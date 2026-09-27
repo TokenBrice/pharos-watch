@@ -5,6 +5,7 @@ import { compareFiniteDesc } from "@shared/lib/sort";
 import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
+import type { NonUsdSharePoint } from "@shared/types/market";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 
@@ -43,14 +44,6 @@ export interface AltPegSnapshot {
   topRows: AltPegDistributionRow[];
 }
 
-export interface AltPegTrendPoint {
-  date: number;
-  commodityShare: number | null;
-  fiatNonUsdShare: number | null;
-  commodity: number | null;
-  fiatNonUsd: number | null;
-  total: number;
-}
 
 export interface AltPegTrendStats {
   latestSharePct: number;
@@ -133,12 +126,12 @@ function getFiatPegRegion(peg: PegCurrency): AltPegRegion {
   }
 }
 
-function sharePointTotal(point: AltPegTrendPoint): number {
-  return (point.commodityShare ?? 0) + (point.fiatNonUsdShare ?? 0);
+function sharePointTotal(point: NonUsdSharePoint): number {
+  return point.commodityShare + point.fiatNonUsdShare;
 }
 
-function sharePointMarketCap(point: AltPegTrendPoint): number {
-  return (point.commodity ?? 0) + (point.fiatNonUsd ?? 0);
+function sharePointMarketCap(point: NonUsdSharePoint): number {
+  return point.commodity + point.fiatNonUsd;
 }
 
 export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnapshot {
@@ -239,7 +232,7 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
   };
 }
 
-export function buildAltPegTrendStats(points?: readonly AltPegTrendPoint[]): AltPegTrendStats | null {
+export function buildAltPegTrendStats(points?: readonly NonUsdSharePoint[]): AltPegTrendStats | null {
   if (!Array.isArray(points) || points.length === 0) return null;
 
   const latest = points[points.length - 1];

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchPancakeSwapPools } from "../fetch-pancakeswap";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { acknowledgeDexSourcePagination } from "../source-pagination-state";
 
 const ETHEREUM_SUBGRAPH_ID = "CJYGNhb7RvnhfBDjqpRnD3oxgyhibzc7fkAMa38YV3oS";
 const BASE_SUBGRAPH_ID = "BHWNsedAHtmTCzXxCCDfhPmm6iN9rxUhoRHdHKyujic3";
@@ -98,9 +99,12 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
     }));
 
     const writes: RecordedPaginationWrite[] = [];
-    const pending = fetchPancakeSwapPools("graph-key", undefined, makePaginationWriteD1(writes));
+    const db = makePaginationWriteD1(writes);
+    const pending = fetchPancakeSwapPools("graph-key", undefined, db);
     await vi.advanceTimersByTimeAsync(20_000);
     const result = await pending;
+    expect(writes).toEqual([]);
+    await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? []);
 
     // A pre-armed outer abort used to rethrow after attempt 1, so the retry never
     // ran and the chain reported no pools at all.
@@ -114,7 +118,7 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
     ]);
   });
 
-  it("keeps healthy chains and persists per-chain progress when one chain fails every attempt", async () => {
+  it("keeps healthy chains and leaves a failed head cursor untouched", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-10T12:00:00Z"));
     let ethHeadAttempts = 0;
@@ -130,9 +134,12 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
     }));
 
     const writes: RecordedPaginationWrite[] = [];
-    const pending = fetchPancakeSwapPools("graph-key", undefined, makePaginationWriteD1(writes));
+    const db = makePaginationWriteD1(writes);
+    const pending = fetchPancakeSwapPools("graph-key", undefined, db);
     await vi.advanceTimersByTimeAsync(60_000);
     const result = await pending;
+    expect(writes).toEqual([]);
+    await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? []);
 
     expect(ethHeadAttempts).toBe(3);
     expect(result.pools.map((pool) => pool.chain)).toEqual(["base"]);
@@ -141,15 +148,9 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
     expect(result.errors.join(" ")).toContain("ethereum:");
     expect(result.errors.join(" ")).toContain("timed out");
 
-    // Persist diagnostics without skipping the untouched tail after a head failure.
-    expect(writes.map((write) => write.sourceKey)).toEqual([
-      "pancakeswap-v3:ethereum",
-      "pancakeswap-v3:base",
-    ]);
-    expect(writes[0]).toMatchObject({ cursor: "250", completed: false, pagesFetched: 0 });
-    expect(writes[0]!.diagnostics.join(" ")).toContain("ethereum failure:");
-    expect(writes.slice(1).map((write) => write.cursor)).toEqual(["250"]);
-    expect(writes.slice(1).every((write) => write.completed)).toBe(true);
+    // A head failure cannot acknowledge any progress; only Base becomes durable.
+    expect(writes.map((write) => write.sourceKey)).toEqual(["pancakeswap-v3:base"]);
+    expect(writes[0]).toMatchObject({ cursor: "250", completed: true, pagesFetched: 1 });
   });
   it("retries a failed tail page instead of skipping its inventory", async () => {
     vi.useFakeTimers();
@@ -160,9 +161,12 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
       throw new Error("tail unavailable");
     }));
     const writes: RecordedPaginationWrite[] = [];
-    const pending = fetchPancakeSwapPools("graph-key", undefined, makePaginationWriteD1(writes));
+    const db = makePaginationWriteD1(writes);
+    const pending = fetchPancakeSwapPools("graph-key", undefined, db);
     await vi.advanceTimersByTimeAsync(60_000);
-    await pending;
+    const result = await pending;
+    expect(writes).toEqual([]);
+    await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? []);
     expect(writes[0]).toMatchObject({ cursor: "250", completed: false, pagesFetched: 1 });
   });
 

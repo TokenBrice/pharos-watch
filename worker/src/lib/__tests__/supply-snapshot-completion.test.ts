@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   buildSupplySnapshotCoverageExpectation,
   getCompletedSupplySnapshot,
+  preflightSupplySnapshot,
 } from "../supply-snapshot-completion";
 import type { StablecoinPublicationWaiver } from "../stablecoin-publication-coverage";
 
@@ -17,6 +19,37 @@ function markerRow(value: Record<string, unknown>) {
 }
 
 describe("supply snapshot completion identity", () => {
+  it("admits the exact 1800-second cache boundary using the supplied observation clock", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = SNAPSHOT_DATE + 3600;
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "stablecoins",
+        JSON.stringify({ peggedAssets: [{
+          id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD",
+          pegMechanism: "fiat-backed", circulating: { peggedUSD: 100 }, chains: [],
+        }] }),
+        nowSec - 1800,
+      );
+      const result = await preflightSupplySnapshot(db, {
+        nowSec,
+        maxCacheAgeSec: 1800,
+        requiredActiveIds: ["usdt-tether"],
+        publicationWaivers: [],
+        deriveCoverage: (payload) => ({
+          accountedIds: payload.peggedAssets.map((asset) => asset.id),
+          context: null,
+        }),
+      });
+      expect(result).toMatchObject({
+        kind: "ready", cacheAgeSec: 1800, snapshotDate: SNAPSHOT_DATE,
+        publicationCoverage: { complete: true },
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("is order-independent but changes for a same-count ID replacement", () => {
     const first = buildSupplySnapshotCoverageExpectation(["coin-b", "coin-a"], []);
     const reordered = buildSupplySnapshotCoverageExpectation(["coin-a", "coin-b"], []);

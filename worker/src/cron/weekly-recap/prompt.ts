@@ -177,8 +177,9 @@ export function buildWeeklyPrompt(
     const scoreboard = data.forwardLookScoreboard;
     lines.push(
       "",
-      `Forward-look scoreboard (this week's daily trigger outcomes): ${scoreboard.hit} hit / ${scoreboard.missed} missed / ${scoreboard.expired} expired / ${scoreboard.pending} pending.`,
-      "Include this score in the recap when any triggers resolved; own the misses plainly.",
+      `Forward-look scoreboard (this week's daily trigger outcomes): ${scoreboard.hit} hit / ${scoreboard.missed} missed / ${scoreboard.expired} expired / ${scoreboard.pending} pending / ${scoreboard.unavailable} unavailable.`,
+      "Hit share is hit / (hit + missed + expired). Pending and unavailable are excluded; unavailable means the evidence could not establish an outcome, not a miss or recovery.",
+      "Include this score in the recap when any triggers resolved; own the misses plainly. Keep unavailable evidence visible without claiming a resolved outcome.",
     );
   }
 

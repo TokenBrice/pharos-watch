@@ -4,6 +4,9 @@ export function makeUnreportedBluechipRating(): BluechipRating {
   return {
     grade: "A",
     slug: "tether",
+    lastObservedAt: null,
+    observationState: "unknown",
+    observationReason: "legacy-observation-unknown",
     collateralization: null,
     smartContractAudit: null,
     dateOfRating: null,

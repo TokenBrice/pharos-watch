@@ -7,7 +7,7 @@ import { cgHeaders, cgUrl } from "./coingecko";
 import { DEFILLAMA_COINS, USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { buildPriceValidationContext, validatePriceCandidate } from "./price-validation";
-import { recalcAffectedHours } from "./mint-burn-pipeline/persistence";
+import { mintBurnHourlyBucketAggregatesSql, recalcAffectedHours } from "./mint-burn-pipeline/persistence";
 import type { MintBurnAffectedHour } from "./mint-burn-pipeline/types";
 
 export const DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT = 100;
@@ -595,17 +595,10 @@ async function verifyHourlyAggregateForHour(
 ): Promise<void> {
   const row = await db
     .prepare(
+      // SAFETY: the interpolated aggregate list is a fixed expression set shared with the hourly writer.
       `WITH expected AS (
          SELECT
-           SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN 1 ELSE 0 END) AS mint_count,
-           SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN 1 ELSE 0 END) AS burn_count,
-           COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0) AS mint_volume_usd,
-           COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0) AS burn_volume_usd,
-           COALESCE(SUM(CASE
-             WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd
-             WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN -amount_usd
-             ELSE 0
-           END), 0) AS net_flow_usd
+           ${mintBurnHourlyBucketAggregatesSql()}
          FROM mint_burn_events
          WHERE stablecoin_id = ?
            AND chain_id = ?
@@ -621,6 +614,8 @@ async function verifyHourlyAggregateForHour(
         WHERE a.stablecoin_id IS NULL
            OR a.mint_count != e.mint_count
            OR a.burn_count != e.burn_count
+           OR a.mint_unpriced_event_count IS NOT e.mint_unpriced_event_count
+           OR a.burn_unpriced_event_count IS NOT e.burn_unpriced_event_count
            OR ABS(a.mint_volume_usd - e.mint_volume_usd) > MAX(0.000001, ABS(e.mint_volume_usd) * 0.000000001)
            OR ABS(a.burn_volume_usd - e.burn_volume_usd) > MAX(0.000001, ABS(e.burn_volume_usd) * 0.000000001)
            OR ABS(a.net_flow_usd - e.net_flow_usd) > MAX(0.000001, ABS(e.net_flow_usd) * 0.000000001)`,

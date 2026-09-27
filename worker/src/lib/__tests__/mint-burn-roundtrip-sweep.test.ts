@@ -33,7 +33,8 @@ describe("sweepRecentRoundtrips", () => {
     ]);
     expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").get()).toEqual({
       stablecoin_id: "usdc-circle", chain_id: "ethereum", hour_ts: 1699999200,
-      mint_count: 0, burn_count: 0, mint_volume_usd: 0, burn_volume_usd: 0, net_flow_usd: 0,
+      mint_count: 0, burn_count: 0, mint_unpriced_event_count: 0, burn_unpriced_event_count: 0,
+      mint_volume_usd: 0, burn_volume_usd: 0, net_flow_usd: 0,
     });
   });
 

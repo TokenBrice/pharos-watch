@@ -247,6 +247,5 @@ export async function upsertDexDeploymentOutcomes(
       );
     return cleanupStmt ? [cleanupStmt, upsertStmt] : [upsertStmt];
   });
-  await batchExecute(db, statements, { chunkSize: 50, signal });
-  return outcomes.length;
+  return batchExecute(db, statements, { chunkSize: 50, signal });
 }

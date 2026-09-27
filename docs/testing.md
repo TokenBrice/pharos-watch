@@ -30,6 +30,8 @@ Use `npm run check:focused -- --file <path>` to route one path through the chang
 
 Explicit paths use the same normalization as `agent:route`, including repository-relative, `./`, and absolute paths within the repository or current worktree. Paths outside those roots or without an ownership mapping fail before checks run. A mapped area can intentionally select no focused checks; use the matrix below for its local verification recipe.
 
+Focused lint forwards the resolved selection as repeatable `--file` arguments, rather than re-reading a branch diff. Bare `npm run lint:changed` checks staged, unstaged, and untracked working-tree files; use `--staged` for index-selected paths or explicit `--base` / `--head` (also supplied by PR environment variables) for branch-range isolation. Deleted files are excluded. ESLint reads the current working-tree contents of selected paths, including paths selected from the index. Extra ESLint options follow a second `--`.
+
 For generic frontend modules, the focused runner replaces directory-wide test commands with `vitest related --run --passWithNoTests=false` for the selected files. This uses Vitest's import graph; a zero-test selection fails and requires choosing an explicit suite when coverage relies on runtime-loaded files. Non-module changes retain directory coverage. Scripts retain their directory suite because source-reading and CLI contract tests are invisible to the import graph. Sensitive mappings retain their explicit suites and guardrails, including broader CI/release checks when those paths are selected. Generic script artifact checks select only affected checkable outputs and their dependents through the existing artifact registry. `--plan-only` shows these narrowed commands; the protected PR gate is unchanged.
 
 | Area | Smallest adequate local recipe | Conditional additions |
@@ -44,8 +46,8 @@ For generic frontend modules, the focused runner replaces directory-wide test co
 
 ### Generated-artifact failure playbook
 
-A `check:generated-artifacts` failure naming a `checkable: false` artifact is not ordinary freshness drift: the registry intentionally excludes that build-time projection from check-mode selection. `sitemap-dates` and `docs-metadata` have `inputState: "build-time"` and `reproducibility: "git-history-derived"`; their dates require full Git history.
-A shallow checkout or missing history therefore fails fast instead of using unsafe filesystem timestamps.
+Automatic check plans exclude registry entries marked `checkable: false`; an explicit `--only` containing any such entry fails before executing any child, even when mixed with checkable IDs. Legitimately empty artifact plans print a skip message, not a freshness claim. `sitemap-dates` and `docs-metadata` are build-time, Git-history-derived projections rather than checkable snapshots; their dates require full Git history.
+A shallow checkout or missing history fails during history generation instead of using unsafe filesystem timestamps.
 
 For ordinary offline bootstrap-safe artifacts (including valid empty detail-snapshot envelopes):
 
@@ -273,7 +275,7 @@ PSI now also has dedicated replay/regression coverage beyond the pure formula te
 - `worker/src/lib/__tests__/psi-replay.test.ts` covers methodology-aware historical replay behavior, including `v3.x` DEWS stress-breadth inclusion
 - `worker/src/lib/__tests__/psi-benchmark-scenarios.test.ts` holds bounded benchmark scenarios for major stable-market trauma patterns so future PSI work does not accidentally flatten crisis signatures
 
-**Pattern:** `*.test.ts` / `*.test.tsx` — each `test.projects` entry in `vitest.config.ts` sets its own `include`, so only `*.test.?(c|m)[jt]s?(x)` files under `functions/`, `scripts/`, `shared/`, `worker/`, and `src/` are discovered; `.spec.` files are not.
+**Discovery:** `EXECUTABLE_TEST_PROJECTS` in `scripts/lib/critical-ownership.mts`, consumed by `vitest.config.ts`, includes both `*.test.*` and `*.spec.*` under the configured `functions/`, `scripts/`, `shared/`, `worker/`, and `src/` projects. Prefer the established `*.test.ts` / `*.test.tsx` authoring convention and lane-local `__tests__/` homes; do not infer test-typecheck coverage from runtime discovery alone.
 
 ## Test Infrastructure
 
@@ -633,7 +635,7 @@ CI **does not** run a full-suite coverage gate. The PR workflow runs `coverage:c
 - The full derived source and owner set is capped at four Vitest workers. v8 remapping is limited with per-file `--coverage.include` flags, so unrelated loaded modules do not inflate the report.
 - Parses `coverage/lcov.info` and fails if any enrolled source falls below `CRITICAL_COVERAGE_THRESHOLD` (default 40%).
 - Applies explicit per-file line minimums and 40% branch/error-path floors at provider, authentication, scoring, and publication boundaries.
-- Applies the touched-source no-regression ratchet using `.ci/critical-coverage-baseline.json`; changing the baseline itself selects this lane, and the merge checker rejects missing, nonnumeric, out-of-range, or below-enforced-floor entries for the derived enrolled set.
+- Applies the touched-source no-regression ratchet using `.ci/critical-coverage-baseline.json`; changing the baseline itself selects this lane. A missing baseline file (including a configured `CRITICAL_COVERAGE_BASELINE_FILE`) fails the ordinary check, never silently disables the ratchet. Missing, nonnumeric, out-of-range, or below-enforced-floor entries for the derived enrolled set also fail. Bootstrap or refresh is a separate explicit maintenance operation via `scripts/maintenance/update-critical-coverage-baseline.ts`, not a checker fallback.
 - Runs ordinary coverage and ownership waivers through the same review queue: due reviews are advisory for 30 days, while invalid metadata, stale entries, and reviews beyond that grace period fail completeness.
 
 `npm run check:pr -- --base=<ref>` runs this lane automatically when the diff touches an enrolled source or critical-coverage plumbing. Use `npm run coverage:critical` directly for custom `CRITICAL_COVERAGE_*` controls; `--skip-coverage` skips the local lane but not the remote gate.
@@ -681,13 +683,13 @@ When scaffolding is shared by multiple suites, follow the [sibling test-support 
    - `@shared/*` for runtime-shared modules
    - `@/lib/*` for frontend-only modules
 3. Write `describe`/`it` blocks following the conventions above.
-4. Run `npm test` to verify, then `npm run lint` to check for issues.
+4. Run the owning test file with `npx vitest run <test-file>` and use `npm run check:focused -- --file <source-file> --file <test-file>` for the smallest adequate verification; do not default to the full suite and all lint.
 
 **Worker library test:** Same as above but in `worker/src/lib/__tests__/`. Import via relative paths (no `@/` alias).
 
 **API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `@shared/test-utils/mock-d1`. Use shared fixtures from `../../test-helpers/__shared/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts`.
 
-**Cron test:** Create in `worker/src/cron/__tests__/`. Mock external dependencies with `vi.mock()` and HTTP calls with `mockFetch()`. Test both normal path and at least one degraded-mode scenario.
+**Cron test:** Use the owning lane's `worker/src/cron/<lane>/__tests__/` for lane modules; only flat cron modules belong in `worker/src/cron/__tests__/`. Mock external dependencies with `vi.mock()` and HTTP calls with `mockFetch()`. Exercise both normal and degraded outcomes: assert the machine-readable reason, no optimistic publication, and retained last-good state where applicable. A defined return value or no-throw check does not prove degradation.
 
 Example API contract test:
 
@@ -714,31 +716,41 @@ describe("handleBlacklist", () => {
 });
 ```
 
-Example cron test with degraded mode:
+Example cron degradation contract (in the existing `snapshot-psi.test.ts` owner): no samples must not replace an already published daily row. The SQLite outcome proves both no new publication and retention, rather than pinning SQL text or mock calls.
 
 ```ts
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { afterEach, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { snapshotPsiDaily } from "../snapshot-psi";
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: async (url: string, opts?: RequestInit) => fetch(url, opts),
-}));
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  fixtures.closeAll();
+  vi.useRealTimers();
+});
 
-import { syncFxRates } from "../sync-fx-rates";
+it("retains the last-good daily row when samples become unavailable", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  const { sqlite, db } = fixtures.open();
+  const day = Date.parse("2026-03-05T00:00:00Z") / 1000;
+  sqlite.prepare(`INSERT INTO stability_index_samples
+    (stored_at, score, band, components, input_snapshot, methodology_version)
+    VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(day, 87.4, "STEADY", JSON.stringify({
+      severity: 5, breadth: 2, stressBreadth: 1, trend: 0.5,
+    }), "{}", "psi-v3");
+  await snapshotPsiDaily(db);
+  const before = sqlite.prepare("SELECT * FROM stability_index").all();
+  expect(before).toEqual([expect.objectContaining({ computed_at: day, score: 87.4 })]);
+  sqlite.prepare("DELETE FROM stability_index_samples").run();
 
-describe("syncFxRates", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  const result = await snapshotPsiDaily(db);
 
-  it("falls back gracefully when frankfurter.dev returns 503", async () => {
-    mockFetch([{ match: "frankfurter.dev", body: {}, status: 503 }]);
-    const db = mockD1([{ match: "cache", rows: [], first: null }]);
-    const result = await syncFxRates(db);
-    expect(result).toBeDefined(); // no throw
-  });
+  expect(result.status).toBe("degraded");
+  expect(JSON.parse(result.metadata ?? "{}").reason).toBe("no-samples-for-yesterday");
+  expect(result.itemCount).toBe(0);
+  expect(sqlite.prepare("SELECT * FROM stability_index").all()).toEqual(before);
 });
 ```
 

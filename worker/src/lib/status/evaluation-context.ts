@@ -1,6 +1,7 @@
 import type {
   StatusResponse,
 } from "@shared/types/status";
+import { unavailableReserveComposition } from "@shared/lib/status-reserve-composition";
 import { computeReserveCompositionOverview } from "../live-reserves/store";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import type { CronHealthSnapshot } from "./cron-health";
@@ -50,12 +51,12 @@ export async function loadSupplementalStatusSections(
   }
 
   const datasetFreshness = await getDatasetFreshness(db);
-  let reserveComposition = emptyReserveComposition();
+  let reserveComposition: StatusResponse["reserveComposition"] = emptyReserveComposition();
   let reserveCompositionQueryFailed = false;
   try {
     const reserveOverviewData = await computeReserveCompositionOverview(db, now);
     const reserveAssessment = deriveReserveCompositionStatus({
-      ...reserveComposition,
+      ...emptyReserveComposition(),
       ...reserveOverviewData,
     });
     reserveComposition = {
@@ -66,6 +67,7 @@ export async function loadSupplementalStatusSections(
     };
   } catch (err) {
     reserveCompositionQueryFailed = true;
+    reserveComposition = unavailableReserveComposition();
     logWorkerEvent({
       scope: "status",
       level: "warn",

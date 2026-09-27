@@ -27,7 +27,6 @@ import {
 import { YIELD_VARIANT_MAP as RAW_YIELD_VARIANT_MAP } from "./yield-config-variants";
 import { YIELD_WEIGHTED_POOL_GROUPS } from "./yield-config-weighted-pools";
 
-export type { ExplicitYieldPoolConfig } from "./yield-config-explicit-pools";
 export { EXPLICIT_YIELD_SOURCE_POOL_MAP };
 export { LENDING_PROTOCOL_ALLOWLIST, LENDING_PROTOCOL_LABELS } from "./yield-config-lending-protocols";
 export { YIELD_WEIGHTED_POOL_GROUPS };

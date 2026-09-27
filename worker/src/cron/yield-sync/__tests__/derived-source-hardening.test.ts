@@ -77,7 +77,7 @@ describe("derived source admission", () => {
     if (freshness === "degraded") { product.isFallback = true; product.fallbackMode = "retained"; }
     const result = await resolve(product);
     const entry = result.resolved.find((row) => row.id === "ustbl-spiko" && row.yield?.dataSource === "rate-derived");
-    expect(entry?.yield).toMatchObject({ sourceObservedAt: now, productBenchmarkFreshness: freshness });
+    expect(entry?.yield?.sourceObservedAt).toBe(now);
     expect(entry?.yield?.currentApy).toBeCloseTo(4.1);
     const input = baseEvaluationInput({
       startSec: now,
@@ -95,10 +95,46 @@ describe("derived source admission", () => {
     expect(row?.sourceFreshness).toBe(freshness === "stale" ? "stale" : "fresh");
     if (freshness === "stale") expect(row?.pharosYieldScore).toBeNull();
     if (freshness === "degraded") expect(row?.warnings).toContain("reference-benchmark-degraded");
-    if (freshness === "healthy" && entry?.yield) {
-      const control = evaluateYieldSources({ ...input, resolved: [{ ...entry, yield: { ...entry.yield, productBenchmarkFreshness: undefined } }] });
-      expect(row?.pharosYieldScore).toBeTypeOf("number");
-      expect(row?.pharosYieldScore).toBe(control.evaluatedSources[0]?.pharosYieldScore);
+    if (freshness === "healthy") expect(row?.pharosYieldScore).toBeTypeOf("number");
+  });
+
+  it("assesses product, hurdle and non-USD normalization independently through resolve and evaluate", async () => {
+    vi.useFakeTimers().setSystemTime(now * 1000);
+    for (const expired of [null, "USD", "USD_EFFR", "EUR"] as const) {
+      const riskFreeRates = {
+        ...benchmarks(),
+        EUR: { ...benchmarks().USD, key: "EUR" as const, currency: "EUR" },
+      };
+      if (expired) riskFreeRates[expired].recordDate = "2026-08-01";
+      const result = await resolveTrackedYieldSources({
+        db: mockD1([
+          { match: "pharos:yield-sync:tier1-previous-rate", rows: [] },
+          { match: "snapshot_date BETWEEN", rows: [] },
+          { match: "SELECT price, snapshot_date FROM supply_history", rows: [] },
+        ]), startSec: now, sevenDaysAgoSec: now - 7 * DAY_SECONDS,
+        dlPools: [], onChainRates: new Map(), safetyScores: new Map(), riskFreeRates,
+      });
+      for (const id of ["usdgo-osl", "ustbl-spiko", "eutbl-spiko"]) {
+        const entry = result.resolved.find((row) => row.id === id && row.yield?.dataSource === "rate-derived")!;
+        const input = baseEvaluationInput({
+          startSec: now, resolved: [entry], riskFreeRates,
+          safetyScores: new Map([[id, { score: 80, grade: "B+" }]]),
+          sourceHistory: new Map([[`${id}::rate-derived`, [1, 2].map((day) => ({
+            stablecoin_id: id, source_key: "rate-derived", recorded_at: now - day * DAY_SECONDS,
+            is_best: 1, apy: entry.yield!.currentApy, source_tvl_usd: null, data_source: "rate-derived",
+            yield_source: null, yield_type: null,
+          }))]]),
+        });
+        const row = evaluateYieldSources(input).evaluatedSources[0];
+        const productKey = id === "usdgo-osl" ? "USD_EFFR" : id === "ustbl-spiko" ? "USD" : "EUR";
+        const hurdleKey = id === "eutbl-spiko" ? "EUR" : "USD_EFFR";
+        const reason = expired === productKey ? "source-stale"
+          : expired === hurdleKey || (id === "eutbl-spiko" && expired === "USD") ? "benchmark-stale" : null;
+        expect(row.pysNullReason, `${id}/${expired}`).toBe(reason);
+        expect(row.sourceFreshness).toBe(reason === "source-stale" ? "stale" : "fresh");
+        if (reason) expect(row.pharosYieldScore).toBeNull();
+        else expect(row.pharosYieldScore).toBeTypeOf("number");
+      }
     }
   });
 

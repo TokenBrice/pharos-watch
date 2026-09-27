@@ -17,7 +17,6 @@ import { loadReserveSyncReliabilityRollup } from "./store-history-read";
 import { logWorkerEvent } from "../structured-log";
 import {
   hasConsistentSnapshotState,
-  isReserveSnapshotStale,
   evaluateLiveReserveAdmission,
   type LiveReserveAdmissionResult,
   hasUncertainWriteState,
@@ -186,7 +185,7 @@ function countCoinsByStatus(
       continue;
     }
 
-    if (isReserveSnapshotStale(record, coin, now, freshnessSec)) {
+    if (admission.freshness?.stale) {
       staleCoins++;
       if (uncertainWrite) writeTimeoutUncertain++;
       continue;

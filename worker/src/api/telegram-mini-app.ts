@@ -11,6 +11,7 @@ import {
   type TelegramMiniAppErrorCode,
   type TelegramMiniAppMutableState,
   type TelegramMiniAppOperation,
+  type TelegramMiniAppSnapshot,
   type TelegramMiniAppVersionCompatibility,
 } from "@shared/lib/telegram-mini-app-contract";
 import { TELEGRAM_MINI_APP_CATALOG } from "@shared/lib/telegram-mini-app-catalog";
@@ -96,11 +97,12 @@ function versionMismatchResponse(
 function stateResponse(
   state: TelegramMiniAppMutableState,
   compatibility: Extract<TelegramMiniAppVersionCompatibility, "legacy" | "compatible">,
+  undo?: TelegramMiniAppSnapshot["undo"],
 ): Response {
   if (compatibility === "legacy") {
     return jsonResponse({ ...state, catalog: TELEGRAM_MINI_APP_CATALOG }, NO_STORE);
   }
-  return jsonResponse(createTelegramMiniAppSnapshot(state), NO_STORE);
+  return jsonResponse({ ...createTelegramMiniAppSnapshot(state), ...(undo ? { undo } : {}) }, NO_STORE);
 }
 
 function requestVersionCompatibility(
@@ -545,6 +547,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       }
     }
 
+    let undo: TelegramMiniAppSnapshot["undo"];
     try {
       if (bulkPreviewOperation) {
         const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, auth, bulkPreviewOperation);
@@ -574,7 +577,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         });
         return stateResponse(state, compatibility);
       }
-      await applyTelegramMiniAppMutation(db, auth, parsed.operation);
+      undo = await applyTelegramMiniAppMutation(db, auth, parsed.operation) ?? undefined;
     } catch (err) {
       if (err instanceof TelegramMiniAppMutationError) {
         await recordMiniAppEvent(db, {
@@ -617,6 +620,6 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
       recapRollout,
     });
-    return stateResponse(state, compatibility);
+    return stateResponse(state, compatibility, undo);
   },
 );

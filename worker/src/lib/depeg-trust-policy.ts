@@ -5,6 +5,7 @@ import {
   countDepegAuthoritativeSources,
   hasUpstreamCapableDepegAuthoritativeSource,
   isSingleSourceDepegAuthoritative,
+  isObservedPrice,
 } from "@shared/lib/pricing-source-policy";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC, DEX_PRICE_CHECK_UI_MIN_TVL_USD } from "./constants";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
@@ -107,6 +108,7 @@ export function getFreshIndependentPrimarySourceFamilies(
   excludedFamily: string,
 ): Set<string> {
   if (
+    !isObservedPrice(input) ||
     input.price == null ||
     !Number.isFinite(input.price) ||
     input.price <= 0 ||
@@ -162,7 +164,7 @@ export function hasFreshMultiSourcePrimaryAgreement(
   input: PrimaryPriceTrustInput,
   nowSec: number,
 ): boolean {
-  if (input.price == null || !Number.isFinite(input.price) || input.price <= 0) {
+  if (!isObservedPrice(input) || input.price == null || !Number.isFinite(input.price) || input.price <= 0) {
     return false;
   }
 
@@ -192,7 +194,7 @@ export function classifyPrimaryDepegTrust(
   input: PrimaryPriceTrustInput,
   nowSec: number,
 ): DepegPrimaryTrust {
-  if (input.price == null || !Number.isFinite(input.price) || input.price <= 0) {
+  if (!isObservedPrice(input) || input.price == null || !Number.isFinite(input.price) || input.price <= 0) {
     return "unusable";
   }
 

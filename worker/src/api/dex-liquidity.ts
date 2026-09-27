@@ -23,12 +23,13 @@ import {
   type DexPriceRow,
 } from "../lib/dex-liquidity-response";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 
 export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const [result, histResult, priceResult, deploymentResult, latestCron] = await Promise.all([
     db
       .prepare(
-        `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, total_volume_7d_measured, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version
+        `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, total_volume_7d_measured, volume_availability_json, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version
          FROM dex_liquidity
          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          ORDER BY liquidity_score DESC`,
@@ -152,6 +153,12 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
     const totalVolume7dMeasured = row.total_volume_7d_measured != null
       ? row.total_volume_7d_measured === 1
       : inferred7dMeasured;
+    // DEC-19 availability record (migration 0249). Legacy rows keep today's
+    // numbers with unrecorded completeness; recorded non-complete windows
+    // publish no measured total.
+    const volumeRecord = parseDexVolumeAvailabilityRecord(row.volume_availability_json);
+    const volume24h = readStoredDexVolumeWindow(row.total_volume_24h_usd, volumeRecord, "24h");
+    const volume7d = readStoredDexVolumeWindow(row.total_volume_7d_usd, volumeRecord, "7d", totalVolume7dMeasured);
 
     map[id] = {
       warning: [headers.Warning, buildDexLiquidityWarning(
@@ -160,8 +167,10 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       )]
         .filter(Boolean).join(", ") || null,
       totalTvlUsd: currentTvl,
-      totalVolume24hUsd: row.total_volume_24h_usd,
-      totalVolume7dUsd: totalVolume7dMeasured ? row.total_volume_7d_usd : null,
+      totalVolume24hUsd: volume24h.measuredUsd,
+      totalVolume7dUsd: volume7d.measuredUsd,
+      ...(volume24h.availability ? { volume24hAvailability: volume24h.availability } : {}),
+      ...(volume7d.availability ? { volume7dAvailability: volume7d.availability } : {}),
       poolCount: row.pool_count,
       pairCount: row.pair_count,
       chainCount: row.chain_count,

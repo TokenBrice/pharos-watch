@@ -2,7 +2,8 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
-import { PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
+import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
@@ -81,6 +82,7 @@ export const StablecoinLiveSummarySchema = z.object({
   priceObservedAt: z.number().nullable(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
   priceSyncedAt: z.number().nullable().optional(),
+  nominalPriceReference: NominalPriceReferenceSchema.optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
   supplyObservedAt: z.number().nullable(),
@@ -88,6 +90,15 @@ export const StablecoinLiveSummarySchema = z.object({
   circulatingPrevDay: StablecoinDetailPegBucketsSchema,
   circulatingPrevWeek: StablecoinDetailPegBucketsSchema,
   circulatingPrevMonth: StablecoinDetailPegBucketsSchema,
+}).transform((summary) => isObservedPrice(summary) ? summary : {
+  ...summary,
+  price: null,
+  priceConfidence: null,
+  priceUpdatedAt: null,
+  priceObservedAt: null,
+  ...(summary.priceSyncedAt !== undefined ? { priceSyncedAt: null } : {}),
+  ...(summary.consensusSources !== undefined ? { consensusSources: [] } : {}),
+  ...(summary.agreeSources !== undefined ? { agreeSources: [] } : {}),
 });
 export type StablecoinLiveSummary = z.infer<typeof StablecoinLiveSummarySchema>;
 
@@ -136,6 +147,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     priceObservedAt: detail.priceObservedAt ?? detail.priceUpdatedAt ?? null,
     priceObservedAtMode: detail.priceObservedAtMode,
     priceSyncedAt: detail.priceSyncedAt,
+    ...(detail.nominalPriceReference ? { nominalPriceReference: detail.nominalPriceReference } : {}),
     consensusSources: detail.consensusSources,
     agreeSources: detail.agreeSources,
     supplyObservedAt: latestDate,
@@ -161,6 +173,7 @@ export function projectFrozenSnapshotLiveSummary(snapshot: FrozenSnapshot): Stab
     priceObservedAt: row.priceObservedAt ?? row.priceUpdatedAt ?? null,
     priceObservedAtMode: row.priceObservedAtMode,
     priceSyncedAt: row.priceSyncedAt,
+    ...(row.nominalPriceReference ? { nominalPriceReference: row.nominalPriceReference } : {}),
     consensusSources: row.consensusSources,
     agreeSources: row.agreeSources,
     supplyObservedAt: Math.floor(Date.parse(snapshot.capturedAt) / 1000),
@@ -510,7 +523,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       path: API_PATHS.nonUsdShare(),
       producerIntervalMs: CRON_SUPPLY_SNAPSHOT,
     },
-    "plain",
+    "meta",
     createLazySchema<NonUsdSharePoint[]>(
       async () => (await import("@shared/types/market")).NonUsdShareResponseSchema,
     ),

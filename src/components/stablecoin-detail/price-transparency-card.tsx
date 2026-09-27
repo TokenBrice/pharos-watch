@@ -22,6 +22,7 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { PRICE_TRANSPARENCY_SOURCE_KEYS, getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
 import { formatCurrency, timeAgo } from "@shared/lib/format";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
@@ -324,13 +325,24 @@ export function PriceTransparencyCard({
 }) {
   const [showAll, setShowAll] = useState(false);
 
-  const hasNoPrice = coinData.price == null;
-  const isProtocolRedeem = isPricingSourceProtocolOverride(coinData.priceSource);
+  const observed = isObservedPrice(coinData);
+  const hasNoPrice = !observed || coinData.price == null;
+  const nominalReference = coinData.nominalPriceReference ?? (
+    (coinData.priceObservedAtMode === "nominal_reference" || coinData.priceSource === "protocol-par") && coinData.price != null
+      ? { price: coinData.price, source: coinData.priceSource ?? "protocol-par" }
+      : null
+  );
+  const nominalReferenceNote = nominalReference ? (
+    <p className="text-sm text-muted-foreground">
+      Nominal par reference: ${nominalReference.price.toFixed(4)} ({nominalReference.source}). Not an observed price or a live redemption quote.
+    </p>
+  ) : null;
+  const isProtocolRedeem = observed && isPricingSourceProtocolOverride(coinData.priceSource);
 
   // If the DEX Price Check has data, dex-promoted is available even if it wasn't
   // included in the consensus sources (the consensus pipeline uses a stricter
   // freshness threshold than the UI display tier).
-  const effectiveConsensusSources =
+  const effectiveConsensusSources = !observed ? [] :
     dexPriceCheck && !consensusSources.includes("dex-promoted")
       ? [...consensusSources, "dex-promoted"]
       : consensusSources;
@@ -338,7 +350,7 @@ export function PriceTransparencyCard({
   // Group sources by status
   const sources: SourceInfo[] = PRICE_TRANSPARENCY_SOURCE_KEYS.map((key) => ({
     key,
-    status: resolvePriceTransparencySourceStatus(key, agreeSources, effectiveConsensusSources, isProtocolRedeem),
+    status: resolvePriceTransparencySourceStatus(key, observed ? agreeSources : [], effectiveConsensusSources, isProtocolRedeem),
     label: getPricingSourceLabel(key),
   }));
 
@@ -374,12 +386,12 @@ export function PriceTransparencyCard({
   // next to the word "Disagrees". `CircleCheck`/`TriangleAlert` is the house
   // severity glyph vocabulary (`src/components/severity-icon.tsx`).
   const DexAgreementIcon = dexPriceCheck?.agrees ? CircleCheck : TriangleAlert;
-  const priceLabel = coinData.price != null ? `$${coinData.price.toFixed(4)}` : "N/A";
+  const priceLabel = !hasNoPrice && coinData.price != null ? `$${coinData.price.toFixed(4)}` : "N/A";
   const confidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
   const sourceDepthLabel = `Sources ${formatSourceDepthTargetLabel(sourceDepthCount)}`;
 
   if (compact) {
-    const updatedAtLabel = formatCompactUpdatedAt(coinData.priceUpdatedAt);
+    const updatedAtLabel = !hasNoPrice ? formatCompactUpdatedAt(coinData.priceUpdatedAt) : null;
     const displayedSources = [
       ...(isProtocolRedeem
         ? [{ key: "protocol-redemption", label: "Protocol Redemption", status: "used" as const }]
@@ -412,9 +424,10 @@ export function PriceTransparencyCard({
             </span>
             {sourceDepthLabel}
           </p>
+          {nominalReferenceNote}
         </div>
 
-        {dexPriceCheck ? (
+        {observed && dexPriceCheck ? (
           <div className="border-t border-border/50 px-4 py-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-muted-foreground">DEX Check</p>
@@ -451,7 +464,7 @@ export function PriceTransparencyCard({
             <SourcesModal
               sources={sources}
               includeProtocolRedeem={isProtocolRedeem}
-              updatedAtLabel={coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
+              updatedAtLabel={!hasNoPrice && coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
             />
           </div>
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5">
@@ -516,9 +529,10 @@ export function PriceTransparencyCard({
             )}
           </div>
         </div>
+        {nominalReferenceNote}
 
         {/* DEX Price Check - Elevated */}
-        {dexPriceCheck ? (
+        {observed && dexPriceCheck ? (
           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

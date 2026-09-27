@@ -52,6 +52,14 @@ describe("parsePaletteInput", () => {
     expect(gt.href).toBe(gte.href);
   });
 
+  it("keeps a positive supply ceiling and drops one the screener would read as no maximum", () => {
+    const positive = parsePaletteInput("screen supply<=1000000");
+    const zero = parsePaletteInput("screen lifecycle=active supply<=0");
+
+    expect(positive.kind === "screen" && positive.filters).toEqual({ supplyMax: "1000000" });
+    expect(zero.kind === "screen" && zero.filters).toEqual({ lifecycle: "active" });
+  });
+
   it("resolves compare tokens while preserving unresolved entries", () => {
     const parsed = parsePaletteInput("compare usdt usdt nope usdc");
 

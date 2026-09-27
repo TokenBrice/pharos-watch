@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { isReserveSnapshotStale } from "../live-reserves/store-snapshot-state";
+import { assessReserveSnapshotFreshness } from "../live-reserves/store-snapshot-state";
 
 const DAY = 86_400;
 const now = 1_800_000_000;
@@ -23,16 +23,16 @@ describe("reviewed NAV source freshness", () => {
       metadata: { freshnessMode: "verified" as const, sourceTimestamp: now - days * DAY },
     };
     expect(coin.liveReservesConfig?.scoring?.maxSourceAgeSec).toBe(days * DAY);
-    expect(isReserveSnapshotStale(snapshot, coin, now, 2 * DAY)).toBe(false);
-    expect(isReserveSnapshotStale(snapshot, coin, now + 1, 2 * DAY)).toBe(true);
-    expect(isReserveSnapshotStale({ ...snapshot, fetchedAt: now - 2 * DAY - 1 }, coin, now, 2 * DAY)).toBe(true);
+    expect(assessReserveSnapshotFreshness(snapshot, coin, now, 2 * DAY).stale).toBe(false);
+    expect(assessReserveSnapshotFreshness(snapshot, coin, now + 1, 2 * DAY).stale).toBe(true);
+    expect(assessReserveSnapshotFreshness({ ...snapshot, fetchedAt: now - 2 * DAY - 1 }, coin, now, 2 * DAY).stale).toBe(true);
   });
 
   it("does not broaden an unreviewed NAV feed's default source budget", () => {
     const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === "acrdx-anemoy-apollo")!;
-    expect(isReserveSnapshotStale({
+    expect(assessReserveSnapshotFreshness({
       fetchedAt: now - 60,
       metadata: { freshnessMode: "verified", sourceTimestamp: now - 2 * DAY - 1 },
-    }, coin, now, 2 * DAY)).toBe(true);
+    }, coin, now, 2 * DAY).stale).toBe(true);
   });
 });

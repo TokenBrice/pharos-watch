@@ -39,7 +39,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "ethena-whitelabel",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "suiusde-sui",
     "display": {

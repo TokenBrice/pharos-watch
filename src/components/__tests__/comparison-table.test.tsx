@@ -1,10 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/comparison-table";
 import type { StablecoinData } from "@shared/types";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
+import { BLUECHIP_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/bluechip-freshness";
+
+afterEach(() => vi.restoreAllMocks());
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -155,6 +158,31 @@ describe("ComparisonTable", () => {
     expect(html).not.toContain("no audit flag");
   });
 
+  it.each([
+    { state: "current", age: 0, label: null },
+    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC, label: "retained" },
+    { state: "current", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC + 1, label: "stale retained" },
+    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC + 1, label: "stale retained" },
+    { state: "unknown", age: null, label: "observation unknown" },
+    { state: "current", age: -1, label: "observation unknown" },
+  ] as const)("keeps $state age=$age provenance with the external grade", ({ state, age, label }) => {
+    const now = 1_790_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const coin = makeCoin("usdt", "USDT");
+    coin.bluechipRating = {
+      ...makeUnreportedBluechipRating(),
+      lastObservedAt: age == null ? null : now - age,
+      observationState: state,
+      observationReason: state === "retained" ? "http-500" : null,
+    };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const externalRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*External Bluechip(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
+    expect(externalRow).toBeDefined();
+    expect(externalRow).toContain(`A · audit not reported${label ? ` · ${label}` : ""}</td>`);
+    expect(externalRow).not.toContain("Not rated");
+    if (!label) expect(externalRow).not.toMatch(/retained|observation unknown/);
+  });
+
 
   it("uses the shared horizontally scrollable table foundation", () => {
     const html = renderToStaticMarkup(
@@ -186,5 +214,45 @@ describe("ComparisonTable", () => {
     expect(html).toContain("-43 bps");
     expect(html).not.toContain("+2.4 bps");
     expect(html).not.toContain("-42.6 bps");
+  });
+
+  it.each([
+    { label: "unusable price", deviation: null, nav: false, limited: false },
+    { label: "NAV token", deviation: null, nav: true, limited: false },
+    { label: "below event floor", deviation: 500, nav: false, limited: true },
+    { label: "observed near peg", deviation: 2, nav: false, limited: false },
+  ])("reports incident absence without a peg verdict for $label", ({ deviation, nav, limited }) => {
+    const coin = makeCoin("test", "TST");
+    coin.meta = { ...coin.meta, flags: { ...coin.meta.flags, navToken: nav } };
+    coin.pegDetails = { ...coin.pegDetails!, currentDeviationBps: deviation, activeDepeg: false, depegEventCoverageLimited: limited };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const row = html.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*Open recorded incident[\s\S]*?<\/tr>/)?.[0];
+    expect(row).toContain(">No<");
+    expect(row).not.toContain("At peg");
+  });
+
+  it.each([true, null])("distinguishes an open incident from missing event coverage (%s)", (active) => {
+    const coin = makeCoin("test", "TST");
+    coin.pegDetails = active === null ? null : { ...coin.pegDetails!, activeDepeg: active };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const row = html.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*Open recorded incident[\s\S]*?<\/tr>/)?.[0];
+    expect(row).toContain(active === null ? "—" : ">Yes<");
+    expect(row).not.toContain(">No<");
+  });
+
+  it("keeps missing current supply unavailable instead of $0 or a -100% change", () => {
+    const missing = makeCoin("usdt", "USDT");
+    missing.data = { ...missing.data, circulating: {}, circulatingPrevWeek: { peggedUSD: 98_000_000_000 } };
+    const missingHtml = renderToStaticMarkup(<ComparisonTable coins={[missing]} pegRates={PEG_RATES} logos={{}} />);
+
+    expect(missingHtml).not.toContain("$0.00");
+    expect(missingHtml).not.toMatch(/-100\.0+%|-100%/);
+
+    const explicitZero = makeCoin("usdt", "USDT");
+    explicitZero.data = { ...explicitZero.data, circulating: { peggedUSD: 0 }, circulatingPrevWeek: { peggedUSD: 98_000_000_000 } };
+    const zeroHtml = renderToStaticMarkup(<ComparisonTable coins={[explicitZero]} pegRates={PEG_RATES} logos={{}} />);
+
+    expect(zeroHtml).toContain("$0.00");
+    expect(zeroHtml).toMatch(/-100\.0+%|-100%/);
   });
 });

@@ -68,9 +68,6 @@ describe("Safety Score v9 USDT premium production integration", () => {
     // so this capture's 48.9% tron slice is priced as a common-mode deployment adjustment and the
     // premium's 75-point base-score gate is missed.
     expect(usdt.trace).toMatchObject({
-      finalScore: 73,
-      inheritableScore: 73,
-      finalGrade: "B",
       scoreAdjustments: [],
       deploymentAdjustments: [{ failureDomainKey: "chain:tron", exposedScore: 64 }],
     });

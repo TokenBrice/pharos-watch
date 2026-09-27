@@ -353,6 +353,17 @@ describe("critical coverage changed-file detection", () => {
     ]);
   });
 
+  it("fails closed when the baseline file is absent", () => {
+    const { logs, errors, exits } = runCoverageFixture({
+      env: { CRITICAL_COVERAGE_CHANGED_FILES: CRITICAL_FILES[0] },
+      lcov: buildCriticalLcov(),
+    });
+
+    expect(exits).toEqual([1]);
+    expect(errors.some((line) => line.includes("Missing baseline file"))).toBe(true);
+    expect(logs.some((line) => line.includes("Critical coverage gate passed"))).toBe(false);
+  });
+
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {
     const { logs, errors, exits } = runCoverageFixture({
       env: {
@@ -383,6 +394,7 @@ describe("critical coverage changed-file detection", () => {
     const { logs, errors, exits } = runCoverageFixture({
       env: { CI: "1", CRITICAL_COVERAGE_CHANGED_FILES: file },
       lcov,
+      baseline: { files: { [file]: 100 } },
     });
 
     expect(exits).toEqual([]);

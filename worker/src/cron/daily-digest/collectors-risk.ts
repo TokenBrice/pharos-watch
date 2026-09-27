@@ -284,6 +284,12 @@ export async function collectDewsStress(
         })
         .slice(0, 5);
 
+      if (ctx.evidence) {
+        ctx.evidence.dews = todayRows.flatMap((row) => {
+          const coin = ctx.stablecoinAssetById.get(row.stablecoin_id);
+          return coin ? [{ stablecoinId: row.stablecoin_id, symbol: coin.symbol, band: row.band }] : [];
+        });
+      }
       return collectorResult({
         bandCounts,
         yesterdayBandCounts,
@@ -435,8 +441,6 @@ export async function collectYieldAnomalies(
          FROM yield_data
          WHERE is_best = 1
            AND (publication_generation_id IS NULL OR publication_state = 'published')
-           AND warning_signals IS NOT NULL
-           AND warning_signals != '[]'
            AND updated_at > ?
          ORDER BY current_apy DESC`,
       )
@@ -447,14 +451,22 @@ export async function collectYieldAnomalies(
         current_apy: number;
         apy_7d: number;
         apy_30d: number;
-        warning_signals: string;
+        warning_signals: string | null;
       }>();
 
+    if (ctx.evidence) {
+      ctx.evidence.yields = (rows.results ?? [])
+        .filter((row) => ctx.trackedStablecoinIds.has(row.stablecoin_id)
+          && (ctx.mcapById.get(row.stablecoin_id) ?? 0) >= 10_000_000
+          && Number.isFinite(row.current_apy) && row.current_apy < 500)
+        .map((row) => ({ stablecoinId: row.stablecoin_id, symbol: row.symbol, currentApy: row.current_apy }));
+    }
     const candidates = (rows.results ?? [])
       .map((row) => {
         let warnings: string[] = [];
         try {
-          warnings = JSON.parse(row.warning_signals) as string[];
+          const parsed: unknown = JSON.parse(row.warning_signals ?? "[]");
+          warnings = Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
         } catch (error) {
           degradedReasons.push("yield-warning-signals-json");
           logCollectorParseFailure("yield-anomalies", "warning_signals", error, { stablecoinId: row.stablecoin_id });

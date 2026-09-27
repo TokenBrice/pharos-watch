@@ -2,6 +2,7 @@ import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { createTableComparator } from "@/lib/table-comparator";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { DexLiquidityData } from "@shared/types";
+import { dexVolumeToTvlRatio } from "@shared/lib/dex-volume-availability";
 
 export type LiquiditySortKey =
   | "score"
@@ -29,9 +30,10 @@ export const compareLiquidityRows: (
   score: (r) => r.liq.liquidityScore ?? 0,
   tvl: (r) => r.liq.totalTvlUsd,
   tvlTrend: (r) => r.liq.tvlChange7d ?? 0,
+  // Unavailable volume (null) is not zero activity: it sorts last in both directions.
   volume: (r) => r.liq.totalVolume24hUsd,
-  volume7d: (r) => r.liq.totalVolume7dUsd ?? 0,
-  vtRatio: (r) => r.liq.totalTvlUsd > 0 ? r.liq.totalVolume24hUsd / r.liq.totalTvlUsd : 0,
+  volume7d: (r) => r.liq.totalVolume7dUsd,
+  vtRatio: (r) => dexVolumeToTvlRatio(r.liq.totalVolume24hUsd, r.liq.totalTvlUsd),
   pools: (r) => r.liq.poolCount,
   chains: (r) => r.liq.chainCount,
   balance: (r) => r.liq.weightedBalanceRatio ?? 0,

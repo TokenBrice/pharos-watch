@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "../edge-cache";
+import { addFreshnessHeaders } from "../../../lib/api-freshness-headers";
 
 function makeContext() {
   return {
@@ -91,6 +92,32 @@ describe("writeEdgeCache", () => {
     const cached = new Response("cached");
     match.mockImplementationOnce(async (key: Request) => key.url === context.cacheKey.url ? cached : undefined);
     await expect(readEdgeCache(context)).resolves.toBe(cached);
+  });
+
+  it("misses across the bounded freshness transition while preserving hit Age and Date", async () => {
+    const assessedAt = 1_800_000_000;
+    const headers = addFreshnessHeaders({
+      "Cache-Control": "public, s-maxage=300, max-age=60, stale-while-revalidate=300",
+      Age: "0",
+    }, assessedAt - 4_790, 600, { assessedAt });
+    const cached = new Response('{"_meta":{"status":"fresh"}}', { headers });
+    match.mockResolvedValue(cached);
+    const clock = vi.spyOn(Date, "now").mockReturnValue((assessedAt + 9) * 1_000);
+    const hit = await readEdgeCache(makeContext());
+    expect(hit?.headers.get("Date")).toBe(headers.Date);
+    expect(hit?.headers.get("Age")).toBe("0");
+    expect(await hit?.json()).toEqual({ _meta: { status: "fresh" } });
+    clock.mockReturnValue((assessedAt + 10) * 1_000);
+    await expect(readEdgeCache(makeContext())).resolves.toBeNull();
+  });
+
+  it("honors accumulated Age even when Date is younger than the bounded TTL", async () => {
+    const now = 1_800_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    match.mockResolvedValue(new Response("cached", {
+      headers: { "Cache-Control": "public, s-maxage=10, max-age=60", Date: new Date(now).toUTCString(), Age: "10" },
+    }));
+    await expect(readEdgeCache(makeContext())).resolves.toBeNull();
   });
 
   it("never stores error responses even with public cache control", () => {

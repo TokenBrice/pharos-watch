@@ -100,12 +100,13 @@ export async function handleBackfillStabilityIndex({
 
     const depegQuery = db
       .prepare(
-        `SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at
-         FROM depeg_events
-         WHERE started_at <= ? AND (ended_at IS NULL OR ended_at > ?)
-         ORDER BY started_at`,
+        `SELECT e.stablecoin_id, e.peak_deviation_bps, e.peg_reference, e.started_at, e.ended_at,
+                e.source, e.peg_type, e.start_price, e.recovery_price, p.quote_mode
+         FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+         WHERE e.started_at < ? AND (e.ended_at IS NULL OR e.ended_at > ?)
+         ORDER BY e.started_at`,
       )
-      .bind(endDay, startDay);
+      .bind(endDay + DAY_SECONDS, startDay);
 
     const allDepegs = await depegQuery.all<PsiDepegEventRow>();
     const depegEvents = allDepegs.results ?? [];
@@ -279,6 +280,8 @@ export async function handleBackfillStabilityIndex({
                   shadowCoverageCount: input.shadowCoverageCount,
                   historicalPriceCoverageCount: input.historicalPriceCoverageCount,
                   peakDeviationFallbackCount: input.peakDeviationFallbackCount,
+                  openDepegsWithoutPrice: input.openDepegsWithoutPrice,
+                  degradedComponents: input.openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : [],
                   dewsStressBreadth: input.dewsStressBreadth ?? 0,
                   stressBreadthIncluded: usesHistoricalStressBreadth(methodologyVersion),
                   methodologyVersion,

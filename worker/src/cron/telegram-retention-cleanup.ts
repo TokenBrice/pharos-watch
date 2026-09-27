@@ -805,6 +805,7 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
     status: highGrowthRetention.error ? "degraded" : "ok",
     itemCount: totalPruned,
     metadata: {
+      reason: highGrowthRetention.error ? "high-growth-retention-failed" : "retention-completed",
       processedUpdatesPruned: processedUpdates.pruned,
       recapTargetsPruned: recapTargets.deletedTargets,
       highGrowthRetention: { ...highGrowthRetention },

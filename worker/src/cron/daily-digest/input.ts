@@ -49,6 +49,7 @@ import { buildEditorialCandidates } from "./editorial-candidates";
 import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
 import { tryParseJson } from "../../lib/json-parse";
+import type { DigestEvidence } from "./digest-evidence";
 
 function aggregateCollectorReasons(
   results: readonly CollectorResult<unknown>[],
@@ -249,9 +250,11 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = bucketUnixSecondsToUtcDay(nowSec);
   const yesterdayTs = todayTs - SECONDS.ONE_DAY;
+  const evidence: DigestEvidence = {};
 
   const ctx: CollectorContext = {
     db,
+    evidence,
     trackedStablecoinAssets,
     trackedStablecoinIds: ACTIVE_IDS,
     coreAggregateStablecoinAssets,
@@ -319,7 +322,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const displayScore = displayPsi?.score ?? null;
   const displayBand = displayPsi?.band ?? null;
 
-  let parsedComponents: { severity: number; breadth: number; stressBreadth?: number; trend: number } | null = null;
+  let parsedComponents: NonNullable<DigestInputData["stabilityIndex"]>["components"] | null = null;
   if (currentPsiSource) {
     const parsed = tryParseJson(currentPsiSource.components, {
       context: "daily-digest PSI components",
@@ -481,7 +484,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   inputData.causeContext = collectCauseContext(topDepegs, nowSec);
   inputData.standingConditions = buildStandingConditions(topDepegs);
   inputData.editorialCandidates = buildEditorialCandidates(inputData, previousInputData);
-  Object.assign(inputData, buildDigestIntelligence(inputData, previousInputData));
+  Object.assign(inputData, buildDigestIntelligence(inputData, previousInputData, evidence));
 
   return {
     inputData,

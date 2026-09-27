@@ -11,7 +11,7 @@ const fetchOnchainUint256Mock = vi.fn();
 const fetchSolanaTokenSupplyMock = vi.fn();
 const fetchStarknetTotalSupplyMock = vi.fn();
 const fetchIcrcLedgerTotalSupplyMock = vi.fn();
-const fetchMovementFungibleAssetSupplyMock = vi.fn();
+const fetchMoveFungibleAssetSupplyMock = vi.fn();
 
 vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchErc20TotalSupply: (...args: unknown[]) => fetchErc20TotalSupplyMock(...args),
@@ -19,7 +19,7 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchSolanaTokenSupply: (...args: unknown[]) => fetchSolanaTokenSupplyMock(...args),
   fetchStarknetTotalSupply: (...args: unknown[]) => fetchStarknetTotalSupplyMock(...args),
   fetchIcrcLedgerTotalSupply: (...args: unknown[]) => fetchIcrcLedgerTotalSupplyMock(...args),
-  fetchMovementFungibleAssetSupply: (...args: unknown[]) => fetchMovementFungibleAssetSupplyMock(...args),
+  fetchMoveFungibleAssetSupply: (...args: unknown[]) => fetchMoveFungibleAssetSupplyMock(...args),
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
@@ -238,7 +238,7 @@ describe("fetchOnChainMcap", () => {
 
 describe("fetchCuratedAggregateOnChainMcap", () => {
   it("admits Movement USDCx only when its pinned-ledger supply reconciles to xReserve", async () => {
-    fetchMovementFungibleAssetSupplyMock.mockResolvedValue({
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
       rawSupply: 1_739_632_096_715n,
       decimals: 6,
       ledgerVersion: "199722477",
@@ -257,7 +257,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
   });
 
   it("fails Movement USDCx closed when xReserve differs by more than one basis point", async () => {
-    fetchMovementFungibleAssetSupplyMock.mockResolvedValue({
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
       rawSupply: 1_739_632_096_715n,
       decimals: 6,
       ledgerVersion: "199722477",
@@ -270,7 +270,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
   });
 
   it("fails Movement USDCx closed when its ledger observation is unavailable", async () => {
-    fetchMovementFungibleAssetSupplyMock.mockResolvedValue(null);
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue(null);
 
     await expect(fetchCuratedAggregateOnChainMcap(
       makeMovementMeta(), 1, movementChainRpcs(),
@@ -284,7 +284,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     fetchSolanaTokenSupplyMock.mockReset();
     fetchStarknetTotalSupplyMock.mockReset();
     fetchIcrcLedgerTotalSupplyMock.mockReset();
-    fetchMovementFungibleAssetSupplyMock.mockReset();
+    fetchMoveFungibleAssetSupplyMock.mockReset();
   });
 
   it("reallocates canonical lock/mint supply without double counting representations", async () => {

@@ -300,6 +300,7 @@ export function AltPegsClient() {
             staleTime: API_FRESHNESS_MAX_AGE_SEC.nonUsdShare * 1000,
             error: shareQuery.error,
             hasData: !!shareQuery.data?.length,
+            meta: shareQuery.meta,
           },
         ]}
       />

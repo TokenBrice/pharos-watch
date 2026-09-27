@@ -7,17 +7,18 @@ export interface StablecoinCardData {
   name: string;
   symbol: string;
   grade: string;
-  pegPrice: number;
-  dewsBand: string;
-  liquidityScore: number;
-  mcap: number;
-  flow7d: number;
-  sparklineData: number[];
+  pegPrice: number | null;
+  dewsBand: string | null;
+  liquidityScore: number | null;
+  mcap: number | null;
+  flow7d: number | null;
+  flow7dSource: "mint-burn" | "supply-delta" | null;
+  sparklineData: number[] | null;
   hasActiveDepeg: boolean;
   // Fields
   pegScore: number | null;
-  backing: string;
-  governance: string;
+  backing: string | null;
+  governance: string | null;
   redemptionScore: number | null;
   change24h: number | null;
   variantLabel?: string | null;
@@ -49,7 +50,7 @@ function getAdaptiveTreatment(data: StablecoinCardData): {
       badge: { text: "ELEVATED STRESS", color: "#f59e0b" },
     };
   }
-  return {};
+  return data.dewsBand == null ? { borderTopColor: TEXT_SECONDARY } : {};
 }
 
 /** Get color for 24h change */
@@ -121,17 +122,17 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
       color: gradeColor,
       size: "large" as const,
     },
-    { label: "PEG", value: `$${data.pegPrice.toFixed(4)}`, color: TEXT_SECONDARY },
+    { label: "PRICE", value: data.pegPrice != null ? `$${data.pegPrice.toFixed(4)}` : "—", color: TEXT_SECONDARY },
     { label: "PEG SCORE", value: data.pegScore != null ? data.pegScore.toFixed(1) : "—", color: TEXT_SECONDARY },
-    { label: "DEWS", value: data.dewsBand, color: dewsColor },
-    { label: "LIQUIDITY", value: data.liquidityScore.toFixed(0), color: TEXT_SECONDARY },
+    { label: "DEWS", value: data.dewsBand ?? "—", color: dewsColor },
+    { label: "LIQUIDITY", value: data.liquidityScore != null ? data.liquidityScore.toFixed(0) : "—", color: TEXT_SECONDARY },
   ];
 
   // Build secondary metrics row (6 items)
   const secondaryMetrics: Metric[] = [
     { 
       label: "MARKET CAP", 
-      value: formatCurrency(data.mcap, 1),
+      value: data.mcap != null ? formatCurrency(data.mcap, 1) : "—",
     },
     { 
       label: "24H CHANGE", 
@@ -139,17 +140,17 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
       color: getChangeColor(data.change24h),
     },
     { 
-      label: "7D FLOW", 
-      value: `${data.flow7d >= 0 ? "+" : ""}${formatCurrency(data.flow7d, 1)}`,
-      color: data.flow7d >= 0 ? SEMANTIC_COLORS.positive : SEMANTIC_COLORS.negative,
+      label: data.flow7dSource === "supply-delta" ? "7D SUPPLY DELTA" : "7D NET MINT/BURN",
+      value: data.flow7d != null ? `${data.flow7d > 0 ? "+" : ""}${formatCurrency(data.flow7d, 1)}` : "—",
+      color: getChangeColor(data.flow7d),
     },
     { 
       label: "BACKING", 
-      value: getBackingLabelShort(data.backing),
+      value: data.backing != null ? getBackingLabelShort(data.backing) : "—",
     },
     { 
       label: "TYPE", 
-      value: getGovernanceLabelShort(data.governance),
+      value: data.governance != null ? getGovernanceLabelShort(data.governance) : "—",
     },
     { 
       label: "REDEMPTION", 
@@ -212,7 +213,13 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
       </div>
 
       {/* Sparkline — pushed to bottom by space-between */}
-      <Sparkline data={data.sparklineData} color={FROST_BLUE} />
+      {data.sparklineData != null ? (
+        <Sparkline data={data.sparklineData} color={FROST_BLUE} />
+      ) : (
+        <div style={{ display: "flex", color: TEXT_SECONDARY, fontFamily: "Geist Mono", fontSize: 18 }}>
+          Price history unavailable
+        </div>
+      )}
     </CardFrame>
   );
 }

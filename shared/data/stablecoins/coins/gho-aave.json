@@ -91,7 +91,7 @@
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "gho",
-    "version": 2,
+    "version": 3,
     "semantics": "protocol-reserve",
     "display": {
       "url": "https://aave.tokenlogic.xyz/gho",

@@ -3,6 +3,7 @@ import mechanismOverlays from "@shared/data/safety-score-v9/mechanism-review-ove
 import operationalResilienceOverlays from "@shared/data/safety-score-v9/operational-resilience-overlays-v1.json";
 import transferOverlays from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
 import stablecoinsGenerated from "@shared/data/stablecoins/coins.generated.json";
+import type { StablecoinMeta } from "../core";
 import { SafetyScoreV9MechanismReviewOverlayFileSchema } from "../safety-score-v9-mechanism-overlays";
 import { SafetyScoreV9OperationalResilienceOverlayFileSchema } from "../safety-score-v9-operational-resilience-overlays";
 import { SafetyScoreV9ReviewedTransferFileSchema } from "../safety-score-v9-transfer-overlays";
@@ -11,7 +12,7 @@ import { SafetyScoreV9ReviewedTransferFileSchema } from "../safety-score-v9-tran
 // assuranceAndReconciliation or tbill lossRecoveryDesign component `known`
 // rather than bounded-unknown is `assuranceFact()`
 // (worker/src/lib/safety-score-v9/extension-mechanism.ts), driven solely by
-// `proofOfReserves.latestReport`. `expandOverlayReview` gives any curated
+// complete, date-qualified `proofOfReserves.latestReport` observations. `expandOverlayReview` gives any curated
 // component entry priority over that fallback, so a curated `unavailable`
 // row on that exact field silently demotes a known fact to bounded-unknown
 // (ODR-C2). This mirrors the guard documented in
@@ -74,10 +75,16 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     }
   });
 
-  it("never curates an unavailable assurance component the compiler already grades known from proofOfReserves.latestReport", () => {
-    const assetIdsWithLatestReport = new Set(
-      (stablecoinsGenerated as Array<{ id: string; proofOfReserves?: { latestReport?: unknown } }>)
-        .filter((coin) => coin.proofOfReserves?.latestReport !== undefined)
+  it("never shadows a complete canonical assurance report with unavailable curation", () => {
+    const assetIdsWithAssuranceReport = new Set(
+      (stablecoinsGenerated as Array<Pick<StablecoinMeta, "id" | "proofOfReserves">>)
+        .filter((coin) => {
+          const report = coin.proofOfReserves?.latestReport;
+          return report?.periodEnd != null &&
+            report.publishedAt != null &&
+            report.assuranceMethod !== "unknown" &&
+            report.scope !== "unknown";
+        })
         .map((coin) => coin.id),
     );
 
@@ -89,7 +96,7 @@ describe("shared Safety Score V9 overlay boundaries", () => {
       const components = overlay.components as Record<string, { applicability?: string }> | undefined;
       const component = components?.[assuranceField];
       if (component?.applicability !== "unavailable") return [];
-      if (!assetIdsWithLatestReport.has(overlay.assetId as string)) return [];
+      if (!assetIdsWithAssuranceReport.has(overlay.assetId as string)) return [];
       return [`${overlay.assetId}.${assuranceField}`];
     });
 

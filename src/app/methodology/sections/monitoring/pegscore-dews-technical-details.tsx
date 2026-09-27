@@ -238,6 +238,14 @@ function DewsTechnicalDetails() {
           failure and its signal weight is redistributed.
         </p>
         <p>
+          Pool Balance Drift blends 40% balance stress, 35% average pool stress, and 25% worst single-pool imbalance
+          among pools of at least $100K. When the top-pool detail is missing or unreadable, or no eligible pool carries
+          a balance measurement, the worst-pool component is unavailable and the blend is renormalized over the two
+          readable components with its coverage published, rather than counting the missing pool as perfectly
+          balanced. A readable list with no eligible pool is an observed zero. Smoothing averages only with a previous
+          reading built from the same components; one asset&apos;s unreadable detail never holds the whole run.
+        </p>
+        <p>
           The Yield Anomaly sub-signal combines legacy warning strings with populated Yield Intelligence source-risk,
           source-switch, and rank-attribution stress evidence. Neutral, missing, or malformed structured yield rows
           remain unavailable rather than adding zero-stress signal weight.

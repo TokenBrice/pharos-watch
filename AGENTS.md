@@ -27,7 +27,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 ## Hard rules
 
 - Tailwind classes must be static strings. Classification labels/colors live only in `shared/lib/classification.ts`.
-- Supply: `getCirculatingRaw()` from `shared/lib/supply.ts`; DefiLlama list `circulating` is already USD — never multiply by price, never replace it with manual/on-chain/CMC/DEX values (supplemental paths: explicit, documented, fail-closed, double-count safe).
+- Supply: use `getCirculatingRawOrNull()` / historical `*OrNull` helpers from `shared/lib/supply.ts` at absence-sensitive boundaries; raw helpers require explicit availability proof. DefiLlama list `circulating` is already USD — never multiply by price or apply arbitrary manual/on-chain/CMC/DEX overrides. Bounded CoinGecko aggregate gap-fill is a permitted supplemental path under ADR-8: explicit, documented, fail-closed, double-count safe, with ratio bound, hysteresis, coherent buckets, and per-asset provenance.
 - Imports: `@shared/lib/...` / `@shared/types...`, no relative cross-boundary imports. Root TS config excludes `worker/`; runtime-neutral logic belongs in `shared/lib/`.
 - Cron-backed hooks: `staleTime = producer interval`, `refetchInterval = 2x producer interval` (checked by `npm run check:hook-polling-window`).
 - Worker fetches: Cloudflare caps six simultaneous requests waiting on response headers; Pharos enforces a stricter trigger-wide six-connection budget (`npm run check:cron-connections`) — consume bodies before opening more fetches (`docs/worker-and-api-limits.md#connection-budget-operating-assumption`).

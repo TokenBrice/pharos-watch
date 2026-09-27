@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { ReactNode, Ref, RefObject } from "react";
 import Link from "next/link";
 import { ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles } from "lucide-react";
@@ -160,7 +161,7 @@ function DetailSummaryRail({
   transferReview: TransferReviewView | null;
   viewModel: ReadyDetailViewModel;
 }) {
-  const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
+  const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.coinData.nominalPriceReference) || Boolean(viewModel.dexPriceCheck);
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
@@ -351,7 +352,7 @@ export function DetailContent({
         defaultType="data-correction"
         stablecoinId={viewModel.coin.id}
         stablecoinName={viewModel.coin.name}
-        pegValue={viewModel.coinData.price != null ? `$${viewModel.coinData.price.toFixed(6)}` : undefined}
+        pegValue={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null ? `$${viewModel.coinData.price.toFixed(6)}` : undefined}
       />
     </div>
   );

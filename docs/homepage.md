@@ -63,7 +63,7 @@ and crawlable when JavaScript is unavailable while the live table remains the hy
 
 Derived helpers:
 
-- `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegRates`, `pegScores`, and `filteredRowCount`; the optional builder derives `reportCardMap` and `dewsRiskLevel`)
+- `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegScores` and `filteredRowCount`; the optional builder derives `reportCardMap`)
 - `bucketByDeviationBps(...)` mini-card aggregate helper in `src/lib/home-alt-aggregates.ts`
 - `useHomeAltFilters()` for URL-backed peg cohort filtering
 
@@ -160,6 +160,8 @@ The `Mint Score` column reads the published Safety Score V9 mint component off t
 ## Loading Strategy
 
 `HomeAltHero` keeps the headline and cohort rows in the eager homepage experience. The market-cap chart uses a lightweight SVG renderer in `src/components/home-alt-hero-chart.tsx`, avoiding the shared Recharts runtime, and `HomeAltHeroChartGate` defers the live chart client until the chart surface reaches the viewport and the browser reaches an idle slice. The chart draws the gray total-market envelope and green USDT area as filled layers, then overlays USDC, USDS + DAI, Others, and Non-USD as legend-matched strokes.
+
+The historical aggregate is independent of the four cohort queries: loading, failed, or empty cohort histories do not hide the total envelope. A cohort is unavailable (`null`) before its first observation or while its query is loading/failed, including failed refreshes with cached history. Only an explicitly observed zero is drawn as zero. USDS + DAI requires both histories; Others requires every cohort operand and a nonnegative residual. Over-attribution is shown as unavailable, never clamped into a clean zero residual. Missing segments break both strokes and filled areas, hover values use the unavailable marker, and the chart shows a bounded missing-history notice. A successful query recovery restores the affected cohort and residual without replacing the aggregate.
 
 The heavier homepage sections are client-only dynamic imports in `src/components/home-alt-client.tsx`:
 

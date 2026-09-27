@@ -597,12 +597,15 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
         activeWithLatestProofReportCount += 1;
         if (coin.proofOfReserves.latestReport.scope === "assets-only") {
           activeLatestProofAssetsOnlyCount += 1;
-        } else {
+        } else if (coin.proofOfReserves.latestReport.scope === "assets-and-liabilities") {
           activeLatestProofAssetsAndLiabilitiesCount += 1;
         }
         const cadence = coin.proofOfReserves.cadence ?? "ad-hoc";
         const maxAgeDays = PROOF_REPORT_MAX_AGE_DAYS[cadence];
-        if (ageDays(coin.proofOfReserves.latestReport.periodEnd, generatedAt) > maxAgeDays) {
+        if (
+          coin.proofOfReserves.latestReport.periodEnd != null &&
+          ageDays(coin.proofOfReserves.latestReport.periodEnd, generatedAt) > maxAgeDays
+        ) {
           staleLatestProofReport.push(
             evidenceGap(
               coin,

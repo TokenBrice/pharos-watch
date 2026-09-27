@@ -285,7 +285,16 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(() => parseStablecoinMetaAssets([contaminatedMeta], "contaminated fixture")).toThrow(
       "[mint-bridge-ownership:bridge-capability-in-mint]",
     );
-    expect(() => compileFixture(contaminatedMeta)).toThrow(/bridge-capability-in-mint/);
+    const { extension, compiled } = compileFixture(contaminatedMeta);
+    expect(extension.assets[0]).toMatchObject({
+      assetId: contaminatedMeta.id,
+      admissionQuarantine: {
+        code: "fact-build-failed",
+        path: "registry.mintBridgeOwnership",
+        message: expect.stringContaining("bridge-capability-in-mint"),
+      },
+    });
+    expect(controlsFor(compiled, contaminatedMeta.id)).toEqual([]);
   });
 
   it.each(["usdai-usd-ai", "susdai-usd-ai"])(
@@ -538,7 +547,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
   });
 
-  it("fails the V9 producer with route and control attribution for shadowed representation bridge-mint", () => {
+  it("quarantines shadowed representation bridge-mint with route and control attribution", () => {
     const metadata = meta("fixture-shadowed-bridge-mint", {
       bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
         controls: [
@@ -551,14 +560,16 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       }),
     });
 
-    let failure: unknown;
-    try {
-      compileFixture(metadata);
-    } catch (error) {
-      failure = error;
-    }
-    expect(failure).toBeInstanceOf(Error);
-    const message = (failure as Error).message;
+    const { extension, compiled } = compileFixture(metadata);
+    expect(extension.assets[0]).toMatchObject({
+      assetId: metadata.id,
+      admissionQuarantine: {
+        code: "fact-build-failed",
+        path: "registry.mintBridgeOwnership",
+      },
+    });
+    expect(controlsFor(compiled, metadata.id)).toEqual([]);
+    const message = extension.assets[0]!.admissionQuarantine!.message;
     expect(message).toContain("representation-route-without-bridge-mint");
     expect(message).toContain(metadata.id);
     expect(message).toContain(BASE_ROUTE);

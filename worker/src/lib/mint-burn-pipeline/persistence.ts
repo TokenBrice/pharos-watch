@@ -3,6 +3,7 @@ import { throwIfAborted } from "../abort";
 import { detectAtomicRoundtrips } from "./roundtrip-detection";
 import { applyReviewedProtocolInternalFlows } from "./reviewed-protocol-flows";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
+import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
 
 const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;
 
@@ -116,19 +117,38 @@ export function collectAffectedHours<T extends AffectedHourCandidate>(
   return affectedHours;
 }
 
+/**
+ * Event aggregates for one hourly bucket, shared by every materializer (sync
+ * recalc, retention evidence repair, heal verification) so counts, unpriced
+ * counts and known subtotals are always rebuilt together. Counted flow is
+ * standard mints and standard effective burns. Volumes/net are known-valuation
+ * subtotals: an event without `amount_usd` adds to its side's unpriced count,
+ * never to a dollar amount, so a subtotal is exact only when that count is 0.
+ * `eventAlias` is a trusted literal table alias prefix such as `"event."`.
+ */
+export function mintBurnHourlyBucketAggregatesSql(eventAlias = ""): string {
+  const e = eventAlias;
+  const mint = `${e}direction = 'mint' AND ${e}flow_type = 'standard'`;
+  const burn = `${e}direction = 'burn' AND ${e}burn_type = 'effective_burn' AND ${e}flow_type = 'standard'`;
+  // SAFETY: only the fixed predicates above and a caller-supplied literal alias are interpolated.
+  return `SUM(CASE WHEN ${mint} THEN 1 ELSE 0 END) AS mint_count,
+      SUM(CASE WHEN ${burn} THEN 1 ELSE 0 END) AS burn_count,
+      SUM(CASE WHEN ${mint} AND ${e}amount_usd IS NULL THEN 1 ELSE 0 END) AS mint_unpriced_event_count,
+      SUM(CASE WHEN ${burn} AND ${e}amount_usd IS NULL THEN 1 ELSE 0 END) AS burn_unpriced_event_count,
+      COALESCE(SUM(CASE WHEN ${mint} THEN ${e}amount_usd ELSE 0 END), 0) AS mint_volume_usd,
+      COALESCE(SUM(CASE WHEN ${burn} THEN ${e}amount_usd ELSE 0 END), 0) AS burn_volume_usd,
+      COALESCE(SUM(CASE WHEN ${mint} THEN ${e}amount_usd WHEN ${burn} THEN -${e}amount_usd ELSE 0 END), 0) AS net_flow_usd`;
+}
+
 function hourlyAggSql(whereClause: string): string {
+  // SAFETY: whereClause is a fixed parameterized predicate from recalcAffectedHours.
   return `INSERT OR REPLACE INTO mint_burn_hourly
-      (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-       mint_volume_usd, burn_volume_usd, net_flow_usd)
+      (stablecoin_id, chain_id, hour_ts, ${MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL})
      SELECT
       stablecoin_id,
       chain_id,
       (timestamp / 3600) * 3600 AS hour_ts,
-      SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN 1 ELSE 0 END),
-      SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN 1 ELSE 0 END),
-      COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN -amount_usd ELSE 0 END), 0)
+      ${mintBurnHourlyBucketAggregatesSql()}
      FROM mint_burn_events
      WHERE ${whereClause}
      GROUP BY stablecoin_id, chain_id, hour_ts`;

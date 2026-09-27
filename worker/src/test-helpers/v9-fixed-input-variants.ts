@@ -162,6 +162,38 @@ export function makeV9ThreeAssetFixedInput(gammaCompletionRatio = 0.8) {
 }
 
 /**
+ * `alpha`, `beta`, and one `beta` clone per extra id: a cohort large enough to
+ * put one quarantined asset plus a dependent inside the 10% partial-publication
+ * allowance. Extra ids must sort after `beta`.
+ */
+export function makeV9CohortFixedInput(extraAssetIds: readonly string[]) {
+  const two = makeV9TwoAssetFixedInput();
+  const perExtra = <T>(value: (id: string) => T): Record<string, T> =>
+    Object.fromEntries(extraAssetIds.map((id) => [id, value(id)]));
+  const betaObservedAtSec = two.clockSec - 100;
+  return reseal(two, {
+    activeAssetIds: ["alpha", "beta", ...extraAssetIds],
+    pegDataById: {
+      ...two.pegDataById,
+      ...perExtra((id) => ({ ...two.pegDataById.beta!, id, symbol: id.toUpperCase(), name: id })),
+    },
+    dexLiqMap: {
+      ...two.dexLiqMap,
+      ...perExtra((id) => ({
+        ...two.dexLiqMap.beta!,
+        exitRouteObservations: [v9ExitRouteObservation(`dex:${id}`, betaObservedAtSec, "ethereum", two.clockSec)],
+      })),
+    },
+    resolvedBlacklistStatuses: { ...two.resolvedBlacklistStatuses, ...perExtra(() => false) },
+    liveReserveMap: { ...two.liveReserveMap, ...perExtra(() => []) },
+    chainCirculatingById: {
+      ...two.chainCirculatingById,
+      ...perExtra(() => structuredClone(two.chainCirculatingById.beta)),
+    },
+  });
+}
+
+/**
  * The registry-wide capture: every active stablecoin, no peg rows, and one
  * placeholder DEX row per coin. Used by the fixed-input identity suites, which
  * exercise fingerprinting over the full active set rather than one asset.

@@ -1,3 +1,4 @@
+import { compareBlacklistEvents } from "@shared/lib/blacklist-event-order";
 import {
   buildBlacklistContractBalanceKey,
   getBlacklistPriceAssetId,
@@ -7,19 +8,28 @@ import type { BlacklistRow } from "./shared";
 
 const BLACKLIST_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 
-function compareBlacklistRows(left: BlacklistRow, right: BlacklistRow): number {
-  return left.timestamp === right.timestamp ? left.id.localeCompare(right.id) : left.timestamp - right.timestamp;
+function unambiguousRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
+  const transactions = new Map<string, string>();
+  const ambiguous = new Set<string>();
+  for (const row of rows) {
+    if (row.chain_id !== "tron") continue;
+    const key = `${buildCurrentBalanceKey(row)}:${row.timestamp}:${row.block_number}`;
+    const prior = transactions.get(key);
+    if (prior != null && prior !== row.tx_hash) ambiguous.add(key);
+    transactions.set(key, row.tx_hash);
+  }
+  return rows.filter((row) => !ambiguous.has(`${buildCurrentBalanceKey(row)}:${row.timestamp}:${row.block_number}`));
 }
 
 export function buildLatestBlacklistRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
   const latestByAddress = new Map<string, BlacklistRow>();
-  const orderedRows = [...rows].sort(compareBlacklistRows);
+  const orderedRows = unambiguousRows(rows).sort(compareBlacklistEvents);
 
   for (const row of orderedRows) {
     latestByAddress.set(buildCurrentBalanceKey(row), row);
   }
 
-  return [...latestByAddress.values()].sort(compareBlacklistRows);
+  return [...latestByAddress.values()].sort(compareBlacklistEvents);
 }
 
 function buildCurrentBalanceKey(row: BlacklistRow): string {
@@ -37,7 +47,7 @@ export function buildCurrentBalanceSnapshotRows(rows: readonly BlacklistRow[]): 
     string,
     { latest: BlacklistRow; latestBlacklist: BlacklistRow | null }
   >();
-  const orderedRows = [...rows].sort(compareBlacklistRows);
+  const orderedRows = unambiguousRows(rows).sort(compareBlacklistEvents);
 
   for (const row of orderedRows) {
     const key = buildCurrentBalanceKey(row);
@@ -61,7 +71,7 @@ export function buildCurrentBalanceSnapshotRows(rows: readonly BlacklistRow[]): 
     }
   }
 
-  return snapshotRows.sort(compareBlacklistRows);
+  return snapshotRows.sort(compareBlacklistEvents);
 }
 
 export async function fetchBlacklistAssetPriceFromCache(

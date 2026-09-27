@@ -6,6 +6,11 @@ import { handleHealth } from "../health";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { buildStatusD1Scenario, cleanupStatusTest, makeRawStatusSnapshotRow } from "./status.test-support";
 import { STATUS_RAW_SNAPSHOT_CACHE_KEY } from "../../lib/status/raw-snapshot";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import type { HealthResponse } from "@shared/types/status";
+import { loadStablecoinsPublicationContinuity } from "../../cron/sync-stablecoins/publication";
+import { buildStablecoinsSyncResult } from "../../cron/sync-stablecoins/metadata";
+import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
   dexAge?: number;
@@ -132,7 +137,7 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         { key: "stablecoins", updated_at: now - 60, value: "{}" },
         { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
         { key: "usds-status", updated_at: now - 60, value: "{}" },
-        { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+        ...fxRatesCacheRows(now - 60),
         { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
         // Sentinel-backed lanes attest their own published generation; without
         // one the reader can only fall back and must publish a degraded quality
@@ -182,6 +187,66 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
 
 describe("handleHealth", () => {
   afterEach(cleanupStatusTest);
+  it.each(["read-error", "malformed", "missing"] as const)(
+    "preserves publication continuity through the writer and health handler: %s",
+    async (priorState) => {
+      const now = Math.floor(Date.now() / 1000);
+      const priorDb = mockD1([{
+        match: "activePriceCoverage",
+        rows: [],
+        ...(priorState === "read-error" ? { throwError: new Error("read unavailable") }
+          : { first: priorState === "missing" ? null : { metadata: '{"activePriceCoverage":{}}' } }),
+      }]);
+      const continuity = await loadStablecoinsPublicationContinuity(priorDb, now);
+      const missingId = "usdt-tether";
+      const assets = [...ACTIVE_IDS].map((id) => ({
+        id, name: id, symbol: id, price: id === missingId ? null : 1,
+        circulating: { peggedUSD: 200_000_000 },
+      }));
+      const written = buildStablecoinsSyncResult({
+        assets, rawAssetCount: assets.length, droppedMalformedAssets: 0,
+        canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
+        enrichStats: {}, priceValidationStats: {}, providerDiagnostics: [], rejectedCount: 0,
+        stalenessWarning: false, stalenessCheckFailed: false, gtProbe: { stats: {} as never },
+        depegErrorCount: 0, depegErrors: [], syncStartSec: now,
+        previousActivePriceCoverage: continuity.previousActivePriceCoverage,
+      });
+      const metadata = JSON.parse(written.metadata!);
+      const body = await (await handleHealth(makeHealthyHealthDb(now, {
+        publicationEntry: {
+          match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [],
+          first: { started_at: now, metadata: written.metadata },
+        },
+      }))).json() as HealthResponse;
+      const gap = body.activePriceCoverage!.missingActiveAssets[0];
+      if (priorState === "missing") {
+        expect(gap.consecutiveMissingGenerations).toBe(1);
+        expect(gap.alertEligible).toBe(false);
+        expect(continuity.previousMissingGenerationsById.has(missingId)).toBe(false);
+      } else {
+        expect(metadata.activePriceCoverage.maxConsecutiveMissingGenerations).toBeNull();
+        expect(gap.consecutiveMissingGenerations).toBeNull();
+        expect(gap.streakUnavailableReason).toBe(
+          priorState === "read-error" ? "previous-coverage-read-failed" : "previous-coverage-malformed",
+        );
+        expect(body.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+        expect(continuity.previousMissingGenerationsById.get(missingId)).toBeGreaterThanOrEqual(2);
+      }
+    },
+  );
+
+  it("publishes null rather than zero for unreadable affected market cap", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const publicationEntry = completePublicationEntry(now);
+    const row = publicationEntry.first as { started_at: number; metadata: string };
+    const metadata = JSON.parse(row.metadata);
+    metadata.activePriceCoverage.affectedMarketCapUsd = "malformed";
+    row.metadata = JSON.stringify(metadata);
+    const body = await (await handleHealth(makeHealthyHealthDb(now, { publicationEntry }))).json() as HealthResponse;
+    expect(body.activePriceCoverage).toMatchObject({
+      status: "unknown", unavailableReason: "coverage-malformed", affectedMarketCapUsd: null,
+    });
+  });
   it("keeps the shared D1 scenario strict for unmatched and unused queries", async () => {
     const db = buildStatusD1Scenario({
       sections: [],
@@ -412,6 +477,8 @@ describe("handleHealth", () => {
           stablecoinId: missingId,
           symbol: "MISS",
           marketCapUsd: 88_000_000,
+          currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
+          lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
           consecutiveMissingGenerations: 2,
           rejectionReason: "no-accepted-price",
           alertEligible: true,
@@ -462,6 +529,8 @@ describe("handleHealth", () => {
           stablecoinId: missingId,
           symbol: "MISS",
           marketCapUsd: 88_000_000,
+          currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
+          lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
           consecutiveMissingGenerations: 1,
           rejectionReason: "no-accepted-price",
           alertEligible: false,

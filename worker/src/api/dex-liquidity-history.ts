@@ -7,6 +7,7 @@ import {
   ExitRouteObservationCoverageSchema,
 } from "@shared/types/market";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
+import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 
 type LiquidityHistoryRow = Pick<
   DexLiquidityRow,
@@ -19,6 +20,8 @@ type LiquidityHistoryRow = Pick<
   snapshot_date: number;
   methodology_version: string;
   exit_route_summary_json: string | null;
+  /** Migration 0249; NULL marks a legacy snapshot whose completeness was never recorded. */
+  volume_availability_json?: string | null;
 };
 
 function parseRouteSummary(json: string | null) {
@@ -42,7 +45,7 @@ export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promi
           .prepare(
             `SELECT total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
                   coverage_class, coverage_confidence, methodology_version
-                  , exit_route_summary_json
+                  , exit_route_summary_json, volume_availability_json
            FROM dex_liquidity_history
            WHERE stablecoin_id = ? AND snapshot_date >= ?
            ORDER BY snapshot_date ASC`,
@@ -59,9 +62,18 @@ export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promi
           hasMeasuredLiquidityEvidence,
           trendworthy,
         } = normalizeDexLiquidityEvidence(row);
+        // Legacy snapshots keep their historical number with unknown
+        // completeness (no availability emitted); recorded non-complete days
+        // publish null beside their availability record.
+        const volume24h = readStoredDexVolumeWindow(
+          row.total_volume_24h_usd,
+          parseDexVolumeAvailabilityRecord(row.volume_availability_json),
+          "24h",
+        );
         return {
           tvl: row.total_tvl_usd,
-          volume24h: row.total_volume_24h_usd,
+          volume24h: volume24h.measuredUsd,
+          ...(volume24h.availability ? { volume24hAvailability: volume24h.availability } : {}),
           score: row.liquidity_score,
           date: row.snapshot_date,
           coverageClass,

@@ -77,8 +77,11 @@ Wave-6 packet research produced the canonical negative examples; they remain the
     can already be `known` rather than bounded. `expandOverlayReview` gives any curated
     component entry priority over that fallback, so a curated `unavailable` row on that
     field demotes a known fact to bounded-unknown with no warning. When the asset's
-    `proofOfReserves.latestReport` exists and genuinely supports the report's own grade,
-    leave the component out of `components` entirely rather than curating it unavailable.
+    `proofOfReserves.latestReport` supplies both period end and publication date, known
+    assurance method and scope, and genuinely supports the report's own grade, leave
+    the component out of `components` entirely rather than curating it unavailable.
+    An uncertain dated review reference alone is not eligible assurance evidence and
+    does not prevent an explicit unavailable review.
     `shared/types/__tests__/safety-score-v9-overlays.test.ts` fails the build if a row does
     this.
 

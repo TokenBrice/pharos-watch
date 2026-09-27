@@ -6,6 +6,7 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { makePriceCoverageMetadata } from "./public-health.test-support";
+import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -87,7 +88,7 @@ function makeMintBurnAssessmentDb(
     { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
     { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
     { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
-    { key: "fx-rates", updated_at: nowSec - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+    ...fxRatesCacheRows(nowSec - 60),
     { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
     {
       key: "freshness:dex-liquidity",

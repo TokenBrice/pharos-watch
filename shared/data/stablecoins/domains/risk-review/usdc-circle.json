@@ -1375,11 +1375,15 @@
         "semantics": "other",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "FiatToken-style USDC proxy administered by the single unlabeled EOA 0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb (owner() = masterMinter() = pauser(); ZeppelinOS proxy slots populated; reads at block 65731195, 2026-07-20). The implementation bytecode (23,464 bytes) does not match Circle's canonical FiatTokenV2_2 (21,483 bytes), Circle's CCTP directory does not list X Layer, and no native Circle USDC announcement for X Layer exists. This is a custom X Layer team-administered deployment, not a Circle issuance and not the Agglayer canonical-bridge token (the L1StandardBridge is neutered per L2BEAT). DefiLlama classifies it bridgedFromETH; the ecosystem (OKX explorer, Dolomite) treats it as the canonical USDC on X Layer. Backing is not independently verifiable, hence the opaque tier despite the identified controller.",
+        "reviewNote": "FiatToken-style USDC proxy administered by the single unlabeled EOA 0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb (owner() = masterMinter() = pauser(); ZeppelinOS proxy slots populated; reads at block 65731195, 2026-07-20). The July 20 review found implementation bytecode (23,464 bytes) differing from Circle's canonical FiatTokenV2_2 (21,483 bytes) and no X Layer entry in Circle's CCTP directory. That review predates Circle's current native X Layer entry. As checked September 27, 2026, Circle identifies 0xb6ceceab302e2e4948951ee7843fc24e92933061 as its separate native deployment; this older 0x74b7f16337b8972027f6196a17a631ac6de26d22 representation remains distinct. The July review identified this as a custom X Layer team-administered deployment, not a Circle issuance and not the Agglayer canonical-bridge token (the L1StandardBridge is neutered per L2BEAT). DefiLlama classified it bridgedFromETH; the ecosystem (OKX explorer, Dolomite) treated it as the canonical USDC on X Layer. Backing is not independently verifiable, hence the opaque tier despite the identified controller. Native status of the separate deployment does not establish CCTP support or alter this route's bridge-control risks.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "observedBlock": 65731195,
         "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses (native deployment checked 2026-09-27)",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
           {
             "label": "OKX X Layer explorer: USDC token",
             "url": "https://www.oklink.com/xlayer/token/0x74b7f16337b8972027f6196a17a631ac6de26d22"
@@ -1397,6 +1401,36 @@
         "controllerAddress": "0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb",
         "failureDomainKeys": [
           "contract:xlayer:0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb"
+        ]
+      },
+      {
+        "id": "xlayer:0xb6ceceab302e2e4948951ee7843fc24e92933061",
+        "destinationChain": "xlayer",
+        "contractAddress": "0xb6ceceab302e2e4948951ee7843fc24e92933061",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Circle's mainnet directory identifies this exact address as Circle-issued native USDC, separate from the existing third-party X Layer representation. Decimals and native mint-control getters were verified by public RPC at block 71772542. No CCTP support or deployment-level supply allocation is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-27",
+        "observedBlock": 71772542,
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
+          {
+            "label": "X Layer native USDC explorer",
+            "url": "https://www.oklink.com/x-layer/evm/address/0xb6ceceab302e2e4948951ee7843fc24e92933061"
+          },
+          {
+            "label": "X Layer public RPC; pinned getters at block 71772542, 2026-09-27",
+            "url": "https://rpc.xlayer.tech"
+          }
         ]
       },
       {

@@ -1,6 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it } from "vitest";
 import { D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY } from "../../lib/status/d1-usage";
+import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -18,9 +19,6 @@ function statusLoadersD1(overrides: NonNullable<Parameters<typeof buildStatusD1S
   return buildStatusD1Scenario({
     sections: ["sentinel", "live", "publication", "derived", "reserves"],
     overrides,
-    sectionOverrides: {
-      reserves: [{ match: "FROM reserve_sync_state", rows: [] }],
-    },
   });
 }
 
@@ -615,7 +613,7 @@ describe("handleStatus", () => {
           makeCacheRow("stablecoins"),
           makeCacheRow("stablecoin-charts"),
           makeCacheRow("usds-status"),
-          makeCacheRow("fx-rates"),
+          ...fxRatesCacheRows(now - 300),
           makeCacheRow("bluechip-ratings"),
         ],
       },
@@ -675,20 +673,20 @@ describe("handleStatus", () => {
         ],
       },
       {
-        match: "SELECT MAX(started_at) as latest",
-        matchBinds: ["sync-blacklist", "ok", "degraded"],
+        match: "SELECT MAX(CASE",
+        matchBinds: ["sync-blacklist"],
         rows: [],
         first: { latest: blacklistWriterAt },
       },
       {
-        match: "SELECT MAX(started_at) as latest",
-        matchBinds: ["sync-mint-burn", "sync-mint-burn-extended", "ok", "degraded"],
+        match: "SELECT MAX(CASE",
+        matchBinds: ["sync-mint-burn", "sync-mint-burn-extended"],
         rows: [],
         first: { latest: mintBurnWriterAt },
       },
       {
-        match: "SELECT MAX(started_at) as latest",
-        matchBinds: ["sync-stablecoins", "ok", "degraded"],
+        match: "SELECT MAX(CASE",
+        matchBinds: ["sync-stablecoins"],
         rows: [],
         first: { latest: depegWriterAt },
       },
@@ -797,7 +795,7 @@ describe("handleStatus", () => {
     expect(body.summary.diagnosticIssueCount).toBeGreaterThanOrEqual(1);
   });
 
-  it("keeps data quality healthy when reserve overview diagnostics fail", async () => {
+  it("degrades data quality when reserve evidence cannot be read", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
@@ -816,17 +814,23 @@ describe("handleStatus", () => {
     const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
-      reserveComposition: { status: string };
+      reserveComposition: { status: string; reason: string; configuredCoins: number | null; freshCoverageRatio: number | null; authoritativeFreshCoverageRatio: number | null };
       summary: { diagnosticIssueCount: number };
       causes: { dataQuality: Array<{ code: string; severity: string }> };
       sectionErrors: Record<string, unknown>;
     };
 
-    expect(body.dataQualityStatus).toBe("healthy");
-    expect(body.reserveComposition.status).toBe("healthy");
+    expect(body.dataQualityStatus).toBe("degraded");
+    expect(body.reserveComposition).toMatchObject({
+      status: "unavailable",
+      reason: "reserve_composition_query_failed",
+      configuredCoins: null,
+      freshCoverageRatio: null,
+      authoritativeFreshCoverageRatio: null,
+    });
     expect(body.summary.diagnosticIssueCount).toBeGreaterThanOrEqual(1);
     expect(
-      body.causes.dataQuality.some((cause) => cause.code === "reserve_sync_query_failed" && cause.severity === "info"),
+      body.causes.dataQuality.some((cause) => cause.code === "reserve_sync_query_failed" && cause.severity === "warning"),
     ).toBe(true);
     expect(body.sectionErrors).toHaveProperty("reserveComposition");
   });

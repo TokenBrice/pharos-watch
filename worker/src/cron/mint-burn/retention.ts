@@ -1,6 +1,8 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 import { throwIfAborted } from "../../lib/abort";
+import { mintBurnHourlyBucketAggregatesSql } from "../../lib/mint-burn-pipeline/persistence";
+import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../../lib/mint-burn-hourly-valuation";
 import { runCappedPruneFamily } from "../shared/capped-delete";
 import { tapeProjectorCursorKey } from "../../lib/tape-event-store";
 
@@ -167,21 +169,12 @@ async function repairMissingHourlyRows(
               LIMIT ?
            )
            INSERT OR IGNORE INTO mint_burn_hourly
-             (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-              mint_volume_usd, burn_volume_usd, net_flow_usd)
+             (stablecoin_id, chain_id, hour_ts, ${MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL})
            SELECT
              event.stablecoin_id,
              event.chain_id,
              candidate.hour_ts,
-             SUM(CASE WHEN event.direction = 'mint' AND event.flow_type = 'standard' THEN 1 ELSE 0 END),
-             SUM(CASE WHEN event.direction = 'burn' AND event.burn_type = 'effective_burn' AND event.flow_type = 'standard' THEN 1 ELSE 0 END),
-             COALESCE(SUM(CASE WHEN event.direction = 'mint' AND event.flow_type = 'standard' THEN event.amount_usd ELSE 0 END), 0),
-             COALESCE(SUM(CASE WHEN event.direction = 'burn' AND event.burn_type = 'effective_burn' AND event.flow_type = 'standard' THEN event.amount_usd ELSE 0 END), 0),
-             COALESCE(SUM(CASE
-               WHEN event.direction = 'mint' AND event.flow_type = 'standard' THEN event.amount_usd
-               WHEN event.direction = 'burn' AND event.burn_type = 'effective_burn' AND event.flow_type = 'standard' THEN -event.amount_usd
-               ELSE 0
-             END), 0)
+             ${mintBurnHourlyBucketAggregatesSql("event.")}
              FROM candidate_hours candidate
              JOIN mint_burn_events event
                ON event.stablecoin_id = candidate.stablecoin_id

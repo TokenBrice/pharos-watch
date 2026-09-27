@@ -9,6 +9,7 @@ import {
   degraded,
   makeApiRequestAttributionResponse,
   makeHealthyHealthResponse,
+  makeHealthyReliabilityStatusResponse,
   makeHealthyStatusResponse,
   makeOperationalDependencyFailureStatusResponse,
 } from "@/test-utils/status-fixtures";
@@ -28,38 +29,9 @@ function requestStats() {
 }
 
 function completeStatus(base = makeHealthyStatusResponse()): StatusResponse {
-  return degraded(base, {
+  return degraded(makeHealthyReliabilityStatusResponse(base), {
     caches: {
       stablecoins: { ageSeconds: 60, maxAge: 60, healthy: true },
-    },
-    dependencyHealth: {
-      checkedAt: base.timestamp,
-      dependencies: {},
-      rootCauseGroups: [],
-      summary: { total: 0, healthy: 0, degraded: 0, stale: 0, unknown: 0, rootCauseGroupCount: 0 },
-    },
-    providerCircuitHealth: {
-      checkedAt: base.timestamp,
-      status: "healthy",
-      totalTracked: 0,
-      closedCount: 0,
-      halfOpenCount: 0,
-      openCount: 0,
-      openProviders: [],
-      byFamily: {},
-    },
-    canaries: {
-      checkedAt: base.timestamp,
-      status: "healthy",
-      latestRunAt: base.timestamp,
-      maxAgeSec: 900,
-      totalChecks: 0,
-      okCount: 0,
-      degradedCount: 0,
-      errorCount: 0,
-      skippedCount: 0,
-      staleCount: 0,
-      checks: {},
     },
   });
 }

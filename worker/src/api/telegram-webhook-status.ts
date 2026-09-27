@@ -1,4 +1,8 @@
-import { getCirculatingRaw } from "@shared/lib/supply";
+import {
+  TELEGRAM_CONTEXT_BUDGET_SEC,
+  assessTelegramContextClock,
+  projectTelegramSupplyContext,
+} from "../lib/telegram/context-freshness";
 import { YieldRankingsResponseSchema } from "@shared/types/yield";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -13,8 +17,7 @@ import {
 } from "../lib/safety-score-active-source";
 import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
 
-/** 24h mint/burn flow older than this is "stale": shown on /status with age, omitted from the terse alert Context line. */
-const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
+import { TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 /**
  * Data loader for the `/status <ticker>` command.
@@ -33,8 +36,12 @@ export interface StatusForCoin {
   stablecoinId: string;
   priceUsd: number | null;
   priceUpdatedAt: number | null;
+  /** `null` when the stablecoins publication, the asset, or its current peg buckets are unavailable. */
   supplyUsd: number | null;
-  stablecoinsUpdatedAt: number | null;
+  /** Supply observation clock (asset `supplyObservedAt` bounded by the publication time). */
+  supplyObservedAt: number | null;
+  /** True only when `supplyObservedAt` is within the stablecoins endpoint budget. */
+  supplyCurrent: boolean;
   dews: { band: string; score: number; computedAt: number } | null;
   safety: {
     grade: string;
@@ -51,6 +58,8 @@ export interface StatusForCoin {
     score: number | null;
     totalTvlUsd: number;
     updatedAt: number;
+    /** True only when `updatedAt` is within the DEWS DEX-liquidity budget. */
+    current: boolean;
   } | null;
   yield: {
     currentApy: number;
@@ -60,7 +69,7 @@ export interface StatusForCoin {
     pysUnavailableReason?: string | null;
     updatedAt: number;
   } | null;
-  flow: { netFlowUsd: number; updatedAt: number; stale: boolean } | null;
+  flow: { netFlowUsd: number; updatedAt: number; stale: boolean; assessedAt: number; freshBudgetSec: number } | null;
   depeg:
     | { status: "stable" }
     | {
@@ -182,16 +191,25 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
     );
     if (parsed && typeof parsed.netFlowUsd === "number" && Number.isFinite(parsed.netFlowUsd)) {
       const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : flowCache.updatedAt;
-      flow = { netFlowUsd: parsed.netFlowUsd, updatedAt, stale: nowSec - updatedAt > MINT_BURN_FLOW_STALE_SEC };
+      flow = {
+        netFlowUsd: parsed.netFlowUsd,
+        updatedAt,
+        stale: nowSec - updatedAt > TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC,
+        assessedAt: nowSec,
+        freshBudgetSec: TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC,
+      };
     }
   }
 
   let supplyUsd: number | null = null;
-  let stablecoinsUpdatedAt: number | null = null;
+  let supplyObservedAt: number | null = null;
+  let supplyCurrent = false;
   if (stablecoinsCache?.kind === "ok") {
     const asset = stablecoinsCache.payload.peggedAssets.find((candidate) => candidate.id === stablecoinId);
-    supplyUsd = asset ? getCirculatingRaw(asset) : null;
-    stablecoinsUpdatedAt = stablecoinsCache.updatedAt;
+    const supplyContext = projectTelegramSupplyContext(asset, stablecoinsCache.updatedAt, nowSec);
+    supplyUsd = supplyContext.supplyUsd;
+    supplyObservedAt = supplyContext.observedAt;
+    supplyCurrent = supplyContext.current;
   }
 
   const safetyCard =
@@ -206,7 +224,8 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
     priceUsd: priceRow?.price ?? null,
     priceUpdatedAt: priceRow?.updated_at ?? null,
     supplyUsd,
-    stablecoinsUpdatedAt,
+    supplyObservedAt,
+    supplyCurrent,
     dews: dewsRow ? { band: dewsRow.band, score: dewsRow.score, computedAt: dewsRow.computed_at } : null,
     safety:
       safetyCard && safetyState.source !== null
@@ -227,6 +246,11 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           score: liquidityRow.liquidity_score,
           totalTvlUsd: liquidityRow.total_tvl_usd,
           updatedAt: liquidityRow.updated_at,
+          current: assessTelegramContextClock(
+            liquidityRow.updated_at,
+            nowSec,
+            TELEGRAM_CONTEXT_BUDGET_SEC.dexLiquidity,
+          ).current,
         }
       : null,
     yield: yieldRow

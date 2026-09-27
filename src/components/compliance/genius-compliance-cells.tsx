@@ -65,7 +65,7 @@ export function GeniusReserveCell({ row }: { row: GeniusComplianceRow }) {
   const content = (
     <>
       {row.reserveDisclosurePresent ? "Reserve disclosure" : "Disclosure"}
-      {row.latestReportDate ? <span className="block text-xs text-muted-foreground">{row.latestReportDate}</span> : null}
+      {row.reserveReportNote ? <span className="block text-xs text-muted-foreground">{row.reserveReportNote}</span> : null}
       {row.redemptionPolicyPresent ? <span className="block text-xs text-muted-foreground">Redemption policy</span> : null}
       {row.monthlyAttestationPresent ? (
         <span className="block text-xs text-muted-foreground">Monthly attestation</span>

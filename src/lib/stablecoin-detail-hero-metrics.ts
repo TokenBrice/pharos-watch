@@ -73,13 +73,18 @@ export function buildPegScoreDisplay(
 }
 
 export function buildLiquidityDisplay(liquidityData: DexLiquidityData | undefined): HeroDisplayValue {
-  const liquidityScore = liquidityData?.liquidityScore ?? null;
-  return liquidityData == null || (liquidityScore === null && liquidityData.poolCount === 0)
-    ? { value: "—", color: HERO_MUTED_CLASS }
-    : {
-        value: String(Math.round(liquidityScore ?? 0)),
+  if (!liquidityData) return { value: "—", color: HERO_MUTED_CLASS };
+  const liquidityScore = liquidityData.liquidityScore;
+  return liquidityScore === null
+    ? {
+        value: "—",
         sub: `${liquidityData.poolCount} pools`,
-        color: getScoreColor(liquidityScore ?? 0),
+        color: HERO_MUTED_CLASS,
+      }
+    : {
+        value: String(Math.round(liquidityScore)),
+        sub: `${liquidityData.poolCount} pools`,
+        color: getScoreColor(liquidityScore),
       };
 }
 

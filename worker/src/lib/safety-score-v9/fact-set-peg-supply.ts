@@ -1,4 +1,5 @@
 import { resolveChainId } from "@shared/lib/chains";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isV9RepresentationGroupRoute } from "@shared/lib/safety-score-v9/facts";
 import { deriveV9WindowedPegScore } from "@shared/lib/safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -246,7 +247,7 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       failureDomains: reference.failureDomains,
     };
   }
-  if (!peg) {
+  if (!peg || !isObservedPrice(peg)) {
     return {
       status: missingLocalFact(context, {
         componentKey: "peg",
@@ -254,7 +255,7 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         ownerDomain: "peg",
         responsibility: "producer-failed",
         policyRuleId: "v9.peg.current",
-        message: "No peg fact exists for the asset in the exact fixed input.",
+        message: "No observed peg fact exists for the asset in the exact fixed input.",
       }).status,
       pegKey,
       sourceGenerationId: source.generationId,

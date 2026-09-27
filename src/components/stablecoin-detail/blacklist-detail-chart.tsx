@@ -8,23 +8,15 @@ import {
   QuarterlyStackedBarChart,
   type QuarterlyStackedBarSeries,
 } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
-import type { BlacklistQuarterlyEventTypePoint } from "@shared/types";
+import type { BlacklistEventType, BlacklistQuarterlyEventTypePoint } from "@shared/types";
+import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 
 const CHART_HEIGHT = "h-[220px] sm:h-[260px]";
 
-// Red = blacklist (punitive), amber = destroy (escalation), emerald =
-// unblacklist (reversal). Mirrors the badge colours on the main /blacklist
-// table so users carry intuition across pages.
-const EVENT_TYPE_COLORS = {
-  blacklist: "#ef4444",
-  destroy: "#f59e0b",
-  unblacklist: "#10b981",
-} as const;
-
 const EVENT_TYPE_SERIES: QuarterlyStackedBarSeries[] = [
-  { dataKey: "blacklist", color: EVENT_TYPE_COLORS.blacklist, fillOpacity: 0.8 },
-  { dataKey: "unblacklist", color: EVENT_TYPE_COLORS.unblacklist, fillOpacity: 0.7 },
-  { dataKey: "destroy", color: EVENT_TYPE_COLORS.destroy, fillOpacity: 0.75, radius: [3, 3, 0, 0] },
+  { dataKey: "blacklist", color: EVENT_CHART_COLORS.blacklist, fillOpacity: 0.8 },
+  { dataKey: "unblacklist", color: EVENT_CHART_COLORS.unblacklist, fillOpacity: 0.7 },
+  { dataKey: "destroy", color: EVENT_CHART_COLORS.destroy, fillOpacity: 0.75, radius: [3, 3, 0, 0] },
 ];
 
 interface BlacklistDetailChartProps {
@@ -32,7 +24,7 @@ interface BlacklistDetailChartProps {
   isLoading: boolean;
 }
 
-type Entry = { dataKey: string; value: number; color: string };
+type Entry = { dataKey: BlacklistEventType; value: number; color: string };
 
 export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartProps) {
   const chartData = useMemo(() => data ?? [], [data]);
@@ -62,7 +54,7 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
     <section className="border-t border-border/40 pt-4 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
       <CardTitle as="h3" className="pharos-kicker">Events per Quarter</CardTitle>
       <p className="mt-1 text-xs text-muted-foreground">
-        Count of blacklist, unblacklist, and destroy events attributed to their execution quarter.
+        Count of {EVENT_LABELS.blacklist}, {EVENT_LABELS.unblacklist}, and {EVENT_LABELS.destroy} events attributed to their execution quarter.
       </p>
       <div className="mt-4">
         <div className="mb-3 flex flex-wrap gap-2">
@@ -70,9 +62,9 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
             <div key={key} className="pharos-chart-legend-chip">
               <span
                 className="inline-block h-2.5 w-2.5 rounded-sm"
-                style={{ backgroundColor: EVENT_TYPE_COLORS[key] }}
+                style={{ backgroundColor: EVENT_CHART_COLORS[key] }}
               />
-              {key[0]!.toUpperCase() + key.slice(1)}
+              {EVENT_LABELS[key]}
             </div>
           ))}
         </div>
@@ -97,7 +89,7 @@ function EventTypeTooltip({ active, payload, label }: { active?: boolean; payloa
     <PharosChartTooltip active={active}>
       <TooltipLabel>{label}</TooltipLabel>
       {rows.map((p) => (
-        <TooltipRow key={p.dataKey} color={p.color} label={p.dataKey} value={String(p.value)} />
+        <TooltipRow key={p.dataKey} color={p.color} label={EVENT_LABELS[p.dataKey]} value={String(p.value)} />
       ))}
     </PharosChartTooltip>
   );

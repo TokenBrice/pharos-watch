@@ -60,23 +60,28 @@ describe("logCronRun", () => {
       .toEqual([{ status: "error", item_count: null, error: expect.stringContaining("boom") }]);
   });
 
-  it("logs successful result when job completes", async () => {
+  it("persists the producing generation clock rather than the successful attempt clock", async () => {
     const { sqlite, db } = fixtures.open();
-    await logCronRun(db, "test-job", async () => ({ itemCount: 10, metadata: "test" }));
-    expect(sqlite.prepare("SELECT status, item_count, metadata FROM cron_runs").all())
-      .toEqual([{ status: "ok", item_count: 10, metadata: "test" }]);
+    await logCronRun(db, "test-job", async () => ({
+      itemCount: 10,
+      productivity: { productive: true, publications: [
+        { surface: "stablecoins", generationId: "stablecoins:1234", publishedAt: 1234 },
+      ] },
+    }));
+    expect(sqlite.prepare("SELECT json_extract(metadata, '$.outputPublishedAt') AS published_at FROM cron_runs").get())
+      .toEqual({ published_at: 1234 });
   });
 
-  it.each(["skipped_locked", "skipped_neutral"] as const)("persists custom status %s", async (status) => {
+  it.each(["skipped_locked", "skipped_neutral"] as const)("cannot count retained rows as publication on %s", async (status) => {
     const { sqlite, db: dbWithCapture } = fixtures.open();
-
     await logCronRun(dbWithCapture, "test-job", async () => ({
       status,
+      itemCount: 100,
       metadata: JSON.stringify({ reason: status }),
     }));
-
-    expect(sqlite.prepare("SELECT status, metadata FROM cron_runs").all())
-      .toEqual([{ status, metadata: JSON.stringify({ reason: status }) }]);
+    expect(sqlite.prepare(
+      "SELECT status, degraded_reason, json_type(metadata, '$.outputPublishedAt') AS clock_type FROM cron_runs",
+    ).get()).toEqual({ status, degraded_reason: status, clock_type: "null" });
   });
 
   it("writes and clears cron_run_progress when the job reports progress", async () => {

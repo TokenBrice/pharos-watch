@@ -2,6 +2,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import { isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { computeLeadStreak, decideCriticalLeadSeverity } from "@shared/lib/digest-lead-policy";
 import type { DigestLeadRequirement } from "./lead-requirements";
+import { comparableDepegs } from "./digest-evidence";
 
 function severityBpsOf(depeg: DigestInputData["topDepegs"][number]): number {
   return depeg.currentBps ?? depeg.bps;
@@ -50,7 +51,9 @@ export function buildCriticalDailyLeadRequirements(
     symbol,
     ageHours: criticalDepeg.ageHours,
     severityBps: severityBpsOf(criticalDepeg),
-    previousSeverityBps: previousDepeg != null ? severityBpsOf(previousDepeg) : null,
+    previousSeverityBps: previousDepeg != null && context.previousInputData
+      && comparableDepegs(criticalDepeg, previousDepeg, inputData, context.previousInputData)
+      ? severityBpsOf(previousDepeg) : null,
     streak: computeLeadStreak(context.recentLeadSignalIds ?? [], candidate.id),
   });
 

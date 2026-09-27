@@ -15,8 +15,7 @@
     "reserveDisclosureUrl": "https://stablecoin.z.com/attestation/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "GYEN has NYDFS trust-company supervision and monthly attestations, but no public GENIUS state-qualified approval or official application source was located. GMO-Z.com Trust Company announced a wind-down of GYEN and ZUSD issuance on May 15, 2026, with the parent GMO Internet Group dissolving the subsidiary and recording a ¥2.2bn write-down; the entity is pursuing a strategic shift to Japan. No GENIUS authorization posture is expected to develop given the planned dissolution.",
+    "notes": "Evidence as of 2026-06-18 review: GYEN has NYDFS trust-company supervision and monthly attestations, but no public GENIUS state-qualified approval or official application source was located. GMO-Z.com Trust Company announced a wind-down of GYEN and ZUSD issuance on May 15, 2026, with the parent GMO Internet Group dissolving the subsidiary and recording a ¥2.2bn write-down; the entity is pursuing a strategic shift to Japan. No GENIUS authorization posture is expected to develop given the planned dissolution. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

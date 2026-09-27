@@ -66,13 +66,18 @@ function getBaseMessage(state: Exclude<DataHealthState, "error">): string {
 
 export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): DataHealthInfo {
   const hasData = input.hasData ?? input.dataUpdatedAt > 0;
-  const updatedAtMs = input.meta?.updatedAt != null && input.meta.updatedAt > 0
-    ? input.meta.updatedAt * 1000
-    : input.dataUpdatedAt;
+  const authorityUnavailable = input.meta?.updatedAt === null;
+  const updatedAtMs = authorityUnavailable
+    ? 0
+    : input.meta?.updatedAt != null && input.meta.updatedAt > 0
+      ? input.meta.updatedAt * 1000
+      : input.dataUpdatedAt;
   const ageMs = updatedAtMs > 0 ? Math.max(0, nowMs - updatedAtMs) : null;
-  const classifiedState = pickBaseState(ageMs, input.staleTime);
+  const classifiedState = authorityUnavailable
+    ? input.meta?.status === "stale" ? "stale" : "unavailable"
+    : pickBaseState(ageMs, input.staleTime);
   const hasDegradationFloor = hasServerDegradation(input.meta);
-  const baseState = !hasDegradationFloor
+  const baseState = authorityUnavailable || !hasDegradationFloor
     ? classifiedState
     : classifiedState === "unavailable"
       ? "degraded"

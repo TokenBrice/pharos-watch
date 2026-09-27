@@ -27,10 +27,6 @@ export const FEATURE_FLAGS = {
   // owner: tokenbrice
   // retirementCriterion: keep permanently after the W3 launch; remove only if the hero verdict is retired.
   heroVerdict: process.env.NEXT_PUBLIC_PHAROS_HERO_VERDICT !== "false",
-  // owner: tokenbrice; evidence: 2026-07-29 blacklist banner and hook tests pass.
-  // retirementCriterion: remove once iOS Safari sticky review passes on a coin with active freezes.
-  // expiresAt: 2026-10-15 — awaiting iOS Safari sticky review on a coin with active freezes
-  blacklistBanner: process.env.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER === "true",
   // owner: tokenbrice; evidence: 2026-07-29 CLI contrast review passes AA (min 4.78:1 light, 7.23:1 dark).
   // retirementCriterion: remove once human visual review passes on USDC, USDe, and an active depeg.
   // expiresAt: 2026-11-01 — awaiting human visual review on USDC, USDe, and an active depeg
@@ -67,11 +63,6 @@ export const FEATURE_FLAG_LIFECYCLE = {
     owner: "tokenbrice",
     retirementCriterion: "keep permanently after the W3 launch; remove only if the hero verdict is retired",
   },
-  blacklistBanner: {
-    owner: "tokenbrice",
-    expiresAt: "2026-10-15",
-    retirementCriterion: "remove once iOS Safari sticky review passes on a coin with active freezes",
-  },
   quietDeviations: {
     owner: "tokenbrice",
     expiresAt: "2026-11-01",
@@ -101,10 +92,6 @@ export const FEATURE_FLAG_LIFECYCLE = {
 
 export function isHeroVerdictEnabled(): boolean {
   return FEATURE_FLAGS.heroVerdict;
-}
-
-export function isBlacklistBannerEnabled(): boolean {
-  return FEATURE_FLAGS.blacklistBanner;
 }
 
 export function isQuietDeviationsEnabled(): boolean {

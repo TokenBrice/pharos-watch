@@ -22,7 +22,7 @@ A sub-hourly logical cadence carrying heavy CPU work must use the paired-hourly 
 
 Before adding fetch-heavy scheduled work, the Worker operations owner is the required reviewer and must review the measured workload before one of these consolidation/rebalance paths is executed:
 
-1. Preserve the active/shadow measured-execution surfaces. A bounded native collector may share the active measured-execution trigger (physical `5,35 * * * *`, logical `0,30` slots) only as a serialized phase with a proven unchanged connection peak and a producer runtime below the slot fence; broad diagnostic fan-out remains daily.
+1. Preserve the active/shadow measured-execution surfaces. A bounded native collector may share the active measured-execution trigger (physical aliases `5 * * * *` and `35 * * * *`, logical `0,30 * * * *` slots) only as a serialized phase with a proven unchanged connection peak and a producer runtime below the slot fence; broad diagnostic fan-out remains daily.
 2. Reduce `sync-dex-liquidity-stage` from `5/6` to `4/6` by serializing the nested provider fan-out or moving a bounded source partition to a slot with proven headroom; preserve the hourly `:10` source cadence and re-run the topology checks.
 3. If that path does not preserve required freshness, move the bounded unit of work to Cloudflare Queues or Workflows rather than adding another fetch-heavy cron surface.
 
@@ -63,13 +63,13 @@ The table is a review plan, not permission to remove an expression now. A row ma
 
 | Logical lane | Current physical expression(s) | Conditional after-review disposition | Net change |
 | --- | --- | --- | ---: |
-| `v9PublicationOffset` | `22,52 * * * *` (2) | Retire both only after the V9 shadow/cutover gate and terminal-row proof; no retirement approved yet. | −2 |
-| `halfHourlyOffset` + `halfHourlyMeasuredExecution` | `10 * * * *` + `5,35 * * * *` (2) | Retire the measured-execution aliases and retain one hourly trigger only after the reduced DEX/CL Workflow scope proves six-fetch compliance and replay safety. | −1 |
-| `fiveMinuteReserveRecovery` | `1,6,…,56 * * * *` (1) | Retain; this is the independent recovery path for reserve failures and is not a Workflow candidate. | 0 |
-| `depegResolverOffset` | `13,28,43,58 * * * *` (4) | Retire only after DDR write replay and status-oracle shadow proof; if the gate stays closed, merge it back into `quarterHourly` after the planned 0.2/2.x heap reduction. | −4 |
+| `v9PublicationOffset` | `22 * * * *` + `52 * * * *` (2) | Retire both only after the V9 shadow/cutover gate and terminal-row proof; no retirement approved yet. | −2 |
+| `halfHourlyOffset` + `halfHourlyMeasuredExecution` | `10 * * * *` + `5 * * * *` + `35 * * * *` (3) | Retire the two measured-execution aliases and retain the hourly `:10` trigger only after the reduced DEX/CL Workflow scope proves six-fetch compliance and replay safety. | −2 |
+| `fiveMinuteReserveRecovery` | `1,6,11,16,21,26,31,36,41,46,51,56 * * * *` (1) | Retain; this is the independent recovery path for reserve failures and is not a Workflow candidate. | 0 |
+| `depegResolverOffset` | `13 * * * *` + `28 * * * *` + `43 * * * *` + `58 * * * *` (4) | Retire only after DDR write replay and status-oracle shadow proof; if the gate stays closed, merge it back into `quarterHourly` after the planned 0.2/2.x heap reduction. | −4 |
 | `digestTriggerPoll` | `*/5 * * * *` (1) | Retire after a request-ID-deduped Queue consumer is production-observed; do not replace this poll with a Workflow. | −1 |
 | Heavy cron lanes (`quarterHourly`, V9 supply attribution, status self-check, mint/burn, charts) | 18 expressions | Retain; they remain the measured native execution substrate in this review. | 0 |
 | Unaffected lanes | 12 expressions | Retain; no Workflows evidence or change is part of this review. | 0 |
-| **Reviewed topology** | **40 expressions** | **Conditional total after V9, DEX/CL, DDR, and digest gates: 32; if only the independent reserve cleanup lands: 40.** | **−8 / 0** |
+| **Reviewed topology** | **41 expressions** | **Conditional total after V9, DEX/CL, DDR, and digest gates: 32; if only the independent reserve cleanup lands: 41.** | **−9 / 0** |
 
 This table does not authorize a new trigger. Any future retirement or migration must update the single schedule metadata source, preserve logical slot identity, and rerun `npm run check:cron-sync` and `npm run check:cron-connections`.

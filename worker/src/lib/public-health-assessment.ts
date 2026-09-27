@@ -521,7 +521,7 @@ export async function assessPublicHealth(
       alertBrokerImpactStatus: "stale",
       stablecoinPublication: unknownStablecoinPublicationHealth(),
       stablecoinPublicationImpactStatus: "healthy",
-      activePriceCoverage: unknownActivePriceCoverageHealth(),
+      activePriceCoverage: unknownActivePriceCoverageHealth(null, "coverage-read-failed"),
       activePriceCoverageImpactStatus: "healthy",
     };
   }
@@ -597,7 +597,7 @@ export async function assessPublicHealth(
     ? stablecoinCoverageResult.value
     : {
         publication: unknownStablecoinPublicationHealth(),
-        activePriceCoverage: unknownActivePriceCoverageHealth(),
+        activePriceCoverage: unknownActivePriceCoverageHealth(null, "coverage-read-failed"),
       };
   if (stablecoinCoverageResult.error) {
     warnings.push("stablecoin-coverage-query-failed");

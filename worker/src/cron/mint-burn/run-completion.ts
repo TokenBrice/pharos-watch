@@ -15,6 +15,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { rebuildRetainedLegacyValuationHours } from "./valuation-rebuild";
 
 // healNullPrices only heals events inside its 48h LOOKBACK_SEC window; events older
 // than that are intentionally left unhealed (their cached prices are no longer
@@ -112,6 +113,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   throwIfAborted(input.signal);
   const nowSec = Math.floor(Date.now() / 1000);
   let nullPricesHealed = 0;
+  let legacyValuationHoursRebuilt = 0;
   let nullPriceBacklog: { recent: number; historical: number } | null = null;
   let nullPriceBacklogError: string | null = null;
   try {
@@ -165,6 +167,21 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
         event: "sync-mint-burn.price-heal-failed",
         job: "sync-mint-burn",
         message: "Price heal failed",
+        error,
+      });
+    }
+  }
+  if (status !== "error") {
+    try {
+      legacyValuationHoursRebuilt = await rebuildRetainedLegacyValuationHours(input.db, nowSec, { signal: input.signal });
+    } catch (error) {
+      throwIfAborted(input.signal);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync-mint-burn.legacy-valuation-rebuild-failed",
+        job: "sync-mint-burn",
+        message: "Legacy hourly valuation rebuild failed; affected buckets stay unknown coverage",
         error,
       });
     }
@@ -251,6 +268,19 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     }));
 
   const metadata = withBudgetMetadata(input.budget, {
+    outputPublishedAt: status !== "error" && (
+      phase.rowsInserted > 0
+      || phase.configBreakdown.some((summary) =>
+        summary.advancedTo != null && summary.scanFrom != null && summary.advancedTo >= summary.scanFrom)
+    ) ? Math.floor(Date.now() / 1000) : null,
+    ...(status !== "ok" ? {
+      reason: conservationFailures > 0 ? "mint-burn-conservation-failure"
+        : input.attemptCoverage.staleAttemptCount > 0 ? "mint-burn-stale-attempts"
+        : runStatePersistenceFailed || input.attemptCoverage.persistenceFailed || input.runDrilldown.persistenceFailed
+          ? "mint-burn-state-persistence-failed"
+          : nullPriceBacklogError != null ? "mint-burn-null-price-backlog-unavailable"
+          : "mint-burn-source-coverage-degraded",
+    } : {}),
     lane: input.lane,
     jobName: input.jobName,
     chainHead: compatibilityChainHead || null,
@@ -309,6 +339,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     degradedStreak,
     runStatePersistenceFailed,
     nullPricesHealed,
+    legacyValuationHoursRebuilt,
     nullPriceBacklog,
     nullPriceBacklogRecent: nullPriceBacklog?.recent ?? null,
     nullPriceBacklogHistorical: nullPriceBacklog?.historical ?? null,

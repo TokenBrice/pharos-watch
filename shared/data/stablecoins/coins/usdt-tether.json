@@ -332,7 +332,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "tether-transparency",
-    "version": 1,
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "usdt-tether",
     "display": {
@@ -347,11 +347,12 @@
     },
     "params": {
       "currencyIso": "usdt",
+      "compositionAsOf": "2026-06-30",
       "slices": [
         {
           "sourceKey": "tether:usdt:treasury-bills",
           "name": "U.S. Treasury bills",
-          "pct": 61.03,
+          "pct": 61.230408,
           "risk": "very-low",
           "assetClass": "treasury-bill",
           "issuerOrObligor": "United States Treasury",
@@ -360,13 +361,12 @@
             "liquidity",
             "custody"
           ],
-          "liquidityHorizon": "one-day",
-          "maturityDaysMax": 364
+          "liquidityHorizon": "one-day"
         },
         {
           "sourceKey": "tether:usdt:overnight-reverse-repo",
           "name": "Overnight reverse repurchase agreements",
-          "pct": 10.08,
+          "pct": 9.920325,
           "risk": "very-low",
           "assetClass": "repo",
           "issuerOrObligor": "Undisclosed reverse-repo counterparties",
@@ -381,7 +381,7 @@
         {
           "sourceKey": "tether:usdt:term-reverse-repo",
           "name": "Term reverse repurchase agreements",
-          "pct": 2.47,
+          "pct": 3.724834,
           "risk": "very-low",
           "assetClass": "repo",
           "issuerOrObligor": "Undisclosed reverse-repo counterparties",
@@ -394,9 +394,24 @@
           "liquidityHorizon": "unknown"
         },
         {
+          "sourceKey": "tether:usdt:non-us-treasury-bills",
+          "name": "Non-US Treasury bills",
+          "pct": 0.011917,
+          "risk": "medium",
+          "assetClass": "government-security",
+          "issuerOrObligor": "Undisclosed non-US sovereign issuers",
+          "riskFactors": [
+            "credit",
+            "duration",
+            "liquidity",
+            "custody"
+          ],
+          "liquidityHorizon": "unknown"
+        },
+        {
           "sourceKey": "tether:usdt:cash-bank-deposits",
           "name": "Cash and bank deposits",
-          "pct": 0.06,
+          "pct": 0.021469,
           "risk": "very-low",
           "assetClass": "bank-deposit",
           "issuerOrObligor": "Undisclosed banking counterparties",
@@ -407,9 +422,24 @@
           "liquidityHorizon": "immediate"
         },
         {
+          "sourceKey": "tether:usdt:corporate-bonds",
+          "name": "Corporate bonds",
+          "pct": 0.004640,
+          "risk": "high",
+          "assetClass": "public-credit",
+          "issuerOrObligor": "Undisclosed corporate issuers",
+          "riskFactors": [
+            "credit",
+            "duration",
+            "liquidity",
+            "custody"
+          ],
+          "liquidityHorizon": "unknown"
+        },
+        {
           "sourceKey": "tether:usdt:precious-metals",
           "name": "Precious metals",
-          "pct": 10.34,
+          "pct": 10.033669,
           "risk": "medium",
           "assetClass": "other",
           "issuerOrObligor": "Physical gold inventory",
@@ -423,7 +453,7 @@
         {
           "sourceKey": "tether:usdt:bitcoin",
           "name": "Bitcoin",
-          "pct": 3.45,
+          "pct": 3.090059,
           "risk": "medium",
           "assetClass": "cryptoasset",
           "issuerOrObligor": "Tether-controlled on-chain wallets",
@@ -437,7 +467,7 @@
         {
           "sourceKey": "tether:usdt:public-equities",
           "name": "Public equities",
-          "pct": 1.78,
+          "pct": 2.003414,
           "risk": "high",
           "assetClass": "other",
           "issuerOrObligor": "Undisclosed public-equity issuers",
@@ -452,7 +482,7 @@
         {
           "sourceKey": "tether:usdt:other-investments",
           "name": "Other investments",
-          "pct": 2.53,
+          "pct": 2.793540,
           "risk": "high",
           "assetClass": "other",
           "issuerOrObligor": "Undisclosed",
@@ -467,7 +497,7 @@
         {
           "sourceKey": "tether:usdt:secured-loans",
           "name": "Secured loans",
-          "pct": 8.25,
+          "pct": 7.165724,
           "risk": "high",
           "assetClass": "private-credit",
           "issuerOrObligor": "Undisclosed third-party borrowers",

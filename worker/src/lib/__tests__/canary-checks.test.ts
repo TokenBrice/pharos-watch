@@ -169,7 +169,6 @@ function healthyD1(
     rowCount?: number;
     latestPublishedRows?: number;
     latestGenerationPublishedRows?: number;
-    missingGenerationEvidence?: boolean;
     unpublishedRows?: number;
     generationCount?: number;
     globalRows?: number;
@@ -187,11 +186,7 @@ function healthyD1(
   const unpublishedRows = dex.unpublishedRows ?? 0;
   const generationCount = dex.generationCount ?? 1;
   const globalRows = dex.globalRows ?? 1;
-  const generationMetadata = dex.missingGenerationEvidence
-    ? null
-    : JSON.stringify({
-        activeStablecoinCount: Math.max(0, latestPublishedRows - globalRows),
-      });
+  const generationMetadata = JSON.stringify({ activeStablecoinCount: latestPublishedRows - 1 });
   const publishedDewsRows = dewsRows();
   return mockD1([
     {
@@ -209,7 +204,7 @@ function healthyD1(
       first: {
         generation_id: "dex-gen-1",
         current_row_count: latestPublishedRows,
-        expected_row_count: dex.missingGenerationEvidence ? null : latestPublishedRows,
+        expected_row_count: latestPublishedRows,
         metadata_json: generationMetadata,
         published_at: NOW - 30,
       },
@@ -220,6 +215,7 @@ function healthyD1(
       matchBinds: ["dex-gen-1"],
       first: {
         live_generation_rows: latestGenerationPublishedRows,
+        global_rows: globalRows,
       },
       rows: [],
     },
@@ -299,22 +295,30 @@ describe("worker data invariant canaries", () => {
     ).toMatchObject({ safetyScoreIdentity: { model: "v9" } });
   });
 
-  it("uses publication-generation counts for DEX canaries", async () => {
+  it.each([[14_399, "ok"], [14_400, "ok"], [14_401, "degraded"]])(
+    "preserves the four-hour PSI and DEWS incident tolerance at %i seconds",
+    async (age, status) => {
+      const observedAt = NOW - 60 + Number(age);
+      const summary = await runCanaryChecks(healthyD1(), { observedAt, mode: "status" });
+      for (const checkId of ["psi-latest-sample", "dews-latest-signal"]) {
+        expect(summary.results.find((result) => result.checkId === checkId)).toMatchObject({
+          status,
+          metadata: { maxAgeSec: 14_400, ageSec: age },
+        });
+      }
+    },
+  );
+
+  it("accepts a publication read after the serial run assessment clock", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    const db = healthyD1();
-
-    await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
-
-    const dexQueries = db.getHistory().filter((entry) => entry.sql.includes("canary-dex-"));
-    expect(dexQueries).toHaveLength(3);
-    expect(dexQueries.filter((entry) =>
-      /FROM dex_liquidity(?:\s|$)/.test(entry.sql)
-    )).toHaveLength(1);
-    expect(dexQueries.filter((entry) =>
-      entry.sql.includes("FROM dex_liquidity_publication_generations")
-    )).toHaveLength(2);
+    const summary = await runCanaryChecks(healthyD1(), { observedAt: NOW - 120, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "psi-latest-sample")).toMatchObject({
+      status: "ok",
+      metadata: { storedAt: NOW - 60, ageSec: 0 },
+    });
   });
+
 
   it("flags a seeded null-identity blacklist row", async () => {
     vi.useFakeTimers();
@@ -549,19 +553,30 @@ describe("worker data invariant canaries", () => {
     });
   });
 
-  it("degrades when a DEX publication has no global-row evidence", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
-    const summary = await runCanaryChecks(
-      healthyD1({ missingGenerationEvidence: true }),
-      { observedAt: NOW, mode: "status" },
-    );
-
-    expect(summary.results.find((result) => result.checkId === "dex-liquidity-global-row")).toMatchObject({
-      status: "degraded",
-      severity: "warning",
-      error: "DEX global row evidence is unavailable",
-    });
+  it("checks the actual global identity only inside the published generation", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+      (generation_id, started_at, state, expected_row_count, current_row_count, metadata_json, created_at, published_at)
+      VALUES ('current', ?, 'published', 2, 2, '{"activeStablecoinCount":1}', ?, ?)`).run(NOW, NOW, NOW);
+    const insert = sqlite.prepare(`INSERT INTO dex_liquidity
+      (stablecoin_id, symbol, updated_at, publication_generation_id, publication_state)
+      VALUES (?, 'TEST', ?, ?, 'published')`);
+    insert.run("asset", NOW, "current");
+    insert.run("replacement", NOW, "current");
+    insert.run("__global__", NOW - 60, "older");
+    const check = async () => (await runCanaryChecks(db, { observedAt: NOW, mode: "status" }))
+      .results.filter(({ checkId }) => checkId.startsWith("dex-liquidity-"));
+    expect(await check()).toMatchObject([
+      { status: "ok" },
+      { status: "degraded", metadata: { generationId: "current", currentRows: 2, globalRows: 0 } },
+    ]);
+    sqlite.exec("DELETE FROM dex_liquidity WHERE stablecoin_id = '__global__'");
+    sqlite.exec("UPDATE dex_liquidity SET stablecoin_id = '__global__' WHERE stablecoin_id = 'replacement'");
+    expect(await check()).toMatchObject([{ status: "ok" }, { status: "ok", metadata: { globalRows: 1 } }]);
+    sqlite.exec("DELETE FROM dex_liquidity");
+    expect((await check())[1]).toMatchObject({ status: "degraded", metadata: { currentRows: 0, globalRows: 0 } });
+    sqlite.exec("DELETE FROM dex_liquidity_publication_generations");
+    expect((await check())[1]).toMatchObject({ status: "degraded", metadata: { generationId: null } });
   });
 
   it("degrades noisy invariants without aborting the rest of the run", async () => {
@@ -583,6 +598,11 @@ describe("worker data invariant canaries", () => {
           metadata_json: JSON.stringify({ activeStablecoinCount: 408 }),
           published_at: NOW - 30,
         },
+        rows: [],
+      },
+      {
+        match: "canary-dex-latest-generation-summary",
+        first: { live_generation_rows: 408, global_rows: 0 },
         rows: [],
       },
       {
@@ -666,6 +686,28 @@ describe("worker data invariant canaries", () => {
     expect((await loadCanaryStatus(db, NOW + 60, "status")).status).toBe("healthy");
   });
 
+  it("requires every active ID and fresh usable observations rather than just the returned count", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO worker_canary_runs
+      (id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error, mode)
+      VALUES (?, ?, ?, 'ok', 'info', ?, 1, '{}', NULL, 'status')`);
+    const empty = await loadCanaryStatus(db, NOW, "status");
+    expect(empty.status).toBe("unknown");
+    expect(empty.missingCheckIds).toEqual(expect.arrayContaining(EXPECTED_CANARY_CHECK_IDS));
+    const first = EXPECTED_CANARY_CHECK_IDS[0];
+    insert.run(first, first, first, NOW);
+    const partial = await loadCanaryStatus(db, NOW, "status");
+    expect(partial).toMatchObject({ status: "degraded", totalChecks: 1, presentCheckIds: [first] });
+    expect(partial.missingCheckIds).toEqual(EXPECTED_CANARY_CHECK_IDS.slice(1));
+    for (const id of EXPECTED_CANARY_CHECK_IDS.slice(1)) insert.run(id, id, id, NOW);
+    expect((await loadCanaryStatus(db, NOW + 7_200, "status")).status).toBe("healthy");
+    sqlite.prepare("UPDATE worker_canary_runs SET observed_at = ? WHERE check_id = ?").run(NOW - 1, first);
+    expect(await loadCanaryStatus(db, NOW + 7_200, "status")).toMatchObject({ status: "stale", staleCount: 1 });
+    sqlite.prepare("UPDATE worker_canary_runs SET observed_at = ?, status = 'skipped' WHERE check_id = ?").run(NOW, first);
+    expect((await loadCanaryStatus(db, NOW, "status")).status).toBe("degraded");
+    sqlite.prepare("UPDATE worker_canary_runs SET check_id = 'retired' WHERE check_id = ?").run(first);
+    expect(await loadCanaryStatus(db, NOW, "status")).toMatchObject({ status: "degraded", missingCheckIds: [first] });
+  });
   it.each(["off", "shadow"] as const)(
     "returns the empty compatibility shape without querying retained rows in %s mode",
     async (mode) => {
@@ -673,7 +715,7 @@ describe("worker data invariant canaries", () => {
 
       const status = await loadCanaryStatus(db, NOW + 60, mode);
 
-      expect(status).toEqual({
+      expect(status).toMatchObject({
         checkedAt: NOW + 60,
         status: "unknown",
         latestRunAt: null,

@@ -720,6 +720,7 @@ describe("syncLiveReserves", () => {
       const outcome = await syncFallbackResult({ storedAgeSec: 4 * 60 * 60, fallbackMetadata: unverifiedFallback });
 
       expect(outcome.result.status).toBe("synced");
+      expect(outcome.result.publishedAt).toBeUndefined();
       expect(outcome.resolved?.reserves).toEqual(priorSlices);
       expect(outcome.resolved?.provenance?.scoringEligible).toBe(true);
       expect(outcome.scoringReserves).toEqual(priorSlices);
@@ -749,6 +750,7 @@ describe("syncLiveReserves", () => {
       const outcome = await syncFallbackResult({ storedAgeSec: 3 * 24 * 60 * 60, fallbackMetadata: unverifiedFallback });
 
       expect(outcome.result.status).toBe("synced");
+      expect(outcome.result.publishedAt).toBe(outcome.state?.last_success_at);
       expect(outcome.resolved?.reserves).toEqual(fallbackSlices);
       expect(outcome.resolved?.provenance?.scoringEligible).toBe(false);
       expect(outcome.scoringReserves).toBeUndefined();

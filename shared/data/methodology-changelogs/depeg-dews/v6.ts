@@ -2,6 +2,37 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.29",
+    title: "Unreadable pool detail is an unavailable DEWS component, not measured calm",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "The DEWS pool signal now carries explicit availability for its worst-single-pool component. When an asset's top-pool detail is missing, unparseable, not an array, has an unreadable entry, or its eligible (>= $100K) pools carry no balance measurement, that 25% component is unavailable and the pool blend renormalizes over the readable balance (40%) and average-stress (35%) components instead of adding a measured-looking zero. A readable list with no eligible pool stays an observed empty set scored as a measured zero.",
+    impact: [
+      "`computePoolSignal` in `worker/src/lib/dews/signal-families.ts` divides the readable weighted sum by the readable weight (`componentCoverage` 0.75 or 1) and publishes `worstPool: null`, `worstPoolStatus` (`observed` / `empty` / `unavailable`), `worstPoolUnavailableReason` and `componentCoverage` on the pool signal; with every component readable the formula is numerically unchanged",
+      "Top-pool parsing in `worker/src/lib/dews/scoring.ts` no longer defaults a missing `extra.balanceRatio` to perfect balance (1.0) or turns an unreadable entry into a zero-TVL balanced pool; pools without a balance measurement are excluded from the worst-pool max, and an unreadable list or entry records a per-asset `dex_liquidity.top_pools_json` diagnostic (`degradesRun: false`) that degrades only that asset's pool signal, never the whole generation",
+      "Pool smoothing now also requires the previous reading's `componentCoverage` to match the current one; a previous reading with different or unrecorded coverage (every pre-6.29 row) is not averaged in, and the outcome is published as `smoothing`. The first post-deploy cycle therefore publishes unsmoothed pool values",
+      "Reproduction: balance ratio 0.5 and average stress 50 with absent pool detail previously scored 37.5 with `worstPool: 0`; it now scores 50 with `worstPool: null` over 75% component coverage, matching the same data with an observed $1M pool at ratio 0.5",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.28",
+    title: "Unavailable supply no longer closes a live depeg event",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "The live-event supply floor now distinguishes an observed supply from a missing one. Only an observed circulating supply below $1M, including an explicit zero, closes an open event as `coverage-lost-supply`; when an asset's current circulating buckets are absent, empty or wholly invalid, the open event stays open and unchanged and no new event opens.",
+    impact: [
+      "`deriveDecisionContext` in `worker/src/cron/depeg-detection/decision-engine.ts` reads supply through `getCirculatingRawOrNull()` instead of the zero-defaulting `getCirculatingRaw()`; a `null` reading marks the open event seen, emits a per-asset `Kept live event ... current supply is unavailable` warning, and issues no persistence command, so recovery timers, peaks and `ended_at` are untouched",
+      "Previously an empty supply record read as $0 and closed the open row with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL`, removing it from PSI's open-event set and the resolver's live board although no supply observation had fallen below the floor",
+      "Observed sub-floor supply, the $1M threshold, recovery windows, trust gates and every DEWS formula are unchanged; previously stored coverage closures are not rewritten by this change",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.27",
     title: "Challenger-pool majority can carry a recovery when the aggregate DEX row is withheld",
     date: "2026-09-24",

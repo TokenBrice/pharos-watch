@@ -14,11 +14,12 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 
 Each flag's default and `expiresAt` are owned by `src/lib/feature-flags.ts`; read them there rather than from this page.
 
+The no-op blacklist banner control was retired on 2026-09-27 (DEC-15): its flag, getter, lifecycle metadata and Pages workflow input are removed. The blacklist summary API and seven-day per-coin counters remain available. Removing the former GitHub repository Variable is a separate authorized operations action, not a completed part of this code change. Dated lifecycle reviews below are historical records, not the current inventory.
+
 | Flag                                         | Gates                                                                               |
 | -------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Retained configuration only; the unmounted recent blacklist banner was removed     |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype `VerdictPill`; the `oneLiner` and AI summary are not gated)  |
 | `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR module on `/depeg/` and its inputs to the depeg outlook hero; homepage DDR overview; detail DDR card and DDR track-record section; master-gates DDRR (rollback) |
@@ -40,10 +41,6 @@ What must be true before turning each flag on in production:
 
 - [x] `MobileStickySummary` publishes its height to `--pharos-sticky-summary-h`; `LongformScrollspyNav` includes it in `scrollMarginTop` via `calc()`.
 - [ ] Real-device QA: iOS Safari + Android Chrome scrollspy behavior with sticky summary mounted.
-
-### `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`
-
-The unmounted banner and its query hook have been removed. This flag remains in the configuration contract pending an explicit retirement decision; enabling it does not render a banner. The blacklist summary endpoint and its seven-day per-coin counters remain available.
 
 ## 2026-07-29 lifecycle review
 

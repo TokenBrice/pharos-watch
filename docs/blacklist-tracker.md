@@ -4,7 +4,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.0`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.1`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -32,6 +32,21 @@ The public buckets read `blacklistabilityReview.reviewedStatus` through the gene
 `blacklistStatus`. That reviewed registry value is the sole product-level status authority. Safety
 Score V9 consumes the same review for evidence freshness, scoring gaps, and failure-domain attribution,
 but its `accessPosture.freezeExposure` is not a fallback status source.
+
+Bucket **counts** come from the reviewed registry and never depend on runtime supply. Bucket **market
+cap** sums only observed current supply read through `getCirculatingRawOrNull()`: a reviewed active coin
+that is missing from `/api/stablecoins`, or whose peg buckets are absent, empty or wholly invalid, is
+counted in `supplyUnavailableCount` and excluded from every total rather than added as `$0`.
+`computeFreezableSummary()` (shared by the hero, meter and stats band) classifies coverage as
+`complete`, `partial` or `unavailable`. `unavailable` (no reviewed coin reported supply, including a
+schema-valid empty list) publishes no supply total or share (`—`) while registry counts stay visible.
+`partial` replaces the freezable and unfreezable headline shares with `Partial`; the observed-only share,
+observed totals and the "Observed supply only · N assets without supply data excluded" label appear in
+secondary text, so a partial list can never read as a full-market 0% or 100%. Headline shares are
+published only for `complete` coverage. A bucket whose every member lacks supply shows `—` for its value
+and share; an explicit observed zero remains a real `$0`. The FreezeWatch data-quality notice also lists
+`dataQuality.ambiguousOrderCount` events (with the plain-language `ambiguousOrderReason`, currently Tron
+transfers in separate transactions whose order cannot be confirmed) when the count is positive.
 
 ### Upstream Exposure And The Safety Score V9 Access Branch
 
@@ -127,10 +142,12 @@ The durable rules are:
 1. An event family can read an address or amount from an indexed topic, a fixed ABI data slot, a dynamic address array, or a named Tron result field.
 2. A batch address event expands to one deterministic `blacklist_events` row per affected address.
 3. Oversized batch-address events are never truncated. If a decoded row cannot be persisted completely within the bounded path, coverage is marked incomplete and the cursor cannot advance beyond that block.
-4. Recognized provider events without a non-empty affected address are quarantined instead of creating blank-address history.
+4. Malformed required addresses, direction booleans (only ABI `0`/`1` are valid), address arrays, or log identities produce typed decode failures, never default freeze rows. The frontier holds before the failed EVM block / Tron millisecond for the first two distinct scans. On the third scan, `blacklist:decode-retry:<config>:<identity>` in D1 `cache` durably retains raw evidence, attempts, original failure `reason`, and `disposition=decode-retry-exhausted`; only a successful durable write releases that fence. This prefix has no TTL. Repeat provider observations within one run do not consume extra attempts. A valid empty address array is complete, not a decode failure.
 5. An emitted destroy/seize amount is preferred. An amountless wipe can use `balanceOf` at `blockNumber - 1` when a historical provider can prove it.
 6. Current Tron account balances belong to the freeze ledger. They must not be presented as fabricated event-time blacklist balances.
 7. An amountless Tron freeze is instead replayed from the token's own confirmed transfer ledger: the frozen balance is the address's cumulative signed TRC20 flow through the freeze millisecond, persisted as `amount_source=derived` with `provenance_source=trongrid-transfer-replay` only when the freeze receipt proves the stored event, every returned transfer is unique by its composite transaction identity (transaction, timestamp, route, value — TronGrid history exposes no log index), no transfer shares the freeze millisecond, the ledger paginates to completion, and the cumulative flow reconciles exactly with the solidified `balanceOf` read that brackets the same solidified head. The settle window between the ledger bound and the balance read must also be proven quiet, so a landing transfer during the read is reported as a state race instead of a mismatch. Replay never overwrites an existing amount, a current-balance snapshot, or an operator-repaired value; its writes additionally require the row to still have no amount.
+
+`shared/lib/blacklist-event-order.ts` owns state execution ordering: timestamp, block number, numeric block-global EVM log index parsed from the event ID, then numeric batch-array suffix. The active-record fold, row preparation, summary SQL, and current-balance rebuild use that authority; transaction hashes never define execution order. No receipt migration is needed for EVM. Tron event indices are transaction-local: same-address/block/time events across transactions carry `orderAmbiguityReason=tron-cross-transaction-order`, unknown amounts, and are excluded from confirmed active counts and snapshot/rebuild candidates. A subsequent ordered freeze/release can resolve that state. Historical repair must not guess unretained Tron transaction positions.
 
 The scheduled replay lane (`worker/src/lib/blacklist/tron-amount-recovery.ts`) runs in the `sync-blacklist` maintenance tail under the same runtime window and subrequest budget as the EVM repair lane, is gated on the same TronGrid circuit as the scan, and is capped at 24 rows and 40 history pages per row with 120 history pages per run, where every requested page counts — including pages that fail. Its candidates come from the same durable `blacklist_amount_repair_queue` rows as every other chain, least-attempted first, so fresh rows cannot starve retries. Provider failures and unreconciled ledgers retry with normal backoff; deterministic classes that cannot change on retry (a ledger beyond the page cap, shared-millisecond evidence, an unusable config) are parked for a week and stay visible as unresolved gaps for the operator repair path. A duplicated transfer record is rejected the same way — equal-and-opposite duplicate pairs can still cancel at the current-balance checkpoint, so record uniqueness is checked before reconciliation and the row parks for receipt-level review rather than persisting an inflated freeze amount. A freeze younger than 15 minutes, a run window that closes mid-ledger, or a landing transfer during the proof leaves the row untouched with no attempt recorded, so nothing is inferred from an unproven state.
 
@@ -253,6 +270,8 @@ Use the admin actions and decision order in [Runbook: Blacklist Sync](./runbooks
 
 The summary query supplies aggregate cards, exposure drilldowns, chart data, and filter metadata. The event query supplies the current server-filtered, sorted, searched, and paginated ledger slice. Both endpoints use the same six-hour producer freshness source.
 
+`dataQuality.ambiguousOrderCount` counts unresolved contract-scoped active-state records excluded from confirmed counts. `dataQuality.ambiguousOrderReason` is `tron-cross-transaction-order` when that count is positive, otherwise `null`; the same reason appears in `warnings` and degrades quality. Both fields are additive/optional for retained old summaries; missing fields mean legacy unknown coverage, not a measured zero. Tracked ledger totals remain retained snapshots, not a claim that ambiguous current state is resolved.
+
 The page must preserve these distinctions:
 
 - missing or unresolved amounts display their status/source instead of a confirmed zero;
@@ -287,6 +306,6 @@ When changing blacklist coverage or behavior:
 The `blacklist_sync_state.last_block` column has different semantics per chain type:
 
 - **EVM chains**: stores actual block numbers
-- **Tron**: stores millisecond timestamps (Tron events are ordered by timestamp, not block number)
+- **Tron**: stores millisecond scan timestamps; execution state additionally compares block number and transaction-local positions where defensible
 
 This is intentional — do not mix these values across chain types.

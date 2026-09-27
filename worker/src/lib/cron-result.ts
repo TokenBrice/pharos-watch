@@ -4,15 +4,16 @@ export type CronMetadataPrimitive = string | number | boolean | null;
 
 export type CronMetadataValue =
   | CronMetadataPrimitive
-  | CronMetadataValue[]
+  | readonly CronMetadataValue[]
   | { [key: string]: CronMetadataValue };
 
 export type CronMetadataRecord = Record<string, CronMetadataValue>;
 
-export interface StructuredCronResult<TMetadata extends CronMetadataRecord = CronMetadataRecord>
-  extends Omit<CronResult, "metadata"> {
-  metadata?: TMetadata;
-}
+export type StructuredCronResult<TMetadata extends CronMetadataRecord = CronMetadataRecord> =
+  Omit<CronResult, "metadata" | "status"> & (
+    | { status?: "ok"; metadata?: TMetadata }
+    | { status?: NonNullable<CronResult["status"]>; metadata: TMetadata & { reason: string } }
+  );
 
 export function serializeCronMetadata<TMetadata extends CronMetadataRecord>(
   metadata: TMetadata | null | undefined,

@@ -251,6 +251,7 @@ export async function runStablecoinsPricingStage(
   });
   prevalidatePrices({
     assets: options.assets,
+    nowSec: options.syncStartSec,
     primaryPriceResults,
     previousTrustedPrices,
     validationContexts,

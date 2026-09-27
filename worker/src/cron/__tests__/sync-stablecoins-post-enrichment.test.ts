@@ -62,6 +62,8 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
     price: 1.12,
     priceSource: "coingecko",
     priceConfidence: "single-source",
+    priceObservedAt: 1_700_000_000,
+    priceObservedAtMode: "upstream",
     navToken: false,
     ...overrides,
   });

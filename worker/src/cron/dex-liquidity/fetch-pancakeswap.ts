@@ -3,18 +3,15 @@ import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
-import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { SUBGRAPH_PAGE_MAX_RESPONSE_BYTES } from "./constants";
 import {
-  describeDexPaginationWriteFailure,
-  isDegradingDexPaginationWriteFailure,
   readDexSourcePaginationState,
-  summarizeDexSourcePaginationWrites,
-  writeDexSourcePaginationState,
-  type DexSourcePaginationWriteAttempt,
+  type PaginatedDexApiFetchResult,
+  type PendingDexSourcePaginationUpdate,
 } from "./source-pagination-state";
 
 const PAGE_SIZE = 250;
@@ -174,7 +171,7 @@ export async function fetchPancakeSwapPools(
   graphApiKey: string | null,
   signal?: AbortSignal,
   db?: D1Database,
-): Promise<DexApiFetchResult> {
+): Promise<PaginatedDexApiFetchResult> {
   if (!graphApiKey) {
     return makeDexApiFetchResult([], {
       ok: false,
@@ -190,8 +187,7 @@ export async function fetchPancakeSwapPools(
   let successfulChains = 0;
   let pagesFetched = 0;
   let partialChains = 0;
-  let cursorPersistenceDegraded = false;
-  const paginationWriteAttempts: DexSourcePaginationWriteAttempt[] = [];
+  const pendingPaginationUpdates: PendingDexSourcePaginationUpdate[] = [];
   const currentHourStart = Math.floor(Date.now() / 1000 / 3600) * 3600;
   const oldestIncludedHourStart = currentHourStart - DAY_SECONDS;
 
@@ -329,16 +325,15 @@ export async function fetchPancakeSwapPools(
       }
     }
 
-    // Persist failures, but retry the unread page. A failed head must not move the tail.
-    if (chainPagesFetched > 0 || chainError != null) {
+    // Pending only: the source-stage owner acknowledges durable observations.
+    if (chainPagesFetched > 0 && paginationState.revision) {
       if (chainError != null) {
         nextCursor = lastAttemptedSkip > 0 ? lastAttemptedSkip : tailStartSkip;
       }
       const chainDiagnostics = warnings.filter(
         (warning) => warning.startsWith(`${chain}:`) || warning.startsWith(`${chain} page`),
       );
-      const outcome = await writeDexSourcePaginationState({
-        db,
+      pendingPaginationUpdates.push({
         sourceKey,
         cursor: String(nextCursor ?? PAGE_SIZE),
         cycleStartedAt: cycleCompleted ? nowSec : (paginationState.cycleStartedAt ?? nowSec),
@@ -348,11 +343,9 @@ export async function fetchPancakeSwapPools(
         diagnostics: chainError == null
           ? chainDiagnostics
           : [...chainDiagnostics, `${chain} failure: ${chainError}`],
+        expectedRevision: paginationState.revision,
+        generation: crypto.randomUUID(),
       });
-      paginationWriteAttempts.push({ sourceKey, outcome });
-      const persistenceWarning = describeDexPaginationWriteFailure(chain, outcome);
-      if (persistenceWarning) warnings.push(persistenceWarning);
-      if (isDegradingDexPaginationWriteFailure(outcome)) cursorPersistenceDegraded = true;
     }
   }
 
@@ -360,9 +353,9 @@ export async function fetchPancakeSwapPools(
     logWorkerEventArgs("handler", "info", `[fetch-pancakeswap] Fetched ${pools.length} pools`);
   }
 
-  return makeDexApiFetchResult(pools, {
+  return { ...makeDexApiFetchResult(pools, {
     ok: successfulChains > 0,
-    degraded: errors.length > 0 || cursorPersistenceDegraded,
+    degraded: errors.length > 0,
     errors,
     warnings,
     ...(degradedChains.length > 0 ? { degradedChains } : {}),
@@ -372,7 +365,6 @@ export async function fetchPancakeSwapPools(
       pagesFetched,
       cursor: partialChains > 0 ? `${partialChains}-chain-tail(s)` : null,
       cycleCompleted: partialChains === 0,
-      cursorPersistence: summarizeDexSourcePaginationWrites(paginationWriteAttempts),
     },
-  });
+  }), pendingPaginationUpdates, censusScope: "bounded-sample" };
 }

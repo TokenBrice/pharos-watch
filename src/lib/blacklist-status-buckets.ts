@@ -1,5 +1,5 @@
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
@@ -11,8 +11,12 @@ export type BlacklistStatusBucketKey = "yes" | "upstream" | "possible" | "no";
 export interface BlacklistStatusBucket {
   status: string;
   key: BlacklistStatusBucketKey;
+  /** Reviewed active registry members in this bucket, independent of runtime supply availability. */
   count: number;
+  /** Sum of observed current supply for members whose supply is available; never includes unavailable members as zero. */
   marketCap: number;
+  /** Members whose runtime supply is missing, empty or wholly invalid; excluded from `marketCap`. */
+  supplyUnavailableCount: number;
 }
 
 export const BLACKLIST_STATUS_BUCKET_ORDER: readonly BlacklistStatusBucketKey[] = [
@@ -63,12 +67,12 @@ export function getBlacklistStatusBucketForStablecoin(
 export function buildBlacklistStatusBuckets(
   stablecoins: StablecoinData[] | undefined,
 ): BlacklistStatusBucket[] {
-  const supplyById = new Map((stablecoins ?? []).map((coin) => [coin.id, getCirculatingRaw(coin)]));
-  const counts: Record<BlacklistStatusBucketKey, { count: number; marketCap: number }> = {
-    yes: { count: 0, marketCap: 0 },
-    upstream: { count: 0, marketCap: 0 },
-    possible: { count: 0, marketCap: 0 },
-    no: { count: 0, marketCap: 0 },
+  const supplyById = new Map((stablecoins ?? []).map((coin) => [coin.id, getCirculatingRawOrNull(coin)]));
+  const counts: Record<BlacklistStatusBucketKey, { count: number; marketCap: number; supplyUnavailableCount: number }> = {
+    yes: { count: 0, marketCap: 0, supplyUnavailableCount: 0 },
+    upstream: { count: 0, marketCap: 0, supplyUnavailableCount: 0 },
+    possible: { count: 0, marketCap: 0, supplyUnavailableCount: 0 },
+    no: { count: 0, marketCap: 0, supplyUnavailableCount: 0 },
   };
 
   for (const coin of ACTIVE_STABLECOINS) {
@@ -76,7 +80,12 @@ export function buildBlacklistStatusBuckets(
     const bucket = getBlacklistStatusBucketForStablecoin(coin.id);
     if (bucket === null) continue;
     counts[bucket].count += 1;
-    counts[bucket].marketCap += supplyById.get(coin.id) ?? 0;
+    const supply = supplyById.get(coin.id) ?? null;
+    if (supply === null) {
+      counts[bucket].supplyUnavailableCount += 1;
+    } else {
+      counts[bucket].marketCap += supply;
+    }
   }
 
   return BLACKLIST_STATUS_BUCKET_ORDER.map((key) => ({
@@ -84,6 +93,7 @@ export function buildBlacklistStatusBuckets(
     key,
     count: counts[key].count,
     marketCap: counts[key].marketCap,
+    supplyUnavailableCount: counts[key].supplyUnavailableCount,
   }));
 }
 

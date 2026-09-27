@@ -159,6 +159,30 @@ describe("readCacheWithPolicy", () => {
     decode: JSON.parse, encode: JSON.stringify,
   };
 
+  it.each([30, null])("keeps timestamp admission independent of TTL %s", async (ttlSec) => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    insert.run(policy.key, '{"count":4}', 160);
+    expect(await readCacheWithPolicy(db, { ...policy, ttlSec }, 100)).toMatchObject({ state: "fresh", usable: true });
+    insert.run(policy.key, '{"count":4}', 161);
+    expect(await readCacheWithPolicy(db, { ...policy, ttlSec, stale: "accept" }, 100)).toMatchObject({
+      state: "invalid", value: null, usable: false, reason: "future-timestamp",
+    });
+    insert.run(policy.key, '{"count":4}', 1);
+    expect(await readCacheWithPolicy(db, { ...policy, ttlSec }, 100)).toMatchObject({
+      state: ttlSec == null ? "fresh" : "stale", usable: ttlSec == null,
+    });
+  });
+
+  it("applies invalid deletion to an invalid clock", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(policy.key, '{"count":4}', 161);
+    expect(await readCacheWithPolicy(db, { ...policy, invalid: "delete" }, 100)).toMatchObject({
+      state: "invalid", reason: "future-timestamp",
+    });
+    expect(await getCache(db, policy.key)).toBeNull();
+  });
+
   it("accepts the exact TTL and applies stale accept versus reject one second later", async () => {
     const { db, sqlite } = fixtures.open();
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")

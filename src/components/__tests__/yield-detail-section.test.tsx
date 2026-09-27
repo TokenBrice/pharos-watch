@@ -190,10 +190,10 @@ describe("YieldDetailSection", () => {
   });
 
   it("does not prefix chain or deployment facts with a separator without a venue", () => {
-    mockRankings([makeRanking({ sourceRisk: { venueChain: "ethereum", deploymentPlace: "lending-vault" } })]);
+    mockRankings([makeRanking({ sourceRisk: { venueChain: "ethereum", deploymentPlace: "lending-market" } })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
     expect(screen.getByText("ethereum", { selector: "span" }).textContent).not.toContain("·");
-    expect(screen.getByText("· lending vault")).toBeTruthy();
+    expect(screen.getByText("· lending market")).toBeTruthy();
   });
 
   it("never calls a ZCHF deposit holder yield and routes to the existing fallback", () => {

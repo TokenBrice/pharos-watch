@@ -186,6 +186,7 @@ const CHIP_TONES = {
 
 /** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%". */
 export function formatReserveQualityPct(value: number): string {
+  if (value > 0 && value < 0.1) return "<0.1%";
   return `${Number(value.toFixed(1))}%`;
 }
 
@@ -356,7 +357,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     slices: slices.map((slice, index) => ({
       key: `${slice.name}:${index}`,
       name: slice.name,
-      pct: round1(slice.pct),
+      pct: slice.pct,
       assetClassLabel: slice.assetClass ? ASSET_CLASS_LABELS[slice.assetClass] : null,
       horizonLabel: slice.liquidityHorizon ? HORIZON_LABELS[slice.liquidityHorizon] : null,
       riskLabel: RESERVE_RISK_PRESENTATION[slice.risk].shortLabel,

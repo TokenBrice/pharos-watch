@@ -31,7 +31,7 @@ const LANE_STROKE: Record<PsiBeamDimmerKey, string> = {
 };
 
 function laneStrokeHex(lane: PsiBeamDimmerLane): string {
-  if (lane.key === "trend" && lane.value < 0) return CHART_RED;
+  if (lane.key === "trend" && lane.value !== null && lane.value < 0) return CHART_RED;
   return LANE_STROKE[lane.key];
 }
 
@@ -43,6 +43,7 @@ function laneToneClass(lane: PsiBeamDimmerLane): string {
 }
 
 function valueLabel(lane: PsiBeamDimmerLane): string {
+  if (lane.value === null) return "Unavailable";
   if (lane.key === "trend" && lane.value > 0) return `+${formatScore(lane.value)}`;
   return formatScore(lane.value);
 }
@@ -149,7 +150,7 @@ export function PsiBeamDimmers({
                           </linearGradient>
                         </defs>
                         <TimeXAxis dataKey="ts" hide />
-                        <DateTooltip formatter={(value) => [formatScore(Number(value)), lane.label]} />
+                        <DateTooltip formatter={(value) => [value == null ? "Unavailable" : formatScore(Number(value)), lane.label]} />
                         <Area
                           type="monotone"
                           dataKey={lane.key}
@@ -158,23 +159,24 @@ export function PsiBeamDimmers({
                           fill={`url(#${gradientId})`}
                           strokeWidth={1.5}
                           dot={false}
+                          connectNulls={false}
                           {...(index === 0 ? { onAnimationEnd: handleAnimationEnd } : {})}
                           {...animProps}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
-                ) : (
+                ) : lane.pressurePct !== null ? (
                   <div className={cn("overflow-hidden rounded-full bg-background/80", isCompact ? "h-1.5" : "h-2")}>
                     <div
                       className={cn("h-full rounded-full", laneToneClass(lane))}
                       style={{ width: `${lane.pressurePct}%` }}
                     />
                   </div>
-                )}
+                ) : null}
                 <div className={cn("mt-1 flex items-center justify-between gap-3 text-muted-foreground", isCompact ? "text-[11px]" : "text-xs")}>
-                  <span>{deltaLabel(lane.delta)}</span>
-                  <span className="font-mono tabular-nums">{lane.pressurePct.toFixed(0)}%</span>
+                  <span>{lane.value === null ? "component not reported" : deltaLabel(lane.delta)}</span>
+                  <span className="font-mono tabular-nums">{lane.pressurePct === null ? "—" : `${lane.pressurePct.toFixed(0)}%`}</span>
                 </div>
               </div>
             </div>

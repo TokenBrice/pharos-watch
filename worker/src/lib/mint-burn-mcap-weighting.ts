@@ -7,7 +7,7 @@
 // instead.
 
 import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
   canonicalizeChainCirculating,
   type RawChainCirculating,
@@ -39,21 +39,27 @@ export function getMintBurnTrackedChains(stablecoinId: string): string[] {
  *
  * Fallback policy (in order):
  *   1. If the coin has no tracked chains (legacy/future id) → the canonical
- *      circulating total from `getCirculatingRaw({ circulating })`.
+ *      circulating total from `getCirculatingRawOrNull({ circulating })`.
  *   2. If the canonicalized chainCirculating has no tracked-chain entry →
  *      the canonical circulating total (keeps CG-fallback assets with empty
- *      chainCirculating alive and tolerates current=null entries).
+ *      chainCirculating alive).
  *   3. Otherwise sum `chainCirculating[chainId].current` across tracked chains.
+ *
+ * Returns `null` when the fallback path has no observed circulating bucket: the
+ * coin's weight is unavailable, never a measured `0`. Callers exclude it from
+ * gauge weights and tracked-mcap totals and count it.
  *
  * Note: `current = 0` is treated as real data (a tracked-chain entry exists
  * and reports zero supply); it contributes 0 but does NOT trigger fallback.
+ * A tracked-chain entry whose `current` is unavailable (`null`) makes the whole
+ * weight unavailable (`null`) rather than a partial sum that reads as a zero leg.
  */
 export function sumMcapForTrackedChains(
   stablecoinId: string,
   chainCirculating: RawChainCirculating | null | undefined,
   circulating: Record<string, number> | undefined,
-): number {
-  const fallbackSupply = getCirculatingRaw({ circulating });
+): number | null {
+  const fallbackSupply = getCirculatingRawOrNull({ circulating });
   const trackedChains = getMintBurnTrackedChains(stablecoinId);
   if (trackedChains.length === 0) return fallbackSupply;
 
@@ -65,6 +71,7 @@ export function sumMcapForTrackedChains(
   for (const chainId of trackedChains) {
     const entry = canonical.get(chainId);
     if (entry) {
+      if (entry.current == null) return null;
       total += entry.current;
       anyFound = true;
     }

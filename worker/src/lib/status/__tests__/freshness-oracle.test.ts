@@ -40,6 +40,30 @@ describe("classifyFreshness parity boundaries", () => {
     expect(classifyFreshness(atAge(staleAt + 1), policy, NOW).state).toBe("stale");
     expect(classifyFreshness(atAge(null), policy, NOW).state).toBe("stale");
   });
+
+  it.each([
+    [NOW, "fresh", null],
+    [NOW + 60, "fresh", null],
+    [NOW + 61, "stale", "future-timestamp"],
+    [NOW + 86400, "stale", "future-timestamp"],
+    [NaN, "stale", "invalid-timestamp"],
+    [null, "stale", "missing-timestamp"],
+  ] as const)("admits timestamp %s without inventing a fresh age", (lastSuccessAt, state, timestampReason) => {
+    const result = classifyFreshness({ ...FACT, lastSuccessAt }, legacyPolicies[0][1], NOW);
+    expect(result).toMatchObject({ state, timestampReason, ageSec: timestampReason == null ? 0 : null });
+  });
+
+  it("allows overlapping publications against read time while preserving captured-run age", () => {
+    expect(classifyFreshness({ ...FACT, lastSuccessAt: NOW + 120 }, legacyPolicies[0][1], NOW, {
+      readAtSec: NOW + 120,
+    })).toMatchObject({ state: "fresh", ageSec: 0, timestampReason: null });
+    expect(classifyFreshness({ ...FACT, lastSuccessAt: NOW + 181 }, legacyPolicies[0][1], NOW, {
+      readAtSec: NOW + 120,
+    })).toMatchObject({ state: "stale", ageSec: null, timestampReason: "future-timestamp" });
+    expect(classifyFreshness({ ...FACT, lastSuccessAt: NOW + 120 }, legacyPolicies[0][1], NOW, {
+      allowedFutureSkewSec: 120,
+    }).state).toBe("fresh");
+  });
 });
 
 describe("loadProducerFreshnessFacts", () => {
@@ -86,12 +110,15 @@ describe("loadProducerFreshnessFacts", () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job TEXT NOT NULL,
       started_at INTEGER NOT NULL,
-      status TEXT NOT NULL
+      status TEXT NOT NULL,
+      item_count INTEGER,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      metadata TEXT
     )`);
-    sqlite.prepare("INSERT INTO cron_runs (job, started_at, status) VALUES (?, ?, ?)")
-      .run("alpha", NOW - 30, "ok");
-    sqlite.prepare("INSERT INTO cron_runs (job, started_at, status) VALUES (?, ?, ?)")
-      .run("alpha", NOW - 10, "error");
+    sqlite.prepare("INSERT INTO cron_runs (job, started_at, status, item_count) VALUES (?, ?, ?, ?)")
+      .run("alpha", NOW - 30, "ok", 1);
+    sqlite.prepare("INSERT INTO cron_runs (job, started_at, status, item_count) VALUES (?, ?, ?, ?)")
+      .run("alpha", NOW - 10, "error", 0);
     const [fact] = await loadProducerFreshnessFacts(createSqliteD1(sqlite), NOW, [{
       job: "alpha", label: "Alpha", group: "other", intervalSec: 60,
       scheduleKey: "daily0300Utc", schedule: "0 3 * * *", triggerMode: "isolated", statusImpact: "watch",

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { BlacklistStats } from "@/components/blacklist-stats";
+import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
 
 
 function makePerCoinRecord<T>(createValue: (symbol: BlacklistStablecoin) => T): Record<BlacklistStablecoin, T> {
@@ -66,6 +67,16 @@ function makeStats(): BlacklistSummaryResponse["stats"] {
   };
 }
 
+function bucket(
+  key: BlacklistStatusBucket["key"],
+  count: number,
+  marketCap: number,
+  supplyUnavailableCount = 0,
+): BlacklistStatusBucket {
+  const status = { yes: "Yes", upstream: "Upstream", possible: "Possible", no: "No" }[key];
+  return { status, key, count, marketCap, supplyUnavailableCount };
+}
+
 describe("BlacklistStats", () => {
   it("renders the unfreezable market-share stat from the blacklist-status no bucket", () => {
     render(
@@ -73,10 +84,10 @@ describe("BlacklistStats", () => {
         summary={{ ...makeSummary(), stats: makeStats() }}
         isLoading={false}
         blacklistStatusBuckets={[
-          { status: "Yes", key: "yes", count: 10, marketCap: 150_000_000_000 },
-          { status: "Possible", key: "possible", count: 5, marketCap: 40_000_000_000 },
-          { status: "Upstream", key: "upstream", count: 3, marketCap: 20_000_000_000 },
-          { status: "No", key: "no", count: 2, marketCap: 30_000_000_000 },
+          bucket("yes", 10, 150_000_000_000),
+          bucket("possible", 5, 40_000_000_000),
+          bucket("upstream", 3, 20_000_000_000),
+          bucket("no", 2, 30_000_000_000),
         ]}
         supportDataLoading={false}
       />,
@@ -94,6 +105,68 @@ describe("BlacklistStats", () => {
     expect(screen.queryByText("unique events")).toBeNull();
   });
 
+  it("labels a partial observed-supply denominator and withholds a share with no observed unfreezable supply", () => {
+    const { unmount } = render(
+      <BlacklistStats
+        summary={{ ...makeSummary(), stats: makeStats() }}
+        isLoading={false}
+        blacklistStatusBuckets={[
+          bucket("yes", 10, 150_000_000_000, 1),
+          bucket("possible", 5, 40_000_000_000),
+          bucket("upstream", 3, 20_000_000_000),
+          bucket("no", 2, 30_000_000_000),
+        ]}
+        supportDataLoading={false}
+      />,
+    );
+
+    // A partial denominator never produces a headline share; the observed-only share is labelled.
+    expect(screen.getByText("Partial")).toBeTruthy();
+    expect(screen.queryByText("12.5%")).toBeNull();
+    expect(
+      screen.getByText("2 stablecoins · 12.5% of observed supply ($30.00B of $240.00B) · 1 without supply data excluded"),
+    ).toBeTruthy();
+    unmount();
+
+    render(
+      <BlacklistStats
+        summary={{ ...makeSummary(), stats: makeStats() }}
+        isLoading={false}
+        blacklistStatusBuckets={[bucket("yes", 10, 0, 10), bucket("no", 2, 0, 2)]}
+        supportDataLoading={false}
+      />,
+    );
+
+    expect(screen.queryByText("0%")).toBeNull();
+    expect(screen.getByText("2 stablecoins · supply data unavailable")).toBeTruthy();
+  });
+
+  it("surfaces ambiguous-order freeze events in the data-quality notice", () => {
+    render(
+      <BlacklistStats
+        summary={{
+          ...makeSummary(),
+          dataQuality: {
+            status: "degraded",
+            warnings: [],
+            ambiguousOrderCount: 3,
+            ambiguousOrderReason: "tron-cross-transaction-order",
+            amountGaps: { totalEvents: 100, recoverable: 0, unrecoverable: 0, recentRecoverable: 0, missingRatio: 0, recentWindowSec: 86_400 },
+            freezeLedger: { providerFailedCount: 0, trackedGapCount: 0, scopedRows: 10, legacyRows: 0 },
+            coverage: { supportedConfigs: 8, unsupportedDeferredConfigs: 0 },
+          },
+        }}
+        isLoading={false}
+        blacklistStatusBuckets={null}
+        supportDataLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("Data Quality")).toBeTruthy();
+    expect(screen.getByText(/3 events have an ambiguous order/)).toBeTruthy();
+    expect(screen.getByText(/Tron transfers in separate transactions/)).toBeTruthy();
+  });
+
   it("renders the unfreezable drill-down as a native button", () => {
     const onUnfreezableSelect = vi.fn();
     render(
@@ -101,8 +174,8 @@ describe("BlacklistStats", () => {
         summary={makeSummary()}
         isLoading={false}
         blacklistStatusBuckets={[
-          { status: "Yes", key: "yes", count: 10, marketCap: 150_000_000_000 },
-          { status: "No", key: "no", count: 2, marketCap: 30_000_000_000 },
+          bucket("yes", 10, 150_000_000_000),
+          bucket("no", 2, 30_000_000_000),
         ]}
         supportDataLoading={false}
         onUnfreezableSelect={onUnfreezableSelect}
@@ -194,10 +267,10 @@ describe("BlacklistStats", () => {
         summary={{ ...makeSummary(), stats: makeStats() }}
         isLoading={false}
         blacklistStatusBuckets={[
-          { status: "Yes", key: "yes", count: 10, marketCap: 150_000_000_000 },
-          { status: "Possible", key: "possible", count: 5, marketCap: 40_000_000_000 },
-          { status: "Upstream", key: "upstream", count: 3, marketCap: 20_000_000_000 },
-          { status: "No", key: "no", count: 2, marketCap: 184_790_000 },
+          bucket("yes", 10, 150_000_000_000),
+          bucket("possible", 5, 40_000_000_000),
+          bucket("upstream", 3, 20_000_000_000),
+          bucket("no", 2, 184_790_000),
         ]}
         supportDataLoading={false}
       />,
@@ -212,10 +285,10 @@ describe("BlacklistStats", () => {
         summary={{ ...makeSummary(), stats: makeStats() }}
         isLoading={false}
         blacklistStatusBuckets={[
-          { status: "Yes", key: "yes", count: 10, marketCap: 150_000_000_000 },
-          { status: "Possible", key: "possible", count: 5, marketCap: 40_000_000_000 },
-          { status: "Upstream", key: "upstream", count: 3, marketCap: 20_000_000_000 },
-          { status: "No", key: "no", count: 2, marketCap: 30_000_000_000 },
+          bucket("yes", 10, 150_000_000_000),
+          bucket("possible", 5, 40_000_000_000),
+          bucket("upstream", 3, 20_000_000_000),
+          bucket("no", 2, 30_000_000_000),
         ]}
         supportDataLoading
       />,

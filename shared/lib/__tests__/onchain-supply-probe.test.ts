@@ -199,6 +199,17 @@ describe("curated on-chain supply paths", () => {
     expect(selected?.[1]?.config.rpcUrl).toBe("https://rpc-gel.inkonchain.com");
   });
 
+  it.each([
+    ["pgold-pleasing", "https://api.zan.top/public/pharos-mainnet", "https://pharos.drpc.org"],
+    ["syzusd-yuzu", "https://pharos.drpc.org", undefined],
+  ])("keeps %s primary and fallback overrides ahead of shared defaults", (id, primary, fallback) => {
+    const config = selectCuratedAggregateOnchainSupplyProbeContracts(
+      TRACKED_META_BY_ID.get(id!)!,
+    )?.find(({ config }) => config.chain === "pharos")?.config;
+    expect(config?.rpcUrl).toBe(primary);
+    expect(config?.fallbackRpcUrl).toBe(fallback);
+  });
+
   it("resolves sUSDe's probeable LayerZero OFT legs and leaves TON and Aptos unconfigured", () => {
     const oft = "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2";
     const oftChains = [

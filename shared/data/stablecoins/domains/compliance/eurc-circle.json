@@ -42,8 +42,7 @@
     "reserveDisclosureUrl": "https://www.circle.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "EURC is payment-stablecoin-like, but its issuer is Circle Europe under MiCA/ACPR rather than Circle Internet Financial, LLC. No U.S. GENIUS PPSI approval, OCC foreign-issuer registration, or Treasury comparability determination was found for EURC/Circle Europe.",
+    "notes": "Evidence as of 2026-06-18 review: EURC is payment-stablecoin-like, but its issuer is Circle Europe under MiCA/ACPR rather than Circle Internet Financial, LLC. No U.S. GENIUS PPSI approval, OCC foreign-issuer registration, or Treasury comparability determination was found for EURC/Circle Europe. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "Circle EURC page",

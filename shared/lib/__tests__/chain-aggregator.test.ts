@@ -130,6 +130,44 @@ describe("aggregateChains", () => {
     expect(unknown.globalChange30dPct).toBeNull();
   });
 
+  it("never manufactures chain mints or redemptions from unavailable observations; numeric zero still counts", () => {
+    const usdc = { id: "usdc-circle", symbol: "USDC", price: 1, chainCirculating: { ethereum: { current: 50, circulatingPrevDay: 50 } } };
+    // Empty current (normalized to null): no -100 redemption and no understated chain total posing as observed.
+    const emptyCurrent = aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, chainCirculating: { ethereum: { current: null, circulatingPrevDay: 100 } } },
+      usdc,
+    ] }));
+    expect(emptyCurrent.chains.find((chain) => chain.id === "ethereum")).toMatchObject({ totalUsd: 50, change24h: 0, change24hPct: 0 });
+
+    // Empty prevDay (normalized to null): the whole current is not reported as a 24h mint.
+    const emptyPrevDay = aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, chainCirculating: { ethereum: { current: 150, circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null } } },
+      usdc,
+    ] }));
+    expect(emptyPrevDay.chains.find((chain) => chain.id === "ethereum")).toMatchObject({ totalUsd: 200, change24h: 0 });
+
+    // An explicit zero current is a genuine redemption.
+    const zeroCurrent = aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, chainCirculating: { ethereum: { current: 0, circulatingPrevDay: 100 } } },
+      usdc,
+    ] }));
+    expect(zeroCurrent.chains.find((chain) => chain.id === "ethereum")).toMatchObject({ totalUsd: 50, change24h: -100 });
+  });
+
+  it("excludes absent aggregate buckets from global supply while counting an observed zero", () => {
+    const result = aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: {}, circulatingPrevDay: { peggedUSD: 40 },
+        chainCirculating: { ethereum: { current: 100 } } },
+      { id: "usdc-circle", symbol: "USDC", price: 1, circulating: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: 20 },
+        chainCirculating: {} },
+      { id: "dai-makerdao", symbol: "DAI", price: 1, circulating: { peggedUSD: 60 }, circulatingPrevDay: { peggedUSD: 60 },
+        chainCirculating: { ethereum: { current: 60 } } },
+    ] }));
+    expect(result.globalTotalUsd).toBe(60);
+    // Paired 24h: (0 + 60) vs (20 + 60); the absent USDT aggregate neither adds supply nor pairs its prevDay.
+    expect(result.globalChange24hPct).toBeCloseTo(-0.25);
+  });
+
   it("pairs global production supply only with assets that have historical anchors", () => {
     const result = aggregateChains(makeInput({ peggedAssets: [
       { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100 },
@@ -283,11 +321,13 @@ describe("aggregateChains", () => {
     expect(result.globalTotalUsd).toBe(1000);
     expect(result.chainAttributedTotalUsd).toBe(750);
     expect(result.unattributedTotalUsd).toBe(250);
+    expect(result.attributionDiscrepancyUsd).toBe(-250);
+    expect(result.dominanceGeometryTotalUsd).toBe(1000);
     expect(result.globalChange7dPct).toBeCloseTo((1000 - 935) / 935, 4);
     expect(eth.dominanceShare).toBeCloseTo(550 / 1000, 4);
   });
 
-  it("bounds chain attribution and dominance when chain rows exceed aggregate supply", () => {
+  it("publishes raw over-attribution as a signed discrepancy instead of capping chain shares", () => {
     const result = aggregateChains(makeInput({
       peggedAssets: [
         {
@@ -295,26 +335,69 @@ describe("aggregateChains", () => {
           symbol: "USDT",
           price: 1,
           pegType: "peggedUSD",
-          circulating: { peggedUSD: 600 },
-          chainCirculating: { ethereum: { current: 800 } },
+          circulating: { peggedUSD: 60 },
+          chainCirculating: { ethereum: { current: 90 } },
         },
         {
           id: "usdc-circle",
           symbol: "USDC",
           price: 1,
           pegType: "peggedUSD",
-          circulating: { peggedUSD: 400 },
-          chainCirculating: { bsc: { current: 700 } },
+          circulating: { peggedUSD: 40 },
+          chainCirculating: { base: { current: 60 } },
         },
       ],
     }));
 
-    expect(result.globalTotalUsd).toBe(1000);
-    expect(result.chainAttributedTotalUsd).toBe(1000);
+    // Canonical global supply stays its own authority; chain rows keep their raw totals.
+    expect(result.globalTotalUsd).toBe(100);
+    expect(result.chainAttributedTotalUsd).toBe(150);
+    expect(result.chainAttributedTotalUsd).toBe(result.chains.reduce((sum, chain) => sum + chain.totalUsd, 0));
+    expect(result.attributionDiscrepancyUsd).toBe(50);
     expect(result.unattributedTotalUsd).toBe(0);
-    expect(result.chains.find((chain) => chain.id === "ethereum")?.dominanceShare).toBeCloseTo(800 / 1500);
-    expect(result.chains.find((chain) => chain.id === "bsc")?.dominanceShare).toBeCloseTo(700 / 1500);
-    expect(result.chains.reduce((sum, chain) => sum + chain.dominanceShare, 0)).toBeCloseTo(1);
+    // Shares keep the global denominator (no hidden rescale); geometry names the larger raw total.
+    expect(result.chains.find((chain) => chain.id === "ethereum")?.dominanceShare).toBeCloseTo(0.9);
+    expect(result.chains.find((chain) => chain.id === "base")?.dominanceShare).toBeCloseTo(0.6);
+    expect(result.dominanceGeometryTotalUsd).toBe(150);
+    for (const chain of result.chains) {
+      expect(chain.totalUsd / result.dominanceGeometryTotalUsd!).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("discloses unobserved aggregate and chain supply instead of silently dropping it", () => {
+    const result = aggregateChains(makeInput({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 100 },
+          chainCirculating: { ethereum: { current: 60 }, tron: { current: null } },
+        },
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: {},
+          chainCirculating: { ethereum: { current: null }, bsc: { current: 30 } },
+        },
+      ],
+    }));
+
+    expect(result.supplyCoverage).toEqual({
+      aggregateUnavailableAssetCount: 1,
+      chainUnavailableObservationCount: 2,
+      chainIdsWithUnavailableObservations: ["ethereum", "tron"],
+    });
+    // Tron has no observed row, so it is not published, but it is still named above.
+    expect(result.chains.find((chain) => chain.id === "tron")).toBeUndefined();
+    expect(result.chains.find((chain) => chain.id === "ethereum")).toMatchObject({
+      totalUsd: 60,
+      unavailableSupplyObservationCount: 1,
+    });
+    expect(result.chains.find((chain) => chain.id === "bsc")?.unavailableSupplyObservationCount).toBe(0);
   });
 
   it("includes the top stablecoins per chain by local supply", () => {
@@ -357,7 +440,7 @@ describe("aggregateChains", () => {
     input.peggedAssets[0].price = 0.9;
     const depegged = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
     expect(depegged.healthFactors.quality).toBe(baseline.healthFactors.quality);
-    expect(depegged.healthFactors.pegStability).toBeLessThan(baseline.healthFactors.pegStability);
+    expect(depegged.healthFactors.pegStability).toBeLessThan(baseline.healthFactors.pegStability!);
     expect(depegged.healthScore).toBeLessThan(baseline.healthScore!);
   });
 
@@ -380,6 +463,34 @@ describe("aggregateChains", () => {
     expect(missing.healthFactors.pegStability).toBe(100);
     expect(referenced.healthFactors.pegStability).toBe(45);
     expect(missing.healthScore).toBeGreaterThan(referenced.healthScore!);
+    // The missing-reference supply stays in the coverage denominator rather than vanishing.
+    expect(missing.pegStabilityCoverage).toMatchObject({
+      status: "partial",
+      observedSupplyUsd: 250,
+      eligibleSupplyUsd: 550,
+      noPegReferenceSupplyUsd: 300,
+      neutralImputedSupplyUsd: 0,
+      observedScore: 100,
+    });
+    expect(referenced.pegStabilityCoverage?.status).toBe("complete");
+  });
+
+  it("reports zero peg coverage beside the Release A neutral placeholder when every price is missing", () => {
+    const input = makeInput();
+    for (const coin of input.peggedAssets) coin.price = null;
+    const eth = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
+    // RELEASE A: the published factor keeps the neutral-50 imputation; coverage shows it is unobserved.
+    expect(eth.healthFactors.pegStability).toBe(50);
+    expect(eth.pegStabilityCoverage).toEqual({
+      status: "unavailable",
+      observedSupplyUsd: 0,
+      eligibleSupplyUsd: 550,
+      coverage: 0,
+      noUsablePriceSupplyUsd: 550,
+      noPegReferenceSupplyUsd: 0,
+      neutralImputedSupplyUsd: 550,
+      observedScore: null,
+    });
   });
 
   it("assigns tier 1 chain environment to ethereum", () => {

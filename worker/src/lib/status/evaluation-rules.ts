@@ -35,13 +35,13 @@ const DEWS_DOWNSTREAM_DEX_RATIO_GATE = 2;
 
 export interface ReserveCompositionAssessment {
   bootstrap: boolean;
-  status: StatusResponse["reserveComposition"]["status"];
+  status: Exclude<StatusResponse["reserveComposition"]["status"], "unavailable">;
   freshCoverageRatio: number;
   authoritativeFreshCoverageRatio: number;
 }
 
 export function evaluateReserveCompositionStatus(
-  reserveComposition: StatusResponse["reserveComposition"],
+  reserveComposition: Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>,
 ): ReserveCompositionAssessment {
   const bootstrap = reserveComposition.configuredCoins > 0 && reserveComposition.lastSuccessAt == null;
   const authoritativeFreshCoins =
@@ -323,7 +323,7 @@ function evaluateWatchTailDiagnostics(input: WatchTailInput): Partial<StatusRule
     causes.push(makeCause("availability", "watch_unhealthy_crons_present", "info", `${input.watchUnhealthyCrons} watch-tier cron job(s) are unavailable/stale.`, { metric: "watchUnhealthyCrons", value: input.watchUnhealthyCrons, threshold: 1 }));
   }
   if (input.degradedCronRuns > 0) {
-    causes.push(makeCause("availability", "degraded_cron_warning", "info", `${input.degradedCronRuns} cron job(s) are in fallback/degraded mode (warning-only).`, { metric: "degradedCrons", value: input.degradedCronRuns, threshold: 1 }));
+    causes.push(makeCause("availability", "degraded_cron_warning", "info", `${input.degradedCronRuns} cron job(s) report incomplete work or output quality warnings.`, { metric: "degradedCrons", value: input.degradedCronRuns, threshold: 1 }));
   }
   return ruleResult("healthy", causes);
 }
@@ -483,12 +483,12 @@ function evaluateDataSourceFailures(input: DataQualityEvaluationInput): Partial<
 }
 
 function evaluateReserveQueryFailure(input: DataQualityEvaluationInput): Partial<StatusRuleEvaluation> | null {
-  if (!input.reserveCompositionQueryFailed) return null;
-  return ruleResult("healthy", [
+  if (!input.reserveCompositionQueryFailed && input.reserveComposition.status !== "unavailable") return null;
+  return ruleResult("degraded", [
     makeCause(
       "data-quality",
       "reserve_sync_query_failed",
-      "info",
+      "warning",
       "Live reserve composition overview query failed; reserve freshness status may be incomplete.",
     ),
   ]);
@@ -525,6 +525,7 @@ function evaluateRepairDiagnostics(input: DataQualityEvaluationInput): Partial<S
 
 function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const reserve = input.reserveComposition;
+  if (reserve.status === "unavailable") return null;
   const causes: StatusCause[] = [];
   if (reserve.writeTimeoutUncertain > 0) {
     causes.push(
@@ -600,7 +601,7 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
         const acknowledgement = reviewed.length > 0
           ? ` ${reviewed.length} acknowledged gap(s) under review: ${reviewed.join("; ")}.`
           : "";
-        const baseMessage = `Live prices are missing for ${coverage.missingPriceCount} active asset(s).${acknowledgement}`;
+        const baseMessage = `Live prices are missing for ${coverage.missingPriceCount ?? "an unknown number of"} active asset(s).${acknowledgement}`;
         const notAlerting = reviewed.length > 0
           ? " Every missing gap is either acknowledged under review or below the alert-eligible persistence threshold"
           : " No gap has reached the alert-eligible persistence threshold";
@@ -611,7 +612,7 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
           alertIds.length > 0
             ? `${baseMessage} Alert-eligible (unacknowledged) gaps: ${alertIds.join(", ")}.`
             : `${baseMessage}${notAlerting}; not degrading public status.`,
-          { metric: "missingActivePrices", value: coverage.missingPriceCount, threshold: 1 },
+          { metric: "missingActivePrices", value: coverage.missingPriceCount ?? undefined, threshold: 1 },
         ));
         // A duration-driven degradation opens a public uptime incident, so it
         // gets its own allowlisted cause; the generic incomplete-coverage
@@ -622,8 +623,10 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
             "data-quality",
             "active_price_coverage_duration_degraded",
             "warning",
-            `Persistent live-price gap(s) have outlived the duration budget (${gapDuration.worstGenerations} consecutive missing generations, threshold ${STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated}): ${gapDuration.degradedGapIds.join(", ")}. Each requires catalog review to re-source the price or retire the listing.`,
-            { metric: "missingPriceDurationGenerations", value: gapDuration.worstGenerations, threshold: STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated },
+            gapDuration.worstGenerations == null
+              ? `Live-price gap continuity is unavailable; conservatively retaining a warning for: ${gapDuration.degradedGapIds.join(", ")}.`
+              : `Persistent live-price gap(s) have outlived the duration budget (${gapDuration.worstGenerations} consecutive missing generations, threshold ${STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated}): ${gapDuration.degradedGapIds.join(", ")}. Each requires catalog review to re-source the price or retire the listing.`,
+            { metric: "missingPriceDurationGenerations", value: gapDuration.worstGenerations ?? undefined, threshold: STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated },
           ));
         }
       } else if (coverage.status === "unknown") {
@@ -712,9 +715,10 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
       return status === "healthy" && causes.length === 0 ? null : { status, causes };
   },
   (input) => {
-      const status = input.reserveComposition.status;
-      if (status === "healthy") return null;
       const reserve = input.reserveComposition;
+      if (reserve.status === "unavailable") return null; // The failed-read rule supplies the degrading cause.
+      const status = reserve.status;
+      if (status === "healthy") return null;
       const persistent = reserve.persistentlyStaleIndependentCoins.length > 0
         ? ` ${formatPersistentStaleIndependentFeeds(reserve.persistentlyStaleIndependentCoins)}.`
         : "";
@@ -748,7 +752,7 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
 ];
 
 function formatPersistentStaleIndependentFeeds(
-  coins: StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"],
+  coins: NonNullable<StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"]>,
 ): string {
   const examples = coins
     .slice(0, 3)

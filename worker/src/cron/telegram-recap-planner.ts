@@ -412,6 +412,7 @@ export async function planTelegramPersonalizedRecaps(
     status,
     itemCount: counts.queued + counts.noChanges + counts.paused + counts.stale,
     metadata: {
+      reason: tapeFreshness === "stale" ? "project-tape-stale" : "recap-planning-completed",
       ...counts,
       tapeFreshness,
       wallDurationMs: Math.max(0, Date.now() - startedAtMs),

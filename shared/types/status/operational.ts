@@ -216,6 +216,10 @@ export const CanaryStatusSchema = z.object({
   latestRunAt: z.number().nullable(),
   maxAgeSec: z.number(),
   totalChecks: z.number(),
+  // Older Workers omit cohort diagnostics; absence is unknown completeness, not an empty cohort.
+  expectedCheckIds: z.array(z.string()).optional(),
+  presentCheckIds: z.array(z.string()).optional(),
+  missingCheckIds: z.array(z.string()).optional(),
   okCount: z.number(),
   degradedCount: z.number(),
   errorCount: z.number(),

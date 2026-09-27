@@ -157,7 +157,7 @@ describe("parseEvmLogs", () => {
       ],
       data: "0x",
       blockNumber: "0x1234",
-      transactionHash: "0xabc",
+      transactionHash: "0x" + "ab".repeat(32),
       logIndex: "0x0",
       timeStamp: "0x65000000",
     }];
@@ -178,7 +178,7 @@ describe("parseEvmLogs", () => {
       ],
       data: "0x",
       blockNumber: "0x1234",
-      transactionHash: "0xdef",
+      transactionHash: "0x" + "de".repeat(32),
       logIndex: "0x0",
       timeStamp: "0x65000000",
     }];
@@ -194,7 +194,7 @@ describe("parseEvmLogs", () => {
       topics: ["0xae7f60c1b8f645c3beffeb531169cbc446874bbf247698325318879ac850c346"],
       data: encodeAbiParameters([{ type: "address" }], [pausedAddr]),
       blockNumber: "0x1234",
-      transactionHash: "0xrlusd",
+      transactionHash: "0x" + "11".repeat(32),
       logIndex: "0x1",
       timeStamp: "0x65000000",
     }];
@@ -218,7 +218,7 @@ describe("parseEvmLogs", () => {
       topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
       data: encodeAbiParameters([{ type: "address[]" }], [[firstAddr, secondAddr]]),
       blockNumber: "0x1234",
-      transactionHash: "0xusdtb",
+      transactionHash: "0x" + "22".repeat(32),
       logIndex: "0x2",
       timeStamp: "0x65000000",
     }];
@@ -228,8 +228,8 @@ describe("parseEvmLogs", () => {
     expect(rows).toHaveLength(2);
     expect(rows.map((row) => row.address)).toEqual([firstAddr, secondAddr]);
     expect(rows.map((row) => row.id)).toEqual([
-      "ethereum-0xusdtb-0x2-0",
-      "ethereum-0xusdtb-0x2-1",
+      `ethereum-0x${"22".repeat(32)}-0x2-0`,
+      `ethereum-0x${"22".repeat(32)}-0x2-1`,
     ]);
   });
 
@@ -243,14 +243,14 @@ describe("parseEvmLogs", () => {
       topics: [USDTB_CONFIG.events[0]!.topicHash],
       data: encodeAbiParameters([{ type: "address[]" }], [addresses]),
       blockNumber: "0x1234",
-      transactionHash: "0xusdtb-large-batch",
+      transactionHash: "0x" + "33".repeat(32),
       logIndex: "0x2",
       timeStamp: "0x65000000",
     }]).rows;
 
     expect(rows).toHaveLength(501);
     expect(rows[500]).toMatchObject({
-      id: "ethereum-0xusdtb-large-batch-0x2-500",
+      id: `ethereum-0x${"33".repeat(32)}-0x2-500`,
       address: addresses[500],
     });
   });
@@ -265,7 +265,7 @@ describe("parseEvmLogs", () => {
         [destroyedAddr, 123_000_000n],
       ),
       blockNumber: "0x1234",
-      transactionHash: "0xa7a5",
+      transactionHash: "0x" + "44".repeat(32),
       logIndex: "0x3",
       timeStamp: "0x65000000",
     }];
@@ -297,7 +297,7 @@ describe("parseEvmLogs", () => {
       ],
       data: "0x",
       blockNumber: "0x1234",
-      transactionHash: "0xindexed",
+      transactionHash: "0x" + "55".repeat(32),
       logIndex: "0x4",
       timeStamp: "0x65000000",
     }];
@@ -332,7 +332,7 @@ describe("parseEvmLogs", () => {
         [seizedAddr, 25_000_000n, "test", 0],
       ),
       blockNumber: "0x1234",
-      transactionHash: "0xbuidl",
+      transactionHash: "0x" + "66".repeat(32),
       logIndex: "0x5",
       timeStamp: "0x65000000",
     }];
@@ -359,7 +359,7 @@ describe("parseEvmLogs", () => {
       ],
       data: encodeAbiParameters([{ type: "address" }], [seizedAddr]),
       blockNumber: "0x1234",
-      transactionHash: "0xbuidl-short",
+      transactionHash: "0x" + "77".repeat(32),
       logIndex: "0x6",
       timeStamp: "0x65000000",
     }]).rows;
@@ -375,17 +375,19 @@ describe("parseEvmLogs", () => {
   });
 
   it("skips malformed scalar address data instead of creating a bogus 0x row", () => {
-    const rows = parseEvmLogsWithCoverage(USDC_CONFIG, [{
+    const parsed = parseEvmLogsWithCoverage(USDC_CONFIG, [{
       address: USDC_CONFIG.contractAddress,
       topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855"],
       data: "0x1234",
       blockNumber: "0x1234",
-      transactionHash: "0xshort-address",
+      transactionHash: "0x" + "88".repeat(32),
       logIndex: "0x7",
       timeStamp: "0x65000000",
-    }]).rows;
+    }]);
 
-    expect(rows).toHaveLength(0);
+    expect(parsed.rows).toHaveLength(0);
+    expect(parsed.coverageCeiling).toBe(0x1233);
+    expect(parsed.failures[0].reason).toBe("invalid-address");
   });
 
   it("decodes BUIDL Seize with amountDataIndex=0 (regression for Agent A C1)", async () => {
@@ -532,12 +534,14 @@ describe("parseEvmLogs branch coverage", () => {
   });
 
   it("handles malformed address array data gracefully", () => {
-    const rows = parseEvmLogsWithCoverage(USDTB_CONFIG, [makeBlacklistLog({
+    const parsed = parseEvmLogsWithCoverage(USDTB_CONFIG, [makeBlacklistLog({
       address: USDTB_CONFIG.contractAddress,
       topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
       data: "0xdeadbeef",
-    })]).rows;
-    expect(rows).toHaveLength(0);
+    })]);
+    expect(parsed.rows).toHaveLength(0);
+    expect(parsed.coverageCeiling).not.toBeNull();
+    expect(parsed.failures[0].reason).toBe("invalid-address-array");
   });
 
 
@@ -561,7 +565,6 @@ describe("parseEvmLogs branch coverage", () => {
   it.each([
     ["one", "01".padStart(64, "0"), "blacklist"],
     ["zero", "00".repeat(32), "unblacklist"],
-    ["high-bit-set", "ff".repeat(32), "blacklist"],
   ] as const)("decodes the %s bool word", (_name, word, eventType) => {
     const rows = parseEvmLogsWithCoverage(boolConfig, [makeBlacklistLog({
       address: boolConfig.contractAddress,
@@ -573,6 +576,26 @@ describe("parseEvmLogs branch coverage", () => {
       event_type: eventType,
       address: "0x1111111111111111111111111111111111111111",
     });
+  });
+
+  it.each(["0x", "0x" + "ff".repeat(32)])("fences absent or invalid direction evidence %s", (data) => {
+    const parsed = parseEvmLogsWithCoverage(boolConfig, [makeBlacklistLog({
+      address: boolConfig.contractAddress, topics: [boolTopic, "0x" + "0".repeat(24) + "11".repeat(20)], data,
+    })]);
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.coverageCeiling).not.toBeNull();
+    expect(parsed.failures[0].reason).toBe("invalid-direction-bool");
+  });
+
+  it("admits a valid empty address array without a frontier fence", () => {
+    const parsed = parseEvmLogsWithCoverage(USDTB_CONFIG, [makeBlacklistLog({
+      address: USDTB_CONFIG.contractAddress,
+      topics: [USDTB_CONFIG.events[0].topicHash],
+      data: encodeAbiParameters([{ type: "address[]" }], [[]]),
+    })]);
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.coverageCeiling).toBeNull();
+    expect(parsed.failures).toEqual([]);
   });
 
   it("decodes non-indexed address from data for USDT DestroyedBlackFunds", () => {

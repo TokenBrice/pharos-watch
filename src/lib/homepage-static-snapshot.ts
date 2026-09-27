@@ -32,7 +32,7 @@ export function getHomepageHeroSnapshot(): HomepageHeroSnapshot {
       return [{
         id: row.id,
         pegType: row.pegType,
-        circulatingUsd: numberValue(row.circulatingUsd) ?? 0,
+        circulatingUsd: numberValue(row.circulatingUsd),
       }];
     }),
     asOfISO(),

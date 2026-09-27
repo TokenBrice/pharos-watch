@@ -18,6 +18,8 @@ export interface CronSentinelSourceResult {
   source: CronSentinelRuleSource;
   result: CronResult;
   observedAt?: number;
+  state: "current" | "expired" | "missing" | "disabled";
+  maxAgeSec: number;
 }
 
 const SOURCES_BY_MODE: Record<CronSentinelMode, readonly CronSentinelRuleSource[]> = {
@@ -33,27 +35,22 @@ const SOURCES_BY_MODE: Record<CronSentinelMode, readonly CronSentinelRuleSource[
 const TURNOVER_INTERVAL_SEC = CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset.intervalSec * 2;
 
 const SOURCE_INTERVAL_SEC: Record<CronSentinelRuleSource, number> = {
-  freshness: 15 * 60,
-  "digest-publication": 15 * 60,
-  growth: 24 * 60 * 60,
-  duration: 24 * 60 * 60,
-  "repair-debt": 24 * 60 * 60,
+  freshness: CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.intervalSec,
+  "digest-publication": CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.intervalSec,
+  growth: CRON_SCHEDULE_CADENCES.daily0300Utc.intervalSec,
+  duration: CRON_SCHEDULE_CADENCES.daily0300Utc.intervalSec,
+  "repair-debt": CRON_SCHEDULE_CADENCES.daily0300Utc.intervalSec,
   turnover: TURNOVER_INTERVAL_SEC,
-  "reserve-post-sync": 4 * 60 * 60,
+  "reserve-post-sync": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
 };
 const SOURCE_STATE_MAX_AGE_SEC = 48 * 60 * 60;
 const SOURCE_STATE_INTERVAL_MULTIPLIER = 2;
 
-function isRetainedSourceStateFresh(
-  source: CronSentinelRuleSource,
-  updatedAt: number,
-  nowSec: number,
-): boolean {
-  const maxAgeSec = Math.min(
+function sourceStateMaxAgeSec(source: CronSentinelRuleSource): number {
+  return Math.min(
     SOURCE_STATE_MAX_AGE_SEC,
     SOURCE_INTERVAL_SEC[source] * SOURCE_STATE_INTERVAL_MULTIPLIER,
   );
-  return Number.isFinite(updatedAt) && nowSec - updatedAt <= maxAgeSec;
 }
 
 function parseMetadata(metadata: string | undefined): unknown {
@@ -78,29 +75,44 @@ function buildCronSentinelResult(
   mode: CronSentinelMode,
   sourceResults: readonly CronSentinelSourceResult[],
 ): CronResult {
-  const results = sourceResults.map(({ result }) => result);
+  const currentSources = sourceResults.filter(({ state }) => state === "current");
+  const results = currentSources.map(({ result }) => result);
   const status = worstStatus(results);
   const sourceStatuses = Object.fromEntries(
-    sourceResults.map(({ source, result }) => [source, result.status ?? "ok"]),
+    sourceResults.map(({ source, result, state }) => [source, state === "current" ? result.status ?? "ok" : state]),
   );
+  const qualitySources = currentSources.flatMap(({ source, result }) => {
+    const metadata = parseMetadata(result.metadata);
+    return metadata && typeof metadata === "object" && "quality" in metadata && metadata.quality
+      ? [[source, metadata.quality] as const]
+      : [];
+  });
   // One job id multiplexes four watchdog sets, so the row names the mode and
   // the source that produced the worst status instead of collapsing them.
   const attributedSource = status === "ok" || status === undefined
     ? null
-    : sourceResults.find(({ result }) => (result.status ?? "ok") === status)?.source ?? null;
+    : currentSources.find(({ result }) => (result.status ?? "ok") === status)?.source ?? null;
   return {
     status,
     itemCount: results.reduce((sum, result) => sum + (result.itemCount ?? 0), 0),
     metadata: JSON.stringify({
       mode,
       sourceStatuses,
-      ...(attributedSource ? { reason: `${mode}:${attributedSource}:${status}` } : {}),
+      ...(attributedSource
+        ? { reason: `${mode}:${attributedSource}:${status}` }
+        : status === "skipped_neutral" ? { reason: `${mode}:no-current-source-evidence` } : {}),
+      ...(qualitySources.length > 0
+        ? { quality: { reason: "sentinel-source-findings", sources: Object.fromEntries(qualitySources) } }
+        : {}),
       ruleIds: Object.fromEntries(
         sourceResults.map(({ source }) => [source, CRON_SENTINEL_RULE_IDS[source]]),
       ),
-      sources: Object.fromEntries(sourceResults.map(({ source, result, observedAt }) => [source, {
-        ...(observedAt !== undefined ? { observedAt } : {}),
-        status: result.status ?? "ok",
+      sources: Object.fromEntries(sourceResults.map(({ source, result, observedAt, state, maxAgeSec }) => [source, {
+        observedAt: observedAt ?? null,
+        intervalSec: SOURCE_INTERVAL_SEC[source],
+        maxAgeSec,
+        status: state === "current" ? result.status ?? "ok" : state,
+        ...(state !== "current" ? { reason: `source-state-${state}`, lastStatus: result.status ?? null } : {}),
         itemCount: result.itemCount ?? 0,
         metadata: parseMetadata(result.metadata),
         ...(result.error ? { error: result.error } : {}),
@@ -173,8 +185,11 @@ export async function runCronSentinelSources(
   const results: CronSentinelSourceResult[] = [];
   for (const source of allSources) {
     const row = saved.get(`cron-sentinel:source:${source}`);
-    if (!row) continue;
-    if (!isRetainedSourceStateFresh(source, row.updatedAt, nowSec)) continue;
+    const maxAgeSec = sourceStateMaxAgeSec(source);
+    if (!row) {
+      results.push({ source, result: { status: "skipped_neutral" }, state: "missing", maxAgeSec });
+      continue;
+    }
     let result: CronResult;
     try {
       result = JSON.parse(row.value) as CronResult;
@@ -183,7 +198,14 @@ export async function runCronSentinelSources(
     } catch {
       result = { status: "error", itemCount: 0, error: "Invalid persisted sentinel source state" };
     }
-    results.push({ source, result, observedAt: row.updatedAt });
+    const metadata = parseMetadata(result.metadata);
+    const disabled = source === "repair-debt" && metadata != null && typeof metadata === "object"
+      && "enabled" in metadata && metadata.enabled === false;
+    const fresh = Number.isFinite(row.updatedAt) && nowSec - row.updatedAt <= maxAgeSec;
+    results.push({
+      source, result, observedAt: row.updatedAt, maxAgeSec,
+      state: !fresh ? "expired" : disabled ? "disabled" : "current",
+    });
   }
   return buildCronSentinelResult(mode, results);
 }

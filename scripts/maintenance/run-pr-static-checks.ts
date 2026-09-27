@@ -2,6 +2,7 @@
 
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import {
   createExecutionUnit,
@@ -138,7 +139,7 @@ export function buildPrStaticCheckPlan(
   // could leave the V9 evaluation-build manifest stale and still pass the PR
   // gate — the Wave-1 fix wave did exactly that, and only the release discovery
   // gate caught it.
-  const artifactIds = selectChangedGeneratedArtifactIds(changedFiles);
+  const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles));
   if (artifactIds.length > 0) {
     commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
   }
@@ -170,7 +171,8 @@ export async function runPrStaticChecks({
   stdout = process.stdout,
 }: PrStaticCheckOptions = {}): Promise<number> {
   const startedAt = Date.now();
-  const { base, head, rest } = parseChangedFileArgs(argv, env);
+  const { base, head, rest, staged } = parseChangedFileArgs(argv, env);
+  if (staged) throw new Error("check:pr:static requires a --base/--head range; use check:focused --staged for index-selected checks.");
   const json = rest.includes("--json");
   const skipDocSync = rest.includes("--skip-doc-sync");
   const unknownOptions = rest.filter((arg) => arg !== "--json" && arg !== "--skip-doc-sync");

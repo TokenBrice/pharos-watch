@@ -182,6 +182,26 @@ describe("handleBackfillStabilityIndex", () => {
     vi.useRealTimers();
   });
 
+  it("persists native replay unavailability instead of using a USD daily price or peak", async () => {
+    const day = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+    const db = makeDb({
+      depegRows: [{ stablecoin_id: "eurc-circle", peak_deviation_bps: -200, peg_reference: 1,
+        started_at: day, ended_at: null }],
+      supplyRows: [{ stablecoin_id: "eurc-circle", snapshot_date: day, circulating_usd: 1e9, price: 1.08 }],
+    });
+    db.sqlite.prepare("UPDATE depeg_events SET peg_type = 'peggedEUR', source = 'live', start_price = 0.98").run();
+    const response = await callBackfillStabilityIndex({
+      db, trustedAdmin: true,
+      request: makeApiRequest(`/api/backfill-stability-index?startDay=${day}&endDay=${day}`, { method: "POST", adminKey: "secret" }),
+    });
+    expect(response.status).toBe(200);
+    const row = db.sqlite.prepare("SELECT input_snapshot FROM stability_index WHERE computed_at = ?").get(day) as { input_snapshot: string };
+    expect(JSON.parse(row.input_snapshot)).toMatchObject({
+      depegCount: 0, openDepegsWithoutPrice: 1, peakDeviationFallbackCount: 0,
+      degradedComponents: ["open-depeg-no-price"],
+    });
+  });
+
   it("returns 404 when there are no depeg events", async () => {
     const res = await callBackfillStabilityIndex({ db: makeDb({ earliest: null }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { adminKey: "secret" }) });
 

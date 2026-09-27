@@ -11,11 +11,12 @@ import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry"
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { getDepegThresholdBpsForPegCurrency } from "./constants";
 import { deriveDepegSignal } from "./depeg-signals";
+import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
 const HISTORICAL_PEAK_FLOOR_MIN_CLOSE_PERSISTENCE_SEC = 6 * 3600;
 
-export interface PsiDepegEventRow {
+export interface PsiDepegEventRow extends NativeEventPriceEvidence {
   stablecoin_id: string;
   peak_deviation_bps: number;
   peg_reference: number;
@@ -40,6 +41,7 @@ export interface StabilityInputForDay {
   shadowCoverageCount: number;
   historicalPriceCoverageCount: number;
   peakDeviationFallbackCount: number;
+  openDepegsWithoutPrice: number;
 }
 
 export function buildSupplySnapshotMap(rows: PsiSupplyRow[]): SupplySnapshotMap {
@@ -126,18 +128,31 @@ export function buildStabilityInputForDay(
   const depegs: Array<{ bps: number; mcapUsd: number; depegAgeDays: number }> = [];
   let historicalPriceCoverageCount = 0;
   let peakDeviationFallbackCount = 0;
+  let openDepegsWithoutPrice = 0;
   for (const [coinId, events] of grouped) {
     if (!CORE_PSI_ELIGIBLE_IDS.has(coinId)) continue;
     let worstBps = 0;
     let earliestStart = Infinity;
     let usedHistoricalPrice = false;
     let usedPeakFallback = false;
+    let missingPrice = false;
     const snapshot = findNearestSupplySnapshot(supplyByCoin.get(coinId), day);
     const snapshotPrice = snapshot?.price;
     const thresholdBps = getDepegThresholdBpsForPegCurrency(PSI_ELIGIBLE_META_BY_ID.get(coinId)?.flags.pegCurrency);
 
     for (const event of events) {
-      const replayBps = computeHistoricalEventBps(event, snapshotPrice, day, thresholdBps);
+      const nativeEvent = isNativePegEvent(event);
+      const nativePrice = nativeEvent ? getNativeEventPrice(event, Math.min(now, dayEnd)) : null;
+      const nativeSignal = nativePrice == null ? null : deriveDepegSignal(nativePrice, event.peg_reference);
+      if (nativeEvent && nativeSignal == null) {
+        missingPrice = true;
+        continue;
+      }
+      // Native evidence is already in the event domain. Never use USD snapshots
+      // or an untimed event peak to fill a missing contemporaneous native quote.
+      const replayBps = nativeEvent
+        ? { bps: nativeSignal!.bps, source: "historical-price" as const }
+        : computeHistoricalEventBps(event, snapshotPrice, day, thresholdBps);
       if (!replayBps) continue;
       if (Math.abs(replayBps.bps) > Math.abs(worstBps)) {
         worstBps = replayBps.bps;
@@ -148,6 +163,7 @@ export function buildStabilityInputForDay(
         earliestStart = event.started_at;
       }
     }
+    if (missingPrice) openDepegsWithoutPrice++;
 
     if (earliestStart === Infinity) continue;
     if (usedHistoricalPrice) historicalPriceCoverageCount++;
@@ -175,5 +191,6 @@ export function buildStabilityInputForDay(
     shadowCoverageCount: universe.shadowCoverageCount,
     historicalPriceCoverageCount,
     peakDeviationFallbackCount,
+    openDepegsWithoutPrice,
   };
 }

@@ -23,6 +23,7 @@ interface Dependency {
   kind: DependencyKind;
   names: string[];
   reExports?: Array<{ imported: string; exported: string }>;
+  opaqueReason?: string;
 }
 
 interface ModuleInfo {
@@ -224,6 +225,7 @@ export function scanForUnusedCode(options: UnusedCodeScanOptions = {}): UnusedCo
   runtimeInbound = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
   namedExportUsage = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
   ambiguousUsage = new Set<string>();
+  const opaqueImportCounts = new Map<string, number>();
 
 
 for (const [file, info] of moduleInfo.entries()) {
@@ -231,7 +233,12 @@ for (const [file, info] of moduleInfo.entries()) {
     if (!runtimeInbound.has(dependency.resolved)) continue;
     runtimeInbound.get(dependency.resolved)?.add(file);
     if (dependency.kind === "re-export-named" || dependency.kind === "re-export-all") continue;
-    if (dependency.kind !== "named") {
+    if (dependency.kind === "namespace" && dependency.opaqueReason) {
+      if (dependency.opaqueReason === "computed or escaping namespace" || dependency.opaqueReason === "unresolved namespace binding") {
+        out(`Conservative namespace audit: ${relPathByFile.get(file)} -> ${relPathByFile.get(dependency.resolved)} (${dependency.opaqueReason})\n`);
+      } else {
+        opaqueImportCounts.set(dependency.opaqueReason, (opaqueImportCounts.get(dependency.opaqueReason) ?? 0) + 1);
+      }
       ambiguousUsage.add(dependency.resolved);
       continue;
     }
@@ -241,6 +248,9 @@ for (const [file, info] of moduleInfo.entries()) {
       usedNames.add(name);
     }
   }
+}
+for (const [reason, count] of opaqueImportCounts) {
+  out(`Conservative namespace audit: ${count} ${reason} edge(s) retain whole-module consumption.\n`);
 }
 
 // Re-exports are routing edges, not genuine uses. Propagate actual consumer use
@@ -475,6 +485,18 @@ function analyzeModule(file: string): ModuleInfo {
   const localTypeUsage = new Set<string>();
   const dependencies: Dependency[] = [];
   let hasWildcardExports = false;
+  let namespaceChecker: ts.TypeChecker | undefined;
+  const getNamespaceChecker = () => {
+    if (!namespaceChecker) {
+      // Bind only this file: local symbols distinguish shadowed identifiers without
+      // loading dependencies or type-checking the workspace.
+      const options: ts.CompilerOptions = { noResolve: true, noLib: true, allowJs: true };
+      const host = ts.createCompilerHost(options);
+      host.getSourceFile = (name) => name === file ? sourceFile : undefined;
+      namespaceChecker = ts.createProgram([file], options, host).getTypeChecker();
+    }
+    return namespaceChecker;
+  };
   let hasSideEffectsOnly = true;
 
   for (const node of sourceFile.statements) {
@@ -492,7 +514,7 @@ function analyzeModule(file: string): ModuleInfo {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       const resolved = resolveModule(file, node.moduleSpecifier.text);
       if (resolved) {
-        dependencies.push(...collectImportDependencies(node, resolved));
+        dependencies.push(...collectImportDependencies(node, resolved, getNamespaceChecker));
       }
     }
 
@@ -506,7 +528,7 @@ function analyzeModule(file: string): ModuleInfo {
         dependencies.push(
           node.qualifier
             ? { resolved, kind: "named", names: [getRightmostEntityName(node.qualifier)] }
-            : { resolved, kind: "namespace", names: [] },
+            : { resolved, kind: "namespace", names: [], opaqueReason: "unqualified import type" },
         );
       }
     }
@@ -565,10 +587,15 @@ function analyzeModule(file: string): ModuleInfo {
     }
 
     if (hasExportModifier(node)) {
-      collectExportedNames(node, exports);
-      collectExportedTypeNames(node, typeExports);
-      collectExportedNames(node, declaredExports);
-      collectExportedTypeNames(node, declaredTypeExports);
+      if (ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)) {
+        exports.add("default");
+        declaredExports.add("default");
+      } else {
+        collectExportedNames(node, exports);
+        collectExportedTypeNames(node, typeExports);
+        collectExportedNames(node, declaredExports);
+        collectExportedTypeNames(node, declaredTypeExports);
+      }
     }
 
     if (
@@ -579,7 +606,7 @@ function analyzeModule(file: string): ModuleInfo {
     ) {
       const resolved = resolveModule(file, node.arguments[0].text);
       if (resolved) {
-        dependencies.push({ resolved, kind: "side-effect", names: [] });
+        dependencies.push({ resolved, kind: "namespace", names: [], opaqueReason: "dynamic import result" });
       }
     }
   });
@@ -642,7 +669,11 @@ function isCoveredByDefinitionSiteWaiver(file: string, name: string): boolean {
   return EXPORT_ALLOWLIST.has(`${definitionRel}::${name}`);
 }
 
-function collectImportDependencies(node: ts.ImportDeclaration, resolved: string): Dependency[] {
+function collectImportDependencies(
+  node: ts.ImportDeclaration,
+  resolved: string,
+  getChecker: () => ts.TypeChecker,
+): Dependency[] {
   const deps: Dependency[] = [];
   const importClause = node.importClause;
   if (!importClause) {
@@ -651,14 +682,44 @@ function collectImportDependencies(node: ts.ImportDeclaration, resolved: string)
   }
 
   if (importClause.name) {
-    deps.push({ resolved, kind: "default", names: [] });
+    deps.push({ resolved, kind: "default", names: ["default"] });
   }
 
   const bindings = importClause.namedBindings;
   if (!bindings) return deps;
 
   if (ts.isNamespaceImport(bindings)) {
-    deps.push({ resolved, kind: "namespace", names: [] });
+    const checker = getChecker();
+    const symbol = checker.getSymbolAtLocation(bindings.name);
+    if (!symbol) {
+      deps.push({ resolved, kind: "namespace", names: [], opaqueReason: "unresolved namespace binding" });
+      return deps;
+    }
+    const names = new Set<string>();
+    let opaqueReason: string | undefined;
+    visit(node.getSourceFile(), (reference) => {
+      if (!ts.isIdentifier(reference) || reference === bindings.name) return;
+      if (checker.getSymbolAtLocation(reference) !== symbol) return;
+      const parent = reference.parent;
+      if (ts.isPropertyAccessExpression(parent) && parent.expression === reference) {
+        names.add(parent.name.text);
+      } else if (ts.isQualifiedName(parent) && parent.left === reference) {
+        names.add(parent.right.text);
+      } else if (ts.isElementAccessExpression(parent) && parent.expression === reference &&
+                 (ts.isStringLiteral(parent.argumentExpression) || ts.isNoSubstitutionTemplateLiteral(parent.argumentExpression))) {
+        names.add(parent.argumentExpression.text);
+      } else if (ts.isCallExpression(parent) && parent.arguments[0] === reference &&
+                 ts.isPropertyAccessExpression(parent.expression) &&
+                 ts.isIdentifier(parent.expression.expression) &&
+                 ["vi", "jest"].includes(parent.expression.expression.text) &&
+                 parent.expression.name.text === "spyOn" &&
+                 parent.arguments[1] && ts.isStringLiteral(parent.arguments[1])) {
+        names.add(parent.arguments[1].text);
+      } else {
+        opaqueReason = "computed or escaping namespace";
+      }
+    });
+    deps.push({ resolved, kind: "namespace", names: [...names], opaqueReason });
     return deps;
   }
 

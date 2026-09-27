@@ -25,7 +25,20 @@ export function createEdgeCacheContext(request: Request, url: URL): EdgeCacheCon
 
 export async function readEdgeCache(context: EdgeCacheContext): Promise<Response | null> {
   if (context.skipCache) return null;
-  return (await caches.default.match(context.cacheKey)) ?? null;
+  const response = await caches.default.match(context.cacheKey);
+  if (!response) return null;
+  const cacheControl = response.headers.get("Cache-Control") ?? "";
+  const ttl = cacheControl.match(/\bs-maxage\s*=\s*(\d+)/i)
+    ?? cacheControl.match(/\bmax-age\s*=\s*(\d+)/i);
+  if (ttl) {
+    const date = Date.parse(response.headers.get("Date") ?? "");
+    const age = Number(response.headers.get("Age") ?? 0);
+    const elapsed = Number.isFinite(date) ? Math.max(0, (Date.now() - date) / 1000) : 0;
+    // Do not reset Date/Age or re-assess the body's generation-time verdict.
+    // Both dispatch lanes must miss once the bounded shared lifetime ends.
+    if (Math.max(elapsed, Number.isFinite(age) ? age : 0) >= Number(ttl[1])) return null;
+  }
+  return response;
 }
 
 export function writeEdgeCache(

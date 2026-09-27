@@ -286,6 +286,35 @@ function renderHero(overrides: HeroBuilderOverrides = {}): string {
 }
 
 describe("HeroCard", () => {
+  it.each([
+    { score: null, pools: 0, value: "—" },
+    { score: null, pools: 3, value: "—" },
+    { score: 0, pools: 3, value: "0" },
+    { score: 82, pools: 3, value: "82" },
+  ])("preserves liquidity availability for score $score with $pools pools", ({ score, pools, value }) => {
+    const overrides = { liquidityData: { ...liquidityData, liquidityScore: score, poolCount: pools } };
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps(overrides));
+    const metric = model.tertiaryMetrics.find((item) => item.key === "liquidity")!;
+    expect(metric.display.value).toBe(value);
+    expect(metric.display.sub).toBe(`${pools} pools`);
+    expect(model.signalRailItems.find((item) => item.key === "liquidity")?.primary).toBe(value);
+    if (score === null) {
+      expect(metric.accentClass).toBeUndefined();
+      expect(metric.display.color).toBe("text-muted-foreground");
+    }
+    const html = renderHero(overrides);
+    expect(html).toContain(`${pools} pools`);
+    expect(html.split(">Liq<")[1]).toContain(`>${value}<`);
+  });
+
+  it("leaves missing liquidity unavailable without a measured score accent", () => {
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps({ liquidityData: undefined }));
+    const metric = model.tertiaryMetrics.find((item) => item.key === "liquidity")!;
+    expect(metric.display.value).toBe("—");
+    expect(metric.display.sub).toBeUndefined();
+    expect(metric.accentClass).toBeUndefined();
+  });
+
   it("renders the existing unavailable placeholder when live price is null", () => {
     const html = renderToStaticMarkup(
       <HeroPriceMetric

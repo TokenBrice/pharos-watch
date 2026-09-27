@@ -4,6 +4,8 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeDexLiquidityHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDexLiquidityHistory } from "../dex-liquidity-history";
+import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { DexLiquidityHistoryResponseSchema } from "@shared/types/market";
 
 describe("handleDexLiquidityHistory", () => {
   const row = makeDexLiquidityHistoryRow();
@@ -141,6 +143,49 @@ describe("handleDexLiquidityHistory", () => {
     expect(body[0]?.liquidityEvidenceClass).toBe("observed_unmeasured");
     expect(body[0]?.hasMeasuredLiquidityEvidence).toBe(false);
     expect(body[0]?.trendworthy).toBe(false);
+  });
+
+  it("keeps legacy snapshots at unknown completeness and nulls recorded non-complete days", async () => {
+    const asOfSec = 1_790_000_000;
+    const availability = (pools: Array<{ volumeUsd: number | null; observedAtSec: number | null }>) =>
+      JSON.stringify({
+        "24h": summarizeDexVolumeWindow(pools, "24h", { asOfSec, maxObservationAgeSec: 86_400 }).availability,
+      });
+    const db = mockD1([
+      {
+        match: "dex_liquidity_history",
+        rows: [
+          makeDexLiquidityHistoryRow({ total_volume_24h_usd: 7_000, snapshot_date: asOfSec - 3 * 86_400 }),
+          {
+            ...makeDexLiquidityHistoryRow({ total_volume_24h_usd: 0, snapshot_date: asOfSec - 2 * 86_400 }),
+            volume_availability_json: availability([{ volumeUsd: 0, observedAtSec: asOfSec - 60 }]),
+          },
+          {
+            ...makeDexLiquidityHistoryRow({ total_volume_24h_usd: 4_000, snapshot_date: asOfSec - 86_400 }),
+            volume_availability_json: availability([
+              { volumeUsd: 4_000, observedAtSec: asOfSec - 60 },
+              { volumeUsd: 9_000, observedAtSec: asOfSec - 180 * 3600 },
+            ]),
+          },
+        ],
+      },
+    ]);
+    const res = await handleDexLiquidityHistory(
+      db,
+      new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
+    );
+    const body = (await res.json()) as Array<Record<string, unknown>>;
+    expect(DexLiquidityHistoryResponseSchema.safeParse(body).success).toBe(true);
+    // Legacy: historical number kept, no completeness claimed.
+    expect(body[0]).toMatchObject({ volume24h: 7_000 });
+    expect(body[0]).not.toHaveProperty("volume24hAvailability");
+    // Complete measured zero stays an observed zero.
+    expect(body[1]).toMatchObject({ volume24h: 0, volume24hAvailability: { completeness: "complete" } });
+    // Mixed fresh + 180h-old flow: no measured statistic, labelled partial sum only.
+    expect(body[2]).toMatchObject({
+      volume24h: null,
+      volume24hAvailability: { completeness: "partial", reason: "pool-observations-stale", partialGrossUsd: 4_000 },
+    });
   });
 });
 

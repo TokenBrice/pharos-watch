@@ -11,6 +11,15 @@ import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { CHAIN_META } from "@shared/lib/chains";
+import {
+  addMintBurnValuationTally,
+  emptyMintBurnValuationTally,
+  summarizeMintBurnValuation,
+  tallyMintBurnHourlyBucket,
+  type MintBurnValuationTally,
+} from "@shared/lib/mint-burn-valuation";
+import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
+import { type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 
@@ -25,12 +34,16 @@ export interface HourlyRow {
   hour_ts: number;
   mint_count: number;
   burn_count: number;
+  /** NULL: bucket aggregated before valuation coverage was recorded. */
+  mint_unpriced_event_count: number | null;
+  burn_unpriced_event_count: number | null;
+  /** Known-valuation subtotals; exact only when the matching unpriced count is 0. */
   mint_volume_usd: number;
   burn_volume_usd: number;
   net_flow_usd: number;
 }
 
-export interface DailyBaselineRow {
+export interface DailyBaselineRow extends MintBurnValuationTallyRow {
   stablecoin_id: string;
   chain_id: string;
   day_ts: number;
@@ -115,75 +128,71 @@ export interface FlowAggregate {
   mintCount: number;
   burnCount: number;
   netFlow: number;
+  valuation: MintBurnValuationTally;
 }
 
 export function bucketDay(ts: number): number {
   return bucketUnixSecondsToUtcDay(ts);
 }
 
-function emptyFlowAggregate(): FlowAggregate {
-  return {
-    mintVolume: 0,
-    burnVolume: 0,
-    mintCount: 0,
-    burnCount: 0,
-    netFlow: 0,
-  };
-}
-
-function addHourlyRowToAggregate(aggregate: FlowAggregate, row: HourlyRow): void {
-  aggregate.mintVolume += row.mint_volume_usd;
-  aggregate.burnVolume += row.burn_volume_usd;
-  aggregate.mintCount += row.mint_count;
-  aggregate.burnCount += row.burn_count;
-  aggregate.netFlow += row.net_flow_usd;
+function aggregateHourlyRowsBy<K>(rows: HourlyRow[], keyOf: (row: HourlyRow) => K): Map<K, FlowAggregate> {
+  const aggregates = new Map<K, FlowAggregate>();
+  for (const row of rows) {
+    const key = keyOf(row);
+    let aggregate = aggregates.get(key);
+    if (!aggregate) {
+      aggregate = {
+        mintVolume: 0,
+        burnVolume: 0,
+        mintCount: 0,
+        burnCount: 0,
+        netFlow: 0,
+        valuation: emptyMintBurnValuationTally(),
+      };
+      aggregates.set(key, aggregate);
+    }
+    aggregate.mintVolume += row.mint_volume_usd;
+    aggregate.burnVolume += row.burn_volume_usd;
+    aggregate.mintCount += row.mint_count;
+    aggregate.burnCount += row.burn_count;
+    aggregate.netFlow += row.net_flow_usd;
+    addMintBurnValuationTally(aggregate.valuation, tallyMintBurnHourlyBucket({
+      mintCount: row.mint_count,
+      burnCount: row.burn_count,
+      unpricedMintEventCount: row.mint_unpriced_event_count,
+      unpricedBurnEventCount: row.burn_unpriced_event_count,
+    }));
+  }
+  return aggregates;
 }
 
 export function aggregateHourlyRowsByStablecoin(rows: HourlyRow[]): Map<string, FlowAggregate> {
-  const aggregates = new Map<string, FlowAggregate>();
-  for (const row of rows) {
-    const aggregate = aggregates.get(row.stablecoin_id) ?? emptyFlowAggregate();
-    addHourlyRowToAggregate(aggregate, row);
-    aggregates.set(row.stablecoin_id, aggregate);
-  }
-  return aggregates;
+  return aggregateHourlyRowsBy(rows, (row) => row.stablecoin_id);
 }
 
 export function aggregateHourlyRowsByChain(rows: HourlyRow[]): Map<string, FlowAggregate> {
-  const aggregates = new Map<string, FlowAggregate>();
-  for (const row of rows) {
-    const aggregate = aggregates.get(row.chain_id) ?? emptyFlowAggregate();
-    addHourlyRowToAggregate(aggregate, row);
-    aggregates.set(row.chain_id, aggregate);
-  }
-  return aggregates;
+  return aggregateHourlyRowsBy(rows, (row) => row.chain_id);
 }
 
-function aggregateHourlyRowsByTimestamp(rows: HourlyRow[]): Map<number, { net: number; mint: number; burn: number }> {
-  const aggregates = new Map<number, { net: number; mint: number; burn: number }>();
-  for (const row of rows) {
-    const aggregate = aggregates.get(row.hour_ts) ?? { net: 0, mint: 0, burn: 0 };
-    aggregate.net += row.net_flow_usd;
-    aggregate.mint += row.mint_volume_usd;
-    aggregate.burn += row.burn_volume_usd;
-    aggregates.set(row.hour_ts, aggregate);
-  }
-  return aggregates;
-}
-
+/**
+ * Hourly series. `netFlowUsd` stays the known-valuation net (release A); the
+ * bucket `valuation` marks hours where it is unproven.
+ */
 export function buildHourlyFlowSeries(rows: HourlyRow[]): Array<{
   hourTs: number;
   netFlowUsd: number;
   mintVolumeUsd: number;
   burnVolumeUsd: number;
+  valuation: MintBurnValuationCompleteness;
 }> {
-  return [...aggregateHourlyRowsByTimestamp(rows).entries()]
+  return [...aggregateHourlyRowsBy(rows, (row) => row.hour_ts).entries()]
     .sort(([a], [b]) => a - b)
     .map(([ts, value]) => ({
       hourTs: ts,
-      netFlowUsd: value.net,
-      mintVolumeUsd: value.mint,
-      burnVolumeUsd: value.burn,
+      netFlowUsd: value.netFlow,
+      mintVolumeUsd: value.mintVolume,
+      burnVolumeUsd: value.burnVolume,
+      valuation: summarizeMintBurnValuation(value.valuation).completeness,
     }));
 }
 
@@ -218,7 +227,7 @@ export function mintBurnPairKey(stablecoinId: string, chainId: string): string {
 function resolveCachedFlowFreshnessTimestamp(
   payload: unknown,
   fallbackUpdatedAt: number,
-): number {
+): number | null {
   if (!isRecord(payload)) {
     logMalformedJsonPath({
       scope: "api",
@@ -228,7 +237,7 @@ function resolveCachedFlowFreshnessTimestamp(
       source: "cache:mint-burn-flows",
       updatedAt: fallbackUpdatedAt,
     });
-    return fallbackUpdatedAt;
+    return null;
   }
 
   const sync = payload.sync;
@@ -260,22 +269,7 @@ function resolveCachedFlowFreshnessTimestamp(
     }
   }
 
-  const updatedAt = toFinitePositiveNumber(payload.updatedAt);
-  if (updatedAt != null) {
-    return updatedAt;
-  }
-  if ("updatedAt" in payload && payload.updatedAt != null) {
-    logMalformedJsonPath({
-      scope: "api",
-      owner: "mint-burn-flows",
-      context: "fallback-payload.updatedAt",
-      reason: "invalid-shape",
-      source: "cache:mint-burn-flows",
-      updatedAt: fallbackUpdatedAt,
-    });
-  }
-
-  return fallbackUpdatedAt;
+  return null;
 }
 
 function parseMintBurnCronMetadata(
@@ -350,6 +344,21 @@ function parseMintBurnCronMetadata(
   };
 }
 
+function buildFlowFreshnessHeaders(freshnessTs: number | null): Record<string, string> {
+  if (freshnessTs == null) {
+    return {
+      "Cache-Control": "no-store",
+      "X-Data-Age": "unavailable",
+      Warning: '199 - "Mint/burn sync timestamp unavailable"',
+    };
+  }
+  return addFreshnessHeaders(
+    { "Cache-Control": CACHE_PROFILES.standard },
+    freshnessTs,
+    MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC,
+  );
+}
+
 export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }): Response {
   const parsed = readCachedJsonOr503<{
     sync?: { lastSuccessfulSyncAt?: number | null };
@@ -360,10 +369,10 @@ export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: n
   }
   const freshnessTs = resolveCachedFlowFreshnessTimestamp(parsed.data, cached.updatedAt);
 
-  const headers = addFreshnessHeaders({
+  const headers = {
     "Content-Type": "application/json",
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, freshnessTs, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC);
+    ...buildFlowFreshnessHeaders(freshnessTs),
+  };
   return new Response(cached.value, { headers });
 }
 
@@ -372,16 +381,12 @@ export async function finalizeMintBurnFlowResponse(
   cacheKey: string,
   syncStartSec: number,
   body: unknown,
-  freshnessTs: number,
+  freshnessTs: number | null,
 ): Promise<Response> {
   await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
   return jsonResponseWithHeaders(
     body,
-    addFreshnessHeaders(
-      { "Cache-Control": CACHE_PROFILES.standard },
-      freshnessTs,
-      MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC,
-    ),
+    buildFlowFreshnessHeaders(freshnessTs),
   );
 }
 
@@ -487,23 +492,33 @@ export async function readMintBurnCronSnapshot(
   return (await readMintBurnCronSnapshotResult(db, job)).value;
 }
 
+export interface FlowBaseline {
+  avgNet: number;
+  avgAbs: number;
+  dataDays: number;
+  /** Valuation completeness of the baseline days: a partial baseline understates its known averages. */
+  valuation: MintBurnValuationCompleteness;
+}
+
 export function buildBaselineMap(
   nowSec: number,
   dailyRows: DailyBaselineRow[],
   firstSeenRows: FirstSeenRow[],
-): Map<string, { avgNet: number; avgAbs: number; dataDays: number }> {
+): Map<string, FlowBaseline> {
   const nowDayTs = bucketDay(nowSec);
   const baselineEndDayTs = nowDayTs - DAY_SECONDS;
-  const byCoinDay = new Map<string, Map<number, { net: number; abs: number }>>();
+  const byCoinDay = new Map<string, Map<number, { net: number; abs: number; valuation: MintBurnValuationTally }>>();
   const firstSeenByCoin = new Map<string, number>();
 
   for (const row of dailyRows) {
     if (!Number.isFinite(row.day_ts)) continue;
     const dayTs = bucketDay(row.day_ts);
-    const perDay = byCoinDay.get(row.stablecoin_id) ?? new Map<number, { net: number; abs: number }>();
-    const prev = perDay.get(dayTs) ?? { net: 0, abs: 0 };
+    const perDay = byCoinDay.get(row.stablecoin_id)
+      ?? new Map<number, { net: number; abs: number; valuation: MintBurnValuationTally }>();
+    const prev = perDay.get(dayTs) ?? { net: 0, abs: 0, valuation: emptyMintBurnValuationTally() };
     prev.net += row.daily_net;
     prev.abs += row.daily_abs;
+    addMintBurnValuationTally(prev.valuation, readMintBurnValuationTallyRow(row));
     perDay.set(dayTs, prev);
     byCoinDay.set(row.stablecoin_id, perDay);
   }
@@ -516,7 +531,7 @@ export function buildBaselineMap(
     }
   }
 
-  const baselineMap = new Map<string, { avgNet: number; avgAbs: number; dataDays: number }>();
+  const baselineMap = new Map<string, FlowBaseline>();
   for (const [stablecoinId, firstHourTs] of firstSeenByCoin) {
     const firstDayTs = bucketDay(firstHourTs);
     if (firstDayTs > baselineEndDayTs) continue;
@@ -529,18 +544,21 @@ export function buildBaselineMap(
     const perDay = byCoinDay.get(stablecoinId);
     let sumNet = 0;
     let sumAbs = 0;
+    const valuation = emptyMintBurnValuationTally();
 
     for (let dayTs = startDayTs; dayTs <= baselineEndDayTs; dayTs += DAY_SECONDS) {
       const bucket = perDay?.get(dayTs);
       if (!bucket) continue;
       sumNet += bucket.net;
       sumAbs += bucket.abs;
+      addMintBurnValuationTally(valuation, bucket.valuation);
     }
 
     baselineMap.set(stablecoinId, {
       avgNet: sumNet / dataDays,
       avgAbs: sumAbs / dataDays,
       dataDays,
+      valuation: summarizeMintBurnValuation(valuation).completeness,
     });
   }
 

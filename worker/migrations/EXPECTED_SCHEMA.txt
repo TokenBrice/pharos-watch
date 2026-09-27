@@ -142,6 +142,7 @@ index	idx_mbh_chain_coin_hour
 index	idx_mbh_chain_hour_coin
 index	idx_mbh_coin
 index	idx_mbh_ts
+index	idx_mbh_valuation_unrecorded
 index	idx_onchain_supply_updated
 index	idx_pricing_provider_negative_cache_expiry
 index	idx_redemption_backstop_history_date

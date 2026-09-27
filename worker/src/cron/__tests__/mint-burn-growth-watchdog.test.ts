@@ -26,7 +26,7 @@ describe("runMintBurnGrowthWatchdog", () => {
     expect(db.getHistory()[0]?.sql).toContain("mint_burn_events");
   });
 
-  it("degrades when the growth budget is exceeded", async () => {
+  it("reports capacity findings without failing completed work", async () => {
     const db = mockD1(
       [
         {
@@ -42,11 +42,12 @@ describe("runMintBurnGrowthWatchdog", () => {
 
     const result = await runMintBurnGrowthWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD + 1);
     expect(JSON.parse(String(result.metadata))).toEqual({
       rowCount: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD + 1,
       thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,
+      quality: { reason: "row-count-threshold" },
     });
     expect(db.getHistory()[0]?.sql).toContain("COUNT(*)");
     expect(db.getHistory()[0]?.sql).toContain("mint_burn_events");

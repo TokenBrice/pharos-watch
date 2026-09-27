@@ -8,6 +8,7 @@
  */
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types/market";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 import { dexLiquidityPublishedRowFilter } from "./dex-liquidity";
 
@@ -33,6 +34,7 @@ export function buildNavPriceById(
   const entries: Array<[string, NonNullable<ReportCardsFixedInput["navPriceById"]>[string]]> = [];
   for (const asset of peggedAssets) {
     if (!ACTIVE_META_BY_ID.get(asset.id)?.flags.navToken) continue;
+    if (!isObservedPrice(asset)) continue;
     if (typeof asset.price !== "number" || !Number.isFinite(asset.price) || asset.price <= 0) continue;
     if (!asset.priceSource || asset.priceSource === "missing") continue;
     const rawObservedAtSec = asset.priceObservedAt ?? asset.priceUpdatedAt ?? asset.priceSyncedAt;

@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.27`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.29`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -81,7 +81,7 @@ CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NUL
 `close_reason` distinguishes real recovery from non-recovery terminal boundaries:
 
 - `recovered-primary`, `recovered-dex`, `recovered-native`
-- `coverage-lost-supply`
+- `coverage-lost-supply` (only an observed sub-floor supply, including an explicit zero; unavailable supply never closes a row)
 - `superseded-direction`
 - `orphan-tracking-removed`
 
@@ -200,7 +200,7 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 
 `dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 75 min`, covering the hourly producer plus one bounded delay) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
-The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a new `depeg_events` row. If the coin already had an open live row from a period above the floor, the row closes as coverage-lost with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` instead of remaining live indefinitely.
+The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a new `depeg_events` row. If the coin already had an open live row from a period above the floor and an observed supply now sits below it, the row closes as coverage-lost with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` instead of remaining live indefinitely. Unavailable supply is not an observation below the floor: when the asset's current circulating buckets are absent, empty or wholly invalid, the open row stays open and unchanged (marked seen, a `Kept live event ... current supply is unavailable` warning is logged) and no new row opens for that asset.
 
 ### Per-Asset Processing
 
@@ -209,7 +209,7 @@ Validation gates (skip if any fail):
 - Must be in `PSI_ELIGIBLE_STABLECOINS`
 - Not a NAV token (`meta.flags.navToken`)
 - Price valid: non-null, is a number, not NaN, > 0
-- Supply >= $1M (via `getCirculatingRaw()`, whose internal `sumPegBuckets` helper sums circulating buckets) for live event recording; if an existing open event later falls below this floor while the coin remains tracked, the live row closes with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery
+- Supply >= $1M (via `getCirculatingRawOrNull()`, which sums finite circulating buckets and returns `null` for absent, empty or wholly invalid buckets) for live event recording; if an existing open event later observes supply below this floor (an explicit zero included) while the coin remains tracked, the live row closes with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery. `null` supply skips the asset without touching an open event
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references use the live FX rate whenever it is available. A peer median is only a fallback when at least 3 live contributors remain; thin peer medians and empty live peer sets fail closed for that cycle
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh native-currency quote before mutating live state; a native quote inside the recovery band or pointing the other way vetoes the derived USD/FX onset for that cycle, while a threshold-crossing native quote can initiate a pending candidate when the primary USD-vs-reference path is still inside threshold
@@ -516,7 +516,7 @@ Query params:
 | `offset` | number | 0 | Pagination offset |
 | `cursor` | string | -- | Keyset pagination cursor; advance via the response `nextCursor`. Cannot be combined with a non-zero `offset` |
 | `includePending` | string | `false` | If `"true"`, add a `pending` array of unconfirmed candidates to the response |
-| `includeTotal` | string | `true` | If `"false"`, skip the COUNT query; `total` becomes a lower-bound estimate and `totalExact` is `false` |
+| `includeTotal` | string | `true` | If `"false"`, skip the COUNT query; `total` is an observed lower bound and `totalExact` is `false`. Empty offset pages report `0`, never the requested offset. |
 
 Response:
 
@@ -634,7 +634,8 @@ Returns `null` if < 7 days tracking. The 7–30 day "Early score" label describe
 |----------|----------|
 | Duplicate events | Unique index (`stablecoin_id`, `started_at`, `source`) + run-start repair; same-direction rows merge, opposite-direction rows close older directions without absorbing opposite-sign peaks |
 | NAV tokens | Skipped (expected to appreciate, depeg detection N/A) |
-| Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note; existing rows close with `close_reason = 'coverage-lost-supply'` |
+| Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note; existing rows close with `close_reason = 'coverage-lost-supply'` only on an observed sub-floor supply |
+| Supply unavailable (absent/empty/invalid buckets) | No new event; an existing open row stays open and unchanged (no coverage closure, no recovery progress) with a per-asset warning |
 | Missing/invalid prices | Multiple null/NaN/<= 0 checks |
 | Peg reference validation | Must be finite and > 0 |
 | DEX freshness | Prices > 75 min old ignored |

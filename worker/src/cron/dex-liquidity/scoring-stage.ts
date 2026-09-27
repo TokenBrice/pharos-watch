@@ -936,10 +936,7 @@ async function loadStageManifest(
       ).bind(options.expectedSourceSlotStartedAt);
   const row = await runWithOverloadRetry(() => query.first<StageManifestRow>(), 3, signal);
   if (!row) {
-    const suffix = options.expectedSourceSlotStartedAt == null
-      ? ""
-      : ` for source slot ${options.expectedSourceSlotStartedAt}`;
-    throw new Error(`DEX liquidity scoring stage is missing${suffix}`);
+    throw new MissingDexLiquidityScoringStageError(options.expectedSourceSlotStartedAt);
   }
   if (row.schema_version !== DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION) {
     throw new Error(`Unsupported DEX liquidity scoring stage schema version ${row.schema_version}`);
@@ -1045,6 +1042,15 @@ export async function loadDexLiquidityScoringStage(
  *  stops and lets its caller recover or fail fast ("stop"). */
 export type DexLiquidityScoringStageWaitDecision = "wait" | "stop";
 
+export class MissingDexLiquidityScoringStageError extends Error {
+  constructor(readonly expectedSourceSlotStartedAt?: number) {
+    super(`DEX liquidity scoring stage is missing${
+      expectedSourceSlotStartedAt == null ? "" : ` for source slot ${expectedSourceSlotStartedAt}`
+    }`);
+    this.name = "MissingDexLiquidityScoringStageError";
+  }
+}
+
 export async function loadDexLiquidityScoringStageWhenReady(
   db: D1Database,
   options: {
@@ -1075,8 +1081,6 @@ export async function loadDexLiquidityScoringStageWhenReady(
     throw new RangeError("DEX liquidity scoring stage pollIntervalMs must be positive");
   }
 
-  const missingMessage =
-    `DEX liquidity scoring stage is missing for source slot ${options.expectedSourceSlotStartedAt}`;
   while (true) {
     throwIfAborted(signal);
     const observedNowMs = nowMs();
@@ -1087,7 +1091,8 @@ export async function loadDexLiquidityScoringStageWhenReady(
       }, signal);
     } catch (error) {
       rethrowIfAborted(error, signal);
-      if (!(error instanceof Error) || error.message !== missingMessage) throw error;
+      if (!(error instanceof MissingDexLiquidityScoringStageError) ||
+        error.expectedSourceSlotStartedAt !== options.expectedSourceSlotStartedAt) throw error;
       if (options.onMissing != null && await options.onMissing(signal) === "stop") throw error;
       const remainingMs = options.readyDeadlineMs - nowMs();
       if (remainingMs <= 0) throw error;

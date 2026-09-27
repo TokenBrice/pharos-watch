@@ -1,5 +1,6 @@
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
+import { unavailableReserveComposition } from "@shared/lib/status-reserve-composition";
 
 export function makeDataQuality(overrides?: Partial<DataQuality>): DataQuality {
   return {
@@ -45,7 +46,17 @@ export function makeDataQuality(overrides?: Partial<DataQuality>): DataQuality {
   };
 }
 
-export function makeReserveComposition(overrides: Partial<StatusResponse["reserveComposition"]> = {}): StatusResponse["reserveComposition"] {
+type AvailableReserveComposition = Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>;
+type UnavailableReserveComposition = Extract<StatusResponse["reserveComposition"], { status: "unavailable" }>;
+
+export function makeReserveComposition(overrides: { status: "unavailable" }): UnavailableReserveComposition;
+export function makeReserveComposition(overrides?: Partial<AvailableReserveComposition>): AvailableReserveComposition;
+export function makeReserveComposition(
+  overrides: Partial<AvailableReserveComposition> | { status: "unavailable" } = {},
+): StatusResponse["reserveComposition"] {
+  if (overrides.status === "unavailable") {
+    return unavailableReserveComposition();
+  }
   return {
     ...emptyReserveCompositionOverview(),
     status: "healthy",

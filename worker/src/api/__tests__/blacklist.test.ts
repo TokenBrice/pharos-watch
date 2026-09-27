@@ -246,20 +246,6 @@ describe("handleBlacklist", () => {
     expect(body.methodology.asOf).toBe(eventTs);
   });
 
-  it("falls back to latest event timestamp when sync-blacklist has no successful cron row", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const eventTs = now - 3600;
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "blacklist_events", rows: [makeBlacklistRow({ timestamp: eventTs })] },
-      { match: "cron_runs", rows: [], first: { started_at: null } },
-    ], { requireMatch: true });
-
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
-    const age = Number(res.headers.get("X-Data-Age"));
-    expect(age).toBeGreaterThanOrEqual(3600);
-    expect(age).toBeLessThan(3700);
-  });
 
   it("rejects oversized limit values instead of silently clamping them", async () => {
     const res = await handleBlacklist(mockD1([], { requireMatch: true }), new URL("https://x/api/blacklist?limit=999999"));

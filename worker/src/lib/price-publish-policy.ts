@@ -7,6 +7,7 @@ import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "@s
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getReferencePriceForContext, isFixedPegContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
+import { validateCompositePricingSourceFreshness } from "./pricing-source-freshness";
 
 const WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS = 2_000;
 const WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS = 500;
@@ -302,12 +303,25 @@ export function validatePublishedAssetPrice(input: {
     priceSource?: string | null;
     priceConfidence?: PriceConfidence | null;
     agreeSources?: string[];
+    priceObservedAt?: number | null;
+    priceUpdatedAt?: number | null;
+    priceObservedAtMode?: PriceObservedAtMode | null;
+    supplyRestored?: boolean;
   };
   candidatePrices?: Record<string, number>;
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
   previousTrustedPrice?: TrustedPriceReference | null;
+  nowSec?: number;
 }): PublishablePriceDecision {
+  const freshness = validateCompositePricingSourceFreshness({
+    source: input.asset.priceSource ?? "",
+    observedAt: input.asset.priceObservedAt ?? input.asset.priceUpdatedAt,
+    observedAtMode: input.asset.priceObservedAtMode,
+    nowSec: input.nowSec,
+    requireObservedAt: input.asset.supplyRestored === true,
+  });
+  if (!freshness.accepted) return { accepted: false, reason: freshness.reason };
   return validatePriceForPublication({
     price: input.asset.price ?? 0,
     source: input.asset.priceSource,

@@ -34,8 +34,7 @@
     "reserveDisclosureUrl": "https://www.straitsx.com/xsgd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "XSGD is a foreign non-USD payment stablecoin with U.S. availability signals, but no public GENIUS approval or foreign-issuer exception source was found. Treasury has not yet published any comparable-regime list or Singapore MAS determination; the foreign-exception pathway remains open rulemaking as of 2026-06-18. Monthly reserve attestation reports are published by StraitsX (ISCA-listed auditor KK Yap & Associates, 2022 to 2026 monthly archive on straitsx.com).",
+    "notes": "Evidence as of 2026-06-18 review: XSGD is a foreign non-USD payment stablecoin with U.S. availability signals, but no public GENIUS approval or foreign-issuer exception source was found. Treasury has not yet published any comparable-regime list or Singapore MAS determination; the foreign-exception pathway remains open rulemaking as of 2026-06-18. Monthly reserve attestation reports are published by StraitsX (ISCA-listed auditor KK Yap & Associates, 2022 to 2026 monthly archive on straitsx.com). Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

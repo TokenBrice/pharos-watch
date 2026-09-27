@@ -213,6 +213,31 @@ export function makePublishedDewsTables(dewsRows: TestDewsRow[]): MockTableConfi
 
 export const PUBLISHED_GAUGE_SCORE = 37.5;
 
+const COMPLETE_FLOW_VALUATION = {
+  window24h: { completeness: "complete", mintCompleteness: "complete", burnCompleteness: "complete", unpricedMintEventCount: 0, unpricedBurnEventCount: 0 },
+  baseline: "complete",
+  netFlow7d: "complete",
+  netFlow30d: "complete",
+  netFlow90d: "complete",
+};
+
+/** A publication carrying valuation completeness; `overrides` replace top-level payload keys. */
+export function publishedGaugePayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    gauge: { score: PUBLISHED_GAUGE_SCORE, band: "HEALTHY", flightToQuality: false, flightIntensity: 0, classificationSource: "safety-score-v9-publication", partialValuationInputs: 0 },
+    coins: [
+      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: 100, netFlow24hUsd: 200_000_000, valuation: COMPLETE_FLOW_VALUATION },
+      { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: -83.33, netFlow24hUsd: -50_000_000, valuation: COMPLETE_FLOW_VALUATION },
+      { stablecoinId: "paxg-paxos", symbol: "PAXG", pressureShiftScore: null, netFlow24hUsd: -3_000_000, valuation: COMPLETE_FLOW_VALUATION },
+    ],
+    chains: [
+      { chainId: "ethereum", netFlow24hUsd: 150_000_000, valuation: "complete" },
+      { chainId: "arbitrum", netFlow24hUsd: -3_000_000, valuation: "complete" },
+    ],
+    ...overrides,
+  };
+}
+
 export function publishedGaugeTable(
   options: { value?: string; ageSec?: number } = {},
 ): MockTableConfig {
@@ -222,15 +247,7 @@ export function publishedGaugeTable(
     matchBinds: ["mint-burn-flows:v3:aggregate:24"],
     rows: [],
     first: {
-      value: options.value ?? JSON.stringify({
-        gauge: { score: PUBLISHED_GAUGE_SCORE, band: "HEALTHY", flightToQuality: false, flightIntensity: 0, classificationSource: "safety-score-v9-publication" },
-        coins: [
-          { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: 100, netFlow24hUsd: 200_000_000 },
-          { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: -83.33, netFlow24hUsd: -50_000_000 },
-          { stablecoinId: "paxg-paxos", symbol: "PAXG", pressureShiftScore: null, netFlow24hUsd: -3_000_000 },
-        ],
-        chains: [{ chainId: "ethereum", netFlow24hUsd: 150_000_000 }, { chainId: "arbitrum", netFlow24hUsd: -3_000_000 }],
-      }),
+      value: options.value ?? JSON.stringify(publishedGaugePayload()),
       updated_at: nowSec - (options.ageSec ?? 300),
     },
   };
@@ -296,6 +313,7 @@ function makeDailyDigestTables(): MockTableConfig[] {
           symbol: "USDT",
           direction: "below",
           peak_deviation_bps: 150,
+          peg_reference: 1,
           started_at: nowSec - 3600,
         },
       ],
@@ -371,7 +389,7 @@ export function makeDailyDigestScenario(
       kind: "ok",
       payload: {
         peggedAssets: [
-          makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.985, circulating: { peggedUSD: 100_000_000 }, circulatingPrevWeek: { peggedUSD: 95_000_000 } }),
+          makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.985, priceObservedAt: nowSec, circulating: { peggedUSD: 100_000_000 }, circulatingPrevWeek: { peggedUSD: 95_000_000 } }),
           makeAsset({ id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 60_000_000 }, circulatingPrevWeek: { peggedUSD: 62_000_000 } }),
           makeAsset({ id: "susds-sky", symbol: "sUSDS", circulating: { peggedUSD: 1_000_000_000 }, circulatingPrevWeek: { peggedUSD: 900_000_000 } }),
           makeAsset({ id: "acred-apollo-securitize", symbol: "ACRED", circulating: { peggedUSD: 500_000_000 }, circulatingPrevWeek: { peggedUSD: 450_000_000 } }),
@@ -396,6 +414,7 @@ export function makeCollectorCtx(db: D1Database): CollectorContext {
     makeAsset({ id: "usdc-circle", symbol: "USDC", price: 0.99, circulating: { peggedUSD: 50_000_000_000 }, circulatingPrevWeek: { peggedUSD: 52_000_000_000 } }),
     makeAsset({ id: "dai-makerdao", symbol: "DAI", price: 1.05, circulating: { peggedUSD: 5_000_000 }, circulatingPrevWeek: { peggedUSD: 5_000_000 } }),
   ];
+  for (const asset of assets) asset.priceObservedAt = nowSec;
   return {
     db,
     trackedStablecoinAssets: assets,

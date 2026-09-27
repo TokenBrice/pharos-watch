@@ -18,6 +18,7 @@ Run `npm run check:migrations` for the current active/retired inventory. Crossin
 - Record the current D1 Time Travel bookmark and deployed Worker version.
 - Use named scratch D1 databases and the remote-target flag for rehearsal. Do not validate a production squash only against the local emulator.
 - Use the latest squash commit `5ea2d360f` as the implementation reference, then re-check current Wrangler behavior before executing.
+- For every existing target (including preview databases and Time Travel restores), read `SELECT name FROM d1_migrations WHERE name = '0000_baseline.sql';` and run `wrangler d1 migrations list <database> --remote` against the proposed tree before any apply. Require the exact replacement-baseline filename in the ledger and no pending baseline. Absorbed migration names do not satisfy this prerequisite. If either check fails, stop for a separately reviewed baseline-adoption plan; do not insert a ledger row or replay the baseline as an improvised fix.
 
 ## Procedure
 
@@ -28,7 +29,7 @@ Run `npm run check:migrations` for the current active/retired inventory. Crossin
 5. Point a preview Worker at the second database. Run the preview smoke set and one full cron tick; verify the cron ledgers and status probes show no migration-name coupling.
 6. Move every absorbed filename into a new squash block in `worker/migrations/MANIFEST.md`. Keep retired entries and historical filenames explicit, and leave only the new baseline plus the unsquashed tail on disk.
 7. If step 2 removed any object the current tree still creates, regenerate the fresh-replay schema manifest with `npm run check:migrations -- --write-schema-manifest` and confirm the `worker/migrations/EXPECTED_SCHEMA.txt` diff contains only those recorded destructive-cleanup removals. Then run `npm run check:migrations` and the normal focused Worker checks. Land the baseline, `worker/migrations/EXPECTED_SCHEMA.txt` (when regenerated), the manifest, and the file removals as one logical commit.
-8. During the production window, run the normal migration/deploy path and verify that the existing production database executes zero migration SQL for the squash. Existing databases already record the absorbed filenames; the replacement baseline is for fresh databases.
+8. During the production window, repeat the exact-filename ledger and pending-list preflight for every existing target before the normal migration/deploy path. Verify zero migration SQL attributable to the squash. Wrangler skips the replacement baseline only when its exact filename is already recorded, not because absorbed filenames were applied; the replacement baseline is for fresh databases.
 9. Observe a full cron tick and the standard production probes, then keep the migration freeze through a 24-hour soak.
 
 ## Failure And Recovery

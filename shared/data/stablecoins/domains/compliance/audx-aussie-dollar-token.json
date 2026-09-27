@@ -30,8 +30,7 @@
     "reserveDisclosureUrl": "https://www.audxtoken.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-06-30",
-    "notes": "AUDX issuer terms and transparency materials identify an Australian issuer and Australian-law product context, but no token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found. Australian regulatory context was not treated as U.S. GENIUS authorization; foreign-exception status remains unknown.",
+    "notes": "Evidence as of 2026-08-14 review: AUDX issuer terms and transparency materials identify an Australian issuer and Australian-law product context, but no token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found. Australian regulatory context was not treated as U.S. GENIUS authorization; foreign-exception status remains unknown. Reserve-report date recorded as of 2026-08-14 review: 2026-06-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC GENIUS Act regulations proposed rule",

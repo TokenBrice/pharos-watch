@@ -232,6 +232,28 @@ function dexRow(exitRouteObservations: ExitRouteObservation[]): DexLiquidityData
 const exactFixedInput = makeV9RegistryFixedInput;
 
 describe("retained v3 fixed report-card input", () => {
+  it("preserves archived Bluechip grades without inventing a current observation", () => {
+    const normalized = normalizeFixedInput({
+      ...withoutBaseInputGenerationId(exactFixedInput()),
+      bluechipMap: {
+        "usdc-circle": {
+          grade: "A", slug: "usdc", collateralization: null, smartContractAudit: null,
+          dateOfRating: "2024-01-01", dateLastChange: "2024-02-01",
+          smidge: { stability: null, management: null, implementation: null, decentralization: null, governance: null, externals: null },
+        },
+      },
+    });
+    expect(normalized.bluechipMap["usdc-circle"]).toMatchObject({
+      grade: "A",
+      dateOfRating: "2024-01-01",
+      dateLastChange: "2024-02-01",
+      lastObservedAt: null,
+      observationState: "unknown",
+      observationReason: "legacy-observation-unknown",
+    });
+    expect(normalizeFixedInput(normalized).bluechipMap).toEqual(normalized.bluechipMap);
+  });
+
   it("persists V9-only legacy supply attribution without changing the base identity", async () => {
     const assetId = "usdt-tether";
     const aggregateSupplyUsd = 2_480_000_000;

@@ -7,8 +7,11 @@ import {
   DepegEventSchema,
   DepegEventStoredSnapshotSchema,
   DepegPendingIncidentSchema,
+  StablecoinDataSchema,
 } from "../market";
 
+import { makeStablecoin } from "../../test-utils/stablecoin";
+import { isObservedPrice } from "../../lib/pricing-source-policy";
 const baseEvent = {
   id: 1,
   stablecoinId: "usdt-tether",
@@ -137,5 +140,30 @@ describe("blacklist summary cache contract", () => {
     expect(parsed.success).toBe(true);
     expect(Object.keys(parsed.data!.stats.perCoinQuarterlyEventTypes)).toContain("NOT-YET-TRACKED");
     expect(BLACKLIST_STABLECOINS.includes("NOT-YET-TRACKED" as never)).toBe(false);
+  });
+});
+
+describe("nominal price reference reader contract", () => {
+  it("preserves a legacy observation and an independently labelled nominal reference", () => {
+    const legacy = StablecoinDataSchema.parse(makeStablecoin({ price: 0.98, priceSource: "coingecko" }));
+    expect(legacy.price).toBe(0.98);
+    expect(isObservedPrice(legacy)).toBe(true);
+    expect(legacy).not.toHaveProperty("nominalPriceReference");
+    const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" };
+    const market = StablecoinDataSchema.parse({ ...legacy, nominalPriceReference });
+    expect(market.price).toBe(0.98);
+    expect(market.nominalPriceReference).toEqual(nominalPriceReference);
+    expect(isObservedPrice(market)).toBe(true);
+  });
+
+  it.each(["nominal_reference", "future-mode"])("does not promote %s to an observation", (mode) => {
+    const row = StablecoinDataSchema.parse({
+      ...makeStablecoin(),
+      price: 1, priceSource: "protocol-redeem", priceConfidence: "high",
+      priceObservedAt: 1_800_000_000,
+      priceObservedAtMode: mode,
+    });
+    expect(isObservedPrice(row)).toBe(false);
+    expect(isObservedPrice({ priceSource: "protocol-par" })).toBe(false);
   });
 });

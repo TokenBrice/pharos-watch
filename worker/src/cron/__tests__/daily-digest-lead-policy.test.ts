@@ -57,7 +57,7 @@ async function replayCollector(seeds: DepegEventSeed[], nowSec: number) {
   const stablecoinAssetById = new Map<string, StablecoinData>(
     seeds
       .filter((seed) => seed.currentPriceUsd != null)
-      .map((seed) => [seed.stablecoinId, { id: seed.stablecoinId, price: seed.currentPriceUsd } as StablecoinData]),
+      .map((seed) => [seed.stablecoinId, { id: seed.stablecoinId, price: seed.currentPriceUsd, priceObservedAt: nowSec } as StablecoinData]),
   );
   const ctx: CollectorContext = {
     db: mockD1([{ match: "depeg_events", rows }]),
@@ -193,7 +193,7 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     input.editorialCandidates = buildEditorialCandidates(input, null);
     // Worsened 700 bps overnight: hard again despite the exhausted quota.
     const escalated = buildCriticalDailyLeadRequirements(input, {
-      previousInputData: { ...fixture.inputData, topDepegs: previousWorse.topDepegs },
+      previousInputData: { ...fixture.inputData, dataQuality: { ...fixture.inputData.dataQuality!, generatedAt: nowSec - 86_400 }, topDepegs: previousWorse.topDepegs },
       recentLeadSignalIds: streakedHistory,
     });
     expect(escalated?.[0]?.severity).toBe("hard");
@@ -207,11 +207,12 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
   });
 
   it("keeps opposite movements of same-symbol coins attached to their identities", () => {
-    const depeg = (stablecoinId: string, bps: number) => ({
+    const depeg = (stablecoinId: string, bps: number, priceObservedAt: number) => ({
       ...fixture.inputData.topDepegs[0], stablecoinId, symbol: "USDA", bps, currentBps: bps,
+      severityBasis: "current" as const, pegReference: 1, startedAt: 1, priceObservedAt,
     });
-    const previous = { ...fixture.inputData, topDepegs: [depeg("usda-avalon", 3098), depeg("usda-alpha-partner", 503)] };
-    const current = { ...fixture.inputData, topDepegs: [depeg("usda-alpha-partner", 603), depeg("usda-avalon", 2898)] };
+    const previous = { ...fixture.inputData, dataQuality: { ...fixture.inputData.dataQuality!, generatedAt: nowSec - 86_400 }, topDepegs: [depeg("usda-avalon", 3098, nowSec - 86_400), depeg("usda-alpha-partner", 503, nowSec - 86_400)] };
+    const current = { ...fixture.inputData, topDepegs: [depeg("usda-alpha-partner", 603, nowSec), depeg("usda-avalon", 2898, nowSec)] };
     const summary = buildChangeSummary(current, previous);
     expect(summary.improvedSignals.filter((change) => change.kind === "depeg")).toEqual([
       { id: "change:depeg:usda-avalon:improved", label: "USDA depeg narrowed", kind: "depeg", symbols: ["USDA"], detail: "3098 bps to 2898 bps off peg." },
@@ -292,10 +293,16 @@ describe("next-trigger lifecycle (Batch 4)", () => {
       detail: "d",
       repeatedCount: 2,
     };
-    const previous = inputWithTriggers([staleTrigger]);
-    const triggers = buildNextTriggers(bareInput, previous);
+    const at = generatedAt(bareInput);
+    const observed: DigestInputData = { ...bareInput, topDepegs: [{
+      stablecoinId: "apxusd-apyx", symbol: "APXUSD", bps: -3650, currentBps: -1570,
+      severityBasis: "current", pegReference: 1, priceObservedAt: at, startedAt: 1, mcapUsd: 1e8,
+    }] };
+    const previous = { ...inputWithTriggers([staleTrigger]), dataQuality: { ...bareInput.dataQuality!, generatedAt: at - 86400 },
+      topDepegs: [{ ...observed.topDepegs[0], currentBps: -1500, priceObservedAt: at - 86400 }] };
+    const triggers = buildNextTriggers(observed, previous);
     expect(triggers.find((trigger) => trigger.id === "trigger:depeg:apxusd-apyx")).toBeUndefined();
-    const outcomes = buildForwardLookOutcomes(bareInput, previous);
+    const outcomes = buildForwardLookOutcomes(observed, previous);
     expect(outcomes.find((outcome) => outcome.triggerId === "trigger:depeg:apxusd-apyx")?.status).toBe("expired");
   });
 

@@ -106,17 +106,39 @@ export const POR_TIER_STYLES: Record<AttestorTier, { cls: string; label: string;
 // Blacklist event badge styles
 // ---------------------------------------------------------------------------
 
-export const EVENT_BADGE_STYLES: Record<BlacklistEventType, string> = {
-  blacklist: "bg-red-500/15 text-red-600 border-red-500/30 dark:text-red-400",
-  unblacklist: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
-  destroy: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
-};
+const EVENT_DESCRIPTORS = {
+  blacklist: {
+    label: "Freeze",
+    badgeCls: "bg-red-500/15 text-red-600 border-red-500/30 dark:text-red-400",
+    chartColor: "#ef4444",
+  },
+  unblacklist: {
+    label: "Release",
+    badgeCls: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
+    chartColor: "#10b981",
+  },
+  destroy: {
+    label: "Wipe",
+    badgeCls: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
+    chartColor: "#f59e0b",
+  },
+} as const satisfies Record<BlacklistEventType, { label: string; badgeCls: string; chartColor: string }>;
 
-export const EVENT_LABELS: Record<BlacklistEventType, string> = {
-  blacklist: "Freeze",
-  unblacklist: "Release",
-  destroy: "Wipe",
-};
+export const EVENT_BADGE_STYLES: Record<BlacklistEventType, string> = projectDescriptors(
+  EVENT_DESCRIPTORS,
+  (descriptor) => descriptor.badgeCls,
+);
+
+export const EVENT_LABELS: Record<BlacklistEventType, string> = projectDescriptors(
+  EVENT_DESCRIPTORS,
+  (descriptor) => descriptor.label,
+);
+
+/** Solid chart fills share the event badge semantics in both themes. */
+export const EVENT_CHART_COLORS: Record<BlacklistEventType, string> = projectDescriptors(
+  EVENT_DESCRIPTORS,
+  (descriptor) => descriptor.chartColor,
+);
 
 // ---------------------------------------------------------------------------
 // Peg currency chart colors (text + bg pairs for charts and stat cards)

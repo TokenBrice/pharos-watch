@@ -6,8 +6,9 @@ import { buildFlowSummaryNarrative } from "@/lib/flow-signal-ui";
 const mintingProps = {
   symbol: "USDT",
   color: "#3b82f6",
-  netFlow24hUsd: 1_240_000_000,
+  netFlow24h: { valueUsd: 1_240_000_000, completeness: "complete" as const, note: null },
   pressureShiftScore: 58,
+  pressureUnavailableNote: null,
   netFlowDirection24h: "minting" as const,
   pressureShiftState: "improving" as const,
 };
@@ -15,8 +16,9 @@ const mintingProps = {
 const burningProps = {
   symbol: "USDC",
   color: "#ef4444",
-  netFlow24hUsd: -340_000_000,
+  netFlow24h: { valueUsd: -340_000_000, completeness: "complete" as const, note: null },
   pressureShiftScore: -28,
+  pressureUnavailableNote: null,
   netFlowDirection24h: "burning" as const,
   pressureShiftState: "worsening" as const,
 };
@@ -24,8 +26,9 @@ const burningProps = {
 const nrProps = {
   symbol: "USDS",
   color: "#10b981",
-  netFlow24hUsd: 0,
+  netFlow24h: { valueUsd: 0, completeness: "complete" as const, note: null },
   pressureShiftScore: null,
+  pressureUnavailableNote: null,
   netFlowDirection24h: "inactive" as const,
   pressureShiftState: "nr" as const,
 };
@@ -51,6 +54,39 @@ describe("CoinFlowCard", () => {
     expect(html).toContain("NR");
     expect(html).not.toContain("Improving");
     expect(html).not.toContain("Worsening");
+  });
+
+  it("renders a partial 24h window as unavailable, not a signed amount, flat, or burning", () => {
+    const html = renderToStaticMarkup(
+      <CoinFlowCard
+        {...burningProps}
+        netFlow24h={{
+          valueUsd: null,
+          completeness: "partial",
+          note: "Partial valuation: 2 mint / 0 burn events unpriced; signed net unavailable",
+        }}
+        netFlowDirection24h={null}
+        pressureShiftScore={null}
+        pressureShiftState="nr"
+        pressureUnavailableNote="Partial valuation: pressure shift unavailable"
+      />,
+    );
+    expect(html).toContain("2 mint / 0 burn events unpriced; signed net unavailable");
+    expect(html).not.toContain("$");
+    expect(html).not.toMatch(/\b(Flat|Burning|Worsening)\b/);
+    expect(html).toContain("NR");
+    expect(html).toContain("Partial valuation: pressure shift unavailable");
+  });
+
+  it("keeps a coverage-unknown net visible with a marker", () => {
+    const html = renderToStaticMarkup(
+      <CoinFlowCard
+        {...mintingProps}
+        netFlow24h={{ valueUsd: 1_240_000_000, completeness: "unknown", note: "Coverage unknown" }}
+      />,
+    );
+    expect(html).toContain("+$1.24B");
+    expect(html).toContain("(coverage unknown)");
   });
 });
 

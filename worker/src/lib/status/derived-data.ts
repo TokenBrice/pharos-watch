@@ -18,6 +18,7 @@ import { logWorkerEvent } from "../structured-log";
 import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
 import { loadActiveSafetyScoreSource } from "../safety-score-active-source";
+import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {
@@ -33,7 +34,7 @@ export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   };
 }
 
-export function emptyReserveComposition(): StatusResponse["reserveComposition"] {
+export function emptyReserveComposition(): Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }> {
   return {
     ...emptyReserveCompositionOverview(),
     status: "healthy",
@@ -121,15 +122,13 @@ async function getLastTableUpdate(
 async function getLastSuccessfulCronRun(db: D1Database, jobs: readonly string[]): Promise<number | null> {
   try {
     const jobInClause = buildInClause(jobs);
-    const successStatuses = buildInClause(["ok", "degraded"]);
     const row = await db
       .prepare(
-        `SELECT MAX(started_at) as latest
+        `SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as latest
          FROM cron_runs
-         WHERE job IN (${jobInClause.sql})
-           AND status IN (${successStatuses.sql})`,
+         WHERE job IN (${jobInClause.sql})`,
       )
-      .bind(...jobInClause.binds, ...successStatuses.binds)
+      .bind(...jobInClause.binds)
       .first<{ latest: number | null }>();
     return row?.latest ?? null;
   } catch (err) {
@@ -323,8 +322,9 @@ export async function getMintBurnReconciliation(
         string,
         {
           chainId?: string;
-          current?: number;
-          circulatingPrevDay?: number;
+          // `null` = unavailable chain observation (CR-13); the delta below requires finite numbers.
+          current?: number | null;
+          circulatingPrevDay?: number | null;
         }
       >;
     }>

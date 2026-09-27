@@ -236,7 +236,10 @@ export async function runPostEnrichmentPricePipeline(
           priceSource: COINGECKO_NATIVE_IMPLIED_SOURCE,
           priceConfidence: "single-source",
           agreeSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
+          priceObservedAt: nativePegImpliedUsd.updatedAt,
+          priceObservedAtMode: "upstream",
         },
+        nowSec: input.syncStartSec,
         validationContext: validationContexts.get(asset),
         validationReferences,
         previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
@@ -295,6 +298,7 @@ export async function runPostEnrichmentPricePipeline(
 
     const decision = validatePublishedAssetPrice({
       asset,
+      nowSec: input.syncStartSec,
       candidatePrices: getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
       validationContext: validationContexts.get(asset),
       validationReferences,

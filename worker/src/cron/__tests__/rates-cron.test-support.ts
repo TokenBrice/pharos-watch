@@ -545,6 +545,13 @@ export function makeFxRatesDb({
   extraTables = [],
 }: FxRatesDbOptions = {}): MockD1Database {
   const cacheTables = [
+    // loadFxRateState reads the rates/meta pair in one statement.
+    {
+      match: "SELECT key, value, updated_at FROM cache WHERE key IN",
+      matchBinds: ["fx-rates", "fx-rates-meta"],
+      rows: ([["fx-rates", previousRates], ["fx-rates-meta", previousMeta]] as const)
+        .flatMap(([key, row]) => (row ? [{ key, value: row.value, updated_at: row.updatedAt }] : [])),
+    },
     cacheReadTable("fx-rates", previousRates),
     cacheReadTable("fx-rates-meta", previousMeta),
     ...(stablecoins ? [cacheReadTable("stablecoins", stablecoins)] : []),

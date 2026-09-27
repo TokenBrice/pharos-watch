@@ -15,6 +15,8 @@ describe("cors helpers", () => {
     const response = addCorsHeaders(new Response("ok"), origin);
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://ops.pharos.watch");
     expect(response.headers.get("Vary")).toBe("Origin");
+    const exposed = response.headers.get("Access-Control-Expose-Headers")?.split(", ");
+    expect(exposed).toEqual(expect.arrayContaining(["X-Data-Freshness", "X-Data-Freshness-Reason"]));
   });
 
   it("returns 403 without ACAO for a disallowed OPTIONS preflight", () => {

@@ -2,7 +2,6 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
   makeDexApiFetchResult,
-  type DexApiFetchResult,
   type DexApiPool,
 } from "../../lib/dex-api-common";
 import { rethrowIfAborted, sleepWithSignal } from "../../lib/abort";
@@ -19,12 +18,9 @@ import {
 import { isDexApiRecord } from "./direct-api-json";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
-  describeDexPaginationWriteFailure,
-  isDegradingDexPaginationWriteFailure,
   readDexSourcePaginationState,
-  summarizeDexSourcePaginationWrites,
-  writeDexSourcePaginationState,
-  type DexSourcePaginationWriteAttempt,
+  type PaginatedDexApiFetchResult,
+  type PendingDexSourcePaginationUpdate,
 } from "./source-pagination-state";
 
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
@@ -105,7 +101,7 @@ function getOrcaNextCursor(meta: unknown): string | null {
   return typeof meta.next === "string" ? meta.next : null;
 }
 
-export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Promise<DexApiFetchResult> {
+export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Promise<PaginatedDexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -119,7 +115,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
   let resumeCursor: string | null = storedTailCursor;
   let cycleCompleted = false;
   const seenCursors = new Set<string>();
-  const paginationWriteAttempts: DexSourcePaginationWriteAttempt[] = [];
+  const pendingPaginationUpdates: PendingDexSourcePaginationUpdate[] = [];
   let page = 0;
 
   while (url) {
@@ -278,9 +274,8 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
     url = nextCursor ? buildOrcaPoolsUrl(nextCursor) : null;
   }
 
-  if (successfulPages > 0) {
-    const outcome = await writeDexSourcePaginationState({
-      db,
+  if (successfulPages > 0 && paginationState.revision) {
+    pendingPaginationUpdates.push({
       sourceKey: ORCA_SOURCE_KEY,
       cursor: resumeCursor,
       cycleStartedAt: cycleCompleted ? nowSec : (paginationState.cycleStartedAt ?? nowSec),
@@ -288,12 +283,13 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       completed: cycleCompleted,
       pagesFetched: successfulPages,
       diagnostics: [...errors, ...warnings],
+      expectedRevision: paginationState.revision,
+      generation: crypto.randomUUID(),
     });
-    paginationWriteAttempts.push({ sourceKey: ORCA_SOURCE_KEY, outcome });
-    const persistenceWarning = describeDexPaginationWriteFailure("orca", outcome);
-    if (persistenceWarning) warnings.push(persistenceWarning);
-    if (isDegradingDexPaginationWriteFailure(outcome)) degraded = true;
   }
+  // Finishing a rotating tail is not a census of the skipped middle pages.
+  const exhaustive = cycleCompleted && !degraded && errors.length === 0 &&
+    (storedTailCursor == null || storedTailCursor === refreshedHeadCursor);
 
   if (results.length > 0) {
     logWorkerEventArgs("handler", "info", `[fetch-orca] Fetched ${results.length} pools`);
@@ -301,18 +297,17 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
   for (const error of errors) {
     logWorkerEventArgs("handler", "warn", "[fetch-orca]", error);
   }
-  return makeDexApiFetchResult(results, {
+  return { ...makeDexApiFetchResult(results, {
     ok: results.length > 0,
     degraded: degraded || errors.length > 0,
     errors,
     warnings,
     pagination: {
-      state: cycleCompleted ? "complete" : "partial",
+      state: exhaustive ? "complete" : "partial",
       headRefreshed: successfulPages > 0,
       pagesFetched: successfulPages,
       cursor: resumeCursor,
       cycleCompleted,
-      cursorPersistence: summarizeDexSourcePaginationWrites(paginationWriteAttempts),
     },
-  });
+  }), pendingPaginationUpdates, censusScope: exhaustive ? "exhaustive" : "bounded-sample" };
 }

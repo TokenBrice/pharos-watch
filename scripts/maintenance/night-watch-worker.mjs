@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
+import { getCronQualityReasons } from "../../shared/lib/cron-quality-reasons.ts";
 import {
   collectWorkerCronSnapshot,
   WORKER_WATCH_DEFAULTS,
@@ -565,6 +566,22 @@ function summarizeFindings(snapshots, statusPayload, coverage, args) {
       severity: nonOkRuns.some((run) => run.status === "error") ? "High" : "Medium",
       title: `${nonOkRuns.length} non-ok cron run rows in collected window`,
       evidence: nonOkRuns.slice(0, 8).map((run) => `${run.job}: ${run.status} [${run.degraded_reason ?? "(no-reason)"}]${run.error ? ` (${String(run.error).slice(0, 120)})` : ""}`),
+    });
+  }
+
+  const qualityRuns = runs.flatMap((run) => {
+    let quality = run.quality;
+    if (typeof quality === "string") {
+      try { quality = JSON.parse(quality); } catch { return []; }
+    }
+    const reasons = getCronQualityReasons({ quality });
+    return reasons.length > 0 ? [{ job: run.job, reasons }] : [];
+  });
+  if (qualityRuns.length > 0) {
+    findings.push({
+      severity: "Medium",
+      title: `${qualityRuns.length} cron runs reported quality warnings`,
+      evidence: qualityRuns.slice(0, 8).map((run) => `${run.job}: ${run.reasons.join(", ")}`),
     });
   }
 

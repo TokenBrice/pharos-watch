@@ -89,6 +89,7 @@ import { enrichCurveStableswapFactoryExecutionModels } from "./curve-stableswap-
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
 import { attachPinnedShadowExecutionTargets } from "./execution-targets/pinned-shadow";
 import {
+  MissingDexLiquidityScoringStageError,
   loadDexLiquidityScoringStage,
   loadDexLiquidityScoringStageWhenReady,
   markDexLiquidityScoringStageConsumed,
@@ -101,6 +102,7 @@ import type {
   DexLiquidityScoringSourceState,
 } from "./scoring-stage-contract";
 import { createDexProgressReporter, type DexProgressReporter } from "./orchestrator-progress";
+import { acknowledgeDexSourcePagination, type PendingDexSourcePaginationUpdate } from "./source-pagination-state";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
 
@@ -238,11 +240,14 @@ export async function stageDexLiquidityScoring(
     },
     signal,
   );
+  throwIfAborted(signal);
+  const cursorPersistence = await acknowledgeDexSourcePagination(db, ctx.pendingPaginationUpdates ?? []);
 
   return {
     status: scoringSourceState.criticalSourceFailures.length > 0 ||
       materialPoolRejections ||
-      stored.retention.error
+      stored.retention.error ||
+      cursorPersistence.failures.length > 0
       ? "degraded"
       : "ok",
     itemCount,
@@ -254,6 +259,8 @@ export async function stageDexLiquidityScoring(
       recordCount: stored.recordCount,
       payloadBytes: stored.payloadBytes,
       retention: stored.retention,
+      cursorPersistence,
+      ...(cursorPersistence.failures.length > 0 ? { reason: "pagination-cursor-acknowledgement-failed" } : {}),
       rowsRead: scoringSourceState.primaryRawPoolCount,
       failedSources: scoringSourceState.failedSources,
       degradedSources: scoringSourceState.degradedSources ?? [],
@@ -423,7 +430,7 @@ export async function reuseCurrentDexLiquidityScoringGeneration(
   return createCronResult({
     status: "skipped_neutral",
     itemCount: 0,
-    metadata: { cadenceReuse: true, persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" } },
+    metadata: { reason: "liquidity-cadence-reuse", cadenceReuse: true, persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" } },
     productivity: { productive: false, reason: "liquidity-cadence-reuse" },
   });
 }
@@ -534,8 +541,6 @@ async function loadDexLiquidityScoringStageForConsumer(
   signal?: AbortSignal,
 ): Promise<{ staged: LoadedDexLiquidityScoringStage; recovery: DexLiquidityStageRecoveryOutcome | null }> {
   const { expectedSourceSlotStartedAt } = options;
-  const missingMessage =
-    `DEX liquidity scoring stage is missing for source slot ${expectedSourceSlotStartedAt}`;
   let stopReason: DexLiquidityStageRecoveryReason | null = null;
   try {
     const staged = await loadDexLiquidityScoringStageWhenReady(
@@ -567,12 +572,12 @@ async function loadDexLiquidityScoringStageForConsumer(
   } catch (error) {
     rethrowIfAborted(error, signal);
     const reason = stopReason;
-    if (!(error instanceof Error) || error.message !== missingMessage || reason == null) throw error;
+    if (!(error instanceof MissingDexLiquidityScoringStageError) ||
+      error.expectedSourceSlotStartedAt !== expectedSourceSlotStartedAt || reason == null) throw error;
     if (options.recovery == null) {
+      if (reason === "stage-missing") throw error;
       throw new Error(
-        reason === "stage-missing"
-          ? missingMessage
-          : reason === "stage-generation-failed"
+        reason === "stage-generation-failed"
             ? `DEX liquidity scoring stage generation failed for source slot ${expectedSourceSlotStartedAt}`
             : `DEX liquidity scoring stage run errored for source slot ${expectedSourceSlotStartedAt}`,
       );
@@ -662,6 +667,8 @@ export interface DexLiquidityRunContext {
   reportDexProgress: DexProgressReporter;
   /** Report-only fallback/default counters shared across the run's pool-intake phases. */
   fallbackCounters?: LiquidityFallbackCounters;
+  /** In-memory until both registry writeback and scoring-stage finalization succeed. */
+  pendingPaginationUpdates?: PendingDexSourcePaginationUpdate[];
 }
 
 type DexLiquidityDataSources = NonNullable<Awaited<ReturnType<typeof fetchDataSources>>>;
@@ -808,6 +815,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     counts: { sourceFamilies: directApiFetchers.length },
   });
   let directApiPhase = await runDirectApiFetchPhase(ctx.db, directApiFetchers, ctx.signal, lookups);
+  ctx.pendingPaginationUpdates = directApiPhase.results.flatMap((entry) => entry.result.pendingPaginationUpdates ?? []);
   const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(directApiPhase.results);
   const compactedDirectApi = compactDirectApiFetchPhasePools(directApiPhase, lookups);
   directApiPhase = compactedDirectApi.phase;
@@ -1117,6 +1125,8 @@ async function buildDexLiquidityPoolState(
       minRefreshGapSec: STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
     });
   } catch (error) {
+    // Even a completed scoring stage cannot acknowledge failed registry memory.
+    ctx.pendingPaginationUpdates = [];
     rethrowIfAborted(error, ctx.signal);
     logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "dex-liquidity",

@@ -105,6 +105,37 @@ afterEach(() => {
 });
 
 describe("Telegram Mini App portable watchlist lifecycle", () => {
+  it("keeps snooze-only rows outside portability while allowing exact direct undo", async () => {
+    const { db, sqlite } = setup();
+    sqlite.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").run(AUTH.userId);
+    sqlite.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").run(AUTH.userId);
+    sqlite.prepare(`
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_snooze_until_ts
+      ) VALUES (?, 'usdc-circle', 0, 0, 0, ?)
+    `).run(AUTH.userId, NOW + 3_600);
+    await expect(executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "export-watchlist" }))
+      .rejects.toMatchObject({ code: "empty-portable-state" });
+    const before = sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = ?").all(AUTH.userId);
+    const undo = await applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" });
+    if (!undo) throw new Error("Expected snooze-only undo");
+    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...undo });
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = ?").all(AUTH.userId)).toEqual(before);
+    await expect(executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "export-watchlist" }))
+      .rejects.toMatchObject({ code: "empty-portable-state" });
+    const token = await encodeWatchlistTokenV3({
+      registryVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      direct: [direct("usdt-tether")],
+      presets: [],
+    });
+    const preview = await executeTelegramMiniAppPortabilityOperation(db, AUTH, {
+      kind: "preview-watchlist-import", token,
+    });
+    expect(preview).toMatchObject({
+      result: { preview: { directAdds: ["usdt-tether"], directRemoves: [], directChanges: [] } },
+    });
+  });
+
   it("exports, previews, and atomically confirms a versioned watchlist import", async () => {
     const { db, sqlite } = setup();
     const exported = await executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "export-watchlist" });

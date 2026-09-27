@@ -83,7 +83,7 @@
   ],
   "liveReservesConfig": {
     "adapter": "collateral-positions-api",
-    "version": 2,
+    "version": 3,
     "semantics": "collateral-mix",
     "scoring": {
       "maxSourceAgeSec": 4000000

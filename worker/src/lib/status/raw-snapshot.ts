@@ -40,6 +40,7 @@ import { logWorkerEvent } from "../structured-log";
 import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
 import { parseJsonObjectWithSchema } from "../json-parse";
 import { z } from "zod";
+import { assessFreshnessTimestamp } from "../api-freshness-age";
 
 export const STATUS_RAW_SNAPSHOT_CACHE_KEY = "status:raw-snapshot:v1";
 export const STATUS_RAW_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
@@ -274,7 +275,11 @@ export async function loadStatusRawSnapshot(
       };
     }
 
-    const ageSec = Math.max(0, now - cached.updatedAt);
+    const timestamp = assessFreshnessTimestamp(now, cached.updatedAt);
+    if (timestamp.reason != null) {
+      return { kind: "unreadable", updatedAt: cached.updatedAt, ageSec: null, maxAgeSec, error: timestamp.reason };
+    }
+    const ageSec = timestamp.ageSeconds;
     if (ageSec > maxAgeSec) {
       return {
         kind: "stale",
@@ -293,6 +298,10 @@ export async function loadStatusRawSnapshot(
         maxAgeSec,
         error: "invalid status raw snapshot payload",
       };
+    }
+    const generationTimestamp = assessFreshnessTimestamp(now, payload.producedAt);
+    if (generationTimestamp.reason != null) {
+      return { kind: "unreadable", updatedAt: cached.updatedAt, ageSec: null, maxAgeSec, error: generationTimestamp.reason };
     }
 
     return {

@@ -79,9 +79,6 @@ export async function snapshotChainSupply(
     publicationCoverage,
     snapshotDate,
   } = preflight;
-  if (publicationCoverage.complete && lastWrite?.snapshotDate === snapshotDate && lastWrite.exactCoverageVerified) {
-    return createCronResult({ itemCount: 0, metadata: { reason: "already_written_today", snapshotDate } });
-  }
   if (!publicationCoverage.complete) {
     return createCronResult({
       status: "degraded",
@@ -99,22 +96,58 @@ export async function snapshotChainSupply(
 
   // Accumulate per-chain totals
   const chainTotals = new Map<string, { totalUsd: number; coinCount: number }>();
+  const restoredOnlyIds = new Set<string>();
+  const staleSupplyIds = new Set<string>();
+  const missingSupplyIds = new Set<string>();
+  const deferredChainIds = new Set<string>();
 
   for (const asset of cache.payload.peggedAssets) {
     if (!expectedActiveIdSet.has(String(asset.id))) continue;
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
+    const restored = asset.supplyRestored === true;
+    // Legacy rows without an observation clock inherit the admitted cache
+    // clock; a carried-forward row never does.
+    const stale = nowSec - (asset.supplyObservedAt ?? cache.updatedAt) > CACHE_MAX_AGE_SEC;
+    if (restored) restoredOnlyIds.add(String(asset.id));
+    if (stale) staleSupplyIds.add(String(asset.id));
 
     for (const [chainId, data] of canonicalChainCirculating) {
-      const current = data.current ?? 0;
-      if (current <= 0) continue;
-
       if (!CHAIN_META[chainId]) continue;
+      if (restored || stale || data.current == null) {
+        deferredChainIds.add(chainId);
+        if (data.current == null) missingSupplyIds.add(String(asset.id));
+        continue;
+      }
+      const current = data.current;
+      if (current <= 0) continue;
 
       const existing = chainTotals.get(chainId) ?? { totalUsd: 0, coinCount: 0 };
       existing.totalUsd += current;
       existing.coinCount += 1;
       chainTotals.set(chainId, existing);
     }
+  }
+  // There is no partial-history coverage contract. Preserve the whole daily
+  // generation, not a fresh subtotal that silently subtracts unavailable peers.
+  if (deferredChainIds.size > 0 || restoredOnlyIds.size > 0 || staleSupplyIds.size > 0) {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "chain_observations_unavailable",
+        restoredOnlyIds: [...restoredOnlyIds].sort(),
+        staleSupplyIds: [...staleSupplyIds].sort(),
+        missingSupplyIds: [...missingSupplyIds].sort(),
+        deferredChainIds: [...deferredChainIds].sort(),
+      },
+    });
+  }
+  if (
+    lastWrite?.snapshotDate === snapshotDate
+    && lastWrite.exactCoverageVerified
+    && lastWrite.chainObservationAdmissionVerified
+  ) {
+    return createCronResult({ itemCount: 0, metadata: { reason: "already_written_today", snapshotDate } });
   }
 
   const chainRows: Array<readonly [string, number, number, number]> = [];
@@ -140,6 +173,7 @@ export async function snapshotChainSupply(
         ownedRowIds: chainRows.map(([chainId]) => chainId),
       }),
       writtenChains: chainRows.length,
+      chainObservationAdmissionVersion: 1,
     });
     const replacementStatements = [
       db.prepare("DELETE FROM chain_supply_history WHERE snapshot_date = ?").bind(snapshotDate),

@@ -54,6 +54,7 @@ const subPhaseMocks = vi.hoisted(() => ({
     cacheKey: "stablecoins",
     syncStartSec,
     responseReadyCacheError: null,
+    quarantinedAssets: [],
   })),
   commitReplayPriceCache: vi.fn(async () => null),
   runDepegPipeline: vi.fn(async () => ({

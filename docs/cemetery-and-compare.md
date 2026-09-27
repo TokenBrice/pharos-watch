@@ -157,6 +157,7 @@ Compare includes client-side share/export rendering:
 - Builds a canvas card via `src/lib/compare-share-image.ts`
 - Supports clipboard image copy + Twitter intent flow
 - Supports PNG download from the generated canvas
+- The share card reads market cap and the 7-day supply change through `getCirculatingRawOrNull()` / `getPrevWeekRawOrNull()`; an unavailable operand renders `—`, never `$0.00` or a fabricated `-100%` change
 
 ### Compare table context
 
@@ -170,6 +171,10 @@ Compare includes client-side share/export rendering:
 - structure, controls, reserves, and regulatory status
 
 The matrix uses the shared contextual methodology labels for Peg Score, Liquidity Score, and Safety. Missing source coverage renders as a dash rather than zero. External Bluechip is the exception, because two different absences would otherwise collapse into one dash: a coin with no rating at all reads "Not rated", a rated coin whose audit flag the source omits reads "audit not reported" beside its grade, and a source that positively reports no audit reads "no audit flag". Directional fields such as issuance flow, supply change, and yield are not styled as universal winners because their desirability depends on the comparison task.
+
+Market cap and the 24h/7d/30d supply-change rows read current supply through `getCirculatingRawOrNull()`. A coin whose current peg buckets are absent, empty or wholly invalid shows a dash for market cap and every supply change: a change is published only when both the current and the previous value are observed (and the previous value is positive), so missing current supply never becomes a `-100%` change. An explicitly observed zero still renders `$0.00` and its real change.
+
+The peg-track-record row `Open recorded incident` reports `activeDepeg` as Yes/No (or a dash when the peg-summary row is missing). No means only that no recorded incident is open, never that the asset is currently at peg. This remains true for NAV tokens, unusable prices/references, and assets below event-collection coverage; current deviation is a separate measurement.
 
 ## Operational notes
 

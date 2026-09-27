@@ -806,6 +806,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     status: probeStatus === "healthy" ? "ok" : "degraded",
     itemCount: sampleCount,
     metadata: JSON.stringify({
+      outputPublishedAt: rawSnapshotPersistenceSucceeded && probePersistenceSucceeded && statusPersistenceSucceeded ? now : null,
       ...(probeStatus === "healthy" ? {} : { reason: `probe-plane-${probeStatus}` }),
       sampleCount,
       passCount,

@@ -187,7 +187,11 @@ function loadCoverageBaseline(
     exit = process.exit,
   }: { fsImpl?: CoverageFs; consoleImpl?: CoverageConsole; exit?: ExitFunction } = {},
 ): Record<string, unknown> | null {
-  if (!fsImpl.existsSync(path)) return null;
+  if (!fsImpl.existsSync(path)) {
+    consoleImpl.error(`[coverage] Missing baseline file ${path}. Create or refresh it with the explicit update-critical-coverage-baseline maintenance command.`);
+    exit(1);
+    return null;
+  }
   try {
     const parsed = JSON.parse(fsImpl.readFileSync(path, "utf8"));
     if (parsed && typeof parsed === "object" && parsed.files && typeof parsed.files === "object") {
@@ -352,6 +356,7 @@ export function runCriticalCoverageCheck({
   const lcov = fsImpl.readFileSync(LCOV_PATH, "utf8");
   const parsed = parseLcov(lcov);
   const baseline = loadCoverageBaseline(baselinePath, { fsImpl, consoleImpl, exit });
+  if (baseline === null) return;
   if (baseline) {
     const baselineErrors = validateCriticalCoverageBaseline(
       baseline,
@@ -401,8 +406,6 @@ export function runCriticalCoverageCheck({
     } else {
       consoleImpl.log("[coverage] No touched critical files detected; ratchet checks skipped.");
     }
-  } else {
-    consoleImpl.log(`[coverage] Baseline file not found at ${baselinePath}; ratchet checks skipped.`);
   }
 
   function thresholdForFile(file: string): number {

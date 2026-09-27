@@ -6,6 +6,7 @@ import {
   LIQUIDITY_TVL_DEPTH_ANCHOR_RATIO,
   LIQUIDITY_TVL_DEPTH_SLOPE,
 } from "@shared/lib/liquidity-score-weights";
+import { computeVolumeActivityScore } from "@shared/lib/dex-volume-availability";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -205,9 +206,8 @@ export function computeLiquidityScore(
     tvlDepth = computeTvlDepthScore(Math.max(tvlInput, 1) / TVL_DEPTH_FALLBACK_MCAP_USD);
   }
 
-  // Component 2: Volume activity (20%) — log-scale
-  const vtRatio = m.totalTvlUsd > 0 ? m.totalVolume24hUsd / m.totalTvlUsd : 0;
-  const volumeActivity = vtRatio <= 0 ? 0 : clampScore(38 * (Math.log10(vtRatio) + 3));
+  // Component 2: Volume activity (20%) — log-scale; formula owned by the shared DEC-19 helper.
+  const volumeActivity = computeVolumeActivityScore(m.totalVolume24hUsd, m.totalTvlUsd);
 
   // Component 3: Pool quality (20%) — quality retention ratio
   const qualityRetention = m.totalTvlUsd > 0 ? m.qualityAdjustedTvl / m.totalTvlUsd : 0;

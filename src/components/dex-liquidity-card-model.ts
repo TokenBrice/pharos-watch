@@ -76,10 +76,11 @@ export function formatBalanceDetails(balanceDetails: PoolBalanceDetails | undefi
  */
 export function buildLiquidityVerdictLine(components: DexLiquidityData["scoreComponents"]): string | null {
   if (!components) return null;
-  const entries = LIQUIDITY_SCORE_WEIGHTS.map((weight) => ({
-    label: weight.label,
-    value: Math.round(components[weight.key]),
-  }));
+  const entries = LIQUIDITY_SCORE_WEIGHTS.map((weight) => {
+    const value = components[weight.key];
+    return { label: weight.label, value: value == null ? Number.NaN : Math.round(value) };
+  });
+  // A DEC-19 NR activity component leaves no complete composite to explain.
   if (entries.some((entry) => !Number.isFinite(entry.value))) return null;
 
   const sorted = [...entries].sort((a, b) => b.value - a.value);
@@ -98,6 +99,17 @@ export function buildLiquidityVerdictLine(components: DexLiquidityData["scoreCom
       : `${weakest.label.toLowerCase()} ${weakest.value} is the softest`;
 
   return `${strengthClause}; ${weakClause}.`;
+}
+
+/**
+ * DEC-19 read side: the published LiquidityScore is NR because required 24h
+ * volume activity was partial, missing, stale or unknown — not because the
+ * token lacks a direct DEX market. Legacy payloads never match.
+ */
+export function isLiquidityActivityNotRated(liq: DexLiquidityData): boolean {
+  if (liq.liquidityScore != null) return false;
+  if (liq.scoreComponents?.volumeActivity === null) return true;
+  return liq.volume24hAvailability != null && liq.volume24hAvailability.completeness !== "complete";
 }
 
 export function getLiquidityEvidenceLabel(liq: DexLiquidityData): string | null {

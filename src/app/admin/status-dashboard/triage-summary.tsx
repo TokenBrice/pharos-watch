@@ -38,8 +38,8 @@ import { cn } from "@/lib/utils";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
 
-function formatReserveCoverage(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
+function formatReserveCoverage(value: number | null): string {
+  return value == null ? "Unknown" : `${(value * 100).toFixed(1)}%`;
 }
 
 function getEvidenceBadgeClass(state: DashboardEvidence["state"]): string {

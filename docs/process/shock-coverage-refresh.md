@@ -16,18 +16,17 @@ Worst-case gap between scheduled attempts is 48h, leaving a roughly 24h manual/r
 
 | Stage                     | Command                                                                     | Failure meaning                                          |
 | ------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Measure Liquity V1        | `measure-cdp-shock-coverage.ts --asset lusd-liquity`                        | No RPC endpoint served a complete position snapshot      |
-| Measure Liquity V2        | `measure-cdp-shock-coverage.ts --asset bold-liquity`                        | Same, for the BOLD branch set                            |
-| Measure Base Dollar V2    | `measure-cdp-shock-coverage.ts --asset bd-basedollar`                      | Same, for BD's five Base branches                        |
+| `targets` job | Validate `shared/data/safety-score-v9/shock-coverage-targets.json` and emit the asset matrix | Invalid, empty, or duplicate asset roster |
+| `measure` matrix jobs | `measure-cdp-shock-coverage.ts --asset <matrix.asset>` for each roster asset, then upload that asset's artifact | No RPC endpoint served a complete position snapshot for that asset |
 | Attest journal replays    | `generate-safety-score-v9-shock-coverage-attestations.ts`                   | A journal did not replay byte-identically offline        |
 | Regenerate registry       | `generate-safety-score-v9-shock-coverage-registry.ts`                       | Journal/registry projection is inconsistent              |
 | Verify self-consistency   | both generators with `--check`                                              | A generated artifact is stale after its own run          |
 | Assert scoring freshness  | `scripts/ci/check-shock-coverage-freshness.ts`                              | A target is missing, incomplete, unattested, or past the 36h refresh budget the check enforces (half the 72h policy bound) |
 | Run shock-coupled tests   | `vitest` over the registry, extension-shock, and fact-set suites            | The refreshed data would fail the PR gate — the PR would be unmergeable |
 
-Each stage is a separate step, so a partial refresh (for example V1 succeeding and V2 failing) fails the job **before** any branch, commit, or PR is created. Nothing unverified reaches the registry.
+`measure` depends on `targets` and uses `fail-fast: false`, so all asset jobs may finish even when one fails. The `refresh` fan-in job has `needs: measure`: it runs only after the whole measurement matrix succeeds, downloads the artifacts, then executes the attestation, registry, consistency, freshness, and test steps above before creating a branch, commit, or PR. A partial matrix refresh cannot create a partial PR.
 
-Each measure step writes the journal and its committed `<journal>.summary.json` projection together. The attestation and registry generators discover journals only through those summaries (raw bodies leave Git for R2 in the later upload step), so a summary written only at upload time would leave a fresh measurement invisible to the registry and fail the freshness assertion.
+Each matrix job writes the journal and its committed `<journal>.summary.json` projection together. The attestation and registry generators discover journals only through those summaries (raw bodies leave Git for R2 in the later upload step), so a summary written only at upload time would leave a fresh measurement invisible to the registry and fail the freshness assertion.
 
 ### Replay attestations are load-bearing
 
@@ -47,7 +46,7 @@ The workflow **arms auto-merge** on the PR it opens (`gh pr merge --squash --aut
 
 The PR step uses `SHOCK_COVERAGE_GITHUB_TOKEN`, falling back to the existing `OG_REFRESH_GITHUB_TOKEN`. A bot or PAT token is required so the automated PR triggers normal `pull_request` checks; the default `GITHUB_TOKEN` would not. The workflow fails with an explicit error when neither secret is set.
 
-The measurement itself needs **no** credential. `scripts/lib/mechanism-measurement/shock-targets.ts` carries hardcoded lists of public Ethereum and Base RPC endpoints with per-endpoint failover.
+The measurement itself needs **no** credential. `shared/data/safety-score-v9/shock-coverage-targets.json` owns each target's public Ethereum or Base `rpcs` list. `scripts/lib/mechanism-measurement/shock-targets.ts` loads that canonical roster; edit the JSON roster, not the loader, to change endpoints. Measurements use per-endpoint failover.
 
 ## Manual refresh
 

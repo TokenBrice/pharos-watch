@@ -4,7 +4,8 @@ import { existsSync } from "node:fs";
 
 import { classifyChangedFiles, normalizeExplicitFiles, readChangedFiles } from "../ci/pharos-change-contract.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
-import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
+import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
+import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
 import {
   parseStrictCliArgs,
   runDirectCli,
@@ -63,9 +64,6 @@ export interface FocusedCheck {
   argv?: readonly string[];
 }
 
-export interface BuildFocusedCheckPlanOptions {
-  base?: string;
-}
 
 export interface FocusedCheckReport {
   changedFiles: string[];
@@ -124,7 +122,6 @@ function selectFocusedFiles(args: FocusedCheckArgs): string[] {
 
 export function buildFocusedCheckPlan(
   changedFiles: readonly string[],
-  { base }: BuildFocusedCheckPlanOptions = {},
 ): FocusedCheckPlan {
   const classification = classifyChangedFiles(changedFiles);
   const familyOrder = new Map(classification.mappings.map((mapping, index) => [mapping.id, index]));
@@ -152,9 +149,13 @@ export function buildFocusedCheckPlan(
     .forEach((family) => {
       for (const command of family.checks) {
         let argv: string[] | undefined;
-        let plannedCommand = command === "npm run lint:changed" && base
-          ? `${command} -- --base=${base}`
-          : command;
+        let plannedCommand = command;
+        if (command === "npm run lint:changed") {
+          const files = selectLintableFiles(classification.changedFiles);
+          if (files.length === 0) continue;
+          argv = ["npm", "run", "lint:changed", "--", ...files.flatMap((file) => ["--file", file])];
+          plannedCommand = createSpawnCommand(argv[0], argv.slice(1)).cmd;
+        }
         if (isGeneric(family)) {
           if (retainedCommands.has(command)) continue;
           const files = classification.changedFiles.filter((file) => family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)));
@@ -163,9 +164,7 @@ export function buildFocusedCheckPlan(
             argv = ["npx", "vitest", "related", "--run", "--passWithNoTests=false", ...files];
             plannedCommand = createSpawnCommand(argv[0], argv.slice(1)).cmd;
           } else if (command === "npm run check:generated-artifacts") {
-            const ids = selectChangedGeneratedArtifactIds(classification.changedFiles).filter((id) =>
-              GENERATED_ARTIFACT_REGISTRY.some((artifact) => artifact.id === id && artifact.checkable !== false),
-            );
+            const ids = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(classification.changedFiles));
             if (ids.length === 0) continue;
             plannedCommand = `${command} -- --only=${ids.join(",")}`;
           }
@@ -236,7 +235,7 @@ export async function runFocusedChecks({
   const args = parseFocusedCheckArgs(argv);
   if (writeCliHelpIfRequested(args, USAGE, stdout)) return 0;
 
-  const plan = buildFocusedCheckPlan(selectFocusedFiles(args), { base: args.base });
+  const plan = buildFocusedCheckPlan(selectFocusedFiles(args));
   if (args.files.length > 0) {
     const mappedFiles = new Set(plan.classification.mappings.flatMap((mapping) => mapping.matchedFiles));
     const unmatched = plan.changedFiles.filter((file) => !mappedFiles.has(file));

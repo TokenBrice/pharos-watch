@@ -13,19 +13,56 @@ const SignedFlowIntensitySchema = z.number().min(-100).max(100);
 const PressureShiftStateSchema = z.enum(PRESSURE_SHIFT_STATE_VALUES);
 const NetFlowDirection24hSchema = z.enum(NET_FLOW_DIRECTION_24H_VALUES);
 
+/**
+ * USD valuation completeness of a flow window (or one side of it).
+ * - `complete`: every counted event carried a USD valuation, so totals are exact. A window with no
+ *   counted events is complete (genuine zero activity).
+ * - `partial`: counted events without a USD valuation exist. Mint/burn volumes are known-subtotal lower
+ *   bounds; a signed net is not a bound in either direction.
+ * - `unknown`: part of the window was aggregated before valuation completeness was recorded.
+ */
+export const MINT_BURN_VALUATION_COMPLETENESS_VALUES = ["complete", "partial", "unknown"] as const;
+export const MintBurnValuationCompletenessSchema = z.enum(MINT_BURN_VALUATION_COMPLETENESS_VALUES);
+export type MintBurnValuationCompleteness = z.infer<typeof MintBurnValuationCompletenessSchema>;
+
+/** Window valuation: `partial` wins over `unknown`, which wins over `complete`. */
+export const MintBurnValuationSchema = z.object({
+  completeness: MintBurnValuationCompletenessSchema,
+  mintCompleteness: MintBurnValuationCompletenessSchema,
+  burnCompleteness: MintBurnValuationCompletenessSchema,
+  /** Counted mints without a USD valuation, in hours whose coverage was recorded (a lower bound when `mintCompleteness` is `unknown`). */
+  unpricedMintEventCount: z.number().int().nonnegative(),
+  /** Counted effective burns without a USD valuation, in hours whose coverage was recorded. */
+  unpricedBurnEventCount: z.number().int().nonnegative(),
+});
+export type MintBurnValuation = z.infer<typeof MintBurnValuationSchema>;
+
 const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
   band: z.string().nullable(),
   intensitySemantics: z.literal("signed-v2"),
-  flightToQuality: z.boolean(),
-  flightIntensity: z.number().finite(),
+  /** Nullable for valuation gating: `null` means missing valuation can alter the flight-to-quality conclusion. */
+  flightToQuality: z.boolean().nullable(),
+  flightIntensity: z.number().finite().nullable(),
   // The retired cache label is accepted for rolling/historical payload reads.
   classificationSource: z
     .enum(["safety-score-v9-publication", "report-card-cache", "unavailable"])
     .optional(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
   trackedCoins: z.number().int().nonnegative(),
+  /** Sum of observed tracked-chain supply; coins counted in `mcapUnavailableCoins` are excluded, not zeroed. */
   trackedMcapUsd: z.number().finite().nonnegative(),
+  /**
+   * Tracked coins whose supply weight was unavailable, excluded from the gauge weights and
+   * `trackedMcapUsd`. Absent on payloads produced before the count existed (count unknown).
+   */
+  mcapUnavailableCoins: z.number().int().nonnegative().optional(),
+  /**
+   * Weighted coins whose pressure input entering `score` has `partial` valuation (unpriced events in
+   * the 24h window or the baseline), so missing valuation can alter the composite. Absent on payloads
+   * produced before valuation completeness existed (unknown).
+   */
+  partialValuationInputs: z.number().int().nonnegative().optional(),
 });
 export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
 
@@ -68,24 +105,43 @@ const MintBurnCoinCoverageSchema = z.object({
 });
 export type MintBurnCoinCoverage = z.infer<typeof MintBurnCoinCoverageSchema>;
 
+/**
+ * Per-coin valuation completeness. `window24h` qualifies the 24h volumes, net, direction and (with
+ * `baseline`) the pressure shift; the `netFlow*` entries qualify the matching window nets.
+ */
+const MintBurnCoinValuationSchema = z.object({
+  window24h: MintBurnValuationSchema,
+  baseline: MintBurnValuationCompletenessSchema,
+  netFlow7d: MintBurnValuationCompletenessSchema,
+  netFlow30d: MintBurnValuationCompletenessSchema,
+  netFlow90d: MintBurnValuationCompletenessSchema,
+});
+
 const MintBurnCoinFlowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
   pressureShiftScore: SignedFlowIntensitySchema.nullable(),
   pressureShiftState: PressureShiftStateSchema,
-  netFlowDirection24h: NetFlowDirection24hSchema,
+  /** Nullable for valuation gating: `null` means missing valuation leaves the direction unproven. */
+  netFlowDirection24h: NetFlowDirection24hSchema.nullable(),
   has24hActivity: z.boolean(),
   baselineDailyNetUsd: z.number().nullable(),
   baselineDailyAbsUsd: z.number().nullable(),
   baselineDataDays: z.number().nullable(),
-  netFlow24hUsd: z.number().finite(),
+  /**
+   * Signed nets are nullable for valuation gating: `null` means valuation is not complete. Until the
+   * producer gates them, a non-`complete` `valuation` entry marks the number as unproven (a partial
+   * signed net is not a bound).
+   */
+  netFlow24hUsd: z.number().finite().nullable(),
+  /** Known-valuation subtotals: lower bounds unless the matching `valuation` side is `complete`. */
   mintVolume24hUsd: z.number().finite().nonnegative(),
   burnVolume24hUsd: z.number().finite().nonnegative(),
   mintCount24h: z.number().int().nonnegative(),
   burnCount24h: z.number().int().nonnegative(),
-  netFlow7dUsd: z.number().finite(),
-  netFlow30dUsd: z.number().finite(),
-  netFlow90dUsd: z.number().finite(),
+  netFlow7dUsd: z.number().finite().nullable(),
+  netFlow30dUsd: z.number().finite().nullable(),
+  netFlow90dUsd: z.number().finite().nullable(),
   largestEvent24h: z
     .object({
       direction: z.enum(["mint", "burn"]),
@@ -95,14 +151,18 @@ const MintBurnCoinFlowSchema = z.object({
     })
     .nullable(),
   coverage: MintBurnCoinCoverageSchema.optional(),
+  /** Absent on payloads produced before valuation completeness existed (unknown). */
+  valuation: MintBurnCoinValuationSchema.optional(),
 });
 export type MintBurnCoinFlow = z.infer<typeof MintBurnCoinFlowSchema>;
 
 const MintBurnHourlyBucketSchema = z.object({
   hourTs: z.number().int().nonnegative(),
-  netFlowUsd: z.number().finite(),
+  netFlowUsd: z.number().finite().nullable(),
   mintVolumeUsd: z.number().finite().nonnegative(),
   burnVolumeUsd: z.number().finite().nonnegative(),
+  /** Absent on payloads produced before valuation completeness existed (unknown). */
+  valuation: MintBurnValuationCompletenessSchema.optional(),
 });
 export type MintBurnHourlyBucket = z.infer<typeof MintBurnHourlyBucketSchema>;
 
@@ -114,7 +174,9 @@ export type MintBurnHourlyBucket = z.infer<typeof MintBurnHourlyBucketSchema>;
  */
 const MintBurnAggregateChainSchema = z.object({
   chainId: z.string(),
-  netFlow24hUsd: z.number().finite(),
+  netFlow24hUsd: z.number().finite().nullable(),
+  /** Absent on payloads produced before valuation completeness existed (unknown). */
+  valuation: MintBurnValuationCompletenessSchema.optional(),
 });
 
 export const MintBurnFlowsResponseSchema = z.object({
@@ -135,7 +197,8 @@ const MintBurnPerCoinChainSchema = z.object({
   burnVolumeUsd: z.number().finite().nonnegative(),
   mintCount: z.number().int().nonnegative(),
   burnCount: z.number().int().nonnegative(),
-  netFlowUsd: z.number().finite(),
+  netFlowUsd: z.number().finite().nullable(),
+  valuation: MintBurnValuationSchema.optional(),
 });
 
 export const MintBurnPerCoinResponseSchema = z.object({
@@ -143,11 +206,13 @@ export const MintBurnPerCoinResponseSchema = z.object({
   symbol: z.string(),
   mintVolumeUsd: z.number().finite().nonnegative(),
   burnVolumeUsd: z.number().finite().nonnegative(),
-  netFlowUsd: z.number().finite(),
+  netFlowUsd: z.number().finite().nullable(),
   mintCount: z.number().int().nonnegative(),
   burnCount: z.number().int().nonnegative(),
   chains: z.array(MintBurnPerCoinChainSchema),
   hourly: z.array(MintBurnHourlyBucketSchema),
+  /** Qualifies the window totals. Absent on payloads produced before valuation completeness existed (unknown). */
+  valuation: MintBurnValuationSchema.optional(),
   updatedAt: z.number(),
   windowHours: z.number().int().positive().optional(),
   scope: MintBurnScopeSchema.optional(),

@@ -128,9 +128,9 @@ export interface StagedPoolUpsertOptions {
   minRefreshGapSec?: number;
 }
 
-export async function upsertStagedPools(db: D1Database, pools: StagedPool[], signal?: AbortSignal, options?: StagedPoolUpsertOptions): Promise<void> {
+export async function upsertStagedPools(db: D1Database, pools: StagedPool[], signal?: AbortSignal, options?: StagedPoolUpsertOptions): Promise<number> {
   throwIfAborted(signal);
-  if (pools.length === 0) return;
+  if (pools.length === 0) return 0;
 
   const validPools = pools.filter((pool) => {
     if (!isValidStagedPoolId(pool.poolId)) {
@@ -147,7 +147,7 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
     }
     return true;
   });
-  if (validPools.length === 0) return;
+  if (validPools.length === 0) return 0;
 
   const minRefreshGapSec = options?.minRefreshGapSec ?? 0;
 
@@ -190,7 +190,7 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
   });
 
   throwIfAborted(signal);
-  await batchExecute(db, stmts, { chunkSize: STAGING_BATCH_SIZE, signal });
+  return batchExecute(db, stmts, { chunkSize: STAGING_BATCH_SIZE, signal });
 }
 
 /**

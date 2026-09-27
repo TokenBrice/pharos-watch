@@ -72,7 +72,43 @@ describe("FlowChart", () => {
       "—",
       "—",
       "—",
+      "—",
     ]);
     expect(screen.getByText(/shown as breaks and excluded from rolling averages/i)).toBeTruthy();
+  });
+
+  it("draws no net for a partial-valuation bucket and stops the cumulative line there", () => {
+    const firstHour = 3_600_000;
+    render(
+      <FlowChart
+        isLoading={false}
+        hourly={[
+          { hourTs: firstHour, mintVolumeUsd: 7, burnVolumeUsd: 0, netFlowUsd: 7, valuation: "complete" },
+          { hourTs: firstHour + 3_600, mintVolumeUsd: 5, burnVolumeUsd: 0, netFlowUsd: 5, valuation: "partial" },
+          { hourTs: firstHour + 7_200, mintVolumeUsd: 14, burnVolumeUsd: 0, netFlowUsd: 14, valuation: "complete" },
+        ]}
+      />,
+    );
+
+    expect(chartState.data[1]).toMatchObject({
+      mint: 5,
+      net: null,
+      positiveDelta: null,
+      negativeDelta: null,
+      cumulative: null,
+      valuation: "partial",
+    });
+    // The later complete bucket still draws its bar, but the running total is unproven.
+    expect(chartState.data[2]).toMatchObject({ net: 14, positiveDelta: 14, cumulative: null });
+
+    const partialRow = screen.getAllByRole("row")[2];
+    expect(within(partialRow).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
+      "≥ $5",
+      "≥ $0",
+      "—",
+      "—",
+      "Partial valuation: net unavailable",
+    ]);
+    expect(screen.getByText(/1 hourly bucket has unpriced events/i)).toBeTruthy();
   });
 });

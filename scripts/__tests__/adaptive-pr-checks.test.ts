@@ -13,6 +13,13 @@ import {
 import { runPrChecks } from "../maintenance/run-pr-checks.ts";
 
 describe("adaptive PR checks", () => {
+  it("rejects staged selection before running a range-based static gate", async () => {
+    const runCommandImpl = vi.fn(async () => 0);
+    await expect(runPrStaticChecks({ argv: ["--staged"], runCommandImpl }))
+      .rejects.toThrow(/requires a --base\/--head range/);
+    expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
   it("emits the stable check:pr JSON envelope through the adaptive harness", async () => {
     const stdout = { write: vi.fn<(chunk: string) => unknown>() };
     const stderr = { write: vi.fn<(chunk: string) => unknown>() };

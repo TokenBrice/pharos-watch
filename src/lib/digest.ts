@@ -85,6 +85,7 @@ export interface DigestTriggerRecordBucket {
   missed: number;
   expired: number;
   pending: number;
+  unavailable: number;
   total: number;
   resolved: number;
   hitRate: number | null;
@@ -96,6 +97,7 @@ export interface DigestTriggerRecord {
   missed: number;
   expired: number;
   pending: number;
+  unavailable: number;
   resolved: number;
   hitRate: number | null;
   buckets: readonly DigestTriggerRecordBucket[];
@@ -183,13 +185,13 @@ function resolveDigestTriggerMetric(
 }
 
 function emptyTriggerRecordCounts(): Record<DigestTriggerRecordStatus, number> {
-  return { hit: 0, missed: 0, expired: 0, pending: 0 };
+  return { hit: 0, missed: 0, expired: 0, pending: 0, unavailable: 0 };
 }
 
 /**
  * Aggregate the forward-look outcomes carried by the public digest archive.
  * The headline deliberately includes expired outcomes in its denominator;
- * pending outcomes remain visible as a separate count. Trigger classes come
+ * pending and unavailable outcomes remain visible as separate counts. Trigger classes come
  * from the archived trigger metric, and outcomes without one stay explicit in
  * an "Unclassified" bucket rather than being inferred from prose.
  */
@@ -213,7 +215,7 @@ export function buildDigestTriggerRecord(
   const toBucket = (key: DigestTriggerRecordClassKey): DigestTriggerRecordBucket | null => {
     const counts = bucketCounts.get(key);
     if (!counts) return null;
-    const total = counts.hit + counts.missed + counts.expired + counts.pending;
+    const total = counts.hit + counts.missed + counts.expired + counts.pending + counts.unavailable;
     const resolved = counts.hit + counts.missed + counts.expired;
     return {
       key,
@@ -235,12 +237,12 @@ export function buildDigestTriggerRecord(
   const unclassified = bucketCounts.get("unknown") ?? emptyTriggerRecordCounts();
 
   return {
-    total: totals.hit + totals.missed + totals.expired + totals.pending,
+    total: totals.hit + totals.missed + totals.expired + totals.pending + totals.unavailable,
     ...totals,
     resolved,
     hitRate: resolved > 0 ? totals.hit / resolved : null,
     buckets,
-    unclassifiedCount: unclassified.hit + unclassified.missed + unclassified.expired + unclassified.pending,
+    unclassifiedCount: unclassified.hit + unclassified.missed + unclassified.expired + unclassified.pending + unclassified.unavailable,
   };
 }
 

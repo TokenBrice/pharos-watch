@@ -165,18 +165,26 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
   }
   if (loaderErrorCount("markets") > 0) marketStates.push("unknown");
 
-  const reserveStates: PipelineSeverity[] = [healthSeverity(data.reserveComposition.status)];
-  const reserveOperationalCount =
-    data.reserveComposition.deferredCoins +
-    data.reserveComposition.staleCoins +
-    data.reserveComposition.missingCoins +
-    data.reserveComposition.degradedCoins +
-    data.reserveComposition.errorCoins +
-    data.reserveComposition.corruptCoins +
-    data.reserveComposition.writeTimeoutUncertain;
-  let reserveCount = reserveOperationalCount + loaderErrorCount("reserves");
-  if (reserveOperationalCount > 0) reserveStates.push("watch");
-  if (data.reserveComposition.errorCoins > 0 || data.reserveComposition.corruptCoins > 0) reserveStates.push("critical");
+  const reserve = data.reserveComposition;
+  const reserveStates: PipelineSeverity[] = [
+    reserve.status === "unavailable" ? "unknown" : healthSeverity(reserve.status),
+  ];
+  let reserveCount = loaderErrorCount("reserves");
+  if (reserve.status === "unavailable") {
+    reserveCount += 1; // One unavailable section, not a measured feed count.
+  } else {
+    const reserveOperationalCount =
+      reserve.deferredCoins +
+      reserve.staleCoins +
+      reserve.missingCoins +
+      reserve.degradedCoins +
+      reserve.errorCoins +
+      reserve.corruptCoins +
+      reserve.writeTimeoutUncertain;
+    reserveCount += reserveOperationalCount;
+    if (reserveOperationalCount > 0) reserveStates.push("watch");
+    if (reserve.errorCoins > 0 || reserve.corruptCoins > 0) reserveStates.push("critical");
+  }
   if (data.reserveDrift) {
     reserveCount += data.reserveDrift.length;
     if (data.reserveDrift.length > 0) reserveStates.push("watch");

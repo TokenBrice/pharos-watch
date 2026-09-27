@@ -26,8 +26,11 @@ export function FlowComparisonChart({
   hours,
   onHoursChange,
 }: FlowComparisonChartProps) {
-  // Merge all series into flat array keyed by timestamp
+  // Merge all series into flat array keyed by timestamp. Hours with an
+  // unavailable net (null or partial valuation) are already omitted upstream.
   const mergedData = mergeMultiSeriesData(series, (d) => d.netFlowUsd);
+  const unavailableSeries = series.filter((s) => s.unavailableHours > 0);
+  const unknownCoverageSeries = series.filter((s) => s.unknownCoverageHours > 0);
 
   if (mergedData.length === 0) return null;
 
@@ -83,6 +86,18 @@ export function FlowComparisonChart({
             tooltipVariant="pharos"
           />
         </div>
+        {unavailableSeries.length > 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Partial valuation: {unavailableSeries.map((s) => `${s.label} ${s.unavailableHours}h`).join(", ")} omitted
+            because unpriced events leave the signed net unavailable.
+          </p>
+        )}
+        {unknownCoverageSeries.length > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Coverage unknown: {unknownCoverageSeries.map((s) => `${s.label} ${s.unknownCoverageHours}h`).join(", ")} were
+            aggregated before valuation completeness was recorded.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

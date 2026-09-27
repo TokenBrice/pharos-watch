@@ -350,6 +350,7 @@ export async function generateWeeklyRecap(
         ? { status: "degraded" as const }
         : {}),
       metadata: {
+        reason: retryDegradedReasons.join(",") || (hasNonDeliveringDisposition(retry.dispositions) ? "delivery-not-completed" : "delivery-completed"),
         summary: `weekly: existing recap delivery retry, tweet: ${retry.tweetStatus}, telegram: ${retry.telegramStatus}`,
         channels: {
           twitter: { status: retry.tweetStatus, disposition: retry.dispositions.twitter },

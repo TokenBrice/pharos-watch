@@ -11,6 +11,7 @@ import type { CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
@@ -279,10 +280,19 @@ function stampPreviousSupplyObservedAt(asset: PeggedAsset, cacheUpdatedAt: numbe
   return cloned;
 }
 
-function markRestoredSupply(asset: PeggedAsset): PeggedAsset {
+function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset {
   const restored = cloneCachedAsset(asset);
   restored.supplyRestored = true;
   restored.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
+  if (!validateCompositePricingSourceFreshness({
+    source: restored.priceSource ?? "",
+    observedAt: restored.priceObservedAt ?? restored.priceUpdatedAt,
+    observedAtMode: restored.priceObservedAtMode,
+    nowSec,
+    requireObservedAt: true,
+  }).accepted) {
+    clearPriceMetadata(restored);
+  }
   return restored;
 }
 
@@ -550,7 +560,7 @@ export function mergeSupplementalLastKnownGood(
         resolved.set(id, asset);
         continue;
       }
-      const merged = markRestoredSupply(previous);
+      const merged = markRestoredSupply(previous, nowSec);
       if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
         merged.price = asset.price;
         merged.priceSource = asset.priceSource;
@@ -615,7 +625,7 @@ export function restoreMissingTrackedAssets(
       droppedIds.push(id);
       continue;
     }
-    restoredAssets.push(markRestoredSupply(previous));
+    restoredAssets.push(markRestoredSupply(previous, nowSec));
     restoredIds.push(id);
   }
 

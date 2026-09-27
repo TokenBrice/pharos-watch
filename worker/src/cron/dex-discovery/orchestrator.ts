@@ -311,6 +311,8 @@ export async function syncDexDiscovery(
   let runSeq = 0;
   let coinsCrawled = 0;
   let poolsDiscovered = 0;
+  let stagedRowsChanged = 0;
+  let observedDeploymentOutcomesWritten = 0;
   let budgetExhausted = false;
   const stagingWritesSkippedForBudget = 0;
   let cleanupSkippedForBudget = false;
@@ -332,6 +334,8 @@ export async function syncDexDiscovery(
   const buildRunMetadata = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
     coinsCrawled,
     poolsDiscovered,
+    stagedRowsChanged,
+    observedDeploymentOutcomesWritten,
     tierBreakdown,
     censusCadenceHolds,
     budgetExhausted,
@@ -542,12 +546,17 @@ export async function syncDexDiscovery(
           if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
             // The provider work already completed, so preserve its staged rows
             // before reserving the remaining run budget for finalization.
-            await upsertStagedPools(db, result.pools, signal);
+            stagedRowsChanged += await upsertStagedPools(db, result.pools, signal);
             budgetExhausted = true;
             break;
           }
-          await upsertStagedPools(db, result.pools, signal);
-          deploymentOutcomesWritten += await upsertDexDeploymentOutcomes(db, result.deploymentOutcomes, signal);
+          stagedRowsChanged += await upsertStagedPools(db, result.pools, signal);
+          const outcomesWritten = await upsertDexDeploymentOutcomes(db, result.deploymentOutcomes, signal);
+          deploymentOutcomesWritten += outcomesWritten;
+          if (result.deploymentOutcomes.some((outcome) =>
+            outcome.outcome === "observed_pools" || outcome.outcome === "verified_no_pools")) {
+            observedDeploymentOutcomesWritten += outcomesWritten;
+          }
           await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec, signal);
 
           coinsCrawled += 1;
@@ -644,6 +653,11 @@ export async function syncDexDiscovery(
       status: failedCoins.length > 0 || budgetExhausted || cleanup?.error != null ? "degraded" : "ok",
       itemCount: coinsCrawled,
       metadata: JSON.stringify(buildRunMetadata({
+        outputPublishedAt: stagedRowsChanged > 0 || observedDeploymentOutcomesWritten > 0 ? nowSec : null,
+        ...(failedCoins.length > 0 || budgetExhausted || cleanup?.error != null ? {
+          reason: failedCoins.length > 0 ? "dex-discovery-coins-failed"
+            : budgetExhausted ? "dex-discovery-budget-exhausted" : "dex-discovery-cleanup-failed",
+        } : {}),
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
@@ -659,6 +673,8 @@ export async function syncDexDiscovery(
       status: "error",
       itemCount: coinsCrawled,
       metadata: JSON.stringify(buildRunMetadata({
+        outputPublishedAt: null,
+        reason: "dex-discovery-orchestrator-failed",
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,

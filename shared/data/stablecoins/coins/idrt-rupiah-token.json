@@ -94,7 +94,25 @@
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Indonesia",
-    "attestorLicense": "Public Accountant License No. AP. 1456"
+    "attestorLicense": "Public Accountant License No. AP. 1456",
+    "latestReport": {
+      "reviewReference": {
+        "date": "2026-03-31",
+        "reviewedAt": "2026-08-14",
+        "dateKind": "unspecified"
+      },
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Pharos compliance research",
+      "confidence": "unknown",
+      "sources": [
+        {
+          "label": "Rupiah Token March 2026 AUP (as of 2026-08-14 review; date kind unspecified)",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_March_31_2026_64e7edee6b.pdf?updated_at=2026-04-13T14%3A14%3A20.108Z"
+        }
+      ]
+    }
   },
   "launchDate": "2019-04-10"
 }

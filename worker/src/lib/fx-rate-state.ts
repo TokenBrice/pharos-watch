@@ -2,7 +2,10 @@ import type { CacheStatus } from "@shared/types/status";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
-import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
+import { sha256Hex } from "@shared/lib/sha256";
+import { getCaches, type CacheWriteResult } from "./db-cache";
+import { executeAtomicBatch } from "./db";
+import { logWorkerEvent } from "./structured-log";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
 import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
@@ -15,11 +18,43 @@ const FX_INTRADAY_SOURCE_DEGRADED_AGE_SEC = 6 * 3600;
 const FX_INTRADAY_SOURCE_STALE_AGE_SEC = 24 * 3600;
 const FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC = 6;
 const FX_BUSINESS_DAILY_PUBLISH_HOUR_UTC = 16;
+/** A persisted per-peg source time further ahead of the reader clock than this is not admissible provenance. */
+const FX_SOURCE_MAX_FUTURE_SKEW_SEC = 5 * 60;
+const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/;
 
 export type FxRateSyncMode = "live" | "cached-fallback";
 export type FxRateSourceMode = "live" | "cached";
 export type { FxSourceCadence } from "./fx-cadence";
 export type FxSourceStatus = "fresh" | "degraded" | "stale" | "none";
+
+/**
+ * How the `fx-rates-meta` row was bound to the `fx-rates` row it describes.
+ * - `verified`: both rows carry one `updated_at` and the metadata's `ratesSha256`
+ *   matches the stored rates bytes, so the pair is one publication even when two
+ *   runs share a clock second.
+ * - `legacy-timestamp`: metadata written before `ratesSha256` existed; accepted only
+ *   when both rows carry one `updated_at`. Transitional: the first publication by the
+ *   current producer replaces it with a verified pair.
+ * - `missing` / `malformed` / `generation-mismatch`: the rates are usable numbers,
+ *   but no per-peg provenance can be attached to them.
+ */
+export type FxMetadataIdentity = "verified" | "legacy-timestamp" | "missing" | "malformed" | "generation-mismatch";
+export type FxUnverifiableMetadataIdentity = Exclude<FxMetadataIdentity, "verified" | "legacy-timestamp">;
+
+function isFxMetadataUnverifiable(identity: FxMetadataIdentity): identity is FxUnverifiableMetadataIdentity {
+  return identity !== "verified" && identity !== "legacy-timestamp";
+}
+
+/**
+ * Why a present non-USD rate has no admissible source provenance. Shared by pricing
+ * (`getFxReferenceTypeFromState`) and health (`buildFxCacheStatus`) so the two can
+ * never disagree about an unknown source.
+ */
+export type FxPegAdmissionIssue =
+  | `metadata-${FxUnverifiableMetadataIdentity}`
+  | "source-provenance-missing"
+  | "source-time-missing"
+  | "source-time-future";
 
 export interface FxRatesMeta {
   usableSyncAt: number;
@@ -47,7 +82,7 @@ export interface FxRateState {
   ecbDate?: string | null;
   previousCacheUpdatedAt?: number | null;
   consecutiveFallbackRuns: number;
-  bootstrapMetadata: boolean;
+  metadataIdentity: FxMetadataIdentity;
 }
 
 interface CacheRow {
@@ -94,35 +129,27 @@ function sanitizeSources(input: unknown): Record<string, string> | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-function buildBootstrapMeta(cache: CacheRow, rates: Record<string, number>): FxRatesMeta {
-  const sourceUpdatedAtByPeg: Record<string, number | null> = {};
-  const sourceModeByPeg: Record<string, FxRateSourceMode> = {};
-  const sourceCadenceByPeg: Record<string, FxSourceCadence> = {};
-  const sourceDateByPeg: Record<string, string | null> = {};
-  for (const pegKey of Object.keys(rates)) {
-    sourceUpdatedAtByPeg[pegKey] = cache.updatedAt;
-    sourceModeByPeg[pegKey] = "live";
-    sourceCadenceByPeg[pegKey] = "intraday";
-    sourceDateByPeg[pegKey] = null;
-  }
+/**
+ * Rates without an attachable metadata row keep their real publication clock
+ * (`usableSyncAt` = the rates row's `updated_at`) but no per-peg source provenance:
+ * the cache write time is never substituted for a source observation time.
+ */
+function buildUnverifiableMeta(ratesCache: CacheRow, rates: Record<string, number>): FxRatesMeta {
   return {
-    usableSyncAt: cache.updatedAt,
+    usableSyncAt: ratesCache.updatedAt,
     mode: "live",
-    sourceUpdatedAtByPeg,
-    sourceModeByPeg,
-    sourceCadenceByPeg,
-    sourceDateByPeg,
-    previousCacheUpdatedAt: cache.updatedAt,
+    sourceUpdatedAtByPeg: Object.fromEntries(Object.keys(rates).map((pegKey) => [pegKey, null])),
+    sourceModeByPeg: {},
+    previousCacheUpdatedAt: ratesCache.updatedAt,
     consecutiveFallbackRuns: 0,
   };
 }
 
 function parseFxMeta(
   value: string,
-  fallback: CacheRow,
-  rates: Record<string, number>,
-): { meta: FxRatesMeta; bootstrapped: boolean } {
-  const decoded = decodeJsonString<FxRatesMeta, "json-parse-failed" | "invalid-payload">(value, {
+  ratesCache: CacheRow,
+): { meta: FxRatesMeta; ratesSha256: string | null } | null {
+  const decoded = decodeJsonString<{ meta: FxRatesMeta; ratesSha256: string | null }, "json-parse-failed" | "invalid-payload">(value, {
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -130,39 +157,64 @@ function parseFxMeta(
       }
 
       const record = parsed as Record<string, unknown>;
+      // Absent digest = legacy writer; a present but unusable digest is corrupt metadata.
+      if (record.ratesSha256 !== undefined && (typeof record.ratesSha256 !== "string" || !SHA256_HEX_PATTERN.test(record.ratesSha256))) {
+        return { ok: false, reason: "invalid-payload" };
+      }
       const usableSyncAt =
         typeof record.usableSyncAt === "number" && Number.isFinite(record.usableSyncAt) && record.usableSyncAt > 0
           ? Math.floor(record.usableSyncAt)
-          : fallback.updatedAt;
+          : ratesCache.updatedAt;
       const mode: FxRateSyncMode = record.mode === "cached-fallback" ? "cached-fallback" : "live";
       return {
         ok: true,
         payload: {
-          usableSyncAt,
-          mode,
-          sourceUpdatedAtByPeg: sanitizeSourceUpdatedAtByPeg(record.sourceUpdatedAtByPeg),
-          sourceModeByPeg: sanitizeSourceModeByPeg(record.sourceModeByPeg),
-          sourceCadenceByPeg: sanitizeSourceCadenceByPeg(record.sourceCadenceByPeg),
-          sourceDateByPeg: sanitizeSourceDateByPeg(record.sourceDateByPeg),
-          sources: sanitizeSources(record.sources),
-          ecbDate: typeof record.ecbDate === "string" && record.ecbDate.length > 0 ? record.ecbDate : null,
-          previousCacheUpdatedAt:
-            typeof record.previousCacheUpdatedAt === "number" && Number.isFinite(record.previousCacheUpdatedAt)
-              ? Math.floor(record.previousCacheUpdatedAt)
-              : fallback.updatedAt,
-          consecutiveFallbackRuns:
-            typeof record.consecutiveFallbackRuns === "number" && Number.isFinite(record.consecutiveFallbackRuns) && record.consecutiveFallbackRuns >= 0
-              ? Math.floor(record.consecutiveFallbackRuns)
-              : 0,
+          ratesSha256: typeof record.ratesSha256 === "string" ? record.ratesSha256 : null,
+          meta: {
+            usableSyncAt,
+            mode,
+            sourceUpdatedAtByPeg: sanitizeSourceUpdatedAtByPeg(record.sourceUpdatedAtByPeg),
+            sourceModeByPeg: sanitizeSourceModeByPeg(record.sourceModeByPeg),
+            sourceCadenceByPeg: sanitizeSourceCadenceByPeg(record.sourceCadenceByPeg),
+            sourceDateByPeg: sanitizeSourceDateByPeg(record.sourceDateByPeg),
+            sources: sanitizeSources(record.sources),
+            ecbDate: typeof record.ecbDate === "string" && record.ecbDate.length > 0 ? record.ecbDate : null,
+            previousCacheUpdatedAt:
+              typeof record.previousCacheUpdatedAt === "number" && Number.isFinite(record.previousCacheUpdatedAt)
+                ? Math.floor(record.previousCacheUpdatedAt)
+                : ratesCache.updatedAt,
+            consecutiveFallbackRuns:
+              typeof record.consecutiveFallbackRuns === "number" && Number.isFinite(record.consecutiveFallbackRuns) && record.consecutiveFallbackRuns >= 0
+                ? Math.floor(record.consecutiveFallbackRuns)
+                : 0,
+          },
         },
       };
     },
   });
+  return decoded.ok ? decoded.payload : null;
+}
 
-  if (decoded.ok) {
-    return { meta: decoded.payload, bootstrapped: false };
+/**
+ * Binds the metadata row to the rates row it describes. A row pair from two
+ * different publications (legacy split writes, a failed second write, or two runs
+ * sharing one clock second) never hydrates as matched provenance.
+ */
+function resolveFxMetadata(
+  ratesCache: CacheRow,
+  metaCache: CacheRow | null,
+  rates: Record<string, number>,
+): { meta: FxRatesMeta; identity: FxMetadataIdentity } {
+  if (!metaCache) return { meta: buildUnverifiableMeta(ratesCache, rates), identity: "missing" };
+  const parsed = parseFxMeta(metaCache.value, ratesCache);
+  if (!parsed) return { meta: buildUnverifiableMeta(ratesCache, rates), identity: "malformed" };
+  if (
+    metaCache.updatedAt !== ratesCache.updatedAt
+    || (parsed.ratesSha256 != null && parsed.ratesSha256 !== sha256Hex(ratesCache.value))
+  ) {
+    return { meta: buildUnverifiableMeta(ratesCache, rates), identity: "generation-mismatch" };
   }
-  return { meta: buildBootstrapMeta(fallback, rates), bootstrapped: true };
+  return { meta: parsed.meta, identity: parsed.ratesSha256 == null ? "legacy-timestamp" : "verified" };
 }
 
 export function getFxRatesMetaKey(): string {
@@ -373,6 +425,54 @@ export function getFxSourceStatus(
   ).status;
 }
 
+export interface FxPegAdmission {
+  /** Cadence-aware source freshness; `none` whenever `issue` is set. */
+  status: FxSourceStatus;
+  /** Non-null when the present rate has no admissible source provenance. */
+  issue: FxPegAdmissionIssue | null;
+  ageSec: number | null;
+  cadence: FxSourceCadence | null;
+  updatedAt: number | null;
+  warning: string | null;
+}
+
+/**
+ * The single per-peg admission assessment for a hydrated FX generation. Pricing
+ * and health both derive their verdicts from it, so an unknown or unverifiable
+ * source can never be healthy in one and unusable in the other.
+ */
+function assessFxPegAdmission(state: FxRateState, pegKey: string, nowSec: number): FxPegAdmission {
+  if (isFxMetadataUnverifiable(state.metadataIdentity)) {
+    return {
+      status: "none",
+      issue: `metadata-${state.metadataIdentity}`,
+      ageSec: null,
+      cadence: null,
+      updatedAt: null,
+      warning: null,
+    };
+  }
+  const updatedAt = state.sourceUpdatedAtByPeg[pegKey] ?? null;
+  if (updatedAt != null && updatedAt - nowSec > FX_SOURCE_MAX_FUTURE_SKEW_SEC) {
+    return { status: "none", issue: "source-time-future", ageSec: null, cadence: null, updatedAt, warning: null };
+  }
+  const mode = state.sourceModeByPeg[pegKey];
+  const freshness = evaluateFxSourceFreshness(
+    pegKey,
+    updatedAt,
+    mode,
+    state.sourceCadenceByPeg[pegKey],
+    state.sourceDateByPeg[pegKey],
+    nowSec,
+  );
+  if (freshness.status !== "none") return { ...freshness, issue: null, updatedAt };
+  return {
+    ...freshness,
+    issue: mode === "live" || mode === "cached" ? "source-time-missing" : "source-provenance-missing",
+    updatedAt,
+  };
+}
+
 export function getFxReferenceTypeFromState(
   state: FxRateState | null,
   pegKey: string,
@@ -383,36 +483,29 @@ export function getFxReferenceTypeFromState(
   const rate = state.rates[pegKey];
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return "none";
 
-  const mode = state.sourceModeByPeg[pegKey];
-  if (state.bootstrapMetadata) return "stale";
-
-  const updatedAt = state.sourceUpdatedAtByPeg[pegKey] ?? null;
-  const freshness = evaluateFxSourceFreshness(
-    pegKey,
-    updatedAt,
-    mode,
-    state.sourceCadenceByPeg[pegKey],
-    state.sourceDateByPeg[pegKey],
-    nowSec,
-  );
-  if (freshness.status === "none") return "none";
+  // Unverifiable metadata keeps its established pricing verdict: the rate exists
+  // but can never be a fresh reference.
+  if (isFxMetadataUnverifiable(state.metadataIdentity)) return "stale";
+  const admission = assessFxPegAdmission(state, pegKey, nowSec);
+  if (admission.issue) return "none";
   if (
-    freshness.status === "degraded" &&
-    freshness.cadence === "intraday" &&
-    updatedAt != null &&
-    Math.max(0, nowSec - updatedAt) > maxAgeSec
+    admission.status === "degraded" &&
+    admission.cadence === "intraday" &&
+    admission.ageSec != null &&
+    admission.ageSec > maxAgeSec
   ) {
     return "stale";
   }
-  return freshness.status === "stale" ? "stale" : "fresh";
+  return admission.status === "stale" ? "stale" : "fresh";
 }
 
+/**
+ * Reads both FX rows in ONE statement, so a concurrent publication can never be
+ * observed half-applied (both-old or both-new only).
+ */
 export async function loadFxRateState(db: D1Database): Promise<FxRateState | null> {
-  const [ratesCache, metaCache] = await Promise.all([
-    getCache(db, FX_RATES_KEY),
-    getCache(db, FX_RATES_META_KEY),
-  ]);
-  return hydrateFxRateState(ratesCache, metaCache);
+  const rows = await getCaches(db, [FX_RATES_KEY, FX_RATES_META_KEY]);
+  return hydrateFxRateState(rows.get(FX_RATES_KEY) ?? null, rows.get(FX_RATES_META_KEY) ?? null);
 }
 
 export function hydrateFxRateState(
@@ -434,10 +527,7 @@ export function hydrateFxRateState(
   const rates = decodedRates.payload;
   if (Object.keys(rates).length === 0) return null;
 
-  const metadata = metaCache
-    ? parseFxMeta(metaCache.value, ratesCache, rates)
-    : { meta: buildBootstrapMeta(ratesCache, rates), bootstrapped: true };
-  const { meta } = metadata;
+  const { meta, identity } = resolveFxMetadata(ratesCache, metaCache, rates);
 
   const nowSec = Math.floor(Date.now() / 1000);
   return {
@@ -460,22 +550,59 @@ export function hydrateFxRateState(
     ecbDate: meta.ecbDate ?? null,
     previousCacheUpdatedAt: meta.previousCacheUpdatedAt ?? ratesCache.updatedAt,
     consecutiveFallbackRuns: meta.consecutiveFallbackRuns,
-    bootstrapMetadata: metadata.bootstrapped,
+    metadataIdentity: identity,
   };
 }
 
+// Pair-level generation fence: each row is written only while NEITHER FX row is
+// newer than this publication's clock. Two independent per-key conditions would let
+// a legacy split pair (one row newer, one older) accept exactly one of the writes.
+const FX_PAIR_FENCED_UPSERT_SQL = `INSERT INTO cache (key, value, updated_at)
+  SELECT ?, ?, ?
+  WHERE NOT EXISTS (SELECT 1 FROM cache WHERE key IN (?, ?) AND updated_at > ?)
+  ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`;
+
+/**
+ * Publishes the rates and their metadata as one generation: one atomic D1 batch
+ * under a pair-level clock fence, with the metadata bound to the exact rates bytes
+ * by `ratesSha256`. Either both rows advance or neither does; a failed statement
+ * rolls back the whole pair.
+ */
 export async function persistFxRateState(
   db: D1Database,
   rates: Record<string, number>,
   meta: FxRatesMeta,
   syncStartSec: number,
-): Promise<{
-  rates: CacheWriteResult;
-  meta: CacheWriteResult;
-}> {
-  const ratesResult = await setCacheIfNewer(db, FX_RATES_KEY, JSON.stringify(rates), syncStartSec);
-  const metaResult = await setCacheIfNewer(db, FX_RATES_META_KEY, JSON.stringify(meta), syncStartSec);
-  return { rates: ratesResult, meta: metaResult };
+): Promise<CacheWriteResult> {
+  const ratesValue = JSON.stringify(rates);
+  const metaValue = JSON.stringify({ ...meta, ratesSha256: sha256Hex(ratesValue) });
+  const [ratesResult, metaResult] = await executeAtomicBatch(
+    db,
+    [
+      [FX_RATES_KEY, ratesValue],
+      [FX_RATES_META_KEY, metaValue],
+    ].map(([key, value]) => db
+      .prepare(FX_PAIR_FENCED_UPSERT_SQL)
+      .bind(key, value, syncStartSec, FX_RATES_KEY, FX_RATES_META_KEY, syncStartSec)),
+    { returnResults: true },
+  );
+  const ratesWritten = Number(ratesResult?.meta?.changes ?? 0) > 0;
+  const metaWritten = Number(metaResult?.meta?.changes ?? 0) > 0;
+  if (ratesWritten !== metaWritten) {
+    // Unreachable under the pair fence inside one transaction; fail loudly rather
+    // than report a split pair as published.
+    throw new Error(`fx rate pair publication diverged (rates=${ratesWritten}, meta=${metaWritten})`);
+  }
+  if (!ratesWritten) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "info",
+      event: "cache_write_skipped_newer",
+      message: "Skipped FX rate pair publication because a newer FX generation exists",
+      metadata: { key: FX_RATES_KEY, pairKey: FX_RATES_META_KEY, syncStartSec },
+    });
+  }
+  return { written: ratesWritten, skippedBecauseNewer: !ratesWritten };
 }
 
 export function buildFxCacheStatus(
@@ -505,33 +632,50 @@ export function buildFxCacheStatus(
   let sourceWarning: string | null = null;
   let sourceStatusAgeSeconds: number | null = null;
   let sourceStatusUpdatedAt: number | null = null;
+  const admissionIssues: Array<{ pegKey: string; issue: FxPegAdmissionIssue }> = [];
 
   const severityRank = (status: FxSourceStatus): number =>
     status === "stale" ? 3 : status === "degraded" ? 2 : status === "fresh" ? 1 : 0;
 
   for (const pegKey of Object.keys(state.rates)) {
     if (pegKey === "peggedUSD") continue;
-    const sourceMode = state.sourceModeByPeg[pegKey];
-    const updatedAt = state.sourceUpdatedAtByPeg[pegKey] ?? null;
-    if (updatedAt != null && Number.isFinite(updatedAt) && updatedAt > 0) {
+    const admission = assessFxPegAdmission(state, pegKey, nowSec);
+    if (admission.issue) {
+      admissionIssues.push({ pegKey, issue: admission.issue });
+      continue;
+    }
+    const { updatedAt } = admission;
+    if (updatedAt != null) {
       oldestSourceUpdatedAt = oldestSourceUpdatedAt == null ? updatedAt : Math.min(oldestSourceUpdatedAt, updatedAt);
       const sourceAge = Math.max(0, nowSec - updatedAt);
       maxSourceAgeSeconds = maxSourceAgeSeconds == null ? sourceAge : Math.max(maxSourceAgeSeconds, sourceAge);
     }
-
-    const freshness = evaluateFxSourceFreshness(
-      pegKey,
-      updatedAt,
-      sourceMode,
-      state.sourceCadenceByPeg[pegKey],
-      state.sourceDateByPeg[pegKey],
-      nowSec,
-    );
-    if (severityRank(freshness.status) > severityRank(sourceStatus)) {
-      sourceStatus = freshness.status;
-      sourceWarning = freshness.warning;
-      sourceStatusAgeSeconds = freshness.ageSec;
+    if (severityRank(admission.status) > severityRank(sourceStatus)) {
+      sourceStatus = admission.status;
+      sourceWarning = admission.warning;
+      sourceStatusAgeSeconds = admission.ageSec;
       sourceStatusUpdatedAt = updatedAt;
+    }
+  }
+
+  // A present non-USD rate without admissible provenance is at least degraded:
+  // recency of the cache write can never make an unknown source healthy.
+  let degradedReason: string | null = null;
+  let admissionWarning: string | null = null;
+  if (admissionIssues.length > 0) {
+    if (isFxMetadataUnverifiable(state.metadataIdentity)) {
+      degradedReason = `fx-metadata-${state.metadataIdentity}`;
+      admissionWarning = `FX metadata ${state.metadataIdentity}: no verifiable source provenance for ${admissionIssues.length} rate${admissionIssues.length === 1 ? "" : "s"}`;
+    } else {
+      const perPeg = admissionIssues.map(({ pegKey, issue }) => `${pegKey}=${issue}`).join(",");
+      degradedReason = `fx-source-provenance-unknown:${perPeg}`;
+      admissionWarning = `source provenance unknown for ${admissionIssues.map(({ pegKey, issue }) => `${pegKey} (${issue})`).join(", ")}`;
+    }
+    if (severityRank(sourceStatus) < severityRank("degraded")) {
+      sourceStatus = "degraded";
+      sourceWarning = null;
+      sourceStatusAgeSeconds = null;
+      sourceStatusUpdatedAt = null;
     }
   }
 
@@ -551,11 +695,14 @@ export function buildFxCacheStatus(
   if ((sourceStatus === "degraded" || sourceStatus === "stale") && sourceWarning) {
     warningParts.push(sourceWarning);
   }
+  if (admissionWarning) warningParts.push(admissionWarning);
 
   const cacheStatus: CacheStatus = {
     ageSeconds,
     maxAge: maxAgeSec,
-    healthy: ratio <= FRESHNESS_RATIOS.DEGRADED,
+    healthy: ratio <= FRESHNESS_RATIOS.DEGRADED && admissionIssues.length === 0,
+    degraded: admissionIssues.length > 0,
+    degradedReason,
     mode: state.mode,
     sourceUpdatedAt:
       sourceStatus === "degraded" || sourceStatus === "stale"

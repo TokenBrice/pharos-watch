@@ -27,7 +27,7 @@ describe("live reserve admission", () => {
     }, { fetchedAt: now - 60, source: "liquity-v1", sourceModel: "single-bucket" });
     const capacity = (reasons: NonNullable<typeof snapshot.admission>["reasons"]) => resolveRedemptionCapacity(
       mockReserveD1(), "lusd-liquity", { kind: "reserve-sync-metadata" }, 1_000_000, now,
-      { reserveSnapshotMetadata: { ...snapshot, admission: { eligible: false, reasons } } },
+      { reserveSnapshotMetadata: { ...snapshot, admission: { eligible: false, reasons, freshness: null } } },
     );
     expect((await capacity(["non-independent"])).immediateCapacityUsd).toBe(400_000);
     expect((await capacity(["config-mismatch"])).immediateCapacityUsd).toBeNull();

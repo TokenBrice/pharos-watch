@@ -1,6 +1,11 @@
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { TELEGRAM_USD_PROFILE, TELEGRAM_SIGNED_USD_PROFILE } from "../lib/telegram/usd-profile";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import {
+  TELEGRAM_CONTEXT_BUDGET_SEC,
+  assessTelegramContextClock,
+  projectTelegramSupplyContext,
+  type TelegramSupplyContext,
+} from "../lib/telegram/context-freshness";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadActiveAlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
@@ -11,8 +16,7 @@ import { perCoinFlowCacheKey } from "../lib/mint-burn-flows-service";
 import { getCache } from "../lib/db-cache";
 import { safeJsonParse } from "../lib/api-cache-read";
 
-/** 24h mint/burn flow older than this is omitted from the terse alert Context line. */
-const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
+import { TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 function formatUsdCompact(value: number | null | undefined): string {
   return formatCompactUsdWithOptions(value, TELEGRAM_USD_PROFILE);
@@ -43,12 +47,16 @@ export async function buildAlertContextLines(
     loadFlowRows(db, uniqueIds, nowSec),
   ]);
 
-  const supplies = new Map<string, number>();
+  // Supply and DEX context carry their producer clocks. Only facts observed within
+  // the existing source budgets reach the terse Context line; stale, unclocked or
+  // unavailable facts are omitted (never rendered as current or as $0), and their
+  // absence never blocks or changes the primary alert.
+  const supplies = new Map<string, TelegramSupplyContext>();
   if (stablecoinsResult?.kind === "ok") {
     const wantedIds = new Set(uniqueIds);
     for (const asset of stablecoinsResult.payload.peggedAssets) {
       if (wantedIds.has(asset.id)) {
-        supplies.set(asset.id, getCirculatingRaw(asset));
+        supplies.set(asset.id, projectTelegramSupplyContext(asset, stablecoinsResult.updatedAt, nowSec));
       }
     }
   }
@@ -63,9 +71,11 @@ export async function buildAlertContextLines(
         `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""} (${safety!.safetyScoreIdentity.model.toUpperCase()} ${safety!.safetyScoreIdentity.methodologyVersion})`,
       );
     }
-    if (liq) parts.push(`Liquidity ${liq.score ?? "NR"}, DEX TVL ${formatUsdCompact(liq.tvl)}`);
+    if (liq && assessTelegramContextClock(liq.updatedAt, nowSec, TELEGRAM_CONTEXT_BUDGET_SEC.dexLiquidity).current) {
+      parts.push(`Liquidity ${liq.score ?? "NR"}, DEX TVL ${formatUsdCompact(liq.tvl)}`);
+    }
     const supply = supplies.get(id);
-    if (supply != null) parts.push(`Supply ${formatUsdCompact(supply)}`);
+    if (supply?.supplyUsd != null && supply.current) parts.push(`Supply ${formatUsdCompact(supply.supplyUsd)}`);
     const flow = flowResult.get(id);
     if (flow && flow.netFlowUsd !== 0) parts.push(`Flow24h ${formatSignedUsdCompact(flow.netFlowUsd)}`);
     if (parts.length > 0) out.set(id, `Context: ${parts.join(" · ")}`);
@@ -77,22 +87,27 @@ export async function buildAlertContextLines(
 async function loadLiquidityRows(
   db: D1Database,
   stablecoinIds: readonly string[],
-): Promise<Map<string, { score: number | null; tvl: number }>> {
+): Promise<Map<string, { score: number | null; tvl: number; updatedAt: number | null }>> {
   const uniqueIds = Array.from(new Set(stablecoinIds));
   if (uniqueIds.length === 0) return new Map();
-  const rows: Array<{ stablecoin_id: string; liquidity_score: number | null; total_tvl_usd: number }> = [];
+  const rows: Array<{
+    stablecoin_id: string;
+    liquidity_score: number | null;
+    total_tvl_usd: number;
+    updated_at: number | null;
+  }> = [];
   for (const idChunk of chunkArray(uniqueIds)) {
     const inClause = buildInClause(idChunk);
     try {
       const result = await db
         .prepare(
-          `SELECT stablecoin_id, liquidity_score, total_tvl_usd
+          `SELECT stablecoin_id, liquidity_score, total_tvl_usd, updated_at
            FROM dex_liquidity
            WHERE stablecoin_id IN (${inClause.sql})
              AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
         )
         .bind(...inClause.binds)
-        .all<{ stablecoin_id: string; liquidity_score: number | null; total_tvl_usd: number }>();
+        .all<{ stablecoin_id: string; liquidity_score: number | null; total_tvl_usd: number; updated_at: number | null }>();
       rows.push(...(result.results ?? []));
     } catch (error) {
       logTelegramEvent({
@@ -107,7 +122,10 @@ async function loadLiquidityRows(
     }
   }
 
-  return new Map(rows.map((row) => [row.stablecoin_id, { score: row.liquidity_score, tvl: row.total_tvl_usd }]));
+  return new Map(rows.map((row) => [
+    row.stablecoin_id,
+    { score: row.liquidity_score, tvl: row.total_tvl_usd, updatedAt: row.updated_at },
+  ]));
 }
 
 /**
@@ -138,7 +156,7 @@ async function loadFlowRows(
           return null;
         }
         const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : cached.updatedAt;
-        if (nowSec - updatedAt > MINT_BURN_FLOW_STALE_SEC) return null;
+        if (nowSec - updatedAt > TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC) return null;
         return { id, netFlowUsd: parsed.netFlowUsd, updatedAt };
       } catch {
         return null;

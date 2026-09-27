@@ -193,21 +193,19 @@ export function selectSafetyScoreV9CdpShockMeasurement(
   return projectMeasurement(measurement);
 }
 
-/** Materializes chronology-bounded journal facts without replacing replay-pinned facts. */
-export function hydrateSafetyScoreV9ShockCoverageExtension(extension: unknown, asOfSec: number): unknown {
-  if (!isRecord(extension) || !Array.isArray(extension.assets)) return extension;
-  return {
-    ...extension,
-    assets: extension.assets.map((asset) => {
-      if (!isRecord(asset) || asset.archetype !== "cdp" || typeof asset.assetId !== "string") {
-        return asset;
-      }
-      if (Object.prototype.hasOwnProperty.call(asset, "cdpStressCoverage")) {
-        validatePinnedMeasurement(asset.assetId, asset.cdpStressCoverage, asOfSec);
-        return asset;
-      }
-      const measurement = selectSafetyScoreV9CdpShockMeasurement(asset.assetId, asOfSec);
-      return measurement === undefined ? asset : { ...asset, cdpStressCoverage: measurement };
-    }),
-  };
+/**
+ * Materializes one asset's chronology-bounded journal facts without replacing
+ * replay-pinned facts. A pinned fact that fails provenance throws; extension
+ * admission quarantines that asset rather than the cohort.
+ */
+export function hydrateSafetyScoreV9ShockCoverageAsset(asset: unknown, asOfSec: number): unknown {
+  if (!isRecord(asset) || asset.archetype !== "cdp" || typeof asset.assetId !== "string") {
+    return asset;
+  }
+  if (Object.prototype.hasOwnProperty.call(asset, "cdpStressCoverage")) {
+    validatePinnedMeasurement(asset.assetId, asset.cdpStressCoverage, asOfSec);
+    return asset;
+  }
+  const measurement = selectSafetyScoreV9CdpShockMeasurement(asset.assetId, asOfSec);
+  return measurement === undefined ? asset : { ...asset, cdpStressCoverage: measurement };
 }

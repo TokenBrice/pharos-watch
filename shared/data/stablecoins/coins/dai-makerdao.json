@@ -195,7 +195,7 @@
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "sky-makercore",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "sky-makercore-collateral",
     "display": {

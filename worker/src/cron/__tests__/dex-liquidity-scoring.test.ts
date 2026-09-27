@@ -56,6 +56,7 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import type { ExitRouteObservation } from "@shared/types/market";
 import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
 import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
+import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import {
   computeDepthStability,
   computeDexPrices,
@@ -270,6 +271,46 @@ describe("dex-liquidity scoring", () => {
         ["usdt-tether", 1],
       ]),
     );
+  });
+
+  it("keeps recorded non-complete 24h days out of volume consistency without estimating them", async () => {
+    const asOfSec = 1_790_000_000;
+    const record = (pools: Array<{ volumeUsd: number | null; observedAtSec: number | null }>) => JSON.stringify({
+      "24h": summarizeDexVolumeWindow(pools, "24h", { asOfSec, maxObservationAgeSec: 86_400 }).availability,
+    });
+    const partial = record([{ volumeUsd: 5_000, observedAtSec: asOfSec - 60 }, { volumeUsd: null, observedAtSec: null }]);
+    const complete = record([{ volumeUsd: 100_000, observedAtSec: asOfSec - 60 }]);
+    const row = (stablecoinId: string, day: number, volume: number, json: string | null) => ({
+      stablecoin_id: stablecoinId,
+      snapshot_date: day,
+      total_tvl_usd: 1_000_000,
+      total_volume_24h_usd: volume,
+      coverage_confidence: 1,
+      volume_availability_json: json,
+    });
+    const historyRows = [
+      // 7 legacy days + 1 complete day at 100K; 3 partial days whose stored column holds a 5K partial gross sum.
+      ...Array.from({ length: 7 }, (_, index) => row("usdc-circle", index + 1, 100_000, null)),
+      row("usdc-circle", 8, 100_000, complete),
+      ...Array.from({ length: 3 }, (_, index) => row("usdc-circle", index + 9, 5_000, partial)),
+      // Too few measured days once partial days are excluded: no volume stability at all.
+      ...Array.from({ length: 3 }, (_, index) => row("usdt-tether", index + 1, 100_000, null)),
+      ...Array.from({ length: 5 }, (_, index) => row("usdt-tether", index + 4, 5_000, partial)),
+    ];
+    const db = makeNoopD1({
+      prepare: (sql: string) => ({
+        bind: (_since: number, cursorStablecoinId: string) => ({
+          all: async () => ({ results: cursorStablecoinId === "" ? historyRows : [], success: true, meta: {} }),
+        }),
+        sql,
+      }),
+    });
+
+    const result = await loadConfidentHistoryStability(db);
+
+    expect(result.volumeStabilityMap).toEqual(new Map([["usdc-circle", 1]]));
+    // TVL stability still uses every confident day.
+    expect(result.tvlStabilityMap).toEqual(new Map([["usdc-circle", 1], ["usdt-tether", 1]]));
   });
 
   it("filters and scales pools, truncates visible pools, and computes deduped global aggregates", async () => {

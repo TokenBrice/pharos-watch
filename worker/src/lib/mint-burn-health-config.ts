@@ -1,4 +1,5 @@
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { parseCsvEnv } from "./env";
 
 const DEFAULT_MINT_BURN_MAJOR_SYMBOLS = [
@@ -16,13 +17,11 @@ const SECONDS_PER_HOUR = 3600;
 const DEFAULT_MINT_BURN_STALE_WARN_SEC = 6 * SECONDS_PER_HOUR;
 const DEFAULT_MINT_BURN_STALE_CRIT_SEC = 24 * SECONDS_PER_HOUR;
 const DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC = SECONDS_PER_HOUR;
-const MINT_BURN_CRITICAL_LANE_INTERVAL_SEC = 30 * 60;
 // Public freshness tolerates one missed critical-lane run; the next half-window is degraded.
-const MINT_BURN_PUBLIC_FRESHNESS_ALLOWED_MISSED_RUNS = 2;
 const MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO = 1.5;
 
 export const MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC =
-  MINT_BURN_CRITICAL_LANE_INTERVAL_SEC * MINT_BURN_PUBLIC_FRESHNESS_ALLOWED_MISSED_RUNS;
+  API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
 
 export interface MintBurnFreshnessConfig {
   majorSymbols: string[];

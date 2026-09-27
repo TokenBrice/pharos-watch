@@ -72,6 +72,25 @@ function row(index: number, overrides: Partial<DigestInputData> = {}): DailyDige
 }
 
 describe("weekly recap canonical candidate aggregation", () => {
+  it("keeps unavailable outcomes separate from resolved weekly accountability", () => {
+    const statuses = ["hit", "missed", "expired", "pending", "unavailable"] as const;
+    const weekly = buildWeeklyInputData(statuses.map((status, index) => row(index, {
+      forwardLookOutcomes: [{ id: `outcome:${index}`, triggerId: "depeg", label: "Depeg", status, detail: "Evidence result" }],
+    })));
+    expect(weekly?.forwardLookScoreboard).toEqual({
+      hit: 1, missed: 1, expired: 1, pending: 1, unavailable: 1,
+    });
+  });
+
+  it("retains a weekly scoreboard when every outcome lacks evidence", () => {
+    const weekly = buildWeeklyInputData(Array.from({ length: 5 }, (_, index) => row(index, {
+      forwardLookOutcomes: [{ id: `outcome:${index}`, triggerId: "depeg", label: "Depeg", status: "unavailable", detail: "Collector unavailable" }],
+    })));
+    expect(weekly?.forwardLookScoreboard).toEqual({
+      hit: 0, missed: 0, expired: 0, pending: 0, unavailable: 5,
+    });
+  });
+
   it("keeps a zero market-cap base undefined rather than inventing infinite growth", () => {
     const weekly = buildWeeklyInputData(Array.from({ length: 5 }, (_, index) => row(index, {
       totalMcapUsd: index * 1_000_000,

@@ -4,10 +4,25 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptReMetrics } from "../re-metrics";
 import { validateAdapterOutput } from "../validate";
+import { extractEscapedJsonValueAfterKey } from "../html";
 import { expectValidAdapterOutput, expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-series.html"), "utf8");
+
+function mutateFixtureField<T>(key: string, mutate: (value: T) => void): string {
+  const anchor = `\\"${key}\\":`;
+  const original = extractEscapedJsonValueAfterKey(SAMPLE_HTML, anchor, "re-metrics");
+  const value = JSON.parse(original) as T;
+  mutate(value);
+  // Next's embedded JSON leaves Unicode escapes single-escaped.
+  const fragment = anchor + original.replaceAll('"', '\\"');
+  if (!SAMPLE_HTML.includes(fragment)) throw new Error(`Missing encoded fixture field: ${key}`);
+  return SAMPLE_HTML.replace(fragment, anchor + JSON.stringify(JSON.stringify(value)).slice(1, -1));
+}
+
+type FixtureReserveRow = { tokenSymbol?: unknown; valueWei?: unknown; valueKnown?: unknown };
+type FixtureBreakdowns = Record<string, { rows: FixtureReserveRow[] }>;
 
 describe("adaptReMetrics", () => {
   it("maps the Re metrics payload into live reserve slices", () => {
@@ -183,6 +198,92 @@ describe("fetchReMetricsReserves", () => {
     });
     expect(result.metadata).toMatchObject({ chainBreakdownCount: 4, trackedTokenCount: 6 });
     expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it.each([
+    ["missing amount", { valueWei: undefined }, "amount-unavailable"],
+    ["malformed amount", { valueWei: "broken" }, "amount-unavailable"],
+    ["negative amount", { valueWei: "-1" }, "amount-unavailable"],
+    ["numeric amount", { valueWei: 100 }, "amount-unavailable"],
+    ["unknown valuation", { valueKnown: false }, "valuation-unavailable"],
+    ["missing valuation", { valueKnown: undefined }, "valuation-unavailable"],
+    ["missing symbol", { tokenSymbol: undefined }, "identity-unavailable"],
+    ["blank symbol", { tokenSymbol: " " }, "identity-unavailable"],
+  ] as const)("withholds composition for a risky row with %s", async (_label, patch, reason) => {
+    const html = mutateFixtureField<FixtureBreakdowns>("initialChainBreakdowns", (breakdowns) => {
+      const row = Object.values(breakdowns).flatMap(({ rows }) => rows)
+        .find(({ tokenSymbol }) => typeof tokenSymbol === "string" && tokenSymbol.toLowerCase() === "susde");
+      if (!row) throw new Error("Missing sUSDe fixture position");
+      Object.assign(row, patch);
+    });
+    const { result } = await runAdapter("re-metrics", "reusd-re-protocol", {
+      network: installAdapterNetwork({ html: { [url]: html } }),
+      nowSec,
+      validate: false,
+    });
+    expect(result.slices).toEqual([]);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: `re-metrics-reserve-${reason}`, effect: "fatal",
+    }));
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.stableAssetUsd).toBeUndefined();
+    expect(result.metadata?.redemption?.capacityUsd).toBe(45535373.18748523);
+    expect(validateAdapterOutput(result, { now: nowSec }).valid).toBe(false);
+  });
+
+  it("withholds composition when off-chain capital has no usable valuation", async () => {
+    const html = mutateFixtureField<Array<{ seriesKey: string; stats?: { current?: unknown }; points?: unknown[] }>>("initialCards", (cards) => {
+      const card = cards.find(({ seriesKey }) => seriesKey === "offchain_capital");
+      if (!card) throw new Error("Missing off-chain fixture capital");
+      card.stats = {};
+      card.points = [];
+    });
+    const { result } = await runAdapter("re-metrics", "reusd-re-protocol", {
+      network: installAdapterNetwork({ html: { [url]: html } }), nowSec, validate: false,
+    });
+    expect(result.slices).toEqual([]);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "re-metrics-offchain-value-unavailable", effect: "fatal",
+    }));
+    expect(validateAdapterOutput(result, { now: nowSec }).valid).toBe(false);
+  });
+
+  it("admits a positively identified explicit zero position without requiring its clock", async () => {
+    const html = mutateFixtureField<FixtureBreakdowns>("initialChainBreakdowns", (breakdowns) => {
+      breakdowns.zero = { rows: [{ tokenSymbol: "susde", valueWei: "0", valueKnown: true }] };
+    });
+    const { result } = await runAdapter("re-metrics", "reusd-re-protocol", {
+      network: installAdapterNetwork({ html: { [url]: html } }), nowSec,
+    });
+    expect(result.slices).toEqual(adaptReMetrics(SAMPLE_HTML).slices);
+    expect(result.metadata?.freshnessMode).toBe("verified");
+  });
+
+  it.each([undefined, null, "broken", "-1", 100])("withholds partial redemption capacity for %s", async (amount) => {
+    const html = mutateFixtureField<Array<{ totalReserveValueWei?: unknown }>>("redemptionRows", (rows) => {
+      rows[0].totalReserveValueWei = amount;
+    });
+    const { result } = await runAdapter("re-metrics", "reusd-re-protocol", {
+      network: installAdapterNetwork({ html: { [url]: html } }), nowSec,
+    });
+    expect(result.slices).toEqual(adaptReMetrics(SAMPLE_HTML).slices);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.redemptionRowsCount).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "re-metrics-redemption-incomplete", effect: "degraded",
+    }));
+  });
+
+  it("publishes observed zero redemption capacity rather than unavailable capacity", async () => {
+    const html = mutateFixtureField<Array<{ totalReserveValueWei: string }>>("redemptionRows", (rows) => {
+      for (const row of rows) row.totalReserveValueWei = "0";
+    });
+    const { result } = await runAdapter("re-metrics", "reusd-re-protocol", {
+      network: installAdapterNetwork({ html: { [url]: html } }), nowSec,
+    });
+    expect(result.metadata?.redemption?.capacityUsd).toBe(0);
+    expect(result.metadata?.redemptionRowsCount).toBe(4);
+    expect(result.slices).toEqual(adaptReMetrics(SAMPLE_HTML).slices);
   });
 
   it("rejects a renamed chain-breakdown field instead of publishing stale composition", async () => {

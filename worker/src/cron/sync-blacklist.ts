@@ -248,6 +248,14 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     itemCount: counters.totalInsertedRows,
     metadata: JSON.stringify(
       withBudgetMetadata(budget, {
+        outputPublishedAt: status !== "error" && (counters.totalInsertedRows > 0 || configsSucceeded > 0)
+          ? Math.floor(Date.now() / 1000) : null,
+        ...(status !== "ok" ? {
+          reason: stateConflicts > 0 ? "blacklist-state-conflict"
+            : runtimeBudgetHit || subrequestBudgetReached ? "blacklist-budget-exhausted"
+            : providerCircuitSkips > 0 ? "blacklist-provider-circuit-open"
+            : "blacklist-source-coverage-incomplete",
+        } : {}),
         rowsWritten: counters.totalInsertedRows,
         eventsFetched: totalFetchedEvents,
         contractsSkipped,

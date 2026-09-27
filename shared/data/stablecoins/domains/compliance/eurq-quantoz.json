@@ -52,8 +52,7 @@
     "reserveDisclosureUrl": "https://www.quantoz.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "latestReportDate": "2026-06-30",
-    "notes": "Quantoz has a DNB electronic-money authorization and EURQ has the existing MiCA-authorized record, but the sources reviewed do not show a token-specific U.S. GENIUS PPSI approval, official application, or foreign-issuer exception registration for Quantoz. The OCC GENIUS framework remains in proposed-rules phase as of 2026-08-14, so no U.S. pathway is inferred from the Dutch EMI authorization.",
+    "notes": "Evidence as of 2026-08-14 review: Quantoz has a DNB electronic-money authorization and EURQ has the existing MiCA-authorized record, but the sources reviewed do not show a token-specific U.S. GENIUS PPSI approval, official application, or foreign-issuer exception registration for Quantoz. The OCC GENIUS framework remains in proposed-rules phase as of 2026-08-14, so no U.S. pathway is inferred from the Dutch EMI authorization. Reserve-report date recorded as of 2026-08-14 review: 2026-06-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",

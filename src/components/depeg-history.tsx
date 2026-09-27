@@ -20,7 +20,7 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency } from "@shared/lib/format";
+import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency, formatPegOccupancy } from "@shared/lib/format";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
@@ -218,7 +218,7 @@ export function DepegHistory({
       {recent90d ? (
         <div className="border-t border-border/50 pt-3 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">Recent 90d: </span>
-          <span className="font-mono">{recent90d.pegPct.toFixed(1)}%</span> at peg across{" "}
+          <span className="font-mono">{formatPegOccupancy(recent90d.pegPct, 1)}</span> at peg across{" "}
           <span className="font-mono">{Math.floor(recent90d.observedDays)}d</span> observed, with{" "}
           <span className="font-mono">{recent90d.incidentCount}</span> incidents and{" "}
           <span className="font-mono">{recent90d.thresholdCrossingCount}</span> threshold crossings

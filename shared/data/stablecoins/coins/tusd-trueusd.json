@@ -109,13 +109,12 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
-    "version": 1,
+    "version": 2,
     "semantics": "attestation-mix",
     "scoring": {
       "allowedDegradedWarningCodes": [
         "por-reserve-over-supply",
-        "partial-supply-read-failure",
-        "por-supply-chain-omitted"
+        "partial-supply-read-failure"
       ]
     },
     "breakerScope": "tusd-trueusd",
@@ -133,7 +132,62 @@
     "params": {
       "porFeedAddress": "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5",
       "assetLabel": "USD reserves (Moore Hong Kong attested)",
-      "assetRisk": "very-high"
+      "assetRisk": "very-high",
+      "liabilityScope": {
+        "basis": "issuer-native-supply",
+        "reviewedAt": "2026-09-27",
+        "evidenceRef": "Moore CPA TUSD reserves assurance report as of 2026-09-27 08:30:30Z (https://widget.verinumus.io/api/v1/tusd/report), footnotes 1 and 3-6; https://tusd.io/transparency natively deployed networks",
+        "included": [
+          {
+            "chain": "ethereum",
+            "reader": "evm-erc20"
+          },
+          {
+            "chain": "tron",
+            "reader": "tron-trc20"
+          },
+          {
+            "chain": "bsc",
+            "reader": "evm-erc20"
+          },
+          {
+            "chain": "avalanche",
+            "reader": "evm-erc20"
+          }
+        ],
+        "excluded": [
+          {
+            "chain": "polygon",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "Polygon PoS representation minted by ChildChainManagerProxy against Ethereum TUSD locked in ERC20PredicateProxy 0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf; the lock is already inside Ethereum totalSupply"
+          },
+          {
+            "chain": "arbitrum",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "Arbitrum standard-gateway representation of Ethereum TUSD locked in L1ERC20Gateway 0xa3A7B6F88361F48403514059F1F16C8E78d60EeC; the lock is already inside Ethereum totalSupply"
+          },
+          {
+            "chain": "optimism",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "OP standard-bridge representation of Ethereum TUSD locked in L1StandardBridge 0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1; the lock is already inside Ethereum totalSupply"
+          },
+          {
+            "chain": "fantom",
+            "relation": "third-party-bridge-representation",
+            "reason": "Legacy Multichain (Anyswap) representation owned by the Multichain MPC 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE, which holds only ~6.3 TUSD on Ethereum; a claim on a defunct bridge, not an issuer liability, and outside Moore's issued-token perimeter"
+          },
+          {
+            "chain": "near",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "Rainbow Bridge factory.bridge.near NEP-141 representation of Ethereum TUSD, not issued by Techteryx and outside Moore's issued-token perimeter (Ethereum, Tron, BNB Chain, Avalanche)"
+          }
+        ],
+        "maxReserveSupplySkewSec": 172800
+      }
     }
   },
   "launchDate": "2018-03-05",

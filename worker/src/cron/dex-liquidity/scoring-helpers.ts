@@ -11,6 +11,7 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { clamp } from "@shared/lib/math";
 import { median, weightedMedian } from "@shared/lib/stats";
 import { normalizeProtocol } from "./pool-helpers";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 type PoolExtra = NonNullable<LiquidityMetrics["topPools"][number]["extra"]>;
 type PoolExtraKey = keyof PoolExtra;
@@ -473,12 +474,11 @@ function getObservationIdentityKey(observation: DexPriceObs): string | null {
   return null;
 }
 
-// Display path: soft `?? 0` fallbacks. Intentionally NOT unified with the confidence-weighted
-// median in scoring.ts (which hard-indexes adjustedObs[0].price); unifying would move outputs.
-function tvlWeightedMedian(observations: readonly Pick<DexPriceObs, "price" | "tvl">[]): number {
+// Protocol display prices require usable positive evidence weight.
+function tvlWeightedMedian(observations: readonly Pick<DexPriceObs, "price" | "tvl">[]): number | null {
   return weightedMedian(
     observations.map((observation) => ({ value: observation.price, weight: observation.tvl })),
-  ) ?? 0;
+  );
 }
 
 export function collapseDuplicateObservations(
@@ -524,6 +524,8 @@ export function aggregateProtocolSources(
 ): Array<{ protocol: string; chain: string; price: number; tvl: number; sourceFamily?: string }> {
   const byProtocolFamily = new Map<string, DexPriceObs[]>();
   for (const observation of observations) {
+    if (!Number.isFinite(observation.tvl) || observation.tvl <= 0 ||
+      !Number.isFinite(observation.price) || observation.price <= 0) continue;
     const sourceFamily = normalizeSourceFamily(observation.sourceFamily);
     const key = `${observation.protocol}:${sourceFamily ?? "unknown"}`;
     const existing = byProtocolFamily.get(key) ?? [];
@@ -531,19 +533,21 @@ export function aggregateProtocolSources(
     byProtocolFamily.set(key, existing);
   }
 
-  const aggregated = Array.from(byProtocolFamily.values(), (protocolObs) => {
+  const aggregated = Array.from(byProtocolFamily.values()).flatMap((protocolObs) => {
     const protocol = protocolObs[0]?.protocol ?? "unknown";
     const sourceFamily = normalizeSourceFamily(protocolObs[0]?.sourceFamily);
     const totalTvl = protocolObs.reduce((sum, observation) => sum + observation.tvl, 0);
+    const price = tvlWeightedMedian(protocolObs);
+    if (price == null) return [];
 
     const chains = [...new Set(protocolObs.map((observation) => observation.chain))];
-    return {
+    return [{
       protocol,
       chain: chains.length === 1 ? chains[0] : "multi",
-      price: tvlWeightedMedian(protocolObs),
+      price,
       tvl: Math.round(totalTvl),
       ...(sourceFamily != null ? { sourceFamily } : {}),
-    };
+    }];
   });
 
   return aggregated.sort((left, right) => right.tvl - left.tvl || left.protocol.localeCompare(right.protocol));
@@ -575,6 +579,7 @@ export function buildDexPriceObservationsFromRetainedPools(
     }
 
     const pricedPools: DexPriceObs[] = [];
+    let rejectedPriceEvidenceCount = 0;
     for (const pool of pools) {
       if (
         isBlockedDexId(pool.project) ||
@@ -585,12 +590,17 @@ export function buildDexPriceObservationsFromRetainedPools(
       }
 
       if (typeof pool.price === "number" && Number.isFinite(pool.price) && pool.price > 0) {
+        const priceEvidenceTvl = Math.min(pool.tvlUsd, pool.priceEvidenceTvlUsd ?? pool.tvlUsd);
+        if (!Number.isFinite(priceEvidenceTvl) || priceEvidenceTvl <= 0) {
+          rejectedPriceEvidenceCount++;
+          continue;
+        }
         pricedPools.push({
           price: pool.price,
           // A cross-source price (value row and price row from different
           // registry observations) is weighted by the TVL the price-observing
           // row itself claims, never by the value row's larger TVL.
-          tvl: Math.min(pool.tvlUsd, pool.priceEvidenceTvlUsd ?? pool.tvlUsd),
+          tvl: priceEvidenceTvl,
           chain: pool.chain,
           protocol: pool.project,
           poolKey: pool.poolId,
@@ -610,6 +620,15 @@ export function buildDexPriceObservationsFromRetainedPools(
       }
     }
 
+    if (rejectedPriceEvidenceCount > 0) {
+      logWorkerEvent({
+        scope: "handler",
+        level: "warn",
+        event: "dex_liquidity.price_evidence_rejected",
+        message: "Omitted retained prices without usable evidence weight",
+        metadata: { stablecoinId, reason: "nonpositive-or-invalid-price-evidence-tvl", count: rejectedPriceEvidenceCount },
+      });
+    }
     if (pricedPools.length > 0) {
       observations.set(stablecoinId, pricedPools);
     }

@@ -4,6 +4,20 @@ import { getPricingSourceRegistryEntry } from "./pricing-source-registry";
 import { normalizePricingSourceKeys } from "./pricing-sources";
 
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
+const NOMINAL_PRICE_SOURCE = /(?:^|\+)\s*protocol-par\s*(?:\+|$)/i;
+
+/**
+ * Whether provenance permits treating a price as observed. Callers still validate
+ * the value and freshness; absent legacy modes retain their existing semantics.
+ */
+export function isObservedPrice(asset: {
+  priceSource?: string | null;
+  priceObservedAtMode?: string | null;
+}): boolean {
+  const mode = asset.priceObservedAtMode;
+  if (mode != null && mode !== "upstream" && mode !== "local_fetch" && mode !== "unknown") return false;
+  return !NOMINAL_PRICE_SOURCE.test(asset.priceSource ?? "");
+}
 
 /**
  * Single owner of the hard-tier membership question. Callers must not

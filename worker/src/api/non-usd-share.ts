@@ -2,8 +2,9 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/market";
 import { addFreshnessHeaders } from "../lib/api-freshness";
-import { jsonResponseWithHeaders } from "../lib/api-response";
+import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { parseQueryParams } from "../lib/api-params";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
@@ -91,14 +92,7 @@ export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Respo
     const ninetyDaysAgo = nowSec - 90 * DAY_SECONDS;
     const twoYearsAgo = nowSec - 2 * 365 * DAY_SECONDS;
 
-    const points: Array<{
-      date: number;
-      commodityShare: number;
-      fiatNonUsdShare: number;
-      commodity: number;
-      fiatNonUsd: number;
-      total: number;
-    }> = [];
+    const points: NonUsdSharePoint[] = [];
     let lastKeptDate = 0;
 
     for (const row of rows) {
@@ -124,6 +118,10 @@ export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Respo
         });
         lastKeptDate = row.snapshot_date;
       }
+    }
+    const validated = NonUsdShareResponseSchema.safeParse(points);
+    if (!validated.success) {
+      return errorResponse(503, "Non-USD share data is unavailable", { noStore: true });
     }
 
     const latestPointDate = points.reduce<number | null>(

@@ -482,8 +482,8 @@ function fallbackLiveOverlay(row: DdrV2Row, updatedAt: number, reason: string): 
       : null;
   return {
     currentEventId: null,
-    ageSec: 0,
-    peakDeviationBps: sourceRow?.peakDeviationBps ?? 0,
+    ageSec: null,
+    peakDeviationBps: sourceRow?.peakDeviationBps ?? null,
     currentDeviationBps: null,
     eventState: "source_event_missing",
     updatedAt,
@@ -504,7 +504,6 @@ async function manifestFallbackResponse(db: D1Database, reason: string): Promise
     };
     if (!Array.isArray(parsed.rows) || !parsed.methodology) return null;
 
-    const nowSec = Math.floor(Date.now() / 1000);
     const rows: DdrV2ResponseRow[] = [];
     for (const row of parsed.rows) {
       const baseRow = DdrV2RowSchema.parse(row);
@@ -520,7 +519,7 @@ async function manifestFallbackResponse(db: D1Database, reason: string): Promise
         dataAsOf: parsed._meta?.dataAsOf ?? manifest.publishedAt,
         modelAsOf: parsed._meta?.modelAsOf ?? manifest.publishedAt,
         computedAt: parsed._meta?.computedAt ?? manifest.publishedAt,
-        expiresAt: parsed._meta?.expiresAt ?? nowSec + API_FRESHNESS_MAX_AGE_SEC.depegResolver,
+        expiresAt: parsed._meta?.expiresAt ?? manifest.publishedAt + API_FRESHNESS_MAX_AGE_SEC.depegResolver,
         lastRefreshAttemptAt: parsed._meta?.lastRefreshAttemptAt ?? null,
         snapshotToken: manifest.snapshotToken,
         snapshotGeneration: manifest.snapshotGeneration,

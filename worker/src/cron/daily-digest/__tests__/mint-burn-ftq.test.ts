@@ -17,9 +17,10 @@ vi.mock("../../../lib/flight-to-quality-classification", () => ({
 const { computeDigestMintBurnFtqFlows } = await import("../mint-burn-ftq");
 
 const db = {} as D1Database;
+const COMPLETE = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
 const intensities = [
-  { id: "usdt-tether", net24h: 40_000_000 },
-  { id: "usdc-circle", net24h: -50_000_000 },
+  { id: "usdt-tether", knownNetUsd: 40_000_000, valuation: COMPLETE },
+  { id: "usdc-circle", knownNetUsd: -50_000_000, valuation: COMPLETE },
 ];
 
 describe("digest mint/burn flight-to-quality flows", () => {
@@ -28,7 +29,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     mocks.buildFlightToQualityClassificationFromV9Snapshot.mockReset();
   });
 
-  it("splits flows across the canonical publication's safe and risky cohorts", async () => {
+  function classify(safe: string[], risky: string[]) {
     const snapshot = makeWorkerReportCardsV9Response();
     mocks.loadActiveSafetyScoreSource.mockResolvedValue({
       kind: "v9",
@@ -37,20 +38,51 @@ describe("digest mint/burn flight-to-quality flows", () => {
     mocks.buildFlightToQualityClassificationFromV9Snapshot.mockReturnValue({
       kind: "ok",
       classification: {
-        safeIds: new Set(["usdt-tether"]),
-        riskyIds: new Set(["usdc-circle"]),
+        safeIds: new Set(safe),
+        riskyIds: new Set(risky),
         safetyScoreIdentity: snapshot.safetyScoreIdentity,
       },
     });
+    return snapshot;
+  }
+
+  it("splits flows across the canonical publication's safe and risky cohorts", async () => {
+    const snapshot = classify(["usdt-tether"], ["usdc-circle"]);
 
     await expect(
       computeDigestMintBurnFtqFlows(db, intensities),
     ).resolves.toEqual({
       kind: "ok",
+      active: false,
       safeNet24h: 40_000_000,
       riskyNet24h: -50_000_000,
       safetyScoreIdentity: snapshot.safetyScoreIdentity,
     });
+  });
+
+  it("withholds FTQ when missing valuation could flip it", async () => {
+    const snapshot = classify(["usdt-tether"], ["usdc-circle"]);
+    // The risky outflow looks decisive, but unpriced risky mints of unknown size can
+    // lift it above the -$100M threshold, so the activation itself is unproven.
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE },
+      { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: { ...COMPLETE, mintCompleteness: "partial" } },
+    ])).resolves.toEqual({
+      kind: "unavailable",
+      active: false,
+      safeNet24h: 0,
+      riskyNet24h: 0,
+      reason: "valuation-incomplete",
+      safetyScoreIdentity: snapshot.safetyScoreIdentity,
+    });
+  });
+
+  it("keeps a proven-inactive FTQ when unpriced mints can only raise a risky net", async () => {
+    classify(["usdt-tether"], ["usdc-circle"]);
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE },
+      { id: "usdc-circle", knownNetUsd: 10_000_000, valuation: { ...COMPLETE, mintCompleteness: "partial" } },
+    ])).resolves.toMatchObject({ kind: "ok", active: false });
   });
 
   it("fails closed with zeroed flows when the canonical source is unavailable", async () => {
@@ -65,6 +97,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
       computeDigestMintBurnFtqFlows(db, intensities),
     ).resolves.toEqual({
       kind: "unavailable",
+      active: false,
       safeNet24h: 0,
       riskyNet24h: 0,
       reason: "v9-snapshot-unavailable",
@@ -93,6 +126,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
       computeDigestMintBurnFtqFlows(db, intensities),
     ).resolves.toEqual({
       kind: "unavailable",
+      active: false,
       safeNet24h: 0,
       riskyNet24h: 0,
       reason: "publication-held",
@@ -107,6 +141,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
       computeDigestMintBurnFtqFlows(db, intensities),
     ).resolves.toEqual({
       kind: "unavailable",
+      active: false,
       safeNet24h: 0,
       riskyNet24h: 0,
       reason: "cache-read-failed",

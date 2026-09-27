@@ -127,8 +127,9 @@ export const PROOF_ASSURANCE_METHOD_VALUES = [
   "attestation",
   "onchain-proof",
   "self-verification",
+  "unknown",
 ] as const;
-export const PROOF_ASSURANCE_SCOPE_VALUES = ["assets-only", "assets-and-liabilities"] as const;
+export const PROOF_ASSURANCE_SCOPE_VALUES = ["assets-only", "assets-and-liabilities", "unknown"] as const;
 export const LIABILITY_RECONCILIATION_VALUES = ["full", "partial", "none", "unknown"] as const;
 export type ProofOfReservesLatestReport = import("./stablecoin-meta-schemas").ProofOfReservesLatestReport;
 export type ProofOfReserves = import("./stablecoin-meta-schemas").ProofOfReserves;
@@ -749,13 +750,25 @@ export type FilterTag =
 
 const PRICE_CONFIDENCE_VALUES = ["high", "single-source", "low", "fallback"] as const;
 export type PriceConfidence = (typeof PRICE_CONFIDENCE_VALUES)[number];
-const PRICE_OBSERVED_AT_MODE_VALUES = ["upstream", "local_fetch", "unknown"] as const;
+const PRICE_OBSERVED_AT_MODE_VALUES = ["upstream", "local_fetch", "unknown", "nominal_reference", "unsupported"] as const;
 export type PriceObservedAtMode = (typeof PRICE_OBSERVED_AT_MODE_VALUES)[number];
 const DEPEG_PRIMARY_TRUST_VALUES = ["authoritative", "confirm_required", "unusable"] as const;
 export type DepegPrimaryTrust = (typeof DEPEG_PRIMARY_TRUST_VALUES)[number];
 
 export const PriceConfidenceSchema = z.enum(PRICE_CONFIDENCE_VALUES);
-export const PriceObservedAtModeSchema = z.enum(PRICE_OBSERVED_AT_MODE_VALUES);
+// Preserve forward compatibility without mistaking a future mode for legacy observation evidence.
+export const PriceObservedAtModeSchema = z.preprocess(
+  (value) => typeof value === "string" && !(PRICE_OBSERVED_AT_MODE_VALUES as readonly string[]).includes(value)
+    ? "unsupported"
+    : value,
+  z.enum(PRICE_OBSERVED_AT_MODE_VALUES),
+);
+export const NominalPriceReferenceSchema = z.object({
+  price: z.number().finite().positive(),
+  source: z.string(),
+  mode: z.literal("nominal_reference"),
+});
+export type NominalPriceReference = z.infer<typeof NominalPriceReferenceSchema>;
 export const DepegPrimaryTrustSchema = z.enum(DEPEG_PRIMARY_TRUST_VALUES);
 
 export interface PriceSourceConfidenceProfile {
@@ -780,6 +793,7 @@ export interface PegAssetBase {
   priceUpdatedAt?: number | null;
   priceObservedAt?: number | null;
   priceObservedAtMode?: PriceObservedAtMode | null;
+  nominalPriceReference?: NominalPriceReference;
   priceSyncedAt?: number | null;
   consensusSources?: string[];
   agreeSources?: string[];

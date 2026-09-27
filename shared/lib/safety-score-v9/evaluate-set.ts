@@ -45,7 +45,6 @@ import {
   upstreamExitAccessScore,
   upstreamOracleNavScore,
   type V9EvaluatedAsset,
-  type V9WrapperStrategyTier,
 } from "./evaluate-asset";
 import {
   isV9RepresentationGroupRoute,
@@ -67,7 +66,7 @@ export {
   projectV9ResolvedBackingExposure,
   resolveV9WrapperStrategyTier,
 };
-export type { V9EvaluatedAsset, V9WrapperStrategyTier };
+export type { V9EvaluatedAsset };
 
 const V9_EVALUATED_SET_DIGEST_DOMAIN = "safety-score-v9.evaluated-set.v2";
 

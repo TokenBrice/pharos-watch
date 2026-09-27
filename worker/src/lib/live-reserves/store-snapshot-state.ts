@@ -1,6 +1,11 @@
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveAdapterValidationPolicy, LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
+import type {
+  LiveReserveAdapterValidationPolicy,
+  LiveReserveAdmissionRejectionCode,
+  LiveReserveSnapshotMetadata,
+  ReserveFreshnessView,
+} from "@shared/types/live-reserves";
 import { LIVE_RESERVE_FRESHNESS_SEC, selectScoringDegradedWarnings, type ReserveCompositionRecord, type ReserveSyncStateRecord } from "./store-shared";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "../../cron/reserve-adapters/validate";
 
@@ -71,33 +76,76 @@ export function shouldUseLegacySnapshotFallback(
     && syncState.lastStatus !== "skipped";
 }
 
-/** Fetch liveness and disclosure age have separate budgets (monthly reports are not daily feeds). */
-export function isReserveSnapshotStale(
-  record: Pick<ReserveCompositionRecord, "fetchedAt" | "metadata">,
+interface ReserveGeneration {
+  fetchedAt: number | null;
+  attemptId: string | null;
+}
+
+/** The single fetch-age rule; `null` generation (nothing ever fetched) is never stale. */
+export function assessReserveFetchFreshness(
+  generation: ReserveGeneration,
+  now: number,
+  fetchFreshnessSec: number,
+): ReserveFreshnessView {
+  const fetchAgeSec = generation.fetchedAt == null ? null : now - generation.fetchedAt;
+  const fetchStale = fetchAgeSec != null && fetchAgeSec > fetchFreshnessSec;
+  return {
+    stale: fetchStale,
+    staleReasons: fetchStale ? ["fetch-age"] : [],
+    assessedAt: now,
+    fetchedAt: generation.fetchedAt,
+    attemptId: generation.attemptId,
+    fetchAgeSec,
+    fetchBudgetSec: fetchFreshnessSec,
+    sourceTimestamp: null,
+    sourceAgeSec: null,
+    sourceAgeBudgetSec: null,
+    sourceAgeBudgetCap: null,
+  };
+}
+
+/**
+ * Fetch liveness and disclosure age have separate budgets (monthly reports are
+ * not daily feeds). The effective source budget is min(coin scoring cap,
+ * adapter validation cap), falling back to the fetch budget when neither is
+ * declared; it applies only to `verified` snapshots with a finite source
+ * timestamp. Returns the verdict with every value it used (ADR-30).
+ */
+export function assessReserveSnapshotFreshness(
+  record: Pick<ReserveCompositionRecord, "fetchedAt" | "attemptId" | "metadata">,
   coin: StablecoinMeta,
   now: number,
   fetchFreshnessSec: number,
-): boolean {
-  if (now - record.fetchedAt > fetchFreshnessSec) return true;
-  if (record.metadata.freshnessMode !== "verified") return false;
+): ReserveFreshnessView {
+  const fetch = assessReserveFetchFreshness({ fetchedAt: record.fetchedAt, attemptId: record.attemptId ?? null }, now, fetchFreshnessSec);
+  if (record.metadata.freshnessMode !== "verified") return fetch;
   const sourceTimestamp = record.metadata.sourceTimestamp;
-  if (typeof sourceTimestamp !== "number" || !Number.isFinite(sourceTimestamp)) return false;
+  if (typeof sourceTimestamp !== "number" || !Number.isFinite(sourceTimestamp)) return fetch;
   const config = coin.liveReservesConfig;
   const adapter = config && getLiveReserveAdapterDefinition(config.adapter);
   const validation: LiveReserveAdapterValidationPolicy | undefined = adapter && "validation" in adapter ? adapter.validation : undefined;
-  const adapterMaxAge = validation?.maxSourceAgeSec;
-  const sourceMaxAge = Math.min(config?.scoring?.maxSourceAgeSec ?? Infinity, adapterMaxAge ?? Infinity);
-  return now - sourceTimestamp > (Number.isFinite(sourceMaxAge) ? sourceMaxAge : fetchFreshnessSec);
+  const scoringMaxAge = config?.scoring?.maxSourceAgeSec;
+  const cappedMaxAge = Math.min(scoringMaxAge ?? Infinity, validation?.maxSourceAgeSec ?? Infinity);
+  const sourceAgeBudgetSec = Number.isFinite(cappedMaxAge) ? cappedMaxAge : fetchFreshnessSec;
+  const sourceAgeBudgetCap = !Number.isFinite(cappedMaxAge) ? "fetch-budget" : cappedMaxAge === scoringMaxAge ? "scoring" : "adapter";
+  const sourceAgeSec = now - sourceTimestamp;
+  const sourceStale = sourceAgeSec > sourceAgeBudgetSec;
+  return {
+    ...fetch,
+    stale: fetch.stale || sourceStale,
+    staleReasons: sourceStale ? [...fetch.staleReasons, "source-age"] : fetch.staleReasons,
+    sourceTimestamp,
+    sourceAgeSec,
+    sourceAgeBudgetSec,
+    sourceAgeBudgetCap,
+  };
 }
-
-export type AdmissionRejectionCode =
-  | "unconfigured" | "suspended" | "missing-snapshot" | "inconsistent-snapshot"
-  | "config-mismatch" | "non-independent" | "stale" | "invalid-freshness"
-  | "degraded-snapshot" | "insufficient-slices";
 
 export interface LiveReserveAdmissionResult {
   eligible: boolean;
-  reasons: AdmissionRejectionCode[];
+  reasons: LiveReserveAdmissionRejectionCode[];
+  /** The freshness assessment behind any `stale` reason; `null` without a snapshot or coin. */
+  freshness: ReserveFreshnessView | null;
 }
 
 /** Snapshot admission deliberately does not depend on a later attempt's status. */
@@ -109,13 +157,13 @@ export function evaluateLiveReserveAdmission(
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
   minSlices = 1,
 ): LiveReserveAdmissionResult {
-  const reasons: AdmissionRejectionCode[] = [];
+  const reasons: LiveReserveAdmissionRejectionCode[] = [];
   const config = coin?.liveReservesConfig;
   if (!config) reasons.push("unconfigured");
   if (config?.suspended) reasons.push("suspended");
   if (!record) {
     reasons.push("missing-snapshot");
-    return { eligible: false, reasons };
+    return { eligible: false, reasons, freshness: null };
   }
   if (!hasConsistentSnapshotState(syncState, record)) reasons.push("inconsistent-snapshot");
   if (config) {
@@ -126,9 +174,10 @@ export function evaluateLiveReserveAdmission(
     }
   }
   if (record.adapterEvidenceClass !== "independent") reasons.push("non-independent");
-  if (coin && isReserveSnapshotStale(record, coin, now, freshnessSec)) reasons.push("stale");
+  const freshness = coin ? assessReserveSnapshotFreshness(record, coin, now, freshnessSec) : null;
+  if (freshness?.stale) reasons.push("stale");
   if (!hasScoringEligibleLiveReserveFreshness(record.metadata, now)) reasons.push("invalid-freshness");
   if (selectScoringDegradedWarnings(record.warnings, config).length > 0) reasons.push("degraded-snapshot");
   if (record.slices.length < minSlices) reasons.push("insufficient-slices");
-  return { eligible: reasons.length === 0, reasons };
+  return { eligible: reasons.length === 0, reasons, freshness };
 }

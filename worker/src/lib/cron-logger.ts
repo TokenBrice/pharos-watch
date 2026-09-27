@@ -24,6 +24,7 @@ import { stripSensitive } from "./safe-error-message";
 import { sanitizeBoundedMetadata } from "./sensitive-metadata";
 import { compactCronMetadataForPersistence } from "./cron-metadata-persistence";
 import { parseJsonObject } from "./json-parse";
+import { confirmedCronOutputAt } from "./cron-output";
 
 // --- Cron failure recording ---
 // `recordCronFailure` replaces ad-hoc `console.error(...)` in cron catch blocks
@@ -243,46 +244,15 @@ export interface CronRunLoggerOptions {
   producer?: Omit<ProducerIdentity, "job">;
 }
 
-const NON_PRODUCTIVE_REASONS = new Set([
-  "already_written_today",
-  "already_written_today_before_freshness_gate",
-  "cadence_bucket_completed",
-  "cadence_bucket_in_progress",
-  "circuit-open",
-  "no-pending-request",
-  "not-due-today",
-]);
-
 function inferCronProductivity(
   result: CronResult | null | void,
   metadata: Record<string, unknown> | null,
+  outputPublishedAt: number | null,
 ): CronProductivity {
-  if (result?.productivity) return result.productivity;
-  const status = result?.status ?? "ok";
-  if (status === "error" || status === "skipped_locked" || status === "skipped_neutral") {
-    return { productive: false, reason: status };
+  if (outputPublishedAt == null) {
+    return { productive: false, reason: typeof metadata?.reason === "string" ? metadata.reason : "no-confirmed-output" };
   }
-  const reason = typeof metadata?.reason === "string" ? metadata.reason : null;
-  if (reason && NON_PRODUCTIVE_REASONS.has(reason)) {
-    return { productive: false, reason };
-  }
-  if (
-    metadata?.cacheWriteMode === "skipped-newer"
-    || metadata?.cacheWriteSucceeded === false
-    || metadata?.lastWriteAdvanced === false
-  ) {
-    return { productive: false, reason: "canonical-write-not-advanced" };
-  }
-  if (metadata?.lastWriteAdvanced === true) {
-    return { productive: true, reason: "canonical-write-advanced" };
-  }
-  if (metadata?.published === true || metadata?.publicationPointerWritten === true) {
-    return { productive: true, reason: "publication-confirmed" };
-  }
-  if (typeof result?.itemCount === "number" && result.itemCount > 0) {
-    return { productive: true, reason: "positive-item-count" };
-  }
-  return { productive: false, reason: reason ?? "no-productive-output" };
+  return result?.productivity ?? { productive: true, reason: "publication-confirmed" };
 }
 
 function producerOutcomeForResult(result: CronResult | null | void): ProducerOutcome {
@@ -552,9 +522,16 @@ export async function logCronRun(
     const resultStatus = resolvedResult?.status ?? "ok";
     const completedAt = Math.floor(Date.now() / 1000);
     const parsedMetadata = parseJsonObject(resolvedResult?.metadata);
-    const productivity = inferCronProductivity(resolvedResult, parsedMetadata);
+    const outputPublishedAt = confirmedCronOutputAt(resolvedResult, parsedMetadata, completedAt);
+    const productivity = inferCronProductivity(resolvedResult, parsedMetadata, outputPublishedAt);
     const publicationCount = productivity.publications?.length ?? 0;
-    const persistedMetadata = compactCronMetadataForPersistence(resolvedResult?.metadata, parsedMetadata).metadata;
+    const publicationMetadata = {
+      ...(parsedMetadata ?? (resolvedResult?.metadata ? { legacyMetadata: resolvedResult.metadata } : {})),
+      outputPublishedAt,
+    };
+    const persistedMetadata = compactCronMetadataForPersistence(
+      JSON.stringify(publicationMetadata), publicationMetadata,
+    ).metadata;
     const resolvedError = resolvedResult?.error == null ? null : stripSensitive(resolvedResult.error);
     const degradedReason = resolveCronDegradedReason(job, resultStatus, resolvedResult, parsedMetadata);
     const producer = options?.producer;

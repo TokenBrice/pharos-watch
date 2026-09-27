@@ -145,17 +145,6 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.cronErrorCount).toBe(1);
   });
 
-  it("keeps a neutral weekly skip available after a fresh degraded required run", async () => {
-    const rows = seedWithOverrides(NOW, [
-      { job: "weekly-recap", status: "skipped_neutral", ageSec: 30 },
-      { job: "weekly-recap", status: "degraded", ageSec: 86_400 },
-    ]);
-    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    expect(snapshot.crons["weekly-recap"]?.healthy).toBe(true);
-    expect(snapshot.watchUnhealthyCrons).toBe(0);
-    expect(snapshot.degradedCronRuns).toBe(1);
-  });
-
   it.each([
     { job: "snapshot-public-dataset", reason: "same_day_snapshot_exists" },
     { job: "snapshot-psi", reason: "same_day_snapshot_exists" },
@@ -224,7 +213,7 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   ])("retains latest required evidence beyond ten neutral skips: %s", async ({ status, ageSec, healthy }) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
-      const insert = sqlite.prepare("INSERT INTO cron_runs(job,started_at,duration_ms,status) VALUES ('fetch-tbill-rate',?,100,?)");
+      const insert = sqlite.prepare("INSERT INTO cron_runs(job,started_at,duration_ms,status,item_count) VALUES ('fetch-tbill-rate',?,100,?,1)");
       insert.run(NOW - ageSec, status);
       for (let hour = 0; hour < 11; hour++) insert.run(NOW - 30 - hour * 3600, "skipped_neutral");
       const snapshot = await loadCronHealth(db, NOW);

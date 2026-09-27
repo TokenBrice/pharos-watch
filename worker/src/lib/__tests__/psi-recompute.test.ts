@@ -3,6 +3,7 @@ import {
   buildStabilityInputForDay,
   buildSupplySnapshotMap,
   type PsiSupplyRow,
+  type PsiDepegEventRow,
 } from "../psi-recompute";
 import {
   findNearestSupplySnapshot,
@@ -107,6 +108,33 @@ describe("findNearestSupplySnapshot", () => {
 });
 
 describe("buildStabilityInputForDay", () => {
+  it.each([
+    ["eurc-circle", "peggedEUR", 1.08],
+    ["jpyc-jpyc", "peggedJPY", 0.0067],
+    ["usdt-tether", "peggedUSD", 0.98],
+  ])("replays %s with contemporaneous same-domain evidence", (id, pegType, price) => {
+    const day = 30 * DAY;
+    const event: PsiDepegEventRow = {
+      stablecoin_id: id, source: "live", peg_type: pegType,
+      peg_reference: 1, started_at: day + DAY - 3600, ended_at: null,
+      start_price: 0.98, peak_deviation_bps: -200,
+    };
+    const replay = (usdPrice: number, events = [event]) => buildStabilityInputForDay(
+      day, day + 2 * DAY, events,
+      buildSupplySnapshotMap([{ stablecoin_id: id, snapshot_date: day, circulating_usd: 1e9, price: usdPrice }]),
+    );
+    expect(replay(price).depegs).toEqual([{ bps: -200, mcapUsd: 1e9, depegAgeDays: 0 }]);
+    if (pegType !== "peggedUSD") {
+      expect(replay(price * 1.2).depegs).toEqual(replay(price).depegs);
+      const unavailable = replay(price, [{ ...event, started_at: day }]);
+      expect(unavailable.depegs).toEqual([]);
+      expect(unavailable.openDepegsWithoutPrice).toBe(1);
+      expect(unavailable.peakDeviationFallbackCount).toBe(0);
+      expect(replay(price, [{ ...event, source: "backfill", quote_mode: "native-peg" }]).depegs)
+        .toEqual(replay(price).depegs);
+    }
+  });
+
   it("handles no active depegs", () => {
     const day = 30 * DAY;
     const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 1000, priorMcap: 900 }), [], day + 2 * DAY);

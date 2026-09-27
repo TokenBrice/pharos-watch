@@ -117,7 +117,9 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
  * and gap persistence are different questions, and a small number of permanent
  * gaps never moves the ratio.
  */
-export function getMissingPriceDurationStatus(consecutiveMissingGenerations: number): StatusHealthValue {
+export function getMissingPriceDurationStatus(consecutiveMissingGenerations: number | null): StatusHealthValue {
+  // Unknown continuity cannot establish a critical duration, but must not clear a warning.
+  if (consecutiveMissingGenerations == null) return "degraded";
   if (consecutiveMissingGenerations >= STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical) {
     return "stale";
   }
@@ -131,7 +133,7 @@ export interface ActivePriceGapDurationVerdict {
   /** Worst duration band across material unacknowledged alert-eligible gaps. */
   status: StatusHealthValue;
   /** Worst consecutive-missing-generation count among those material gaps. */
-  worstGenerations: number;
+  worstGenerations: number | null;
   /** Material unacknowledged alert-eligible gaps whose own band is past `elevated`. */
   degradedGapIds: string[];
   /** Every unacknowledged alert-eligible gap at the `critical` band, material or not. */
@@ -156,12 +158,12 @@ export function assessActivePriceGapDuration(
     (asset) => asset.marketCapUsd == null
       || asset.marketCapUsd >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd,
   );
-  const worstGenerations = materialGaps.reduce(
-    (worst, asset) => Math.max(worst, asset.consecutiveMissingGenerations),
-    0,
-  );
+  const worstGenerations = materialGaps.some((asset) => asset.consecutiveMissingGenerations == null)
+    ? null
+    : materialGaps.reduce((worst, asset) => Math.max(worst, asset.consecutiveMissingGenerations!), 0);
   return {
-    status: getMissingPriceDurationStatus(worstGenerations),
+    status: materialGaps.some((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
+      ? "stale" : getMissingPriceDurationStatus(worstGenerations),
     worstGenerations,
     degradedGapIds: materialGaps
       .filter((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) !== "healthy")
@@ -300,10 +302,10 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
 /** Reserve-sync fields the score-input hold predicate needs; structurally compatible with `StatusResponse["reserveComposition"]`. */
 export interface ReserveScoreInputHoldInput {
   status: string;
-  deferredCoins: number;
-  runBudgetTruncated: boolean;
-  writeTimeoutUncertain: number;
-  authoritativeFreshCoverageRatio: number;
+  deferredCoins: number | null;
+  runBudgetTruncated: boolean | null;
+  writeTimeoutUncertain: number | null;
+  authoritativeFreshCoverageRatio: number | null;
 }
 
 /**
@@ -321,9 +323,13 @@ export interface ReserveScoreInputHoldInput {
 export function hasReserveScoreInputHold(reserve: ReserveScoreInputHoldInput): boolean {
   return (
     reserve.status !== "healthy"
+    || reserve.deferredCoins == null
     || reserve.deferredCoins > 0
+    || reserve.runBudgetTruncated == null
     || reserve.runBudgetTruncated
+    || reserve.writeTimeoutUncertain == null
     || reserve.writeTimeoutUncertain > 0
+    || reserve.authoritativeFreshCoverageRatio == null
     || reserve.authoritativeFreshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedAuthoritativeCoverageRatio
   );
 }

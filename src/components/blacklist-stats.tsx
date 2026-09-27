@@ -7,6 +7,7 @@ import { QueryStateNotice } from "@/components/query-state-notice";
 import { cn } from "@/lib/utils";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
+import { computeFreezableSummary } from "@/components/freezewatch/freezable-supply-meter";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
 
@@ -48,19 +49,36 @@ export function BlacklistStats({
   const stats = summary?.stats;
   const dataQuality = summary?.dataQuality;
   const trackedFrozenTotal = stats ? (stats.trackedFrozenTotal ?? stats.activeFrozenTotal ?? 0) : null;
-  const totalTrackedMarketCap = (blacklistStatusBuckets ?? []).reduce((sum, bucket) => sum + bucket.marketCap, 0);
+  const freezableSummary = computeFreezableSummary(blacklistStatusBuckets);
+  const totalTrackedMarketCap = freezableSummary.totalMarketCap;
   const unfreezableBucket = blacklistStatusBuckets?.find((bucket) => bucket.key === "no") ?? null;
+  // Shares divide by observed supply only; a bucket or market with no observed supply has no share.
+  const unfreezableSupplyObserved =
+    unfreezableBucket !== null && unfreezableBucket.supplyUnavailableCount < unfreezableBucket.count;
   const unfreezableMarketSharePct =
-    unfreezableBucket && totalTrackedMarketCap > 0 ? (unfreezableBucket.marketCap / totalTrackedMarketCap) * 100 : 0;
+    unfreezableBucket && unfreezableSupplyObserved && totalTrackedMarketCap > 0
+      ? (unfreezableBucket.marketCap / totalTrackedMarketCap) * 100
+      : null;
   const isUnfreezableShareLoading = supportDataLoading;
+  const unfreezableSharePartial = freezableSummary.coverage === "partial";
+  // The headline share is published only over complete supply coverage; a partial
+  // denominator moves the observed-only share into the labelled subtext.
   const unfreezableMarketShareValue =
-    isUnfreezableShareLoading || supportUnavailable ? "—" : formatMarketSharePercentage(unfreezableMarketSharePct);
+    isUnfreezableShareLoading || supportUnavailable || unfreezableMarketSharePct === null
+      ? "—"
+      : unfreezableSharePartial
+        ? "Partial"
+        : formatMarketSharePercentage(unfreezableMarketSharePct);
   const unfreezableCount = isUnfreezableShareLoading ? "syncing" : `${unfreezableBucket?.count ?? 0} stablecoins`;
   const baseUnfreezableSubtext = supportUnavailable
     ? "Freeze status data unavailable"
-    : unfreezableBucket && totalTrackedMarketCap > 0
-      ? `${unfreezableCount} · ${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} total`
-      : "Freezable: No / total market cap";
+    : unfreezableBucket && unfreezableMarketSharePct !== null
+      ? unfreezableSharePartial
+        ? `${unfreezableCount} · ${formatMarketSharePercentage(unfreezableMarketSharePct)} of observed supply (${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)}) · ${freezableSummary.supplyUnavailableCount} without supply data excluded`
+        : `${unfreezableCount} · ${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} total`
+      : freezableSummary.coverage === "unavailable" && blacklistStatusBuckets !== null
+        ? `${unfreezableCount} · supply data unavailable`
+        : "Freezable: No / total market cap";
   const canDrillIntoUnfreezable =
     typeof onUnfreezableSelect === "function" &&
     !isUnfreezableShareLoading &&
@@ -69,9 +87,10 @@ export function BlacklistStats({
   const unfreezableMarketShareSubtext = canDrillIntoUnfreezable
     ? `${baseUnfreezableSubtext} · View list →`
     : baseUnfreezableSubtext;
+  const ambiguousOrderCount = dataQuality?.ambiguousOrderCount ?? 0;
   const hasFreezeLedgerWarnings =
     dataQuality &&
-    (dataQuality.status !== "ok" || dataQuality.freezeLedger.providerFailedCount > 0);
+    (dataQuality.status !== "ok" || dataQuality.freezeLedger.providerFailedCount > 0 || ambiguousOrderCount > 0);
   const qualityTone = dataQuality?.status === "stale" ? "stale" : "degraded";
   const qualityTitle =
     dataQuality?.status === "stale" ? "Freeze ledger coverage is stale" : "Freeze ledger coverage is degraded";
@@ -119,6 +138,15 @@ export function BlacklistStats({
               {dataQuality.amountGaps.recoverable > 0 ? (
                 <li>
                   {dataQuality.amountGaps.recoverable} recoverable amount gaps across freeze events
+                </li>
+              ) : null}
+              {ambiguousOrderCount > 0 ? (
+                <li>
+                  {ambiguousOrderCount} {ambiguousOrderCount === 1 ? "event has" : "events have"} an ambiguous order
+                  {dataQuality.ambiguousOrderReason === "tron-cross-transaction-order"
+                    ? " (Tron transfers in separate transactions whose relative order cannot be confirmed)"
+                    : ""}{" "}
+                  and {ambiguousOrderCount === 1 ? "is" : "are"} excluded from confirmed frozen counts
                 </li>
               ) : null}
             </ul>

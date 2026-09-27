@@ -19,6 +19,25 @@ describe("CollateralizationCard", () => {
     vi.useRealTimers();
   });
 
+  it("keeps retained unmarked live records at unknown scope", () => {
+    render(<CollateralizationCard reviewed={reviewed} liveRatio={1.2} />);
+    expect(screen.getByText("120.0%")).toBeTruthy();
+    expect(screen.queryByText(/shared Sky\/Maker/)).toBeNull();
+  });
+
+  it("removes live shared-book scope when the headline falls back to reviewed evidence", () => {
+    const props = {
+      reviewed,
+      liveBalanceSheetScope: "shared-sky-maker" as const,
+      liveSharedBookAssetIds: ["dai-makerdao", "usds-sky"],
+    };
+    const { rerender } = render(<CollateralizationCard {...props} liveRatio={1.2} />);
+    expect(screen.getByText(/shared Sky\/Maker/)).toBeTruthy();
+    rerender(<CollateralizationCard {...props} liveRatio={null} liveLiquidationCapacityRatio={0.5} />);
+    expect(screen.getByText("245.5%")).toBeTruthy();
+    expect(screen.queryByText(/shared Sky\/Maker/)).toBeNull();
+  });
+
   it("renders the reviewed ratio with an overcollateralized badge and provenance", () => {
     render(<CollateralizationCard reviewed={reviewed} />);
     expect(screen.getByText("245.5%")).toBeTruthy();

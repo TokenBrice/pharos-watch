@@ -49,6 +49,7 @@ import {
 } from "./evaluation-scoring";
 import { selectYieldSourceGroup } from "./evaluation-selection";
 import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
+import { resolveYieldBenchmarkDependencies } from "../../lib/yield-config/yield-benchmark-dependencies";
 
 export { buildHistoryKey } from "./evaluation-history";
 export { buildSelectionReason } from "./evaluation-arbitration";
@@ -396,7 +397,15 @@ function evaluateYieldSourceGroup(
     const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
     const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
     const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
-    const sourceFreshness = y.productBenchmarkFreshness === "stale" ? "stale" : classifyYieldSourceFreshness({
+    // Use the same assessment clock as the hurdle and prepared USD re-base;
+    // the run's source-observation clock must not give references a second verdict.
+    const benchmarkDependencies = resolveYieldBenchmarkDependencies({
+      stablecoinId,
+      dataSource: y.dataSource,
+      benchmarks: input.riskFreeRates,
+      benchmarkCurrency,
+    });
+    const sourceFreshness = benchmarkDependencies.productFreshness === "stale" ? "stale" : classifyYieldSourceFreshness({
       dataSource: y.dataSource,
       sourceKey,
       sourceAgeSeconds,
@@ -412,10 +421,7 @@ function evaluateYieldSourceGroup(
       recordDate: benchmarkMeta.recordDate,
       maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[benchmarkSelection.key],
     });
-    // Rate-derived APY consumes the product benchmark independently of the
-    // comparison hurdle (USD T-bills versus EFFR). Keep retained-input evidence.
-    const rowReferenceBenchmarkFreshness = y.productBenchmarkFreshness
-      ?? (benchmarkCurrency === "USD" ? "healthy" : prepared.referenceBenchmarkFreshness);
+    const rowReferenceBenchmarkFreshness = benchmarkDependencies.referenceFreshness;
     const referenceBenchmarkDegraded = rowReferenceBenchmarkFreshness !== "healthy";
     const calculationMode = resolveCalculationMode(y);
     const evidenceClass = resolveEvidenceClass(y);

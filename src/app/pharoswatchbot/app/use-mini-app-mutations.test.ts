@@ -2,6 +2,8 @@
 
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { DatabaseSync } from "node:sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { RECOMMENDED_OPERATION } from "./constants";
 import { MiniAppRequestError, type MiniAppErrorCode } from "./error-messages";
 import { baseState } from "./mini-app-test-fixtures";
@@ -55,8 +57,51 @@ function makeArgs(overrides: Partial<UseMiniAppMutationsArgs> = {}): UseMiniAppM
   };
 }
 
+const databases: DatabaseSync[] = [];
+
+async function persistedMutations() {
+  const { db, sqlite } = createLatestSchemaSqlite();
+  databases.push(sqlite);
+  const now = Math.floor(Date.now() / 1000);
+  const auth = {
+    userId: "42", username: "alice", firstName: "Alice", chatType: "private",
+    startParam: null, authDate: now, initDataHash: "test", canMutatePrivateChat: true,
+  } as const;
+  // Runtime-load the Worker test boundary: its Cloudflare ambient types belong
+  // to worker/tsconfig.json, not the frontend TypeScript compilation.
+  const { applyTelegramMiniAppMutation } = await vi.importActual<{
+    applyTelegramMiniAppMutation: (
+      database: typeof db,
+      context: typeof auth,
+      operation: TelegramMiniAppOperation,
+    ) => Promise<TelegramMiniAppClientSnapshot["undo"] | void>;
+  }>("../../../../worker/src/api/telegram-mini-app-mutations");
+  sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', ?, ?)").run(now, now);
+  sqlite.prepare(`
+    INSERT INTO telegram_subscriptions (
+      chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
+      alert_dews_override, alert_depeg_override, alert_safety_override,
+      dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
+    ) VALUES ('42', 'usdc-circle', 1, 1, 0, 1, 1, 1, 'DANGER', 'downgrade-only', 250, ?)
+  `).run(now + 14_400);
+  const row = () => sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = 'usdc-circle'").get();
+  apiMocks.postMiniAppSnapshot.mockImplementation(async (_path: string, { operation }: { operation: TelegramMiniAppOperation }) => {
+    try {
+      const undo = await applyTelegramMiniAppMutation(db, auth, operation);
+      return { ...makeSnapshot({ ...baseState, subscriptions: row() ? baseState.subscriptions : [] }), ...(undo ? { undo } : {}) };
+    } catch (error) {
+      if (error instanceof Error && "code" in error) {
+        throw new MiniAppRequestError(409, error.code as MiniAppErrorCode);
+      }
+      throw error;
+    }
+  });
+  return { db, sqlite, auth, row, applyTelegramMiniAppMutation };
+}
+
 afterEach(() => {
   cleanup();
+  while (databases.length > 0) databases.pop()?.close();
   vi.useRealTimers();
   apiMocks.postMiniAppSnapshot.mockReset();
   apiMocks.refreshMiniAppBundleOnce.mockReset();
@@ -116,9 +161,10 @@ describe("useMiniAppMutations", () => {
 
   it("invalidates a remove undo when unsubscribing all", async () => {
     const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
-    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot({ ...baseState, subscriptions: [] }));
+    await persistedMutations();
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
     await act(async () => { result.current.remove(baseState.subscriptions[0]!); });
+    await waitFor(() => expect(result.current.pendingUndo).not.toBeNull());
     expect(result.current.pendingUndo).toEqual(baseState.subscriptions[0]);
     await act(async () => { result.current.unsubscribeAll(); });
     expect(result.current.pendingUndo).toBeNull();
@@ -255,32 +301,39 @@ describe("useMiniAppMutations", () => {
     expect(requestWriteAccess).not.toHaveBeenCalled();
   });
 
-  it("keeps the remove undo subject for its five-second window and restores it with set-coin", async () => {
-    const coin = {
-      ...baseState.subscriptions[0]!,
-      alertTypes: { ...baseState.subscriptions[0]!.alertTypes, safety: false },
-      alertOverrides: { dews: false, depeg: false, safety: true, launch: false, reserve: false, freeze: false },
-    };
-    const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
-    const webApp = makeWebApp({ showConfirm });
-    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot({ ...baseState, subscriptions: [] }));
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp })));
+  it("restores the persisted server row, not stale client tuning, during the undo window", async () => {
+    const { row } = await persistedMutations();
+    const before = row();
+    const coin = baseState.subscriptions[0]!;
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
 
-    act(() => { result.current.remove(coin); });
+    await act(async () => { result.current.remove(coin); });
     await waitFor(() => expect(result.current.pendingUndo).toEqual(coin));
-    expect(showConfirm).toHaveBeenCalledWith("Remove USDC from your watchlist?", expect.any(Function));
-
-    act(() => { result.current.undoRemove(); });
-    await waitFor(() => expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2));
-    expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1]).toEqual({
-      initData: "signed-init-data",
-      operation: {
-        kind: "set-coin",
-        stablecoinId: "usdc-circle",
-        patch: { alertTypes: { dews: true, depeg: true, safety: false }, dewsMinBand: "ALERT", depegStepBps: 250 },
-      },
-    });
+    expect(row()).toBeUndefined();
+    expect(result.current.pendingUndo).toEqual(coin);
+    await act(async () => { result.current.undoRemove(); });
+    await waitFor(() => expect(result.current.isMutating).toBe(false));
+    expect(row()).toEqual(before);
     expect(result.current.pendingUndo).toBeNull();
+  });
+
+  it("refuses stale undo after another preference edit without retrying or overwriting it", async () => {
+    const { db, auth, row, applyTelegramMiniAppMutation } = await persistedMutations();
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    await act(async () => { result.current.remove(baseState.subscriptions[0]!); });
+    await waitFor(() => expect(result.current.pendingUndo).not.toBeNull());
+    await applyTelegramMiniAppMutation(db, auth, {
+      kind: "set-coin", stablecoinId: "usdc-circle",
+      patch: { alertTypes: { safety: true }, safetyMode: "upgrade-only" },
+    });
+    const concurrent = row();
+    await act(async () => { result.current.undoRemove(); });
+    await waitFor(() => expect(result.current.isMutating).toBe(false));
+    expect(row()).toEqual(concurrent);
+    expect(result.current.message).not.toBeNull();
+    expect(result.current.pendingUndo).toBeNull();
+    await act(async () => { result.current.undoRemove(); });
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2);
   });
 
   it("does not dispatch a canceled remove confirmation", () => {
@@ -297,13 +350,16 @@ describe("useMiniAppMutations", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const coin = baseState.subscriptions[0]!;
     const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
-    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot({ ...baseState, subscriptions: [] }));
+    const { row } = await persistedMutations();
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
 
     act(() => { result.current.remove(coin); });
     await waitFor(() => expect(result.current.pendingUndo).toEqual(coin));
     await act(async () => { vi.advanceTimersByTime(5_001); });
     expect(result.current.pendingUndo).toBeNull();
+    await act(async () => { result.current.undoRemove(); });
+    expect(row()).toBeUndefined();
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
   });
 
   it("keeps native two-step confirmation and forget-me terminal state in the hook", async () => {

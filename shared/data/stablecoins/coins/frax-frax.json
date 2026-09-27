@@ -120,7 +120,7 @@
   "custodyModel": "institutional-regulated",
   "liveReservesConfig": {
     "adapter": "frax-balance-sheet",
-    "version": 2,
+    "version": 3,
     "semantics": "attestation-mix",
     "breakerScope": "frax-frax",
     "display": {

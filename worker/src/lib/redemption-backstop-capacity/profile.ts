@@ -26,6 +26,7 @@ export interface CapacityResolution {
   capacityKind?: RedemptionBackstopEntry["capacityKind"];
   freshnessKind?: RedemptionBackstopEntry["freshnessKind"];
   sourceTimestamp?: number;
+  evidenceObservedAt?: number;
   sourceUrls?: string[];
   settlementDelaySec?: number;
   queueDepthUsd?: number;

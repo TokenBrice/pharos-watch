@@ -424,6 +424,8 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
         mintVolume24hUsd: null,
         burnBaseline30dUsd: null,
         flowDataAgeDays: 0,
+        flowValuation24h: null,
+        flowBurnBaselineValuation: null,
         yieldWarnings: [],
         psiScore: null,
       };

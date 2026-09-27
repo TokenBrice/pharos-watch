@@ -4,8 +4,8 @@
 
 `0000_baseline.sql` consolidates migrations 0001–0227 into a single idempotent schema creation script.
 
-- **Applied only to fresh databases.** Existing databases continue from their last-applied migration and will never execute the baseline.
-- D1's migration runner tracks applied migrations by filename in its internal ledger, so existing databases that have already applied 0001–0227 will correctly skip 0000.
+- **Intended only for fresh databases.** Existing databases must already record the exact filename `0000_baseline.sql` before using the squashed tree.
+- D1's migration runner selects unapplied migrations by exact filename membership in its ledger. Applied 0001–0227 filenames do not make it skip `0000_baseline.sql`. Before any apply to an existing target, verify that exact ledger row and no pending baseline with the [baseline preflight](../../docs/process/d1-baseline-squash-plan.md#preconditions); otherwise stop for a separately reviewed adoption plan.
 - Fresh databases apply the baseline then any individual migrations from 0228 onward.
 
 **Squash date:** 2026-07-30 (S-03 / P4-01); previous squash 2026-03-25 (S-014) consolidated 0001–0071. On 2026-08-26, the accepted baseline cleanup removed DDL and seed rows for the objects already dropped from production on 2026-07-29 and 2026-08-10; the active 0228+ tail remains unsquashed.
@@ -35,6 +35,8 @@
 | 0246     | `0246_telegram_watcher_lifecycle_events.sql`              | Add privacy-preserving daily watcher transition counters and atomic active-state tracking for real subscribe, unsubscribe, and reactivate analytics. |
 | 0247     | `0247_scheduled_checkpoint_retention_index.sql`           | Add the terminal-state/update-time covering index used by bounded scheduled-checkpoint retention drains. |
 | 0248     | `0248_ddr_publication_sequence_cross_table_unique.sql`    | Guard triggers making ddr_public snapshot_sequence globally unique across the legacy, compressed-v2, and payload-reference publication tables. |
+| 0249     | `0249_dex_volume_availability.sql`                        | Add nullable DEX 24h/7d measured-volume availability records (completeness, reason, partial gross sum, observation-window clock) on current, run-row and history tables; NULL = legacy unknown completeness. |
+| 0251     | `0251_mint_burn_hourly_valuation_completeness.sql`        | Add nullable per-side unpriced counted-event counts to `mint_burn_hourly` (volume/net columns stay known-valuation subtotals; NULL = legacy unknown coverage on sides with counted events) and the partial `idx_mbh_valuation_unrecorded` index for the bounded legacy-bucket rebuild. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -350,6 +352,8 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0246_telegram_watcher_lifecycle_events.sql`: apply before the Worker release that reads lifecycle-event counters. Existing subscriber state is initialized without creating historical events; compatibility triggers then record transitions from both old and new Worker writes. Worker rollback ignores the additive columns/table while trigger capture continues. Removing the capture requires a separate coordinated cleanup rollout.
 - `0247_scheduled_checkpoint_retention_index.sql`: roll back by restoring the prior Worker; keep the additive partial index because it is inert to older Workers and prevents terminal-checkpoint retention scans. Drop it only in a later measured cleanup migration.
 - `0248_ddr_publication_sequence_cross_table_unique.sql`: apply before Worker activation. This is the rollback fence itself: a prior Worker whose allocator ignores `depeg_resolver_publication_snapshot_refs` cannot reuse a sequence a reference row already claimed — its publication batch aborts loudly instead of silently duplicating publication ordering. If such failures appear after a rollback, roll forward to a reference-aware Worker; do not drop the triggers or delete reference rows to work around them.
+- `0249_dex_volume_availability.sql`: apply before the Worker release that reads availability records (CR-05 release A). Worker rollback ignores the additive nullable columns; retain them. If rows written by a DEC-19 producer (CR-11 slice A) exist when rolling back to a pre-0249-reader Worker, that Worker publishes the stored legacy column (the complete sum, or the in-budget partial gross sum) without its completeness label — roll forward rather than dropping the columns. No backfill: legacy rows stay unknown completeness.
+- `0251_mint_burn_hourly_valuation_completeness.sql`: apply before the Worker release that writes and reads hourly valuation completeness (CR-18 release A). Worker rollback ignores the additive nullable columns; retain them. A prior Worker's hourly rewrites leave both columns NULL, so its buckets read back as unknown coverage, never as complete, after roll-forward; the forward Worker re-derives them from retained raw events inside the event-retention window. No SQL backfill: buckets whose raw events were pruned stay unknown.
 
 ## Rollback Procedure
 

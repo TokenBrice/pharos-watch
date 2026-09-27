@@ -36,8 +36,7 @@
     "reserveDisclosureUrl": "https://www.bitgo.com/usd1/attestations/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "USD1 is legally issued by BitGo Trust Company (operating post-conditional-OCC-approval as BitGo Bank & Trust, N.A.); World Liberty Financial Inc. is the brand sponsor/co-founder. In January 2026, WLTC Holdings LLC (a WLFI subsidiary) filed a de novo OCC national trust bank charter application to establish World Liberty Trust Company, N.A., which would take over direct issuance and custody of USD1 if approved. The OCC charter applications are under existing OCC authority: not GENIUS Act PPSI applications. No GENIUS PPSI framework has been finalized; issuer-announced-intent remains the correct status. No token-specific GENIUS PPSI approval, state-qualified approval, or official PPSI application was located.",
+    "notes": "Evidence as of 2026-06-18 review: USD1 is legally issued by BitGo Trust Company (operating post-conditional-OCC-approval as BitGo Bank & Trust, N.A.); World Liberty Financial Inc. is the brand sponsor/co-founder. In January 2026, WLTC Holdings LLC (a WLFI subsidiary) filed a de novo OCC national trust bank charter application to establish World Liberty Trust Company, N.A., which would take over direct issuance and custody of USD1 if approved. The OCC charter applications are under existing OCC authority: not GENIUS Act PPSI applications. No GENIUS PPSI framework has been finalized; issuer-announced-intent remains the correct status. No token-specific GENIUS PPSI approval, state-qualified approval, or official PPSI application was located. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

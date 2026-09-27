@@ -10,7 +10,14 @@ import {
   type ChainlinkPorParams,
 } from "../chainlink-por";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
-import { expectWarnings, expectWarningEffect, runAdapter, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
+import {
+  expectWarnings,
+  expectWarningEffect,
+  resolveAdapterCoin,
+  runAdapter,
+  type AdapterNetworkSpec,
+  type AdapterRpcValue,
+} from "./reserve-adapter.test-support";
 import { makePorCoin, makePorSupply } from "./chainlink-por.test-support";
 const POR_FEED_ENDPOINT = "https://api.backed.fi/graphql";
 const TRON_SUPPLY_ENDPOINT = "https://api.trongrid.io/wallet/triggerconstantcontract";
@@ -26,8 +33,10 @@ interface PorNetworkOptions {
   reserves?: bigint;
   updatedAt: number;
   evmSupply?: Record<string, bigint | null>;
+  tokenDecimals?: Record<string, bigint>;
   tronSupply?: bigint | null;
   circulation?: unknown;
+  block?: { number?: number; timestamp?: number };
 }
 
 function porNetwork(options: PorNetworkOptions): AdapterNetworkSpec {
@@ -38,6 +47,9 @@ function porNetwork(options: PorNetworkOptions): AdapterNetworkSpec {
   const rpc: Record<string, AdapterRpcValue> = {
     [`${feed}:0x313ce567`]: options.feedDecimals ?? 8n,
     [`${feed}:0xfeaf968c`]: encodeLatestRoundData(options.reserves ?? 1_010_00000000n, options.updatedAt),
+    ...Object.fromEntries(
+      Object.entries(options.tokenDecimals ?? {}).map(([address, value]) => [`${address}:0x313ce567`, value]),
+    ),
     "0x18160ddd": (call: { contract: string }) => Object.prototype.hasOwnProperty.call(supply, call.contract)
       ? supply[call.contract]
       : null,
@@ -54,7 +66,7 @@ function porNetwork(options: PorNetworkOptions): AdapterNetworkSpec {
   if (Object.prototype.hasOwnProperty.call(options, "circulation")) {
     json[POR_FEED_ENDPOINT] = options.circulation;
   }
-  return { rpc, ...(Object.keys(json).length > 0 ? { json } : {}) };
+  return { rpc, ...(Object.keys(json).length > 0 ? { json } : {}), ...(options.block ? { block: options.block } : {}) };
 }
 
 function runPor(
@@ -106,6 +118,7 @@ describe("adaptChainlinkPorResponse", () => {
           },
         ],
         omittedNonEvmChains: [],
+        omittedNoRpcChains: [],
         omittedReadFailureChains: [],
       },
     );
@@ -156,6 +169,7 @@ describe("adaptChainlinkPorResponse", () => {
           },
         ],
         omittedNonEvmChains: [],
+        omittedNoRpcChains: [],
         omittedReadFailureChains: [],
       },
     );
@@ -238,14 +252,15 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.warnings?.find((w) => w.code === "por-reserve-over-supply")?.effect).toBe("degraded");
   });
 
-  it("withholds the coverage ratio and reports the gap when the supply scope is declared incomplete", () => {
+  it("withholds the coverage ratio with a not-comparable scope and publishes the declared basis", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 2_567_133_466_000_000_000_000_000n, decimals: 18, roundId: 200n, updatedAt: 1710000000 },
       {
         ...params,
         reserveUnit: "XAU_G",
-        incompleteSupplyScope: {
-          chain: "kinesis",
+        liabilityScope: {
+          basis: "not-comparable",
+          canonicalChain: "kinesis",
           reason: "the Ethereum ERC-20 is a KMS Labs representation of Kinesis-native KAU",
         },
       },
@@ -267,11 +282,15 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2_567_133.466, 3);
     expect(result.metadata?.supplyTokens).toBeCloseTo(1_640_000, 3);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
-    expect(result.metadata?.supplyReadComplete).toBe(true);
-    expect(result.metadata?.supplyCoverageComplete).toBe(false);
-    expect(result.metadata?.supplyScopeIncomplete).toEqual({
-      chain: "kinesis",
-      reason: "the Ethereum ERC-20 is a KMS Labs representation of Kinesis-native KAU",
+    expect(result.metadata).toMatchObject({
+      supplyReadComplete: true,
+      supplyCoverageComplete: false,
+      ratioUnavailableReason: "not-comparable",
+      liabilityScope: {
+        basis: "not-comparable",
+        canonicalChain: "kinesis",
+        reason: "the Ethereum ERC-20 is a KMS Labs representation of Kinesis-native KAU",
+      },
     });
     expectWarnings(result, ["por-supply-scope-incomplete"]);
     expectWarningEffect(result, "por-supply-scope-incomplete", "info");
@@ -279,21 +298,25 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
   });
 
-  it("emits info warning when non-EVM chains are omitted from supply aggregation", () => {
+  it("withholds the ratio when an unscoped roster omits a non-EVM chain", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 100_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
-      makePorSupply({ omittedNonEvmChains: ["tron"] }),
+      makePorSupply({ omittedNonEvmChains: ["solana"] }),
     );
 
     const omitted = result.warnings?.find((w) => w.code === "por-supply-chain-omitted");
-    expect(omitted).toBeDefined();
     expect(omitted?.severity).toBe("info");
-    expect(omitted?.message).toContain("tron");
-    // Reads all succeeded, but coverage is not complete: a registry deployment
-    // was omitted by design rather than read.
-    expect(result.metadata?.supplyReadComplete).toBe(true);
-    expect(result.metadata?.supplyCoverageComplete).toBe(false);
+    expect(omitted?.message).toContain("solana");
+    // Every attempted read succeeded, but the readable subset is not the
+    // liability: no ratio is published from it.
+    expect(result.metadata).toMatchObject({
+      supplyUsd: 1000,
+      supplyReadComplete: true,
+      supplyCoverageComplete: false,
+      ratioUnavailableReason: "liability-scope-unclassified-chain",
+    });
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
   });
 
   it("withholds coverage when any EVM supply source fails", () => {
@@ -307,6 +330,7 @@ describe("adaptChainlinkPorResponse", () => {
       supplyUsd: 1000,
       supplyReadComplete: false,
       supplyCoverageComplete: false,
+      ratioUnavailableReason: "included-supply-read-failed",
     });
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     const warning = result.warnings?.find((w) => w.code === "partial-supply-read-failure");
@@ -424,6 +448,7 @@ describe("adaptChainlinkPorResponse with issuer circulation", () => {
       },
     ],
     omittedNonEvmChains: [],
+    omittedNoRpcChains: [],
     omittedReadFailureChains: [],
   };
 
@@ -519,7 +544,7 @@ describe("fetchChainlinkPorReserves", () => {
     params: baseParams,
   };
 
-  it("sums totalSupply across all configured EVM chains plus Tron for the ratio denominator", async () => {
+  it("withholds the ratio when an unscoped roster has an unreadable non-EVM deployment", async () => {
     const coin = makePorCoin({
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
@@ -543,16 +568,19 @@ describe("fetchChainlinkPorReserves", () => {
 
     expect(network.rpcCalls.filter((call) => call.selector === "0x18160ddd")).toHaveLength(3);
     expect(network.requests.some((request) => request.url === TRON_SUPPLY_ENDPOINT)).toBe(true);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.01, 5);
+    // The readable EVM+Tron subset is published as a diagnostic, but without a
+    // reviewed scope proving Solana is outside the liability it is not a ratio.
     expect(result.metadata?.supplyUsd).toBeCloseTo(1000, 5);
-    expect(result.metadata?.supplyReadComplete).toBe(true);
-    expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
-    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
+    expect(result.metadata).toMatchObject({
+      supplyReadComplete: true,
+      supplyCoverageComplete: false,
+      ratioUnavailableReason: "liability-scope-unclassified-chain",
+    });
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
     const contributions = result.metadata?.supplyContributions as Array<{ chain: string }> | undefined;
     expect(contributions?.some((contribution) => contribution.chain === "tron")).toBe(true);
     expectWarnings(result, ["por-supply-chain-omitted"]);
     expect(result.warnings?.find((warning) => warning.code === "por-supply-chain-omitted")?.message).toContain("solana");
-    expect(result.warnings?.find((warning) => warning.code === "por-supply-chain-omitted")?.message).not.toContain("tron");
   });
 
   it("degrades and withholds coverage when the Tron totalSupply() read fails", async () => {
@@ -732,7 +760,7 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
   });
 
-  it("publishes KAU's declared incomplete supply scope instead of a scope-mismatch degradation", async () => {
+  it("publishes KAU's declared not-comparable scope instead of a scope-mismatch degradation", async () => {
     // Real catalog config for kau-kinesis: the feed answers the audited Kinesis
     // Cayman fine-gold balance (2,567,133.466 g), while the only readable
     // deployment is the Ethereum representation wrapper (1,640,000 totalSupply).
@@ -753,7 +781,11 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2_567_133.466, 3);
     expect(result.metadata?.supplyTokens).toBeCloseTo(1_640_000, 3);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
-    expect(result.metadata?.supplyCoverageComplete).toBe(false);
+    expect(result.metadata).toMatchObject({
+      supplyCoverageComplete: false,
+      ratioUnavailableReason: "not-comparable",
+      liabilityScope: { basis: "not-comparable", canonicalChain: "kinesis" },
+    });
     expectWarningEffect(result, "por-supply-scope-incomplete", "info");
     expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
@@ -780,6 +812,7 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.warnings?.some((w) => w.code === "partial-supply-read-failure")).not.toBe(true);
     expect(result.metadata?.supplyReadComplete).toBe(true);
     expect(result.metadata?.supplyCoverageComplete).toBe(false);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
   });
 
   it("treats a zero totalSupply read as a valid empty deployment, not a read failure", async () => {
@@ -861,6 +894,122 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.warnings?.find((w) => w.code === "por-reserve-over-supply")).toBeUndefined();
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "por-circulation-freshness-unverified", effect: "degraded" }));
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
+  });
+});
+
+// TUSD reviewed liability scope, raw values read 2026-09-27 (Moore report as of
+// 08:30:30Z; Chainlink TUSD Reserves feed updatedAt 04:00:47Z; supply reads
+// around 20:43:47Z). Moore attests 501,928,900.88 reserves against exactly
+// 494,515,082.75 issued TUSD on Ethereum, Tron, BNB Chain and Avalanche.
+describe("fetchChainlinkPorReserves with TUSD's reviewed liability scope", () => {
+  const TUSD_FEED = "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5";
+  const FEED_UPDATED_AT = 1_790_481_647;
+  const SUPPLY_READ_AT = 1_790_541_827;
+  const RESERVES = 501_928_900_880_000_000_000_000_000n;
+  const NATIVE_SUPPLY = {
+    "0x0000000000085d4780b73119b644ae5ecd22b376": 315_125_540_952_349_698_425_178_789n,
+    "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9": 10_030_363_880_000_000_000_000_000n,
+    "0x1c20e891bab6b1727d14da358fae2984ed9b59eb": 845_723_780_000_000_000_000_000n,
+  } as const;
+  const TRON_SUPPLY = 168_513_454_137_650_301_574_821_211n;
+  const BRIDGED_SUPPLY = {
+    "0x2e1ad108ff1d8c782fcbbb89aad783ac49586756": 183_788_690_903_223_656_091_095n,
+    "0x4d15a3a2286d883af0aa1b3f21367843fac63e07": 164_752_318_710_295_684_303_626n,
+    "0xcb59a0a753fdb7491d5f3d794316f1ade197b21e": 4_874_232_760_387_043_201_513n,
+    "0x9879abdea01a879644185341f7af7d8343556b7a": 466_468_532_660_924_841_124_161n,
+  } as const;
+  const EXPECTED_SUPPLY = 494_515_082.75;
+  const EXPECTED_RATIO = 501_928_900.88 / 494_515_082.75;
+
+  function tusdNetwork(options: { tronSupply?: bigint | null; withBridgedReads?: boolean } = {}) {
+    const evmSupply: Record<string, bigint> = {
+      ...NATIVE_SUPPLY,
+      ...(options.withBridgedReads ? BRIDGED_SUPPLY : {}),
+    };
+    return porNetwork({
+      feedAddress: TUSD_FEED,
+      feedDecimals: 18n,
+      updatedAt: FEED_UPDATED_AT,
+      reserves: RESERVES,
+      evmSupply,
+      tokenDecimals: Object.fromEntries(Object.keys(evmSupply).map((address) => [address, 18n])),
+      tronSupply: options.tronSupply === undefined ? TRON_SUPPLY : options.tronSupply,
+      block: { number: 26_071_248, timestamp: SUPPLY_READ_AT },
+    });
+  }
+
+  it.each([false, true])("divides Moore's reserves by native-chain supply only (bridged reads answered=%s)", async (withBridgedReads) => {
+    const { result, network } = await runAdapter("chainlink-por", "tusd-trueusd", {
+      nowSec: SUPPLY_READ_AT,
+      network: tusdNetwork({ withBridgedReads }),
+    });
+
+    expect(result.metadata?.supplyUsd).toBeCloseTo(EXPECTED_SUPPLY, 2);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(EXPECTED_RATIO, 7);
+    // Regression guard: adding the 819,883.78 bridged TUSD gave 1.0133121.
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1.0149);
+    expect(result.metadata).toMatchObject({
+      supplyReadComplete: true,
+      supplyCoverageComplete: true,
+      reserveObservedAt: FEED_UPDATED_AT,
+      supplyObservedAt: { min: SUPPLY_READ_AT, max: SUPPLY_READ_AT },
+      ratioSkewSec: SUPPLY_READ_AT - FEED_UPDATED_AT,
+      liabilityScope: {
+        basis: "issuer-native-supply",
+        includedChains: ["ethereum", "tron", "bsc", "avalanche"],
+        unclassifiedChains: [],
+        failedChains: [],
+        maxReserveSupplySkewSec: 172_800,
+      },
+    });
+    const scope = result.metadata?.liabilityScope as { excludedChains: Array<{ chain: string }> };
+    expect(scope.excludedChains.map((entry) => entry.chain)).toEqual(["polygon", "arbitrum", "optimism", "fantom", "near"]);
+    expect(result.metadata?.ratioUnavailableReason).toBeUndefined();
+    expect(result.warnings).toBeUndefined();
+    const supplyReads = network.rpcCalls.filter((call) => call.selector === "0x18160ddd").map((call) => call.contract).sort();
+    expect(supplyReads).toEqual(Object.keys(NATIVE_SUPPLY).sort());
+  });
+
+  it("withholds the ratio, never zero-filling, when an included Tron read fails", async () => {
+    const { result } = await runAdapter("chainlink-por", "tusd-trueusd", {
+      nowSec: SUPPLY_READ_AT,
+      network: tusdNetwork({ tronSupply: null }),
+    });
+
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      supplyReadComplete: false,
+      supplyCoverageComplete: false,
+      ratioUnavailableReason: "included-supply-read-failed",
+      liabilityScope: { failedChains: [{ chain: "tron", reason: "totalSupply() read failed" }] },
+    });
+    expect((result.metadata?.supplyContributions as Array<{ chain: string }>).map((entry) => entry.chain).sort())
+      .toEqual(["avalanche", "bsc", "ethereum"]);
+    expectWarningEffect(result, "partial-supply-read-failure", "degraded");
+  });
+
+  it("withholds the ratio when the catalog gains a chain the scope does not classify", async () => {
+    const { result, network, coin } = await runAdapter("chainlink-por", "tusd-trueusd", {
+      nowSec: SUPPLY_READ_AT,
+      network: tusdNetwork(),
+      coin: {
+        contracts: [
+          ...(resolveAdapterCoin("chainlink-por", "tusd-trueusd").coin.contracts ?? []),
+          { chain: "base", address: "0x00000000000000000000000000000000000000b5", decimals: 18 },
+        ],
+      },
+    });
+
+    expect(coin.contracts?.some((contract) => contract.chain === "base")).toBe(true);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.supplyUsd).toBeCloseTo(EXPECTED_SUPPLY, 2);
+    expect(result.metadata).toMatchObject({
+      supplyCoverageComplete: false,
+      ratioUnavailableReason: "liability-scope-unclassified-chain",
+      liabilityScope: { unclassifiedChains: ["base"] },
+    });
+    expectWarningEffect(result, "por-liability-scope-unclassified", "degraded");
+    expect(network.rpcCalls.some((call) => call.contract === "0x00000000000000000000000000000000000000b5")).toBe(false);
   });
 });
 

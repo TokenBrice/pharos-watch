@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { bluechipObservationLabel } from "@shared/lib/bluechip-freshness";
 import { memo, useMemo, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
@@ -12,6 +14,7 @@ import {
   formatBps,
   formatNativePrice,
   formatPercent,
+  formatPegOccupancy,
   formatPercentFromRatio,
   formatScore,
   formatSignedCurrency,
@@ -22,7 +25,7 @@ import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { projectTopDriver } from "@shared/lib/safety-score-v9/public";
 import {
-  getCirculatingRaw,
+  getCirculatingRawOrNull,
   getPrevDayRawOrNull,
   getPrevMonthRawOrNull,
   getPrevWeekRawOrNull,
@@ -42,6 +45,35 @@ import { resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
+import { FlowSignedNetValue } from "@/components/flow-valuation-value";
+import {
+  resolveCoinNetFlow,
+  resolvePressureScore,
+  resolvePressureState,
+  resolvePressureUnavailableNote,
+  type MintBurnNetWindow,
+} from "@/lib/mint-burn-coin-helpers";
+
+/** Signed flow net gated by valuation completeness: unavailable renders the placeholder, never $0. */
+function renderFlowNet(coin: ComparisonCoinEntry, window: MintBurnNetWindow): ReactNode {
+  return coin.flow
+    ? <FlowSignedNetValue net={resolveCoinNetFlow(coin.flow, window)} format={formatSignedCurrency} />
+    : NULL_VALUE;
+}
+
+function renderFlowPressure(coin: ComparisonCoinEntry): ReactNode {
+  if (!coin.flow) return NULL_VALUE;
+  const unavailableNote = resolvePressureUnavailableNote(coin.flow);
+  if (unavailableNote) {
+    return (
+      <span className="text-muted-foreground" title={unavailableNote}>
+        NR<span className="sr-only"> ({unavailableNote})</span>
+      </span>
+    );
+  }
+  const score = resolvePressureScore(coin.flow);
+  return `${humanizeSafetyScoreV9Value(resolvePressureState(coin.flow))}${score != null ? ` · ${formatScore(score, { trimInteger: true })}` : ""}`;
+}
 
 interface ComparisonTableProps {
   coins: ComparisonCoinEntry[];
@@ -87,9 +119,15 @@ function formatScore100(value: number | null | undefined): ReactNode {
   return value == null ? NULL_VALUE : `${formatScore(value, { trimInteger: true })}/100`;
 }
 
+function formatCurrentSupply(coin: ComparisonCoinEntry): ReactNode {
+  const current = getCirculatingRawOrNull(coin.data);
+  return current == null ? NULL_VALUE : formatCurrency(current);
+}
+
 function formatSupplyChange(coin: ComparisonCoinEntry, previous: number | null): ReactNode {
-  const current = getCirculatingRaw(coin.data);
-  if (previous == null || previous <= 0) return NULL_VALUE;
+  // Both operands must be observed: a missing current supply is not a -100% change.
+  const current = getCirculatingRawOrNull(coin.data);
+  if (current == null || previous == null || previous <= 0) return NULL_VALUE;
   return formatSignedPercent(((current - previous) / previous) * 100);
 }
 
@@ -158,12 +196,12 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
           numeric: true,
           render: (coin) => {
             const ref = getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
-            return formatNativePrice(coin.data.price, coin.meta.flags.pegCurrency, ref);
+            return formatNativePrice(isObservedPrice(coin.data) ? coin.data.price : null, coin.meta.flags.pegCurrency, ref);
           },
         },
-        { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatComparisonBps(coin.pegDetails?.currentDeviationBps) },
+        { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatComparisonBps(isObservedPrice(coin.data) ? coin.pegDetails?.currentDeviationBps : null) },
         { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.pegDetails?.pegScore) },
-        { key: "market-cap", label: "Market cap", numeric: true, render: (coin) => formatCurrency(getCirculatingRaw(coin.data)) },
+        { key: "market-cap", label: "Market cap", numeric: true, render: formatCurrentSupply },
         { key: "supply-24h", label: "Supply change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
         { key: "supply-7d", label: "Supply change · 7d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevWeekRawOrNull(coin.data)) },
         { key: "supply-30d", label: "Supply change · 30d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevMonthRawOrNull(coin.data)) },
@@ -183,8 +221,8 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
       title: "Peg Track Record",
       description: "Current stress plus the reviewed observation window behind Peg Score.",
       metrics: [
-        { key: "active-depeg", label: "Current state", render: (coin) => coin.pegDetails ? (coin.pegDetails.activeDepeg ? "Active depeg" : "At peg") : NULL_VALUE },
-        { key: "peg-90d", label: "At peg · 90d", numeric: true, render: (coin) => coin.pegDetails?.recent90d ? formatPercent(coin.pegDetails.recent90d.pegPct) : NULL_VALUE },
+        { key: "active-depeg", label: "Open recorded incident", render: (coin) => coin.pegDetails ? (coin.pegDetails.activeDepeg ? "Yes" : "No") : NULL_VALUE },
+        { key: "peg-90d", label: "At peg · 90d", numeric: true, render: (coin) => coin.pegDetails?.recent90d ? formatPegOccupancy(coin.pegDetails.recent90d.pegPct) : NULL_VALUE },
         { key: "incidents-90d", label: "Incidents · 90d", numeric: true, render: (coin) => coin.pegDetails?.recent90d ? formatCount(coin.pegDetails.recent90d.incidentCount, "incident") : NULL_VALUE },
         { key: "worst-deviation", label: "Worst deviation", numeric: true, render: (coin) => formatComparisonBps(coin.pegDetails?.worstDeviationBps) },
         { key: "event-count", label: "Recorded incidents", numeric: true, render: (coin) => coin.pegDetails ? formatCount(coin.pegDetails.eventCount, "incident") : NULL_VALUE },
@@ -228,7 +266,8 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
               : coin.bluechipRating.smartContractAudit
                 ? "audit recorded"
                 : "no audit flag";
-            return `${coin.bluechipRating.grade} · ${audit}`;
+            const observationLabel = bluechipObservationLabel(coin.bluechipRating, Math.floor(Date.now() / 1000));
+            return `${coin.bluechipRating.grade} · ${audit}${observationLabel ? ` · ${observationLabel}` : ""}`;
           },
         },
       ],
@@ -239,7 +278,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
       description: "Venue depth and the primary redemption route are shown separately, not blended.",
       metrics: [
         { key: "effective-tvl", label: "Effective DEX TVL", numeric: true, render: (coin) => coin.liquidity ? formatCurrency(coin.liquidity.effectiveTvlUsd) : NULL_VALUE },
-        { key: "volume-24h", label: "DEX volume · 24h", numeric: true, render: (coin) => coin.liquidity ? formatCurrency(coin.liquidity.totalVolume24hUsd) : NULL_VALUE },
+        { key: "volume-24h", label: "DEX volume · 24h", numeric: true, render: (coin) => coin.liquidity?.totalVolume24hUsd != null ? formatCurrency(coin.liquidity.totalVolume24hUsd) : NULL_VALUE },
         { key: "venues", label: "Pools / chains", numeric: true, render: (coin) => coin.liquidity ? `${coin.liquidity.poolCount} / ${coin.liquidity.chainCount}` : NULL_VALUE },
         { key: "dex-evidence", label: "Liquidity evidence", render: (coin) => humanize(coin.liquidity?.liquidityEvidenceClass) },
         { key: "concentration", label: "Venue concentration", numeric: true, render: (coin) => coin.liquidity?.concentrationHhi != null ? formatPercent(coin.liquidity.concentrationHhi * 100, 0) : NULL_VALUE },
@@ -257,11 +296,11 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
       description: "Directional issuance and yield context; larger values are not treated as automatically better.",
       metrics: [
         { key: "dews", label: "DEWS", numeric: true, render: (coin) => coin.stress ? `${coin.stress.band} · ${formatScore(coin.stress.score, { trimInteger: true })}` : NULL_VALUE },
-        { key: "pressure", label: "Pressure Shift", numeric: true, render: (coin) => coin.flow?.pressureShiftState ? `${humanizeSafetyScoreV9Value(coin.flow.pressureShiftState)}${coin.flow.pressureShiftScore != null ? ` · ${formatScore(coin.flow.pressureShiftScore, { trimInteger: true })}` : ""}` : NULL_VALUE },
-        { key: "flow-24h", label: "Net flow · 24h", numeric: true, render: (coin) => coin.flow ? formatSignedCurrency(coin.flow.netFlow24hUsd) : NULL_VALUE },
-        { key: "flow-7d", label: "Net flow · 7d", numeric: true, render: (coin) => coin.flow ? formatSignedCurrency(coin.flow.netFlow7dUsd) : NULL_VALUE },
-        { key: "flow-30d", label: "Net flow · 30d", numeric: true, render: (coin) => coin.flow ? formatSignedCurrency(coin.flow.netFlow30dUsd) : NULL_VALUE },
-        { key: "flow-90d", label: "Net flow · 90d", numeric: true, render: (coin) => coin.flow ? formatSignedCurrency(coin.flow.netFlow90dUsd) : NULL_VALUE },
+        { key: "pressure", label: "Pressure Shift", numeric: true, render: renderFlowPressure },
+        { key: "flow-24h", label: "Net flow · 24h", numeric: true, render: (coin) => renderFlowNet(coin, "24h") },
+        { key: "flow-7d", label: "Net flow · 7d", numeric: true, render: (coin) => renderFlowNet(coin, "7d") },
+        { key: "flow-30d", label: "Net flow · 30d", numeric: true, render: (coin) => renderFlowNet(coin, "30d") },
+        { key: "flow-90d", label: "Net flow · 90d", numeric: true, render: (coin) => renderFlowNet(coin, "90d") },
         { key: "apy-30d", label: "APY · 30d", numeric: true, render: (coin) => coin.yield ? formatPercent(coin.yield.apy30d) : NULL_VALUE },
         { key: "excess-yield", label: "Excess yield", numeric: true, render: (coin) => coin.yield ? formatSignedPercent(coin.yield.excessYield) : NULL_VALUE },
         { key: "pys", label: "Pharos Yield Score", numeric: true, render: (coin) => formatScore100(coin.yield?.pharosYieldScore) },

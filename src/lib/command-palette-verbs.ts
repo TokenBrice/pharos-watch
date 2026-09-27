@@ -202,7 +202,9 @@ const SCREEN_TOKEN_MAP: Record<string, ScreenTokenMapping> = {
       const n = Number(value);
       if (!Number.isFinite(n)) return [];
       if (op === "gte") return [["supplyMin", String(n)]];
-      if (op === "lte") return [["supplyMax", String(n)]];
+      // The screener reads `supplyMax=0` as "no maximum", so a non-positive
+      // ceiling cannot be represented; drop it rather than widen to every row.
+      if (op === "lte") return n > 0 ? [["supplyMax", String(n)]] : [];
       return [];
     },
   },

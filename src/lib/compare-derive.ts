@@ -23,6 +23,14 @@ import type {
   V9ConsumerIdentity,
 } from "@/lib/safety-score-v9-consumers";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
+import {
+  resolveCoinNetFlow,
+  resolveNetDirection,
+  resolvePressureScore,
+  resolvePressureState,
+  resolvePressureUnavailableNote,
+} from "@/lib/mint-burn-coin-helpers";
+import type { MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
 import type { CompareRadarCohort } from "@/components/radar-chart-v9";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
@@ -76,16 +84,24 @@ export interface FlowSeriesEntry {
   id: string;
   label: string;
   color: string;
+  /** Hours whose net is available; null or partial-valuation hours are omitted (missing points, never 0). */
   data: { ts: number; netFlowUsd: number }[];
+  /** Hourly buckets omitted because their signed net is unavailable. */
+  unavailableHours: number;
+  /** Plotted hours aggregated before valuation completeness was recorded (coverage unknown). */
+  unknownCoverageHours: number;
 }
 
 export interface FlowCardEntry {
   id: string;
   symbol: string;
   color: string;
-  netFlow24hUsd: number;
+  netFlow24h: MintBurnSignedNetView;
   pressureShiftScore: number | null;
-  netFlowDirection24h: NetFlowDirection24h;
+  /** Set when partial valuation withholds the pressure shift. */
+  pressureUnavailableNote: string | null;
+  /** `null` when missing valuation leaves the 24h direction unproven. */
+  netFlowDirection24h: NetFlowDirection24h | null;
   pressureShiftState: PressureShiftState;
 }
 
@@ -245,11 +261,20 @@ export function deriveFlowSeries({
       const detail = flowDetails[index];
       if (!detail?.hourly?.length) return null;
       const meta = metaMap.get(id);
+      const data: FlowSeriesEntry["data"] = [];
+      let unknownCoverageHours = 0;
+      for (const bucket of detail.hourly) {
+        if (bucket.netFlowUsd == null || bucket.valuation === "partial") continue;
+        data.push({ ts: bucket.hourTs * 1000, netFlowUsd: bucket.netFlowUsd });
+        if (bucket.valuation !== "complete") unknownCoverageHours += 1;
+      }
       return {
         id,
         label: meta?.symbol ?? id,
         color: COMPARE_COLORS[index % COMPARE_COLORS.length],
-        data: detail.hourly.map((bucket) => ({ ts: bucket.hourTs * 1000, netFlowUsd: bucket.netFlowUsd })),
+        data,
+        unavailableHours: detail.hourly.length - data.length,
+        unknownCoverageHours,
       };
     })
     .filter((series): series is NonNullable<typeof series> => series != null);
@@ -277,10 +302,11 @@ export function deriveFlowCardData({
         id,
         symbol: meta?.symbol ?? id,
         color: COMPARE_COLORS[index % COMPARE_COLORS.length],
-        netFlow24hUsd: coin.netFlow24hUsd,
-        pressureShiftScore: coin.pressureShiftScore ?? null,
-        netFlowDirection24h: coin.netFlowDirection24h ?? "inactive",
-        pressureShiftState: coin.pressureShiftState ?? "nr",
+        netFlow24h: resolveCoinNetFlow(coin, "24h"),
+        pressureShiftScore: resolvePressureScore(coin) ?? null,
+        pressureUnavailableNote: resolvePressureUnavailableNote(coin),
+        netFlowDirection24h: resolveNetDirection(coin),
+        pressureShiftState: resolvePressureState(coin),
       };
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry != null);

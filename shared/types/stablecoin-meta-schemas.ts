@@ -150,8 +150,17 @@ export const ProofOfReservesSchema = z
     attestorLicense: z.string().optional(),
     latestReport: z
       .object({
-        periodEnd: StrictIsoDateSchema,
-        publishedAt: StrictIsoDateSchema,
+        // Omit either date when the cited evidence does not establish its meaning.
+        periodEnd: StrictIsoDateSchema.optional(),
+        publishedAt: StrictIsoDateSchema.optional(),
+        reviewReference: z
+          .object({
+            date: StrictIsoDateSchema,
+            reviewedAt: ReviewDateSchema,
+            dateKind: z.literal("unspecified"),
+          })
+          .strict()
+          .optional(),
         assuranceMethod: z.enum(PROOF_ASSURANCE_METHOD_VALUES),
         scope: z.enum(PROOF_ASSURANCE_SCOPE_VALUES),
         liabilityReconciliation: z.enum(LIABILITY_RECONCILIATION_VALUES),
@@ -161,7 +170,13 @@ export const ProofOfReservesSchema = z
       })
       .strict()
       .superRefine((report, ctx) => {
-        if (report.publishedAt < report.periodEnd) {
+        if (report.periodEnd == null && report.publishedAt == null && report.reviewReference == null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "latestReport requires a sourced date or an explicitly uncertain review reference",
+          });
+        }
+        if (report.publishedAt != null && report.periodEnd != null && report.publishedAt < report.periodEnd) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "latestReport publishedAt cannot precede periodEnd",

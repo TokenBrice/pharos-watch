@@ -107,7 +107,14 @@ function assuranceFact(
   meta: MechanismMeta,
 ): V9MechanismFactV1 {
   const report = meta.proofOfReserves?.latestReport;
-  if (!report) return boundedFact("assurance-and-reconciliation", meta.proofOfReserves !== undefined);
+  if (
+    !report?.periodEnd ||
+    !report.publishedAt ||
+    report.assuranceMethod === "unknown" ||
+    report.scope === "unknown"
+  ) {
+    return boundedFact("assurance-and-reconciliation", meta.proofOfReserves !== undefined);
+  }
   const reportPeriodEndSec = isoDateStartSec(
     report.periodEnd,
     fixedInput.clockSec,

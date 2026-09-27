@@ -392,7 +392,7 @@ describe("api contract validation policy", () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     const fetchSpy = mockJsonOnce({ ok: true });
 
-    await apiRequest("/api/api-key-requests", { method: "POST" });
+    await apiRequest("/api/api-key-requests", (response) => response.json(), { method: "POST" });
 
     expect(fetchSpy.mock.calls[0]?.[0]).toBe("/api/api-key-requests");
   });
@@ -403,7 +403,7 @@ describe("api contract validation policy", () => {
     const fetchSpy = mockAbortableFetch(new DOMException("caller aborted", "AbortError"));
     const controller = new AbortController();
 
-    const requestPromise = apiRequest("/api/stablecoins", { signal: controller.signal });
+    const requestPromise = apiRequest("/api/stablecoins", (response) => response.json(), { signal: controller.signal });
     const rejection = expect(requestPromise).rejects.toMatchObject({
       name: "AbortError",
       message: "caller aborted",
@@ -429,6 +429,7 @@ describe("api contract validation policy", () => {
 
     const pending = apiRequest(
       "/api/stablecoins",
+      (response) => response.json(),
       { signal: initController.signal },
       { signal: optionsController.signal, timeoutMs: null },
     );
@@ -444,7 +445,7 @@ describe("api contract validation policy", () => {
     vi.useFakeTimers();
     mockAbortableFetch(new DOMException("timed out", "TimeoutError"));
 
-    const requestPromise = apiRequest("/api/stablecoins");
+    const requestPromise = apiRequest("/api/stablecoins", (response) => response.json());
     const rejection = expect(requestPromise).rejects.toMatchObject({
       name: "TimeoutError",
       message: `API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS}ms`,
@@ -478,7 +479,7 @@ describe("api contract validation policy", () => {
         }),
     );
 
-    const pending = apiRequest("/api/stablecoins", undefined, { timeoutMs: Number.NaN });
+    const pending = apiRequest("/api/stablecoins", (response) => response.json(), undefined, { timeoutMs: Number.NaN });
     const rejection = expect(pending).rejects.toMatchObject({
       name: "TimeoutError",
       message: `API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS}ms`,
@@ -616,6 +617,21 @@ describe("api contract validation policy", () => {
     });
     expect(result.meta).not.toHaveProperty("updatedAt");
     expect(result.meta).not.toHaveProperty("ageSeconds");
+  });
+
+  it.each(["stale", "unknown"] as const)("preserves %s producer authority from body and header metadata", async (status) => {
+    const metadata = { updatedAt: null, ageSeconds: null, status, reason: "producer-history-missing" };
+    for (const bodyMetadata of [true, false]) {
+      mockJsonOnce({ ok: true, ...(bodyMetadata ? { _meta: metadata } : {}) }, 200, {
+        "X-Data-Age": "unavailable",
+        "X-Data-Freshness": status,
+        "X-Data-Freshness-Reason": metadata.reason,
+        Warning: '199 - "Producer authority unavailable"',
+      });
+      const result = await apiFetchWithMeta("/api/events", z.object({ ok: z.boolean() }));
+      expect(result.data).toEqual({ ok: true });
+      expect(result.meta).toEqual({ ...metadata, warning: '199 - "Producer authority unavailable"' });
+    }
   });
 
   it("combines warning-only body metadata with a header-derived producer clock", async () => {

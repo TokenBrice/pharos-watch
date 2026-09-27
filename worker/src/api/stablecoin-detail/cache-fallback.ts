@@ -2,7 +2,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import type { DetailResponseHelpers } from "./shared";
+import { buildNativeSupplyBuckets, type DetailResponseHelpers } from "./shared";
 
 function buildCacheFallbackToken(
   date: number,
@@ -18,9 +18,7 @@ function buildCacheFallbackToken(
   return {
     date,
     totalCirculatingUSD: circulatingUsd,
-    totalCirculating: {
-      [pegType]: price && price > 0 ? supplyUsd / price : 0,
-    },
+    totalCirculating: buildNativeSupplyBuckets(pegType, supplyUsd, price),
   };
 }
 

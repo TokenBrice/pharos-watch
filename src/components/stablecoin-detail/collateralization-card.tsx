@@ -16,6 +16,8 @@ interface CollateralizationCardProps {
   liveLiquidationCapacityRatio?: number | null;
   liveAtSec?: number | null;
   liveFreshnessLabel?: string;
+  liveBalanceSheetScope?: "shared-sky-maker";
+  liveSharedBookAssetIds?: readonly string[];
 }
 
 function formatRatioPct(ratio: number): string {
@@ -49,6 +51,8 @@ export function CollateralizationCard({
   liveLiquidationCapacityRatio = null,
   liveAtSec = null,
   liveFreshnessLabel,
+  liveBalanceSheetScope,
+  liveSharedBookAssetIds,
 }: CollateralizationCardProps) {
   const live = typeof liveRatio === "number" && Number.isFinite(liveRatio) && liveRatio >= 0 ? liveRatio : null;
   const liveBackstop =
@@ -63,6 +67,10 @@ export function CollateralizationCard({
   const liquidationCapacityRatio = liveBackstop ?? reviewed?.liquidationCapacityRatio ?? null;
   const hasLiveMetrics = live != null || liveBackstop != null;
   const coverage = headlineRatio != null ? coverageLabel(headlineRatio) : null;
+  const showsSharedSkyBook = live != null
+    && liveBalanceSheetScope === "shared-sky-maker"
+    && liveSharedBookAssetIds?.includes("dai-makerdao")
+    && liveSharedBookAssetIds.includes("usds-sky");
 
   // Header slot carries status only (owner ruling 2026-08-11): the coverage
   // chip moves up from the body, and freshness — the live stamp or the
@@ -107,6 +115,12 @@ export function CollateralizationCard({
             ) : null}
           </>
         )}
+        {showsSharedSkyBook ? (
+          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+            Ratio covers the shared Sky/Maker balance sheet backing DAI and USDS.
+            Shared reserves are not additive across these assets.
+          </p>
+        ) : null}
       </div>
 
       {liquidationCapacityRatio != null ? (

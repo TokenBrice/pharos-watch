@@ -502,6 +502,7 @@ export async function readRpcParityStore(db: D1Database, signal?: AbortSignal): 
 
 export interface RpcParityStoreWrite {
   ok: boolean;
+  published: boolean;
   runs: number;
   bytes: number;
   droppedOldest: number;
@@ -526,6 +527,7 @@ export async function recordRpcParityRun(
   } catch (error) {
     return {
       ok: false,
+      published: false,
       runs: merged.row.runs.length,
       bytes: merged.bytes,
       droppedOldest: merged.droppedOldest,
@@ -536,6 +538,7 @@ export async function recordRpcParityRun(
   const readError = existing.error;
   return {
     ok: readError === null,
+    published: true,
     runs: merged.row.runs.length,
     bytes: merged.bytes,
     droppedOldest: merged.droppedOldest,

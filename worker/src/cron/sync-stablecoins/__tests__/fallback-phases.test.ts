@@ -30,6 +30,7 @@ const fallbackMocks = vi.hoisted(() => ({
     cacheKey: "stablecoins",
     syncStartSec,
     responseReadyCacheError: null,
+    quarantinedAssets: [],
   })),
   commitReplayPriceCache: vi.fn(async (..._args: unknown[]) => null),
   fillMissingSupplyHistory: vi.fn(async (..._args: unknown[]) => 0),

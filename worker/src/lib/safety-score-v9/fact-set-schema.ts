@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { compareCodeUnits } from "@shared/lib/compare";
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { isRecord } from "@shared/lib/type-guards";
 import { canonicalV9DependencyEdgeKey } from "@shared/lib/safety-score-v9/facts";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -375,6 +378,21 @@ const WrapperCustodyReviewSchema = z
   })
   .strict();
 
+/**
+ * Asset-local admission failure. A baseline producer or extension validator
+ * that cannot build or admit one asset's local overlay replaces it with a
+ * conservative stub carrying this marker; compilation then quarantines the
+ * asset to producer-failed NR instead of rejecting the cohort (R8).
+ */
+const AssetAdmissionQuarantineSchema = z
+  .object({
+    code: z.enum(["fact-build-failed", "fact-validation-failed"]),
+    path: CanonicalTextSchema,
+    message: z.string().min(1).max(500),
+  })
+  .strict();
+export type SafetyScoreV9AssetAdmissionQuarantine = z.infer<typeof AssetAdmissionQuarantineSchema>;
+
 const AssetExtensionSchema = z
   .object({
     assetId: CanonicalTextSchema,
@@ -433,6 +451,7 @@ const AssetExtensionSchema = z
     wrapperAllocationReview: SafetyScoreV9WrapperAllocationReviewSchema.nullable().optional(),
     researchEvidence: canonicalArrayBy(ResearchEvidenceSchema, (evidence) => evidence.evidenceKey).default([]),
     componentEvidence: canonicalArrayBy(ComponentEvidenceBindingSchema, (binding) => binding.componentKey).default([]),
+    admissionQuarantine: AssetAdmissionQuarantineSchema.optional(),
   })
   .strict()
   .superRefine((asset, ctx) => {
@@ -468,66 +487,194 @@ const AssetExtensionSchema = z
     }
   });
 
+type AdmittedAssetExtension = z.infer<typeof AssetExtensionSchema>;
+
+interface AssetClockIssue {
+  path: (string | number)[];
+  message: string;
+}
+
+/** Point-in-time admission checks of one asset against the extension clock. */
+function assetExtensionClockIssues(asset: AdmittedAssetExtension, compiledAtSec: number): AssetClockIssue[] {
+  const issues: AssetClockIssue[] = [];
+  if (asset.operationalResilience !== undefined && asset.operationalResilience !== null) {
+    const reviewedAtSec = Date.parse(asset.operationalResilience.reviewedAt) / 1_000;
+    const expiresAtSec = Date.parse(asset.operationalResilience.expiresAt) / 1_000;
+    if (!(reviewedAtSec <= compiledAtSec && compiledAtSec < expiresAtSec)) {
+      issues.push({
+        path: ["operationalResilience"],
+        message: "Operational-resilience overlay is outside its exact review window",
+      });
+    }
+  }
+  for (let evidenceIndex = 0; evidenceIndex < asset.researchEvidence.length; evidenceIndex += 1) {
+    const evidence = asset.researchEvidence[evidenceIndex]!;
+    if (evidence.observedAtSec > compiledAtSec) {
+      issues.push({
+        path: ["researchEvidence", evidenceIndex, "observedAtSec"],
+        message: "Research evidence observation cannot be later than the extension clock",
+      });
+    }
+    if (evidence.publishedAtSec !== null && evidence.publishedAtSec > compiledAtSec) {
+      issues.push({
+        path: ["researchEvidence", evidenceIndex, "publishedAtSec"],
+        message: "Research evidence publication cannot be later than the extension clock",
+      });
+    }
+  }
+  return issues;
+}
+
+const ExtensionEnvelopeShape = {
+  schemaVersion: z.literal(2),
+  registryFingerprint: Sha256Schema,
+  compiledAtSec: UnixSecondsSchema,
+  sources: z
+    .object({
+      registryObservedAtSec: UnixSecondsSchema,
+      unavailableRedemptionObservedAtSec: UnixSecondsSchema,
+      liveReserves: SourceClockSchema,
+      chainSupply: SourceClockSchema,
+      peg: SourceClockSchema,
+      researchOverlays: SourceClockSchema,
+    })
+    .strict(),
+  routeFreshness: z
+    .object({
+      dexMaxAgeSec: z.number().int().nonnegative(),
+      redemptionMaxAgeSec: z.number().int().nonnegative(),
+      documentedTermsMaxAgeSec: z.number().int().nonnegative(),
+    })
+    .strict(),
+};
+const EMPTY_EXTENSION_MESSAGE = "Safety Score v9 extension requires at least one asset";
+
 export const SafetyScoreV9FactSetExtensionV2Schema = z
   .object({
-    schemaVersion: z.literal(2),
-    registryFingerprint: Sha256Schema,
-    compiledAtSec: UnixSecondsSchema,
-    sources: z
-      .object({
-        registryObservedAtSec: UnixSecondsSchema,
-        unavailableRedemptionObservedAtSec: UnixSecondsSchema,
-        liveReserves: SourceClockSchema,
-        chainSupply: SourceClockSchema,
-        peg: SourceClockSchema,
-        researchOverlays: SourceClockSchema,
-      })
-      .strict(),
-    routeFreshness: z
-      .object({
-        dexMaxAgeSec: z.number().int().nonnegative(),
-        redemptionMaxAgeSec: z.number().int().nonnegative(),
-        documentedTermsMaxAgeSec: z.number().int().nonnegative(),
-      })
-      .strict(),
+    ...ExtensionEnvelopeShape,
     assets: canonicalArrayBy(AssetExtensionSchema, (asset) => asset.assetId).refine((assets) => assets.length > 0, {
-      message: "Safety Score v9 extension requires at least one asset",
+      message: EMPTY_EXTENSION_MESSAGE,
     }),
   })
   .strict()
   .superRefine((extension, ctx) => {
     for (let assetIndex = 0; assetIndex < extension.assets.length; assetIndex += 1) {
-      const asset = extension.assets[assetIndex]!;
-      if (asset.operationalResilience !== undefined && asset.operationalResilience !== null) {
-        const reviewedAtSec = Date.parse(asset.operationalResilience.reviewedAt) / 1_000;
-        const expiresAtSec = Date.parse(asset.operationalResilience.expiresAt) / 1_000;
-        if (!(reviewedAtSec <= extension.compiledAtSec && extension.compiledAtSec < expiresAtSec)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["assets", assetIndex, "operationalResilience"],
-            message: "Operational-resilience overlay is outside its exact review window",
-          });
-        }
-      }
-      for (let evidenceIndex = 0; evidenceIndex < asset.researchEvidence.length; evidenceIndex += 1) {
-        const evidence = asset.researchEvidence[evidenceIndex]!;
-        if (evidence.observedAtSec > extension.compiledAtSec) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["assets", assetIndex, "researchEvidence", evidenceIndex, "observedAtSec"],
-            message: "Research evidence observation cannot be later than the extension clock",
-          });
-        }
-        if (evidence.publishedAtSec !== null && evidence.publishedAtSec > extension.compiledAtSec) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["assets", assetIndex, "researchEvidence", evidenceIndex, "publishedAtSec"],
-            message: "Research evidence publication cannot be later than the extension clock",
-          });
-        }
+      for (const issue of assetExtensionClockIssues(extension.assets[assetIndex]!, extension.compiledAtSec)) {
+        ctx.addIssue({ code: "custom", path: ["assets", assetIndex, ...issue.path], message: issue.message });
       }
     }
   });
 
 export type SafetyScoreV9FactSetExtensionV2 = z.infer<typeof SafetyScoreV9FactSetExtensionV2Schema>;
 export type AssetExtension = SafetyScoreV9FactSetExtensionV2["assets"][number];
+
+/** Envelope-only view: registry identity, clocks, freshness, and a non-empty asset list stay cohort-global. */
+const ExtensionEnvelopeSchema = z
+  .object({
+    ...ExtensionEnvelopeShape,
+    assets: z.array(z.unknown()).min(1, EMPTY_EXTENSION_MESSAGE),
+  })
+  .strict();
+
+function salvage<T>(schema: z.ZodType<T>, value: unknown, fallback: T): T {
+  const parsed = schema.safeParse(value);
+  return parsed.success ? parsed.data : fallback;
+}
+
+/**
+ * Conservative stand-in for one asset whose local overlay could not be built
+ * or admitted. Only identity and graph-shape fields that validate on their own
+ * are retained (so dependents still resolve their edges and the cohort graph
+ * stays checkable); every score-bearing review is absent. Compilation turns the
+ * marker into a producer-failed quarantine, never a rated or dropped asset.
+ */
+export function quarantinedSafetyScoreV9ExtensionAsset(
+  source: unknown,
+  assetId: string,
+  quarantine: SafetyScoreV9AssetAdmissionQuarantine,
+): AssetExtension {
+  const record = isRecord(source) ? source : {};
+  return AssetExtensionSchema.parse({
+    assetId,
+    assetIssuerKey: salvage(CanonicalTextSchema.nullable(), record.assetIssuerKey, null),
+    archetype: salvage(V9ResolvedMechanismArchetypeSchema, record.archetype, "unresolved"),
+    variantKind: salvage(V9VariantKindSchema, record.variantKind, null) ?? null,
+    launchedAtSec: null,
+    mechanismRiskReview: null,
+    dependencies: salvage(EffectiveDependenciesOverlaySchema.nullable(), record.dependencies, null),
+    reserveApplicability: { state: "required" },
+    reserveClassifications: [],
+    routeReviews: [],
+    retainedRoutes: [],
+    controlReview: null,
+    economicControlReview: null,
+    accessReview: null,
+    pegReference: salvage(PegReferenceSchema.nullable(), record.pegReference, null),
+    supplyReview: null,
+    admissionQuarantine: {
+      code: quarantine.code,
+      path: quarantine.path.trim().slice(0, 500).trim() || "asset",
+      message:
+        quarantine.message.trim().slice(0, 500).trim() || "Safety Score v9 asset extension could not be admitted",
+    },
+  });
+}
+
+function admitExtensionAsset(
+  source: unknown,
+  assetId: string,
+  compiledAtSec: number,
+  hydrateCdpStressCoverage: (asset: unknown) => unknown,
+): AssetExtension {
+  let hydrated: unknown;
+  try {
+    hydrated = hydrateCdpStressCoverage(source);
+  } catch (error) {
+    return quarantinedSafetyScoreV9ExtensionAsset(source, assetId, {
+      code: "fact-validation-failed",
+      path: "cdpStressCoverage",
+      message: toErrorMessage(error),
+    });
+  }
+  const parsed = AssetExtensionSchema.safeParse(hydrated);
+  const issues: readonly { path: readonly PropertyKey[]; message: string }[] = parsed.success
+    ? assetExtensionClockIssues(parsed.data, compiledAtSec)
+    : parsed.error.issues;
+  const [first, ...rest] = issues;
+  if (parsed.success && first === undefined) return parsed.data;
+  return quarantinedSafetyScoreV9ExtensionAsset(source, assetId, {
+    code: "fact-validation-failed",
+    path: first === undefined || first.path.length === 0 ? "asset" : first.path.map(String).join("."),
+    message: `${first?.message ?? "Invalid asset extension"}${rest.length > 0 ? ` (+${rest.length} more issues)` : ""}`,
+  });
+}
+
+/**
+ * Parse an extension with the asset-local quarantine boundary (R8). The
+ * envelope, each asset's identity, and the canonical asset-id set are
+ * cohort-global and still throw. Everything inside one asset's overlay is
+ * admitted per asset: a malformed, point-in-time-inadmissible, or unverifiable
+ * replay-pinned overlay becomes a quarantined stub with its field path and
+ * reason. For a fully valid extension the result equals
+ * `SafetyScoreV9FactSetExtensionV2Schema.parse(value)`.
+ */
+export function admitSafetyScoreV9FactSetExtension(
+  value: unknown,
+  hydrateCdpStressCoverage: (asset: unknown) => unknown,
+): SafetyScoreV9FactSetExtensionV2 {
+  const envelope = ExtensionEnvelopeSchema.parse(value);
+  const seen = new Set<string>();
+  const assets = envelope.assets.map((source, index) => {
+    const assetId = salvage(CanonicalTextSchema, isRecord(source) ? source.assetId : undefined, null);
+    if (assetId === null) {
+      throw new Error(`Safety Score v9 extension asset at index ${index} has no canonical assetId`);
+    }
+    if (seen.has(assetId)) {
+      throw new Error(`Duplicate canonical key: ${assetId}`);
+    }
+    seen.add(assetId);
+    return admitExtensionAsset(source, assetId, envelope.compiledAtSec, hydrateCdpStressCoverage);
+  });
+  assets.sort((left, right) => compareCodeUnits(left.assetId, right.assetId));
+  return { ...envelope, assets };
+}

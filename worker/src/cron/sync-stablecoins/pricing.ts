@@ -22,6 +22,7 @@ import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
 } from "../../lib/pricing-provider-diagnostics";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 
 const MAX_AUTHORITATIVE_PUBLICATION_ASSET_ATTEMPTS = 512;
 
@@ -140,6 +141,16 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, DlListQuot
 
 function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): void {
   const source = asset.priceSource || "defillama";
+  if (!validateCompositePricingSourceFreshness({
+    source,
+    observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
+    observedAtMode: asset.priceObservedAtMode,
+    nowSec: syncStartSec,
+    requireObservedAt: asset.supplyRestored === true,
+  }).accepted) {
+    clearPriceMetadata(asset);
+    return;
+  }
   stampPriceMetadata(
     asset,
     source,
@@ -337,6 +348,7 @@ export function prevalidatePrices(input: {
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   logLabel: string;
+  nowSec?: number;
 }): void {
   const {
     assets,
@@ -351,6 +363,7 @@ export function prevalidatePrices(input: {
     if (asset.price == null || typeof asset.price !== "number" || asset.price === 0) continue;
     const decision = validatePublishedAssetPrice({
       asset,
+      nowSec: input.nowSec,
       candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults),
       validationContext: validationContexts.get(asset),
       validationReferences,
@@ -369,8 +382,8 @@ export function prevalidatePrices(input: {
 /**
  * Applies primary consensus results to assets.
  *
- * Full primary pass: stamps existing valid prices when there is no candidate or when
- * validation rejects, and defaults `supplySource` to `"defillama"` after processing.
+ * Full primary pass: retains existing prices only within their source freshness
+ * budget using the original observation, and defaults `supplySource` to `"defillama"`.
  */
 export function applyConsensusResults(input: {
   assets: PeggedAsset[];

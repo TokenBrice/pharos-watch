@@ -1,11 +1,63 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildGeneratedArtifactExecutionPhases,
   parseGeneratedArtifactsArgs,
   runGeneratedArtifacts,
 } from "../maintenance/run-generated-artifacts";
+import { selectCheckableArtifactIds, selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.ts";
 
 describe("generated-artifact runner lifecycle selection", () => {
+  it.each(["sitemap-dates", "agents-doc,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-uncheckable-"));
+    try {
+      const result = spawnSync(process.execPath, [
+        "--import", resolve("node_modules/tsx/dist/loader.mjs"),
+        resolve("scripts/maintenance/run-generated-artifacts.ts"),
+        "--check", `--only=${ids}`,
+      ], { cwd, encoding: "utf8" });
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain("bootstrap:generated:history");
+      expect(readdirSync(cwd)).toEqual([]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["sitemap-dates", "agents-doc,sitemap-dates"])("rejects explicit uncheckable selection %s before any child executes", async (ids) => {
+    const runCommandImpl = vi.fn(async () => 0);
+    await expect(runGeneratedArtifacts({ argv: ["--check", `--only=${ids}`], runCommandImpl }))
+      .rejects.toThrow(/sitemap-dates.*git-history-derived.*bootstrap:generated:history/);
+    expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
+  it.each(["src/app/page.tsx", "shared/lib/public-docs.ts"])("keeps routine PR artifact plans checkable for %s", (file) => {
+    const expected = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds([file]));
+    const step = buildPrStaticCheckPlan([file]).commands.find((command) => command.name === "check:generated-artifacts");
+    expect(step?.args).toEqual(expected.length ? [`--only=${expected.join(",")}`] : undefined);
+    expect(selectGeneratedArtifacts({ check: true, only: expected }).map((artifact) => artifact.id))
+      .not.toContain("sitemap-dates");
+    expect(expected).not.toContain("docs-metadata");
+    // llms-txt remains checkable in the current registry; do not suppress it.
+    if (file === "shared/lib/public-docs.ts") expect(expected).toContain("llms-txt");
+  });
+
+  it("reports a legitimate empty intersection without running children", async () => {
+    const log = vi.fn();
+    const runCommandImpl = vi.fn(async () => 0);
+    const result = await runGeneratedArtifacts({
+      argv: ["--check", "--only=agents-doc", "--phase=2"], log, runCommandImpl,
+    });
+    expect(result).toMatchObject({ status: 0, results: [] });
+    expect(runCommandImpl).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("no checks executed"));
+  });
+
   it("parses and de-duplicates lifecycle filters", () => {
     expect(
       parseGeneratedArtifactsArgs([

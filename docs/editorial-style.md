@@ -73,6 +73,10 @@ Claim-safety rules for every product surface (profiles, OG cards, SEO metadata, 
 
 [`docs/design-language.md#context`](./design-language.md#context) owns product posture; this document owns sentences. On mechanics, this document wins.
 
+**Digest numerical quality policy.** In daily and weekly digest output, the factual gate pairs a quoted price and bps deviation only when both bind unambiguously to the same coin or fact and peg basis. A contradiction is hard, follows one bounded corrective retry, and holds the edition if unresolved. A dollar amount with ambiguous monetary context (market cap, supply, flow, another coin, or no unambiguous pair) is advisory; it cannot block by itself. This is a digest factual gate, not a new style-pattern rule, so the machine-readable policy version does not change.
+
+**AI summary grade claims.** Registered `{{grade}}` tokens and the editorial staleness scanner use the canonical `ReportCardGradeSchema` vocabulary. A published `NR` renders as `NR` (not rated), distinct from `N/A`, which is reserved for missing or invalid current values. Unsupported `D+` and `D-` are not valid Pharos grades and must not be interpreted as `D` by the scanner. The refresh queue detects drift in recognized grade claims; it is not a publication gate or a complete factual audit of prose.
+
 ## Banned constructions
 
 Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edition. **Advisory** rules are review triggers and prompt guidance; they never block on their own, because they cannot be detected without judgment.

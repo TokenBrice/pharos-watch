@@ -148,7 +148,6 @@ export const GeniusProfileSchema = z
     reserveDisclosureUrl: HttpUrlSchema.optional(),
     redemptionPolicyPresent: z.boolean().optional(),
     monthlyAttestationPresent: z.boolean().optional(),
-    latestReportDate: ReviewDateSchema.optional(),
     notes: z.string().min(1).optional(),
     references: z.array(GeniusReferenceSchema).optional(),
     negativeEvidenceReview: GeniusNegativeEvidenceReviewSchema.optional(),

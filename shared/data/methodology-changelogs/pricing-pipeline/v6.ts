@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.37",
+    title: "Bounded CoinGecko supply gap-fill and per-asset supply admission",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "The CoinGecko aggregate gap-fill for a DefiLlama-backed asset with one missing deployment is kept but bounded: it admits CoinGecko/DefiLlama ratios only inside a reviewed band with hysteresis, takes every published bucket from one CoinGecko series, and records `supplyGapFill` provenance. Malformed or supply-invalid rows are quarantined per asset instead of stalling or crashing the whole list, and empty chain buckets stay unavailable instead of becoming zero.",
+    impact: [
+      "`COINGECKO_GAP_FILL_POLICY` in `worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts`: entry needs 1.05 < ratio <= 1.45, a row gap-filled in the previous publication is retained while 1.02 < ratio <= 1.50, and 1.50 is a hard ceiling at current and at every compared 1d/7d/30d bucket DefiLlama also observed. The per-bucket `max(DL, CG)` splice is gone; a missing CoinGecko history point fails the fill closed, and a bucket DefiLlama did not observe stays absent",
+      "Derived from the 2026-09-27 observed distribution (median ratio 1.0000, p90 1.31 across 157 tracked DefiLlama assets; complete-coverage assets already disagree up to 1.47 and beyond 1.65), so feUSD (7.65x), USDXL (28.3x), scUSD (2.97x) and BtcUSD (1.65x) return to their canonical DefiLlama totals and their supply history steps down once; the already-filled reUSD (1.050, retained by hysteresis) and wCOP (1.057) remain inside the band",
+      "Intake validates the DefiLlama envelope (`peggedAssets` must be an array; otherwise the DefiLlama circuit records a failure and the CoinGecko fallback runs) and quarantines null/primitive rows before the frozen-snapshot merge, then rows with absent, non-finite, negative or overflowing current aggregate buckets; an explicit zero is still admitted. Publication validates each row against the published schema and quarantines invalid rows, holding the whole list only for an invalid envelope, duplicate ids, or a cohort below the 50-row floor",
+      "Chain normalization keeps an empty `current`/`circulatingPrevDay`/`circulatingPrevWeek`/`circulatingPrevMonth` bucket as unavailable (`null`) instead of 0, so chain summaries no longer report a whole balance as a 24h mint when DefiLlama sends an empty baseline; `/api/stablecoins` still serves the legacy `0` on the wire in this release",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.36",
     title: "Hard CEX ticker coverage for MXNB and AUDD",
     date: "2026-09-27",

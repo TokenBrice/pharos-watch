@@ -1,5 +1,6 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { StablecoinData } from "@shared/types/market";
+import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSResult } from "../dews";
 
@@ -59,12 +60,17 @@ export interface DexPriceSnapshot {
 }
 
 export interface MintBurnSnapshot {
+  /** Known-valuation subtotals (see `mint_burn_hourly`). */
   burn24h: number;
   mint24h: number;
   burnBaseline: number;
   mintBaseline: number;
   /** Distinct baseline days observed in the 30-day mint/burn window. */
   baselineDays: number;
+  /** Valuation of the 24h window; both sides feed the flow signal. */
+  valuation24h: MintBurnValuationCompleteness;
+  /** Burn-side valuation of the 30-day window behind `burnBaseline`. */
+  burnBaselineValuation: MintBurnValuationCompleteness;
 }
 
 export type BlacklistCountByStablecoinId = Map<string, { count24h: number; count7d: number }>;

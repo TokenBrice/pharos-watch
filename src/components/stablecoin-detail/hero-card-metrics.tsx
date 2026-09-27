@@ -9,6 +9,7 @@ import {
   pegCurrencySymbol,
 } from "@shared/lib/format";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
@@ -122,9 +123,12 @@ export function HeroPriceMetric({
   coinData,
   price: { pegRef, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
 }: HeroPriceMetricProps & { variant: HeroMetricVariant }) {
-  const price = formatHeroNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
-  const referenceLine = formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, isNavToken });
-  const referenceClass = pegReferenceUnavailable
+  const observed = isObservedPrice(coinData);
+  const price = formatHeroNativePrice(observed ? coinData.price : null, coin.flags.pegCurrency ?? "USD", pegRef);
+  const referenceLine = observed
+    ? formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, isNavToken })
+    : "Observed price unavailable";
+  const referenceClass = !observed || pegReferenceUnavailable
     ? "text-muted-foreground"
     : isNavToken
       ? "text-green-700 dark:text-green-400"
@@ -139,7 +143,7 @@ export function HeroPriceMetric({
         subline={<span className={referenceClass}>{referenceLine.toUpperCase()}</span>}
       >
         <p
-          className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${confidenceClass(coinData.priceConfidence)}`}
+          className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)}`}
         >
           {price}
         </p>
@@ -157,7 +161,7 @@ export function HeroPriceMetric({
       <p className={HERO_METRIC_LABEL_CLASS}>
         Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
       </p>
-      <p className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(coinData.priceConfidence)} text-xl`}>
+      <p className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)} text-xl`}>
         {price}
       </p>
       <p className={`pharos-numeric mt-1 text-xs ${referenceClass}`}>{referenceLine}</p>

@@ -327,6 +327,21 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
     expect(db.getHistory()[0]!.binds).toEqual(["usdc", 400, 400, 4, 3]);
   });
 
+  it.each([0, 50_000])("does not infer population from an empty uncounted page at offset %s", async (offset) => {
+    const db = mockD1([{ match: "FROM depeg_events", rows: [] }], { requireMatch: true });
+    const result = await fetchPaginatedEvents<Row, Row>(db, {
+      tableName: "depeg_events",
+      orderBy: "started_at DESC, id DESC",
+      conditions: [],
+      filterBindings: [],
+      limit: 10,
+      offset,
+      includeTotal: false,
+      mapRow: (row) => row,
+    });
+    expect(result).toEqual({ events: [], total: 0, totalExact: false });
+  });
+
 });
 
 describe("buildPaginatedEventResponse", () => {
@@ -341,7 +356,6 @@ describe("buildPaginatedEventResponse", () => {
     freshness: {
       producerJob: "detect-depegs",
       maxAgeSec: 600,
-      fallbackTimestamp: () => 0,
     },
     cacheControl: "public, max-age=60",
   };

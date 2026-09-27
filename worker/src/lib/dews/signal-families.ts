@@ -11,7 +11,7 @@
 
 import { clamp } from "@shared/lib/math";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
-import type { DEWSInput, SignalResult } from "./types";
+import type { DEWSInput, SignalResult, WorstPoolComponentStatus, WorstPoolUnavailableReason } from "./types";
 import { piecewiseLinear } from "./compatibility";
 import { deriveDepegSignal } from "../depeg-signals";
 
@@ -127,6 +127,45 @@ export function computeSupplySignal(input: DEWSInput): SignalResult {
   };
 }
 
+// Pool signal blend: 40% balance stress, 35% avg pool stress, 25% worst single pool.
+// Balance ratio weighted highest because it directly measures exit liquidity.
+// Worst pool at 25% ensures a single severely imbalanced pool can't be masked
+// by many healthy pools.
+const POOL_BALANCE_WEIGHT = 0.4;
+const POOL_AVG_STRESS_WEIGHT = 0.35;
+const POOL_WORST_WEIGHT = 0.25;
+/** Balance + average stress: both are required for the signal to be available at all. */
+const POOL_REQUIRED_COMPONENT_WEIGHT = POOL_BALANCE_WEIGHT + POOL_AVG_STRESS_WEIGHT;
+const WORST_POOL_MIN_TVL_USD = 100_000;
+
+interface WorstPoolComponent {
+  status: WorstPoolComponentStatus;
+  /** `null` whenever the component is unavailable; `empty` is a measured zero. */
+  value: number | null;
+  reason?: WorstPoolUnavailableReason;
+}
+
+function assessWorstPool(input: DEWSInput): WorstPoolComponent {
+  if (input.topPools == null) {
+    return { status: "unavailable", value: null, reason: input.topPoolsUnavailableReason ?? "top-pools-missing" };
+  }
+  let eligible = 0;
+  let measured = 0;
+  let worst = 0;
+  for (const pool of input.topPools) {
+    if (!(pool.tvlUsd >= WORST_POOL_MIN_TVL_USD)) continue;
+    eligible += 1;
+    // A pool without a balance measurement is excluded, never read as perfect balance.
+    if (pool.balanceRatio == null || !Number.isFinite(pool.balanceRatio)) continue;
+    measured += 1;
+    worst = Math.max(worst, clamp((1 - pool.balanceRatio) * 100, 0, 100));
+  }
+  // Observed empty eligible set: no single large pool exists to be imbalanced.
+  if (eligible === 0) return { status: "empty", value: 0 };
+  if (measured === 0) return { status: "unavailable", value: null, reason: "top-pools-balance-unmeasured" };
+  return { status: "observed", value: worst };
+}
+
 export function computePoolSignal(input: DEWSInput): SignalResult {
   if (
     input.weightedBalanceRatio == null ||
@@ -141,33 +180,34 @@ export function computePoolSignal(input: DEWSInput): SignalResult {
   const balanceStress = (1 - input.weightedBalanceRatio) * 100;
   // avg_pool_stress is already 0-100 in the DB
   const poolStressScore = input.avgPoolStress;
+  const worstPool = assessWorstPool(input);
 
-  // Worst single pool imbalance
-  let worstPoolSignal = 0;
-  if (input.topPools) {
-    for (const pool of input.topPools) {
-      if (pool.tvlUsd >= 100_000) {
-        const imbalance = (1 - pool.balanceRatio) * 100;
-        worstPoolSignal = Math.max(worstPoolSignal, imbalance);
-      }
-    }
+  // An unavailable worst-pool component drops out of both numerator and denominator (DEC-04): the
+  // blend renormalizes over the readable components instead of adding a measured-looking zero.
+  let weightedSum = POOL_BALANCE_WEIGHT * balanceStress + POOL_AVG_STRESS_WEIGHT * poolStressScore;
+  let componentCoverage = POOL_REQUIRED_COMPONENT_WEIGHT;
+  if (worstPool.value != null) {
+    weightedSum += POOL_WORST_WEIGHT * worstPool.value;
+    componentCoverage += POOL_WORST_WEIGHT;
   }
+  let value = clamp(weightedSum / componentCoverage, 0, 100);
 
-  let value = clamp(
-    // Pool signal blend: 40% balance stress, 35% avg pool stress, 25% worst single pool.
-    // Balance ratio weighted highest because it directly measures exit liquidity.
-    // Worst pool at 25% ensures a single severely imbalanced pool can't be masked
-    // by many healthy pools.
-    0.4 * balanceStress + 0.35 * poolStressScore + 0.25 * worstPoolSignal,
-    0,
-    100,
-  );
-
-  // Smooth only against a previous reading that was itself an observation: a
-  // persisted unavailable signal is `{value: 0, available: false}`, and
-  // averaging it in would publish absent evidence as measured calm.
-  if (input.prevPoolValue !== undefined && input.prevPoolAvailable === true) {
+  // Smooth only against a previous observation built from the same readable components: a persisted
+  // unavailable signal is `{value: 0, available: false}`, and a reading with different component
+  // coverage (or legacy unknown coverage) measured a different blend, so averaging either would mix
+  // absent evidence into the current reading.
+  let smoothing: SignalResult["smoothing"];
+  if (input.prevPoolValue === undefined) {
+    smoothing = "no-previous";
+  } else if (input.prevPoolAvailable !== true) {
+    smoothing = "previous-unavailable";
+  } else if (input.prevPoolComponentCoverage == null) {
+    smoothing = "previous-coverage-unknown";
+  } else if (input.prevPoolComponentCoverage !== componentCoverage) {
+    smoothing = "coverage-changed";
+  } else {
     value = (value + input.prevPoolValue) / 2;
+    smoothing = "applied";
   }
 
   return {
@@ -175,7 +215,11 @@ export function computePoolSignal(input: DEWSInput): SignalResult {
     available: true,
     balanceRatio: input.weightedBalanceRatio,
     avgPoolStress: input.avgPoolStress,
-    worstPool: Math.round(worstPoolSignal * 100) / 100,
+    worstPool: worstPool.value == null ? null : Math.round(worstPool.value * 100) / 100,
+    worstPoolStatus: worstPool.status,
+    ...(worstPool.reason ? { worstPoolUnavailableReason: worstPool.reason } : {}),
+    componentCoverage,
+    smoothing,
   };
 }
 
@@ -428,6 +472,21 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
   }
   if (!Number.isFinite(input.flowDataAgeDays) || input.flowDataAgeDays > 1) {
     return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-stale" };
+  }
+  // Missing USD valuation is never read as zero dollars (D11-2): unpriced 24h
+  // burns understate the surge and unpriced 24h mints overstate the ratio, and
+  // unpriced baseline burns overstate the surge. Unknown (pre-completeness)
+  // baseline coverage is tolerated until legacy hourly buckets age out.
+  if (input.flowValuation24h !== "complete") {
+    return {
+      value: 0,
+      available: false,
+      baselineDays,
+      unavailableReason: input.flowValuation24h === "partial" ? "mint-burn-valuation-partial" : "mint-burn-valuation-unknown",
+    };
+  }
+  if (input.flowBurnBaselineValuation === "partial") {
+    return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-baseline-valuation-partial" };
   }
 
   // Burn surge: how much 24h burns exceed the 30d daily average

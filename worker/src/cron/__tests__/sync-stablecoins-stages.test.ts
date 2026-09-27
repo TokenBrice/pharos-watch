@@ -79,7 +79,6 @@ import {
   normalizeChainCirculating,
 } from "../sync-stablecoins/phase-helpers";
 import { runStablecoinsPricingStage } from "../sync-stablecoins/stages";
-import { loadStablecoinsPublicationContinuity } from "../sync-stablecoins/publication";
 import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { makePrimaryPriceResultFixture } from "../sync-stablecoins/__tests__/_fixtures";
 
@@ -177,59 +176,39 @@ describe("sync-stablecoins stage helpers", () => {
     });
   });
 
-  it("loads one prior active-price continuity snapshot for either intake lane", async () => {
-    const db = mockD1([{
-      match: "FROM cron_runs",
-      rows: [],
-      first: {
-        metadata: JSON.stringify({
-          activePriceCoverage: {
-            missingActiveIds: ["usdt-tether"],
-            missingActiveAssets: [{
-              stablecoinId: "usdt-tether",
-              symbol: "USDT",
-              consecutiveMissingGenerations: 3,
-              rejectionReason: "no-accepted-price",
-            }],
-          },
-        }),
-      },
-    }]);
 
-    const continuity = await loadStablecoinsPublicationContinuity(db, 1_800_000_000);
-
-    expect(continuity.previousActivePriceCoverage).toMatchObject({
-      missingActiveIds: ["usdt-tether"],
-      missingActiveAssets: [{
-        stablecoinId: "usdt-tether",
-        consecutiveMissingGenerations: 3,
-      }],
-    });
-    expect(continuity.previousMissingGenerationsById).toEqual(new Map([
-      ["usdt-tether", 3],
-    ]));
-  });
-
-  it("filters malformed assets while preserving structurally valid rows", () => {
-    const assets = [
+  it("quarantines malformed and supply-invalid rows per asset while keeping observed zero supply", () => {
+    const assets: unknown[] = [
       { id: "usdt-tether", name: "USDT", symbol: "USDT", circulating: { peggedUSD: 1 } },
       { id: "usdc-circle", name: "Broken", circulating: { peggedUSD: 1 } },
       { id: null, name: "Broken", symbol: "BRK", circulating: { peggedUSD: 1 } },
-    ] as unknown as Array<{
-      id: string | null;
-      name: string;
-      symbol?: string;
-      circulating: Record<string, number>;
-    }>;
+      null,
+      "primitive-row",
+      { id: "empty", name: "Empty", symbol: "E", circulating: {} },
+      { id: "negative", name: "Negative", symbol: "N", circulating: { peggedUSD: -10 } },
+      { id: "overflow", name: "Overflow", symbol: "O", circulating: { peggedUSD: 1e308, peggedEUR: 1e308 } },
+      { id: "zero", name: "Zero", symbol: "Z", circulating: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: -1 } },
+    ];
 
-    const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(assets as never[]);
+    const { validAssets, droppedMalformedAssets, quarantined, invalidHistoryIds } = filterStructurallyValidAssets(assets);
 
-    expect(validAssets).toHaveLength(1);
-    expect(validAssets[0].id).toBe("usdt-tether");
-    expect(droppedMalformedAssets).toBe(2);
+    expect(validAssets.map((asset) => asset.id)).toEqual(["usdt-tether", "zero"]);
+    // An invalid historical bucket drops to absence without quarantining the observed current supply.
+    expect(validAssets[1]).toMatchObject({ circulating: { peggedUSD: 0 }, circulatingPrevDay: null });
+    expect(invalidHistoryIds).toEqual(["zero"]);
+    expect(droppedMalformedAssets).toBe(7);
+    expect(quarantined).toEqual([
+      { index: 1, id: "usdc-circle", reason: "name-or-symbol-invalid" },
+      { index: 2, id: null, reason: "id-missing" },
+      { index: 3, id: null, reason: "row-not-object" },
+      { index: 4, id: null, reason: "row-not-object" },
+      { index: 5, id: "empty", reason: "circulating-absent" },
+      { index: 6, id: "negative", reason: "circulating-negative-bucket" },
+      { index: 7, id: "overflow", reason: "circulating-overflow" },
+    ]);
   });
 
-  it("normalizes chainCirculating peg buckets into numeric totals", () => {
+  it("normalizes chain peg buckets without turning empty observations into zero", () => {
     const assets = [
       {
         id: "usdt-tether",
@@ -239,16 +218,20 @@ describe("sync-stablecoins stage helpers", () => {
             circulatingPrevDay: { peggedUSD: 8, peggedEUR: 7 },
             circulatingPrevWeek: 9,
           },
+          tron: { current: {}, circulatingPrevDay: { peggedUSD: 100 } },
+          stellar: { current: { peggedUSD: 50 }, circulatingPrevDay: {}, circulatingPrevWeek: { peggedUSD: 0 }, circulatingPrevMonth: { peggedUSD: -3 } },
+          sei: { circulatingPrevDay: { peggedUSD: 5 } },
         },
       },
     ] as unknown as never[];
 
     normalizeChainCirculating(assets);
 
-    const entry = (assets[0] as unknown as { chainCirculating: Record<string, Record<string, unknown>> }).chainCirculating.ethereum;
-    expect(entry.current).toBe(25);
-    expect(entry.circulatingPrevDay).toBe(15);
-    expect(entry.circulatingPrevWeek).toBe(9);
+    const rows = (assets[0] as unknown as { chainCirculating: Record<string, Record<string, unknown>> }).chainCirculating;
+    expect(rows.ethereum).toEqual({ current: 25, circulatingPrevDay: 15, circulatingPrevWeek: 9 });
+    expect(rows.tron).toEqual({ current: null, circulatingPrevDay: 100 });
+    expect(rows.stellar).toEqual({ current: 50, circulatingPrevDay: null, circulatingPrevWeek: 0, circulatingPrevMonth: null });
+    expect(rows.sei).toEqual({ current: null, circulatingPrevDay: 5 });
   });
 
   it("applies curated metadata overrides and address patches", () => {

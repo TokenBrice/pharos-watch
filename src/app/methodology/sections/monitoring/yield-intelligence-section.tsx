@@ -172,9 +172,17 @@ export function YieldIntelligenceMethodologySection() {
                       spreads, using USD by default, product-specific EFFR where configured, 3-month compounded €STR for EUR pegs, 3-month compounded SARON
                       for Swiss-franc pegs, the CBR key rate for RUB pegs, and BIST TLREF for TRY pegs. Product-input
                       freshness is checked independently of the PYS comparison hurdle: fresh EFFR cannot refresh a stale
-                      T-bill product input, and a hardcoded fallback cannot produce a product APY candidate
+                      T-bill product input, and a hardcoded fallback cannot produce a product APY candidate.
+                      USDGO requires EFFR only; non-USD products independently require the USD normalization reference.
+                      These dependencies are assessed consistently at publication and on API reads
                     </li>
                   </ul>
+                  <p>
+                    Weighted pool groups use one complete TVL universe for total, base, and reward APY. A missing reward
+                    is zero only when that pool&apos;s base already covers its total; otherwise an unresolved component
+                    stays unavailable without discarding the measured total. Rewards from a small pool are never
+                    attributed to the entire group.
+                  </p>
                   <p>
                     Deterministic and curated paths can all contribute rows, then a confidence-weighted arbitration layer
                     chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when an

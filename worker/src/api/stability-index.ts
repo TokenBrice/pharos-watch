@@ -21,6 +21,21 @@ import { round1 } from "@shared/lib/math";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 
 import { isRecord } from "@shared/lib/type-guards";
+import { StabilityIndexDailyProvenanceSchema } from "@shared/types/stability";
+
+function readDailyProvenance(value: unknown) {
+  const parsed = StabilityIndexDailyProvenanceSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
+function componentAvailability(
+  components: Record<string, unknown> | undefined,
+  counts?: Record<string, number> | null,
+) {
+  const componentsUnavailable = (["severity", "breadth", "stressBreadth", "trend"] as const)
+    .filter((key) => counts?.[key] === 0 || (components != null && components[key] == null));
+  return componentsUnavailable.length > 0 ? { componentsUnavailable } : {};
+}
 
 type PsiJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 
@@ -100,14 +115,20 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = bucketUnixSecondsToUtcDay(now);
 
-  // Daily history from stability_index. The detail query is intentionally unbounded so
-  // historical event annotations (events go back to 2018) stay within the chart's range.
-  // input_snapshot is deliberately NOT selected here — it is a large per-row blob that is
-  // only needed for the latest row when no live sample exists. Fetch it lazily below in
-  // that fallback. Do not re-add a LIMIT to bound this query.
-  const historyQuery = detail
-    ? "SELECT computed_at, score, band, components, methodology_version FROM stability_index ORDER BY computed_at DESC"
-    : "SELECT computed_at, score, band, components, methodology_version FROM stability_index ORDER BY computed_at DESC LIMIT 91";
+  // Project only small daily provenance fields, never the heavy per-row replay inputs.
+  // Detail history remains unbounded so historical annotations retain their date range.
+  const dailyProvenanceProjection = `CASE WHEN json_valid(input_snapshot) THEN
+    CASE WHEN json_extract(input_snapshot, '$.source') = 'daily-avg' THEN
+      json_object(
+        'aggregation', 'all-day',
+        'sampleCount', json_extract(input_snapshot, '$.sampleCount'),
+        'componentSampleCounts', json_extract(input_snapshot, '$.componentSampleCounts'),
+        'methodologyBreakdown', json_extract(input_snapshot, '$.methodologyBreakdown')
+      )
+    END
+  END AS daily_provenance`;
+  const historyQuery = `SELECT computed_at, score, band, components, methodology_version,
+    ${dailyProvenanceProjection} FROM stability_index ORDER BY computed_at DESC${detail ? "" : " LIMIT 91"}`;
 
   // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),
   // the previous sample remains the source of truth.
@@ -125,7 +146,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       .first<{ avg: number | null }>(),
     db
       .prepare(historyQuery)
-      .all<{ computed_at: number; score: number; band: string; components: string; methodology_version: string | null }>(),
+      .all<{ computed_at: number; score: number; band: string; components: string; methodology_version: string | null; daily_provenance: string | null }>(),
   ]);
   const results = rows.results ?? [];
 
@@ -186,12 +207,18 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
   // Build history array (newest-first from stability_index)
   let malformedRows = 0;
   const history = results.map((r) => {
+    const provenance = r.daily_provenance
+      ? decodePsiObjectField(r.daily_provenance, r.computed_at, "history.dailyProvenance")
+      : undefined;
+    const dailyProvenance = provenance?.ok ? readDailyProvenance(provenance.value) : undefined;
     if (!detail) {
       return {
         date: r.computed_at,
         score: r.score,
         band: r.band,
         methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
+        ...(dailyProvenance ? { dailyProvenance } : {}),
+        ...componentAvailability(undefined, dailyProvenance?.componentSampleCounts),
       };
     }
 
@@ -210,7 +237,9 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       score: r.score,
       band: r.band,
       components: decodedHistoryComponents.value,
+      ...componentAvailability(decodedHistoryComponents.value, dailyProvenance?.componentSampleCounts),
       methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
+      ...(dailyProvenance ? { dailyProvenance } : {}),
     };
   }).filter((row): row is NonNullable<typeof row> => row !== null);
 
@@ -238,6 +267,14 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
   const currentMethodologyTs = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? computedAt);
   const methodologyVersion =
     resolveMethodologyVersion(currentSource.methodology_version, currentMethodologyTs);
+  const dailyProvenance = !latestSample && snapshot.value.source === "daily-avg"
+    ? readDailyProvenance({
+      aggregation: "all-day",
+      sampleCount: snapshot.value.sampleCount,
+      componentSampleCounts: snapshot.value.componentSampleCounts ?? null,
+      methodologyBreakdown: snapshot.value.methodologyBreakdown,
+    })
+    : undefined;
 
   return jsonResponse({
     current: {
@@ -246,6 +283,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       avg24h,
       avg24hBand,
       components: currentComponents.value,
+      ...componentAvailability(currentComponents.value, dailyProvenance?.componentSampleCounts),
       contributors,
       ...(inputDegradation ? { inputDegradation } : {}),
       ...(snapshot.value.aggregateUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE
@@ -254,6 +292,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       totalMcapUsd: typeof snapshot.value.totalMcapUsd === "number" ? snapshot.value.totalMcapUsd : 0,
       computedAt,
       methodologyVersion,
+      ...(dailyProvenance ? { dailyProvenance } : {}),
     },
     history,
     malformedRows,

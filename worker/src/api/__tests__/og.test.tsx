@@ -64,47 +64,62 @@ describe("stablecoin OG card data", () => {
     });
 
     expect(data.flow7d).toBe(5_000_000);
+    expect(data.flow7dSource).toBe("supply-delta");
     expect(data.sparklineData).toEqual([1.0001, 0.9998]);
     expect(data.pegScore).toBe(95);
     expect(data.backing).toBe("rwa-backed");
     expect(data.governance).toBe("centralized");
-    // PSI should not be on individual coin cards
-    expect((data as unknown as Record<string, unknown>).psiScore).toBeUndefined();
+  });
+  it("preserves unavailable facts instead of inventing healthy readings or full-cap inflow", () => {
+    const input = {
+      coin: { name: "Unknown", symbol: "UNK", circulating: { peggedUSD: 100_000_000 } },
+      dexLiquidityScore: null,
+      dewsBand: null,
+      grade: null,
+      sparklineRows: [],
+      hasActiveDepeg: false,
+      flow7d: null,
+      pegScore: null,
+      backing: null,
+      governance: null,
+      redemptionScore: null,
+      change24h: null,
+    };
+    const data = deriveStablecoinOgCardData(input);
+    expect(data).toMatchObject({
+      pegPrice: null, dewsBand: null, liquidityScore: null,
+      flow7d: null, flow7dSource: null, sparklineData: null,
+      backing: null, governance: null, mcap: 100_000_000,
+    });
+    const markup = renderToStaticMarkup(<StablecoinCard data={data} />);
+    expect(markup).not.toContain("$1.0000");
+    expect(markup).not.toContain("CALM");
+    expect(markup).not.toContain("+$");
+    expect(markup).not.toContain("CeFi");
+    expect(markup).toContain("Price history unavailable");
+    expect(deriveStablecoinOgCardData({ ...input, coin: { ...input.coin, circulating: {} } }).mcap).toBeNull();
   });
 
-  it("hides the volume block when volume is unavailable", () => {
-    const markup = renderToStaticMarkup(
-      <StablecoinCard
-        data={{
-          name: "USD Coin",
-          symbol: "USDC",
-          grade: "A",
-          pegPrice: 1,
-          dewsBand: "CALM",
-          liquidityScore: 80,
-          mcap: 1_000_000_000,
-          flow7d: 10_000_000,
-          sparklineData: [0.999, 1.001],
-          hasActiveDepeg: false,
-          pegScore: 92,
-          backing: "rwa-backed",
-          governance: "centralized",
-          redemptionScore: 88,
-          change24h: 0.25,
-        }}
-      />,
-    );
-
-    expect(markup).not.toContain("24H VOLUME");
-    expect(markup).toContain("MARKET CAP");
-    expect(markup).toContain("7D FLOW");
-    expect(markup).toContain("PEG SCORE");
-    expect(markup).toContain("BACKING");
-    expect(markup).toContain("RWA");
-    expect(markup).toContain("CeFi");
-    expect(markup).toContain("background-color:#f8f8fa");
-    expect(markup).not.toContain("background-color:#0a0f1e");
+  it("keeps measured zero flow and zero liquidity distinct from absence", () => {
+    const data = deriveStablecoinOgCardData({
+      coin: {
+        name: "Zero", symbol: "ZERO", price: 1,
+        circulating: { peggedUSD: 100 }, circulatingPrevWeek: { peggedUSD: 50 },
+      },
+      dexLiquidityScore: 0, dewsBand: null, grade: null, sparklineRows: [{ price: 1 }],
+      hasActiveDepeg: false, flow7d: 0, pegScore: null, backing: null,
+      governance: null, redemptionScore: null, change24h: null,
+    });
+    expect(data.flow7d).toBe(0);
+    expect(data.flow7dSource).toBe("mint-burn");
+    expect(data.liquidityScore).toBe(0);
+    expect(data.sparklineData).toBeNull();
+    const markup = renderToStaticMarkup(<StablecoinCard data={data} />);
+    expect(markup).toContain("7D NET MINT/BURN");
+    expect(markup).toContain("$0");
+    expect(markup).not.toContain("7D SUPPLY DELTA");
   });
+
 
   describe("peg-analytics cache hits", () => {
     const nowSec = Math.floor(Date.now() / 1000);
@@ -398,6 +413,7 @@ describe("stablecoin OG card data", () => {
           liquidityScore: 70,
           mcap: 10_000_000,
           flow7d: 500_000,
+          flow7dSource: "mint-burn",
           sparklineData: [0.995, 1.0],
           hasActiveDepeg: false,
           pegScore: 88,
@@ -752,6 +768,7 @@ describe("og cards render through satori", () => {
     liquidityScore: 92,
     mcap: 120_000_000_000,
     flow7d: 250_000_000,
+    flow7dSource: "mint-burn",
     sparklineData: [1.0001, 1.0002, 0.9999, 1.0, 1.0001, 1.0003, 1.0002],
     hasActiveDepeg: false,
     pegScore: 97.2,
@@ -768,6 +785,24 @@ describe("og cards render through satori", () => {
   it("renders the stablecoin card (calm baseline)", async () => {
     const svg = await renderSvg(<StablecoinCard data={calmCoin} />);
     expect(svg).toContain("<svg");
+  });
+
+  it.each([null, 0])("renders unavailable evidence without converting flow %s to another fact", async (flow7d) => {
+    const data: StablecoinCardData = {
+      ...calmCoin, pegPrice: null, dewsBand: null, liquidityScore: null,
+      mcap: null, flow7d, flow7dSource: flow7d == null ? null : "mint-burn",
+      sparklineData: null, backing: null, governance: null,
+    };
+    const svg = await satori(<StablecoinCard data={data} />, {
+      width: 1200, height: 628, fonts, embedFont: false,
+    });
+    const visibleText = [...svg.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map((match) => match[1]).join(" ").replace(/\s+/g, " ");
+    expect(visibleText).toContain("Price history unavailable");
+    expect(visibleText).not.toMatch(/\$\s*1\s*\.\s*0000/);
+    expect(visibleText).not.toContain("CALM");
+    expect(visibleText).not.toMatch(/\+\s*\$/);
+    if (flow7d === 0) expect(visibleText).toMatch(/\$\s*0/);
+    else expect(visibleText).not.toMatch(/\$\s*0/);
   });
 
   it("renders the stablecoin card with depeg, frozen, and variant branches", async () => {

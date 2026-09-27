@@ -1,8 +1,10 @@
-import { CRON_INTERVALS, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
+import { CRON_INTERVALS, getCronJobMeta, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { cronEventCacheKey } from "../cron-logger";
+import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
+import { confirmedCronOutputAt } from "../cron-output";
 import { staleSlotEventCacheKey } from "../scheduled-slot-fence";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
@@ -141,6 +143,22 @@ function isFreshCronRun(run: CronRun | null | undefined, now: number, interval: 
     { watchAt: { multiplier: 2 }, staleAt: { multiplier: 2 } },
     now,
   ).state === "fresh";
+}
+
+function hasFreshOutput(job: string, run: CronRun | null, now: number, interval: number): boolean {
+  if (!run) return false;
+  // Control-plane jobs have no consumer output clock; a completed observation
+  // remains available independently of its diagnostic finding.
+  if (getCronJobMeta(job)?.freshnessSurface === "none") {
+    return isFreshCronRun(run, now, interval) && (run.status === "ok" || run.status === "degraded");
+  }
+  if (run.status !== "ok" && run.status !== "degraded") return false;
+  const outputAt = confirmedCronOutputAt(
+    { status: run.status, itemCount: run.itemCount },
+    run.metadata ?? null,
+    run.startedAt + Math.ceil(run.durationMs / 1000),
+  );
+  return outputAt != null && outputAt <= now && now - outputAt <= interval * 2;
 }
 
 function buildCronHistoryQuery(jobCount: number, requiredOnly = false): string {
@@ -607,7 +625,7 @@ export async function loadCronHealth(
     const requiredRuns = runs.filter((run) => run.status !== NEUTRAL_CRON_RUN_STATUS);
     const latestRequiredRun = requiredRuns[0] ?? null;
     const latestRequiredRunFresh = isFreshCronRun(latestRequiredRun, now, interval);
-    const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
+    const hasFreshOk = runs.some((run) => run.status === "ok" && hasFreshOutput(job, run, now, interval));
     // A neutral skip whose machine-readable reason proves the period's
     // write-once artifact exists (PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS) is
     // fresh positive evidence that the period's requirement is satisfied: the
@@ -620,22 +638,20 @@ export async function loadCronHealth(
       lastRun != null &&
       lastRun.status === NEUTRAL_CRON_RUN_STATUS &&
       isProvenSatisfiedNeutralSkipReason(lastRun.metadata?.reason);
-    const hasFreshRequiredAvailability =
-      latestRequiredRunFresh
-      && (latestRequiredRun.status === "ok" || latestRequiredRun.status === "degraded");
+    const hasFreshRequiredAvailability = hasFreshOutput(job, latestRequiredRun, now, interval);
     const availabilityHealthyFromLastRun =
       isFresh &&
       lastRun != null &&
-      (lastRun.status === "ok" ||
-        lastRun.status === "degraded" ||
+      (hasFreshOutput(job, lastRun, now, interval) ||
         (lastRun.status === NEUTRAL_CRON_RUN_STATUS && (hasFreshRequiredAvailability || lastRunProvesPeriodSatisfied)) ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
+    const qualityRun = lastRun?.status === NEUTRAL_CRON_RUN_STATUS ? latestRequiredRun : lastRun;
     const metadataDegraded =
-      job === "sync-blacklist"
-      && lastRun != null
-      && isFresh
-      && hasBlacklistMaintenanceDegradation(lastRun.metadata);
+      qualityRun != null
+      && isFreshCronRun(qualityRun, now, interval)
+      && (getCronQualityReasons(qualityRun.metadata).length > 0
+        || (job === "sync-blacklist" && hasBlacklistMaintenanceDegradation(qualityRun.metadata)));
     // Bootstrap = no required attempt yet. Watch-tier crons can legitimately
     // have no rows or one neutral admission skip while a just-deployed
     // prerequisite generation/version is not ready. A second neutral-only run

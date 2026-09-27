@@ -576,14 +576,17 @@ describe("handleStatus", () => {
     expect(body.crons["sync-stablecoins"]?.healthy).toBe(true);
   });
 
-  it("treats fresh degraded cron runs as warning-only (not availability unhealthy)", async () => {
+  it("treats fresh degraded cron runs with confirmed output as warning-only (not availability unhealthy)", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const jobs = Object.keys(fixtureCRON_INTERVALS);
     const cronRows = [
-      ...jobs.map((job) => makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30)),
+      ...jobs.map((job) => ({
+        ...makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30),
+        metadata: JSON.stringify({ outputPublishedAt: now - 30 }),
+      })),
       makeCronRow("sync-redemption-backstops", "ok", 30),
     ];
     const db = fixtureMockD1([{ match: "cron_runs", rows: cronRows },

@@ -282,74 +282,33 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     });
   });
 
-  it("preserves exact live reserve-sync capacity output when ratio telemetry overrides derived ratio", async () => {
-    const db = {} as D1Database;
+  it.each([
+    [1_000_000, 800_000, 0.9, undefined, 800_000, 800_000],
+    [500_000, 800_000, 0.9, undefined, 500_000, 500_000],
+    [1_000_000, undefined, 0.4, undefined, 400_000, 400_000],
+    [1_000_000, 800_000, undefined, undefined, 800_000, 800_000],
+    [1_000_000, 800_000, 0.9, 250_000, 800_000, 250_000],
+    [1_000_000, 800_000, 0.9, 900_000, 800_000, 800_000],
+  ] as const)("uses the same supply denominator for finalized capacity (%j)", async (
+    supply, amount, ratio, dailyLimit, immediate, scoring,
+  ) => {
     const result = await resolveRedemptionCapacity(
-      db,
-      "lusd-liquity",
-      { kind: "reserve-sync-metadata" },
-      1_000_000,
-      now,
-      {
-        reserveSnapshotMetadata: baseSnapshot({
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 800_000,
-            capacityRatioOfSupply: 0.9,
-            capacityKind: "live-direct-bounded",
-            freshnessKind: "same-run-onchain",
-            sourceTimestamp: now - 30,
-            sourceUrls: ["https://example.com/reserves"],
-            settlementDelaySec: 3_600,
-            queueDepthUsd: 50_000,
-            dailyLimitUsd: 250_000,
-            minRedeemUsd: 100,
-            routeStatus: "open",
-            routeStatusSource: "onchain",
-            routeStatusReason: "Vault open",
-            routeStatusReviewedAt: "2026-05-17",
-          },
-        }),
-      },
+      {} as D1Database, "lusd-liquity", { kind: "reserve-sync-metadata" }, supply!, now,
+      { reserveSnapshotMetadata: baseSnapshot({
+        freshnessMode: "not-applicable",
+        redemption: {
+          ...(amount != null ? { capacityUsd: amount } : {}),
+          ...(ratio != null ? { capacityRatioOfSupply: ratio } : {}),
+          ...(dailyLimit != null ? { dailyLimitUsd: dailyLimit } : {}),
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+        },
+      }) },
     );
-
-    expect(result).toEqual({
-      immediateCapacityUsd: 800_000,
-      immediateCapacityRatio: 0.9,
-      scoringCapacityUsd: 250_000,
-      scoringCapacityRatio: 0.25,
-      capacityProfile: {
-        immediateUsd: 800_000,
-        dailyLimitUsd: 250_000,
-        queuedUsd: 50_000,
-        scoringUsd: 250_000,
-        scoringHorizon: "daily",
-        capacityProfileConfidence: "live-direct",
-      },
-      provider: "reserve-sync-metadata",
-      sourceMode: "dynamic",
-      resolutionState: "resolved",
-      capacityConfidence: "live-direct",
-      capacityBasis: "live-direct-telemetry",
-      capacitySemantics: "immediate-bounded",
-      capacityKind: "live-direct-bounded",
-      freshnessKind: "same-run-onchain",
-      sourceTimestamp: now - 30,
-      sourceUrls: ["https://example.com/reserves"],
-      settlementDelaySec: 3_600,
-      queueDepthUsd: 50_000,
-      dailyLimitUsd: 250_000,
-      minRedeemUsd: 100,
-      routeStatus: "open",
-      routeStatusSource: "onchain",
-      routeStatusReason: "Vault open",
-      routeStatusReviewedAt: "2026-05-17",
-      notes: [
-        "Live redemption daily limit caps usable scoring capacity",
-        "Live redemption queue depth is surfaced as a route constraint",
-        "Live redemption settlement delay is surfaced as a route constraint",
-      ],
-    });
+    expect(result.immediateCapacityUsd).toBe(immediate);
+    expect(result.immediateCapacityRatio).toBe(immediate! / supply!);
+    expect(result.scoringCapacityUsd).toBe(scoring);
+    expect(result.scoringCapacityRatio).toBe(scoring! / supply!);
   });
 
   it("treats an unproven settlement bound as unestablished capacity", async () => {

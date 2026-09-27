@@ -10,11 +10,15 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCompactUsd } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveQueryViewState } from "@/lib/query-view-state";
+import { resolveCoinNetFlow } from "@/lib/mint-burn-coin-helpers";
+import { sumMintBurnSignedNets, type MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 
 interface Mover {
   id: string;
   symbol: string;
   netFlow24hUsd: number;
+  net: MintBurnSignedNetView;
 }
 
 export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}): React.JSX.Element {
@@ -23,14 +27,20 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
   const logos = logosById;
   const logoMap = logos ?? {};
 
-  const { topMovers, totalNet } = useMemo(() => {
-    const coins = (data?.coins ?? []).filter((c) => c.has24hActivity !== false && c.netFlow24hUsd !== 0);
-    const sorted = [...coins].sort((a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd));
-    const totalNet = coins.reduce((s, c) => s + c.netFlow24hUsd, 0);
-    const topMovers: Mover[] = sorted
-      .slice(0, 3)
-      .map((c) => ({ id: c.stablecoinId, symbol: c.symbol, netFlow24hUsd: c.netFlow24hUsd }));
-    return { topMovers, totalNet };
+  const { topMovers, totalNet, hasUnavailableNet } = useMemo(() => {
+    const activeCoins = (data?.coins ?? []).filter((c) => c.has24hActivity !== false);
+    const nets = activeCoins.map((c) => ({ coin: c, net: resolveCoinNetFlow(c, "24h") }));
+    // Only displayable nonzero nets rank as movers; an unavailable net is never ranked as 0.
+    const movers: Mover[] = nets.flatMap(({ coin, net }) =>
+      net.valueUsd == null || net.valueUsd === 0
+        ? []
+        : [{ id: coin.stablecoinId, symbol: coin.symbol, netFlow24hUsd: net.valueUsd, net }],
+    );
+    const topMovers = movers
+      .sort((a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd))
+      .slice(0, 3);
+    const totalNet = sumMintBurnSignedNets(nets.map(({ net }) => net));
+    return { topMovers, totalNet, hasUnavailableNet: totalNet.valueUsd == null };
   }, [data?.coins]);
 
   const gauge = data?.gauge;
@@ -38,7 +48,8 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
     hasData: data !== undefined,
     isLoading,
     error: query.error,
-    isEmpty: topMovers.length === 0,
+    // Coins whose net is unavailable still count as activity: "no activity" would be a false claim.
+    isEmpty: topMovers.length === 0 && !hasUnavailableNet,
   });
 
   return (
@@ -74,7 +85,12 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
                       {gauge.score.toFixed(0)} ·{" "}
                     </span>
                   )}
-                  Net <span className="pharos-numeric text-foreground/85">{formatSignedCompactUsd(totalNet)}</span>
+                  Net{" "}
+                  <FlowSignedNetValue
+                    net={totalNet}
+                    format={formatSignedCompactUsd}
+                    className="pharos-numeric text-foreground/85"
+                  />
                 </>
               ) : (
                 "Net flow"
@@ -84,6 +100,8 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
           <ul className="ml-auto flex flex-1 flex-col justify-center gap-1 text-xs" aria-label="Top 24h flow movers">
             {state === "empty" ? (
               <li className="font-mono uppercase tracking-wider text-muted-foreground">No 24h activity</li>
+            ) : topMovers.length === 0 ? (
+              <li className="font-mono uppercase tracking-wider text-muted-foreground">Net flows unavailable</li>
             ) : (
               topMovers.map((row) => {
                 const logoSrc = getLogoSrc(logoMap, row.id);
@@ -96,15 +114,15 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
                     >
                       <CoinCell logoSrc={logoSrc} size="compact" />
                       <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
-                      <span
+                      <FlowSignedNetValue
+                        net={row.net}
+                        format={formatSignedCompactUsd}
                         className={
                           row.netFlow24hUsd >= 0
                             ? "text-green-700 dark:text-green-400"
                             : "text-red-700 dark:text-red-400"
                         }
-                      >
-                        {formatSignedCompactUsd(row.netFlow24hUsd)}
-                      </span>
+                      />
                     </Link>
                   </li>
                 );

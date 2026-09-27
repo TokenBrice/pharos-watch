@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
 import { ReportCardGradeSchema } from "./report-card-grade";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
+import { FreshnessAssessmentSchema } from "./api-meta";
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,
   YIELD_BENCHMARK_KEY_VALUES,
@@ -262,13 +263,10 @@ const YieldResponseWarningSchema = z.object({
  * Shared freshness envelope for detailed rankings, their summary projection,
  * and yield history. Every assessment names the budgets used for its verdict.
  */
-const YieldResponseFreshnessMetaSchema = z
-  .object({
+const YieldResponseFreshnessMetaSchema = FreshnessAssessmentSchema
+  .extend({
     updatedAt: z.number(),
     ageSeconds: z.number(),
-    assessedAt: z.number(),
-    freshBudgetSec: z.number(),
-    degradedBudgetSec: z.number(),
     reason: z.string().nullable(),
     status: z.enum(["fresh", "degraded", "stale"]),
   })

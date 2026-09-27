@@ -66,6 +66,7 @@ export interface HistoricalPsiReplayResult {
     shadowCoverageCount: number;
     historicalPriceCoverageCount: number;
     peakDeviationFallbackCount: number;
+    openDepegsWithoutPrice: number;
   };
 }
 
@@ -105,6 +106,7 @@ export function replayHistoricalPsiForDay(
       shadowCoverageCount: baseInput.shadowCoverageCount,
       historicalPriceCoverageCount: baseInput.historicalPriceCoverageCount,
       peakDeviationFallbackCount: baseInput.peakDeviationFallbackCount,
+      openDepegsWithoutPrice: baseInput.openDepegsWithoutPrice,
     },
   };
 }

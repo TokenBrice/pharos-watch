@@ -22,6 +22,8 @@ import {
   type DexHistoryRow,
 } from "../../lib/dex-liquidity-response";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { tallyMintBurnHourlyBucket, type MintBurnValuationTally } from "@shared/lib/mint-burn-valuation";
 import {
   loadRedemptionBackstopLiveSignalRows,
   RedemptionBackstopSnapshotUnavailableError,
@@ -51,6 +53,12 @@ import {
 } from "./utils";
 import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
 
+/** Stored hourly bucket read for DDR mint-surge evidence; `netFlowUsd` is the known-valuation net. */
+export interface DdrMintBurnHourlyRow {
+  hourTs: number;
+  netFlowUsd: number;
+  valuation: MintBurnValuationTally;
+}
 export interface DdrLoadedContext {
   active: DdrActiveEventInput[];
   activeCoinIds: string[];
@@ -58,7 +66,7 @@ export interface DdrLoadedContext {
   incidents: DdrIncident[];
   quarantined: Set<string>;
   supplyByCoin: Map<string, { date: number; usd: number }[]>;
-  mintBurnHourlyByCoin: Map<string, { hourTs: number; netFlowUsd: number }[]>;
+  mintBurnHourlyByCoin: Map<string, DdrMintBurnHourlyRow[]>;
   dewsByCoin: Map<string, { stablecoin_id: string; score: number; band: string; signals_json: string | null; computed_at: number }>;
   liqByCoin: Map<string, { stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; total_tvl_usd: number | null; total_volume_24h_usd: number | null; updated_at: number }>;
   liqTvlChange7dByCoin: Map<string, number>;
@@ -75,9 +83,15 @@ export type DdrContextLoadResult =
   | { kind: "ok"; context: DdrLoadedContext }
   | { kind: "degraded"; reason: string; dataAsOf: number | null };
 
+// Measured 24h volume after the DEC-19 availability read: null when the
+// stored record marks the window partial/missing/stale/unreadable.
 type DdrDexHistoryRow = DexHistoryRow & {
-  total_volume_24h_usd: number;
+  total_volume_24h_usd: number | null;
 };
+
+function measuredVolume24h(storedUsd: number | null, availabilityJson: string | null | undefined): number | null {
+  return readStoredDexVolumeWindow(storedUsd, parseDexVolumeAvailabilityRecord(availabilityJson), "24h").measuredUsd;
+}
 
 export function emptyDdrLineage(nowSec: number): DdrLineage {
   return {
@@ -388,7 +402,8 @@ export async function loadDdrContext(
   const mintBurnCoinIds = activeCoinIds.filter((id) => MINT_BURN_COVERED_COIN_IDS.has(id));
   const mintBurnResult = await queryRowsChunked("mint_burn_hourly", mintBurnCoinIds, (inClauseSql, binds) => db
     .prepare(
-      `SELECT stablecoin_id, hour_ts, net_flow_usd FROM mint_burn_hourly ` +
+      `SELECT stablecoin_id, hour_ts, net_flow_usd, mint_count, burn_count, ` +
+        `mint_unpriced_event_count, burn_unpriced_event_count FROM mint_burn_hourly ` +
         `WHERE stablecoin_id IN (${inClauseSql}) AND hour_ts >= ? AND hour_ts <= ? ` +
         "ORDER BY stablecoin_id, hour_ts ASC",
     )
@@ -401,11 +416,24 @@ export async function loadDdrContext(
       stablecoin_id: string;
       hour_ts: number;
       net_flow_usd: number;
+      mint_count: number;
+      burn_count: number;
+      mint_unpriced_event_count: number | null;
+      burn_unpriced_event_count: number | null;
     }>());
-  const mintBurnHourlyByCoin = new Map<string, { hourTs: number; netFlowUsd: number }[]>();
+  const mintBurnHourlyByCoin = new Map<string, DdrMintBurnHourlyRow[]>();
   for (const row of mintBurnResult.rows) {
     const list = mintBurnHourlyByCoin.get(row.stablecoin_id) ?? [];
-    list.push({ hourTs: row.hour_ts, netFlowUsd: row.net_flow_usd });
+    list.push({
+      hourTs: row.hour_ts,
+      netFlowUsd: row.net_flow_usd,
+      valuation: tallyMintBurnHourlyBucket({
+        mintCount: row.mint_count,
+        burnCount: row.burn_count,
+        unpricedMintEventCount: row.mint_unpriced_event_count,
+        unpricedBurnEventCount: row.burn_unpriced_event_count,
+      }),
+    });
     mintBurnHourlyByCoin.set(row.stablecoin_id, list);
   }
 
@@ -427,7 +455,7 @@ export async function loadDdrContext(
 
   const liqResult = await queryRowsChunked("dex_liquidity", activeCoinIds, (inClauseSql, binds) => db
     .prepare(
-      `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, total_volume_24h_usd, updated_at FROM dex_liquidity ` +
+      `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, total_volume_24h_usd, volume_availability_json, updated_at FROM dex_liquidity ` +
         `WHERE stablecoin_id IN (${inClauseSql}) ` +
         `AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
     )
@@ -438,21 +466,30 @@ export async function loadDdrContext(
       concentration_hhi: number | null;
       total_tvl_usd: number | null;
       total_volume_24h_usd: number | null;
+      volume_availability_json?: string | null;
       updated_at: number;
     }>());
-  const liqByCoin = new Map(liqResult.rows.map((l) => [l.stablecoin_id, l]));
+  const liqRows = liqResult.rows.map(({ volume_availability_json, ...row }) => ({
+    ...row,
+    total_volume_24h_usd: measuredVolume24h(row.total_volume_24h_usd, volume_availability_json),
+  }));
+  const liqByCoin = new Map(liqRows.map((l) => [l.stablecoin_id, l]));
 
   const liqHistResult = await queryRowsChunked("dex_liquidity_history", activeCoinIds, (inClauseSql, binds) => db
     .prepare(
-      `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date, coverage_class, coverage_confidence ` +
+      `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, volume_availability_json, snapshot_date, coverage_class, coverage_confidence ` +
         `FROM dex_liquidity_history ` +
         `WHERE stablecoin_id IN (${inClauseSql}) AND snapshot_date >= ? ` +
         `ORDER BY stablecoin_id, snapshot_date DESC`,
     )
     .bind(...binds, nowSec - 32 * DAY)
-    .all<DdrDexHistoryRow>());
+    .all<DdrDexHistoryRow & { volume_availability_json?: string | null }>());
   const liqHistoryByCoin = new Map<string, DdrDexHistoryRow[]>();
-  for (const row of liqHistResult.rows) {
+  for (const { volume_availability_json, ...stored } of liqHistResult.rows) {
+    const row: DdrDexHistoryRow = {
+      ...stored,
+      total_volume_24h_usd: measuredVolume24h(stored.total_volume_24h_usd, volume_availability_json),
+    };
     const rows = liqHistoryByCoin.get(row.stablecoin_id) ?? [];
     rows.push(row);
     liqHistoryByCoin.set(row.stablecoin_id, rows);
@@ -463,7 +500,7 @@ export async function loadDdrContext(
   const target7d = nowSec - 7 * DAY;
   const target30d = nowSec - 30 * DAY;
   const { week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
-  for (const row of liqResult.rows) {
+  for (const row of liqRows) {
     const currentTvl = row.total_tvl_usd;
     const history = liqHistoryByCoin.get(row.stablecoin_id) ?? [];
     const baseline7d = selectTrendBaseline(history, target7d, trend7dToleranceSec) as DdrDexHistoryRow | null;
@@ -493,6 +530,7 @@ export async function loadDdrContext(
     const currentVolume = row.total_volume_24h_usd;
     if (
       baseline30d &&
+      baseline30d.total_volume_24h_usd != null &&
       baseline30d.total_volume_24h_usd > 0 &&
       currentVolume != null &&
       Number.isFinite(currentVolume)

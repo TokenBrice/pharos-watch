@@ -134,4 +134,32 @@ describe("DominanceBreakdown", () => {
     expect(label).toBe("Supply dominance: Ethereum 50.0%, Tron 20.0%");
     expect(label).not.toMatch(/NaN|Infinity/);
   });
+
+  it("keeps global-share labels while normalizing bar geometry when chain rows over-attribute supply", () => {
+    const overAttributed = [
+      makeChain({ id: "ethereum", name: "Ethereum", dominanceShare: 0.9, totalUsd: 90 }),
+      makeChain({ id: "base", name: "Base", dominanceShare: 0.6, totalUsd: 60 }),
+    ];
+    const { container } = render(
+      <DominanceBreakdown
+        topBySupply={overAttributed}
+        globalTotalUsd={100}
+        chainAttributedTotalUsd={150}
+        unattributedTotalUsd={0}
+        attributionDiscrepancyUsd={50}
+        dominanceGeometryTotalUsd={150}
+        chains={overAttributed}
+      />,
+    );
+
+    expect(dominanceBarLabel(container)).toBe(
+      "Supply dominance: Ethereum 90.0%, Base 60.0%, Chain rows exceed global supply by 50.0%",
+    );
+    expect(screen.getByText("Chain rows exceed global supply by")).toBeTruthy();
+    const widths = [...container.querySelectorAll<HTMLElement>('div[role="img"] > div')]
+      .map((segment) => Number.parseFloat(segment.style.width));
+    expect(widths).toHaveLength(2);
+    expect(widths[0]).toBeCloseTo(60);
+    expect(widths[1]).toBeCloseTo(40);
+  });
 });

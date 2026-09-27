@@ -313,6 +313,8 @@ export interface ReserveCoinSyncResult {
   breakerKey: string;
   status: ReserveCoinSyncStatus;
   breakerOutcome?: boolean;
+  /** Present only after this attempt's canonical composition was confirmed authoritative. */
+  publishedAt?: number;
   warningMessages: string[];
   hasWarnings: boolean;
   attemptFailureSummaries?: ReserveAttemptFailureSummary[];
@@ -663,6 +665,7 @@ export async function syncReserveCoin(args: {
       breakerKey,
       status: "synced",
       breakerOutcome: true,
+      publishedAt: compositionRecord.fetchedAt,
       warningMessages,
       hasWarnings: warningMessages.length > 0,
     });

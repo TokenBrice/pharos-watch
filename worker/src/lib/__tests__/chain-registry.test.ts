@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CHAIN_META } from "@shared/lib/chains";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
+import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   DWELLIR_CHAINS,
   buildAlchemyRpcUrl,
@@ -18,6 +21,25 @@ import {
 const ALCHEMY_KEY = "alchemy-test-key";
 const DRPC_KEY = "drpc-test-key";
 const DWELLIR_KEY = "dwellir-test-key";
+
+describe("public supply RPC provider exclusions", () => {
+  it("never routes Polygon supply through the known zero-valued eth_call provider", () => {
+    const chainRpcs = buildChainRpcs();
+    expect(getPublicFallbackRpcUrls("polygon")).toEqual([
+      "https://polygon-bor-rpc.publicnode.com",
+      "https://polygon.drpc.org",
+    ]);
+    for (const meta of TRACKED_STABLECOINS) {
+      for (const { config, contract } of selectCuratedAggregateOnchainSupplyProbeContracts(meta) ?? []) {
+        const defaults = registryRpcUrls(chainRpcs.get(contract.chain));
+        const urls = [config.rpcUrl ?? defaults[0], config.fallbackRpcUrl ?? defaults[1]];
+        for (const url of urls) {
+          if (url) expect(new URL(url).hostname, `${meta.id}:${contract.chain}`).not.toBe("polygon-rpc.com");
+        }
+      }
+    }
+  });
+});
 
 /** Today's [rpcUrl, fallbackRpcUrl] lists, captured before the endpoint refactor. */
 const KEY_COMBINATIONS = [

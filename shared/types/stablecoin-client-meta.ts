@@ -80,7 +80,6 @@ export const GENIUS_COMPLIANCE_PROFILE_FIELDS = [
   "reserveDisclosureUrl",
   "redemptionPolicyPresent",
   "monthlyAttestationPresent",
-  "latestReportDate",
   "notes",
   "references",
   "negativeEvidenceReview",

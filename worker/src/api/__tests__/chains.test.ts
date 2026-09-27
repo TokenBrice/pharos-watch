@@ -294,19 +294,32 @@ describe("handleChains", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
-  it("degrades an old stablecoins snapshot independently of current V9 safety", async () => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
-    const db = mockD1([
-      stablecoinsCache(
-        [asset("usdc-circle", { Ethereum: { current: 100 } })],
-        1_801,
-      ),
-    ]);
-
-    const response = await handleChains(db);
-    const body = await response.json() as { _meta: { status: string } };
-    expect(body._meta.status).toBe("degraded");
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  it.each([
+    [1_790, "fresh"], [1_800, "fresh"], [1_801, "degraded"],
+    [3_600, "degraded"], [3_601, "stale"],
+  ] as const)("discloses strict snapshot bands at age %s independently of current V9 safety", async (age, status) => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    try {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
+      const db = mockD1([
+        stablecoinsCache([asset("usdc-circle", { Ethereum: { current: 100 } })], age),
+      ]);
+      const response = await handleChains(db);
+      const body = await response.json() as {
+        _meta: { status: string; assessedAt: number; updatedAt: number; freshBudgetSec: number; degradedBudgetSec: number };
+      };
+      expect(body._meta.status).toBe(status);
+      expect(body._meta.assessedAt - body._meta.updatedAt).toBe(age);
+      expect(body._meta.freshBudgetSec).toBe(1_800);
+      expect(body._meta.degradedBudgetSec).toBe(3_600);
+      if (age >= 1_800) {
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+      } else {
+        expect(response.headers.get("Cache-Control")).toContain("s-maxage=10");
+      }
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("excludes frozen and non-active assets from live aggregation", async () => {

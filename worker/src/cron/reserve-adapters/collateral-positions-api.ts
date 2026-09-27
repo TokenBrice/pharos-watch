@@ -20,6 +20,8 @@ import {
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { encodeAddress, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import { rethrowIfAborted } from "../../lib/abort";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 
 const BRIDGE_EUR_SELECTOR = "0x7439ae59";
 const BRIDGE_DEURO_SELECTOR = "0xd395d24b";
@@ -213,6 +215,7 @@ export function adaptCollateralPositions(
   otherThresholdPct = 2,
   immediateRedeemableUsd?: number | null,
   redemptionOptions: CollateralPositionsRedemptionOptions = {},
+  nowSec = Math.floor(Date.now() / 1000),
 ): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const values: Array<{
@@ -295,12 +298,13 @@ export function adaptCollateralPositions(
   // withheld rather than overstated.
   let mintedUsd = 0;
   let mintedCoverageComplete = true;
+  const debtPriceTimestamps: unknown[] = [];
   for (const entry of Object.values(details)) {
     for (const [positionIndex, position] of entry.positions.entries()) {
-      if (position.closed || position.denied || position.minted == null) continue;
-      const mintedDecimals = position.zchfDecimals ?? entry.decimals;
-      const mintedRaw = parseCollateralBalance(position.minted, mintedDecimals);
-      if (mintedRaw == null) {
+      if (position.closed || position.denied) continue;
+      const mintedDecimals = parseBoundedDecimals(position.zchfDecimals);
+      const mintedRaw = mintedDecimals == null ? null : parseCollateralBalance(position.minted, mintedDecimals);
+      if (mintedDecimals == null || mintedRaw == null) {
         mintedCoverageComplete = false;
         warnings.push(reserveDegradedWarning(
           "unparseable-minted-balance",
@@ -309,13 +313,15 @@ export function adaptCollateralPositions(
         continue;
       }
       if (mintedRaw <= 0n) continue;
-      const mintedPrice = position.zchf
-        ? prices[position.zchf.toLowerCase()]?.price?.usd
+      const mintedPriceInfo = position.zchf
+        ? prices[position.zchf.toLowerCase()]
         : undefined;
-      if (typeof mintedPrice !== "number" || mintedPrice <= 0) {
+      const mintedPrice = mintedPriceInfo?.price?.usd;
+      if (typeof mintedPrice !== "number" || !Number.isFinite(mintedPrice) || mintedPrice <= 0) {
         mintedCoverageComplete = false;
         continue;
       }
+      debtPriceTimestamps.push(mintedPriceInfo?.timestamp);
       const usd = valueUsdFromBigIntPrice(mintedRaw, mintedDecimals, mintedPrice);
       if (Number.isFinite(usd) && usd >= 0) {
         mintedUsd += usd;
@@ -323,6 +329,28 @@ export function adaptCollateralPositions(
         mintedCoverageComplete = false;
       }
     }
+  }
+  if (!mintedCoverageComplete) {
+    warnings.push(reserveDegradedWarning(
+      "liability-coverage-incomplete",
+      "One or more open positions lack a valid minted amount, debt decimals, token identity, or USD valuation",
+    ));
+  }
+  // Debt quotes qualify only the ratio, never the independently observed
+  // collateral composition clock. Reuse the reserve freshness budget because
+  // this latest-state adapter has no dated-source age tier.
+  const debtTimestampSummary = summarizeSourceTimestampsRequiringCoverage(debtPriceTimestamps);
+  const debtPricesFresh = debtPriceTimestamps.length === 0 || (
+    debtTimestampSummary != null &&
+    debtTimestampSummary.untimestampedCount === 0 &&
+    nowSec - debtTimestampSummary.sourceTimestamp <= LIVE_RESERVE_FRESHNESS_SEC &&
+    debtTimestampSummary.latestSourceTimestamp <= nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC
+  );
+  if (!debtPricesFresh) {
+    warnings.push(reserveDegradedWarning(
+      "liability-price-freshness",
+      `Debt price timestamps must be complete, at most ${LIVE_RESERVE_FRESHNESS_SEC}s old, and no more than ${MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC}s ahead`,
+    ));
   }
 
   const knownValues = values.filter((value) => !value.unknown);
@@ -378,7 +406,9 @@ export function adaptCollateralPositions(
       unknownAssetCount: unknownValues.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
       totalReserveUsd: total,
-      ...(mintedUsd > 0 && mintedCoverageComplete
+      mintedCoverageComplete,
+      debtPricesFresh,
+      ...(mintedUsd > 0 && mintedCoverageComplete && debtPricesFresh
         ? {
             totalLiabilitiesUsd: mintedUsd,
             collateralizationRatio: total / mintedUsd,
@@ -636,5 +666,6 @@ export async function fetchCollateralPositionsApiReserves(
       : params.redemptionBridge
       ? { sourceUrls: [input.url, params.pricesUrl] }
       : {},
+    ctx?.nowSec,
   );
 }

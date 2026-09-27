@@ -215,6 +215,44 @@ describe("loadStatusForCoin", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
   });
 
+  it("keeps missing supply unavailable and marks 30-day-old DEX liquidity not current", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-27T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const stablecoinsRow = {
+      value: JSON.stringify({ peggedAssets: [{ id: "usdc-circle", symbol: "USDC", circulating: {} }] }),
+      updated_at: nowSec - 60,
+    };
+    const liquidityRow = { liquidity_score: 91, total_tvl_usd: 123_000_000, updated_at: nowSec - 30 * 86_400 };
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [stablecoinsRow], first: stablecoinsRow },
+      { match: "FROM dex_liquidity", rows: [liquidityRow], first: liquidityRow },
+    ]);
+
+    const status = await loadStatusForCoin(db, "usdc-circle");
+
+    expect(status.supplyUsd).toBeNull();
+    expect(status.supplyCurrent).toBe(true);
+    expect(status.liquidity).toMatchObject({ score: 91, updatedAt: nowSec - 30 * 86_400, current: false });
+  });
+
+  it("reports an explicit zero supply with its observation clock", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-27T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const stablecoinsRow = {
+      value: JSON.stringify({ peggedAssets: [{ id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 0 } }] }),
+      updated_at: nowSec - 60,
+    };
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [stablecoinsRow], first: stablecoinsRow },
+    ]);
+
+    const status = await loadStatusForCoin(db, "usdc-circle");
+
+    expect(status).toMatchObject({ supplyUsd: 0, supplyObservedAt: nowSec - 60, supplyCurrent: true });
+  });
+
   it("returns yield status from published or legacy rows only", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {

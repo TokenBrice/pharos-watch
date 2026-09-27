@@ -400,7 +400,8 @@ function baseStatus(overrides: Partial<StatusForCoin> = {}): StatusForCoin {
     priceUsd: 1,
     priceUpdatedAt: Math.floor(Date.now() / 1000),
     supplyUsd: null,
-    stablecoinsUpdatedAt: null,
+    supplyObservedAt: null,
+    supplyCurrent: false,
     dews: null,
     safety: null,
     safetyUnavailableReason: null,
@@ -418,20 +419,20 @@ describe("buildStatusMessage 24h mint/burn flow line (C122)", () => {
   it("renders a signed Flow 24h line when flow is present", () => {
     const msg = buildStatusMessage(
       "USDC",
-      baseStatus({ flow: { netFlowUsd: 12_300_000, updatedAt: nowSec, stale: false } }),
+      baseStatus({ flow: { netFlowUsd: 12_300_000, updatedAt: nowSec, stale: false, assessedAt: nowSec, freshBudgetSec: 21_600 } }),
     );
     expect(msg).toContain("Flow 24h: +$12");
   });
 
   it("renders $0 for zero net flow (tracked coin, no events)", () => {
-    const msg = buildStatusMessage("USDC", baseStatus({ flow: { netFlowUsd: 0, updatedAt: nowSec, stale: false } }));
+    const msg = buildStatusMessage("USDC", baseStatus({ flow: { netFlowUsd: 0, updatedAt: nowSec, stale: false, assessedAt: nowSec, freshBudgetSec: 21_600 } }));
     expect(msg).toContain("Flow 24h: $0");
   });
 
   it("renders a negative net flow with a minus sign", () => {
     const msg = buildStatusMessage(
       "USDC",
-      baseStatus({ flow: { netFlowUsd: -4_000_000, updatedAt: nowSec, stale: false } }),
+      baseStatus({ flow: { netFlowUsd: -4_000_000, updatedAt: nowSec, stale: false, assessedAt: nowSec, freshBudgetSec: 21_600 } }),
     );
     expect(msg).toContain("Flow 24h: -$4");
   });
@@ -439,6 +440,40 @@ describe("buildStatusMessage 24h mint/burn flow line (C122)", () => {
   it("omits the line for untracked coins (flow null), without an n/a placeholder", () => {
     const msg = buildStatusMessage("USDC", baseStatus({ flow: null }));
     expect(msg).not.toContain("Flow 24h");
+  });
+});
+
+describe("buildStatusMessage supply and DEX context", () => {
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  it("states unavailable supply explicitly instead of $0 or dropping it", () => {
+    const msg = buildStatusMessage("USDC", baseStatus({ supplyUsd: null }));
+    expect(msg).toContain("Supply: unavailable");
+    expect(msg).not.toContain("Supply: $0");
+  });
+
+  it("keeps an explicit zero supply and labels only out-of-budget observations stale", () => {
+    expect(
+      buildStatusMessage("USDC", baseStatus({ supplyUsd: 0, supplyObservedAt: nowSec, supplyCurrent: true })),
+    ).toMatch(/Supply: \$0 \([^)]*\)/);
+    const stale = buildStatusMessage(
+      "USDC",
+      baseStatus({ supplyUsd: 5_000_000_000, supplyObservedAt: nowSec - 30 * 86_400, supplyCurrent: false }),
+    );
+    expect(stale).toMatch(/Supply: \$5[^\n]*, stale\)/);
+  });
+
+  it("labels 30-day-old DEX liquidity stale while keeping its age", () => {
+    const msg = buildStatusMessage(
+      "USDC",
+      baseStatus({ liquidity: { score: 91, totalTvlUsd: 123_000_000, updatedAt: nowSec - 30 * 86_400, current: false } }),
+    );
+    expect(msg).toMatch(/Liquidity: 91, TVL \$123[^\n]*, stale\)/);
+    const current = buildStatusMessage(
+      "USDC",
+      baseStatus({ liquidity: { score: 91, totalTvlUsd: 123_000_000, updatedAt: nowSec, current: true } }),
+    );
+    expect(current).not.toContain("stale");
   });
 });
 

@@ -78,6 +78,36 @@ describe("ChainsResponseSchema", () => {
     expect(parsed.chains[0].healthFactors.quality).toBeNull();
   });
 
+  it("accepts an NR peg factor and NR composite with peg coverage alongside legacy payloads", () => {
+    const chain = validChainsPayload.chains[0];
+    const nrPeg = {
+      ...validChainsPayload,
+      attributionDiscrepancyUsd: -250,
+      dominanceGeometryTotalUsd: 1250,
+      chains: [{
+        ...chain,
+        healthScore: null,
+        healthBand: null,
+        healthFactors: { ...chain.healthFactors, quality: 80, pegStability: null },
+        pegStabilityCoverage: {
+          status: "unavailable",
+          observedSupplyUsd: 0,
+          eligibleSupplyUsd: 1000,
+          coverage: 0,
+          noUsablePriceSupplyUsd: 1000,
+          noPegReferenceSupplyUsd: 0,
+          neutralImputedSupplyUsd: 0,
+          observedScore: null,
+        },
+      }],
+    };
+    expect(ChainsResponseSchema.parse(nrPeg).chains[0].healthFactors.pegStability).toBeNull();
+    expect(ChainsResponseSchema.safeParse({
+      ...nrPeg,
+      chains: [{ ...nrPeg.chains[0], pegStabilityCoverage: { ...nrPeg.chains[0].pegStabilityCoverage, status: "imputed" } }],
+    }).success).toBe(false);
+  });
+
   it("rejects unknown chain runtime types", () => {
     expect(ChainsResponseSchema.safeParse({
       ...validChainsPayload,

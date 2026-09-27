@@ -25,11 +25,11 @@ import {
   type SafetyScoreV9CompilerInput,
 } from "./native-input";
 import { assertSafetyScoreV9ExactExtensionAssets } from "./fact-set-boundary";
-import { hydrateSafetyScoreV9ShockCoverageExtension } from "./extension-shock";
+import { hydrateSafetyScoreV9ShockCoverageAsset } from "./extension-shock";
 import { safetyScoreV9ChainSupplySourcePayload } from "./supply-attribution";
 import { logWorkerEvent } from "../structured-log";
 import {
-  SafetyScoreV9FactSetExtensionV2Schema,
+  admitSafetyScoreV9FactSetExtension,
   type AssetExtension,
   type SafetyScoreV9FactSetExtensionV2,
 } from "./fact-set-schema";
@@ -92,12 +92,18 @@ export interface SafetyScoreV9FactCompilationResult {
 }
 const materializedExtensions = new WeakSet<object>();
 
+/**
+ * Admit an extension behind the asset-local quarantine boundary. Envelope,
+ * registry identity, and asset-id set failures still throw for the cohort; one
+ * asset's malformed, future-dated, or unverifiable local overlay becomes a
+ * quarantined stub that compiles to producer-failed NR.
+ */
 export function materializeSafetyScoreV9FactSetExtension(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extensionValue: unknown,
 ): Readonly<SafetyScoreV9FactSetExtensionV2> {
-  const extension = SafetyScoreV9FactSetExtensionV2Schema.parse(
-    hydrateSafetyScoreV9ShockCoverageExtension(extensionValue, fixedInput.clockSec),
+  const extension = admitSafetyScoreV9FactSetExtension(extensionValue, (asset) =>
+    hydrateSafetyScoreV9ShockCoverageAsset(asset, fixedInput.clockSec),
   );
   materializedExtensions.add(extension);
   return extension;
@@ -375,6 +381,48 @@ function buildQuarantinedAssetFacts(
   });
 }
 
+type V9AssetQuarantineStage = "extension-admission" | "fact-build" | "fact-validation" | "evaluation";
+
+/**
+ * Conservative producer-failed outcome for one asset. Dependencies already
+ * compiled on the failing path are reused; otherwise the reviewed overlay is
+ * compiled so dependents keep resolving their edges, and an overlay that cannot
+ * compile falls back to the unreviewed (edge-free) dependency set.
+ */
+function quarantinedAssetOutcome(
+  context: AssetBuildContext,
+  compiledDependencies: V9EffectiveDependenciesV3 | null,
+  quarantine: V9AssetQuarantine,
+  stage: V9AssetQuarantineStage,
+): { facts: V9AssetFactsV3; quarantine: V9AssetQuarantine } {
+  let quarantineContext = context;
+  let dependencies = compiledDependencies;
+  if (dependencies === null) {
+    try {
+      dependencies = V9EffectiveDependenciesV3Schema.parse(buildDependencies(context));
+    } catch {
+      quarantineContext = createAssetBuildContext(
+        context.fixedInput,
+        context.extension,
+        { ...context.asset, dependencies: null },
+        context.researchPayloadSha256,
+      );
+      dependencies = V9EffectiveDependenciesV3Schema.parse(buildDependencies(quarantineContext));
+    }
+  }
+  logWorkerEvent({
+    scope: "lib",
+    level: "warn",
+    event: "safety_score_v9_asset_quarantined",
+    message: `Safety Score v9 asset ${quarantine.assetId} quarantined during ${stage}: ${quarantine.message}`,
+    metadata: { assetId: quarantine.assetId, stage, code: quarantine.code, message: quarantine.message },
+  });
+  return {
+    facts: buildQuarantinedAssetFacts(quarantineContext, dependencies),
+    quarantine,
+  };
+}
+
 function evaluationQuarantineOutcome(
   fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
@@ -382,31 +430,12 @@ function evaluationQuarantineOutcome(
   researchPayloadSha256: string,
   message: string,
 ): { facts: V9AssetFactsV3; quarantine: V9AssetQuarantine } {
-  const context = createAssetBuildContext(
-    fixedInput,
-    extension,
-    asset,
-    researchPayloadSha256,
+  return quarantinedAssetOutcome(
+    createAssetBuildContext(fixedInput, extension, asset, researchPayloadSha256),
+    null,
+    { assetId: asset.assetId, code: "evaluation-failed", message: message.slice(0, 500) },
+    "evaluation",
   );
-  const dependencies = V9EffectiveDependenciesV3Schema.parse(
-    buildDependencies(context),
-  );
-  const boundedMessage = message.slice(0, 500);
-  logWorkerEvent({
-    scope: "lib",
-    level: "warn",
-    event: "safety_score_v9_asset_quarantined",
-    message: `Safety Score v9 asset ${asset.assetId} quarantined during evaluation: ${boundedMessage}`,
-    metadata: { assetId: asset.assetId, stage: "evaluation", message: boundedMessage },
-  });
-  return {
-    facts: buildQuarantinedAssetFacts(context, dependencies),
-    quarantine: {
-      assetId: asset.assetId,
-      code: "evaluation-failed",
-      message: boundedMessage,
-    },
-  };
 }
 
 function compileAssetOutcome(
@@ -424,68 +453,50 @@ function compileAssetOutcome(
     asset,
     researchPayloadSha256,
   );
-  const rawDependencies = V9EffectiveDependenciesV3Schema.parse(
-    buildDependencies(context),
-  );
-  let reserves: ReturnType<typeof buildReserves>;
-  try {
-    reserves = buildReserves(context);
-  } catch (error) {
-    const message = quarantineFailureMessage(error);
-    logWorkerEvent({
-      scope: "lib",
-      level: "warn",
-      event: "safety_score_v9_asset_quarantined",
-      message: `Safety Score v9 asset ${asset.assetId} quarantined: ${message}`,
-      metadata: { assetId: asset.assetId, message },
-    });
-    return {
-      facts: buildQuarantinedAssetFacts(context, rawDependencies),
-      quarantine: {
-        assetId: asset.assetId,
-        code: "fact-build-failed",
-        message,
-      },
-    };
-  }
-  const dependencies = V9EffectiveDependenciesV3Schema.parse(
-    reconcileCollateralDependencyMappings(
+  const admission = asset.admissionQuarantine;
+  if (admission !== undefined) {
+    return quarantinedAssetOutcome(
       context,
-      rawDependencies,
-      reserves.reserveExposures,
-    ),
-  );
+      null,
+      {
+        assetId: asset.assetId,
+        code: admission.code,
+        message: quarantineFailureMessage(`${admission.path}: ${admission.message}`),
+      },
+      "extension-admission",
+    );
+  }
+  // Reserves failures quarantine with the pre-reconciliation dependency set;
+  // later failures with the reconciled set, matching what each stage compiled.
+  let dependencies: V9EffectiveDependenciesV3 | null = null;
   let facts: V9AssetFactsV3;
   try {
+    dependencies = V9EffectiveDependenciesV3Schema.parse(buildDependencies(context));
+    const reserves = buildReserves(context);
+    dependencies = V9EffectiveDependenciesV3Schema.parse(
+      reconcileCollateralDependencyMappings(
+        context,
+        dependencies,
+        reserves.reserveExposures,
+      ),
+    );
     facts = buildAssetFacts(context, dependencies, reserves);
   } catch (error) {
-    const message = quarantineFailureMessage(error);
-    logWorkerEvent({
-      scope: "lib",
-      level: "warn",
-      event: "safety_score_v9_asset_quarantined",
-      message: `Safety Score v9 asset ${asset.assetId} quarantined: ${message}`,
-      metadata: { assetId: asset.assetId, message },
-    });
-    return {
-      facts: buildQuarantinedAssetFacts(context, dependencies),
-      quarantine: {
-        assetId: asset.assetId,
-        code: "fact-build-failed",
-        message,
-      },
-    };
+    return quarantinedAssetOutcome(
+      context,
+      dependencies,
+      { assetId: asset.assetId, code: "fact-build-failed", message: quarantineFailureMessage(error) },
+      "fact-build",
+    );
   }
   const parsed = V9AssetFactsV3Schema.safeParse(facts);
   if (!parsed.success) {
-    return {
-      facts: buildQuarantinedAssetFacts(context, dependencies),
-      quarantine: {
-        assetId: asset.assetId,
-        code: "fact-validation-failed",
-        message: quarantineFailureMessage(parsed.error),
-      },
-    };
+    return quarantinedAssetOutcome(
+      context,
+      dependencies,
+      { assetId: asset.assetId, code: "fact-validation-failed", message: quarantineFailureMessage(parsed.error) },
+      "fact-validation",
+    );
   }
   return { facts: parsed.data, quarantine: null };
 }

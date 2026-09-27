@@ -16,8 +16,18 @@ interface DominanceBreakdownProps {
   globalTotalUsd: number;
   chainAttributedTotalUsd: number;
   unattributedTotalUsd: number;
+  /** Signed chain-attributed minus global supply; derived from the totals when absent. */
+  attributionDiscrepancyUsd?: number;
+  /** Bar geometry denominator; `max(global, attributed)` when absent. Never used for labels. */
+  dominanceGeometryTotalUsd?: number;
   /** Used only as a fallback total when chainAttributedTotalUsd is not finite. */
   chains: readonly ChainSummary[];
+}
+
+const RESIDUAL_LABEL_MIN_SHARE = 0.005;
+
+function formatSharePct(share: number): string {
+  return `${(share * 100).toFixed(1)}%`;
 }
 
 export function DominanceBreakdown({
@@ -25,44 +35,67 @@ export function DominanceBreakdown({
   globalTotalUsd,
   chainAttributedTotalUsd,
   unattributedTotalUsd,
+  attributionDiscrepancyUsd,
+  dominanceGeometryTotalUsd,
   chains,
 }: DominanceBreakdownProps) {
+  // Labels are shares of the canonical global supply (`dominanceShare`); they are never rescaled.
   const topShare = topBySupply.reduce((s, c) => s + c.dominanceShare, 0);
   const attributedTotalUsd = Number.isFinite(chainAttributedTotalUsd)
     ? chainAttributedTotalUsd
     : chains.reduce((sum, chain) => sum + chain.totalUsd, 0);
-  const chainAttributedShare = globalTotalUsd > 0 ? attributedTotalUsd / globalTotalUsd : 0;
+  const hasGlobal = globalTotalUsd > 0;
+  const chainAttributedShare = hasGlobal ? attributedTotalUsd / globalTotalUsd : 0;
   const unattributedShare =
-    globalTotalUsd > 0 && Number.isFinite(unattributedTotalUsd) ? unattributedTotalUsd / globalTotalUsd : 0;
+    hasGlobal && Number.isFinite(unattributedTotalUsd) ? unattributedTotalUsd / globalTotalUsd : 0;
   const otherChainsShare = Math.max(0, chainAttributedShare - topShare);
+  const discrepancyUsd = attributionDiscrepancyUsd != null && Number.isFinite(attributionDiscrepancyUsd)
+    ? attributionDiscrepancyUsd
+    : attributedTotalUsd - globalTotalUsd;
+  const overAttributedShare = hasGlobal ? Math.max(0, discrepancyUsd) / globalTotalUsd : 0;
+  // Geometry only: when chain rows over-attribute supply the bar normalizes to the larger raw total so
+  // every segment fits without clamping; the printed percentages keep the global denominator.
+  const geometryTotalUsd = dominanceGeometryTotalUsd != null && Number.isFinite(dominanceGeometryTotalUsd)
+    ? dominanceGeometryTotalUsd
+    : Math.max(globalTotalUsd, attributedTotalUsd);
+  const geometryScale = hasGlobal && geometryTotalUsd > globalTotalUsd ? globalTotalUsd / geometryTotalUsd : 1;
+  const showOtherChains = otherChainsShare > RESIDUAL_LABEL_MIN_SHARE;
+  const showUnattributed = unattributedShare > RESIDUAL_LABEL_MIN_SHARE;
+  const showOverAttribution = overAttributedShare > RESIDUAL_LABEL_MIN_SHARE;
+  const ariaLabel = [
+    `Supply dominance: ${topBySupply.map((c) => `${c.name} ${formatSharePct(c.dominanceShare)}`).join(", ")}`,
+    showOtherChains ? `Other chains ${formatSharePct(otherChainsShare)}` : null,
+    showUnattributed ? `Unattributed ${formatSharePct(unattributedShare)}` : null,
+    showOverAttribution ? `Chain rows exceed global supply by ${formatSharePct(overAttributedShare)}` : null,
+  ].filter((part): part is string => part != null).join(", ");
   return (
     <>
       <div
         className="flex h-2.5 w-full overflow-hidden rounded-full"
         role="img"
-        aria-label={`Supply dominance: ${topBySupply.map((c) => `${c.name} ${(c.dominanceShare * 100).toFixed(1)}%`).join(", ")}${otherChainsShare > 0.005 ? `, Other chains ${(otherChainsShare * 100).toFixed(1)}%` : ""}${unattributedShare > 0.005 ? `, Unattributed ${(unattributedShare * 100).toFixed(1)}%` : ""}`}
+        aria-label={ariaLabel}
       >
         {topBySupply.map((chain, idx) => (
           <div
             key={chain.id}
             className="h-full transition-all duration-500"
             style={{
-              width: `${chain.dominanceShare * 100}%`,
+              width: `${chain.dominanceShare * geometryScale * 100}%`,
               backgroundColor: DOMINANCE_COLORS[idx],
             }}
           />
         ))}
-        {otherChainsShare > 0.005 && (
+        {showOtherChains && (
           <div
             className="h-full"
-            style={{ width: `${otherChainsShare * 100}%`, backgroundColor: OTHER_CHAINS_COLOR }}
+            style={{ width: `${otherChainsShare * geometryScale * 100}%`, backgroundColor: OTHER_CHAINS_COLOR }}
           />
         )}
-        {unattributedShare > 0.005 && (
+        {showUnattributed && (
           <div
             className="h-full"
             style={{
-              width: `${unattributedShare * 100}%`,
+              width: `${unattributedShare * geometryScale * 100}%`,
               backgroundColor: UNATTRIBUTED_COLOR,
               backgroundImage:
                 "repeating-linear-gradient(135deg, transparent 0 4px, oklch(0.95 0.01 245 / 0.35) 4px 6px)",
@@ -86,20 +119,20 @@ export function DominanceBreakdown({
               style={{ width: 14, height: 14 }}
             />
             <span>{chain.name}</span>
-            <span className="pharos-numeric">{(chain.dominanceShare * 100).toFixed(1)}%</span>
+            <span className="pharos-numeric">{formatSharePct(chain.dominanceShare)}</span>
           </span>
         ))}
-        {otherChainsShare > 0.005 && (
+        {showOtherChains && (
           <span className="inline-flex items-center gap-1.5">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: OTHER_CHAINS_COLOR }}
             />
             <span>Other chains</span>
-            <span className="pharos-numeric">{(otherChainsShare * 100).toFixed(1)}%</span>
+            <span className="pharos-numeric">{formatSharePct(otherChainsShare)}</span>
           </span>
         )}
-        {unattributedShare > 0.005 && (
+        {showUnattributed && (
           <span className="inline-flex items-center gap-1.5">
             <span
               className="inline-block h-2 w-2 rounded-full"
@@ -110,7 +143,16 @@ export function DominanceBreakdown({
               }}
             />
             <span>Unattributed</span>
-            <span className="pharos-numeric">{(unattributedShare * 100).toFixed(1)}%</span>
+            <span className="pharos-numeric">{formatSharePct(unattributedShare)}</span>
+          </span>
+        )}
+        {showOverAttribution && (
+          <span
+            className="inline-flex items-center gap-1.5"
+            title="Chain rows sum above the canonical global supply. Percentages stay shares of global supply; the bar is scaled to the larger chain-row total."
+          >
+            <span>Chain rows exceed global supply by</span>
+            <span className="pharos-numeric">{formatSharePct(overAttributedShare)}</span>
           </span>
         )}
       </div>

@@ -505,6 +505,43 @@ describe("snapshotSupply", () => {
     }
   });
 
+  it("atomically replaces circulating values and prices when a required restored ID recovers", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+      const payload = { peggedAssets: [
+        makeSnapshotAsset({ id: "usdt-tether", circulating: { peggedUSD: 100 }, price: 1 }),
+        makeSnapshotAsset({ id: "usdc-circle", circulating: { peggedUSD: 50 }, supplyRestored: true }),
+      ] };
+      const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      const options = { nowSec, requiredActiveIds: DEFAULT_REQUIRED_IDS, snapshotEligibleIds: DEFAULT_REQUIRED_IDS };
+      putCache.run("stablecoins", JSON.stringify(payload), nowSec);
+      await snapshotSupply(db, undefined, options);
+      expect(sqlite.prepare("SELECT stablecoin_id, circulating_usd, price FROM supply_history").all()).toEqual([
+        { stablecoin_id: "usdt-tether", circulating_usd: 100, price: 1 },
+      ]);
+      Object.assign(payload.peggedAssets[0]!, { circulating: { peggedUSD: 120 }, price: 0.99 });
+      Object.assign(payload.peggedAssets[1]!, { supplyRestored: false, circulating: { peggedUSD: 60 } });
+      putCache.run("stablecoins", JSON.stringify(payload), nowSec + 60);
+      const recovered = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
+      expect(recovered.itemCount).toBe(2);
+      expect(sqlite.prepare(
+        "SELECT stablecoin_id, circulating_usd, price FROM supply_history ORDER BY stablecoin_id",
+      ).all()).toEqual([
+        { stablecoin_id: "usdc-circle", circulating_usd: 60, price: 1 },
+        { stablecoin_id: "usdt-tether", circulating_usd: 120, price: 0.99 },
+      ]);
+      const marker = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get("snapshot-supply:last-write")!;
+      expect(marker.updated_at).toBe(nowSec + 60);
+      expect(JSON.parse(String(marker.value))).toMatchObject({
+        snapshotDate, ownedRowIds: ["usdc-circle", "usdt-tether"], accountedActiveCount: 2,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("invalidates completion when an applied waiver owner or expiry changes", async () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const snapshotDate = Date.UTC(2025, 5, 15) / 1000;

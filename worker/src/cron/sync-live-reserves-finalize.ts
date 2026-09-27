@@ -331,7 +331,18 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   return {
     itemCount: args.counts.synced,
     status: runStatus,
+    productivity: { productive: args.counts.latestPublishedAt != null },
     metadata: JSON.stringify({
+      ...(args.counts.latestPublishedAt != null ? { outputPublishedAt: args.counts.latestPublishedAt } : {}),
+      ...(runStatus !== "ok"
+        ? {
+            reason: args.counts.failed > 0
+              ? "reserve-adapter-or-persistence-failed"
+              : args.counts.deferredCoins > 0 || args.counts.deferredSkipped > 0
+                ? "reserve-run-budget-deferred"
+                : "reserve-circuit-open",
+          }
+        : {}),
       structureVersion: 2,
       synced: args.counts.synced,
       failed: args.counts.failed,

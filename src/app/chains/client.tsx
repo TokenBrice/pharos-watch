@@ -175,6 +175,8 @@ export function ChainsLeaderboardClient() {
               globalTotalUsd={data.globalTotalUsd}
               chainAttributedTotalUsd={data.chainAttributedTotalUsd}
               unattributedTotalUsd={data.unattributedTotalUsd}
+              attributionDiscrepancyUsd={data.attributionDiscrepancyUsd}
+              dominanceGeometryTotalUsd={data.dominanceGeometryTotalUsd}
               chains={data.chains}
             />
           )}

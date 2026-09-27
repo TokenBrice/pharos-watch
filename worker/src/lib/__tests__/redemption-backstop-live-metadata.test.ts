@@ -14,6 +14,28 @@ const readMetadata = (
   fetchedAt: now - 60, source: "unit-test", sourceModel: "single-bucket", evidenceClass,
 }), now);
 
+describe("redemption evidence observation clock", () => {
+  it.each([
+    ["same-run-onchain", undefined, 9 * 3600, now - 9 * 3600],
+    ["same-run-api", undefined, 40 * 3600, now - 40 * 3600],
+    ["same-run-onchain", now - 120, 60, now - 120],
+    ["same-run-api", undefined, 0, now],
+    ["verified-source-timestamp", undefined, 60, null],
+    ["verified-source-timestamp", now + 601, 60, null],
+    ["unverified", undefined, 60, null],
+  ] as const)("preserves %s evidence time", (freshnessKind, sourceTimestamp, age, expected) => {
+    const result = readRedemptionBackstopLiveMetadata("lusd-liquity", liveSnapshot("lusd-liquity", {
+      freshnessMode: "not-applicable",
+      redemption: { capacityUsd: 1_000_000, capacityKind: "live-direct", freshnessKind, sourceTimestamp },
+    }, { fetchedAt: now - Number(age), source: "liquity-v1", sourceModel: "single-bucket" }), now);
+    expect(result.evidenceObservedAt).toBe(expected);
+  });
+
+  it("does not invent an observation for a missing snapshot", () => {
+    expect(readRedemptionBackstopLiveMetadata("lusd-liquity", null, now).evidenceObservedAt).toBeNull();
+  });
+});
+
 function decodedRowMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
   const decoded = parseReserveCompositionRow(
     {

@@ -38,7 +38,25 @@
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Netherlands",
-    "attestorLicense": "EMI (MiCA)"
+    "attestorLicense": "EMI (MiCA)",
+    "latestReport": {
+      "reviewReference": {
+        "date": "2026-06-30",
+        "reviewedAt": "2026-08-14",
+        "dateKind": "unspecified"
+      },
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Pharos compliance research",
+      "confidence": "unknown",
+      "sources": [
+        {
+          "label": "Quantoz transparency (as of 2026-08-14 review; date kind unspecified)",
+          "url": "https://www.quantoz.com/transparency"
+        }
+      ]
+    }
   },
   "links": [
     {

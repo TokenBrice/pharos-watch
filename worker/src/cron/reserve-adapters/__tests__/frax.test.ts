@@ -110,6 +110,7 @@ describe("adaptFraxBalanceSheet", () => {
   it("warns on unknown token symbols", () => {
     const withUnknown: FraxBalanceSheetResponse = {
       ...BALANCE_SHEET_SAMPLE,
+      totalAssets: BALANCE_SHEET_SAMPLE.totalAssets! + 1_000_000,
       assets: [
         ...BALANCE_SHEET_SAMPLE.assets!,
         { tokenSymbol: "XYZZY", totalValueUsd: 1_000_000, category: "asset:owned:usd" },
@@ -434,10 +435,117 @@ describe("adaptFraxFpiCollateral", () => {
 });
 
 describe("frax balance-sheet fetch boundary", () => {
+  it.each([100.51, 200])("rejects materially overstated rows (%s) through fetch", async (value) => {
+    await expect(runAdapter("frax-balance-sheet", "frax-frax", {
+      network: { json: { [BALANCE_SHEET_ENDPOINT]: {
+        asOfTimestamp: BALANCE_SHEET_SAMPLE.asOfTimestamp,
+        totalAssets: 100,
+        assets: [{ tokenSymbol: "USDC", totalValueUsd: value, category: "asset:owned:usd" }],
+      } } },
+      nowSec: 1_775_307_827,
+    })).rejects.toThrow(/exceed totalAssets/);
+  });
+
+  it.each([
+    { rows: [{ tokenSymbol: "USDC", totalValueUsd: 200 }, { tokenSymbol: "ETH", totalValueUsd: -100 }], error: /net asset is negative/ },
+    { rows: [{ tokenSymbol: "USDC", totalValueUsd: 100 }, { tokenSymbol: "USDC", totalValueUsd: 100 }], error: /exceed totalAssets/ },
+    { rows: [{ tokenSymbol: "USDC", totalValueUsd: 100 }, { tokenSymbol: "ETH", totalValueUsd: null }], error: /unavailable/ },
+  ])("rejects invalid or duplicated headline accounting", async ({ rows, error }) => {
+    await expect(runAdapter("frax-balance-sheet", "frax-frax", {
+      network: { json: { [BALANCE_SHEET_ENDPOINT]: {
+        asOfTimestamp: BALANCE_SHEET_SAMPLE.asOfTimestamp,
+        totalAssets: 100,
+        assets: rows.map((row) => ({ ...row, category: "asset:owned:usd" })),
+      } } },
+      nowSec: 1_775_307_827,
+    })).rejects.toThrow(error);
+  });
+
+  it("nets signed contra entries and accepts genuine zero without inflating capacity", async () => {
+    const { result } = await runAdapter("frax-balance-sheet", "frax-frax", {
+      network: { json: { [BALANCE_SHEET_ENDPOINT]: {
+        asOfTimestamp: BALANCE_SHEET_SAMPLE.asOfTimestamp,
+        totalAssets: 100,
+        assets: [
+          { tokenSymbol: "USDC", totalValueUsd: 120, category: "asset:owned:usd" },
+          { tokenSymbol: "USDC", totalValueUsd: -20, category: "asset:contra" },
+          { tokenSymbol: "SDL", totalValueUsd: 0, category: "asset:owned:usd" },
+        ],
+      } } },
+      nowSec: 1_775_307_827,
+    });
+    expect(result.metadata).toMatchObject({ totalCollateralUsd: 100, redemption: { capacityUsd: 100 } });
+    expect(result.slices).toEqual([expect.objectContaining({ coinId: "usdc-circle", pct: 100 })]);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("admits rounding tolerance without publishing capacity above the headline", () => {
+    const result = adaptFraxBalanceSheet({
+      totalAssets: 100,
+      assets: [{ tokenSymbol: "USDC", totalValueUsd: 100.5, category: "asset:owned:usd" }],
+    });
+    expect(result.metadata?.totalCollateralUsd).toBe(100);
+    expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+  });
+
+  it.each([null, undefined, "broken", -1, Number.POSITIVE_INFINITY])(
+    "marks unavailable FPI assets incomplete and preserves independent liabilities (%s)", async (value) => {
+      const { result } = await runAdapter("frax-fpi-collateral", "fpi-frax", {
+        network: { code: { "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51": "0x" }, json: { [FPI_COLLATERAL_ENDPOINT]: {
+          ...FPI_COLLATERAL_SAMPLE,
+          assets: [...FPI_COLLATERAL_SAMPLE.assets!, { tokenSymbol: "sfrxUSD", valueUsd: value }],
+        } } },
+        nowSec: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec!,
+      });
+      expect(result.metadata).toMatchObject({
+        compositionComplete: false, unavailableAssetCount: 1,
+        knownCollateralUsd: 5_200_000, totalLiabilitiesUsd: 8_000_000,
+      });
+      expect(result.metadata?.totalCollateralUsd).toBeUndefined();
+      expect(result.metadata?.collateralizationRatio).toBeUndefined();
+      expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
+    },
+  );
+
+  it.each([null, undefined, "broken", -1, Number.POSITIVE_INFINITY])(
+    "withholds FPI liability totals and ratio for an unreadable liability (%s)", async (value) => {
+      const { result } = await runAdapter("frax-fpi-collateral", "fpi-frax", {
+        network: { code: { "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51": "0x" }, json: { [FPI_COLLATERAL_ENDPOINT]: {
+          ...FPI_COLLATERAL_SAMPLE,
+          liabilities: [...FPI_COLLATERAL_SAMPLE.liabilities!, { tokenSymbol: "FPI", valueUsd: value }],
+        } } },
+        nowSec: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec!,
+      });
+      expect(result.metadata).toMatchObject({
+        compositionComplete: true, liabilityCoverageComplete: false,
+        unavailableLiabilityCount: 1, totalCollateralUsd: 5_200_000,
+      });
+      expect(result.metadata?.totalLiabilitiesUsd).toBeUndefined();
+      expect(result.metadata?.collateralizationRatio).toBeUndefined();
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "liability-coverage-incomplete", effect: "degraded" }));
+    },
+  );
+
+  it("preserves FPI known-good coverage with explicit zero asset and liability rows", async () => {
+    const { result } = await runAdapter("frax-fpi-collateral", "fpi-frax", {
+      network: { code: { "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51": "0x" }, json: { [FPI_COLLATERAL_ENDPOINT]: {
+        ...FPI_COLLATERAL_SAMPLE,
+        assets: [...FPI_COLLATERAL_SAMPLE.assets!, { tokenSymbol: "sfrxUSD", valueUsd: 0 }],
+        liabilities: [...FPI_COLLATERAL_SAMPLE.liabilities!, { tokenSymbol: "FPI", valueUsd: 0 }],
+      } } },
+      nowSec: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec!,
+    });
+    expect(result.metadata).toMatchObject({
+      compositionComplete: true, liabilityCoverageComplete: true, collateralizationRatio: 1.04,
+      redemption: { capacityUsd: 5_000_000 },
+    });
+  });
+
   it("fetches the configured balance-sheet endpoint through the shared network harness", async () => {
     const { result, network } = await runAdapter("frax-balance-sheet", "frax-frax", {
       network: { json: { [BALANCE_SHEET_ENDPOINT]: BALANCE_SHEET_SAMPLE } },
-      nowSec: 1_775_657_027,
+      nowSec: 1_775_307_827 + 3_600,
     });
 
     expect(network.requests.map((request) => request.url)).toEqual([BALANCE_SHEET_ENDPOINT]);

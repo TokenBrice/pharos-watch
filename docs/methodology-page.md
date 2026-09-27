@@ -103,7 +103,7 @@ Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Bac
 
 Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. `BLACKLIST_STABLECOINS` in `shared/types/market.ts` owns the response/UI/archive identity union. Live on-chain scan admission is a separate reviewed contract roster, `CONTRACT_CONFIGS` in `worker/src/lib/blacklist-contracts.ts`; do not infer that every UI identity is actively scanned or that an omitted identity lacks an administrative freeze surface. The source registries and their coverage tests own the volatile roster rather than this page.
 
-The detail page retains its per-coin blacklist module. The unmounted recent-activity banner and its hook have been removed; the retained `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` configuration flag has no render site (see [process/feature-flags.md](process/feature-flags.md)). The summary API still exposes its trailing seven-day per-coin event counts.
+The detail page retains its per-coin blacklist module. The unmounted recent-activity banner, its hook and its no-op configuration flag have been removed (see [process/feature-flags.md](process/feature-flags.md)). The summary API still exposes its trailing seven-day per-coin event counts.
 
 Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/methodology-versions/registry.ts` for the versioned methodology snapshot.
 

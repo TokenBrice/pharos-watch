@@ -40,6 +40,9 @@ rg -n '/route-name/|src/app/route-name' docs
 - [depeg-page.md](./depeg-page.md) - depeg and recovery incident board, hero contract, and event archive routing
 - [portfolio-page.md](./portfolio-page.md) - personal stablecoin risk workspace
 - [upcoming-page.md](./upcoming-page.md) - pre-launch stablecoin tracker
+- [homepage.md](./homepage.md) and [about-page.md](./about-page.md) - dashboard and product/source overview
+- [coverage-page.md](./coverage-page.md), [start-page.md](./start-page.md), and [feedback-pipeline.md](./feedback-pipeline.md) - coverage availability, onboarding, and feedback delivery
+- [compliance-page.md](./compliance-page.md) - compliance workbench; regime evidence is owned by [mica-tracker.md](./mica-tracker.md) and [genius-tracker.md](./genius-tracker.md)
 
 ## Cross-Cutting Contracts
 
@@ -48,6 +51,18 @@ rg -n '/route-name/|src/app/route-name' docs
 - [telegram-architecture.md](./telegram-architecture.md) - Telegram seam index; routes ingress/storage to Architecture, commands/dispatch/delivery to Alerts, and client/auth/state to the Mini App contract
 - [pricing-pipeline.md](./pricing-pipeline.md), [supply-snapshot.md](./supply-snapshot.md), [stability-index.md](./stability-index.md), [depeg-detection.md](./depeg-detection.md), and [blacklist-tracker.md](./blacklist-tracker.md) - authoritative data-pipeline feature contracts; [data-flow-map.md](./data-flow-map.md) remains the routing diagram
 - [design-language.md](./design-language.md#context) - design context and reusable UI rules; [design-tokens.md](./design-tokens.md) owns implementation tokens
+- [live-reserves.md](./live-reserves.md#registry-defined-adapter-classes) and [yield-intelligence.md](./yield-intelligence.md#engineering-contract) - reserve evidence admission and yield publication contracts
+
+## Stale Output Diagnosis
+
+Start with the producing job and the affected publication, not a successful deploy or a healthy-looking latest attempt. Choose the symptom owner:
+
+- Yield rankings missing or old: [yield-rankings-stale-or-missing.md](./runbooks/yield-rankings-stale-or-missing.md); benchmark fallback: [yield-benchmark-fallback-stale.md](./runbooks/yield-benchmark-fallback-stale.md).
+- Stablecoin publication stale: [stablecoins-cache.md](./runbooks/stablecoins-cache.md); reserve snapshot versus latest attempt: [Live Reserve API Contract](./live-reserves.md#api-contract).
+- Job not executing or lease held: [cron-slot-abandonment.md](./runbooks/cron-slot-abandonment.md) and [lease-and-breaker-recovery.md](./runbooks/lease-and-breaker-recovery.md); failed D1 reads: [db-connectivity.md](./runbooks/db-connectivity.md).
+- Telegram output missing: [telegram-no-delivery.md](./runbooks/telegram-no-delivery.md); mint/burn data gaps: [mint-burn-integrity.md](./runbooks/mint-burn-integrity.md).
+
+Follow [Monitoring Without Model Polling](./deployment-process.md#monitoring-without-model-polling) for `ops:watch-worker-cron` / `ops:night-watch-worker`: capture the affected generation, job, activation and observation window. A single snapshot or watcher exit zero does not certify the next execution or publication health. Remote D1 inspection uses read-only `SELECT` with `--command`, never `--file`; see [Remote D1 Inspection](./worker-infrastructure.md#remote-d1-inspection) for the import-lock hazard.
 
 ## Process Index
 

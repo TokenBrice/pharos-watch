@@ -1,9 +1,12 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageGapAcknowledgement,
+  ActivePriceCoverageHealth,
 } from "@shared/types/status";
 import { parseJsonObject } from "./json-parse";
 
@@ -40,6 +43,7 @@ export interface StablecoinPriceCoverageAsset {
   priceSource?: string | null;
   priceConfidence?: string | null;
   priceObservedAt?: number | null;
+  priceObservedAtMode?: string | null;
   priceUpdatedAt?: number | null;
   circulating?: Record<string, number> | null;
 }
@@ -62,32 +66,20 @@ export interface StablecoinPriceGapReview {
   expiresAt: number;
 }
 
-export interface StablecoinActivePriceCoverage {
+/** The writer has measured current counts; only prior-generation continuity
+ * can be unknown. The public reader also represents unavailable current data. */
+export type StablecoinActivePriceCoverage = {
+  [Key in Exclude<keyof ActivePriceCoverageHealth,
+    "status" | "observedAt" | "unavailableReason" | "maxConsecutiveMissingGenerations">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
+} & {
   complete: boolean;
-  expectedActiveCount: number;
-  presentActiveCount: number;
-  pricedActiveCount: number;
-  missingPriceCount: number;
-  pricedActiveIds: string[];
-  missingActiveIds: string[];
-  affectedMarketCapUsd: number;
-  missingActiveAssets: MissingActivePriceDetail[];
-  alertEligibleCount: number;
-  alertEligibleIds: string[];
-  /** Missing IDs whose gaps are acknowledged by an active review. They stay
-   * in `missingActiveIds` / `missingPriceCount` / `affectedMarketCapUsd` and
-   * are never alert-eligible; the acknowledgement silently stops applying the
-   * moment the asset is priced again. */
-  acknowledgedGapIds: string[];
-  acknowledgedGapCount: number;
-  expiredGapReviewIds: string[];
-  invalidGapReviewIds: string[];
-  maxConsecutiveMissingGenerations: number;
-}
+  maxConsecutiveMissingGenerations: ActivePriceCoverageHealth["maxConsecutiveMissingGenerations"];
+};
 
 export interface PreviousStablecoinActivePriceCoverage {
   missingActiveIds: string[];
   missingActiveAssets: MissingActivePriceDetail[];
+  unavailableReason?: "previous-coverage-read-failed" | "previous-coverage-malformed";
 }
 
 export interface StablecoinActivePriceCoverageOptions {
@@ -101,11 +93,12 @@ export interface StablecoinActivePriceCoverageOptions {
 
 export type PersistedMissingActivePriceState = readonly [
   stablecoinId: string,
-  consecutiveMissingGenerations: number,
+  consecutiveMissingGenerations: number | null,
   lastAcceptedPrice: number | null,
   lastAcceptedSource: string | null,
   lastAcceptedObservedAt: number | null,
   rejectionReason: string,
+  streakUnavailableReason?: MissingActivePriceDetail["streakUnavailableReason"],
 ];
 
 export interface CompactedStablecoinActivePriceCoverage extends StablecoinActivePriceCoverage {
@@ -429,6 +422,7 @@ function stringOrNull(value: unknown): string | null {
 
 function priceRejectionReason(asset: StablecoinPriceCoverageAsset | undefined): string {
   if (!asset) return "active-row-missing";
+  if (!isObservedPrice(asset)) return "non-observed-price";
   if (asset.price == null) return "no-accepted-price";
   if (typeof asset.price !== "number" || !Number.isFinite(asset.price)) return "invalid-price";
   if (asset.price <= 0) return "non-positive-price";
@@ -441,7 +435,7 @@ function acceptedObservation(asset: StablecoinPriceCoverageAsset | undefined): {
   observedAt: number | null;
 } | null {
   const price = positiveFiniteNumberOrNull(asset?.price);
-  if (price == null) return null;
+  if (!asset || !isObservedPrice(asset) || price == null) return null;
   return {
     price,
     source: stringOrNull(asset?.priceSource),
@@ -458,10 +452,8 @@ export function parseMissingActivePriceDetail(
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
   if (typeof entry.stablecoinId !== "string") return null;
-  const consecutiveMissingGenerations = Math.max(
-    1,
-    Math.floor(finiteNumberOrNull(entry.consecutiveMissingGenerations) ?? 1),
-  );
+  const streak = finiteNumberOrNull(entry.consecutiveMissingGenerations);
+  const consecutiveMissingGenerations = streak != null && Number.isInteger(streak) && streak >= 1 ? streak : null;
   // Registry truth at read time: a persisted acknowledgement is never trusted,
   // so a registry edit or an expired review takes effect immediately.
   const review = positiveFiniteNumberOrNull(entry.currentPrice) != null
@@ -478,12 +470,16 @@ export function parseMissingActivePriceDetail(
     currentObservedAt: dateSecondsOrNull(entry.currentObservedAt),
     currentConfidence: stringOrNull(entry.currentConfidence),
     consecutiveMissingGenerations,
+    streakUnavailableReason: consecutiveMissingGenerations == null
+      ? entry.streakUnavailableReason === "previous-coverage-read-failed"
+        ? "previous-coverage-read-failed" : "previous-coverage-malformed"
+      : null,
     lastAcceptedPrice: positiveFiniteNumberOrNull(entry.lastAcceptedPrice),
     lastAcceptedSource: stringOrNull(entry.lastAcceptedSource),
     lastAcceptedObservedAt: dateSecondsOrNull(entry.lastAcceptedObservedAt),
     rejectionReason: stringOrNull(entry.rejectionReason) ?? "no-accepted-price",
     alertEligible: review == null
-      && (entry.alertEligible === true
+      && (consecutiveMissingGenerations == null
         || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS),
     acknowledgedGap: review == null ? null : acknowledgementFromReview(review),
   };
@@ -494,10 +490,8 @@ export function parsePersistedMissingActivePriceState(
   options: { nowSec?: number; reviewsById?: ReadonlyMap<string, StablecoinPriceGapReview> } = {},
 ): MissingActivePriceDetail | null {
   if (!Array.isArray(value) || value.length < 6 || typeof value[0] !== "string") return null;
-  const consecutiveMissingGenerations = Math.max(
-    1,
-    Math.floor(finiteNumberOrNull(value[1]) ?? 1),
-  );
+  const streak = finiteNumberOrNull(value[1]);
+  const consecutiveMissingGenerations = streak != null && Number.isInteger(streak) && streak >= 1 ? streak : null;
   const review = options.reviewsById
     ? options.reviewsById.get(value[0]) ?? null
     : activePriceGapReviewForId(value[0], options.nowSec ?? Math.floor(Date.now() / 1000));
@@ -510,12 +504,16 @@ export function parsePersistedMissingActivePriceState(
     currentObservedAt: null,
     currentConfidence: null,
     consecutiveMissingGenerations,
+    streakUnavailableReason: consecutiveMissingGenerations == null
+      ? value[6] === "previous-coverage-read-failed"
+        ? "previous-coverage-read-failed" : "previous-coverage-malformed"
+      : null,
     lastAcceptedPrice: positiveFiniteNumberOrNull(value[2]),
     lastAcceptedSource: stringOrNull(value[3]),
     lastAcceptedObservedAt: dateSecondsOrNull(value[4]),
     rejectionReason: stringOrNull(value[5]) ?? "no-accepted-price",
     alertEligible: review == null
-      && consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
+      && (consecutiveMissingGenerations == null || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS),
     acknowledgedGap: review == null ? null : acknowledgementFromReview(review),
   };
 }
@@ -527,6 +525,9 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
     const rawCoverage = metadata.activePriceCoverage;
     if (!rawCoverage || typeof rawCoverage !== "object" || Array.isArray(rawCoverage)) return null;
     const coverage = rawCoverage as Record<string, unknown>;
+    if (!ActivePriceCoverageHealthSchema.safeParse({
+      ...coverage, status: coverage.complete === true ? "complete" : "incomplete", observedAt: null,
+    }).success) return null;
     const parseOptions = {
       reviewsById: resolveStablecoinPriceGapReviews(WORKER_ACTIVE_IDS, Math.floor(Date.now() / 1000)).activeById,
     };
@@ -551,6 +552,7 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
     const missingActiveAssets = missingActiveIds
       .map((stablecoinId) => detailsById.get(stablecoinId))
       .filter((detail): detail is MissingActivePriceDetail => detail != null);
+    if (missingActiveAssets.length !== missingActiveIds.length) return null;
     return { missingActiveIds, missingActiveAssets };
   } catch {
     return null;
@@ -576,6 +578,7 @@ export function compactStablecoinActivePriceCoverage(
       boundedStateString(detail.lastAcceptedSource),
       detail.lastAcceptedObservedAt,
       boundedStateString(detail.rejectionReason) ?? "no-accepted-price",
+      detail.streakUnavailableReason ?? null,
     ]),
   };
 }
@@ -586,7 +589,11 @@ export function compactStablecoinActivePriceCoverage(
 export async function loadPreviousStablecoinActivePriceCoverage(
   db: D1Database,
   beforeStartedAt: number,
-): Promise<PreviousStablecoinActivePriceCoverage | null> {
+): Promise<
+  | { status: "ok"; coverage: PreviousStablecoinActivePriceCoverage }
+  | { status: "missing" }
+  | { status: "read-error"; reason: NonNullable<PreviousStablecoinActivePriceCoverage["unavailableReason"]> }
+> {
   try {
     const row = await db.prepare(
       `SELECT metadata
@@ -598,10 +605,12 @@ export async function loadPreviousStablecoinActivePriceCoverage(
         ORDER BY started_at DESC, id DESC
         LIMIT 1`,
     ).bind(beforeStartedAt).first<{ metadata: string }>();
-    return row?.metadata ? parsePreviousCoverageMetadata(row.metadata) : null;
+    if (!row) return { status: "missing" };
+    const coverage = parsePreviousCoverageMetadata(row.metadata);
+    return coverage ? { status: "ok", coverage } : { status: "read-error", reason: "previous-coverage-malformed" };
   } catch (error) {
     logWorkerEventArgs("lib", "warn", "[sync-stablecoins] Failed to load previous active price coverage:", error);
-    return null;
+    return { status: "read-error", reason: "previous-coverage-read-failed" };
   }
 }
 
@@ -643,13 +652,13 @@ export function evaluateStablecoinActivePriceCoverage(
   );
   let presentActiveCount = 0;
   let affectedMarketCapUsd = 0;
-  let maxConsecutiveMissingGenerations = 0;
+  let maxConsecutiveMissingGenerations: number | null = 0;
 
   for (const stablecoinId of expectedActiveIds) {
     const asset = assetsById.get(stablecoinId);
     if (asset) presentActiveCount++;
 
-    const currentPrice = finiteNumberOrNull(asset?.price);
+    const currentPrice = asset && isObservedPrice(asset) ? finiteNumberOrNull(asset.price) : null;
     if (currentPrice != null && currentPrice > 0) {
       pricedActiveIds.push(stablecoinId);
       continue;
@@ -660,10 +669,12 @@ export function evaluateStablecoinActivePriceCoverage(
       affectedMarketCapUsd += marketCapUsd;
     }
     const previousDetail = previousMissingDetailsById.get(stablecoinId);
-    const previousStreak = previousMissingIds.has(stablecoinId)
-      ? Math.max(1, previousDetail?.consecutiveMissingGenerations ?? 1)
-      : 0;
-    const consecutiveMissingGenerations = previousStreak + 1;
+    const previousStreak = options.previousCoverage?.unavailableReason
+      ? null
+      : previousMissingIds.has(stablecoinId)
+        ? previousDetail?.consecutiveMissingGenerations ?? null
+        : 0;
+    const consecutiveMissingGenerations = previousStreak == null ? null : previousStreak + 1;
     const previousAccepted = acceptedObservation(options.previousAcceptedAssetsById?.get(stablecoinId));
     const lastAcceptedPrice = previousAccepted?.price ?? previousDetail?.lastAcceptedPrice ?? null;
     const lastAcceptedSource = previousAccepted?.source ?? previousDetail?.lastAcceptedSource ?? null;
@@ -671,12 +682,10 @@ export function evaluateStablecoinActivePriceCoverage(
     const acknowledgedReview = resolvedReviews.activeById.get(stablecoinId) ?? null;
     if (acknowledgedReview) acknowledgedGapIds.push(stablecoinId);
     const alertEligible = acknowledgedReview == null
-      && consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS;
+      && (consecutiveMissingGenerations == null || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS);
     if (alertEligible) alertEligibleIds.push(stablecoinId);
-    maxConsecutiveMissingGenerations = Math.max(
-      maxConsecutiveMissingGenerations,
-      consecutiveMissingGenerations,
-    );
+    maxConsecutiveMissingGenerations = maxConsecutiveMissingGenerations == null || consecutiveMissingGenerations == null
+      ? null : Math.max(maxConsecutiveMissingGenerations, consecutiveMissingGenerations);
     missingActiveIds.push(stablecoinId);
     missingActiveAssets.push({
       stablecoinId,
@@ -689,6 +698,9 @@ export function evaluateStablecoinActivePriceCoverage(
       currentObservedAt: dateSecondsOrNull(asset?.priceObservedAt ?? asset?.priceUpdatedAt),
       currentConfidence: typeof asset?.priceConfidence === "string" ? asset.priceConfidence : null,
       consecutiveMissingGenerations,
+      streakUnavailableReason: consecutiveMissingGenerations == null
+        ? options.previousCoverage?.unavailableReason ?? previousDetail?.streakUnavailableReason ?? "previous-coverage-malformed"
+        : null,
       lastAcceptedPrice,
       lastAcceptedSource,
       lastAcceptedObservedAt,

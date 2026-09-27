@@ -87,9 +87,10 @@ export const TapeEventSchema = z
 export type TapeEvent = z.infer<typeof TapeEventSchema>;
 
 const TapeEventsResponseMetaSchema = z.object({
-  updatedAt: z.number(),
-  ageSeconds: z.number(),
-  status: z.enum(["fresh", "degraded", "stale"]),
+  updatedAt: z.number().nullable(),
+  ageSeconds: z.number().nullable(),
+  status: z.enum(["fresh", "degraded", "stale", "unknown"]),
+  reason: z.string().optional(),
 });
 
 export const TapeEventsResponseSchema = z.object({

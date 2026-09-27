@@ -4,6 +4,7 @@ import { validatePrimaryPriceCandidate } from "../../lib/price-publish-policy";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
+import { normalizeStablecoinsPayload } from "../sync-stablecoins/shared";
 
 vi.mock("../../lib/price-publish-policy", () => ({
   validatePrimaryPriceCandidate: vi.fn(),
@@ -74,13 +75,13 @@ describe("pricing application helpers", () => {
     expect(assets[0].priceConfidence).toBe("high");
   });
 
-  it("stamps existing valid price on missing primary result", () => {
+  it.each([900, 901])("bounds missing-candidate retention at the CG budget (age=%i)", (age) => {
     const assets = [
       makeAsset({
         price: 0.999,
-        priceSource: "manual",
-        priceObservedAt: 1_799_999_950,
-        priceUpdatedAt: 1_799_999_940,
+        priceSource: "coingecko",
+        priceObservedAt: 1_800_000_000 - age,
+        priceUpdatedAt: 1_800_000_000 - age,
         priceConfidence: "single-source",
       }),
     ];
@@ -93,20 +94,20 @@ describe("pricing application helpers", () => {
       reason: "primary",
     });
 
-    expect(assets[0].price).toBe(0.999);
-    expect(assets[0].priceSource).toBe("manual");
-    expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
-    expect(assets[0].priceObservedAt).toBe(1_799_999_950);
+    expect(assets[0].price).toBe(age <= 900 ? 0.999 : null);
+    expect(normalizeStablecoinsPayload({ peggedAssets: assets }).peggedAssets[0].priceSource)
+      .toBe(age <= 900 ? "coingecko" : "missing");
+    expect(assets[0].priceObservedAt).toBe(age <= 900 ? 1_800_000_000 - age : null);
   });
 
-  it("stamps the existing price when the primary candidate is rejected", () => {
+  it.each([900, 901])("bounds rejected-candidate retention at the CG budget (age=%i)", (age) => {
     const assets = [
       makeAsset({
         id: "usdt-tether",
         price: 1.001,
         priceSource: "coingecko",
         priceConfidence: "single-source",
-        priceObservedAt: 1_799_999_900,
+        priceObservedAt: 1_800_000_000 - age,
       }),
     ];
     const candidate = makePriceResult({
@@ -129,11 +130,10 @@ describe("pricing application helpers", () => {
       reason: "primary",
     });
 
-    // The rejected candidate is not applied — the pre-existing price stays and is re-stamped.
-    expect(assets[0].price).toBe(1.001);
-    expect(assets[0].priceSource).toBe("coingecko");
-    expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
-    expect(assets[0].priceObservedAt).toBe(1_799_999_900);
+    expect(assets[0].price).toBe(age <= 900 ? 1.001 : null);
+    expect(normalizeStablecoinsPayload({ peggedAssets: assets }).peggedAssets[0].priceSource)
+      .toBe(age <= 900 ? "coingecko" : "missing");
+    expect(assets[0].priceObservedAt).toBe(age <= 900 ? 1_800_000_000 - age : null);
     warnSpy.mockRestore();
   });
 

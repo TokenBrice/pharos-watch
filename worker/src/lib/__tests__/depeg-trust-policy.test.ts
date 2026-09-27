@@ -13,6 +13,36 @@ import {
 
 describe("classifyPrimaryDepegTrust", () => {
   const nowSec = 1_700_000_000;
+  it.each([
+    { priceSource: "pyth", priceObservedAtMode: "nominal_reference" as const },
+    { priceSource: "protocol-par", priceObservedAtMode: "upstream" as const },
+    { priceSource: "protocol-par" },
+    { priceSource: "pyth", priceObservedAtMode: "unsupported" as const },
+  ])("never admits nominal or unsupported prices despite fresh confident evidence: %j", (provenance) => {
+    const input = {
+      price: 0.98,
+      priceConfidence: "high" as const,
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["pyth", "coingecko"],
+      ...provenance,
+    };
+    expect(classifyPrimaryDepegTrust(input, nowSec)).toBe("unusable");
+    expect(hasFreshMultiSourcePrimaryAgreement(input, nowSec)).toBe(false);
+    expect([...getFreshIndependentPrimarySourceFamilies(input, nowSec, "other")]).toEqual([]);
+  });
+
+  it.each([undefined, "unknown", "upstream", "local_fetch"] as const)(
+    "keeps legacy redemption evidence usable but requiring confirmation with mode %s",
+    (priceObservedAtMode) => {
+      expect(classifyPrimaryDepegTrust({
+        price: 0.98,
+        priceSource: "protocol-redeem",
+        priceObservedAtMode,
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+      }, nowSec)).toBe("confirm_required");
+    },
+  );
 
   it("requires confirmation for fresh soft single-source prices", () => {
     expect(classifyPrimaryDepegTrust({

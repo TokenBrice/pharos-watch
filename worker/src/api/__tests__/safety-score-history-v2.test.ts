@@ -172,28 +172,6 @@ describe("handleSafetyScoreHistoryV2", () => {
     )).rejects.toThrow("D1_ERROR");
   });
 
-  it("returns an empty history with a current freshness fallback", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-15T12:00:00Z"));
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      { match: "FROM safety_score_history_v2", rows: [] },
-      { match: "cron_runs", rows: [] },
-    ], { requireMatch: true });
-
-    const response = await handleSafetyScoreHistoryV2(
-      db,
-      new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ schemaVersion: 2, history: [], malformedRows: 0 });
-    expect(response.headers.get("X-Data-Age")).toBe("0");
-    expect(db.getHistory().find((entry) => entry.sql.includes("FROM safety_score_history_v2"))?.binds).toEqual([
-      "usdc-circle",
-      now - 365 * 86_400,
-    ]);
-  });
 
   it.each([
     ["unknown stablecoin", "?stablecoin=unknown-fixture", 404, "Unknown stablecoin"],

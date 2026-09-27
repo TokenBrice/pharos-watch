@@ -642,8 +642,10 @@ export async function runYieldCoverageAudit(
   return createCronResult({
     status: protocolCategoryStatus === "ok" ? "ok" : "degraded",
     itemCount,
+    productivity: { productive: true },
     metadata: {
-      ...(degradedReason ? { reason: degradedReason } : {}),
+      reason: degradedReason ?? "coverage-audit-completed",
+      outputPublishedAt: reportedAt,
       ...auditCounts,
       manifestMissingCount: manifestMissingIds.length,
       intentionalGapCount: intentionalGapIds.length,

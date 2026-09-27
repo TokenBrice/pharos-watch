@@ -10,6 +10,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import * as dependencyHealthModule from "../../lib/dependency-health";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
+import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 
 stubCryptoForAuth();
 
@@ -22,7 +23,7 @@ function makeCacheRow(key: string, ageSec = 300) {
   return {
     key,
     updated_at: Math.floor(Date.now() / 1000) - ageSec,
-    value: JSON.stringify(key === "fx-rates" ? { peggedEUR: 1.08 } : []),
+    value: JSON.stringify([]),
   };
 }
 
@@ -130,9 +131,12 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
   });
   return [
-    { match: "cache WHERE key IN", rows: (healthy
-      ? ["stablecoins", "stablecoin-charts", "usds-status", "fx-rates", "bluechip-ratings"]
-      : ["stablecoins", "stablecoin-charts"]).map((key) => makeCacheRow(key)) },
+    { match: "cache WHERE key IN", rows: healthy
+      ? [
+          ...["stablecoins", "stablecoin-charts", "usds-status", "bluechip-ratings"].map((key) => makeCacheRow(key)),
+          ...fxRatesCacheRows(now - 300),
+        ]
+      : ["stablecoins", "stablecoin-charts"].map((key) => makeCacheRow(key)) },
     { match: "dex_liquidity", rows: [], first: { age: healthy ? 60 : 300 } },
     { match: "yield_data", rows: [], first: { age: healthy ? 60 : 300 } },
     { match: "cron_runs", rows: healthy

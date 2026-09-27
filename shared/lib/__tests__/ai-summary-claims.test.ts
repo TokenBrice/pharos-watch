@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { resolveAiSummaryClaims, validateAiSummaryClaimTokens } from "../ai-summary-claims";
 import type { AiSummaryClaimToken } from "../../types/editorial";
+import { ReportCardGradeSchema } from "../../types/report-card-grade";
 
 const gradeToken: AiSummaryClaimToken = {
   token: "grade",
@@ -12,6 +13,18 @@ const gradeToken: AiSummaryClaimToken = {
 };
 
 describe("AI summary claim tokens", () => {
+  it.each(ReportCardGradeSchema.options)("preserves the published %s grade, including not-rated", (grade) => {
+    expect(resolveAiSummaryClaims("Grade {{grade}}.", [gradeToken], {
+      "report-card.grade": grade,
+    }).text).toBe(`Grade ${grade}.`);
+  });
+
+  it.each([null, undefined, "D+", "D-"])("renders unavailable or invalid grade %s as N/A", (grade) => {
+    expect(resolveAiSummaryClaims("Grade {{grade}}.", [gradeToken], {
+      "report-card.grade": grade,
+    }).text).toBe("Grade N/A.");
+  });
+
   it("resolves registered current values and formats supply", () => {
     expect(resolveAiSummaryClaims(
       "Grade {{grade}}, score {{score}}, supply {{supplyUsd}}.",

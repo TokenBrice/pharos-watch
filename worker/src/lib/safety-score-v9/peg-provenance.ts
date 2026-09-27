@@ -1,4 +1,5 @@
 import { computePegScore, type PegScoreResult } from "@shared/lib/peg-score";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
@@ -471,6 +472,11 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
       );
     }
     return;
+  }
+  if (provenance.sourcePriceProviders?.some((source) => !isObservedPrice({ priceSource: source }))) {
+    throw new Error(
+      `[safety-score-v9-peg-provenance] ${eventLabel(event)} has non-observed price provenance`,
+    );
   }
 
   if (

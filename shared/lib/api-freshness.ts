@@ -73,6 +73,18 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   nonUsdShare: DAY_SECONDS,
 } as const;
 
+/** Last-valid DEWS presentation window; not the endpoint freshness SLO. */
+export const STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8;
+
+/** Telegram tolerates six-hour flow context without claiming endpoint freshness. */
+export const TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC = 6 * 3600;
+
+/** Incident detection tolerances, deliberately distinct from endpoint freshness. */
+export const CANARY_INCIDENT_MAX_AGE_SEC = {
+  stabilityIndex: 4 * 3600,
+  stressSignals: 4 * 3600,
+} as const;
+
 /**
  * Does a `Warning` response header signal degraded/stale freshness?
  *

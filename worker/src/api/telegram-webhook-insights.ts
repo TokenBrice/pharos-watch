@@ -271,7 +271,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         "Top chains by stablecoin supply",
         chains,
         (row, i) =>
-          `${i}. ${row.name} — ${formatTelegramCompactUsd(row.totalUsd) ?? "n/a"}, health ${row.healthScore ?? "NR"} (${row.healthBand})`,
+          `${i}. ${row.name} — ${formatTelegramCompactUsd(row.totalUsd) ?? "n/a"}, health ${row.healthScore == null || row.healthBand == null ? "NR" : `${row.healthScore} (${row.healthBand})`}`,
       );
       return activeSource.kind !== "error"
         ? message
@@ -365,7 +365,7 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
   const lines = [
     `<b>${escapeHtml(symbol)} coverage</b>`,
     `Price: ${status.priceUsd != null ? "yes" : "missing"}`,
-    `Supply: ${formatTelegramCompactUsd(status.supplyUsd) ?? "missing"}`,
+    `Supply: ${formatTelegramCompactUsd(status.supplyUsd) ?? "missing"}${status.supplyUsd != null && !status.supplyCurrent ? " (stale)" : ""}`,
     `DEWS: ${status.dews ? `${status.dews.band} (${formatAge(status.dews.computedAt)})` : "missing"}`,
     `Safety: ${
       status.safety
@@ -375,7 +375,7 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
           : "missing"
     }`,
     `Active depeg: ${status.depeg.status === "active" ? "yes" : "no"}`,
-    `DEX liquidity: ${status.liquidity ? `score ${status.liquidity.score ?? "NR"}, TVL ${formatTelegramCompactUsd(status.liquidity.totalTvlUsd) ?? "n/a"}` : "missing"}`,
+    `DEX liquidity: ${status.liquidity ? `score ${status.liquidity.score ?? "NR"}, TVL ${formatTelegramCompactUsd(status.liquidity.totalTvlUsd) ?? "n/a"}${status.liquidity.current ? "" : " (stale)"}` : "missing"}`,
     `Yield: ${status.yield ? `${status.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(status.yield.source)}` : "missing"}`,
     `<a href="https://pharos.watch/stablecoin/${status.stablecoinId}">Open coin page</a>`,
   ];

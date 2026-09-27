@@ -1,5 +1,7 @@
 import { CRON_JOB_DEFINITIONS, type CronJobMeta } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "../d1-overload-retry";
+import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
+import { assessFreshnessTimestamp, type FreshnessTimestampReason } from "../api-freshness-age";
 
 export type FreshnessThreshold =
   | { multiplier: number }
@@ -24,6 +26,7 @@ export interface FreshnessClassification {
   ratio: number | null;
   watchAtSec: number;
   staleAtSec: number;
+  timestampReason: FreshnessTimestampReason | null;
 }
 
 interface ProducerFreshnessRow {
@@ -50,17 +53,18 @@ export function classifyFreshness(
   fact: ProducerFreshnessFact,
   policy: FreshnessPolicy,
   nowSec: number,
+  clock: { readAtSec?: number; allowedFutureSkewSec?: number } = {},
 ): FreshnessClassification {
   const watchAtSec = resolveThresholdSec(policy.watchAt, fact.expectedIntervalSec);
   const staleAtSec = resolveThresholdSec(policy.staleAt, fact.expectedIntervalSec);
   if (watchAtSec < 0 || staleAtSec < watchAtSec) {
     throw new Error("freshness policy thresholds must be non-negative and ordered");
   }
-  const ageSec = fact.lastSuccessAt == null
-    || !Number.isFinite(fact.lastSuccessAt)
-    || !Number.isFinite(nowSec)
-    ? null
-    : Math.max(0, nowSec - fact.lastSuccessAt);
+  const timestamp = assessFreshnessTimestamp(
+    clock.readAtSec ?? nowSec, fact.lastSuccessAt, clock.allowedFutureSkewSec,
+  );
+  const timestampReason = Number.isFinite(nowSec) ? timestamp.reason : "invalid-timestamp";
+  const ageSec = timestampReason == null ? Math.max(0, nowSec - fact.lastSuccessAt!) : null;
   const ratio = ageSec == null || fact.expectedIntervalSec <= 0
     ? null
     : ageSec / fact.expectedIntervalSec;
@@ -69,12 +73,12 @@ export function classifyFreshness(
     : ageSec > watchAtSec
       ? "watch"
       : "fresh";
-  return { state, ageSec, ratio, watchAtSec, staleAtSec };
+  return { state, ageSec, ratio, watchAtSec, staleAtSec, timestampReason };
 }
 
 /**
- * Load the latest run and latest successful/degraded run for every producer in
- * one D1 statement. Missing producers remain explicit facts with null clocks.
+ * Load the latest attempt and latest confirmed output clock for every producer in
+ * one D1 statement. Missing or unproven output remains an explicit null clock.
  */
 export async function loadProducerFreshnessFacts(
   db: D1Database,
@@ -95,7 +99,7 @@ export async function loadProducerFreshnessFacts(
              SELECT job,
                     started_at,
                     status,
-                    MAX(CASE WHEN status IN ('ok', 'degraded') THEN started_at END)
+                    MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL})
                       OVER (PARTITION BY job) AS last_success_at,
                     ROW_NUMBER() OVER (
                       PARTITION BY job

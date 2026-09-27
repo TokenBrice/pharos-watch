@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import type { ZodType } from "zod";
 import { D1_INT32_MAX } from "./d1-constants";
 import { getCache, getCacheUpdatedAt, setCacheIfNewer } from "./db-cache";
-import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
+import { buildFreshnessMeta, addFreshnessHeaders, type FreshnessMeta } from "./api-freshness";
 import { errorResponse, jsonResponseWithHeaders, withErrorHandler } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
@@ -180,7 +180,7 @@ function decodeResponseReadyCacheBody(
   return envelope.body;
 }
 
-function injectMetaIntoJsonObject(rawBody: string, updatedAt: number, maxAgeSec: number): string | null {
+function injectMetaIntoJsonObject(rawBody: string, freshness: FreshnessMeta): string | null {
   const trimmedStart = rawBody.search(/\S/);
   if (trimmedStart < 0 || rawBody[trimmedStart] !== "{") return null;
   const trimmedEnd = rawBody.search(/\s*$/);
@@ -191,7 +191,7 @@ function injectMetaIntoJsonObject(rawBody: string, updatedAt: number, maxAgeSec:
   }
   if (rawBody[closeBraceIndex] !== "}") return null;
 
-  const meta = JSON.stringify(buildFreshnessMeta(updatedAt, maxAgeSec));
+  const meta = JSON.stringify(freshness);
   const prefix = rawBody.slice(0, closeBraceIndex).trimEnd();
   const suffix = rawBody.slice(closeBraceIndex);
   const emptyObject = prefix.replace(/\s+/g, "") === "{";
@@ -226,19 +226,20 @@ export function createCacheHandler(
       if (canonicalUpdatedAt != null) {
         const responseReady = await getResponseReadyCache(db, cacheKey);
         if (responseReady?.updatedAt === canonicalUpdatedAt) {
+          const freshness = buildFreshnessMeta(canonicalUpdatedAt, maxAgeSec);
           const trustedBody = options.responseReadySchemaId
             ? decodeResponseReadyCacheBody(cacheKey, responseReady, options.responseReadySchemaId)
             : null;
           const responseReadyBody = trustedBody != null
             && options.injectMeta !== "never"
-            ? injectMetaIntoJsonObject(trustedBody, canonicalUpdatedAt, maxAgeSec)
+            ? injectMetaIntoJsonObject(trustedBody, freshness)
             : trustedBody;
           if (responseReadyBody != null) {
             return new Response(responseReadyBody, {
               headers: addFreshnessHeaders({
                 "Content-Type": "application/json",
                 "Cache-Control": cacheControl,
-              }, canonicalUpdatedAt, maxAgeSec),
+              }, canonicalUpdatedAt, maxAgeSec, freshness),
             });
           }
         }
@@ -249,11 +250,6 @@ export function createCacheHandler(
     if (!cached) {
       return errorResponse(503, "Data not yet available");
     }
-
-    const headers = addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": cacheControl,
-    }, cached.updatedAt, maxAgeSec);
 
     const parsed = readCachedJsonOr503<unknown>(endpoint, cacheKey, cached);
     if (!parsed.ok) {
@@ -276,11 +272,17 @@ export function createCacheHandler(
       }
     }
 
+    const freshness = buildFreshnessMeta(cached.updatedAt, maxAgeSec);
+    const headers = addFreshnessHeaders({
+      "Content-Type": "application/json",
+      "Cache-Control": cacheControl,
+    }, cached.updatedAt, maxAgeSec, freshness);
+
     if (options?.injectMeta !== "never" && body && typeof body === "object" && !Array.isArray(body)) {
       return jsonResponseWithHeaders(
         {
           ...(body as Record<string, unknown>),
-          _meta: buildFreshnessMeta(cached.updatedAt, maxAgeSec),
+          _meta: freshness,
         },
         headers,
       );

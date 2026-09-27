@@ -11,10 +11,12 @@ import {
   toDateString,
   usableCandidates,
 } from "./digest-intelligence-utils";
+import { comparableDepegs, currentDepegBps, type DigestEvidence } from "./digest-evidence";
 
 export function buildChangeSummary(
   data: DigestInputData,
   previousData: DigestInputData | null,
+  evidence?: DigestEvidence,
 ): DigestChangeSummary {
   const current = usableCandidates(data).slice(0, 12);
   const previous = usableCandidates(previousData).slice(0, 20);
@@ -27,12 +29,12 @@ export function buildChangeSummary(
       .filter((candidate) => !previousIds.has(candidate.id))
       .slice(0, CHANGE_LIMIT)
       .map((candidate) => candidateChange(candidate, "New to the top digest candidate set.")),
-    worsenedSignals: buildWorsenedImprovedSignals(data, previousData, "worsened"),
-    improvedSignals: buildWorsenedImprovedSignals(data, previousData, "improved"),
+    worsenedSignals: buildWorsenedImprovedSignals(data, previousData, "worsened", evidence),
+    improvedSignals: buildWorsenedImprovedSignals(data, previousData, "improved", evidence),
     resolvedSignals: previous
-      .filter((candidate) => isResolvedCandidate(candidate, data, currentIds))
+      .filter((candidate) => isResolvedCandidate(candidate, evidence, currentIds, previousData))
       .slice(0, CHANGE_LIMIT)
-      .map((candidate) => candidateChange(candidate, "Signal cleared or fell out of the current top set.")),
+      .map((candidate) => candidateChange(candidate, "Matching depeg event has a positively classified recovery closure.")),
     repeatedSignals: current
       .filter((candidate) => previousIds.has(candidate.id))
       .slice(0, CHANGE_LIMIT)
@@ -44,6 +46,7 @@ function buildWorsenedImprovedSignals(
   data: DigestInputData,
   previousData: DigestInputData | null,
   direction: "worsened" | "improved",
+  evidence?: DigestEvidence,
 ): DigestSignalChange[] {
   if (!previousData) return [];
   const out: DigestSignalChange[] = [];
@@ -52,20 +55,20 @@ function buildWorsenedImprovedSignals(
   // cross-coin movement. Symbol keys remain only for archived rows without ids.
   const depegKey = (depeg: DigestInputData["topDepegs"][number]): string =>
     depeg.stablecoinId ?? `symbol:${depeg.symbol.toUpperCase()}`;
-  const depegBps = (depeg: DigestInputData["topDepegs"][number]): number =>
-    Math.abs(depeg.currentBps ?? depeg.bps);
-  const currentDepegs = new Map(data.topDepegs.map((depeg) => [depegKey(depeg), depeg]));
+  const currentDepegs = new Map((evidence?.activeDepegs ?? data.topDepegs).map((depeg) => [depegKey(depeg), depeg]));
   for (const previous of previousData.topDepegs ?? []) {
     const current = currentDepegs.get(depegKey(previous));
-    if (!current) continue;
-    const delta = depegBps(current) - depegBps(previous);
+    if (!current || !comparableDepegs(current, previous, data, previousData)) continue;
+    const currentBps = currentDepegBps(current, data.dataQuality?.generatedAt)!;
+    const previousBps = currentDepegBps(previous, previousData.dataQuality?.generatedAt)!;
+    const delta = currentBps - previousBps;
     if (direction === "worsened" && delta >= 25) {
       out.push({
         id: `change:depeg:${(current.stablecoinId ?? current.symbol).toLowerCase()}:worsened`,
         label: `${current.symbol} depeg widened`,
         kind: "depeg",
         symbols: [current.symbol],
-        detail: `${depegBps(previous)} bps to ${depegBps(current)} bps off peg.`,
+        detail: `${previousBps} bps to ${currentBps} bps off peg.`,
       });
     }
     if (direction === "improved" && delta <= -25) {
@@ -74,7 +77,7 @@ function buildWorsenedImprovedSignals(
         label: `${current.symbol} depeg narrowed`,
         kind: "depeg",
         symbols: [current.symbol],
-        detail: `${depegBps(previous)} bps to ${depegBps(current)} bps off peg.`,
+        detail: `${previousBps} bps to ${currentBps} bps off peg.`,
       });
     }
   }
@@ -124,13 +127,15 @@ function pushGaugeSignal(
 
 function isResolvedCandidate(
   candidate: DigestEditorialCandidate,
-  data: DigestInputData,
+  evidence: DigestEvidence | undefined,
   currentIds: Set<string>,
+  previousData: DigestInputData | null,
 ): boolean {
   if (currentIds.has(candidate.id)) return false;
-  const symbols = new Set(candidate.symbols.map((symbol) => symbol.toUpperCase()));
   if (candidate.kind !== "depeg") return false;
-  const stillActive = data.topDepegs.some((depeg) => symbols.has(depeg.symbol.toUpperCase()));
-  const resolved = (data.resolvedDepegs ?? []).some((depeg) => symbols.has(depeg.symbol.toUpperCase()));
-  return resolved || !stillActive;
+  const stablecoinId = candidate.id.split(":")[1];
+  const previous = previousData?.topDepegs.find((row) => row.stablecoinId === stablecoinId);
+  if (!previous || evidence?.activeDepegs?.some((row) => row.stablecoinId === stablecoinId)) return false;
+  return (evidence?.recoveredDepegs ?? []).some((row) =>
+    row.stablecoinId === stablecoinId && row.startedAt === previous.startedAt);
 }

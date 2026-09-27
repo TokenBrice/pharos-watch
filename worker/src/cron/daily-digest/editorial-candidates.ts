@@ -1,3 +1,4 @@
+import { comparableDepegs } from "./digest-evidence";
 import type {
   DigestEditorialCandidate,
   DigestEditorialCandidateArtifactRisk,
@@ -83,6 +84,7 @@ function depegSeverityBps(depeg: DigestInputData["topDepegs"][number]): number {
 
 function activeDepegNovelty(
   depeg: DigestInputData["topDepegs"][number],
+  data: DigestInputData,
   previousData: DigestInputData | null,
 ): DigestEditorialCandidate["novelty"] {
   if (depeg.suppressReason) return "chronic";
@@ -94,7 +96,7 @@ function activeDepegNovelty(
   );
   // Without a prior observation to diff against, a multi-day depeg is a
   // standing condition, not a developing story.
-  if (!previous) return "chronic";
+  if (!previous || !previousData || !comparableDepegs(depeg, previous, data, previousData)) return "chronic";
   const delta = Math.abs(depegSeverityBps(depeg)) - Math.abs(depegSeverityBps(previous));
   if (delta >= 100) return "worsening";
   if (delta <= -100) return "improving";
@@ -119,7 +121,7 @@ function addActiveDepegCandidates(
       title: `${depeg.symbol} active ${Math.abs(severityBps)} bps ${severityDirection} peg`,
       symbols: [depeg.symbol],
       impactScore,
-      novelty: activeDepegNovelty(depeg, previousData),
+      novelty: activeDepegNovelty(depeg, data, previousData),
       confidence: "high",
       artifactRisk: artifactRiskForSuppression(depeg.suppressReason, depeg.mcapUsd < 50_000_000 ? "medium" : "low"),
       headlineFacts: [
@@ -450,7 +452,7 @@ function addLiquidityAndBlacklistCandidates(candidates: DigestEditorialCandidate
 
 function addPsiCandidate(candidates: DigestEditorialCandidate[], data: DigestInputData): void {
   const psi = data.stabilityIndex;
-  if (!psi) return;
+  if (!psi || psi.components.severity == null || psi.components.breadth == null) return;
 
   const alertPlusMcap = (data.dewsStress?.elevatedCoins ?? []).reduce((sum, coin) => sum + coin.mcapUsd, 0);
   addCandidate(candidates, {

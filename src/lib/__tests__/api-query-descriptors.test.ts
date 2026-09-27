@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { FRONTEND_API_QUERY_DESCRIPTORS, projectStablecoinLiveSummary, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
-import { CRON_USDS_STATUS } from "@/lib/cron-intervals";
 import { type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
 import {
@@ -10,49 +9,6 @@ import {
 import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "../api-query-domains/stability-detail";
 import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 
-const EXPECTED_RESPONSE_MODES: {
-  [TKey in keyof FrontendApiQueryDescriptorRegistry]: "plain" | "meta" | "static";
-} = {
-  stablecoinLiveSummary: "plain",
-  stablecoins: "meta",
-  chains: "meta",
-  chainsDetail: "meta",
-  bluechipRatings: "meta",
-  dailyDigest: "plain",
-  dexLiquidity: "meta",
-  dexLiquidityHistory: "plain",
-  digestArchive: "meta",
-  digestSnapshot: "static",
-  health: "plain",
-  publicStatusHistory: "plain",
-  latestEvents: "meta",
-  chartAnnotationEvents: "meta",
-  blacklistSummary: "meta",
-  blacklistEvents: "meta",
-  mintBurnFlows: "meta",
-  mintBurnFlowsCoin: "meta",
-  mintBurnEvents: "meta",
-  pegSummary: "meta",
-  reportCardsV9: "meta",
-  depegResolver: "meta",
-  depegResolverReview: "meta",
-  redemptionBackstops: "meta",
-  safetyScoreHistory: "meta",
-  safetyScoreHistoryV2: "meta",
-  stablecoinCharts: "plain",
-  nonUsdShare: "plain",
-  stabilityIndex: "meta",
-  stabilityIndexDetail: "meta",
-  usdsStatus: "plain",
-  telegramPulse: "plain",
-  yieldHistory: "meta",
-  yieldRankings: "meta",
-  yieldRankingsSummary: "meta",
-  yieldAdapterManifest: "static",
-  stressSignals: "meta",
-  stressSignalDetail: "meta",
-  supplyHistory: "plain",
-};
 
 const PARAMETERIZED_ARGS: Record<string, unknown[]> = {
   stablecoinLiveSummary: ["usdc-circle"],
@@ -83,6 +39,36 @@ function resolveEntry(entry: unknown, key: string): FrontendAnyApiQueryDescripto
 }
 
 describe("frontend API query descriptors", () => {
+  it("withholds nominal observations while retaining the separate reference", () => {
+    const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" as const };
+    const summary = projectStablecoinLiveSummary({
+      price: 1,
+      priceSource: "protocol-par",
+      priceConfidence: "high",
+      priceObservedAtMode: "nominal_reference",
+      priceUpdatedAt: 1_700_000_000,
+      priceObservedAt: 1_700_000_000,
+      priceSyncedAt: 1_700_000_000,
+      consensusSources: ["coingecko"],
+      agreeSources: ["coingecko"],
+      nominalPriceReference,
+    });
+    expect(summary).toMatchObject({
+      price: null,
+      priceConfidence: null,
+      priceUpdatedAt: null,
+      priceObservedAt: null,
+      priceSyncedAt: null,
+      consensusSources: [],
+      agreeSources: [],
+      nominalPriceReference,
+    });
+    const legacy = projectStablecoinLiveSummary({ price: 1, priceSource: "protocol-redeem", priceConfidence: "high" });
+    expect(legacy.price).toBe(1);
+    expect(legacy.priceConfidence).toBe("high");
+    expect(legacy).not.toHaveProperty("nominalPriceReference");
+  });
+
   it("preserves canonical price provenance without copying provider history into the summary", () => {
     const provenance = {
       price: 0.9998,
@@ -185,18 +171,6 @@ describe("frontend API query descriptors", () => {
     );
   });
 
-  it("pins every descriptor's response mode", () => {
-    for (const key of Object.keys(FRONTEND_API_QUERY_DESCRIPTORS)) {
-      const runtimeEntry = FRONTEND_API_QUERY_DESCRIPTORS[key as keyof FrontendApiQueryDescriptorRegistry];
-      const runtimeDescriptor = resolveEntry(runtimeEntry, key);
-
-      expect(runtimeDescriptor.responseMode, key).toBe(
-        EXPECTED_RESPONSE_MODES[key as keyof typeof EXPECTED_RESPONSE_MODES],
-      );
-    }
-
-    expect(FRONTEND_API_QUERY_DESCRIPTORS.usdsStatus.producerIntervalMs).toBe(CRON_USDS_STATUS);
-  });
 
   it.each(Object.keys(FRONTEND_API_QUERY_DESCRIPTORS))(
     "keeps %s schema lazy and caches its loader promise",

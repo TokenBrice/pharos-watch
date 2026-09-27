@@ -12,6 +12,8 @@ function discrepancyReasonLabel(reason: StatusDiscrepancyReason): string {
       return "probe disagrees";
     case "probe-missing":
       return "probe missing";
+    case "probe-invalid-timestamp":
+      return "probe timestamp invalid";
   }
 }
 

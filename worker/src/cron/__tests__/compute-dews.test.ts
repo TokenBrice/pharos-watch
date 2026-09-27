@@ -772,6 +772,46 @@ describe("computeAndStoreDEWS", () => {
     );
   });
 
+  it("degrades only the asset's worst-pool component for unreadable top-pool detail, without a cohort hold", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const dexRow = { weighted_balance_ratio: 0.5, avg_pool_stress: 50, liquidity_score: 80, total_tvl_usd: 5_000_000, updated_at: nowSec };
+    const run = async (topPoolsJson: string) => {
+      vi.mocked(computeDEWS).mockClear();
+      const result = await computeAndStoreDEWS(makeDb([], {
+        dexLiqRows: [{ stablecoin_id: "usdt-tether", ...dexRow, top_pools_json: topPoolsJson }],
+      }));
+      return { result, input: vi.mocked(computeDEWS).mock.calls[0]?.[0] };
+    };
+
+    const invalid = await run("{bad-json");
+    expect(invalid.input).toMatchObject({ topPools: null, topPoolsUnavailableReason: "top-pools-json-parse-failed" });
+    expect(invalid.result.status).toBeUndefined();
+    const metadata = JSON.parse(invalid.result.metadata ?? "{}") as {
+      malformedCoreInputRows: number;
+      malformedPersistedInputs: Array<{ source: string; stablecoinId: string; context: string; degradesRun: boolean }>;
+    };
+    expect(metadata.malformedCoreInputRows).toBe(0);
+    expect(metadata.malformedPersistedInputs).toContainEqual(expect.objectContaining({
+      source: "dex_liquidity", stablecoinId: "usdt-tether", context: "dex_liquidity.top_pools_json", degradesRun: false,
+    }));
+
+    const malformedEntry = await run(JSON.stringify([{ tvlUsd: 2_000_000, extra: { balanceRatio: 0.9 } }, { extra: {} }]));
+    expect(malformedEntry.input).toMatchObject({ topPools: null, topPoolsUnavailableReason: "top-pools-entry-malformed" });
+
+    // Readable entries keep a missing balance measurement as null, never as perfect balance.
+    const readable = await run(JSON.stringify([
+      { tvlUsd: 2_000_000, extra: { feeTier: 5 } },
+      { tvlUsd: 1_000_000, extra: { balanceRatio: 0.6 } },
+    ]));
+    expect(readable.input).toMatchObject({
+      topPools: [{ tvlUsd: 2_000_000, balanceRatio: null }, { tvlUsd: 1_000_000, balanceRatio: 0.6 }],
+      topPoolsUnavailableReason: null,
+    });
+
+    const empty = await run("[]");
+    expect(empty.input).toMatchObject({ topPools: [], topPoolsUnavailableReason: null });
+  });
+
   it("excludes staged and failed yield warnings while retaining published and legacy rows", async () => {
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen, {

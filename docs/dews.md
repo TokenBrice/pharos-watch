@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.27`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.29`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
@@ -84,9 +84,17 @@ DEX pool imbalances from `dex_liquidity`. Blends:
 
 - 40% balance stress (1 - weighted_balance_ratio)
 - 35% pool stress score (avg_pool_stress)
-- 25% worst single pool imbalance (from `top_pools_json`, counting only pools with at least $100k TVL)
+- 25% worst single pool imbalance (from `top_pools_json`, counting only pools with at least $100k TVL and a measured `extra.balanceRatio`)
 
-Smoothed (averaged) with the previous cycle's reading only when that reading was itself available. The persisted previous generation keeps an unavailable signal as `{value: 0, available: false}`, so smoothing requires the recorded `available` flag, not just the stored value — otherwise one evidence-less cycle would halve the next fresh reading and decay it over the following three.
+The signal is unavailable unless both `weighted_balance_ratio` and `avg_pool_stress` are finite. The worst-pool component carries its own availability (`worstPoolStatus`):
+
+- `observed` — at least one eligible pool has a measured balance ratio; pools without a balance measurement are excluded from the max, never read as perfect balance
+- `empty` — the list was read and has no eligible pool: an observed empty set, scored as a measured `0`
+- `unavailable` (`worstPool: null`, `worstPoolUnavailableReason`) — `top_pools_json` is missing (`top-pools-missing`), unparseable (`top-pools-json-parse-failed`), not an array (`top-pools-invalid-shape`), has an entry with a missing/invalid TVL or non-numeric ratio (`top-pools-entry-malformed`), or its eligible pools carry no balance measurement (`top-pools-balance-unmeasured`)
+
+An unavailable worst-pool component drops out of both numerator and denominator: the blend is renormalized over the readable components (`value = (0.40·balance + 0.35·stress) / 0.75`) and `componentCoverage` publishes the readable share of the nominal weight (`0.75` or `1`). Unreadable detail therefore cannot publish a lower, calmer value than the readable components support (DEC-04). Decode failures are recorded per asset as `dex_liquidity.top_pools_json` malformed-input diagnostics with `degradesRun: false`, so one asset's bad detail degrades only that asset's pool signal and never holds the generation.
+
+Smoothed (averaged) with the previous cycle's reading only when that reading was itself available **and** had the same `componentCoverage`. The persisted previous generation keeps an unavailable signal as `{value: 0, available: false}`, so smoothing requires the recorded `available` flag, not just the stored value — otherwise one evidence-less cycle would halve the next fresh reading and decay it over the following three. A previous reading built from different components (or a pre-v6.29 row with no recorded coverage) measured a different blend and is not averaged in. The pool signal publishes the outcome as `smoothing` (`applied`, `no-previous`, `previous-unavailable`, `previous-coverage-unknown`, `coverage-changed`).
 
 ### S_liq — Liquidity Erosion
 

@@ -15,7 +15,6 @@ export {
 export type {
   PreviousYieldPublicationRanking,
   PreviousYieldPublicationSnapshot,
-  PreviousYieldPublicationSnapshotStatus,
 } from "./publication-decision-persistence";
 export {
   attachYieldPublicationMetadata,
@@ -26,10 +25,6 @@ export {
 } from "./publication-lifecycle";
 export { buildYieldRankingsPayloadFromEvaluatedSources } from "./publication-ranking-payload";
 export { buildYieldPublicationViews } from "./publication-view";
-export type {
-  YieldCoinPublicationView,
-  YieldPublicationViews,
-} from "./publication-view";
 
 /** Days to retain audit-only yield_source_decisions rows. Trend-tagged rows
  *  (source switches, anomalies, rejected higher-confidence sources) are

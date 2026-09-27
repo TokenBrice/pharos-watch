@@ -320,7 +320,8 @@ describe("computeAndStoreDEWS v5.95 contagion amplifier", () => {
       prevPriceConfidence: null, pegRef: 1, dexPriceUsd: null,
       blacklistEvents24h: 0, blacklistEvents7d: 0, hasBlacklistTracking: false,
       burnVolume24hUsd: null, mintVolume24hUsd: null, burnBaseline30dUsd: null,
-      flowDataAgeDays: 0, yieldWarnings: [], psiScore: 0, contagionAmplifier: 1.15,
+      flowDataAgeDays: 0, flowValuation24h: null, flowBurnBaselineValuation: null,
+      yieldWarnings: [], psiScore: 0, contagionAmplifier: 1.15,
     })!;
 
     expect(hot.amplifiers).toEqual({ psi: 1.3, contagion: 1.15 });

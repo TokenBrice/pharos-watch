@@ -5,6 +5,8 @@ import type {
 
 type FlowSignalVariant = "summary" | "overview";
 type FlowSceneMode = "printer" | "shredder";
+/** `unavailable`: partial valuation leaves the 24h direction unproven (`null` on the wire or proven-direction helper). */
+type FlowDirectionKey = NetFlowDirection24h | "unavailable";
 
 interface FlowDirectionBase {
   badgeClass: string;
@@ -31,7 +33,7 @@ export interface FlowPressureUi extends FlowPressureBase {
   helper: string;
 }
 
-const FLOW_DIRECTION_BASE: Record<NetFlowDirection24h, FlowDirectionBase> = {
+const FLOW_DIRECTION_BASE: Record<FlowDirectionKey, FlowDirectionBase> = {
   minting: {
     badgeClass:
       "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
@@ -58,43 +60,54 @@ const FLOW_DIRECTION_BASE: Record<NetFlowDirection24h, FlowDirectionBase> = {
     accentHex: "#6b7280",
     sceneMode: "printer",
   },
+  unavailable: {
+    badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
+    valueClass: "text-muted-foreground",
+    accentHex: "#6b7280",
+    sceneMode: "printer",
+  },
 };
 
-const FLOW_DIRECTION_LABELS: Record<FlowSignalVariant, Record<NetFlowDirection24h, string>> = {
+const FLOW_DIRECTION_LABELS: Record<FlowSignalVariant, Record<FlowDirectionKey, string>> = {
   summary: {
     minting: "Minting",
     burning: "Burning",
     flat: "Flat",
     inactive: "No activity",
+    unavailable: "Direction unavailable",
   },
   overview: {
     minting: "Net minting",
     burning: "Net burning",
     flat: "Flat net flow",
     inactive: "No activity",
+    unavailable: "Net direction unavailable",
   },
 };
 
-const FLOW_DIRECTION_SCENE_TITLES: Record<FlowSignalVariant, Record<NetFlowDirection24h, string>> = {
+const FLOW_DIRECTION_SCENE_TITLES: Record<FlowSignalVariant, Record<FlowDirectionKey, string>> = {
   summary: {
     minting: "Printer",
     burning: "Shredder",
     flat: "Flow Desk",
     inactive: "Flow Desk",
+    unavailable: "Flow Desk",
   },
   overview: {
     minting: "Mint Desk",
     burning: "Burn Desk",
     flat: "Flow Desk",
     inactive: "Flow Desk",
+    unavailable: "Flow Desk",
   },
 };
 
-const FLOW_DIRECTION_HELPERS: Record<NetFlowDirection24h, string> = {
+const FLOW_DIRECTION_HELPERS: Record<FlowDirectionKey, string> = {
   minting: "Net issuance dominates the last 24 hours.",
   burning: "Net redemptions dominate the last 24 hours.",
   flat: "Mints and burns offset each other in the active window.",
   inactive: "No mint or burn events were recorded in the active window.",
+  unavailable: "Unpriced mint or burn events could change the 24h net direction, so none is claimed.",
 };
 
 const FLOW_PRESSURE_BASE: Record<PressureShiftState, FlowPressureBase> = {
@@ -151,14 +164,15 @@ const FLOW_PRESSURE_HELPERS: Record<PressureShiftState, string> = {
 };
 
 export function getFlowDirectionUi(
-  direction: NetFlowDirection24h,
+  direction: NetFlowDirection24h | null,
   variant: FlowSignalVariant,
 ): FlowDirectionUi {
+  const key: FlowDirectionKey = direction ?? "unavailable";
   return {
-    ...FLOW_DIRECTION_BASE[direction],
-    label: FLOW_DIRECTION_LABELS[variant][direction],
-    helper: FLOW_DIRECTION_HELPERS[direction],
-    sceneTitle: FLOW_DIRECTION_SCENE_TITLES[variant][direction],
+    ...FLOW_DIRECTION_BASE[key],
+    label: FLOW_DIRECTION_LABELS[variant][key],
+    helper: FLOW_DIRECTION_HELPERS[key],
+    sceneTitle: FLOW_DIRECTION_SCENE_TITLES[variant][key],
   };
 }
 
@@ -174,9 +188,12 @@ export function getFlowPressureUi(
 }
 
 export function buildFlowSummaryNarrative(
-  direction: NetFlowDirection24h,
+  direction: NetFlowDirection24h | null,
   pressureState: PressureShiftState,
 ): string {
+  if (direction === null) {
+    return "Net direction unavailable: unpriced events leave the 24h net unproven.";
+  }
   if (direction === "inactive") {
     return "No current activity; pressure shift is NR.";
   }
@@ -219,9 +236,12 @@ export function buildFlowSummaryNarrative(
 }
 
 export function buildFlowOverviewHeadline(
-  direction: NetFlowDirection24h,
+  direction: NetFlowDirection24h | null,
   pressureState: PressureShiftState,
 ): string {
+  if (direction === null) {
+    return "Net direction unavailable: partial valuation";
+  }
   if (direction === "inactive") {
     return "No aggregate mint/burn activity";
   }
@@ -256,9 +276,12 @@ export function buildFlowOverviewHeadline(
 }
 
 export function buildFlowOverviewDescription(
-  direction: NetFlowDirection24h,
+  direction: NetFlowDirection24h | null,
   pressureState: PressureShiftState,
 ): string {
+  if (direction === null) {
+    return "Unpriced mint or burn events leave the aggregate 24-hour net unproven, so no net direction is claimed. The Bank Run Gauge still compares pressure with the recent 30-day norm.";
+  }
   if (direction === "inactive") {
     return "No aggregate mint or burn events were recorded in the active 24-hour window.";
   }

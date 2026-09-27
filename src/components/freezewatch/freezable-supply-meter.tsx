@@ -35,11 +35,32 @@ export function formatShare(value: number): string {
 }
 
 /**
- * Derive the freezable-supply headline figures from the status buckets. Shared
- * by the FreezeWatch hero header (which renders the beam + sub-metrics) and the
- * meter body below it, so the two stay in lockstep.
+ * `complete`: every reviewed asset reported supply. `partial`: some did not; totals and shares
+ * cover observed supply only and must be labelled so. `unavailable`: no reviewed asset reported
+ * supply, so no supply total or share can be claimed (registry counts remain valid).
  */
-export function computeFreezableSummary(buckets: BlacklistStatusBucket[] | null | undefined) {
+export type FreezableSupplyCoverage = "complete" | "partial" | "unavailable";
+
+export interface FreezableSummary {
+  ordered: BlacklistStatusBucket[];
+  /** Observed supply across every bucket — the known-supply denominator. */
+  totalMarketCap: number;
+  freezableMarketCap: number;
+  /** Registry count of freezable assets; independent of supply availability. */
+  freezableCount: number;
+  /** Freezable percentage of observed supply; `null` when no positive supply is observed. */
+  freezableShare: number | null;
+  /** Reviewed assets whose supply is unavailable and therefore excluded from every total. */
+  supplyUnavailableCount: number;
+  coverage: FreezableSupplyCoverage;
+}
+
+/**
+ * Derive the freezable-supply headline figures from the status buckets. Shared
+ * by the FreezeWatch hero header (which renders the beam + sub-metrics), the
+ * meter body below it and the stats band, so they stay in lockstep.
+ */
+export function computeFreezableSummary(buckets: BlacklistStatusBucket[] | null | undefined): FreezableSummary {
   const ordered = BLACKLIST_STATUS_BUCKET_ORDER.map((key) =>
     buckets?.find((bucket) => bucket.key === key),
   ).filter((bucket): bucket is BlacklistStatusBucket => Boolean(bucket));
@@ -47,8 +68,20 @@ export function computeFreezableSummary(buckets: BlacklistStatusBucket[] | null 
   const freezableBuckets = ordered.filter((bucket) => FREEZABLE_BUCKETS.has(bucket.key));
   const freezableMarketCap = freezableBuckets.reduce((sum, bucket) => sum + bucket.marketCap, 0);
   const freezableCount = freezableBuckets.reduce((sum, bucket) => sum + bucket.count, 0);
-  const freezableShare = totalMarketCap > 0 ? (freezableMarketCap / totalMarketCap) * 100 : 0;
-  return { ordered, totalMarketCap, freezableMarketCap, freezableCount, freezableShare };
+  const registryCount = ordered.reduce((sum, bucket) => sum + bucket.count, 0);
+  const supplyUnavailableCount = ordered.reduce((sum, bucket) => sum + bucket.supplyUnavailableCount, 0);
+  const coverage: FreezableSupplyCoverage =
+    registryCount - supplyUnavailableCount <= 0 ? "unavailable" : supplyUnavailableCount > 0 ? "partial" : "complete";
+  const freezableShare =
+    coverage !== "unavailable" && totalMarketCap > 0 ? (freezableMarketCap / totalMarketCap) * 100 : null;
+  return { ordered, totalMarketCap, freezableMarketCap, freezableCount, freezableShare, supplyUnavailableCount, coverage };
+}
+
+/** Qualifier for totals/shares built from a partial observed-supply denominator. */
+export function describeFreezableSupplyCoverage(summary: Pick<FreezableSummary, "coverage" | "supplyUnavailableCount">): string | null {
+  if (summary.coverage !== "partial") return null;
+  const assets = summary.supplyUnavailableCount === 1 ? "asset" : "assets";
+  return `Observed supply only · ${summary.supplyUnavailableCount} ${assets} without supply data excluded`;
 }
 
 export function FreezableSupplyMeter({
@@ -82,7 +115,9 @@ export function FreezableSupplyMeter({
     );
   }
 
-  const { ordered: orderedBuckets, totalMarketCap } = computeFreezableSummary(buckets);
+  const summary = computeFreezableSummary(buckets);
+  const { ordered: orderedBuckets, totalMarketCap } = summary;
+  const coverageNote = describeFreezableSupplyCoverage(summary);
   const yesBucket = orderedBuckets.find((bucket) => bucket.key === "yes") ?? null;
   const noBucket = orderedBuckets.find((bucket) => bucket.key === "no") ?? null;
   const midBuckets = orderedBuckets.filter((bucket) => bucket.key !== "yes" && bucket.key !== "no");
@@ -90,6 +125,9 @@ export function FreezableSupplyMeter({
   return (
     <div className="p-5 animate-in fade-in duration-300 sm:p-6">
       <FreezeLineBar buckets={orderedBuckets} totalMarketCap={totalMarketCap} />
+      {coverageNote ? (
+        <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{coverageNote}</p>
+      ) : null}
 
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {yesBucket ? (
@@ -134,7 +172,12 @@ interface BucketCardProps {
 }
 
 function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: BucketCardProps) {
-  const share = totalMarketCap > 0 ? (bucket.marketCap / totalMarketCap) * 100 : 0;
+  // A bucket whose every member lacks supply has no observed value or share, not $0 / 0%.
+  const valueUnavailable = bucket.count > 0 && bucket.supplyUnavailableCount >= bucket.count;
+  const share = !valueUnavailable && totalMarketCap > 0 ? (bucket.marketCap / totalMarketCap) * 100 : null;
+  const shareLabel = share === null ? "—" : formatShare(share);
+  const unavailableNote =
+    bucket.supplyUnavailableCount > 0 ? ` · ${bucket.supplyUnavailableCount} without supply data` : "";
   const color = BLACKLIST_STATUS_BUCKET_COLORS[bucket.key];
   const isInteractive = typeof onSelect === "function";
 
@@ -174,7 +217,7 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
               <span className={labelClass}>{BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}</span>
             </div>
-            <span className="shrink-0 pharos-numeric text-xs text-muted-foreground">{formatShare(share)}</span>
+            <span className="shrink-0 pharos-numeric text-xs text-muted-foreground">{shareLabel}</span>
           </div>
         ) : (
           <div className="flex min-w-0 items-center gap-2">
@@ -187,15 +230,15 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
             Safe haven
           </p>
         ) : null}
-        <p className={valueClass}>{formatCurrency(bucket.marketCap, 2)}</p>
+        <p className={valueClass}>{valueUnavailable ? "—" : formatCurrency(bucket.marketCap, 2)}</p>
         <p className="mt-1 text-[11px] text-muted-foreground">
           {variant === "hero" ? (
-            `${bucket.count} stablecoins`
+            `${bucket.count} stablecoins${unavailableNote}`
           ) : (
             <>
-              <span className="pharos-numeric text-foreground/85">{formatShare(share)}</span>
+              <span className="pharos-numeric text-foreground/85">{shareLabel}</span>
               <span aria-hidden="true" className="mx-1 text-muted-foreground/60">·</span>
-              {bucket.count} stablecoins
+              {bucket.count} stablecoins{unavailableNote}
             </>
           )}
         </p>

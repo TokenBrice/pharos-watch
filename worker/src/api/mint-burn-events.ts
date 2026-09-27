@@ -144,10 +144,6 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
       freshness: {
         producerJob: "sync-mint-burn",
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
-        fallbackTimestamp: (events) =>
-          events.length > 0
-            ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
-            : Math.floor(Date.now() / 1000),
       },
       cacheControl: CACHE_PROFILES.producerBacked,
     });

@@ -1,4 +1,5 @@
 import type { ContractDeployment, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
+import type { SupplyGapFillProvenance } from "@shared/types/market";
 import { stampPriceMetadata } from "./shared";
 
 export interface PriceValidationStats {
@@ -50,6 +51,8 @@ export interface PeggedAsset {
   supplySource?: string;
   supplyObservedAt?: number | null;
   supplyRestored?: boolean;
+  /** DEC-01 provenance when the aggregate was raised by the bounded CoinGecko gap-fill. */
+  supplyGapFill?: SupplyGapFillProvenance;
   pegType?: string;
   pegMechanism?: string;
   circulating?: Record<string, number>;

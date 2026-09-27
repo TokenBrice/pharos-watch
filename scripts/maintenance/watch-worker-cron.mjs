@@ -286,7 +286,9 @@ export async function collectWorkerCronSnapshot(args, {
 
   // SAFETY: sinceSec/limit/metadataBytes are positive integers derived from validated CLI numeric options.
   const recentRuns = select(args, `
-    SELECT job, started_at, duration_ms, status, error, degraded_reason, item_count, slot_started_at, ${metadataSelect(args, "metadata")}
+    SELECT job, started_at, duration_ms, status, error, degraded_reason, item_count, slot_started_at,
+           CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality') ELSE NULL END AS quality,
+           ${metadataSelect(args, "metadata")}
       FROM cron_runs
      WHERE slot_started_at >= unixepoch() - ${sinceSec}
         OR (slot_started_at IS NULL AND started_at >= unixepoch() - ${sinceSec})

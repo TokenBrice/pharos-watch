@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
-import { HealthResponseSchema } from "@shared/types/status/public-health";
 import { buildPublicHealthStatusCauses } from "@/lib/status/issue-evidence-model";
 import { countPublicImpactOpenCircuits, isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
@@ -91,18 +90,6 @@ describe("public status helpers", () => {
     expect(getImpactedPublicSurfaces(health)).toEqual([]);
   });
 
-  it("parses pre-acknowledgement health payloads with empty and null review defaults", () => {
-    const legacy = makeActivePriceCoverage([makeMissingActiveAsset({ acknowledgedGap: undefined })], {
-      acknowledgedGapIds: undefined, acknowledgedGapCount: undefined,
-      expiredGapReviewIds: undefined, invalidGapReviewIds: undefined,
-    });
-    const parsed = HealthResponseSchema.parse({ ...BASE_HEALTH, activePriceCoverage: legacy }).activePriceCoverage!;
-    expect(parsed.acknowledgedGapIds).toEqual([]);
-    expect(parsed.acknowledgedGapCount).toBe(0);
-    expect(parsed.expiredGapReviewIds).toEqual([]);
-    expect(parsed.invalidGapReviewIds).toEqual([]);
-    expect(parsed.missingActiveAssets[0]?.acknowledgedGap).toBeNull();
-  });
 
   it("explains degraded yield production while retaining unknown warning evidence", () => {
     expect(getPublicHealthWarningPresentation("cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run", BASE_HEALTH)).toEqual({

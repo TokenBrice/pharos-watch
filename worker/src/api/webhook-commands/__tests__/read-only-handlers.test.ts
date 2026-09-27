@@ -49,7 +49,8 @@ const statusFixture: StatusForCoin = {
   priceUsd: 0.9999,
   priceUpdatedAt: 1_700_000_000,
   supplyUsd: 12_300_000_000,
-  stablecoinsUpdatedAt: 1_700_000_000,
+  supplyObservedAt: 1_700_000_000,
+  supplyCurrent: true,
   dews: { band: "CALM", score: 15, computedAt: 1_700_000_000 },
   safety: {
     grade: "A",
@@ -60,7 +61,7 @@ const statusFixture: StatusForCoin = {
     publishedAt: 1_700_000_000,
     recordedAt: 1_700_000_000,
   },
-  liquidity: { score: 91, totalTvlUsd: 450_000_000, updatedAt: 1_700_000_000 },
+  liquidity: { score: 91, totalTvlUsd: 450_000_000, updatedAt: 1_700_000_000, current: true },
   yield: null,
   flow: null,
   depeg: { status: "stable" },

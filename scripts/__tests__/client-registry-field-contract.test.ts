@@ -354,7 +354,6 @@ describe("client registry field contract", () => {
         reserveDisclosureUrl: "https://example.com/reserves",
         redemptionPolicyPresent: true,
         monthlyAttestationPresent: true,
-        latestReportDate: "2026-05-01",
         notes: "Rendered compliance note.",
         references: [{ label: "Disclosure", url: "https://example.com/genius", sourceKind: "issuer-disclosure" }],
         negativeEvidenceReview: {
@@ -402,7 +401,6 @@ describe("client registry field contract", () => {
       reserveDisclosureUrl: "https://example.com/reserves",
       redemptionPolicyPresent: true,
       monthlyAttestationPresent: true,
-      latestReportDate: "2026-05-01",
       notes: "Rendered compliance note.",
       references: [{ label: "Disclosure", url: "https://example.com/genius", sourceKind: "issuer-disclosure" }],
       negativeEvidenceReview: {

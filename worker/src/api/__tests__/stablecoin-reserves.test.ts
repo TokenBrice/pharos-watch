@@ -6,6 +6,7 @@ import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablec
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";
 import { reserveCompositionRow, reserveSyncRow } from "./stablecoin-reserves.test-support";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
 
 describe("handleStablecoinReserves", () => {
   it("keeps USDAI on the reserve endpoint with the curated stablecoin fallback until a validated snapshot is synced", async () => {
@@ -102,6 +103,7 @@ describe("handleStablecoinReserves", () => {
       sourceModel: "dynamic-mix",
       freshnessMode: "not-applicable",
       scoringEligible: true,
+      scoringRejectionReasons: [],
     });
   });
 
@@ -246,6 +248,18 @@ describe("handleStablecoinReserves", () => {
     const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.mode).toBe("live-stale");
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=1800, max-age=120");
+    // The route's own fetch budget and the judged generation travel with the verdict.
+    const freshness = body.sync?.freshness;
+    expect(freshness).toMatchObject({
+      stale: true,
+      staleReasons: ["fetch-age"],
+      fetchedAt,
+      attemptId: null,
+      fetchBudgetSec: LIVE_RESERVE_FRESHNESS_SEC,
+      sourceAgeBudgetSec: null,
+    });
+    expect(freshness?.fetchAgeSec).toBe(freshness!.assessedAt - fetchedAt);
+    expect(freshness!.fetchAgeSec!).toBeGreaterThan(LIVE_RESERVE_FRESHNESS_SEC);
   });
 
 

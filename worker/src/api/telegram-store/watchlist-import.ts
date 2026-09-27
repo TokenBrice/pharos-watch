@@ -88,6 +88,7 @@ export async function loadWatchlistPortableState(
   db: D1Database,
   chatId: string,
   registryVersion: string,
+  includeSnoozeOnlyRows = false,
 ): Promise<{
   state: WatchlistTokenV2State;
   preferenceGeneration: number | null;
@@ -115,7 +116,8 @@ export async function loadWatchlistPortableState(
         .filter((row) => TELEGRAM_ALERT_TYPES.some((alertType) => Boolean(
           row[TELEGRAM_ALERT_PERSISTENCE[alertType].subscriptionColumn]
           || row[TELEGRAM_ALERT_PERSISTENCE[alertType].overrideColumn],
-        )) || Boolean(row.dews_min_band || row.safety_mode || row.depeg_worsening_bps_step))
+        )) || Boolean(row.dews_min_band || row.safety_mode || row.depeg_worsening_bps_step)
+          || (includeSnoozeOnlyRows && row.alert_snooze_until_ts != null))
         .map(directFromRow),
       presets: presets.map(presetFromRow),
     },

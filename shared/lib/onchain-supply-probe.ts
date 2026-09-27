@@ -1,5 +1,6 @@
 import { CHAIN_META } from "./chains";
 import type { StablecoinMeta } from "../types";
+import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
 
@@ -14,18 +15,11 @@ export interface CuratedOnchainSupplyContractConfig {
   allowZeroSupply?: boolean;
 }
 
-export const CURATED_SUPPLY_RPC_DEFAULTS = {
-  plume: { rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" }, plasma: { rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
-  monad: { rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" }, etherlink: { rpcUrl: "https://node.mainnet.etherlink.com" },
-  berachain: { rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" }, linea: { rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
-  katana: { rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com" }, fraxtal: { rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" }, hyperevm: { rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io" },
-} as const satisfies Readonly<Record<string, Omit<CuratedOnchainSupplyContractConfig, "chain">>>;
-
 function supplyProbeChain(
-  chain: keyof typeof CURATED_SUPPLY_RPC_DEFAULTS,
+  chain: keyof typeof SUPPLY_RPC_DEFAULTS,
   overrides: Omit<CuratedOnchainSupplyContractConfig, "chain"> = {},
 ): CuratedOnchainSupplyContractConfig {
-  return { chain, ...CURATED_SUPPLY_RPC_DEFAULTS[chain], ...overrides };
+  return { chain, ...SUPPLY_RPC_DEFAULTS[chain], ...overrides };
 }
 
 export interface CuratedAggregateOnchainSupplyContract {
@@ -99,7 +93,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // than sum the two deployments.
   "dusd-dialectic": [
     { chain: "ethereum" },
-    { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com" },
+    // override: retain this asset's reviewed primary-only supply profile.
+    supplyProbeChain("ink", { fallbackRpcUrl: undefined }),
   ],
   // ACRDX is a Centrifuge V3 share token bridged burn-and-mint through the
   // source-chain Spoke, so the reviewed deployments sum: Ethereum holds only
@@ -139,7 +134,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     supplyProbeChain("etherlink"),
     { chain: "starknet" },
-    { chain: "tac", rpcUrl: "https://rpc.tac.build" },
+    supplyProbeChain("tac"),
   ],
   // sUSN is Ethereum-native with Noon-operated Hyperlane warp representations on
   // zkSync, Sophon and Starknet. Verified 2026-07-29: a 200-holder sweep that
@@ -151,8 +146,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // the true total and stays outside this aggregate.
   "susn-noon": [
     { chain: "ethereum" },
-    { chain: "zksync", rpcUrl: "https://mainnet.era.zksync.io", fallbackRpcUrl: "https://zksync.drpc.org" },
-    { chain: "sophon", rpcUrl: "https://rpc.sophon.xyz" },
+    supplyProbeChain("zksync"),
+    supplyProbeChain("sophon"),
     { chain: "starknet" },
   ],
   "jpym-mento": [{ chain: "celo" }],
@@ -182,23 +177,23 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("fraxtal"),
     supplyProbeChain("hyperevm"),
     supplyProbeChain("berachain"),
-    { chain: "zircuit", rpcUrl: "https://mainnet.zircuit.com" },
-    { chain: "metis", rpcUrl: "https://andromeda.metis.io/?owner=1088", fallbackRpcUrl: "https://metis-rpc.publicnode.com" },
+    supplyProbeChain("zircuit"),
+    supplyProbeChain("metis"),
     // The X Layer OFT is deployed and reviewed but currently holds no supply.
-    { chain: "xlayer", rpcUrl: "https://rpc.xlayer.tech", allowZeroSupply: true },
+    supplyProbeChain("xlayer", { allowZeroSupply: true }),
     { chain: "base" },
     { chain: "bsc" },
-    { chain: "morph-l2", rpcUrl: "https://rpc.morphl2.io", fallbackRpcUrl: "https://morph.drpc.org" },
-    { chain: "scroll", rpcUrl: "https://rpc.scroll.io", fallbackRpcUrl: "https://scroll-rpc.publicnode.com" },
-    { chain: "kava", rpcUrl: "https://evm.kava.io", fallbackRpcUrl: "https://kava-evm-rpc.publicnode.com" },
-    { chain: "swellchain", rpcUrl: "https://rpc.ankr.com/swell", fallbackRpcUrl: "https://swell.drpc.org" },
-    { chain: "mode", rpcUrl: "https://mainnet.mode.network", fallbackRpcUrl: "https://mode.drpc.org" },
-    { chain: "mantle", rpcUrl: "https://rpc.mantle.xyz", fallbackRpcUrl: "https://mantle-rpc.publicnode.com" },
+    supplyProbeChain("morph-l2"),
+    supplyProbeChain("scroll"),
+    supplyProbeChain("kava"),
+    supplyProbeChain("swellchain"),
+    supplyProbeChain("mode"),
+    supplyProbeChain("mantle"),
     { chain: "arbitrum" },
-    { chain: "manta", rpcUrl: "https://pacific-rpc.manta.network/http", fallbackRpcUrl: "https://manta-pacific.drpc.org" },
-    { chain: "blast", rpcUrl: "https://rpc.blast.io", fallbackRpcUrl: "https://blast-rpc.publicnode.com" },
+    supplyProbeChain("manta"),
+    supplyProbeChain("blast"),
     { chain: "optimism" },
-    { chain: "zksync", rpcUrl: "https://mainnet.era.zksync.io", fallbackRpcUrl: "https://zksync.drpc.org" },
+    supplyProbeChain("zksync"),
     { chain: "avalanche" },
     { chain: "solana" },
   ],
@@ -215,19 +210,22 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     { chain: "base" },
     supplyProbeChain("berachain"),
-    { chain: "sonic", rpcUrl: "https://rpc.soniclabs.com" },
+    // override: retain this asset's reviewed primary-only supply profile.
+    supplyProbeChain("sonic", { fallbackRpcUrl: undefined }),
     { chain: "arbitrum" },
     { chain: "bsc" },
     { chain: "avalanche" },
-    { chain: "unichain", rpcUrl: "https://mainnet.unichain.org" },
+    supplyProbeChain("unichain"),
     supplyProbeChain("plume"),
-    { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com" },
-    { chain: "worldchain", rpcUrl: "https://worldchain-mainnet.g.alchemy.com/public" },
+    // override: retain this asset's reviewed primary-only supply profile.
+    supplyProbeChain("sei", { fallbackRpcUrl: undefined }),
+    supplyProbeChain("worldchain"),
     supplyProbeChain("katana"),
     supplyProbeChain("hyperevm"),
     supplyProbeChain("linea"),
     supplyProbeChain("monad"),
-    { chain: "pharos", rpcUrl: "https://api.zan.top/public/pharos-mainnet" },
+    // override: retain this asset's reviewed primary-only supply profile.
+    supplyProbeChain("pharos", { fallbackRpcUrl: undefined }),
     { chain: "solana" },
   ],
   // yUSD is native on Ethereum with LayerZero OFT burn/mint representations on
@@ -242,7 +240,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "arbitrum" },
     { chain: "base" },
     { chain: "optimism" },
-    { chain: "sonic", rpcUrl: "https://rpc.soniclabs.com", fallbackRpcUrl: "https://sonic-rpc.publicnode.com" },
+    supplyProbeChain("sonic"),
     supplyProbeChain("plume"),
     supplyProbeChain("katana"),
     { chain: "bsc" },
@@ -265,8 +263,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "bsc", allowZeroSupply: true },
     supplyProbeChain("monad"),
     supplyProbeChain("katana", { allowZeroSupply: true }),
-    { chain: "megaeth", rpcUrl: "https://mainnet.megaeth.com/rpc", fallbackRpcUrl: "https://megaeth.drpc.org", allowZeroSupply: true },
-    { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com", fallbackRpcUrl: "https://sei-evm-rpc.publicnode.com" },
+    supplyProbeChain("megaeth", { allowZeroSupply: true }),
+    supplyProbeChain("sei"),
   ],
   // cUSDO runs an independent ERC-4626 wrapper on each chain over that chain's
   // own USDO, so nothing escrows anything. Verified 2026-07-29: every remote
@@ -277,7 +275,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "cusdo-openeden": [
     { chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "solana" },
     // Kaia cUSDO wraps its local USDO, like the other independent vaults.
-    { chain: "klaytn", rpcUrl: "https://public-en.node.kaia.io" },
+    supplyProbeChain("klaytn"),
   ],
   // sUSDai is an Arbitrum-native ERC-4626 vault carried to Ethereum, Base and
   // Plasma as LayerZero OFT satellites. Verified 2026-07-29: the OAdapter
@@ -354,7 +352,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "arbitrum" },
     { chain: "base", allowZeroSupply: true },
     supplyProbeChain("hyperevm"),
-    { chain: "stable", rpcUrl: "https://rpc.stable.xyz", fallbackRpcUrl: "https://stable.drpc.org" },
+    supplyProbeChain("stable"),
   ],
   // wiTRY's Ethereum escrow 0x698b7518711bDe4832fDc19F5262DF705c713006 holds
   // 346,349,590.501584 wiTRY, bit-for-bit the MegaETH totalSupply(), so 94% of
@@ -362,7 +360,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // published aggregate is unchanged; only the per-chain split moves.
   "witry-brix": [
     { chain: "ethereum" },
-    { chain: "megaeth", rpcUrl: "https://mainnet.megaeth.com/rpc", fallbackRpcUrl: "https://megaeth.drpc.org" },
+    supplyProbeChain("megaeth"),
   ],
   // KRWQ's five spokes are self-referencing LayerZero OFTs that all resolve
   // peers(30101) to the Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57
@@ -376,8 +374,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base" },
     { chain: "polygon" },
     supplyProbeChain("fraxtal"),
-    { chain: "codex", rpcUrl: "https://rpc.codex.xyz", fallbackRpcUrl: "https://81224.rpc.thirdweb.com", allowZeroSupply: true },
-    { chain: "morph-l2", rpcUrl: "https://rpc.morphl2.io", fallbackRpcUrl: "https://morph.drpc.org" },
+    supplyProbeChain("codex", { allowZeroSupply: true }),
+    supplyProbeChain("morph-l2"),
   ],
   // syrupUSDT is an Ethereum ERC-4626 vault mirrored by Chainlink CCIP BurnMint
   // spokes. Verified 2026-07-29: the Ethereum LockReleaseTokenPool
@@ -389,8 +387,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     supplyProbeChain("plasma"),
     { chain: "bsc" },
-    { chain: "mantle", rpcUrl: "https://rpc.mantle.xyz", fallbackRpcUrl: "https://mantle-rpc.publicnode.com" },
-    { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org" },
+    supplyProbeChain("mantle"),
+    supplyProbeChain("ink"),
   ],
   // syrupUSDC is an Ethereum ERC-4626 vault carried to seven Chainlink CCIP
   // representations. Chainlink's directory identifies Ethereum as the
@@ -405,10 +403,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base" },
     { chain: "arbitrum" },
     { chain: "solana" },
-    { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org", allowZeroSupply: true },
+    supplyProbeChain("ink", { allowZeroSupply: true }),
     supplyProbeChain("monad"),
-    { chain: "robinhood", rpcUrl: "https://rpc.mainnet.chain.robinhood.com", allowZeroSupply: true },
-    { chain: "tempo", rpcUrl: "https://rpc.tempo.xyz", allowZeroSupply: true },
+    supplyProbeChain("robinhood", { allowZeroSupply: true }),
+    supplyProbeChain("tempo", { allowZeroSupply: true }),
   ],
   // srUSD has the same Reservoir shape as wsrUSD but a different adapter:
   // 0x316cd39632Cac4F4CdfC21757c4500FE12f64514 (SrusdOftAdapter). Verified
@@ -428,8 +426,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "pgold-pleasing": [
     { chain: "arbitrum" },
     { chain: "ethereum" },
-    { chain: "apechain", rpcUrl: "https://rpc.apechain.com/http", fallbackRpcUrl: "https://apechain.calderachain.xyz/http" },
-    { chain: "pharos", rpcUrl: "https://api.zan.top/public/pharos-mainnet", fallbackRpcUrl: "https://pharos.drpc.org" },
+    supplyProbeChain("apechain"),
+    supplyProbeChain("pharos"),
   ],
   // PAXG is issuer-native on Ethereum and Solana. The Ethereum LayerZero OFTWrapper
   // 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 is a burn/mint SupplyController
@@ -541,7 +539,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base" },
     supplyProbeChain("etherlink"),
     supplyProbeChain("plume", { allowZeroSupply: true }),
-    { chain: "rootstock", rpcUrl: "https://public-node.rsk.co", allowZeroSupply: true },
+    supplyProbeChain("rootstock", { allowZeroSupply: true }),
   ],
   // spUSDC is a per-chain Spark ERC-4626 over local USDC. The reviewed
   // aggregate path replaces the former Ethereum-only fallback and publishes
@@ -616,7 +614,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // official eSpace endpoint. Ethereum cannot escrow Conflux (1.00M < 38.13M).
   "axcnh-anchorx": [
     { chain: "ethereum" },
-    { chain: "conflux", rpcUrl: "https://evm.confluxrpc.com", fallbackRpcUrl: "https://evm.confluxrpc.org" },
+    supplyProbeChain("conflux"),
   ],
   // MYRC is Blox issuer-native on Ethereum, Arbitrum, Base and Solana.
   // Verified 2026-08-19: Ethereum 1,054,500 + Arbitrum 4,099,598.66 + Base 500,000
@@ -664,8 +662,11 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     supplyProbeChain("monad"),
     supplyProbeChain("hyperevm", { allowZeroSupply: true }),
-    { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com" },
-    { chain: "pharos", rpcUrl: "https://pharos.drpc.org" },
+    // override: retain this asset's reviewed primary-only supply profile.
+    supplyProbeChain("sei", { fallbackRpcUrl: undefined }),
+    // override: this reviewed syzUSD leg uses dRPC first, not the ZAN route.
+    // Keep its primary-only supply profile rather than adding a second endpoint.
+    supplyProbeChain("pharos", { rpcUrl: SUPPLY_RPC_DEFAULTS.pharos.fallbackRpcUrl, fallbackRpcUrl: undefined }),
     supplyProbeChain("berachain"),
   ],
   // IDRT is minted natively on Ethereum, BSC and Polygon: each is a
@@ -698,12 +699,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     { chain: "bsc" },
     { chain: "polygon" },
-    {
-      chain: "harmony",
-      rpcUrl: "https://api.harmony.one",
-      fallbackRpcUrl: "https://api.s0.t.hmny.io",
-      allowZeroSupply: true,
-    },
+    supplyProbeChain("harmony", { allowZeroSupply: true }),
   ],
   // nTBILL is issuer-native Nest BoringVault issuance on Ethereum, Plume,
   // Arbitrum and BNB Chain; the Solana leg is a LayerZero OFT representation that

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createDetailResponseHelpers } from "../stablecoin-detail/shared";
+import { buildNativeSupplyBuckets, buildTokenRowsFromMarketCaps, createDetailResponseHelpers, findNearestPrice } from "../stablecoin-detail/shared";
 
 const fetchWithRetryMock = vi.fn<(
   url: string,
@@ -51,6 +51,33 @@ const { fetchCommodityTokens, handleCommodityDetail } = await import("../stablec
 const config = { stablecoinId: "xaut-tether", geckoId: "tether-gold", protocolSlug: "tether-gold", pegType: "peggedGOLD" };
 const pending: Promise<unknown>[] = [];
 afterEach(async () => { await Promise.all(pending.splice(0)); });
+
+describe("native supply conversion", () => {
+  it.each([null, undefined, 0, -1, NaN, Infinity, Number.MIN_VALUE])(
+    "omits unavailable native units for price %s without dropping USD history",
+    (price) => {
+      const timestamp = Date.UTC(2026, 0, 1);
+      const prices = typeof price === "number" ? new Map([["2026-01-01", price]]) : new Map<string, number>();
+      expect(buildTokenRowsFromMarketCaps([[timestamp, 100]], "peggedUSD", prices)).toEqual([{
+        date: timestamp / 1000, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: {},
+      }]);
+    },
+  );
+
+  it("preserves measured zero and priced positive native units", () => {
+    expect(buildNativeSupplyBuckets("peggedUSD", 0, 2)).toEqual({ peggedUSD: 0 });
+    expect(buildNativeSupplyBuckets("peggedUSD", 100, 2)).toEqual({ peggedUSD: 50 });
+  });
+
+  it.each([0, -1, NaN, Infinity])("does not use an unusable nearest quote %s", (price) => {
+    expect(findNearestPrice([{ timestamp: 100, price }, { timestamp: 300, price: 2 }], 100)).toBeNull();
+  });
+
+  it("distinguishes empty price history from a usable nearest quote", () => {
+    expect(findNearestPrice([], 100)).toBeNull();
+    expect(findNearestPrice([{ timestamp: 100, price: 2 }], 100)).toBe(2);
+  });
+});
 
 describe("fetchCommodityTokens", () => {
   beforeEach(() => {
@@ -163,15 +190,30 @@ describe("fetchCommodityTokens", () => {
     ]);
   });
 
-  it("uses zero units for a zero nearest price", async () => {
+  it.each([0, -1, null])("preserves TVL without native units for unusable nearest price %s", async (price) => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(Response.json({ coins: { "coingecko:tether-gold": { prices: [
-        { timestamp: 100, price: 0 }, { timestamp: 300, price: 5 },
-      ] } } }))
+      .mockResolvedValueOnce(Response.json({ coins: { "coingecko:tether-gold": { prices:
+        price === null ? [] : [{ timestamp: 100, price }, { timestamp: 300, price: 5 }],
+      } } }))
       .mockResolvedValueOnce(Response.json({ tvl: [{ date: 100, totalLiquidityUSD: 100 }] }));
     expect(await fetchCommodityTokens(config)).toEqual([
-      { date: 100, totalCirculatingUSD: { peggedGOLD: 100 }, totalCirculating: { peggedGOLD: 0 } },
+      { date: 100, totalCirculatingUSD: { peggedGOLD: 100 }, totalCirculating: {} },
     ]);
+  });
+
+  it.each([null, 0, -1, Infinity])("retains D1 USD history when price %s cannot supply native units", async (price) => {
+    const detail = createDetailResponseHelpers({
+      db: mockD1([
+        { match: "FROM supply_history", rows: [{ snapshot_date: 100, circulating_usd: 100, price }] },
+        { match: "", rows: [], allowUnused: true },
+      ]),
+      stablecoinId: config.stablecoinId, pegType: config.pegType, cached: null,
+      execCtx: { waitUntil: (promise: Promise<unknown>) => { pending.push(promise); } } as ExecutionContext,
+    });
+    const response = await detail.trySupplyHistoryFallback("commodity-history-empty");
+    expect(await response!.json()).toEqual({ tokens: [
+      { date: 100, totalCirculatingUSD: { peggedGOLD: 100 }, totalCirculating: {} },
+    ] });
   });
 
   it.each(["supply", "stale", "error"] as const)("serves %s after thrown upstream work", async (mode) => {

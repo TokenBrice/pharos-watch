@@ -140,7 +140,8 @@ export function MintBurnFlowMethodologySection() {
                       <span className="text-foreground">Burning</span> &mdash; `netFlow24hUsd &lt; 0`
                     </li>
                     <li>
-                      <span className="text-foreground">Flat</span> &mdash; `netFlow24hUsd = 0` with activity
+                      <span className="text-foreground">Flat</span> &mdash; `netFlow24hUsd = 0` with activity and complete
+                      USD valuation
                     </li>
                     <li>
                       <span className="text-foreground">No activity</span> &mdash; no 24h mint/burn events in the window
@@ -148,6 +149,12 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Invariant</span> &mdash; minting vs burning always comes from raw
                       net flow, never from the pressure score sign
+                    </li>
+                    <li>
+                      <span className="text-foreground">Valuation completeness</span> &mdash; events without a USD price
+                      are counted as unpriced, never as $0. Known mint and burn totals are then lower bounds, and a signed
+                      net is not a bound: a direction is shown only when missing valuation cannot flip it, otherwise it is
+                      unavailable. Buckets aggregated before v6.22 read as coverage unknown.
                     </li>
                   </ul>
                 </div>

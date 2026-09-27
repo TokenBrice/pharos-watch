@@ -1,7 +1,7 @@
 // src/lib/__tests__/regulatory-standing.test.ts
 import { describe, expect, it } from "vitest";
-import type { GeniusProfile, MicaProfile } from "@shared/types";
-import { buildRegulatoryStandingView } from "../regulatory-standing";
+import type { GeniusProfile, MicaProfile, StablecoinMeta } from "@shared/types";
+import { buildRegulatoryStandingView, formatReserveReportNote } from "../regulatory-standing";
 
 const GENIUS: GeniusProfile = {
   applicability: "apparent-payment-stablecoin",
@@ -12,7 +12,6 @@ const GENIUS: GeniusProfile = {
   redemptionPolicyPresent: true,
   reserveDisclosurePresent: true,
   reserveDisclosureUrl: "https://example.com/reserves",
-  latestReportDate: "2026-07-01",
   references: [
     { label: "OCC filing", url: "https://example.com/occ", sourceKind: "federal-regulator" },
   ],
@@ -27,13 +26,27 @@ const MICA: MicaProfile = {
   references: [{ label: "DNB register", url: "https://example.com/dnb" }],
 };
 
+const REPORT: NonNullable<NonNullable<StablecoinMeta["proofOfReserves"]>["latestReport"]> = {
+  periodEnd: "2026-06-30",
+  publishedAt: "2026-07-29",
+  assuranceMethod: "examination",
+  scope: "assets-and-liabilities",
+  liabilityReconciliation: "full",
+  reviewer: "test",
+  confidence: "verified",
+  sources: [{ label: "Report", url: "https://example.com/report" }],
+};
+
 describe("buildRegulatoryStandingView", () => {
   it("returns null when neither regime exists", () => {
     expect(buildRegulatoryStandingView({ symbol: "XXX" })).toBeNull();
   });
 
   it("builds both regimes with facts, checklist, merged sources, and review date", () => {
-    const view = buildRegulatoryStandingView({ symbol: "USDC", genius: GENIUS, mica: MICA });
+    const view = buildRegulatoryStandingView({
+      symbol: "USDC", genius: GENIUS, mica: MICA,
+      proofOfReserves: { type: "independent-audit", url: "https://example.com/reserves", latestReport: REPORT },
+    });
     expect(view).not.toBeNull();
     expect(view!.regimes.map((regime) => regime.key)).toEqual(["genius", "mica"]);
     const genius = view!.regimes[0]!;
@@ -44,8 +57,10 @@ describe("buildRegulatoryStandingView", () => {
     expect(genius.checklist[2]).toMatchObject({
       present: true,
       href: "https://example.com/reserves",
-      note: "latest 2026-07-01",
     });
+    expect(genius.checklist[2]!.note).toContain(REPORT.periodEnd);
+    expect(genius.checklist[2]!.note).toContain(REPORT.publishedAt);
+    expect(genius.checklist[2]!.note).not.toContain(GENIUS.reviewedAt);
     const mica = view!.regimes[1]!;
     expect(mica.facts.find((fact) => fact.key === "status")!.value).toBe("Authorized");
     expect(mica.facts.find((fact) => fact.key === "token-type")!.value).toBe("E-Money Token");
@@ -120,11 +135,38 @@ describe("buildRegulatoryStandingView", () => {
         redemptionPolicyPresent: false,
         reserveDisclosurePresent: undefined,
         reserveDisclosureUrl: undefined,
-        latestReportDate: undefined,
       },
     });
     const checklist = view!.regimes[0]!.checklist;
     expect(checklist).toHaveLength(1);
     expect(checklist[0]).toMatchObject({ label: "Redemption policy", present: false });
+  });
+  it.each([
+    { periodEnd: "2026-06-30", publishedAt: undefined },
+    { periodEnd: undefined, publishedAt: "2026-07-29" },
+  ])("preserves independently known report dates: %j", (dates) => {
+    const note = formatReserveReportNote({ ...REPORT, ...dates });
+    if (dates.periodEnd) expect(note).toContain(`period end ${dates.periodEnd}`);
+    else expect(note).not.toContain("period end");
+    if (dates.publishedAt) expect(note).toContain(`published ${dates.publishedAt}`);
+    else expect(note).not.toContain("published");
+  });
+
+  it("qualifies an ambiguous legacy date by its review without claiming a latest report", () => {
+    const note = formatReserveReportNote({
+      ...REPORT,
+      periodEnd: undefined,
+      publishedAt: undefined,
+      reviewReference: { date: "2026-04-30", reviewedAt: "2026-06-18", dateKind: "unspecified" },
+    });
+    expect(note).toContain("2026-04-30");
+    expect(note).toContain("as of 2026-06-18 review");
+    expect(note).not.toMatch(/latest|period end|published/i);
+  });
+
+  it("does not fabricate a report note from disclosure presence or a review date", () => {
+    const view = buildRegulatoryStandingView({ symbol: "USDC", genius: GENIUS });
+    expect(view!.regimes[0]!.checklist.find((row) => row.key === "reserve-disclosure")!.note).toBeUndefined();
+    expect(formatReserveReportNote({ ...REPORT, periodEnd: undefined, publishedAt: undefined })).toBeUndefined();
   });
 });

@@ -34,6 +34,13 @@ For these scripts, `--dry-run` means no mutation: a command may read local state
 
 New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.parseArgs` directly when the strict wrapper is not required. Do not hand-roll an `process.argv` loop. The many existing hand-rolled parsers stay as they are; convert one only when that script is already being edited for another reason, so parser migration never becomes a standalone churn commit.
 
+| Verification CLI | Selection contract |
+| --- | --- |
+| `lint:changed` | Repeatable `--file <path>`, `--staged`, or `--base <ref> [--head <ref>]` are exclusive selection modes. Explicit file/staged modes override PR range environment. Without flags or PR range environment, selects staged, unstaged and untracked working-tree files. Deleted paths are skipped; staged selection still reads working-tree contents. Forward ESLint options after `--`. |
+| `check:focused` | Repeatable `--file`, `--staged`, or `--base` selects the authoritative file set forwarded to lint. `--plan-only` performs no checks. Narrowed related-test plans fail when no tests are selected; cron/scheduler owner suites stay broad unless measured closure justifies narrowing. |
+| `check:pr:static` | Retains the explicit base/head range for child lint; rejects `--staged` rather than silently discarding it. Use `check:focused -- --staged` for index-selected checks. |
+| `check:generated-artifacts` | Explicit uncheckable IDs, including mixed `--only` requests, fail before execution with lifecycle and generation guidance. Adaptive callers filter via the registry's shared checkability selector; empty plans skip rather than imply freshness. |
+
 ## Safety Score Capture-Time Replay
 
 `npm run report-cards:capture-fixed-input -- --exact-cache-export <path> --output <path>`
@@ -136,6 +143,10 @@ Use `npm run check:pr -- --base=<ref>` for the adaptive local PR contract and th
 Critical ownership reads base-revision Git blobs using their declared byte lengths; embedded NULs and multibyte text cannot shift later file records. Frontend-to-Worker import checks cover literal dynamic imports as well as static imports, retaining the documented waiver.
 
 For `check:focused` selection and preview behavior, use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area).
+
+`check:unused-code` credits namespace property reads, literal-key reads and literal `vi.spyOn`/`jest.spyOn` members individually; default imports consume only `default`, and side-effect imports preserve reachability without consuming named exports. Computed or escaping namespace uses retain conservative whole-module consumption and print their source/target in the audit. Dynamic import results and unqualified import types remain conservative, with aggregate audit counts. Newly exposed exports require individual review, not a blanket allowlist. Scanner fixtures must use external temporary workspace roots, never the repository root.
+
+`check:script-entrypoints` includes `.mts` files in forward command scanning, reverse candidates and reverse references; declaration files are not runnable candidates. Markdown still receives stale-command checks but cannot retain an otherwise unreferenced script. The reverse check remains a textual-reference audit, not an executable import graph: policy-retained operator tools remain valid, and mutually referring disconnected scripts are not proven reachable.
 
 ### Smoke And Operations
 

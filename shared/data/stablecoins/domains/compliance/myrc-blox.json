@@ -33,8 +33,7 @@
     "reserveDisclosureUrl": "https://www.blox.my/myrc/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-06-30",
-    "notes": "Blox's current MYRC materials identify BLOX Blockchain Sdn. Bhd. as issuer, require Malaysia-focused eKYC and banking details, and describe MYRC as 1:1 redeemable for MYR. The product term sheet says MYRC is not legal tender, electronic money, a payment instrument, or remittance tool under Malaysian law unless Blox obtains required approvals; that local-law disclaimer does not remove the token's confusable payment-stablecoin characteristics for GENIUS review. No U.S. permitted-issuer approval, state qualification, official application, or foreign-issuer registration was located. The latest independently assured reserve report reviewed was dated 2026-06-30.",
+    "notes": "Evidence as of 2026-08-14 review: Blox's current MYRC materials identify BLOX Blockchain Sdn. Bhd. as issuer, require Malaysia-focused eKYC and banking details, and describe MYRC as 1:1 redeemable for MYR. The product term sheet says MYRC is not legal tender, electronic money, a payment instrument, or remittance tool under Malaysian law unless Blox obtains required approvals; that local-law disclaimer does not remove the token's confusable payment-stablecoin characteristics for GENIUS review. No U.S. permitted-issuer approval, state qualification, official application, or foreign-issuer registration was located. The latest independently assured reserve report reviewed was dated 2026-06-30. Reserve-report date recorded as of 2026-08-14 review: 2026-06-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",

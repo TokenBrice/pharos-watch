@@ -44,7 +44,7 @@ The most recent registration is Arc (`arc`, EVM chain 5042, explorer `https://ar
 `src/app/chains/client.tsx` consumes `useChains()` and renders:
 
 - hero summary: total tracked stablecoin supply (the frost-blue "One Beam" figure, `.pharos-numeric text-frost-blue`), optional global 7d trend, chain count, and a top-chain dominance breakdown bar/legend. The page keeps its existing sequential bands rather than the shared `FeatureHeroSplit`, and intentionally retains the frost-tinted "Top N chains hold X%" concentration badge
-- explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain
+- explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain. Legend percentages are always shares of `globalTotalUsd` (`dominanceShare`, never rescaled); when chain rows over-attribute supply the bar geometry normalizes to `dominanceGeometryTotalUsd` (the larger raw chain total) and a `Chain rows exceed global supply by X%` legend entry discloses `attributionDiscrepancyUsd` instead of hiding it
 - `NauticalChart`, fed directly by the chain snapshot, whose `topStablecoins` rows provide the top-stablecoin cargo/logos for each chain; the route-level harbor summary plates (`Largest port`, `Avg health`, `Fragile ports`, and health bands) render before the SVG so the chart can finish with the map itself
 - `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's compact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake directly after the harbor map; the panel reads existing chain snapshot fields and does not change Chain Health semantics
 - sortable leaderboard table rendered through `DataTableShell`
@@ -99,7 +99,7 @@ Default sort is `totalUsd desc`.
 
 The route displays the Chain Health composite and its factor detail from `GET /api/chains`. Formula, factors, weights, coverage gates, evidence precedence, bands, and current methodology version are owned by [chain-health.md](./chain-health.md) and `shared/lib/chains/health.ts`. Do not duplicate those volatile values here.
 
-The page contract is limited to presentation: the leaderboard exposes the composite for comparison, and chain profiles show factor/evidence detail when the coordinated API snapshot provides it.
+The page contract is limited to presentation: the leaderboard exposes the composite for comparison, and chain profiles show factor/evidence detail when the coordinated API snapshot provides it. A `null` factor on a loaded chain renders `NR` (loading still shows `—`). The peg-stability row adds a coverage note from `pegStabilityCoverage` whenever coverage is not complete (observed share, neutral-50 placeholder supply, missing-reference supply, or NR when nothing was observed). When the composite is `null` while `quality` is rated, the hero explains that Chain Health is not rated because peg-stability coverage is incomplete; a `null` quality keeps the report-card / safety-coverage explanation.
 
 ---
 
@@ -119,7 +119,7 @@ When `chain` is supplied, `chainDetail` contains the active aggregate coins for 
 - derives non-USD peg references from `fxFallbackRates`; missing commodity references are withheld rather than defaulted to `$1`
 - hydrates safety scores only from a fresh accepted report-card publication; a held, stale, or unavailable source leaves the score map empty
 - computes the response via `aggregateChains(...)`, optionally with the requested canonical detail chain
-- computes `globalTotalUsd` from all tracked circulating supply, while preserving `chainAttributedTotalUsd` and `unattributedTotalUsd` for chain-specific residuals
+- computes `globalTotalUsd` from all observed tracked circulating supply (assets with absent/empty/invalid buckets are excluded and counted in `supplyCoverage.aggregateUnavailableAssetCount`); `chainAttributedTotalUsd` is the raw, unclamped sum of the published chain rows, `attributionDiscrepancyUsd` the signed difference from the global total, `unattributedTotalUsd` its positive residual and `dominanceGeometryTotalUsd` the bar-geometry denominator; unobserved asset-chain rows are excluded from chain totals and counted per chain (`unavailableSupplyObservationCount`) and in `supplyCoverage`, which also names chains left with no observed row
 - overwrites `updatedAt` with the stablecoins-cache timestamp
 - applies freshness headers with `X-Data-Age`, exposes report-card dependency freshness in `_meta.dependencies.reportCards`, and downgrades `Cache-Control` to `no-store` when the chain snapshot or health dependency is degraded
 

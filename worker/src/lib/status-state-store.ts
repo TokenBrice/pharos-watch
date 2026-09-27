@@ -21,6 +21,7 @@ import {
   type StatusStateRow,
   type StatusTransitionRow,
 } from "./status-reliability-shared";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 
 const STATUS_STATE_SELECT_COLUMNS =
   "scope, current_status, raw_status, last_evaluated_at, last_changed_at, consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json";
@@ -303,7 +304,12 @@ export async function getStatusStateSnapshot(
       .bind(STATUS_SCOPE)
       .first<StatusStateRow>();
     if (!row) return { state: null, staleness: null };
-    const ageSeconds = Math.max(0, now - row.last_evaluated_at);
+    const timestamp = assessFreshnessTimestamp(now, row.last_evaluated_at);
+    if (timestamp.reason != null) {
+      reportStatusPersistenceIssue(onIssue, "status_state_invalid_timestamp", "read-status-snapshot", timestamp.reason);
+      return { state: null, staleness: null };
+    }
+    const ageSeconds = timestamp.ageSeconds;
     return {
       state: toStateInfo(row),
       staleness: {

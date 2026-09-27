@@ -38,10 +38,10 @@ export interface PsiContributorRow extends StabilityContributor {
 
 export interface PsiComponentPoint {
   ts: number;
-  severity: number;
-  breadth: number;
-  stressBreadth: number;
-  trend: number;
+  severity: number | null;
+  breadth: number | null;
+  stressBreadth: number | null;
+  trend: number | null;
 }
 
 export type PsiBeamDimmerKey = "severity" | "breadth" | "stressBreadth" | "trend";
@@ -49,11 +49,11 @@ export type PsiBeamDimmerKey = "severity" | "breadth" | "stressBreadth" | "trend
 export interface PsiBeamDimmerLane {
   key: PsiBeamDimmerKey;
   label: string;
-  value: number;
+  value: number | null;
   delta: number | null;
-  pressurePct: number;
+  pressurePct: number | null;
   max: number;
-  role: "penalty" | "support" | "drag";
+  role: "penalty" | "support" | "drag" | "unavailable";
   detail: string;
 }
 
@@ -89,39 +89,39 @@ export function buildPsiComponentData(
   history:
     | Array<{
         date: number;
-        components?: { severity?: number; breadth?: number; stressBreadth?: number; trend?: number } | null;
+        components?: { severity?: number | null; breadth?: number | null; stressBreadth?: number | null; trend?: number | null } | null;
       }>
     | undefined,
   current:
     | {
         computedAt: number;
-        components: { severity: number; breadth: number; stressBreadth?: number | null; trend: number };
+        components: { severity: number | null; breadth: number | null; stressBreadth?: number | null; trend: number | null };
       }
     | null
     | undefined,
 ): PsiComponentPoint[] {
   if (!current || !history) return [];
-  const reversed = [...history].filter((point) => point.components).reverse();
+  const reversed = [...history].reverse();
   return [
     ...reversed.map((point) => ({
       ts: point.date * 1000,
-      severity: point.components?.severity ?? 0,
-      breadth: point.components?.breadth ?? 0,
-      stressBreadth: point.components?.stressBreadth ?? 0,
-      trend: point.components?.trend ?? 0,
+      severity: point.components?.severity ?? null,
+      breadth: point.components?.breadth ?? null,
+      stressBreadth: point.components?.stressBreadth ?? null,
+      trend: point.components?.trend ?? null,
     })),
     {
       ts: current.computedAt * 1000,
       severity: current.components.severity,
       breadth: current.components.breadth,
-      stressBreadth: current.components.stressBreadth ?? 0,
+      stressBreadth: current.components.stressBreadth ?? null,
       trend: current.components.trend,
     },
   ];
 }
 
 export function buildPsiBeamDimmers<
-  T extends { severity: number; breadth: number; stressBreadth: number; trend: number },
+  T extends { severity: number | null; breadth: number | null; stressBreadth: number | null; trend: number | null },
 >(componentData: readonly T[] | undefined): PsiBeamDimmerLane[] {
   if (!componentData?.length) return [];
   const current = componentData[componentData.length - 1];
@@ -132,14 +132,14 @@ export function buildPsiBeamDimmers<
     const config = PSI_BEAM_DIMMER_DETAIL[key];
     const value = current[key];
     const previousValue = previous?.[key] ?? null;
-    const pressureValue = key === "trend" ? Math.max(0, -value) : Math.max(0, value);
-    const role = key === "trend" ? (value >= 0 ? "support" : "drag") : "penalty";
+    const pressureValue = value === null ? null : key === "trend" ? Math.max(0, -value) : Math.max(0, value);
+    const role = value === null ? "unavailable" : key === "trend" ? (value >= 0 ? "support" : "drag") : "penalty";
     return {
       key,
       label: config.label,
       value,
-      delta: previousValue === null ? null : Math.round((value - previousValue) * 10) / 10,
-      pressurePct: clampPct(pressureValue, config.max),
+      delta: value === null || previousValue === null ? null : Math.round((value - previousValue) * 10) / 10,
+      pressurePct: pressureValue === null ? null : clampPct(pressureValue, config.max),
       max: config.max,
       role,
       detail: config.detail,

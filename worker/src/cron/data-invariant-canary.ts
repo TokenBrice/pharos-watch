@@ -1,6 +1,7 @@
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import {
+  ACTIVE_CANARY_CHECK_IDS,
   normalizeWorkerCanaryMode,
   runAndPersistCanaryChecks,
   type WorkerCanaryMode,
@@ -54,19 +55,23 @@ export async function runDataInvariantCanary(
         observedAt,
         persistFailed: true,
         persistError,
-        ...(mode === "shadow" ? {} : { reason: "canary-persist-failed" }),
+        reason: "canary-persist-failed",
       },
     });
   }
 
+  const presentCheckIds = new Set(summary.results.map(({ checkId }) => checkId));
+  const missingCheckIds = ACTIVE_CANARY_CHECK_IDS.filter((checkId) => !presentCheckIds.has(checkId));
+  const incomplete = missingCheckIds.length > 0;
+  const findingReason = incomplete ? "canary-cohort-incomplete" : `canary-${summary.worstStatus}`;
   // The canary ran: a soft (`degraded`) check row is an observation, published
   // under `quality`, while an error row is work the canary could not complete.
-  const observedStatus = summary.errorCount > 0 || summary.degradedCount > 0 ? "degraded" : "ok";
+  const observedStatus = incomplete || summary.errorCount > 0 || summary.degradedCount > 0 ? "degraded" : "ok";
   const operationalStatus = mode === "shadow"
     ? "ok"
-    : mode === "alert" && (summary.errorCount > 0 || summary.worstSeverity === "critical")
+    : mode === "alert" && (incomplete || summary.errorCount > 0 || summary.worstSeverity === "critical")
       ? "error"
-      : summary.errorCount > 0
+      : incomplete || summary.errorCount > 0
         ? "degraded"
         : "ok";
 
@@ -74,27 +79,30 @@ export async function runDataInvariantCanary(
     status: operationalStatus,
     itemCount: summary.totalChecks,
     metadata: {
+      outputPublishedAt: !incomplete ? summary.observedAt : null,
       mode,
       observedStatus,
       observedAt: summary.observedAt,
       totalChecks: summary.totalChecks,
+      expectedCheckIds: ACTIVE_CANARY_CHECK_IDS,
+      presentCheckIds: [...presentCheckIds],
+      missingCheckIds,
       okCount: summary.okCount,
       degradedCount: summary.degradedCount,
       errorCount: summary.errorCount,
       skippedCount: summary.skippedCount,
       worstStatus: summary.worstStatus,
       worstSeverity: summary.worstSeverity,
-      ...(operationalStatus === "ok"
-        ? observedStatus === "ok"
-          ? {}
-          : {
-              quality: {
-                reason: `canary-${summary.worstStatus}`,
-                degradedCount: summary.degradedCount,
-                errorCount: summary.errorCount,
-              },
-            }
-        : { reason: `canary-${summary.worstStatus}` }),
+      reason: observedStatus === "ok" ? "canary-checks-completed" : findingReason,
+      ...(operationalStatus === "ok" && observedStatus !== "ok"
+        ? {
+            quality: {
+              reason: findingReason,
+              degradedCount: summary.degradedCount,
+              errorCount: summary.errorCount,
+            },
+          }
+        : {}),
       checks: summary.results.map((result) => ({
         checkId: result.checkId,
         status: result.status,

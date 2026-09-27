@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildFlowPressureReceiptModel } from "@/lib/flow-pressure-receipt-model";
 import type { MintBurnCoinFlow, MintBurnGauge, MintBurnHourlyBucket } from "@shared/types";
+import {
+  makeInactiveMintBurnFlowCoin as makeCoin,
+  makeMintBurnCoinValuation as completeValuation,
+} from "@/test-utils/mint-burn-fixtures";
 
 const gauge: MintBurnGauge = {
   score: 18,
@@ -19,30 +23,6 @@ function makeCoverage(
     startBlock: 1, lastSyncedBlock: 10, lagBlocks: null, historyStartAt: 1_700_000_000,
     has24hWindow: true, has30dWindow: true, has90dWindow: true, isPartial: false, status: "full",
     ...overrides,
-  };
-}
-
-function makeCoin(overrides: Partial<MintBurnCoinFlow>): MintBurnCoinFlow {
-  return {
-    stablecoinId: overrides.stablecoinId ?? "usdc-circle",
-    symbol: overrides.symbol ?? "USDC",
-    pressureShiftScore: overrides.pressureShiftScore ?? null,
-    pressureShiftState: overrides.pressureShiftState ?? "nr",
-    netFlowDirection24h: overrides.netFlowDirection24h ?? "inactive",
-    has24hActivity: overrides.has24hActivity ?? false,
-    baselineDailyNetUsd: overrides.baselineDailyNetUsd ?? null,
-    baselineDailyAbsUsd: overrides.baselineDailyAbsUsd ?? null,
-    baselineDataDays: overrides.baselineDataDays ?? null,
-    netFlow24hUsd: overrides.netFlow24hUsd ?? 0,
-    mintVolume24hUsd: overrides.mintVolume24hUsd ?? 0,
-    burnVolume24hUsd: overrides.burnVolume24hUsd ?? 0,
-    mintCount24h: overrides.mintCount24h ?? 0,
-    burnCount24h: overrides.burnCount24h ?? 0,
-    netFlow7dUsd: overrides.netFlow7dUsd ?? 0,
-    netFlow30dUsd: overrides.netFlow30dUsd ?? 0,
-    netFlow90dUsd: overrides.netFlow90dUsd ?? 0,
-    largestEvent24h: overrides.largestEvent24h ?? null,
-    coverage: overrides.coverage,
   };
 }
 
@@ -143,5 +123,50 @@ describe("buildFlowPressureReceiptModel", () => {
 
     expect(model.coverageSummary).toBe("1 unknown coin");
     expect(model.coverageRows).toEqual([{ status: "unknown", count: 1 }]);
+  });
+
+  it("never sums a partial or null coin net into the receipt totals or leaders", () => {
+    const model = buildFlowPressureReceiptModel({
+      gauge,
+      coins: [
+        makeCoin({
+          symbol: "USDC",
+          has24hActivity: true,
+          netFlow24hUsd: 50,
+          mintVolume24hUsd: 50,
+          netFlow7dUsd: 70,
+          valuation: completeValuation(),
+        }),
+        makeCoin({
+          symbol: "DAI",
+          has24hActivity: true,
+          netFlow24hUsd: 900,
+          mintVolume24hUsd: 900,
+          netFlow7dUsd: null,
+          valuation: completeValuation({
+            completeness: "partial",
+            burnCompleteness: "partial",
+            unpricedBurnEventCount: 4,
+          }),
+        }),
+      ],
+      weeklyHourly: [
+        { hourTs: 1, mintVolumeUsd: 10, burnVolumeUsd: 0, netFlowUsd: 10, valuation: "complete" },
+        { hourTs: 2, mintVolumeUsd: 5, burnVolumeUsd: 3, netFlowUsd: null, valuation: "partial" },
+      ],
+    });
+
+    expect(model.net24hUsd).toBeNull();
+    expect(model.net7dUsd).toBeNull();
+    // DAI's partial net is not a bound, so it cannot lead even though its known net is larger.
+    expect(model.topMint).toEqual({ symbol: "USDC", valueUsd: 50 });
+    const byId = Object.fromEntries(model.rows.map((row) => [row.id, row]));
+    expect(byId["net-24h"]).toMatchObject({ valueUsd: null, completeness: "partial" });
+    expect(byId["net-24h"].note).toMatch(/partial valuation/i);
+    expect(byId["net-7d"].valueUsd).toBeNull();
+    expect(byId["burn-24h"]).toMatchObject({ completeness: "partial" });
+    expect(byId["burn-24h"].note).toBe("Known subtotal, lower bound: 4 events unpriced");
+    expect(byId["mint-24h"]).toMatchObject({ valueUsd: 950, completeness: "complete", note: null });
+    expect(byId["mint-7d"]).toMatchObject({ valueUsd: 15, completeness: "partial" });
   });
 });

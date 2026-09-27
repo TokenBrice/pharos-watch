@@ -27,6 +27,7 @@ import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
+import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { sha256Hex } from "../lib/hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
@@ -87,6 +88,7 @@ interface DexLiquidityRow {
   stablecoin_id: string;
   total_tvl_usd: number | null;
   total_volume_24h_usd: number | null;
+  volume_availability_json?: string | null;
   pool_count: number | null;
   liquidity_score: number | null;
   durability_score: number | null;
@@ -368,7 +370,7 @@ export async function snapshotPublicDataset(
   try {
     const result = await db
       .prepare(
-        `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, pool_count, liquidity_score,
+        `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, volume_availability_json, pool_count, liquidity_score,
                 durability_score, coverage_class, updated_at
          FROM dex_liquidity
          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
@@ -436,7 +438,12 @@ export async function snapshotPublicDataset(
     liquidity: dexRows.map((row) => ({
       stablecoinId: row.stablecoin_id,
       totalTvlUsd: row.total_tvl_usd,
-      totalVolume24hUsd: row.total_volume_24h_usd,
+      // Measured 24h total only: recorded partial/missing/stale windows export null.
+      totalVolume24hUsd: readStoredDexVolumeWindow(
+        row.total_volume_24h_usd,
+        parseDexVolumeAvailabilityRecord(row.volume_availability_json),
+        "24h",
+      ).measuredUsd,
       poolCount: row.pool_count,
       liquidityScore: row.liquidity_score,
       durabilityScore: row.durability_score,

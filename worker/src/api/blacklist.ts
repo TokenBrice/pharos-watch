@@ -169,17 +169,14 @@ export const handleBlacklist = async (db: D1Database, url: URL): Promise<Respons
     freshness: {
       producerJob: "sync-blacklist",
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,
-      fallbackTimestamp: (events) =>
-        events.length > 0
-          ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
-          : Math.floor(Date.now() / 1000),
     },
     cacheControl: CACHE_PROFILES.producerBacked,
-    buildExtraBody: (events, _total, latestTs) => {
+    buildExtraBody: (events) => {
       const latestEvent = events.reduce<BlacklistEvent | null>(
         (latest, event) => (latest == null || event.timestamp > latest.timestamp ? event : latest),
         null,
       );
+      const latestTs = latestEvent?.timestamp ?? Math.floor(Date.now() / 1000);
       const methodologyVersion = latestEvent?.methodologyVersion ?? getMethodologyVersionAt("blacklist-tracker", latestTs);
       const methodologyVersionLabel = toMethodologyVersionLabel(methodologyVersion);
 

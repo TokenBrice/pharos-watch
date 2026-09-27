@@ -306,7 +306,7 @@ export async function buildRedemptionBackstopEntry(
         capacityConfidence: capacity.capacityConfidence,
         ...(capacity.capacityKind ? { capacityKind: capacity.capacityKind } : {}),
         ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
-        ...(capacity.sourceTimestamp != null ? { sourceTimestamp: capacity.sourceTimestamp } : {}),
+        ...(capacity.evidenceObservedAt != null ? { evidenceObservedAt: capacity.evidenceObservedAt } : {}),
         ...(capacity.settlementDelaySec != null ? { settlementDelaySec: capacity.settlementDelaySec } : {}),
         ...(capacity.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
         ...(liveMetadata.v9OutputValuation ? { outputValuation: liveMetadata.v9OutputValuation } : {}),

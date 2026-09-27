@@ -148,7 +148,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "tether-transparency",
-    "version": 1,
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "xaut-tether",
     "display": {

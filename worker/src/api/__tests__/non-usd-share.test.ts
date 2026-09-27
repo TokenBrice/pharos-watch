@@ -3,15 +3,8 @@ import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggre
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleNonUsdShare } from "../non-usd-share";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
+import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/market";
 
-interface NonUsdSharePoint {
-  date: number;
-  commodityShare: number;
-  fiatNonUsdShare: number;
-  commodity: number;
-  fiatNonUsd: number;
-  total: number;
-}
 
 function unix(iso: string): number {
   return Math.floor(new Date(iso).getTime() / 1000);
@@ -39,6 +32,33 @@ describe("handleNonUsdShare", () => {
       );
       expect(res.status, days).toBe(400);
     }
+  });
+
+  it.each(["commodity", "fiat_non_usd"])("rejects a missing %s cohort instead of publishing a zero share", async (field) => {
+    const db = mockD1([
+      { match: "FROM cache", rows: [] },
+      { match: "FROM supply_history", rows: [
+        { snapshot_date: Math.floor(Date.now() / 1000), total: 100, commodity: 0, fiat_non_usd: 0, [field]: null },
+      ] },
+    ]);
+    const response = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share"));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "Non-USD share data is unavailable" });
+  });
+
+  it("preserves an observed zero cohort in the public schema", async () => {
+    const date = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "FROM cache", rows: [] },
+      { match: "FROM supply_history", rows: [
+        { snapshot_date: date, total: 100, commodity: 0, fiat_non_usd: 0 },
+      ] },
+    ]);
+    const response = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share"));
+    expect(NonUsdShareResponseSchema.parse(await response.json())).toEqual([
+      { date, total: 100, commodity: 0, fiatNonUsd: 0, commodityShare: 0, fiatNonUsdShare: 0 },
+    ]);
   });
 
   it("requests the default long-range window and returns split non-USD shares within D1 bind limits", async () => {

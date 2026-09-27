@@ -147,6 +147,8 @@ export function MintingPressureArcGauge({
 interface MintingPressureGaugeProps {
   mintVolume24hUsd: number;
   burnVolume24hUsd: number;
+  /** Lower-bound caveat when either volume is a known-valuation subtotal. */
+  volumeNote?: string | null;
   className?: string;
 }
 
@@ -154,6 +156,7 @@ interface MintingPressureGaugeProps {
 export function MintingPressureGauge({
   mintVolume24hUsd,
   burnVolume24hUsd,
+  volumeNote,
   className,
 }: MintingPressureGaugeProps) {
   const score = getLiteralMintingPressureScore({
@@ -208,6 +211,7 @@ export function MintingPressureGauge({
       <p className="text-xs text-muted-foreground">
         This gauge uses only raw 24h mint and burn volume balance. It does not use the 30-day baseline.
       </p>
+      {volumeNote ? <p className="text-xs text-muted-foreground">{volumeNote}</p> : null}
     </div>
   );
 }

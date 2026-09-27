@@ -350,14 +350,21 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       ? "unresolved-backstop-routes"
       : hasNoActiveConfiguredRows
         ? "no-active-configured-rows"
-        : liquidityStale
-          ? "liquidity-evidence-stale"
-          : "post-write-warnings";
+        : hasZeroResolvedCapacityFailure
+          ? "no-resolved-backstop-capacity"
+          : liquidityStale
+            ? "liquidity-evidence-stale"
+            : "post-write-warnings";
   }
 
   return createCronResult({
     status,
     itemCount: snapshots.length,
-    metadata: runMetadata,
+    productivity: { productive: writeResult.runRowsWrittenCount > 0 },
+    metadata: {
+      ...runMetadata,
+      ...(writeResult.runRowsWrittenCount > 0 ? { outputPublishedAt: now } : {}),
+      reason: typeof runMetadata.reason === "string" ? runMetadata.reason : "backstops-published",
+    },
   });
 }

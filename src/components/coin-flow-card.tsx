@@ -5,6 +5,8 @@ import { formatSignedCurrency, getNetPrefix } from "@shared/lib/format";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import { buildFlowSummaryNarrative, getFlowDirectionUi, getFlowPressureUi } from "@/lib/flow-signal-ui";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
+import type { MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 
 const PRESSURE_BAR_COLOR: Record<PressureShiftState, string> = {
   improving: "bg-[var(--severity-healthy)]",
@@ -16,17 +18,21 @@ const PRESSURE_BAR_COLOR: Record<PressureShiftState, string> = {
 export interface CoinFlowCardProps {
   symbol: string;
   color: string;
-  netFlow24hUsd: number;
+  netFlow24h: MintBurnSignedNetView;
   pressureShiftScore: number | null;
-  netFlowDirection24h: NetFlowDirection24h;
+  /** Set when partial valuation withholds the pressure shift. */
+  pressureUnavailableNote: string | null;
+  /** `null` when missing valuation leaves the 24h direction unproven. */
+  netFlowDirection24h: NetFlowDirection24h | null;
   pressureShiftState: PressureShiftState;
 }
 
 export function CoinFlowCard({
   symbol,
   color,
-  netFlow24hUsd,
+  netFlow24h,
   pressureShiftScore,
+  pressureUnavailableNote,
   netFlowDirection24h,
   pressureShiftState,
 }: CoinFlowCardProps) {
@@ -53,22 +59,30 @@ export function CoinFlowCard({
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">Net 24h</span>
-        <span className={cn("pharos-numeric text-xs font-semibold", directionUi.valueClass)}>
-          {netFlowDirection24h === "inactive"
-            ? "—"
-            : formatSignedCurrency(netFlow24hUsd)}
-        </span>
+        {netFlowDirection24h === "inactive" ? (
+          <span className={cn("pharos-numeric text-xs font-semibold", directionUi.valueClass)}>—</span>
+        ) : (
+          <FlowSignedNetValue
+            net={netFlow24h}
+            format={formatSignedCurrency}
+            className={cn("pharos-numeric text-xs font-semibold", directionUi.valueClass)}
+          />
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">vs 30D</span>
-        <span className={cn(
-          "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-          pressureUi.badgeClass,
-        )}>
+        <span
+          className={cn(
+            "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+            pressureUi.badgeClass,
+          )}
+          title={pressureUnavailableNote ?? undefined}
+        >
           {pressureDisplay != null
             ? `${pressureUi.label} ${getNetPrefix(pressureDisplay)}${pressureDisplay}`
             : "NR"}
+          {pressureUnavailableNote ? <span className="sr-only"> ({pressureUnavailableNote})</span> : null}
         </span>
       </div>
 

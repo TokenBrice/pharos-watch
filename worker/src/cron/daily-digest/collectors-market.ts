@@ -1,5 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
+import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRaw } from "@shared/lib/supply";
@@ -12,12 +14,10 @@ import {
 } from "@shared/lib/digest-liquidity-admission";
 import { buildInClause } from "../../lib/db";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "../../lib/blacklist/shared";
-import {
-  getGaugeBand,
-  detectFlightToQuality,
-} from "../../lib/mint-burn-scoring";
+import { getGaugeBand } from "../../lib/mint-burn-scoring";
 import {
   readPublishedMintBurnGauge,
+  type PublishedGaugeChain,
   type PublishedGaugeCoin,
 } from "../../lib/mint-burn-published-gauge";
 import { SECONDS } from "../../lib/time-constants";
@@ -84,8 +84,11 @@ export async function collectActiveDepegs(
       const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
       const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
       const asset = ctx.stablecoinAssetById.get(row.stablecoin_id);
+      const priceObservedAt = asset?.priceObservedAt ?? asset?.priceUpdatedAt;
       const livePrice =
         ctx.stablecoinsCacheIsFresh &&
+        priceObservedAt != null && priceObservedAt <= ctx.nowSec &&
+        ctx.nowSec - priceObservedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins &&
         typeof asset?.price === "number" &&
         Number.isFinite(asset.price) &&
         asset.price > 0
@@ -120,6 +123,8 @@ export async function collectActiveDepegs(
         peakBps: row.peak_deviation_bps,
         severityBps,
         severityBasis,
+        ...(pegReference != null ? { pegReference } : {}),
+        ...(livePrice != null && priceObservedAt != null ? { priceObservedAt } : {}),
         ...(currentBps != null ? { currentBps } : {}),
         ...(row.peak_price != null ? { peakPriceUsd: row.peak_price } : {}),
         ...(livePrice != null ? { currentPriceUsd: livePrice } : {}),
@@ -132,9 +137,7 @@ export async function collectActiveDepegs(
         Number(isCriticalDepegRisk({ bps: a.severityBps, mcapUsd: a.mcapUsd }));
       return criticalDelta || b.impactScore - a.impactScore || Math.abs(b.severityBps) - Math.abs(a.severityBps);
     });
-    const topDepegs = withImpact
-      .slice(0, ACTIVE_DEPEG_PROMPT_LIMIT)
-      .map(
+    const allDepegs = withImpact.map(
         ({
           stablecoinId,
           symbol,
@@ -147,6 +150,8 @@ export async function collectActiveDepegs(
           peakBps,
           severityBasis,
           currentBps,
+          pegReference,
+          priceObservedAt,
           peakPriceUsd,
           currentPriceUsd,
           suppressReason,
@@ -162,11 +167,15 @@ export async function collectActiveDepegs(
           peakBps,
           severityBasis,
           ...(currentBps != null ? { currentBps } : {}),
+          ...(pegReference != null ? { pegReference } : {}),
+          ...(priceObservedAt != null ? { priceObservedAt } : {}),
           ...(peakPriceUsd != null ? { peakPriceUsd } : {}),
           ...(currentPriceUsd != null ? { currentPriceUsd } : {}),
           ...(suppressReason ? { suppressReason } : {}),
         }),
       );
+    const topDepegs = allDepegs.slice(0, ACTIVE_DEPEG_PROMPT_LIMIT);
+    if (ctx.evidence) ctx.evidence.activeDepegs = allDepegs;
 
     // Lifecycle review runs over the FULL open-event set, not the top-8 slice:
     // a stalled collapse must not escape review by ranking ninth.
@@ -307,24 +316,17 @@ export async function collectResolvedDepegs(
   ctx: CollectorContext,
 ): Promise<CollectorResult<DigestInputData["resolvedDepegs"]>> {
   try {
-    // The published claim is "resolved in the last 24h", so the evidence window
-    // is the same 24h. Every publishability predicate runs inside the query:
-    // applied after ORDER BY/LIMIT they let twenty ineligible large-peak rows
-    // crowd out a qualifying tracked resolution.
+    // Recovery evidence is uncapped. Only the prompt presentation below applies
+    // market-cap, peak-size and top-N filters.
     const cutoff24h = ctx.nowSec - SECONDS.ONE_DAY;
-    const eligibleIds = [...ctx.mcapById.entries()]
-      .filter(([, mcapUsd]) => mcapUsd > 20_000_000)
-      .map(([stablecoinId]) => stablecoinId);
-    if (eligibleIds.length === 0) return collectorOk(undefined);
+    const eligibleIds = [...ctx.trackedStablecoinIds];
     const resolvedRows = await ctx.db
       .prepare(
-        `SELECT symbol, direction, peak_deviation_bps, started_at, ended_at, stablecoin_id
+        `SELECT symbol, direction, peak_deviation_bps, started_at, ended_at, stablecoin_id, close_reason, recovery_price
          FROM depeg_events
          WHERE ended_at IS NOT NULL AND ended_at >= ?
-           AND ABS(peak_deviation_bps) > 100
            AND stablecoin_id IN (SELECT value FROM json_each(?))
-         ORDER BY ABS(peak_deviation_bps) DESC
-         LIMIT 20`,
+         ORDER BY ABS(peak_deviation_bps) DESC`,
       )
       .bind(cutoff24h, JSON.stringify(eligibleIds))
       .all<{
@@ -334,9 +336,15 @@ export async function collectResolvedDepegs(
         started_at: number;
         ended_at: number;
         stablecoin_id: string;
+        close_reason: string | null;
+        recovery_price: number | null;
       }>();
 
-    const candidates = (resolvedRows.results ?? [])
+    const recovered = (resolvedRows.results ?? [])
+      .filter((row) => {
+        const closure = classifyDepegClosure({ endedAt: row.ended_at, closeReason: row.close_reason, recoveryPrice: row.recovery_price });
+        return closure === "recovered" || closure === "legacy_recovered";
+      })
       .map((row) => {
         const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
         return {
@@ -350,7 +358,10 @@ export async function collectResolvedDepegs(
           endedAt: row.ended_at,
           impactScore: getDepegMarketImpactScore(row.peak_deviation_bps, mcapUsd),
         };
-      })
+      });
+    if (ctx.evidence) ctx.evidence.recoveredDepegs = recovered;
+    const candidates = recovered
+      .filter((row) => row.mcapUsd > 20_000_000 && row.peakBps > 100)
       .sort((a, b) => b.impactScore - a.impactScore)
       .slice(0, 5);
 
@@ -392,28 +403,43 @@ export async function collectMintBurnFlows(
     }
     const gaugeScore = gauge.score;
     if (gaugeScore === null) return collectorResult(undefined, degradedReasons);
+    // Valuation completeness (D11-2): the digest never restates a flow claim
+    // that missing USD valuation could alter. A composite with a partial input
+    // is withheld; a publication predating completeness is used but named.
+    if (gauge.partialValuationInputs !== null && gauge.partialValuationInputs > 0) {
+      return collectorResult(undefined, degradedReasons, ["mint-burn-gauge-valuation-partial"]);
+    }
+    const qualityReasons = gauge.partialValuationInputs === null ? ["mint-burn-valuation-unknown"] : [];
 
     const ftqFlows = await computeDigestMintBurnFtqFlows(
       ctx.db,
-      gauge.coins.map((coin) => ({ id: coin.id, net24h: coin.net24hUsd })),
+      gauge.coins.map((coin) => ({ id: coin.id, knownNetUsd: coin.net24hUsd, valuation: coin.valuation24h })),
     );
-    const { safeNet24h, riskyNet24h } = ftqFlows;
-    const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
     if (ftqFlows.kind === "unavailable") {
-      degradedReasons.push(`mint-burn-ftq:${ftqFlows.reason}`);
+      if (ftqFlows.reason === "valuation-incomplete") qualityReasons.push("mint-burn-ftq-valuation-incomplete");
+      else degradedReasons.push(`mint-burn-ftq:${ftqFlows.reason}`);
     }
 
+    // Pressure and nets need a complete 24h window; a partial baseline also
+    // skews the pressure. Unknown (pre-completeness) baselines are tolerated
+    // until legacy hourly buckets age out of the 30-day window.
     const topPressure = gauge.coins
       .filter(
-        (coin): coin is PublishedGaugeCoin & { intensity: number } =>
-          coin.intensity !== null && Math.abs(coin.intensity) > 20,
+        (coin): coin is PublishedGaugeCoin & { intensity: number; net24hUsd: number } =>
+          coin.intensity !== null
+          && Math.abs(coin.intensity) > 20
+          && coin.net24hUsd !== null
+          && coin.valuation24h.completeness === "complete"
+          && coin.baselineValuation !== "partial",
       )
       .sort((a, b) => Math.abs(b.intensity) - Math.abs(a.intensity))
       .slice(0, 3)
       .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity, net24hUsd: coin.net24hUsd }));
 
-    // Published chains arrive sorted by absolute 24h net flow.
+    // Published chains arrive sorted by absolute 24h net flow; only complete nets are restated.
     const topChains = gauge.chains
+      .filter((chain): chain is PublishedGaugeChain & { net24hUsd: number } =>
+        chain.net24hUsd !== null && chain.valuation === "complete")
       .slice(0, 3)
       .map((chain) => ({ chainId: chain.chainId, netUsd: chain.net24hUsd }));
 
@@ -426,10 +452,10 @@ export async function collectMintBurnFlows(
           : "unavailable",
       classificationReason: ftqFlows.kind === "ok" ? null : ftqFlows.reason,
       safetyScoreIdentity: ftqFlows.safetyScoreIdentity,
-      flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
+      flightToQuality: { active: ftqFlows.active, safeNetUsd: ftqFlows.safeNet24h, riskyNetUsd: ftqFlows.riskyNet24h },
       topPressure,
       topChains,
-    }, degradedReasons);
+    }, degradedReasons, qualityReasons);
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect mint-burn flows:", error);
     degradedReasons.push("mint-burn-gauge-read");
@@ -481,6 +507,7 @@ export async function collectLiquidityShifts(
       methodologyVersion: row.methodology_version,
     });
     const shifts: NonNullable<DigestInputData["liquidityShifts"]> = [];
+    const evidenceRows: NonNullable<NonNullable<CollectorContext["evidence"]>["liquidity"]> = [];
     const rejections = new Set<LiquidityShiftRejection>();
     for (const [id, { latest, previous }] of byId) {
       if (!latest || !previous) continue;
@@ -510,6 +537,7 @@ export async function collectLiquidityShifts(
         continue;
       }
 
+      evidenceRows.push({ stablecoinId: id, symbol: coin.symbol, currentScore: latest.liquidity_score });
       shifts.push({
         symbol: coin.symbol,
         currentScore: latest.liquidity_score,
@@ -531,6 +559,7 @@ export async function collectLiquidityShifts(
     const withheldStoryReasons = [...rejections].map((rejection) => `liquidity-shift-${rejection}`);
 
     shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
+    if (ctx.evidence) ctx.evidence.liquidity = evidenceRows;
     return collectorResult(
       shifts.length > 0 ? shifts.slice(0, 5) : undefined,
       degradedReasons,

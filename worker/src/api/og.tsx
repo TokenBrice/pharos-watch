@@ -17,12 +17,12 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/lib/chains";
 import { resolveOrReject } from "../lib/api-params";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
-import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../lib/stress-signals-current-rows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getVariantDisplay } from "@shared/lib/variant-display";
@@ -220,8 +220,8 @@ interface StablecoinOgSignalsInput {
   hasActiveDepeg: boolean;
   flow7d: number | null | undefined;
   pegScore: number | null;
-  backing: BackingType;
-  governance: string;
+  backing: BackingType | null;
+  governance: string | null;
   redemptionScore: number | null;
   change24h: number | null;
   variantLabel?: string | null;
@@ -246,21 +246,23 @@ export function deriveStablecoinOgCardData({
   variantParentSymbol,
   isFrozen,
 }: StablecoinOgSignalsInput): StablecoinCardData {
-  const pegPrice = coin.price ?? 1;
-  const mcap = getCirculatingRaw(coin);
-  const prevWeekMcap = getPrevWeekRaw(coin);
+  const pegPrice = coin.price ?? null;
+  const mcap = getCirculatingRawOrNull(coin);
+  const prevWeekMcap = getPrevWeekRawOrNull(coin);
   const sparklineData = sparklineRows.map((row) => row.price).reverse();
+  const supplyDelta = mcap != null && prevWeekMcap != null ? mcap - prevWeekMcap : null;
 
   return {
     name: coin.name,
     symbol: coin.symbol,
     grade: grade ?? "NR",
     pegPrice,
-    dewsBand: dewsBand ?? "CALM",
-    liquidityScore: dexLiquidityScore ?? 0,
+    dewsBand: dewsBand ?? null,
+    liquidityScore: dexLiquidityScore,
     mcap,
-    flow7d: flow7d ?? (mcap - prevWeekMcap),
-    sparklineData: sparklineData.length >= 2 ? sparklineData : [pegPrice, pegPrice],
+    flow7d: flow7d ?? supplyDelta,
+    flow7dSource: flow7d != null ? "mint-burn" : supplyDelta != null ? "supply-delta" : null,
+    sparklineData: sparklineData.length >= 2 ? sparklineData : null,
     hasActiveDepeg,
     pegScore,
     backing,
@@ -305,7 +307,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     }),
     loadDexLiquidityMap(db),
     loadStressSignalCurrentRowForCoin(db, id, Math.floor(Date.now() / 1000), {
-      staleAfterSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8,
+      staleAfterSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
     }),
     loadOgSafetyScoreSource(db),
     db
@@ -411,8 +413,8 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       hasActiveDepeg: activeDepegRow !== null,
       flow7d: flowRow?.net_flow,
       pegScore,
-      backing: meta?.flags.backing ?? "rwa-backed",
-      governance: meta?.flags.governance ?? "centralized",
+      backing: meta?.flags.backing ?? null,
+      governance: meta?.flags.governance ?? null,
       redemptionScore: null, // Not available in current cache schema
       change24h,
       variantLabel,
@@ -524,7 +526,7 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
       .prepare("SELECT score, band FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ score: number; band: string }>(),
     loadStressSignalCurrentRows(db, now, {
-      staleAfterSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8,
+      staleAfterSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
     }),
     // New: Get active depeg details
     db

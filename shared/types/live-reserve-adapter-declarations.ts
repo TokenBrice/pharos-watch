@@ -66,11 +66,11 @@ const CONFIG_ATTESTATION_V1 = configPolicy(["attestation-mix"], [1]);
 const CONFIG_ATTESTATION_V1_V2 = configPolicy(["attestation-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V2 = configPolicy(["attestation-mix"], [2]);
 const CONFIG_PROTOCOL_V1 = configPolicy(["protocol-reserve"], [1]);
-const CONFIG_PROTOCOL_V2 = configPolicy(["protocol-reserve"], [2]);
 const CONFIG_PROTOCOL_V1_V2 = configPolicy(["protocol-reserve"], [1, 2]);
 const CONFIG_SINGLE_ASSET_V1 = configPolicy(["single-asset"], [1]);
 const CONFIG_SINGLE_ASSET_V2 = configPolicy(["single-asset"], [2]);
 const CONFIG_SINGLE_ASSET_V1_V2 = configPolicy(["single-asset"], [1, 2]);
+const CONFIG_SINGLE_ASSET_V3 = configPolicy(["single-asset"], [3]);
 const CONFIG_ACCOUNTABLE = configPolicy(["collateral-mix", "protocol-reserve"], [1]);
 
 // Makina's on-chain `positionStaleThreshold` (10800 s on DUSD's Hub Caliber)
@@ -265,12 +265,6 @@ const hyloSolanaParamsSchema = z.object({
   }).strict()).length(2),
   inactiveExoPairs: z.array(hyloAddressSchema).max(16),
 }).strict();
-
-const usd1BundleOracleParamsSchema = z
-  .object({
-    ...OptionalEvmRpcFields,
-  })
-  .strict();
 
 const usdaiProofOfReservesParamsSchema = z.object({
   anchor: z.object({
@@ -692,10 +686,95 @@ const chainlinkPorIssuerCirculationProbeSchema = z
   })
   .strict();
 
-const chainlinkPorIncompleteSupplyScopeSchema = z
+const LIABILITY_SUPPLY_READER_VALUES = [
+  "evm-erc20",
+  "tron-trc20",
+  "solana-spl-mint",
+  "aptos-fungible-asset",
+] as const;
+
+const LIABILITY_SCOPE_EXCLUSION_RELATION_VALUES = [
+  "lock-mint-representation",
+  "third-party-bridge-representation",
+] as const;
+
+/**
+ * Largest reserve-vs-supply observation skew any reviewed scope may accept.
+ * Equal to chainlink-por's default oracle age cap: no reviewed perimeter
+ * compares totals observed more than two days apart.
+ */
+const MAX_RESERVE_SUPPLY_SKEW_CAP_SEC = 2 * 24 * 60 * 60;
+
+/**
+ * Default reserve/supply time-skew bound for a reviewed issuer-native scope
+ * that sets no `maxReserveSupplySkewSec`. Four hours keeps denominator drift
+ * near 0.2% at USD1's largest observed intraday supply move (0.49% in 15 h on
+ * 2026-07-15; docs/live-reserves.md "Reviewed liability scopes").
+ * Proposed value, subject to owner review at PR.
+ */
+export const DEFAULT_MAX_RESERVE_SUPPLY_SKEW_SEC = 4 * 60 * 60;
+
+const issuerNativeLiabilityScopeSchema = z
   .object({
-    chain: z.string().trim().min(1),
+    basis: z.literal("issuer-native-supply"),
+    reviewedAt: StrictIsoDateSchema,
+    evidenceRef: z.string().trim().min(1),
+    included: z.array(z.object({
+      chain: z.string().trim().min(1),
+      reader: z.enum(LIABILITY_SUPPLY_READER_VALUES),
+    }).strict()).min(1),
+    excluded: z.array(z.object({
+      chain: z.string().trim().min(1),
+      relation: z.enum(LIABILITY_SCOPE_EXCLUSION_RELATION_VALUES),
+      backedBy: z.string().trim().min(1).optional(),
+      reason: z.string().trim().min(1),
+    }).strict()),
+    maxReserveSupplySkewSec: z.number().int().positive().max(MAX_RESERVE_SUPPLY_SKEW_CAP_SEC).optional(),
+  })
+  .strict()
+  .superRefine((scope, ctx) => {
+    const seen = new Set<string>();
+    for (const chain of [...scope.included, ...scope.excluded].map((entry) => entry.chain)) {
+      if (seen.has(chain)) {
+        ctx.addIssue({ code: "custom", message: `chain ${chain} is classified more than once` });
+      }
+      seen.add(chain);
+    }
+  });
+
+/** The readable deployments are not comparable with the feed's reserve
+ *  perimeter (Kinesis KAU: the feed covers the whole native-chain program
+ *  while `totalSupply()` reads only the Ethereum representation). Supply stays
+ *  diagnostic and no ratio is published. */
+const notComparableLiabilityScopeSchema = z
+  .object({
+    basis: z.literal("not-comparable"),
+    canonicalChain: z.string().trim().min(1),
     reason: z.string().trim().min(1),
+  })
+  .strict();
+
+/**
+ * Reviewed liability perimeter shared by supply-comparing reserve adapters
+ * (chainlink-por, usd1-bundle-oracle). Every catalog chain of an
+ * `issuer-native-supply` scope must be either included (read with the named
+ * reader) or excluded with its relation and reason; an unclassified chain
+ * withholds the ratio at runtime.
+ */
+const liabilityScopeSchema = z.discriminatedUnion("basis", [
+  issuerNativeLiabilityScopeSchema,
+  notComparableLiabilityScopeSchema,
+]);
+export type LiabilityScope = z.output<typeof liabilityScopeSchema>;
+export type IssuerNativeLiabilityScope = z.output<typeof issuerNativeLiabilityScopeSchema>;
+export type NotComparableLiabilityScope = z.output<typeof notComparableLiabilityScopeSchema>;
+
+/** USD1's liabilities are always measured against a reviewed issuer-native
+ *  perimeter; the oracle numerator is BitGo-reported USD1 redemption assets. */
+const usd1BundleOracleParamsSchema = z
+  .object({
+    ...OptionalEvmRpcFields,
+    liabilityScope: issuerNativeLiabilityScopeSchema,
   })
   .strict();
 
@@ -708,7 +787,7 @@ const chainlinkPorParamsSchema = z
     ...OptionalEvmRpcFields,
     ...OptionalOracleFreshnessFields,
     issuerCirculationProbe: chainlinkPorIssuerCirculationProbeSchema.optional(),
-    incompleteSupplyScope: chainlinkPorIncompleteSupplyScopeSchema.optional(),
+    liabilityScope: liabilityScopeSchema.optional(),
   })
   .strict();
 
@@ -1537,6 +1616,7 @@ const tetherTransparencyParamsSchema = z
   .object({
     currencyIso: z.enum(["usdt", "xaut"]),
     slices: z.array(ReserveSliceSchema).min(1),
+    compositionAsOf: StrictIsoDateSchema.optional(),
   })
   .strict();
 
@@ -2111,7 +2191,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
+    // v2: a reviewed `liabilityScope` (issuer-native perimeter or declared
+    // not-comparable basis) replaces `incompleteSupplyScope`; v1 bindings keep
+    // the unscoped roster, whose ratio now requires complete supply coverage.
+    configValidation: CONFIG_ATTESTATION_V1_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: VERIFIED_ONLY_VALIDATION,
   },
@@ -2120,6 +2203,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     HTTP_DISCLOSURE_ATTESTATION_V1,
     {
       preferredFreshnessMode: "verified",
+      configValidation: CONFIG_ATTESTATION_V1_V2,
       validation: {
         // Circle publishes the reserve chart weekly, not on its monthly assurance cadence.
         maxSourceAgeSec: WEEKLY_SOURCE_MAX_AGE_SEC,
@@ -2133,7 +2217,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1_V2,
+    configValidation: configPolicy(["collateral-mix"], [2, 3]),
     // Capacity is emitted only when a coin opts into either the legacy
     // single-bridge probe or the identity-gated bridge-basket probe.
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
@@ -2210,7 +2294,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -2301,7 +2385,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1_V2,
+    configValidation: configPolicy(["attestation-mix"], [3]),
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -2314,7 +2398,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -2356,7 +2440,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    configValidation: CONFIG_PROTOCOL_V2,
+    configValidation: configPolicy(["protocol-reserve"], [3]),
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: LATEST_STATE_VALIDATION,
   },
@@ -2632,7 +2716,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: DASHBOARD_VALIDATION,
   },
@@ -2735,7 +2819,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "source-invariant",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: CONFIG_COLLATERAL_V1_V2,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -2827,7 +2911,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "source-invariant",
-    configValidation: CONFIG_ATTESTATION_V1,
+    configValidation: CONFIG_ATTESTATION_V1_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     // Measured 2026-08-25: 24 upstream publications in the retained 30-day
     // window (last 2026-08-21T23:30:02Z; the breach was detected at
@@ -2900,7 +2984,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V2,
+    // v3: required reviewed issuer-native `liabilityScope`; the ratio is
+    // published as `collateralizationRatio` only within the skew bound.
+    configValidation: CONFIG_SINGLE_ASSET_V3,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,

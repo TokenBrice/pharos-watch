@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.22",
+    title: "Recorded valuation completeness",
+    date: "2026-09-27",
+    effectiveAt: 1790553600,
+    summary:
+      "Hourly flow buckets record how many counted mints and burns lack a USD valuation beside the known dollar subtotals, and internal flow consumers stop drawing conclusions that missing valuation could change.",
+    impact: [
+      "An unpriced event is counted as unpriced, never as zero dollars. Known mint and burn totals are lower bounds while events stay unpriced; a signed net built from them is not a bound in either direction.",
+      "The flow API publishes a valuation block per coin, chain, hourly bucket and per-coin window (complete, partial or unknown). Buckets aggregated before this release read as unknown until rebuilt from retained events or aged out.",
+      "The DEWS flow signal is unavailable when the 24h window is not fully valued or its burn baseline is partial; DDR mint-surge evidence falls back to the supply proxy when missing valuation could flip it; the daily digest withholds pressure, chain nets, gauge and flight-to-quality claims that missing valuation could alter. Public net, direction, pressure and gauge values are unchanged in this release.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.21",
     title: "Reviewed protocol-internal flows",
     date: "2026-09-27",

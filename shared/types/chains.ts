@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 import { RatioSchema } from "./ratio";
+import { FreshnessAssessmentSchema } from "./api-meta";
 
-export const ChainsFreshnessMetaSchema = z.object({
+export const ChainsFreshnessMetaSchema = FreshnessAssessmentSchema.partial().extend({
   updatedAt: z.number(),
   ageSeconds: z.number(),
   status: z.enum(["fresh", "degraded", "stale"]),
@@ -22,15 +23,42 @@ export const ChainsFreshnessMetaSchema = z.object({
 
 export type ChainsFreshnessMeta = z.infer<typeof ChainsFreshnessMetaSchema>;
 
+/**
+ * `pegStability` is nullable: under DEC-04 a chain with no observed peg evidence is not rated (NR). The
+ * current producer still publishes the neutral-50 imputation until the Release B activation, so consumers
+ * MUST already render `null` as NR and read `pegStabilityCoverage` for the evidence behind the number.
+ */
 export const ChainHealthFactorsSchema = z.object({
   concentration: z.number(),
   quality: z.number().nullable(),
-  pegStability: z.number(),
+  pegStability: z.number().nullable(),
   backingDiversity: z.number(),
   chainEnvironment: z.number(),
 });
 
 export type ChainHealthFactors = z.infer<typeof ChainHealthFactorsSchema>;
+
+export const ChainPegStabilityCoverageStatusSchema = z.enum(["complete", "partial", "unavailable"]);
+export type ChainPegStabilityCoverageStatus = z.infer<typeof ChainPegStabilityCoverageStatusSchema>;
+
+/**
+ * Peg-observation coverage against the chain's full positive supply (every coin on the chain, including
+ * coins without a peg reference). `observedScore` is the supply-weighted peg proximity over observed supply
+ * only; `neutralImputedSupplyUsd` is the supply the published `healthFactors.pegStability` scored as a
+ * neutral 50 instead of an observation.
+ */
+export const ChainPegStabilityCoverageSchema = z.object({
+  status: ChainPegStabilityCoverageStatusSchema,
+  observedSupplyUsd: z.number().nonnegative(),
+  eligibleSupplyUsd: z.number().nonnegative(),
+  coverage: RatioSchema,
+  noUsablePriceSupplyUsd: z.number().nonnegative(),
+  noPegReferenceSupplyUsd: z.number().nonnegative(),
+  neutralImputedSupplyUsd: z.number().nonnegative(),
+  observedScore: z.number().nullable(),
+});
+
+export type ChainPegStabilityCoverage = z.infer<typeof ChainPegStabilityCoverageSchema>;
 
 export const ChainEnvironmentRiskValueSchema = z.object({
   value: z.string(),
@@ -135,19 +163,48 @@ export const ChainSummarySchema = z.object({
   stablecoinCount: z.number(),
   dominantStablecoin: ChainDominantStablecoinSchema,
   topStablecoins: z.array(ChainTopStablecoinSchema),
+  /**
+   * Chain supply over the canonical global total (`totalUsd / globalTotalUsd`), never rescaled. When chain
+   * rows over-attribute supply these shares sum above 1; geometry uses `dominanceGeometryTotalUsd` instead.
+   */
   dominanceShare: z.number(),
   healthScore: z.number().nullable(),
   healthBand: HealthBandSchema.nullable(),
   healthFactors: ChainHealthFactorsSchema,
+  pegStabilityCoverage: ChainPegStabilityCoverageSchema.optional(),
+  /** Assets listing this chain whose current chain supply was unobserved; `totalUsd` excludes them. */
+  unavailableSupplyObservationCount: z.number().int().nonnegative().optional(),
   chainEnvironmentEvidence: ChainEnvironmentEvidenceSchema.optional(),
 });
 
 export type ChainSummary = z.infer<typeof ChainSummarySchema>;
+
+/**
+ * Unobserved supply excluded from the chain accounting: assets whose aggregate circulating buckets were
+ * absent/empty/invalid (excluded from `globalTotalUsd`) and asset-chain rows whose current supply was
+ * unobserved (excluded from that chain's `totalUsd`). Chain IDs include chains with no published row
+ * because every observation on them was unavailable.
+ */
+export const ChainsSupplyCoverageSchema = z.object({
+  aggregateUnavailableAssetCount: z.number().int().nonnegative(),
+  chainUnavailableObservationCount: z.number().int().nonnegative(),
+  chainIdsWithUnavailableObservations: z.array(z.string()),
+});
+
+export type ChainsSupplyCoverage = z.infer<typeof ChainsSupplyCoverageSchema>;
+
 export const ChainsResponseSchema = z.object({
   chains: z.array(ChainSummarySchema),
   globalTotalUsd: z.number(),
+  /** Raw sum of the published chain rows' `totalUsd`; never capped at `globalTotalUsd`. */
   chainAttributedTotalUsd: z.number(),
+  /** Positive residual `max(0, globalTotalUsd - chainAttributedTotalUsd)`. */
   unattributedTotalUsd: z.number(),
+  /** Signed `chainAttributedTotalUsd - globalTotalUsd`: positive = over-attribution, negative = unattributed. */
+  attributionDiscrepancyUsd: z.number().optional(),
+  /** Normalized geometry denominator `max(globalTotalUsd, chainAttributedTotalUsd)`; never a share label. */
+  dominanceGeometryTotalUsd: z.number().nonnegative().optional(),
+  supplyCoverage: ChainsSupplyCoverageSchema.optional(),
   globalChange24hPct: RatioSchema.nullable(),
   globalChange7dPct: RatioSchema.nullable(),
   globalChange30dPct: RatioSchema.nullable(),

@@ -18,7 +18,9 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
-import * as apiUtils from "../../lib/api-schema";
+import { StablecoinDataSchema } from "@shared/types/market";
+import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../lib/api-cache-read";
+import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 import type { CronProgressReporter, CronProgressUpdate } from "../../lib/cron-logger";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
@@ -70,7 +72,7 @@ vi.mock("../../lib/stablecoin-publication-coverage", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/stablecoin-publication-coverage")>();
   return {
     ...actual,
-    loadPreviousStablecoinActivePriceCoverage: vi.fn(async () => null),
+    loadPreviousStablecoinActivePriceCoverage: vi.fn(async () => ({ status: "missing" as const })),
     evaluateStablecoinPublicationCoverage: (ids: Iterable<string>) => {
       const published = [...new Set(ids)];
       return { complete: true, expectedActiveCount: published.length, presentActiveCount: published.length, waivedActiveCount: 0, missingActiveIds: [], waivedActiveIds: [], expiredWaiverIds: [], invalidWaiverIds: [] };
@@ -82,13 +84,9 @@ vi.mock("../../lib/stablecoin-publication-coverage", async (importOriginal) => {
   };
 });
 
-function finalValidationPayload(spy: ReturnType<typeof vi.spyOn>): Record<string, unknown>[] {
-  const call = spy.mock.calls.find((args: unknown[]) => args[2] === "sync-stablecoins:stablecoins");
-  const payload: unknown = call?.[1];
-  if (typeof payload !== "object" || payload === null || !("peggedAssets" in payload)) return [];
-  const assets = payload.peggedAssets;
-  if (!Array.isArray(assets)) return [];
-  return assets.filter((asset): asset is Record<string, unknown> => typeof asset === "object" && asset !== null);
+function publishedAssets(writes: Array<{ key: string; value: string }>): PeggedAsset[] {
+  const write = writes.find((candidate) => candidate.key === "stablecoins");
+  return write ? (JSON.parse(write.value) as { peggedAssets: PeggedAsset[] }).peggedAssets : [];
 }
 
 function fallbackCoinGeckoData(): Record<string, { usd: number; usd_market_cap: number; last_updated_at: number }> {
@@ -238,16 +236,69 @@ describe("syncStablecoins", () => {
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ depegPipelineSucceeded: false, depegErrorCount: 1 });
   });
 
-  it("guards an invalid final payload and writes only the diagnostic cache", async () => {
+  it("holds the whole list only when post-enrichment quarantine drops the cohort below the floor", async () => {
     const db = makeSyncDb();
     const writes = trackCacheWrites(db);
-    vi.spyOn(apiUtils, "validatePayloadWithSchema").mockReturnValueOnce({ ok: false, issues: "forced-test-validation-failure" });
-    mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
+    const data = makeDlResponse(60);
+    // Intake does not require pegMechanism; the published row schema does, so 11 rows fail publication.
+    for (const asset of data.peggedAssets.slice(0, 11)) delete (asset as Partial<PeggedAsset>).pegMechanism;
+    mockFetchWithRetry(defaultSyncRoutes(data));
     const result = await syncStablecoins(db);
     expect(result).toMatchObject({ itemCount: 60, status: "degraded" });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ validationFailures: 1, cacheWriteMode: "blocked-invalid-payload", downstreamSafe: false });
     expect(writes.map((write) => write.key)).toContain("stablecoins:invalid-last");
     expect(writes.map((write) => write.key)).not.toContain("stablecoins");
+  });
+
+  it("quarantines malformed rows per asset through intake and publication and publishes healthy peers", async () => {
+    const db = makeSyncDb();
+    const writes = trackCacheWrites(db);
+    const data = makeDlResponse(60);
+    const rows: unknown[] = [...data.peggedAssets];
+    const extra = (id: string, fields: Record<string, unknown>) => ({ ...data.peggedAssets[0], id, name: id, symbol: id, ...fields });
+    rows.push(
+      null,
+      42,
+      ["array-row"],
+      extra("empty-supply", { circulating: {} }),
+      extra("negative-supply", { circulating: { peggedUSD: -10 } }),
+      extra("overflow-supply", { circulating: { peggedUSD: 1e308, peggedEUR: 1e308 } }),
+      extra("zero-supply", { circulating: { peggedUSD: 0 } }),
+      extra("no-mechanism", { pegMechanism: undefined }),
+    );
+    Object.assign(data.peggedAssets[0], {
+      chainCirculating: { Ethereum: { current: { peggedUSD: 1_000_000 }, circulatingPrevDay: {}, circulatingPrevWeek: { peggedUSD: 0 } } },
+    });
+    mockFetchWithRetry(defaultSyncRoutes({ peggedAssets: rows }));
+    const result = await syncStablecoins(db);
+
+    const published = publishedAssets(writes);
+    const publishedIds = published.map((asset) => asset.id);
+    expect(publishedIds).toHaveLength(61);
+    expect(publishedIds).toContain("zero-supply");
+    for (const quarantined of ["empty-supply", "negative-supply", "overflow-supply", "no-mechanism"]) {
+      expect(publishedIds).not.toContain(quarantined);
+    }
+    expect(published.find((asset) => asset.id === "zero-supply")?.circulating).toEqual({ peggedUSD: 0 });
+    // Canonical storage keeps the empty prevDay as unavailable; a numeric zero stays zero.
+    expect(published.find((asset) => asset.id === "usdt-tether")?.chainCirculating).toEqual({
+      Ethereum: { current: 1_000_000, circulatingPrevDay: null, circulatingPrevWeek: 0 },
+    });
+    // RELEASE A: the public companion keeps the legacy wire value for the unavailable key.
+    const companion = writes.find((write) => write.key === getResponseReadyCacheKey("stablecoins"));
+    const companionBody = (JSON.parse(companion!.value) as { body: string }).body;
+    expect(companion!.value).toBe(encodeResponseReadyCacheValue(companionBody, RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins));
+    expect((JSON.parse(companionBody) as { peggedAssets: PeggedAsset[] }).peggedAssets.find((asset) => asset.id === "usdt-tether")?.chainCirculating)
+      .toEqual({ Ethereum: { current: 1_000_000, circulatingPrevDay: 0, circulatingPrevWeek: 0 } });
+    expect(result).toMatchObject({ itemCount: 61, productivity: { publications: [expect.objectContaining({ candidateRows: 62, publishedRows: 61 })] } });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ rowsRead: 68, rowsDropped: 6 });
+    expect(vi.mocked(detectDepegEvents).mock.calls[0]?.[1]).toHaveLength(61);
+  });
+
+  it("fails closed without dereferencing a non-array peggedAssets envelope", async () => {
+    mockFetchWithRetry(defaultSyncRoutes({ peggedAssets: { not: "an array" } }));
+    await expect(syncStablecoins(makeSyncDb())).rejects.toThrow("DefiLlama payload envelope was invalid (pegged-assets-not-array)");
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_STABLECOINS, false);
   });
 
   it("normalizes missing prices, aliases, nullable history, and reports stages", async () => {
@@ -266,19 +317,20 @@ describe("syncStablecoins", () => {
     };
     const db = makeSyncDb();
     const writes = trackCacheWrites(db);
-    const validate = vi.spyOn(apiUtils, "validatePayloadWithSchema");
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db, undefined, { reportProgress });
-    const payload = finalValidationPayload(validate);
+    const payload = publishedAssets(writes);
     expect(payload.find((asset) => asset.id === "ust-terra")).toMatchObject({ geckoId: "coin-three", priceConfidence: "single-source", circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {} });
-    expect((JSON.parse(writes.find((write) => write.key === "stablecoins")!.value) as { peggedAssets: PeggedAsset[] }).peggedAssets[12]).toMatchObject({ price: null, priceSource: "missing" });
+    expect(payload[12]).toMatchObject({ price: null, priceSource: "missing" });
     expect(progressUpdates.map((update) => update.stage)).toEqual(expect.arrayContaining(["intake", "price-enrichment", "price-validation", "cache-validation", "cache-write", "depeg-pipeline", "complete"]));
   });
 
   it("writes a CoinGecko fallback as diagnostic data when that fallback is also invalid", async () => {
     const db = makeSyncDb();
     const writes = trackCacheWrites(db);
-    vi.spyOn(apiUtils, "validatePayloadWithSchema").mockReturnValueOnce({ ok: false, issues: "forced-fallback-validation-failure" });
+    // Every fallback row fails the real published row schema, so quarantine leaves the cohort below the floor.
+    const rowFailure = StablecoinDataSchema.safeParse({});
+    vi.spyOn(StablecoinDataSchema, "safeParse").mockReturnValue(rowFailure);
     mockFetchWithRetry([{ match: "api.coingecko.com", body: fallbackCoinGeckoData() }, { match: "stablecoins.llama.fi", body: { error: "down" }, status: 500 }]);
     const result = await syncStablecoins(db);
     expect(result.status).toBe("degraded");
@@ -308,11 +360,11 @@ describe("syncStablecoins", () => {
     const historyData = makeDlResponse(60);
     Object.assign(historyData.peggedAssets[0], { circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null });
     const utcMidnight = (daysAgo: number) => { const date = new Date(); date.setUTCDate(date.getUTCDate() - daysAgo); return Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 1000); };
-    const validate = vi.spyOn(apiUtils, "validatePayloadWithSchema");
     const historyDb = makeSyncDb([{ match: "supply_history", rows: [{ stablecoin_id: "usdt-tether", snapshot_date: utcMidnight(1), circulating_usd: 900_000 }, { stablecoin_id: "usdt-tether", snapshot_date: utcMidnight(7), circulating_usd: 890_000 }, { stablecoin_id: "usdt-tether", snapshot_date: utcMidnight(30), circulating_usd: 880_000 }] }]);
+    const historyWrites = trackCacheWrites(historyDb);
     mockFetchWithRetry(defaultSyncRoutes(historyData));
     await syncStablecoins(historyDb);
-    expect(finalValidationPayload(validate).find((asset) => asset.id === "usdt-tether")).toMatchObject({ circulatingPrevDay: { peggedUSD: 900_000 }, circulatingPrevWeek: { peggedUSD: 890_000 }, circulatingPrevMonth: { peggedUSD: 880_000 } });
+    expect(publishedAssets(historyWrites).find((asset) => asset.id === "usdt-tether")).toMatchObject({ circulatingPrevDay: { peggedUSD: 900_000 }, circulatingPrevWeek: { peggedUSD: 890_000 }, circulatingPrevMonth: { peggedUSD: 880_000 } });
   });
 
   it.each([
@@ -338,11 +390,11 @@ describe("syncStablecoins", () => {
     const now = Math.floor(Date.now() / 1000);
     const data = makeDlResponse(60);
     Object.assign(data.peggedAssets[0], { id: "jpyc-jpyc", name: "JPYC", symbol: "JPYC", price: 0.0005, pegType: "peggedJPY" });
-    const validate = vi.spyOn(apiUtils, "validatePayloadWithSchema");
     const db = makeSyncDb([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["fx-rates"], rows: [], first: { value: JSON.stringify({ peggedJPY: 0.0067 }), updated_at: now - 8 * 3600 } }]);
+    const writes = trackCacheWrites(db);
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db);
-    expect(finalValidationPayload(validate).find((asset) => asset.id === "jpyc-jpyc")?.price).toBe(0.0005);
+    expect(publishedAssets(writes).find((asset) => asset.id === "jpyc-jpyc")?.price).toBe(0.0005);
   });
 
   it.each([

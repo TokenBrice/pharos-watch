@@ -111,6 +111,20 @@ function withOneVerifiedReplay(
 }
 
 describe("diagnostic V9 peg provenance identity boundary", () => {
+  it.each(["protocol-par", "protocol-redeem"])(
+    "rejects nominal replay provenance without reclassifying legacy redemption: %s",
+    (source) => {
+      const events = publicationEvents();
+      const fixedInput = singleAssetFixedInput(events);
+      const verified = withOneVerifiedReplay(events, fixedInput.clockSec);
+      verified[0]!.provenance!.sourcePriceProviders = [source];
+      if (source === "protocol-par") {
+        expect(() => summary(verified, fixedInput)).toThrow("non-observed price provenance");
+      } else {
+        expect(summary(verified, fixedInput).classes["provenance-high"].eventCount).toBe(1);
+      }
+    },
+  );
   it("round-trips a compact publication-exact provenance seed and rejects tampering", () => {
     const events = publicationEvents();
     const fixedInput = singleAssetFixedInput(events);

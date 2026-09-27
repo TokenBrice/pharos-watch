@@ -134,11 +134,11 @@ export function getRelatedContext(row: DdrV2ResponseRow): DdrRelatedContext {
   return EMPTY_CONTEXT;
 }
 
-export function getAgeSec(row: DdrV2ResponseRow): number {
+export function getAgeSec(row: DdrV2ResponseRow): number | null {
   return row.live.ageSec;
 }
 
-export function getPeakDeviationBps(row: DdrV2ResponseRow): number {
+export function getPeakDeviationBps(row: DdrV2ResponseRow): number | null {
   return row.kind === "prediction" ? row.frozen.sourceRow.peakDeviationBps : row.live.peakDeviationBps;
 }
 

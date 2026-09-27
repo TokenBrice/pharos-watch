@@ -34,8 +34,7 @@
     "reserveDisclosureUrl": "https://www.paxos.com/usdg-transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "USDG's primary issuing entity is Paxos Digital Singapore (MAS-regulated), with EU issuance by Paxos Issuance Europe Oy (FIN-FSA/MiCA). The GENIUS Act was enacted July 18, 2025, but its PPSI licensing framework remains in proposed-rulemaking phase as of June 2026 with no PPSI approvals granted to any issuer. On December 12, 2025 the OCC conditionally approved Paxos Trust Company, N.A. for a national trust bank charter conversion (from NYDFS); however Paxos confirmed USDG is issued by Paxos Digital Singapore, not Paxos Trust Company, so this OCC charter does not constitute a PPSI authorization for USDG. No public GENIUS Act application, foreign-issuer registration, or comparable-jurisdiction determination has been found for USDG.",
+    "notes": "Evidence as of 2026-06-18 review: USDG's primary issuing entity is Paxos Digital Singapore (MAS-regulated), with EU issuance by Paxos Issuance Europe Oy (FIN-FSA/MiCA). The GENIUS Act was enacted July 18, 2025, but its PPSI licensing framework remains in proposed-rulemaking phase as of June 2026 with no PPSI approvals granted to any issuer. On December 12, 2025 the OCC conditionally approved Paxos Trust Company, N.A. for a national trust bank charter conversion (from NYDFS); however Paxos confirmed USDG is issued by Paxos Digital Singapore, not Paxos Trust Company, so this OCC charter does not constitute a PPSI authorization for USDG. No public GENIUS Act application, foreign-issuer registration, or comparable-jurisdiction determination has been found for USDG. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

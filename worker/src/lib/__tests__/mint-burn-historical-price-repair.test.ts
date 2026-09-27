@@ -284,16 +284,24 @@ describe("historical mint/burn price repair", () => {
       expect(
         db.sqlite
           .prepare(
-            `SELECT mint_count, mint_volume_usd, net_flow_usd
+            `SELECT mint_count, mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, net_flow_usd
              FROM mint_burn_hourly
              WHERE stablecoin_id = 'usdt-tether' AND hour_ts = ${repairedHour}`,
           )
           .get(),
-      ).toEqual({ mint_count: 1, mint_volume_usd: 99.7, net_flow_usd: 99.7 });
+      ).toEqual({
+        mint_count: 1,
+        mint_unpriced_event_count: 0,
+        burn_unpriced_event_count: 0,
+        mint_volume_usd: 99.7,
+        net_flow_usd: 99.7,
+      });
+      // The untouched legacy bucket keeps unrecorded (unknown) coverage; nothing defaults it to complete.
       expect(
         db.sqlite
           .prepare(
-            `SELECT mint_count, burn_count, mint_volume_usd, burn_volume_usd, net_flow_usd
+            `SELECT mint_count, burn_count, mint_unpriced_event_count, burn_unpriced_event_count,
+                    mint_volume_usd, burn_volume_usd, net_flow_usd
              FROM mint_burn_hourly
              WHERE stablecoin_id = 'usdt-tether' AND hour_ts = ${preservedHour}`,
           )
@@ -301,6 +309,8 @@ describe("historical mint/burn price repair", () => {
       ).toEqual({
         mint_count: 7,
         burn_count: 3,
+        mint_unpriced_event_count: null,
+        burn_unpriced_event_count: null,
         mint_volume_usd: 700,
         burn_volume_usd: 300,
         net_flow_usd: 400,

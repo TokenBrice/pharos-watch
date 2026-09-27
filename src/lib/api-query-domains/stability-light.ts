@@ -12,7 +12,7 @@ function invalid(path: readonly PropertyKey[], message: string): SchemaLikeResul
 function validateComponents(value: unknown): readonly [readonly PropertyKey[], string] | null {
   if (!isRecord(value)) return [["current", "components"], "Expected object"];
   for (const key of ["severity", "breadth", "trend"] as const) {
-    if (!isFiniteNumber(value[key])) return [["current", "components", key], "Expected finite number"];
+    if (value[key] !== null && !isFiniteNumber(value[key])) return [["current", "components", key], "Expected finite number or null"];
   }
   if (value.stressBreadth != null && !isFiniteNumber(value.stressBreadth)) {
     return [["current", "components", "stressBreadth"], "Expected finite number"];

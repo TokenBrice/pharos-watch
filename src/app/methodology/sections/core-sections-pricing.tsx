@@ -340,6 +340,11 @@ export function PricingPipelineMethodologySection() {
           </div>
 
           <div className="space-y-2">
+            <h3 className="text-foreground font-medium">CoinGecko Supply Gap-Fill Limits</h3>
+            <p>DefiLlama list totals remain the canonical supply for DefiLlama-backed assets. When exactly one reviewed deployment is missing from DefiLlama&apos;s chain breakdown, a fresh CoinGecko market cap may raise the aggregate only while CoinGecko/DefiLlama stays inside a bounded band: a new fill needs a ratio above 1.05 and at most 1.45, an existing fill is kept above 1.02 (hysteresis), and no fill ever exceeds 1.50 at current or at any compared 1d/7d/30d point. All published buckets come from one CoinGecko series, only the remainder is attributed to the missing chain, and the row exposes <code className="text-xs">supplyGapFill</code> provenance with the retained DefiLlama total. Out-of-band, incomplete or ambiguous cases keep the DefiLlama figures unchanged.</p>
+          </div>
+
+          <div className="space-y-2">
             <h3 className="text-foreground font-medium">Enrichment Pipeline (6-pass fallback)</h3>
             <p>Assets still missing prices after primary consensus go through a staged enrichment pipeline:</p>
             <ol className="list-decimal list-inside space-y-1">

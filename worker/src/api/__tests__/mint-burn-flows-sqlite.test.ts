@@ -90,14 +90,14 @@ describe("fetchAggregateData tracked-pair filter on real SQLite", () => {
 
       const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
 
-      expect(data.net7dMap.get("usdt-tether")).toBe(14);
-      expect(data.net30dMap.get("usdt-tether")).toBe(16);
-      expect(data.net90dMap.get("usdt-tether")).toBe(16);
-      expect(data.net90dMap.get("bd-basedollar")).toBe(100);
-      expect(data.net90dMap.get("usdai-usd-ai")).toBe(50);
+      expect(data.net7dMap.get("usdt-tether")?.netUsd).toBe(14);
+      expect(data.net30dMap.get("usdt-tether")?.netUsd).toBe(16);
+      expect(data.net90dMap.get("usdt-tether")?.netUsd).toBe(16);
+      expect(data.net90dMap.get("bd-basedollar")?.netUsd).toBe(100);
+      expect(data.net90dMap.get("usdai-usd-ai")?.netUsd).toBe(50);
       expect(data.net90dMap.has("ghost-coin")).toBe(false);
       // The untracked usdt/base decoy must not inflate the usdt aggregate.
-      expect(data.net90dMap.get("usdt-tether")).not.toBe(16 + 999);
+      expect(data.net90dMap.get("usdt-tether")?.netUsd).not.toBe(16 + 999);
       expect(data.net90dMap.has("usdt-tether")).toBe(true);
 
       expect(data.hourlyRows.map((row) => `${row.stablecoin_id}|${row.chain_id}`).sort()).toEqual([

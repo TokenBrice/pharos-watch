@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
+import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   const stablecoins = [
@@ -110,69 +111,60 @@ describe("loadPriceValidationReferences", () => {
     vi.useRealTimers();
   });
 
+  /** The FX reader loads the rates/meta pair in one statement. */
+  function fxPairDb(rows: Array<{ key: string; value: string; updated_at: number }>, throwError?: unknown) {
+    return mockD1([{
+      match: "SELECT key, value, updated_at FROM cache WHERE key IN",
+      matchBinds: ["fx-rates", "fx-rates-meta"],
+      rows,
+      ...(throwError ? { throwError } : {}),
+    }]);
+  }
+
   it("keeps fresh cached references stale until source metadata is available", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedEUR: 1.08, bad: "nope", peggedJPY: 0.0067 }),
-          updated_at: nowSec - 300,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = fxPairDb([{
+      key: "fx-rates",
+      value: JSON.stringify({ peggedEUR: 1.08, bad: "nope", peggedJPY: 0.0067 }),
+      updated_at: nowSec - 300,
+    }]);
 
     const result = await loadPriceValidationReferences(db);
 
     expect(result.type).toBe("stale");
     expect(result.rates).toEqual({ peggedEUR: 1.08, peggedJPY: 0.0067 });
     expect(result.typeByPeg).toMatchObject({ peggedEUR: "stale", peggedJPY: "stale" });
+    // The cache write time is never reported as a source observation time.
+    expect(result.updatedAtByPeg).toEqual({ peggedEUR: null, peggedJPY: null });
   });
 
-  it("returns stale cached references after the freshness window", async () => {
+  it("keeps references from a mismatched metadata generation stale", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1([
+    const db = fxPairDb([
+      { key: "fx-rates", value: JSON.stringify({ peggedEUR: 1.08 }), updated_at: nowSec - 60 },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedEUR: 1.08 }),
-          updated_at: nowSec - (8 * 3600),
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
+        key: "fx-rates-meta",
+        updated_at: nowSec - 1_860,
+        value: JSON.stringify({
+          usableSyncAt: nowSec - 1_860,
+          mode: "live",
+          sourceUpdatedAtByPeg: { peggedEUR: nowSec - 1_900 },
+          sourceModeByPeg: { peggedEUR: "live" },
+          sourceCadenceByPeg: { peggedEUR: "intraday" },
+          consecutiveFallbackRuns: 0,
+        }),
       },
     ]);
 
     const result = await loadPriceValidationReferences(db);
 
     expect(result.type).toBe("stale");
-    expect(result.rates).toEqual({ peggedEUR: 1.08 });
-    expect(result.typeByPeg).toMatchObject({ peggedEUR: "stale" });
+    expect(result.typeByPeg).toEqual({ peggedEUR: "stale" });
+    expect(result.updatedAtByPeg).toEqual({ peggedEUR: null });
   });
 
   it("falls back to provided static references when cache is missing", async () => {
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = fxPairDb([]);
 
     const result = await loadPriceValidationReferences(db, {
       staticRates: { peggedEUR: 1.09, bad: Number.NaN },
@@ -185,14 +177,7 @@ describe("loadPriceValidationReferences", () => {
   it("logs and falls back to static references when the FX cache lookup fails", async () => {
     const error = new Error("D1 unavailable");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        throwError: error,
-      },
-    ]);
+    const db = fxPairDb([], error);
 
     const result = await loadPriceValidationReferences(db, {
       staticRates: { peggedEUR: 1.09 },
@@ -211,33 +196,13 @@ describe("loadPriceValidationReferences", () => {
 
   it("keeps cached-fallback references stale when source timestamps are old", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedEUR: 1.08 }),
-          updated_at: nowSec - 60,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: nowSec - 60,
-            mode: "cached-fallback",
-            sourceUpdatedAtByPeg: { peggedEUR: nowSec - (8 * 3600) },
-            sourceModeByPeg: { peggedEUR: "cached" },
-            sourceCadenceByPeg: { peggedEUR: "intraday" },
-            consecutiveFallbackRuns: 2,
-          }),
-          updated_at: nowSec - 60,
-        },
-      },
-    ]);
+    const db = fxPairDb(fxRatesCacheRows(nowSec - 60, { peggedEUR: 1.08 }, {
+      mode: "cached-fallback",
+      sourceUpdatedAtByPeg: { peggedEUR: nowSec - (8 * 3600) },
+      sourceModeByPeg: { peggedEUR: "cached" },
+      sourceCadenceByPeg: { peggedEUR: "intraday" },
+      consecutiveFallbackRuns: 2,
+    }));
 
     const result = await loadPriceValidationReferences(db);
 
@@ -248,34 +213,12 @@ describe("loadPriceValidationReferences", () => {
 
   it("keeps business-daily FX references fresh before the next publish window", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedEUR: 1.08 }),
-          updated_at: nowSec - 60,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: nowSec - 60,
-            mode: "live",
-            sourceUpdatedAtByPeg: { peggedEUR: nowSec - (16 * 3600) },
-            sourceModeByPeg: { peggedEUR: "live" },
-            sourceCadenceByPeg: { peggedEUR: "business-daily" },
-            sourceDateByPeg: { peggedEUR: "2026-03-10" },
-            consecutiveFallbackRuns: 0,
-          }),
-          updated_at: nowSec - 60,
-        },
-      },
-    ]);
+    const db = fxPairDb(fxRatesCacheRows(nowSec - 60, { peggedEUR: 1.08 }, {
+      sourceUpdatedAtByPeg: { peggedEUR: nowSec - (16 * 3600) },
+      sourceModeByPeg: { peggedEUR: "live" },
+      sourceCadenceByPeg: { peggedEUR: "business-daily" },
+      sourceDateByPeg: { peggedEUR: "2026-03-10" },
+    }));
 
     const result = await loadPriceValidationReferences(db);
 

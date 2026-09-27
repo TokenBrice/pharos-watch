@@ -7,6 +7,8 @@ import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { buildLiquidityVerdictLine } from "@/components/dex-liquidity-card-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
+import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
+import { formatCurrency } from "@shared/lib/format";
 
 /** The market-breakdown fold defers charts/tables until first open. */
 function openMarketBreakdown(container: HTMLElement) {
@@ -242,5 +244,72 @@ describe("DexLiquidityCard", () => {
       }),
     ).toBe("Diversity 100 and volume 95 carry the score; tvl depth 29 is the drag.");
     expect(buildLiquidityVerdictLine(null)).toBeNull();
+  });
+
+  describe("DEC-19 volume availability", () => {
+    const asOfSec = 1_790_000_000;
+    const clock = { asOfSec, maxObservationAgeSec: 86_400 };
+    const fresh = (volumeUsd: number | null): DexPoolVolumeObservationInput => ({ volumeUsd, observedAtSec: asOfSec - 600 });
+    const aged: DexPoolVolumeObservationInput = { volumeUsd: 50_000, observedAtSec: asOfSec - 180 * 3600 };
+
+    function renderWindows(pools: DexPoolVolumeObservationInput[], overrides: Parameters<typeof makeDexLiquidityData>[0] = {}) {
+      const day = summarizeDexVolumeWindow(pools, "24h", clock);
+      const week = summarizeDexVolumeWindow(pools, "7d", clock);
+      useDexLiquidityMock.mockReturnValue({
+        data: {
+          "usdc-circle": makeDexLiquidityData({
+            totalTvlUsd: 1_000_000,
+            poolCount: pools.length,
+            chainCount: 1,
+            liquidityScore: 60,
+            totalVolume24hUsd: day.measuredUsd,
+            totalVolume7dUsd: week.measuredUsd,
+            volume24hAvailability: day.availability,
+            volume7dAvailability: week.availability,
+            ...overrides,
+          }),
+        },
+        isLoading: false,
+      });
+      useDexLiquidityHistoryMock.mockReturnValue({ data: [], isLoading: false });
+      render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+      return ["24h Volume", "7d Volume"].map((label) => {
+        const value = screen.getAllByText(label)[0]!.nextElementSibling!;
+        return { value: value.textContent, detail: value.nextElementSibling?.textContent ?? null };
+      });
+    }
+
+    it("renders a complete measured zero as a measured 0", () => {
+      const windows = renderWindows([fresh(0), fresh(0)]);
+      expect(windows).toEqual([
+        { value: formatCurrency(0), detail: null },
+        { value: formatCurrency(0), detail: null },
+      ]);
+    });
+
+    it.each([
+      ["all-missing", [fresh(null), fresh(null)], "Not observed"],
+      ["mixed", [fresh(40_000), fresh(null)], `Partial ≥ ${formatCurrency(40_000)}`],
+      ["stale", [aged], "Stale observations"],
+    ] as const)("renders %s 24h/7d windows as a dash with a labelled detail", (_name, pools, detail) => {
+      expect(renderWindows([...pools])).toEqual([
+        { value: "—", detail },
+        { value: "—", detail },
+      ]);
+    });
+
+    it("explains an activity NR instead of claiming no direct DEX market", () => {
+      renderWindows([fresh(40_000), fresh(null)], {
+        liquidityScore: null,
+        scoreComponents: { tvlDepth: 70, volumeActivity: null, poolQuality: 60, durability: 50, pairDiversity: 10 },
+      });
+      expect(
+        screen.getByText("Liquidity Score is not rated: 24h DEX volume was not measured across every contributing pool."),
+      ).toBeTruthy();
+      expect(screen.queryByText("No observed direct DEX market for this token in the current pipeline.")).toBeNull();
+      // Valid components stay visible beside the NR activity bar (header pill + bar).
+      expect(screen.getByText("Score Breakdown")).toBeTruthy();
+      expect(screen.getAllByText("NR").length).toBeGreaterThanOrEqual(2);
+    });
   });
 });

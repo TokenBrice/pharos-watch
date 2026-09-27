@@ -239,7 +239,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "stablecoins",
     summary: "List stablecoins",
-    description: "Current stablecoin list with supply, price, peg, chain distribution, and freshness headers.",
+    description: "Current stablecoin list with supply, price, peg, chain distribution, and freshness headers. `_meta` publishes the generation, assessment time and effective fresh/degraded budgets; cache TTL and SWR are bounded by the remaining fresh runway.",
     tags: ["Stablecoins"],
     responseSchema: "StablecoinListResponse",
     postman: {
@@ -479,7 +479,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "stress-signals",
     summary: "Stress signals",
-    description: "DEWS-style stress signals for the stablecoin universe or one selected asset.",
+    description: "DEWS-style stress signals for the stablecoin universe or one selected asset. Each current row publishes assessedAt, freshBudgetSec, degradedBudgetSec and newestReturnedComputedAt alongside its generation and ageClassification. Aggregate retainedLastValid compares against the newest returned generation; single-asset rows publish a null comparison basis.",
     tags: ["Risk", "Peg Monitoring"],
     responseSchema: "StressSignalsResponse",
     parameters: [STABLECOIN_QUERY_PARAM, DAYS_PARAM],
@@ -729,7 +729,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "chains",
     summary: "Chains",
-    description: "Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for full per-chain coin detail rows.",
+    description: "Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for full per-chain coin detail rows. `_meta` discloses assessment time and the route's 1800/3600-second freshness bands; an unavailable or degraded Safety Score dependency can also downgrade the verdict. Cache lifetime is bounded by remaining fresh runway.",
     tags: ["Chains"],
     responseSchema: "ChainsResponse",
     parameters: [CHAIN_QUERY_PARAM],

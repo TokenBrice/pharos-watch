@@ -523,13 +523,17 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     s.depeg.status === "active"
       ? `Depeg: ACTIVE — ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%, started ${formatElapsed(s.depeg.startedAt, nowSec)}`
       : "Depeg: stable";
+  // Optional context keeps its producer clock: values outside their existing budget are labelled
+  // stale, and unavailable supply is stated explicitly rather than rendered as $0 or dropped.
+  const staleSuffix = (current: boolean) => (current ? "" : ", stale");
   const supply = formatTelegramCompactUsd(s.supplyUsd);
+  const supplyAge = s.supplyObservedAt != null ? formatAge(s.supplyObservedAt, nowSec) : "age unknown";
   const supplyLine = supply
-    ? `Supply: ${supply}${s.stablecoinsUpdatedAt ? ` (${formatAge(s.stablecoinsUpdatedAt, nowSec)})` : ""}`
-    : null;
+    ? `Supply: ${supply} (${supplyAge}${staleSuffix(s.supplyCurrent)})`
+    : "Supply: unavailable";
   const liquidityTvl = formatTelegramCompactUsd(s.liquidity?.totalTvlUsd);
   const liquidityLine = s.liquidity
-    ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)})`
+    ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)}${staleSuffix(s.liquidity.current)})`
     : null;
   const yieldLine = s.yield
     ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(s.yield.source)}${

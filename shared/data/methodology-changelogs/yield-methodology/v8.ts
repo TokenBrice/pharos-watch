@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.46",
+    title: "Independent Yield Dependencies and Complete Weighted Components",
+    date: "2026-09-27",
+    effectiveAt: 1790542271,
+    summary:
+      "Configured product inputs, comparison hurdles, and USD normalization references now remain independent across publication and both API safety branches. Weighted pool decomposition uses the same complete TVL universe as total APY, after normalizing proven base-only rewards to zero.",
+    impact: [
+      "USDGO depends on EFFR for its product and hurdle, not on USD T-bills. Treasury-product rows still require their configured product evidence independently of EFFR. Non-USD rows also require USD normalization evidence; its expiry withholds PYS as benchmark-stale without falsely marking the product source stale",
+      "Each weighted pool first applies the existing A9 proven-zero rule when a missing reward accompanies base APY at least equal to total APY. Any still-unresolved aggregate component remains null; known total APY and the full TVL remain available",
+      "Reward share and its existing penalty consume the corrected aggregate, so rewards from a small constituent are not attributed to the entire TVL. Healthy benchmark arithmetic, source identity, scoring weights, and penalty calibration are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.45",
     title: "Yield Identity, Holder Returns, and Unavailable Evidence Fail Closed",
     date: "2026-09-27",

@@ -14,7 +14,7 @@ import {
   reserveInfoWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   slicesFromValues,
-  summarizeSourceTimestamps,
+  summarizeSourceTimestampsRequiringCoverage,
   verifiedFreshnessMetadata,
   unverifiedFreshnessMetadata,
 } from "./helpers";
@@ -171,7 +171,7 @@ export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
 }
 
 export function resolveSkyTimestampSummary(groups: SkyGroupResult[]) {
-  return summarizeSourceTimestamps(
+  return summarizeSourceTimestampsRequiringCoverage(
     groups.filter((group) => parseNumericString(group.debt) > 0).map((group) => group.datetime),
   );
 }
@@ -266,6 +266,7 @@ export async function fetchSkyMakercoreReserves(
   const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(groups);
 
   const timestampSummary = resolveSkyTimestampSummary(groups);
+  const hasCompleteTimestamps = timestampSummary != null && timestampSummary.untimestampedCount === 0;
 
   const totalDebt = groups.reduce((sum, g) => sum + parseNumericString(g.debt), 0);
   const unknownDebt = groups
@@ -285,6 +286,12 @@ export async function fetchSkyMakercoreReserves(
         `Sky module has malformed debt and cannot be classified: ${group.group}`,
       ),
     );
+  }
+  if (!hasCompleteTimestamps) {
+    warnings.push(reserveDegradedWarning(
+      "source-timestamp-coverage-incomplete",
+      "Sky positive-debt modules do not all expose parseable source timestamps",
+    ));
   }
   if (timestampSummary && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC) {
     warnings.push(
@@ -327,10 +334,12 @@ export async function fetchSkyMakercoreReserves(
       totalCollateralUsd: Math.round(totalCollateralUsd),
       totalReserveUsd: Math.round(totalCollateralUsd),
       totalLiabilitiesUsd: Math.round(totalDebt),
+      balanceSheetScope: "shared-sky-maker",
+      sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
       ...(totalDebt > 0 ? { collateralizationRatio: totalCollateralUsd / totalDebt } : {}),
       skyStablecoinsModuleCollateralUsd: immediateRedeemableUsd,
-      ...(timestampSummary != null ? { snapshotDate: timestampSummary.sourceTimestamp } : {}),
-      ...(timestampSummary
+      ...(hasCompleteTimestamps ? { snapshotDate: timestampSummary.sourceTimestamp } : {}),
+      ...(hasCompleteTimestamps
         ? {
             ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
             latestGroupTimestamp: timestampSummary.latestSourceTimestamp,
@@ -339,7 +348,7 @@ export async function fetchSkyMakercoreReserves(
           }
         : unverifiedFreshnessMetadata(
             "module-groups-api",
-            "Sky groups payload did not expose a trustworthy snapshot timestamp",
+            "Sky positive-debt modules do not all expose trustworthy snapshot timestamps",
           )),
       unknownExposurePct,
       details: {

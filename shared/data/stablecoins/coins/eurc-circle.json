@@ -124,7 +124,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "circle-transparency",
-    "version": 1,
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "circle-eurc-reserves",
     "display": {

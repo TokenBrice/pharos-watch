@@ -8,6 +8,10 @@ import {
   getBlacklistStatusBucketForStablecoin,
   resolveBlacklistStatusBucket,
 } from "@/lib/blacklist-status-buckets";
+import {
+  computeFreezableSummary,
+  describeFreezableSupplyCoverage,
+} from "@/components/freezewatch/freezable-supply-meter";
 
 const { TRACKED_STATUS_BY_ID } = vi.hoisted(() => ({
   TRACKED_STATUS_BY_ID: {
@@ -62,37 +66,72 @@ describe("blacklist status buckets", () => {
   it("sums every circulating denomination of reviewed active coins only", () => {
     const buckets = buildBlacklistStatusBuckets(SUPPLIED_COINS);
 
-    expect(buckets.map(({ key, count, marketCap }) => ({ key, count, marketCap }))).toEqual([
-      { key: "yes", count: 1, marketCap: 150 },
-      { key: "upstream", count: 1, marketCap: 40 },
-      { key: "possible", count: 0, marketCap: 0 },
-      { key: "no", count: 1, marketCap: 15 },
+    expect(buckets.map(({ key, count, marketCap, supplyUnavailableCount }) => ({ key, count, marketCap, supplyUnavailableCount }))).toEqual([
+      { key: "yes", count: 1, marketCap: 150, supplyUnavailableCount: 0 },
+      { key: "upstream", count: 1, marketCap: 40, supplyUnavailableCount: 0 },
+      { key: "possible", count: 0, marketCap: 0, supplyUnavailableCount: 0 },
+      { key: "no", count: 1, marketCap: 15, supplyUnavailableCount: 0 },
     ]);
+    expect(computeFreezableSummary(buckets)).toMatchObject({
+      coverage: "complete",
+      supplyUnavailableCount: 0,
+      freezableCount: 2,
+      freezableMarketCap: 190,
+      totalMarketCap: 205,
+    });
   });
 
-  it("counts reviewed active coins that have no runtime supply at zero market cap", () => {
+  it("keeps registry counts but excludes reviewed coins without runtime supply from every total", () => {
     const buckets = buildBlacklistStatusBuckets([
       makeStablecoin({ id: "usdp-parallel", circulating: { peggedUSD: 40 } }),
+      // Empty and wholly invalid buckets are unavailable, not a confirmed zero.
+      makeStablecoin({ id: "lusd-liquity", circulating: {} }),
     ]);
 
-    expect(buckets.map(({ key, count, marketCap }) => ({ key, count, marketCap }))).toEqual([
-      { key: "yes", count: 1, marketCap: 0 },
-      { key: "upstream", count: 1, marketCap: 40 },
-      { key: "possible", count: 0, marketCap: 0 },
-      { key: "no", count: 1, marketCap: 0 },
+    expect(buckets.map(({ key, count, marketCap, supplyUnavailableCount }) => ({ key, count, marketCap, supplyUnavailableCount }))).toEqual([
+      { key: "yes", count: 1, marketCap: 0, supplyUnavailableCount: 1 },
+      { key: "upstream", count: 1, marketCap: 40, supplyUnavailableCount: 0 },
+      { key: "possible", count: 0, marketCap: 0, supplyUnavailableCount: 0 },
+      { key: "no", count: 1, marketCap: 0, supplyUnavailableCount: 1 },
     ]);
+    // Only one small asset is observed: the share is explicitly partial, not a full-market 100%.
+    expect(computeFreezableSummary(buckets)).toMatchObject({
+      coverage: "partial",
+      supplyUnavailableCount: 2,
+      freezableCount: 2,
+      freezableShare: 100,
+    });
+    expect(describeFreezableSupplyCoverage(computeFreezableSummary(buckets))).toBe(
+      "Observed supply only · 2 assets without supply data excluded",
+    );
   });
 
-  it("keeps registry-derived counts while zeroing market cap for empty and missing input", () => {
+  it("keeps an explicit observed zero distinct from missing supply", () => {
+    const buckets = buildBlacklistStatusBuckets([
+      makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 100 } }),
+      makeStablecoin({ id: "usdp-parallel", circulating: { peggedUSD: 0 } }),
+      makeStablecoin({ id: "lusd-liquity", circulating: { peggedUSD: 0 } }),
+    ]);
+
+    expect(buckets.every((bucket) => bucket.supplyUnavailableCount === 0)).toBe(true);
+    expect(computeFreezableSummary(buckets)).toMatchObject({ coverage: "complete", freezableShare: 100 });
+  });
+
+  it("publishes no supply share for a schema-valid empty or missing list while keeping registry counts", () => {
     for (const buckets of [buildBlacklistStatusBuckets([]), buildBlacklistStatusBuckets(undefined)]) {
       expect(buckets.map((bucket) => bucket.key)).toEqual(BLACKLIST_STATUS_BUCKET_ORDER);
       // Counts come from the reviewed registry, not the runtime supply snapshot.
-      expect(buckets.map((bucket) => [bucket.count, bucket.marketCap])).toEqual([
-        [1, 0],
-        [1, 0],
+      expect(buckets.map((bucket) => [bucket.count, bucket.supplyUnavailableCount])).toEqual([
+        [1, 1],
+        [1, 1],
         [0, 0],
-        [1, 0],
+        [1, 1],
       ]);
+      expect(computeFreezableSummary(buckets)).toMatchObject({
+        coverage: "unavailable",
+        freezableCount: 2,
+        freezableShare: null,
+      });
     }
   });
 

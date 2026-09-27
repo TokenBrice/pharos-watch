@@ -141,6 +141,8 @@ On `lg+` the hero starts with a desktop-only identity/action strip above the met
 
 Hero tertiary metric chips below the identity block are mobile-only live signals: on `<lg` a 2x2 grid of `DEWS`, `Peg`, `Liq`, `30d Excess` with optional `1Y vs USD` beneath. On `lg+`, the compact metric grid owns the 30d benchmark gap and the summary rail owns Safety / Peg / Liquidity / DEWS. Freeze and chain facts live in the hero passport strip below.
 
+Both identity layouts show only the external Bluechip grade/report link while the Pharos Bluechip roster is suspended; neither grants a Pharos designation or derives tenure from the external report date. Liquidity metrics require a non-null `liquidityScore` regardless of pool count: an unavailable score is a neutral dash with no score accent, while measured pool counts remain context. Numeric zero remains a measured zero with its score styling.
+
 NAV tokens are displayed as NAV in the hero Peg rail and do not consume their own peg-score, active-depeg, deviation, or depeg-event fields for verdict labeling. The `Distressed` verdict is reserved for *measured* distress — an active depeg or a DEWS `WARNING`/`DANGER` band — for every asset, NAV or not. A weak Safety Score alone resolves to `Low Safety Score` (`watch` tone), which names the measurement rather than asserting that the asset is failing; that rule keeps its place ahead of the archetype-driven yield-hybrid and benchmark rules, so a badly rated coin is still surfaced — the one branch still resolving first is the NAV + yield-bearing hybrid. `RISKY_GRADES` on the published ladder is exactly `{D, F}` — the ladder has no `D+`/`D-`. Pure NAV rows also omit the Record passport item and `DepegHistory`.
 
 ### Hero passport strip
@@ -235,6 +237,8 @@ On the worker side, `GET /api/stablecoin/:id` now uses a small strategy layer:
 Detail API stale-while-refresh is bounded: rows older than the 5-minute D1 TTL but younger than 24 hours are served with `Warning: 110`, `X-Data-Age`, and `Cache-Control: no-store` while a single-flight refresh runs in the background. Rows older than 24 hours are not served as stale fallback; the Worker refreshes synchronously and returns the normal upstream/supply-history fallback result.
 
 For USD-pegged DefiLlama detail histories, the normalizer preserves upstream `totalCirculatingUSD` buckets, including explicit zero. When those buckets are absent, it converts native `totalCirculating` (or `circulating`) using a finite positive detail price. This supplies the USD totals consumed by the detail hero and build snapshots; missing or invalid prices leave them unavailable. This is a detail-history fallback using the current detail price, not historical daily prices, and does not change the canonical `/api/stablecoins` list supply, which is already USD-denominated.
+
+For USD-to-native history conversion (D1 supply history, cached checkpoints, CoinGecko market caps, and commodity TVL), an absent `totalCirculating[pegType]` bucket means native supply is unavailable because there is no finite positive conversion price or the division cannot produce a usable finite quantity. It never means measured zero. The authoritative `totalCirculatingUSD` buckets and history dates remain intact; commodity TVL is retained even when its price series is empty. Nearest-price lookup returns unavailable for an unusable nearest observation rather than manufacturing a zero quote. A genuine zero USD observation can still convert to zero native units when a usable price exists.
 
 ### Build snapshot hydration
 

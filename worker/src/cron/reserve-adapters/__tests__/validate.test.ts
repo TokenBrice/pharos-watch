@@ -6,6 +6,26 @@ import { validateAdapterOutput } from "../validate";
 const slices = [{ name: "USDC", pct: 100, risk: "low" as const }];
 
 describe("validateAdapterOutput redemption telemetry", () => {
+  it.each([
+    [3600, 3600, true],
+    [3601, 3600, false],
+    [172800, undefined, true],
+    [172801, undefined, false],
+  ] as const)("bounds nested evidence age %ss using the existing %s budget", (age, maxSourceAgeSec, valid) => {
+    const now = 1_790_467_200;
+    const result = validateAdapterOutput({
+      slices,
+      metadata: {
+        freshnessMode: "verified", sourceTimestamp: now,
+        redemption: { sourceTimestamp: now - age, freshnessKind: "verified-source-timestamp" },
+      },
+    }, { now, maxSourceAgeSec });
+    expect(result.valid).toBe(valid);
+    if (!valid) expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "stale-redemption-source-timestamp", effect: "fatal",
+    }));
+  });
+
   it("retains raw upstream percentage drift after slices have been normalized", () => {
     const validateRawDeviation = (rawSumDeviation: number) => validateAdapterOutput({
       slices,

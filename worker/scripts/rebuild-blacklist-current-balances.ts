@@ -415,7 +415,7 @@ async function main(argv = process.argv.slice(2)) {
   }));
 
   const active = buildBlacklistActiveRecords(events).filter(
-    (record) => record.chainId === options.chainId && record.destroyedAt == null,
+    (record) => record.chainId === options.chainId && record.destroyedAt == null && !record.orderAmbiguityReason,
   );
 
   console.log(

@@ -12,6 +12,16 @@
 // and other hot paths can use it (see `mint-burn-canonical-chain.ts`).
 
 import { isRecord } from "@shared/lib/type-guards";
+import {
+  resolveMintBurnValuation,
+  resolveMintBurnValuationCompleteness,
+} from "@shared/lib/mint-burn-valuation";
+import {
+  MintBurnValuationCompletenessSchema,
+  MintBurnValuationSchema,
+  type MintBurnValuation,
+  type MintBurnValuationCompleteness,
+} from "@shared/types/mint-burn";
 import { getCache } from "./db-cache";
 import { aggregateFlowCacheKey } from "./mint-burn-flow-cache-keys";
 import { tryParseJson } from "./json-parse";
@@ -41,17 +51,29 @@ export interface PublishedGaugeCoin {
   symbol: string;
   /** Baseline-relative pressure shift; `null` = NR (excluded from the gauge). */
   intensity: number | null;
-  net24hUsd: number;
+  /** Known-valuation 24h net; `null` when the publication gated it. */
+  net24hUsd: number | null;
+  /** 24h window valuation; `unknown` on publications that predate completeness. */
+  valuation24h: MintBurnValuation;
+  /** Pressure baseline valuation; `unknown` on publications that predate completeness. */
+  baselineValuation: MintBurnValuationCompleteness;
 }
 
 export interface PublishedGaugeChain {
   chainId: string;
-  net24hUsd: number;
+  /** Known-valuation 24h net; `null` when the publication gated it. */
+  net24hUsd: number | null;
+  valuation: MintBurnValuationCompleteness;
 }
 
 export interface PublishedMintBurnGauge {
   /** Mcap-weighted composite, or `null` when no tracked coin had valid data. */
   score: number | null;
+  /**
+   * Weighted coins whose pressure input in `score` has partial valuation;
+   * `null` on publications that predate valuation completeness (unknown).
+   */
+  partialValuationInputs: number | null;
   coins: PublishedGaugeCoin[];
   /** Per-chain 24 h net flow, sorted by absolute net flow (descending). */
   chains: PublishedGaugeChain[];
@@ -68,6 +90,13 @@ function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/** Required nullable net: `null` is a gated value; absent or non-finite is a contract break. */
+function parseNullableNet(value: unknown): { ok: true; value: number | null } | { ok: false } {
+  if (value === null) return { ok: true, value: null };
+  const net = finiteNumber(value);
+  return net === null ? { ok: false } : { ok: true, value: net };
+}
+
 function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
   if (!Array.isArray(value)) return null;
   const coins: PublishedGaugeCoin[] = [];
@@ -75,14 +104,32 @@ function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
     if (!isRecord(entry)) return null;
     const { stablecoinId, symbol } = entry;
     if (typeof stablecoinId !== "string" || typeof symbol !== "string") return null;
-    const net24hUsd = finiteNumber(entry.netFlow24hUsd);
-    if (net24hUsd === null) return null;
+    const net24hUsd = parseNullableNet(entry.netFlow24hUsd);
+    if (!net24hUsd.ok) return null;
     const intensity = entry.pressureShiftScore === null || entry.pressureShiftScore === undefined
       ? null
       : finiteNumber(entry.pressureShiftScore);
     // A present-but-unparseable intensity is a contract break, not an NR.
     if (entry.pressureShiftScore !== null && entry.pressureShiftScore !== undefined && intensity === null) return null;
-    coins.push({ id: stablecoinId, symbol, intensity, net24hUsd });
+    // Absent valuation predates completeness (unknown); a present but malformed one is a contract break.
+    let valuation24h: MintBurnValuation | undefined;
+    let baselineValuation: MintBurnValuationCompleteness | undefined;
+    if (entry.valuation !== undefined) {
+      if (!isRecord(entry.valuation)) return null;
+      const window24h = MintBurnValuationSchema.safeParse(entry.valuation.window24h);
+      const baseline = MintBurnValuationCompletenessSchema.safeParse(entry.valuation.baseline);
+      if (!window24h.success || !baseline.success) return null;
+      valuation24h = window24h.data;
+      baselineValuation = baseline.data;
+    }
+    coins.push({
+      id: stablecoinId,
+      symbol,
+      intensity,
+      net24hUsd: net24hUsd.value,
+      valuation24h: resolveMintBurnValuation(valuation24h),
+      baselineValuation: resolveMintBurnValuationCompleteness(baselineValuation),
+    });
   }
   return coins;
 }
@@ -95,9 +142,17 @@ function parseChains(value: unknown): PublishedGaugeChain[] | null {
   const chains: PublishedGaugeChain[] = [];
   for (const entry of value) {
     if (!isRecord(entry) || typeof entry.chainId !== "string") return null;
-    const net24hUsd = finiteNumber(entry.netFlow24hUsd);
-    if (net24hUsd === null) return null;
-    chains.push({ chainId: entry.chainId, net24hUsd });
+    const net24hUsd = parseNullableNet(entry.netFlow24hUsd);
+    if (!net24hUsd.ok) return null;
+    const valuation = entry.valuation === undefined
+      ? undefined
+      : MintBurnValuationCompletenessSchema.safeParse(entry.valuation);
+    if (valuation && !valuation.success) return null;
+    chains.push({
+      chainId: entry.chainId,
+      net24hUsd: net24hUsd.value,
+      valuation: resolveMintBurnValuationCompleteness(valuation?.data),
+    });
   }
   return chains;
 }
@@ -115,11 +170,14 @@ export function parsePublishedMintBurnGauge(
   const rawScore = payload.gauge.score;
   const score = rawScore === null || rawScore === undefined ? null : finiteNumber(rawScore);
   if (rawScore !== null && rawScore !== undefined && score === null) return null;
+  const rawPartialInputs = payload.gauge.partialValuationInputs;
+  const partialValuationInputs = rawPartialInputs === undefined ? null : finiteNumber(rawPartialInputs);
+  if (rawPartialInputs !== undefined && (partialValuationInputs === null || partialValuationInputs < 0)) return null;
   const coins = parseCoins(payload.coins);
   if (!coins) return null;
   const chains = parseChains(payload.chains);
   if (!chains) return null;
-  return { score, coins, chains, publishedAt, stale };
+  return { score, partialValuationInputs, coins, chains, publishedAt, stale };
 }
 
 /** Read the single published gauge. Fails closed rather than recomputing. */

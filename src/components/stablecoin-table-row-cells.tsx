@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell } from "@/components/table";
@@ -173,7 +174,7 @@ function MarketCells({ row, model }: RowCellsProps) {
     <>
       {row.isVisible("price") ? (
         <TableCell className="text-right pharos-numeric">
-          <span className={confidenceClass(row.coin.priceConfidence)}>{model.priceCell}</span>
+          <span className={confidenceClass(isObservedPrice(row.coin) ? row.coin.priceConfidence : null)}>{model.priceCell}</span>
         </TableCell>
       ) : null}
       {row.isVisible("peg") ? (

@@ -19,6 +19,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import {
   FreezableSupplyMeter,
   computeFreezableSummary,
+  describeFreezableSupplyCoverage,
   formatShare,
 } from "@/components/freezewatch/freezable-supply-meter";
 import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
@@ -128,8 +129,10 @@ export default function FreezeWatchClient() {
   });
   const heroUnavailable = heroState === "unavailable";
   const heroLoading = summaryLoading || supportDataLoading;
-  const { freezableMarketCap, freezableCount, freezableShare } =
-    computeFreezableSummary(blacklistStatusBuckets);
+  const freezableSummary = computeFreezableSummary(blacklistStatusBuckets);
+  const { freezableMarketCap, freezableCount, freezableShare } = freezableSummary;
+  const supplyAvailable = freezableSummary.coverage !== "unavailable";
+  const freezableCoverageNote = describeFreezableSupplyCoverage(freezableSummary);
 
   return (
     <FeaturePageShell
@@ -176,17 +179,27 @@ export default function FreezeWatchClient() {
               <Skeleton className="h-10 w-32" />
             ) : (
               <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
-                {heroUnavailable ? "—" : formatShare(freezableShare)}
+                {heroUnavailable || freezableShare === null || freezableSummary.coverage === "unavailable"
+                  ? "—"
+                  : freezableSummary.coverage === "partial"
+                    ? "Partial"
+                    : formatShare(freezableShare)}
               </p>
             )}
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
               of tracked stablecoin market cap sits under direct, upstream, or possible issuer freeze control.
+              {freezableCoverageNote && !heroUnavailable ? (
+                <span className="block font-mono text-[10px] uppercase tracking-wider">
+                  {freezableShare !== null ? `${formatShare(freezableShare)} of observed supply · ` : ""}
+                  {freezableCoverageNote}
+                </span>
+              ) : null}
             </p>
           </div>
           <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
             <HeroStat
               label="Freezable value"
-              value={heroUnavailable ? "—" : formatCurrency(freezableMarketCap, 0)}
+              value={heroUnavailable || !supplyAvailable ? "—" : formatCurrency(freezableMarketCap, 0)}
               loading={heroLoading && !heroUnavailable}
             />
             <HeroStat

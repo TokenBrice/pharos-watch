@@ -1,4 +1,5 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import {
   hasUsableStablecoinsPayload,
   loadStablecoinsCache,
@@ -32,19 +33,19 @@ function normalizeSourceCount(sources: unknown): number {
   for (const source of sources) {
     if (typeof source !== "string") continue;
     const normalized = source.trim();
-    if (normalized.length > 0) count++;
+    if (normalized.length > 0 && isObservedPrice({ priceSource: normalized })) count++;
   }
   return count;
 }
 
 export function buildSourceDepthDistribution(
-  assets: Array<{ id: string; consensusSources?: unknown }>,
+  assets: Array<{ id: string; consensusSources?: unknown; priceSource?: string | null; priceObservedAtMode?: string | null }>,
 ): PriceSourceDepthDistribution {
   const distribution = createEmptySourceDepthDistribution();
 
   for (const asset of assets) {
     if (!ACTIVE_IDS.has(asset.id)) continue;
-    distribution[bucketSourceDepth(normalizeSourceCount(asset.consensusSources))] += 1;
+    distribution[bucketSourceDepth(isObservedPrice(asset) ? normalizeSourceCount(asset.consensusSources) : 0)] += 1;
   }
 
   return distribution;

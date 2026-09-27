@@ -109,7 +109,13 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const future = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", Date.parse("2026-07-24T00:00:00Z") / 1_000);
     const injected = structuredClone(baseline);
     injected.assets[0]!.operationalResilience = future;
-    expect(() => compileSafetyScoreV9FactSetFromFixedInput(fixed, injected)).toThrow(/outside its exact review window/);
+    const quarantined = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, materializeSafetyScoreV9FactSetExtension(fixed, injected));
+    expect(quarantined.quarantines).toEqual([{
+      assetId: "usdt-tether",
+      code: "fact-validation-failed",
+      message: "operationalResilience: Operational-resilience overlay is outside its exact review window",
+    }]);
+    expect(quarantined.factSet.assets[0]!.operationalResilience).toBeNull();
   });
 
   it.each([
@@ -375,7 +381,12 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(() => compileSafetyScoreV9FactSetFromFixedInput({ cards: [], overallScore: 99 }, extension())).toThrow(/Malformed fixed report-card input/);
     expect(() => compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), { ...extension(), overallScore: 99 })).toThrow(/Unrecognized key/);
     const shaped = extension();
-    expect(() => compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), { ...shaped, assets: [{ ...shaped.assets[0]!, dimensions: {}, baseScore: 99 }] })).toThrow(/Unrecognized key/);
+    const scoreShaped = materializeSafetyScoreV9FactSetExtension(exactFixedInput(), { ...shaped, assets: [{ ...shaped.assets[0]!, dimensions: {}, baseScore: 99 }] });
+    expect(compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(exactFixedInput(), scoreShaped).quarantines).toEqual([{
+      assetId: "alpha",
+      code: "fact-validation-failed",
+      message: expect.stringMatching(/^asset: .*Unrecognized key/),
+    }]);
     const wrong = extension();
     wrong.assets[0]!.assetId = "beta";
     expect(() => compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), wrong)).toThrow(/active set mismatch/);

@@ -270,7 +270,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "NEAR RPC reads 2026-07-20 confirm this NEP-141 (name TrueUSD, ~510k supply) is a Rainbow Bridge factory-minted subaccount of factory.bridge.near, which is the sole mint/burn authority on NEAR against proofs of lock in the Ethereum-side locker.",
+        "reviewNote": "NEAR RPC reads 2026-07-20 confirm this NEP-141 (name TrueUSD) is a Rainbow Bridge factory-minted subaccount of factory.bridge.near, which is the sole mint/burn authority on NEAR against proofs of lock in the Ethereum-side locker. A 2026-09-27 ft_total_supply read at block 217536167 returned 509.67 TUSD (ft_metadata decimals 18), not the ~510k previously recorded. The representation sits outside Moore's issued-token perimeter (Ethereum, Tron, BNB Chain, Avalanche) and is excluded from the reviewed TUSD liability scope.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "near",
         "controllerAddress": "factory.bridge.near",

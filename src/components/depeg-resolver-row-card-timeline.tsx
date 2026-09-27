@@ -19,7 +19,9 @@ import {
 } from "@/components/depeg-resolver-row-card-model";
 
 function PastDeviationSpark({ row }: { row: DdrV2ResponseRow }) {
-  const peak = Math.abs(getPeakDeviationBps(row));
+  const peakDeviationBps = getPeakDeviationBps(row);
+  if (peakDeviationBps == null) return null;
+  const peak = Math.abs(peakDeviationBps);
   const currentDeviationBps = getCurrentDeviationBps(row);
   const now = currentDeviationBps != null ? Math.abs(currentDeviationBps) : peak;
   const max = Math.max(peak, now, 1);
@@ -165,13 +167,13 @@ export function ForecastTimeline({ row }: { row: DdrV2ResponseRow }) {
   const ageSec = lockAnchored ? (lockMetadata.predictedAgeSec ?? getAgeSec(row)) : getAgeSec(row);
   const peakDeviationBps = getPeakDeviationBps(row);
   const currentDeviationBps = getCurrentDeviationBps(row);
+  const ageLabel = ageSec == null ? "unavailable" : formatElapsedSeconds(ageSec);
+  const peakLabel = peakDeviationBps == null ? "unavailable" : formatBps(peakDeviationBps);
   const ariaLabel = lockAnchored
-    ? `Forecast timeline frozen at public lock: depeg age at lock ${formatElapsedSeconds(ageSec)}, peak ${formatBps(
-        peakDeviationBps,
-      )}${currentDeviationBps != null ? `, lock deviation ${formatBps(currentDeviationBps)}` : ""}; verdict ${
+    ? `Forecast timeline frozen at public lock: depeg age at lock ${ageLabel}, peak ${peakLabel}${currentDeviationBps != null ? `, lock deviation ${formatBps(currentDeviationBps)}` : ""}; verdict ${
         TIER_META[tier].label
       }${hasBand && duration.medianSec != null ? `; expected to resolve in about ${formatDurationSec(duration.medianSec)} after lock` : `; ${forwardLabel}`}.`
-    : `Forecast timeline: depeg open ${formatElapsedSeconds(ageSec)}, peak ${formatBps(peakDeviationBps)}${
+    : `Forecast timeline: observed depeg age ${ageLabel}, peak ${peakLabel}${
         currentDeviationBps != null ? `, now ${formatBps(currentDeviationBps)}` : ""
       }; verdict ${TIER_META[tier].label}${
         hasBand && duration.medianSec != null
@@ -188,7 +190,7 @@ export function ForecastTimeline({ row }: { row: DdrV2ResponseRow }) {
       <div className="pharos-kicker grid grid-cols-[1.05fr_auto_1.85fr] items-center gap-2">
         <span className="truncate">
           {lockAnchored ? "At lock" : "So far"}{" "}
-          <span className="font-mono normal-case text-muted-foreground/90">· {formatElapsedSeconds(ageSec)}</span>
+          <span className="font-mono normal-case text-muted-foreground/90">· {ageSec == null ? "—" : ageLabel}</span>
         </span>
         <span className="px-1 text-foreground/70">{lockAnchored ? "Lock" : "Now"}</span>
         <span className="text-right">

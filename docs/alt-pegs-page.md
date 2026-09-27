@@ -67,6 +67,9 @@ Important contract:
 - `src/lib/alt-peg-market.ts` must join live rows against tracked frontend metadata before filtering to non-USD cohorts.
 - The route must not add a worker/API endpoint unless the current frontend joins stop being sufficient.
 - The current non-commodity historical bucket exposed by `useNonUsdShare()` is not pure fiat-only history; it includes currency-linked plus other non-commodity non-USD pegs. Route copy should stay honest about that unless the data contract changes.
+- Non-USD history points require numeric commodity and non-commodity amounts and shares. The Worker validates that wire contract before publishing; invalid cohorts fail unavailable, not zero. A genuinely measured zero remains zero; absent or empty history produces no trend or share headline.
+- `useNonUsdShare()` retains server freshness metadata. The existing page-level `StaleDataBanner` uses the producer clock for “Non-USD Share,” so a stalled snapshot remains stale even after a successful HTTP refresh; initial failures and failed refetches still use that same notice.
+- The share headline and accessible chart label name the latest included sample's as-of date, separately from coverage start and request receipt. Retained history never claims to be a “Current share.”
 
 The shared table's peg-deviation text and severity both read the published `peg-summary.currentDeviationBps`; the raw price remains an independently refreshed price display rather than a second deviation authority.
 

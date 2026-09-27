@@ -462,6 +462,7 @@ describe("computeDEWS", () => {
         topPools: [{ tvlUsd: 5e6, balanceRatio: 0.3 }],
         prevPoolValue: 10,
         prevPoolAvailable: true,
+        prevPoolComponentCoverage: 1,
       }),
     );
     // With smoothing toward a lower previous value, the pool signal should be less

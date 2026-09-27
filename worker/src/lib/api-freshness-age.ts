@@ -27,3 +27,21 @@ export function measureFreshnessAge(
     futureSkewSeconds: Math.max(0, -rawAgeSeconds),
   };
 }
+
+export type FreshnessTimestampReason = "missing-timestamp" | "invalid-timestamp" | "future-timestamp";
+
+/** Timestamp admission is separate from each consumer's age/retention budget. */
+export function assessFreshnessTimestamp(
+  nowSec: number,
+  updatedAtSec: number | null | undefined,
+  allowedFutureSkewSec = API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
+): { ageSeconds: number; reason: null } | { ageSeconds: null; reason: FreshnessTimestampReason } {
+  if (updatedAtSec == null) return { ageSeconds: null, reason: "missing-timestamp" };
+  if (!Number.isFinite(nowSec) || !Number.isFinite(updatedAtSec)) {
+    return { ageSeconds: null, reason: "invalid-timestamp" };
+  }
+  const age = measureFreshnessAge(nowSec, updatedAtSec, allowedFutureSkewSec);
+  return age.futureSkewSeconds > allowedFutureSkewSec
+    ? { ageSeconds: null, reason: "future-timestamp" }
+    : { ageSeconds: age.ageSeconds, reason: null };
+}

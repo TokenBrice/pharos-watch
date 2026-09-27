@@ -3,6 +3,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NonUsdShareChart } from "@/components/non-usd-share-chart";
+import { formatChartDate } from "@shared/lib/format";
 
 const { useNonUsdShareMock, handleAnimationEndMock } = vi.hoisted(() => ({
   useNonUsdShareMock: vi.fn(),
@@ -67,6 +68,27 @@ describe("NonUsdShareChart", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /open large share chart/i }));
     expect(onOpenFocus).toHaveBeenCalledWith("1y");
+  });
+
+  it("identifies retained history by the latest sample date, not the request date", () => {
+    const saved = useNonUsdShareMock();
+    useNonUsdShareMock.mockReturnValue({
+      ...saved,
+      error: new Error("Refresh failed"),
+      dataUpdatedAt: Date.now(),
+    });
+    render(<NonUsdShareChart />);
+    const latestDate = formatChartDate(saved.data[1].date * 1000, "long");
+    expect(screen.getByText(`As of ${latestDate}:`, { exact: false }).textContent).toContain("2.20%");
+    expect(screen.queryByText(/current share/i)).toBeNull();
+  });
+
+  it("does not invent a zero share for unavailable history", () => {
+    useNonUsdShareMock.mockReturnValue({ data: undefined, isLoading: false });
+    render(<NonUsdShareChart />);
+    expect(screen.getByText("No market share data available")).toBeTruthy();
+    expect(screen.queryByText(/0\\.00%/)).toBeNull();
+    expect(screen.queryByText(/As of/)).toBeNull();
   });
 
   it("supports focused mode and reports range changes", () => {

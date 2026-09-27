@@ -32,7 +32,7 @@ Current `v1.5` composite:
 + 0.10 * backingDiversity
 ```
 
-The score is `null` when `quality` is `null`; otherwise the weighted total is rounded to the nearest integer.
+The score is `null` when `quality` is `null` or when `pegStability` is `null`; otherwise the weighted total is rounded to the nearest integer.
 
 ## Factors
 
@@ -41,16 +41,33 @@ The score is `null` when `quality` is `null`; otherwise the weighted total is ro
 | `quality`          |    30% | report-card cache                                                        | Supply-weighted Safety Score average over rated supply only. Not-rated supply is excluded from both the numerator and the denominator; the factor returns `null` when rated supply is below 50% of chain supply.                                                        |
 | `chainEnvironment` |    20% | L2BEAT snapshot first, then `shared/lib/chains/index.ts` resilience tier | Matched L2BEAT scaling projects use `40%` stage score plus `60%` average risk sentiment across Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure. Unmatched chains fall back to tier `1 -> 100`, tier `2 -> 60`, tier `3 -> 20`. |
 | `concentration`    |    20% | chain supply shares                                                      | `100 * (1 - HHI)`. A single dominant coin scores `0`; an even N-way split approaches `100 * (1 - 1/N)`.                                                                                                                                                                  |
-| `pegStability`     |    20% | cached prices + peg rates                                                | Supply-weighted peg proximity. Deviation comes from the shared `deriveDepegSignal(...)` primitive (`shared/lib/depeg-signals.ts`), the same derivation the depeg pipeline uses. Missing or unusable prices contribute neutral `50`; coins without a peg reference are excluded from the weighted factor.                                       |
+| `pegStability`     |    20% | cached prices + peg rates                                                | Supply-weighted peg proximity. Deviation comes from the shared `deriveDepegSignal(...)` primitive (`shared/lib/depeg-signals.ts`), the same derivation the depeg pipeline uses. In `v1.5` missing or unusable prices still contribute neutral `50` (and an empty weighted set scores `50`); coins without a peg reference are excluded from the weighted factor. `pegStabilityCoverage` discloses that evidence beside the number (see [Peg Coverage](#peg-coverage)).                                       |
 | `backingDiversity` |    10% | active stablecoin backing flags                                          | Normalized Shannon entropy across the two active backing cohorts: `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded.                                                                                                                         |
 
 ## Not-Rated Policy
 
-Chain Health has exactly one not-rated (NR) mechanism: the 50% rated-supply coverage gate on `quality`.
+Chain Health has one active not-rated (NR) mechanism today: the 50% rated-supply coverage gate on `quality`. A second, peg-coverage mechanism is approved (DEC-04) and its public contract is already published; its producer activation is pending (see [Peg Coverage](#peg-coverage)).
 
 Supply whose stablecoin has no published Safety Score is excluded from the `quality` average — it contributes to neither the numerator nor the denominator. Pharos does not impute a score for unrated supply, because any imputed number is a risk judgement that has not been made. Below 50% rated supply the factor is `null`, which nulls the whole composite (`healthScore` and `healthBand` are `null`) rather than publishing a number derived from a minority of the chain's supply.
 
 Consequence: on a chain with partial coverage, `quality` describes the rated portion of that chain's supply, and the coverage gate — not a synthetic score — is what withholds publication when coverage is too thin.
+
+## Peg Coverage
+
+Every chain row carries `pegStabilityCoverage`, computed by `assessPegStability(...)` in `shared/lib/chains/health.ts` against the chain's **full positive supply** (every coin on the chain, including coins with no peg reference, so missing-reference supply cannot inflate coverage):
+
+| Field                     | Meaning                                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `status`                  | `complete` (every coin observed), `partial` (some observed), `unavailable` (no observation at all)       |
+| `observedSupplyUsd`       | Supply with a usable price and a usable (finite, positive) peg reference                                 |
+| `eligibleSupplyUsd`       | Full positive chain supply (the coverage denominator)                                                    |
+| `coverage`                | `observedSupplyUsd / eligibleSupplyUsd`                                                                  |
+| `noUsablePriceSupplyUsd`  | Supply with a usable reference but no usable price                                                       |
+| `noPegReferenceSupplyUsd` | Supply without a usable peg reference                                                                    |
+| `neutralImputedSupplyUsd` | Supply the published `pegStability` scored as neutral `50` (the whole chain when nothing was observed)   |
+| `observedScore`           | Supply-weighted peg proximity over observed supply only; `null` when nothing was observed                |
+
+**Approved policy (DEC-04), Release B activation pending:** zero observed peg coverage makes `healthFactors.pegStability` `null` (NR) and therefore the composite NR; partial coverage publishes `observedScore` as the factor together with the full-universe coverage above but keeps the composite NR until an owner selects a partial-coverage threshold (none is invented here, and quality's 50% is not reused); complete coverage keeps the existing formula. Release A widened the public contract — `healthFactors.pegStability` is nullable, `computeHealthScore(...)` returns `null` for a `null` peg factor, and the chains UI, API schema, Telegram `/top chains`, OG card and Show-Your-Work table all render NR — while the producer still publishes the `v1.5` neutral-50 value. The activation is a Chain Health methodology bump.
 
 ## Bands
 
@@ -87,6 +104,6 @@ When Chain Health behavior changes, update these files together:
 3. `docs/chain-health.md`
 4. `shared/data/methodology-changelogs/chain-health/`
 5. `docs/chains-page.md`
-6. `docs/api-reference.md` (`GET /api/chains`)
+6. `docs/api-reference.md` (`GET /api/chains`; generated from `scripts/maintenance/generate-api-reference.ts`)
 7. `/methodology` Chain Health copy and changelog route when user-facing methodology text changes
 8. `src/app/chains/page.tsx` and `src/app/chains/[chain]/client.tsx` if any user-facing factor labels or weights change

@@ -1,3 +1,4 @@
+import { BlacklistDecodeError, quarantineBlacklistDecodeFailure } from "../../lib/blacklist/decode-quarantine";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { TronEventsResponseSchema } from "../../lib/external-api-schemas";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
@@ -90,34 +91,25 @@ export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult
   const eventDef = getBlacklistEventBySignature(config, evt.event_name);
   if (!eventDef) return null;
   const eventType = eventDef.eventType;
+  if (!/^[0-9a-f]{64}$/i.test(evt.transaction_id)
+    || !Number.isSafeInteger(evt.event_index) || evt.event_index < 0
+    || !Number.isSafeInteger(evt.block_number) || evt.block_number < 0
+    || !Number.isSafeInteger(evt.block_timestamp) || evt.block_timestamp < 0) {
+    throw new BlacklistDecodeError("invalid-log-identity");
+  }
 
-  // Fallback chain: tronResultKey override → _user (modern Tether) → _blackListedUser (legacy) → positional "0"
-  const affectedAddress =
-    (eventDef.tronResultKey && evt.result[eventDef.tronResultKey]) ||
-    evt.result._user ||
-    evt.result._blackListedUser ||
-    evt.result["0"] ||
-    "";
-  if (!affectedAddress) {
-    logWorkerEvent({
-      scope: "lib",
-      level: "warn",
-      event: "sync_blacklist.trongrid_event_missing_address",
-      job: "sync-blacklist",
-      provider: "trongrid",
-      message: "Dropped recognized Tron blacklist event without an affected address",
-      metadata: {
-        configKey: config.configKey,
-        eventName: evt.event_name,
-        transactionId: evt.transaction_id,
-        eventIndex: evt.event_index,
-      },
-    });
-    return null;
+  // A configured field is required; legacy Tether names may use positional "0".
+  const affectedAddress = eventDef.tronResultKey
+    ? (evt.result[eventDef.tronResultKey] ?? "")
+    : (evt.result._user || evt.result._blackListedUser || evt.result["0"] || "");
+  if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(affectedAddress)
+    && !/^(41|0x)[0-9a-f]{40}$/i.test(affectedAddress)) {
+    throw new BlacklistDecodeError("invalid-address");
   }
   const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
   const amount =
-    eventDef.hasAmount && rawAmountStr ? decimalNumberFromBigInt(BigInt(rawAmountStr), config.decimals) : null;
+    eventDef.hasAmount && rawAmountStr && /^[0-9]+$/.test(rawAmountStr)
+      ? decimalNumberFromBigInt(BigInt(rawAmountStr), config.decimals) : null;
   const timestamp = Math.floor(evt.block_timestamp / 1000);
 
   return buildBlacklistRow({
@@ -148,9 +140,12 @@ export async function fetchTronEventsIncremental(
   runBudget: BlacklistRunBudget,
   rateLimit: RateLimitedFetch,
   signal?: AbortSignal,
+  db?: D1Database,
 ): Promise<FetchTronEventsIncrementalResult> {
   const rows: BlacklistRow[] = [];
+  const rowTimestamps = new Map<string, number>();
   let maxBlock = lastTimestampMs;
+  let coverageCeiling: number | null = null;
   let incomplete = false;
   let apiError = false;
   let coveredTopicCount = 0;
@@ -238,10 +233,23 @@ export async function fetchTronEventsIncremental(
 
       for (const evt of json.data) {
         if (evt.block_timestamp > safeHead) continue;
-        const row = parseTronEvent(config, evt);
-        if (!row) continue;
-        if (evt.block_timestamp > maxBlock) maxBlock = evt.block_timestamp;
-        rows.push(row);
+        try {
+          const row = parseTronEvent(config, evt);
+          if (!row) continue;
+          if (evt.block_timestamp > maxBlock) maxBlock = evt.block_timestamp;
+          rows.push(row);
+          rowTimestamps.set(row.id, evt.block_timestamp);
+        } catch (error) {
+          if (!(error instanceof BlacklistDecodeError)) throw error;
+          const quarantined = db != null && await quarantineBlacklistDecodeFailure(
+            db, config.configKey, `${evt.block_number}:${evt.transaction_id}:${evt.event_index}`,
+            error.reason, evt, runBudget.deadlineMs,
+          );
+          if (!quarantined) {
+            const ceiling = Number.isSafeInteger(evt.block_timestamp) ? evt.block_timestamp - 1 : lastTimestampMs;
+            coverageCeiling = coverageCeiling == null ? ceiling : Math.min(coverageCeiling, ceiling);
+          }
+        }
       }
 
       const nextUrl = json.meta?.links?.next;
@@ -293,11 +301,11 @@ export async function fetchTronEventsIncremental(
   }
 
   return {
-    rows,
-    maxBlock,
-    scannedToTimestamp: coveredTopicCount === config.events.length ? safeHead : null,
+    rows: coverageCeiling == null ? rows : rows.filter((row) => rowTimestamps.get(row.id)! <= coverageCeiling),
+    maxBlock: coverageCeiling == null ? maxBlock : Math.min(maxBlock, coverageCeiling),
+    scannedToTimestamp: coveredTopicCount === config.events.length ? Math.min(safeHead, coverageCeiling ?? safeHead) : null,
     safeHead,
-    incomplete,
+    incomplete: incomplete || coverageCeiling != null,
     apiError,
     topicCount: config.events.length,
     coveredTopicCount,

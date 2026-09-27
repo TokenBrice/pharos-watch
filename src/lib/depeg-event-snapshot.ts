@@ -8,7 +8,7 @@ import {
 } from "@shared/types/market";
 
 export const DEPEG_EVENT_DATA_DIR = join(process.cwd(), "data/depeg-events");
-export const DEPEG_EVENT_INDEX_PATH = join(DEPEG_EVENT_DATA_DIR, "index.json");
+const DEPEG_EVENT_INDEX_PATH = join(DEPEG_EVENT_DATA_DIR, "index.json");
 
 const DepegEventIndexEntrySchema = z.object({
   slug: z.string().min(1),

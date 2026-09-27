@@ -4,11 +4,26 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ScoreImpactPanel } from "../score-impact-panel";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 
 
 describe("ScoreImpactPanel", () => {
+  it("keeps missing reserve evidence unknown rather than clean or zero", () => {
+    const { container } = render(
+      <ScoreImpactPanel
+        reserveComposition={makeReserveComposition({ status: "unavailable" })}
+        reserveDrift={[]}
+        classificationWarnings={[]}
+      />,
+    );
+    expect(screen.getByText("unavailable")).toBeTruthy();
+    expect(screen.queryByText("clean")).toBeNull();
+    expect(container.textContent).not.toContain("0.0%");
+    expect(screen.getAllByText("Unknown")).toHaveLength(4);
+  });
   it("renders conservative reserve input and affected drift rows", () => {
     const data = makeHealthyStatusResponse();
+    if (data.reserveComposition.status === "unavailable") throw new Error("Expected an observed reserve fixture");
     const reserveComposition = {
       ...data.reserveComposition,
       status: "degraded" as const,
@@ -52,6 +67,7 @@ describe("ScoreImpactPanel", () => {
 
   it("reports a clean reserve input for a healthy lane at live 73.7% score-grade coverage", () => {
     const data = makeHealthyStatusResponse();
+    if (data.reserveComposition.status === "unavailable") throw new Error("Expected an observed reserve fixture");
 
     render(
       <ScoreImpactPanel
