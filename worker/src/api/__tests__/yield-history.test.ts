@@ -1111,7 +1111,7 @@ describe("handleYieldHistory", () => {
     warnSpy.mockRestore();
   });
 
-  it.each(["{broken", "{}", "null", '[1]', null])("keeps history with unreadable warning evidence: %s", async (warnings) => {
+  it.each(["{bad", "{}", "null", '[1]'])("keeps history with unreadable warning evidence: %s", async (warnings) => {
     const db = mockD1([{ match: "yield_history", rows: [
       makeYieldHistoryRow({ warning_signals: warnings, apy: 4.25 }),
     ] }]);
@@ -1120,15 +1120,26 @@ describe("handleYieldHistory", () => {
     expect(body.history[0]).toMatchObject({ apy: 4.25, warningSignals: [], warningSignalsStatus: "unreadable" });
   });
 
-  it("serves valid empty warnings without an unreadable marker and names fresh authority", async () => {
+  it("preserves valid warning arrays in history without an unreadable marker", async () => {
+    const db = mockD1([{ match: "yield_history", rows: [
+      makeYieldHistoryRow({ warning_signals: '["yield-spike","tvl-outflow"]' }),
+    ] }]);
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
+    expect(body.history[0]?.warningSignals).toEqual(["yield-spike", "tvl-outflow"]);
+    expect(body.history[0]).not.toHaveProperty("warningSignalsStatus");
+  });
+
+  it.each([null, "", " \t\n", "[]"])("serves empty warnings without an unreadable marker and names fresh authority: %s", async (warnings) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "MAX(started_at) as started_at FROM cron_runs", rows: [], first: { started_at: nowSec } },
-      { match: "yield_history", rows: [makeYieldHistoryRow({ warning_signals: "[]" })] },
+      { match: "yield_history", rows: [makeYieldHistoryRow({ warning_signals: warnings })] },
     ]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
-    expect(body.history[0]?.warningSignalsStatus).toBeUndefined();
+    expect(body.history[0]?.warningSignals).toEqual([]);
+    expect(body.history[0]).not.toHaveProperty("warningSignalsStatus");
     expect(body._meta).toMatchObject({ status: "fresh", reason: null, updatedAt: nowSec });
     expect(res.headers.get("Cache-Control")).not.toBe("no-store");
   });
