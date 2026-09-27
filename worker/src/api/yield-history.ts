@@ -1,4 +1,3 @@
-import { projectYieldWireCompat } from "@shared/lib/yield-wire-compat";
 import { YieldTypeSchema } from "@shared/types/core";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { parseStablecoinHistoryQuery } from "../lib/api-history";
@@ -427,7 +426,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
     };
 
     return jsonFreshResponse(
-      projectYieldWireCompat({
+      {
         current,
         history,
         _meta: freshnessMeta,
@@ -441,7 +440,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
           changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
           asOf: latestHistoryTimestamp,
         }),
-      }),
+      },
       {
         cacheControl: freshnessMeta.status !== "fresh" ? "no-store" : CACHE_PROFILES.slow,
         headers: {
