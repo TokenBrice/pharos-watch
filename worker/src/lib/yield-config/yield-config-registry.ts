@@ -5,6 +5,17 @@ import type {
   YieldBenchmarkKey,
 } from "@shared/types/yield";
 import { buildOnChainSourceKey } from "../yield-utils";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { getBenchmarkKeyForPegCurrency } from "../../cron/yield-sync/benchmarks";
+
+export function isPriceDerivedYieldEligible(stablecoinId: string, intentionalGapReason?: string): boolean {
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const yieldType = meta?.yieldConfig?.yieldType;
+  const benchmarkKey = getBenchmarkKeyForPegCurrency(meta?.flags.pegCurrency);
+  return (yieldType === "nav-appreciation" || yieldType === "lending-vault")
+    && (benchmarkKey === null || benchmarkKey === "USD")
+    && !intentionalGapReason;
+}
 
 export type { YieldAdapterLifecycle, YieldAdapterLifecycleReason };
 
@@ -162,7 +173,8 @@ export function deriveYieldRegistry(args: {
       onChainRate: args.onChainRateConfigs.find((config) => config.stablecoinId === stablecoinId),
       directProtocolApiLabel: args.directProtocolApiStrategies[stablecoinId],
       directProtocolApiSourceKey: args.directProtocolApiSourceKeys[stablecoinId],
-      priceDerivedFallback: args.priceDerivedFallbackIds.has(stablecoinId) || undefined,
+      priceDerivedFallback: (args.priceDerivedFallbackIds.has(stablecoinId)
+        && isPriceDerivedYieldEligible(stablecoinId, args.intentionalGapReasons[stablecoinId])) || undefined,
       rateDerived: args.rateDerivedConfigs.find((config) => config.stablecoinId === stablecoinId),
       autoLendingPoolId: args.autoLendingPoolMap[stablecoinId],
       bypassesAutoLendingSafety: args.autoLendingSafetyBypassIds.has(stablecoinId) || undefined,
@@ -203,6 +215,8 @@ export function deriveYieldRegistry(args: {
     .map((stablecoinId) => {
       const entry = registryById.get(stablecoinId);
       const strategies: YieldStrategyDescriptor[] = [];
+      const priceDerivedEligible = (args.navTokenIds.has(stablecoinId) || !!entry?.priceDerivedFallback)
+        && isPriceDerivedYieldEligible(stablecoinId, entry?.intentionalGapReason);
 
       if (entry?.nativePoolId) {
         strategies.push({
@@ -253,10 +267,10 @@ export function deriveYieldRegistry(args: {
           priority: 50,
         });
       }
-      if (args.navTokenIds.has(stablecoinId) || entry?.priceDerivedFallback) {
+      if (priceDerivedEligible) {
         strategies.push({
           kind: "price-derived",
-          label: "Supply-history NAV appreciation fallback",
+          label: "USD price-appreciation fallback (NAV or vault receipt)",
           sourceKey: "price-derived",
           priority: 60,
         });
@@ -303,7 +317,7 @@ export function deriveYieldRegistry(args: {
         nativePoolId: entry?.nativePoolId,
         weightedPoolGroupSourceKey: entry?.weightedPoolGroupSourceKey,
         onChainRate: entry?.onChainRate,
-        priceDerivedFallback: (args.navTokenIds.has(stablecoinId) || entry?.priceDerivedFallback) || undefined,
+        priceDerivedFallback: priceDerivedEligible || undefined,
         rateDerived: entry?.rateDerived,
         autoLendingPoolId: entry?.autoLendingPoolId,
         bypassesAutoLendingSafety: entry?.bypassesAutoLendingSafety,

@@ -78,9 +78,10 @@ function cachedYieldRankings(updatedAt: number): YieldRankingsResponse {
 }
 
 describe("VERITAS-II finding: degraded yield rows retain nested safety numbers", () => {
-  it("removes every selected and alternate-source safety derivative when compact safety is unavailable", async () => {
+  it.each(["B+", null] as const)("removes every selected and alternate-source safety derivative when compact safety is unavailable (cached grade %s)", async (safetyGrade) => {
     const updatedAt = Math.floor(Date.now() / 1_000) - 30;
     const payload = cachedYieldRankings(updatedAt);
+    payload.rankings[0]!.safetyGrade = safetyGrade;
     const db = mockD1([
       {
         match: "cache",
@@ -114,7 +115,7 @@ describe("VERITAS-II finding: degraded yield rows retain nested safety numbers",
       safetyGrade: "NR",
       safetyReason: "safety-snapshot-unavailable",
       pharosYieldScore: null,
-      pysNullReason: "safety-unrated",
+      pysNullReason: "source-freshness-unknown",
       yieldToRisk: null,
     });
     expect(selectedRisk?.underlyingSafetyScore ?? null).toBeNull();
@@ -131,11 +132,8 @@ describe("VERITAS-II finding: degraded yield rows retain nested safety numbers",
     expect(alternateRisk?.opportunityRisk?.underlyingSafetyScore ?? null).toBeNull();
     expect(alternateRisk?.opportunityRisk?.opportunitySafetyScore ?? null).toBeNull();
     expect(alternateRisk?.opportunityRisk?.opportunitySafetyPenalty ?? null).toBeNull();
-    expect(row.rankChangeAttribution).toMatchObject({
-      previousPys: null,
-      pysDelta: null,
-      primaryDriver: null,
-      driverContributions: { stablecoinSafety: null, apy: 1 },
-    });
+    // No published rank means no comparable baseline, even if the old cache
+    // carried an attribution. Unknown source evidence still takes precedence.
+    expect(row.rankChangeAttribution).toBeUndefined();
   });
 });

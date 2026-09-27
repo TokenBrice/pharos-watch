@@ -85,7 +85,7 @@ export function YieldHistoryChart({
     : `${benchmarkLabel ?? "Benchmark"}${
         benchmarkRate > domainMax ? " ↑ off scale" : benchmarkRate < domainMin ? " ↓ off scale" : ""
       }`;
-  const medianReferenceLabel = `Peer Median${
+  const medianReferenceLabel = medianApy == null ? null : `Median${
     medianApy > domainMax ? " ↑ off scale" : medianApy < domainMin ? " ↓ off scale" : ""
   }`;
   const MAX_SPIKE_MARKERS = 3;
@@ -141,7 +141,7 @@ export function YieldHistoryChart({
     );
   }
 
-  if (model.chartData.length === 0) {
+  if (model.mergedChartData.length === 0) {
     return (
       <div className="space-y-3">
         {historyWarning ? (
@@ -192,6 +192,11 @@ export function YieldHistoryChart({
         onSourceChange={model.onSourceChange}
         hideSourceSelector={hideSourceSelector}
       />
+      {model.primarySourceKey === "best" ? (
+        <p className="text-xs text-muted-foreground">
+          Selected source over time. The headline 30d APY uses the current source&apos;s series only.
+        </p>
+      ) : null}
       <ChartShell compact={compact}>
         {showSourceStrip ? (
           <div className="mb-3">
@@ -258,7 +263,7 @@ export function YieldHistoryChart({
                   }
                 />
               ) : null}
-              {medianApy > 0 ? (
+              {medianApy != null ? (
                 <ReferenceLine
                   y={Math.min(Math.max(medianApy, domainMin), domainMax)}
                   stroke={CHART_BLUE}
@@ -289,7 +294,6 @@ export function YieldHistoryChart({
                   strokeWidth={1.5}
                   dot={false}
                   activeDot={false}
-                  connectNulls
                   isAnimationActive={false}
                 />
               ) : null}
@@ -303,7 +307,6 @@ export function YieldHistoryChart({
                   strokeDasharray="4 3"
                   dot={false}
                   activeDot={false}
-                  connectNulls
                   isAnimationActive={false}
                 />
               ) : null}
@@ -359,9 +362,8 @@ export function YieldHistoryChart({
                   stroke={OVERLAY_COLORS[i]}
                   strokeWidth={1.5}
                   strokeDasharray="6 3"
-                  dot={false}
+                  dot={{ r: 2, strokeWidth: 0 }}
                   activeDot={false}
-                  connectNulls
                   isAnimationActive={false}
                 />
               ))}
@@ -397,10 +399,10 @@ export function YieldHistoryChart({
               No benchmark
             </span>
           )}
-          {medianApy > 0 ? (
+          {medianApy != null ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
               <span className="font-mono tabular-nums">{formatChartNumber(medianApy)}%</span>
-              Peer median
+              Global TVL-weighted median (tracked selected rows)
             </span>
           ) : null}
           {model.overlayLabels.map((source, i) => (
@@ -421,6 +423,12 @@ export function YieldHistoryChart({
             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: CHART_AMBER }} />
             warning
           </span>
+          {model.chartData.some((point) => point.warningSignalsStatus === "unreadable") ? (
+            <span className="inline-flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full border border-muted-foreground" />
+              warnings unreadable
+            </span>
+          ) : null}
           <span className="inline-flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: CHART_BLUE }} />
             source change

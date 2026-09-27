@@ -310,7 +310,6 @@ export const CoinNoticeSchema = z
 
 export const YieldConfigSchema = z
   .object({
-    defiLlamaPoolId: z.string().optional(),
     yieldSource: z.string(),
     yieldType: z.enum(YIELD_TYPE_VALUES),
   })

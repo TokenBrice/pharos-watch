@@ -118,7 +118,7 @@ type SourceRiskEvaluationScenario = {
   input?: Partial<EvaluateYieldSourcesInput>;
   expectedSourceSwitchCount30d?: number;
   expectedAnomaly?: string;
-  expectedPys?: number;
+  expectedPys?: number | null;
   expectedUsedDefaultSafety?: boolean;
 };
 
@@ -176,7 +176,7 @@ const SOURCE_RISK_EVALUATION_SCENARIOS: Record<YieldSourceRiskGoldenCaseId, Sour
       apyReward: 0,
     },
     historyCount: 0,
-    expectedPys: 0,
+    expectedPys: null,
   },
   "negative-apy": {
     yield: {
@@ -186,7 +186,7 @@ const SOURCE_RISK_EVALUATION_SCENARIOS: Record<YieldSourceRiskGoldenCaseId, Sour
       apyReward: null,
     },
     historyCount: 0,
-    expectedPys: 0,
+    expectedPys: null,
   },
   "missing-safety": {
     yield: {
@@ -241,7 +241,7 @@ describe("evaluateYieldSources", () => {
       if (scenario.expectedAnomaly != null) {
         expect(evaluated?.anomalies, row.label).toContain(scenario.expectedAnomaly);
       }
-      if (scenario.expectedPys != null) {
+      if (scenario.expectedPys !== undefined) {
         expect(evaluated?.pharosYieldScore, row.label).toBe(scenario.expectedPys);
       }
       if (scenario.expectedUsedDefaultSafety != null) {
@@ -270,9 +270,16 @@ describe("evaluateYieldSources", () => {
   });
 
   it("explains default and explicitly not-rated safety inputs", () => {
+    const startSec = 1776729600;
+    // Constant trailing history: measured zero variance keeps the full stability credit.
+    const sourceHistory = new Map([[
+      buildHistoryKey("coin-a", "defillama:coin-a:base"),
+      historyRows("defillama:coin-a:base", 9, startSec),
+    ]]);
     const missing = evaluateYieldSources(baseEvaluationInput({
       resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
       safetyScores: new Map(),
+      sourceHistory,
     })).evaluatedSources[0];
     expect(missing).toMatchObject({
       safetyGrade: "NR",
@@ -287,6 +294,7 @@ describe("evaluateYieldSources", () => {
     const notRated = evaluateYieldSources(baseEvaluationInput({
       resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
       safetyScores: new Map([["coin-a", { score: 40, grade: "NR" }]]),
+      sourceHistory,
     })).evaluatedSources[0];
     expect(notRated).toMatchObject({
       safetyGrade: "NR",
@@ -1263,6 +1271,10 @@ describe("evaluateYieldSources", () => {
           EUR: eurBenchmark(),
         },
         safetyScores: new Map([["eurc-circle", { score: 80, grade: "B+" }]]),
+        sourceHistory: new Map([[
+          buildHistoryKey("eurc-circle", "defillama:eurc-circle:main"),
+          historyRows("defillama:eurc-circle:main", 9, startSec),
+        ]]),
       })).evaluatedSources[0];
 
     const healthy = run(usdBenchmark());
@@ -1421,7 +1433,7 @@ describe("opportunity-level risk (yield v8.32)", () => {
     expect(source?.sourceRisk?.opportunityRisk?.opportunitySafetyScore).toBe(source?.safetyScore);
   });
 
-  it("publishes an estimated PYS when an external opportunity's venue is unreviewed", () => {
+  it("keeps an unreviewed opportunity published as NR", () => {
     const [source] = evaluateYieldSources(baseEvaluationInput({
       resolved: [{
         id: "coin-a",
@@ -1437,10 +1449,11 @@ describe("opportunity-level risk (yield v8.32)", () => {
     expect(source).toMatchObject({
       safetyScore: 80,
       safetyProvenance: "cached-publish",
-      scoreQualification: "estimated",
-      pysNullReason: null,
+      scoreQualification: "NR",
+      pysNullReason: "opportunity-evidence-missing",
+      rejected: false,
     });
-    expect(source?.pharosYieldScore).toBeGreaterThan(0);
+    expect(source?.pharosYieldScore).toBeNull();
     expect(source?.warnings).toContain("opportunity-evidence-missing");
     expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
       opportunitySafetyScore: null,
@@ -1449,7 +1462,7 @@ describe("opportunity-level risk (yield v8.32)", () => {
     });
   });
 
-  it("keeps an estimated PYS when market size is unavailable", () => {
+  it("keeps an opportunity published as NR when market size is unavailable", () => {
     const [source] = evaluateYieldSources(baseEvaluationInput({
       resolved: [{
         id: "coin-a",
@@ -1464,16 +1477,19 @@ describe("opportunity-level risk (yield v8.32)", () => {
     })).evaluatedSources;
 
     expect(source).toMatchObject({
-      pysNullReason: null,
-      scoreQualification: "estimated",
+      pysNullReason: "opportunity-evidence-missing",
+      scoreQualification: "NR",
+      rejected: false,
     });
-    expect(source?.pharosYieldScore).toBeGreaterThan(0);
+    expect(source?.pharosYieldScore).toBeNull();
     expect(source?.warnings).toContain("opportunity-evidence-missing");
     expect(source?.sourceRisk?.opportunityRisk?.missingCriticalEvidence).toEqual(["market-size"]);
   });
 
   it("leaves holder yield untouched by opportunity evidence requirements", () => {
+    const startSec = 1776729600;
     const [source] = evaluateYieldSources(baseEvaluationInput({
+      startSec,
       resolved: [{
         id: "coin-a",
         symbol: "A",
@@ -1483,6 +1499,10 @@ describe("opportunity-level risk (yield v8.32)", () => {
           yieldType: "lending-vault",
         }),
       }],
+      sourceHistory: new Map([[
+        buildHistoryKey("coin-a", "defillama:coin-a:holder"),
+        historyRows("defillama:coin-a:holder", 9, startSec),
+      ]]),
     })).evaluatedSources;
 
     expect(source?.pharosYieldScore).toBeGreaterThan(0);
@@ -1524,5 +1544,47 @@ describe("opportunity-level risk (yield v8.32)", () => {
       venueReviewed: true,
       missingCriticalEvidence: [],
     });
+  });
+});
+
+describe("source eligibility and unavailable score inputs", () => {
+  it.each(["stale", "unknown", "fresh"] as const)("only an eligible canonical source vetoes divergent discovery (%s)", (freshness) => {
+    const input = baseEvaluationInput();
+    const canonicalKey = "canonical";
+    const discoveredKey = "discovered";
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        { id: "coin-a", symbol: "A", yield: resolvedYield({
+          sourceKey: canonicalKey,
+          currentApy: 5,
+          sourceObservedAt: freshness === "unknown" ? null : input.startSec - (freshness === "stale" ? 86400 : 0),
+        }) },
+        { id: "coin-a", symbol: "A", yield: resolvedYield({
+          sourceKey: discoveredKey,
+          dataSource: "defillama-auto",
+          yieldType: "lending-opportunity",
+          project: "aave-v3",
+          currentApy: 12,
+        }) },
+      ],
+    }));
+    const discovered = result.evaluatedSources.find((row) => row.sourceKey === discoveredKey);
+    expect(discovered?.rejected).toBe(freshness === "fresh");
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe(freshness === "fresh" ? canonicalKey : discoveredKey);
+    expect(discovered?.anomalies.includes("diverges-from-canonical")).toBe(freshness === "fresh");
+  });
+
+  it("keeps a source without measured variance published but unscored", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+    }));
+    expect(result.evaluatedSources[0]).toMatchObject({
+      rejected: false,
+      yieldStability: null,
+      apyVarianceScore: null,
+      pharosYieldScore: null,
+      pysNullReason: "missing-inputs",
+    });
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:base");
   });
 });

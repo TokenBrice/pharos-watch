@@ -5,7 +5,7 @@ interface YieldWhyPysStripProps {
   benchmarkSpread: number | null;
   benchmarkLabel?: string | null;
   stabilityPct: number | null;
-  sustainabilityMult: number;
+  sustainabilityMult: number | null;
   grade: string | null;
   safetyScore: number | null;
   adjustedRiskPenalty: number;

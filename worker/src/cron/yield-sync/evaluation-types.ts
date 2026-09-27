@@ -42,7 +42,7 @@ export interface EvaluatedYieldSource {
   comparisonAnchorObservedAt: number | null;
   apy7d: number;
   apy30d: number;
-  apyVarianceScore: number;
+  apyVarianceScore: number | null;
   stdDev30d: number | null;
   apyMin30d: number | null;
   apyMax30d: number | null;

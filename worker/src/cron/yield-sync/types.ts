@@ -1,5 +1,6 @@
 import type { YieldType } from "@shared/types/core";
 import type { YieldBenchmarkKey, YieldSourceRisk } from "@shared/types/yield";
+import type { YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
 
 export interface DlPool {
   pool: string;
@@ -36,6 +37,7 @@ export interface ResolvedYield {
   /** Explicit venue for the row; first input to `resolveYieldVenueProtocol`. */
   venueProtocol?: string | null;
   benchmarkOverrideKey?: YieldBenchmarkKey | null;
+  productBenchmarkFreshness?: YieldBenchmarkFreshness;
 }
 
 export interface ResolvedYieldCandidate {
@@ -61,7 +63,8 @@ export interface YieldEnvelopeRejection {
   stablecoinId: string;
   symbol: string;
   sourceKey: string;
-  computedApy: number;
+  computedApy: number | null;
+  rejectionReason?: string;
   exchangeRate: number;
   previousExchangeRate: number;
   anchorObservedAt: number;

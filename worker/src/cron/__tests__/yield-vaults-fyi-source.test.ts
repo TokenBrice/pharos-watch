@@ -424,6 +424,25 @@ describe("fetchVaultsFyiSources", () => {
       rankableCandidateCount: 0,
     });
   });
+  it.each([
+    ["old", 1_781_267_400 - 30 * 86400],
+    ["future", 1_781_267_401],
+    ["missing", undefined],
+    ["unparseable", "not-a-timestamp"],
+  ])("does not admit a rankable vault with %s observation evidence", async (_label, timestamp) => {
+    mockYieldSourceRoutes([{ match: () => true, respond: () => response({
+      data: detailedVault({ lastUpdateTimestamp: timestamp }),
+    }) }]);
+    const result = await fetchVaultsFyiSources({
+      db: creditLedgerDb(null).db,
+      config: enabledConfig({ rankableVaults: ["mainnet/0x1111111111111111111111111111111111111111"] }),
+      startSec: 1_781_267_400,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.telemetry.rankableCandidateCount).toBe(0);
+    expect(result.telemetry.auditOnlyCount).toBe(1);
+  });
+
 
   it("marks bounded audit inventory page caps without treating the provider run as partial", async () => {
     const rows = Array.from({ length: 4 }, (_, index) =>

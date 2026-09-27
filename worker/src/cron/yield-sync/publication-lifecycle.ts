@@ -5,7 +5,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { buildYieldMethodology } from "./publication-methodology";
 
 export function buildYieldPublicationGenerationId(startSec: number): string {
-  return `yield-${startSec}`;
+  return `yield-${startSec}-${crypto.randomUUID()}`;
 }
 
 function buildYieldPublicationMetadata(params: {
@@ -68,7 +68,7 @@ export async function stageYieldPublicationGeneration(
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT OR REPLACE INTO yield_publication_generations (
+      `INSERT INTO yield_publication_generations (
         generation_id, started_at, state, cache_key, ranking_updated_at, ranking_count,
         source_row_count, best_row_count, decision_count, metadata_json, created_at
       ) VALUES (?, ?, 'staged', 'yield-rankings', ?, ?, ?, ?, ?, ?, ?)`,
@@ -107,25 +107,33 @@ export async function finalizeYieldPublicationGeneration(
           .prepare(
             `UPDATE yield_publication_generations
              SET state = 'published', published_at = ?, failed_at = NULL, failure_reason = NULL
-             WHERE generation_id = ?`,
+             WHERE generation_id = ?
+               AND EXISTS (SELECT 1 FROM cache WHERE key = 'yield-rankings'
+                 AND json_extract(value, '$.publication.generationId') = generation_id)`,
           )
           .bind(params.timestamp, params.generationId)
       : db
           .prepare(
             `UPDATE yield_publication_generations
              SET state = 'failed', failed_at = ?, failure_reason = ?
-             WHERE generation_id = ?`,
+             WHERE generation_id = ? AND state = 'staged'
+               AND NOT EXISTS (SELECT 1 FROM cache WHERE key = 'yield-rankings'
+                 AND json_extract(value, '$.publication.generationId') = generation_id)`,
           )
           .bind(params.timestamp, params.reason ?? "publication-failed", params.generationId);
 
   await batchExecute(db, [
     generationStmt,
     db
-      .prepare("UPDATE yield_data SET publication_state = ? WHERE publication_generation_id = ?")
-      .bind(rowState, params.generationId),
+      .prepare(`UPDATE yield_data SET publication_state = ? WHERE publication_generation_id = ?
+        AND EXISTS (SELECT 1 FROM yield_publication_generations g
+          WHERE g.generation_id = yield_data.publication_generation_id AND g.state = ?)`)
+      .bind(rowState, params.generationId, rowState),
     db
-      .prepare("UPDATE yield_history SET publication_state = ? WHERE publication_generation_id = ?")
-      .bind(rowState, params.generationId),
+      .prepare(`UPDATE yield_history SET publication_state = ? WHERE publication_generation_id = ?
+        AND EXISTS (SELECT 1 FROM yield_publication_generations g
+          WHERE g.generation_id = yield_history.publication_generation_id AND g.state = ?)`)
+      .bind(rowState, params.generationId, rowState),
   ]);
 }
 

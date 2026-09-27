@@ -107,6 +107,9 @@ export function makeYieldCacheReader(
     if (options.requireKnownKey) {
       throw new Error(`yield-cache.test-support: unexpected cache key ${key}`);
     }
+    // Publication fixtures have usable comparison evidence unless the scenario
+    // explicitly supplies a missing, stale, or fallback benchmark.
+    if (key === "risk_free_rate") return healthyRiskFreeRateCacheRow(4, Math.floor(Date.now() / 1000) - 60);
     return null;
   };
 }

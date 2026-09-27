@@ -97,7 +97,7 @@ export function YieldIntelligenceMethodologySection() {
                     {
                       label: "Failure behavior",
                       value:
-                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive. Expired source or benchmark evidence remains visible with PYS NR rather than an exact score. A fresh row with 40 / NR fallback safety or incomplete external-opportunity evidence retains an explicitly estimated PYS and warning; missing source-risk penalty resolves to neutral 1",
+                        "No resolved source means no published yield row. Non-positive APY or effective yield, unavailable consistency, invalid score inputs, stale or unknown source evidence, stale benchmarks, and missing critical opportunity evidence publish PYS NR with a reason, not an unexplained zero. Fresh rows using the conservative 40 / NR safety fallback may retain an estimated PYS; missing source-risk penalty resolves to neutral 1",
                     },
                 ]}
               />
@@ -148,9 +148,9 @@ export function YieldIntelligenceMethodologySection() {
                       DeFiLlama yield pool via static mapping, chain-scoped wrapper rules, and address-first fallback
                       matching, while explicitly preserving wrapper pools that upstream marks as non-stablecoin when they
                       are configured as relevant yield sources, allowing exact-pool curated overrides for assets such as
-                      XAUT, and TVL-weighting exact pool groups when one tracked asset maps to chain-isolated wrapper
-                      vaults. Wrapper-over-native venues such as BOLD/yBOLD stay classified as native yield rather than
-                      governance-set when the wrapper is just packaging the protocol&apos;s own Stability Pool return
+                      XAUT and Frankencoin Savings for ZCHF, and TVL-weighting exact pool groups when one tracked asset maps
+                      to chain-isolated wrapper vaults. Supplied contradictory addresses fail closed, missing native pins
+                      cannot borrow a generic venue&apos;s APY, and ambiguous same-chain receipts require curated pool identity
                     </li>
                     <li>
                       <span className="text-foreground">Tier 2.5 &mdash; Protocol-native venues</span>: ingests curated
@@ -161,23 +161,30 @@ export function YieldIntelligenceMethodologySection() {
                       rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>, while Midas mMEV publishes a NAV-appreciation row from the issuer-listed mMEV/USD oracle
                     </li>
                     <li>
-                      <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives
-                      APY from 7-45 day price appreciation in `supply_history`
+                      <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: derives APY from 7-45 day
+                      USD price appreciation only for explicitly catalogued NAV-appreciation or lending-vault mechanisms
+                      with a USD or unmapped benchmark denomination and no intentional holder-return gap. USD price drift
+                      is not a measure of non-USD native return, distributed rewards, or rebasing yield
                     </li>
                     <li>
                       <span className="text-foreground">Tier 4 &mdash; Rate-derived</span>: for dividend-distributing and
                       Treasury-tracking tokens, derives APY from the selected benchmark registry entry net of known fee
                       spreads, using USD by default, product-specific EFFR where configured, 3-month compounded €STR for EUR pegs, 3-month compounded SARON
-                      for Swiss-franc pegs, the CBR key rate for RUB pegs, and BIST TLREF for TRY pegs. Rate-derived rows can also carry an explicit benchmark override for PYS/excess-yield provenance without changing the APY derivation benchmark
+                      for Swiss-franc pegs, the CBR key rate for RUB pegs, and BIST TLREF for TRY pegs. Product-input
+                      freshness is checked independently of the PYS comparison hurdle: fresh EFFR cannot refresh a stale
+                      T-bill product input, and a hardcoded fallback cannot produce a product APY candidate
                     </li>
                   </ul>
                   <p>
                     Deterministic and curated paths can all contribute rows, then a confidence-weighted arbitration layer
-                    chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when a
-                    canonical source disagrees materially. Protocol-native supplemental lending venues such as Aave V3 do
-                    not outrank stronger native wrapper yields purely because they query protocol state directly. Within a
-                    confidence tier, candidates compare source-risk-adjusted utility after source-risk penalty resolution
-                    before falling back to APY and TVL tie-breakers, and Resolv / USR-linked lending-opportunity venues
+                    chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when an
+                    eligible canonical source disagrees materially; rejected evidence cannot veto a fresh source.
+                    Protocol-native lending venues do not outrank native wrapper yields merely by querying on-chain state.
+                    Evidence quality precedes confidence; fixed-yield alternatives are demoted before those comparisons.
+                    A non-rejected curated explicit pool takes precedence over auto-discovered candidates of the same asset
+                    and yield type, including an incumbent; discovery remains available as an alternative.
+                    Within a tied tier, risk-adjusted utility is compared when either source has an operator-provided
+                    penalty, otherwise APY and TVL break ties. Resolv / USR-linked lending-opportunity venues
                     are excluded from publication entirely. Published <code>lending-opportunity</code>,{" "}
                     <code>fixed-yield</code>, and <code>structured-tranche</code> rows must also pass a final
                     resolve-stage measured venue-TVL gate after tracked, explicit, auto-discovered, supplemental, and
@@ -185,13 +192,20 @@ export function YieldIntelligenceMethodologySection() {
                     chain floor or 0.1% of current tracked supply; null or non-finite TVL fails closed, and
                     structured-tranche floors augment Royco&apos;s bespoke market/vault floors. The supply-relative floor
                     applies to every peg currency, including GOLD/SILVER, because tracked supply is USD-denominated.
-                    Linked tracked-variant rows can become parent alternatives when they represent native/wrapper yield,
-                    while third-party lending-opportunity rows stay on the asset that owns the venue, and explicit
-                    lending overrides only publish for active assets.
+                    Holder-versus-deposit typing is assigned before this gate. A tracked vault receipt&apos;s own return
+                    is holder yield; a parent-token projection is a deposit opportunity, not passive yield on plain holdings.
+                    An underlying-address match alone identifies the deposit asset, not ownership of a differently named
+                    receipt: native fallback also requires the tracked instrument&apos;s exact symbol, so Royco&apos;s
+                    senior tranche is not promoted into apyUSD holder yield. ZCHF&apos;s Frankencoin Savings row likewise
+                    requires a savings deposit; the curated Ethereum venue wins over auto-discovered Gnosis, which stays
+                    an alternative. Third-party opportunities stay with the asset that owns the venue, and explicit
+                    lending overrides publish only for active assets.
                   </p>
                   <p>
                     Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,
                     the asset is marked as an intentional gap rather than silently disappearing from audit coverage.
+                    HedgeCore sUSD is an intentional gap: its gross Venus quote is quarantined because on-chain rate
+                    interfaces revert and the documented 93% pass-through does not establish holder-return equivalence.
                   </p>
                   <p>
                     Royco Dawn tranche rows are opportunity rows, not stablecoin registry additions. Senior rows are capped
@@ -223,8 +237,9 @@ export function YieldIntelligenceMethodologySection() {
                   <p>
                     Freshness eligibility is applied before confidence arbitration. A stale deterministic candidate cannot
                     beat a fresh curated candidate, and every benchmark used by a published row is evaluated independently.
-                    Fallback benchmarks remain score-bearing but degraded while they are within the 48-hour scoring TTL;
-                    expired source or benchmark evidence is retained for audit with an NR PYS and explicit provenance.
+                    Retained market benchmarks can remain score-bearing but degraded within their freshness bounds;
+                    expired source or benchmark evidence is NR. Missing critical venue, market-size, or tranche evidence
+                    also withholds PYS without hiding an otherwise eligible opportunity.
                   </p>
                   <p>
                     Calculation mode and evidence class are separate. Exchange-rate math can be deterministic while the
@@ -239,7 +254,7 @@ export function YieldIntelligenceMethodologySection() {
                   <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                     benchmarkSpread = apy30d &minus; benchmarkRate
                     <br />
-                    hurdleRebase = usdBenchmarkRate &minus; benchmarkRate
+                    hurdleRebase = usdBenchmarkRate &minus; benchmarkRate (0 for USD-currency rows or missing rates)
                     <br />
                     effectiveYield = max(0, apy30d + benchmarkSpread &times; 0.25 + hurdleRebase)
                     <br />
@@ -255,14 +270,18 @@ export function YieldIntelligenceMethodologySection() {
                     <br />
                     PYS = clamp(round(yieldEfficiency &times; sustainability &times; scalingFactor), 0, 100)
                   </p>
+                  <p>
+                    APY above the 300% scoring envelope or non-finite effective yield is unavailable, not a zero score.
+                    Every withheld score carries an NR reason; a valid score that rounds to zero remains a measured 0.
+                  </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
                       <span className="text-foreground">Effective yield</span> keeps raw APY as the anchor and adds 25%
                       of the row&apos;s benchmark spread, then swaps the local hurdle for the USD risk-free rate (v8.43). A
                       peg that only pays its own central-bank rate scores like a USD row holding the T-bill rate, and equal
                       benchmark-relative excess scores equally in every currency. This is the covered-interest-parity
-                      reading of excess yield: it assumes a frictionless hedge and ignores FX basis, and it is exactly zero
-                      for every row benchmarked at the USD T-bill rate
+                      reading of excess yield: it assumes a frictionless hedge and ignores FX basis. The rebase term is
+                      zero for USD-currency rows, including EFFR comparisons, or when either required rate is unavailable
                     </li>
                     <li>
                       <span className="text-foreground">Source-risk penalty</span> uses nested source-risk evidence from
@@ -276,8 +295,10 @@ export function YieldIntelligenceMethodologySection() {
                       safety penalty so weaker safety grades need much more effective yield to compete
                     </li>
                     <li>
-                      <span className="text-foreground">Sustainability multiplier</span> penalizes volatile yields (high
-                      variance over 30 days), favouring consistent returns
+                      <span className="text-foreground">Consistency</span> penalizes volatile trailing yields while
+                      favouring measured consistent returns. It is unavailable, and PYS is NR, until at least two trailing
+                      observations exist; a near-zero mean or non-finite variation also withholds the score. Measured zero
+                      variance keeps full credit
                     </li>
                     <li>
                       <span className="text-foreground">Scaling factor</span> is a global constant that normalises scores

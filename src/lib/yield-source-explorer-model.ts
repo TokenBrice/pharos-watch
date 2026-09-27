@@ -241,8 +241,8 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
     sourceSwitch: {
       changed: ranking.provenance?.sourceSwitch ?? false,
       previousSourceKey,
-      previousSourceLabel: previousSource?.label ?? previousSourceKey,
-      previousSourceDisplayLabel: previousSource?.displayLabel ?? previousSourceKey,
+      previousSourceLabel: previousSource?.label ?? (previousSourceKey ? "previous source (not retained)" : null),
+      previousSourceDisplayLabel: previousSource?.displayLabel ?? (previousSourceKey ? "previous source (not retained)" : null),
     },
     sourceRiskDrivers: selectedSource.sourceRiskDrivers,
     sourceDepthLens: selectedSource.depthLens,

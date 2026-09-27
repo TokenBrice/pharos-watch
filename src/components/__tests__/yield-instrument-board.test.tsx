@@ -392,6 +392,8 @@ describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
     // frame (3.5): a Sweet Spot chip proves the EUR rate was used.
     renderBoard(eurRowWithoutRate(), false, { benchmarks: REGISTRY_WITH_EUR });
     expect(screen.getByText("Sweet Spot")).toBeTruthy();
+    expect(screen.getByText("+0.1% vs EUR 3M compounded €STR")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /benchmark 1.9 percent/ })).toBeTruthy();
   });
 
   it("uses the same resolved EUR benchmark for the expanded history chart", () => {

@@ -108,6 +108,38 @@ describe("publishYieldCoordinatorResults", () => {
     };
   }
 
+  it("quarantines a NaN source before every publication artifact", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const sources = [
+        makeEvaluatedSource({ id: "usdc-circle" }),
+        makeEvaluatedSource({ id: "bad-source", currentApy: Number.NaN }),
+      ];
+      const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+      const benchmark = makeBenchmarkMeta();
+      const artifacts = buildPreviewYieldRankingsArtifacts({
+        evaluatedSources: sources,
+        bestSourceKeyByCoin: new Map(sources.map((source) => [source.id, source.sourceKey])),
+        riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark,
+        riskFreeRates: makeBenchmarkRegistry(benchmark), dlPoolsMeta: makeYieldSourceMeta(),
+        safetySnapshot: makeSafetySnapshotMeta(), medianApy: 4.5, startSec,
+      });
+      const result = await publishYieldCoordinatorResults({
+        ...makePublishParams({ db }), ...artifacts,
+        evaluatedSources: artifacts.acceptedSources,
+        degradationReasons: artifacts.quarantineReasons,
+      });
+      expect(result).toMatchObject({ ok: true, cacheWriteSkipped: false,
+        degradationReasons: ["yield-publication:quarantined-source:bad-source:currentApy"] });
+      for (const table of ["yield_data", "yield_history", "yield_source_decisions"]) {
+        expect(sqlite.prepare(`SELECT stablecoin_id FROM ${table}`).all()).toEqual([{ stablecoin_id: "usdc-circle" }]);
+      }
+      const cached = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get() as { value: string };
+      expect(JSON.parse(cached.value).rankings.map((row: { id: string }) => row.id)).toEqual(["usdc-circle"]);
+    } finally {
+      sqlite.close();
+    }
+  });
   it("stages then fails a generation when cache payload validation fails before row publication", async () => {
     const db = makePublicationDb();
     const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
@@ -123,14 +155,14 @@ describe("publishYieldCoordinatorResults", () => {
 
     expect(result.ok).toBe(false);
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_publication_generations"))).toBe(
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO yield_publication_generations"))).toBe(
       true,
     );
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
   });
 
-  it("does not replace published D1 rows when the rankings cache CAS skips because a newer cache exists", async () => {
+  it.each([0, 1])("does not mutate a winner when an equal-second or older attempt loses (%s)", async (offset) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
@@ -140,11 +172,12 @@ describe("publishYieldCoordinatorResults", () => {
         bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
         previewRankingsPayload: buildPayloadWithObservedAt(startSec, { id: source.id }),
       });
-      expect(await publishYieldCoordinatorResults({ ...params, startSec: startSec + 1 })).toMatchObject({ ok: true });
+      expect(await publishYieldCoordinatorResults({ ...params, startSec: startSec + offset })).toMatchObject({ ok: true });
       const tables = ["yield_data", "yield_history", "yield_source_decisions"];
       const before = tables.map((table) => sqlite.prepare(`SELECT * FROM ${table}`).all());
       for (const rows of before) expect(rows).toHaveLength(1);
       const cache = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+      const winner = sqlite.prepare("SELECT * FROM yield_publication_generations WHERE state = 'published'").all();
 
       const result = await publishYieldCoordinatorResults({
         ...params, evaluatedSources: [{ ...source, currentApy: 99, apy30d: 99 }],
@@ -153,8 +186,8 @@ describe("publishYieldCoordinatorResults", () => {
       expect(result).toMatchObject({ ok: true, cacheWriteSkipped: true, casSkipped: true });
       expect(tables.map((table) => sqlite.prepare(`SELECT * FROM ${table}`).all())).toEqual(before);
       expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(cache);
-      expect(sqlite.prepare("SELECT state FROM yield_publication_generations WHERE generation_id = ?")
-        .get(`yield-${startSec}`)).toEqual({ state: "failed" });
+      expect(sqlite.prepare("SELECT * FROM yield_publication_generations WHERE state = 'published'").all()).toEqual(winner);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_publication_generations WHERE state = 'failed'").get()).toEqual({ count: 1 });
     } finally {
       sqlite.close();
     }
@@ -353,18 +386,18 @@ describe("publishYieldCoordinatorResults", () => {
     });
     const history = db.getHistory();
     const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
-    const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
+    const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT INTO yield_history"));
     const cacheWrite = history.find((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
     const yieldRows =
       parseJsonBind<Array<{ publication_generation_id: string; publication_state: string }>>(yieldDataInsert);
     const historyRows =
       parseJsonBind<Array<{ publication_generation_id: string; publication_state: string }>>(yieldHistoryInsert);
     expect(yieldRows[0]).toMatchObject({
-      publication_generation_id: "yield-1774526400",
+      publication_generation_id: expect.stringMatching(/^yield-1774526400-/),
       publication_state: "published",
     });
     expect(historyRows[0]).toMatchObject({
-      publication_generation_id: "yield-1774526400",
+      publication_generation_id: yieldRows[0]?.publication_generation_id,
       publication_state: "published",
     });
     expect(cacheWrite?.binds[0]).toBe("yield-rankings");
@@ -373,13 +406,13 @@ describe("publishYieldCoordinatorResults", () => {
     );
     expect(JSON.parse(String(cacheWrite?.binds[1]))).toMatchObject({
       publication: {
-        generationId: "yield-1774526400",
+        generationId: yieldRows[0]?.publication_generation_id,
         status: "published",
         cutoffAt: 1774526400,
       },
       rankings: [
         {
-          publicationGenerationId: "yield-1774526400",
+          publicationGenerationId: yieldRows[0]?.publication_generation_id,
           publishedRank: 1,
         },
       ],
@@ -589,42 +622,27 @@ describe("publishYieldCoordinatorResults", () => {
     expect(ledgerBytes).toBeLessThan(1024);
   });
 
-  it("persists exactly reproducible PYS inputs on yield_history rows", async () => {
-    const db = makePublicationDb();
-    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
-    expect(result).toMatchObject({ ok: true });
-
-    const history = db.getHistory();
-    const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
-    expect(yieldHistoryInsert?.sql).toContain("pys_at_publish");
-    expect(yieldHistoryInsert?.sql).toContain("safety_at_publish");
-    expect(yieldHistoryInsert?.sql).toContain("variance_at_publish");
-    expect(yieldHistoryInsert?.sql).toContain("pys_inputs_at_publish");
-    const historyRows = parseJsonBind<
-      Array<{
-        pys_at_publish: number | null;
-        safety_at_publish: number | null;
-        variance_at_publish: number | null;
-        pys_inputs_at_publish: string;
-      }>
-    >(yieldHistoryInsert);
-    expect(historyRows[0]?.pys_at_publish).toBe(28);
-    expect(historyRows[0]?.safety_at_publish).toBe(82);
-    expect(historyRows[0]?.variance_at_publish).toBe(0.2);
-    expect(JSON.parse(historyRows[0]?.pys_inputs_at_publish ?? "null")).toMatchObject({
-      schemaVersion: YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
-      apy30d: 4.6,
-      safetyScore: 82,
-      varianceScore: 0.1,
-      benchmarkRate: 4.2,
-      sourceRiskPenalty: 1,
-      scoreQualification: "rated",
-      benchmarkKey: "USD",
-      evidenceClass: "curated-observation",
-      // A same-currency USD benchmark stores the reference rate but no re-base (B24).
-      usdBenchmarkRate: 4.2,
-      hurdleRebase: 0,
-    });
+  it("replays PYS from a real persisted history row", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const source = makeEvaluatedSource({ id: "usdc-circle", pharosYieldScore: 37 });
+      const params = makePublishParams({ db, evaluatedSources: [source],
+        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]) });
+      expect(await publishYieldCoordinatorResults(params)).toMatchObject({ ok: true, cacheWriteSkipped: false });
+      const row = sqlite.prepare("SELECT pys_at_publish, pys_inputs_at_publish FROM yield_history").get() as {
+        pys_at_publish: number; pys_inputs_at_publish: string;
+      };
+      const snapshot = JSON.parse(row.pys_inputs_at_publish) as YieldPysInputsAtPublish;
+      expect(computePYS({
+        apy30d: snapshot.apy30d, safetyScore: snapshot.safetyScore,
+        apyVarianceScore: snapshot.varianceScore, scalingFactor: snapshot.scalingFactor,
+        benchmarkRate: snapshot.benchmarkRate,
+        benchmarkCurrency: YIELD_BENCHMARK_KEY_CURRENCY[snapshot.benchmarkKey],
+        sourceRiskPenalty: snapshot.sourceRiskPenalty, usdBenchmarkRate: snapshot.usdBenchmarkRate ?? null,
+      })).toBe(row.pys_at_publish);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("stores the v8.43 hurdle re-base so a non-USD row replays to its published PYS", async () => {
@@ -667,7 +685,7 @@ describe("publishYieldCoordinatorResults", () => {
     );
     expect(result).toMatchObject({ ok: true });
 
-    const yieldHistoryInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
+    const yieldHistoryInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO yield_history"));
     const historyRows = parseJsonBind<
       Array<{ pys_at_publish: number | null; pys_inputs_at_publish: string }>
     >(yieldHistoryInsert);
@@ -836,6 +854,51 @@ describe("pruneYieldTables", () => {
     }
   });
 
+  it("compacts cold-start and below-watermark rows, including a newer close", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const oldDay = Math.floor(startSec / DAY_SECONDS) * DAY_SECONDS - 90 * DAY_SECONDS;
+    try {
+      const insert = sqlite.prepare(`INSERT INTO yield_history
+        (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state)
+        VALUES ('coin-a', 'source-a', ?, 1, ?, 'test', 'published')`);
+      insert.run(oldDay + 10 * DAY_SECONDS + 60, 4);
+      await materializeYieldHistoryDaily(db, startSec);
+      insert.run(oldDay + 60, 5);
+      await materializeYieldHistoryDaily(db, startSec);
+      insert.run(oldDay + 120, 6);
+      await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
+      expect(sqlite.prepare("SELECT recorded_at, apy FROM yield_history_daily ORDER BY recorded_at").all())
+        .toEqual([{ recorded_at: oldDay + 120, apy: 6 }, { recorded_at: oldDay + 10 * DAY_SECONDS + 60, apy: 4 }]);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 0 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("retains unmaterialized rows while draining a bounded daily backfill", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const oldDay = Math.floor(startSec / DAY_SECONDS) * DAY_SECONDS - 60 * DAY_SECONDS;
+    try {
+      const insert = sqlite.prepare(`INSERT INTO yield_history
+        (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state)
+        VALUES ('coin-a', ?, ?, 1, ?, 'test', 'published')`);
+      for (let index = 0; index < 1001; index++) insert.run(`source-${index}`, oldDay + 60, index / 100);
+      await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history_daily").get()).toEqual({ count: 1000 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 1 });
+      const retained = sqlite.prepare("SELECT source_key, apy FROM yield_history").get()!;
+      await pruneYieldTables(db, startSec, { allowDestructiveCleanup: false });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history").get()).toEqual({ count: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_history_daily").get()).toEqual({ count: 1001 });
+      expect(sqlite.prepare("SELECT source_key, apy FROM yield_history_daily WHERE source_key = ?")
+        .get(retained.source_key)).toEqual(retained);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("chunks stale cleanup below the bind ceiling and preserves frozen and current rows", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
@@ -946,11 +1009,27 @@ describe("pruneYieldTables", () => {
 });
 
 describe("yield publication migration compatibility", () => {
+  it("rolls back the cache rather than silently dropping a history constraint failure", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      await expect(publishYieldRowsAtomically(db, {
+        rankingsPayload: { rankings: [], publication: { generationId: "attempt-invalid" } },
+        generationId: "attempt-invalid", startSec: 100,
+        yieldDataRows: [], decisionRows: [], decisionAlternativeRows: [],
+        historyRows: [{ stablecoin_id: "coin-a", source_key: "source-a", recorded_at: 100,
+          is_best: 1, apy: null, data_source: "test" }],
+      })).rejects.toThrow();
+      expect(sqlite.prepare("SELECT * FROM cache").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([]);
+    } finally {
+      sqlite.close();
+    }
+  });
   it("retains only anomaly episode boundaries as permanent trend decisions", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const publish = (generationId: string, startSec: number, fingerprint: string) =>
       publishYieldRowsAtomically(db, {
-        rankingsPayload: { rankings: [] },
+        rankingsPayload: { rankings: [], publication: { generationId } },
         startSec,
         generationId,
         yieldDataRows: [],
@@ -1003,6 +1082,7 @@ describe("yield publication migration compatibility", () => {
       const result = await publishYieldRowsAtomically(db, {
         rankingsPayload: {
           rankings: [],
+          publication: { generationId: "yield-1774526400" },
           blob: "x".repeat(YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS + 1),
         },
         startSec: 1_774_526_400,

@@ -87,10 +87,13 @@ export function buildYieldSocial(data: YieldRankingsResponse, assets: readonly S
     && row.warningSignals.length === 0 && row.provenance?.sourceFreshness === "fresh" && row.provenance.scoreQualified === true
     && !row.provenance.usedDefaultSafety && row.provenance.anomalies.length === 0 && row.provenance.safetyScoreIdentity?.model === "v9"
     && row.provenance.safetyScoreIdentity.publicationGenerationId === safety.safetyScoreIdentity!.publicationGenerationId
-    && fresh(row.provenance.sourceObservedAt, base.capturedAt, 7200) && (row.sourceRisk?.investabilityFlags?.length ?? 0) === 0)
+    && row.provenance.sourceObservedAt != null && fresh(row.provenance.sourceObservedAt, base.capturedAt, 7200)
+    && (row.sourceRisk?.investabilityFlags?.length ?? 0) === 0)
     .sort((a, b) => b.currentApy - a.currentApy || a.id.localeCompare(b.id)).slice(0, 5);
   if (!rows.length) throw new Error("No qualifying fresh yield opportunities");
-  return finish({ ...base, asOf: Math.min(base.asOf, data.updatedAt, safety.publishedAt, ...rows.map((row) => row.provenance!.sourceObservedAt)),
+  // Rows without an observation timestamp were filtered out above, so every
+  // remaining row carries a real source observation time.
+  return finish({ ...base, asOf: Math.min(base.asOf, data.updatedAt, safety.publishedAt, ...rows.map((row) => row.provenance!.sourceObservedAt as number)),
     safetyAsOf: safety.publishedAt, safetyPublicationId: safety.safetyScoreIdentity.publicationGenerationId }, {
     topic: "yield-watch", title: "This week's yield watch", subtitle: "Current APY · Safety Score 70+ · $1M+ source TVL", unit: "percent",
     rows: rows.map((row) => ({ id: row.id, name: row.name, symbol: row.symbol, value: row.currentApy,

@@ -7,7 +7,7 @@
  *   - "source-switch"      — caused by the canonical source switching mid-window
  *   - "organic"            — APY drifted at the source level with no switch
  *   - "mixed"              — both a source switch and an organic move overlap
- *   - "insufficient-data"  — no significant move detected or too little history
+ *   - "insufficient-data"  — too little history or no material observed move
  *
  * Priority order (decision tree):
  *
@@ -20,14 +20,12 @@
  *      switch with no observable timestamp inside the fetched history is not
  *      treated as recent.
  *
- *   2. Otherwise, if the largest move exceeds {@link ORGANIC_DELTA_THRESHOLD_PP}
- *      (in percentage points) and no source switch is reported, attribute it to
- *      "organic". Confidence is "high" when yield stability is strong (≥0.75),
- *      "medium" when moderate (≥0.5), "low" otherwise.
+ *   2. Historical daily-close source identities and switch markers within
+ *      24h of the largest delta prevent a switch being called organic after
+ *      the current ledger flag resets. Historical impact uses endpoint APYs.
  *
- *   3. If a recent source switch overlaps with an organic-sized move (largest
- *      delta ≥ {@link ORGANIC_DELTA_THRESHOLD_PP}), attribute it to "mixed" with
- *      low confidence.
+ *   3. Organic attribution requires matching, known source keys and no nearby
+ *      switch marker. Adequate but quiet history receives a neutral headline.
  *
  * The function NEVER throws. Missing decisionLedger, missing history points,
  * and sparse history all degrade gracefully to lower-confidence paths or
@@ -127,7 +125,7 @@ function normaliseHistory(history: YieldHistoryPoint[]): NormalisedHistoryPoint[
 function findLargestDailyDelta(
   history: NormalisedHistoryPoint[],
   windowStartMs: number,
-): { value: number; ts: number } | null {
+): { value: number; ts: number; prior: NormalisedHistoryPoint; current: NormalisedHistoryPoint } | null {
   const dailyCloses = new Map<number, NormalisedHistoryPoint>();
   for (const point of history) {
     // Require BOTH endpoints inside the window so the delta represents a within-window event.
@@ -137,13 +135,13 @@ function findLargestDailyDelta(
     if (!close || point.ts >= close.ts) dailyCloses.set(dayBucket, point);
   }
   const closes = [...dailyCloses.values()].sort((a, b) => a.ts - b.ts);
-  let best: { value: number; ts: number } | null = null;
+  let best: { value: number; ts: number; prior: NormalisedHistoryPoint; current: NormalisedHistoryPoint } | null = null;
   for (let i = 1; i < closes.length; i++) {
     const current = closes[i]!;
     const prior = closes[i - 1]!;
     const delta = current.apy - prior.apy;
     if (!best || Math.abs(delta) > Math.abs(best.value)) {
-      best = { value: delta, ts: current.ts };
+      best = { value: delta, ts: current.ts, prior, current };
     }
   }
   return best;
@@ -232,11 +230,43 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
   const nowMs = input.nowMs ?? Date.now();
   const windowStartMs = nowMs - THIRTY_DAYS_MS;
   const history = normaliseHistory(input.history);
-  const largestDelta = findLargestDailyDelta(history, windowStartMs);
+  const dailyDelta = findLargestDailyDelta(history.filter((point) => point.ts <= nowMs), windowStartMs);
+  const largestDelta = dailyDelta ? { value: dailyDelta.value, ts: dailyDelta.ts } : null;
   const ledger = input.decisionLedger ?? null;
   const stability = input.yieldStability ?? null;
   const switchContext = deriveSwitchContext(history);
   const switchedAtMs = ledger?.switchedAtMs ?? switchContext?.switchedAtMs ?? null;
+  const nearbySwitch = dailyDelta
+    ? history.find((point) => point.sourceSwitch && Math.abs(point.ts - dailyDelta.ts) <= DAY_MS)
+    : undefined;
+  const sameSource = dailyDelta != null && dailyDelta.prior.sourceKey != null
+    && dailyDelta.prior.sourceKey === dailyDelta.current.sourceKey;
+
+  // The current publication ledger cannot supply a historical switch's impact.
+  // In particular its delta resets after a switch, while the chart retains it.
+  if (dailyDelta && Math.abs(dailyDelta.value) >= SOURCE_SWITCH_DELTA_THRESHOLD_PP
+    && ((!sameSource && (dailyDelta.prior.sourceKey != null || dailyDelta.current.sourceKey != null)) || nearbySwitch)
+    && !(ledger?.sourceSwitch && typeof ledger.apy30dDeltaFromPrevious === "number"
+      && Math.abs(ledger.apy30dDeltaFromPrevious) >= SOURCE_SWITCH_DELTA_THRESHOLD_PP
+      && isRecentSwitch(switchedAtMs, windowStartMs, nowMs)
+      && switchedAtMs != null && Math.abs(dailyDelta.ts - switchedAtMs) <= DAY_MS)) {
+    const changedSource = dailyDelta.prior.sourceKey != null && dailyDelta.current.sourceKey != null
+      && dailyDelta.prior.sourceKey !== dailyDelta.current.sourceKey;
+    const detail = {
+      previousSourceKey: dailyDelta.prior.sourceKey ?? "previous source",
+      previousSourceLabel: dailyDelta.prior.yieldSource ?? undefined,
+      apy30dDelta: dailyDelta.value,
+    };
+    return {
+      largestDelta,
+      attribution: changedSource ? "source-switch" : "mixed",
+      sourceSwitchDetail: detail,
+      confidence: "medium",
+      headline: changedSource
+        ? formatSourceSwitchHeadline(detail, largestDelta, nowMs)
+        : "Multiple drivers may overlap; the observed move cannot be isolated to one source.",
+    };
+  }
 
   // Step 1: high-confidence source-switch attribution from BE ledger.
   if (
@@ -286,7 +316,7 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
   }
 
   // Step 2: organic drift attribution.
-  if (Math.abs(largestDelta.value) > ORGANIC_DELTA_THRESHOLD_PP) {
+  if (Math.abs(largestDelta.value) > ORGANIC_DELTA_THRESHOLD_PP && sameSource && !nearbySwitch) {
     return {
       largestDelta,
       attribution: "organic",
@@ -300,6 +330,6 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     largestDelta,
     attribution: "insufficient-data",
     confidence: "low",
-    headline: "Not enough data to attribute the latest move.",
+    headline: "No material APY change in the observed window.",
   };
 }

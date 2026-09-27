@@ -272,16 +272,6 @@ export async function validateYieldRankingsPayloadForPublish(
       reason: "empty-rankings-payload",
     };
   }
-  const previousRankings = previousRankingsState.count;
-  const severeShrink = previousRankings >= 5 && currentRankings < Math.ceil(previousRankings * 0.4);
-  if (previousRankings > 0 && (currentRankings === 0 || severeShrink)) {
-    logWorkerEventArgs("handler", "warn", "[sync-yield-data] Skipped yield-rankings cache write due to publish guard");
-    return {
-      ok: false,
-      validationFailures: 1,
-      reason: currentRankings === 0 ? "empty-rankings-payload" : "rankings-payload-shrunk",
-    };
-  }
 
   return { ok: true, validationFailures: 0 };
 }

@@ -39,7 +39,7 @@ import type {
   YieldSourceFreshnessDisplay,
   YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
-import type { YieldRankChangeChipDisplay } from "@/lib/yield-presentation";
+import { YIELD_SOURCE_FACT_LABELS, type YieldRankChangeChipDisplay } from "@/lib/yield-presentation";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { trackEvent } from "@/lib/analytics";
 import type { YieldResolvedRowBenchmark } from "@/lib/yield-benchmark";
@@ -57,7 +57,7 @@ type PysBreakdownValues = {
   hurdleRebase: number;
   effectiveYield: number;
   sourceRiskPenalty: number;
-  sustainabilityMult: number;
+  sustainabilityMult: number | null;
 };
 
 type AvailableYieldSource = {
@@ -277,6 +277,33 @@ export function YieldSafetyBadge({
   );
 }
 
+export function YieldSourceIdentity({
+  displayLabel, url, confidenceStyle, confidenceLabel, sourceChanged, onClick,
+}: {
+  displayLabel: string;
+  url: string | null | undefined;
+  confidenceStyle?: YieldSourceConfidenceStyle | null;
+  confidenceLabel?: string | null;
+  sourceChanged?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
+      <TableSourceLink href={url} className="min-w-0" iconClassName="h-3 w-3" stopPropagation onClick={onClick}>
+        {displayLabel}
+      </TableSourceLink>
+      {confidenceStyle && confidenceLabel ? (
+        <span className={confidenceStyle.pill} aria-label={`${confidenceLabel} confidence`}>{confidenceLabel}</span>
+      ) : null}
+      {sourceChanged ? (
+        <span className={cn("shrink-0 rounded-full border px-1.5 py-0.5 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}>
+          {YIELD_SOURCE_FACT_LABELS.changed}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function YieldSourceDetails({
   row,
   confidenceStyle,
@@ -304,22 +331,13 @@ export function YieldSourceDetails({
     <div className="min-w-0 text-sm text-muted-foreground" title={selectionReason}>
       {/* Line 1: confidence dot · source name · source-changed chip · compact risk bar */}
       <div className="flex min-w-0 items-center gap-1.5">
-        {confidenceStyle && confidenceLabel ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className={confidenceStyle.dot} role="img" aria-label={`${confidenceLabel} confidence`} />
-            </TooltipTrigger>
-            <TooltipContent className="text-[11px]">{confidenceLabel} confidence</TooltipContent>
-          </Tooltip>
-        ) : null}
-        <TableSourceLink href={row.yieldSourceUrl} className="min-w-0 flex-1" iconClassName="h-3 w-3" stopPropagation>
-          {row.yieldSource}
-        </TableSourceLink>
-        {row.provenance?.sourceSwitch ? (
-          <span className={cn("shrink-0 rounded-full border px-1.5 py-0.5 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}>
-            source changed
-          </span>
-        ) : null}
+        <YieldSourceIdentity
+          displayLabel={row.yieldSource}
+          url={row.yieldSourceUrl}
+          confidenceStyle={confidenceStyle}
+          confidenceLabel={confidenceLabel}
+          sourceChanged={row.provenance?.sourceSwitch}
+        />
         <YieldSourceRiskBar score={sourceRiskScore} compact tooltip className="shrink-0" />
       </div>
       {/* Line 2: freshness · source depth. Benchmark moved off-row (redundant per row):
@@ -481,7 +499,7 @@ export function YieldExpandedDetails({
 }: {
   row: YieldViewModelRow;
   benchmark: YieldResolvedRowBenchmark;
-  medianApy: number;
+  medianApy: number | null;
   availableSources: AvailableYieldSource[];
   benchmarkReferenceText: string;
   stabilityPct: number | null;
@@ -614,10 +632,9 @@ export function deriveYieldRowDisplay(
   scalingFactor: number,
   /**
    * USD reference the effective yield is re-based onto. Callers must pass the
-   * v8.43-gated value (`resolveYieldDisplayRebaseReferenceRate(
-   * methodology.version, riskFreeRate)`): rows scored before the re-base
-   * release were published without one, so an ungated risk-free rate would
-   * render a re-base line the badge never used.
+   * version- and evidence-gated value (`resolveYieldDisplayRebaseReferenceRate(
+   * methodology.version, riskFreeRate, benchmarks?.USD)`): old methodology or
+   * unhealthy USD evidence disables the re-base, matching the published score.
    */
   usdBenchmarkRate?: number | null,
 ) {

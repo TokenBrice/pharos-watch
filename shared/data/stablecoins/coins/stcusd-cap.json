@@ -46,7 +46,6 @@
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "yieldConfig": {
-    "defiLlamaPoolId": "bf6ca887-e357-49ec-8031-0d1a6141c455",
     "yieldSource": "Cap savings (stcUSD)",
     "yieldType": "lending-vault"
   },

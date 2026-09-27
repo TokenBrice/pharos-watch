@@ -135,6 +135,16 @@ describe("buildYieldDetailModel", () => {
     expect(model.externalSourceKeys).toEqual(expected.length > 0 ? expected : undefined);
   });
 
+  it("preserves an unavailable median rather than inventing a zero reference", () => {
+    const model = buildYieldDetailModel(
+      { ...makeResponse([makeRanking()]), medianApy: null },
+      registryStatus("active", "embedded", true),
+      [],
+    );
+    expect(model.status).toBe("ready");
+    if (model.status === "ready") expect(model.medianApy).toBeNull();
+  });
+
   it("returns the shared PYS, source explorer, and benchmark projection", () => {
     const model = buildYieldDetailModel(
       makeResponse([

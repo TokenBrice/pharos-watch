@@ -107,10 +107,18 @@ describe("computeApyFromRate", () => {
     expect(apy).toBeGreaterThan(0);
   });
 
-  it("returns 0 for non-positive inputs", () => {
-    expect(computeApyFromRate(0, 1, 1)).toBe(0);
-    expect(computeApyFromRate(1, 0, 1)).toBe(0);
-    expect(computeApyFromRate(1, 1, 0)).toBe(0);
+  it("keeps invalid inputs and windows unavailable with a reason", () => {
+    expect(computeApyFromRate(0, 1, 1)).toEqual({ reason: "invalid-input" });
+    expect(computeApyFromRate(1, 0, 1)).toEqual({ reason: "invalid-input" });
+    expect(computeApyFromRate(Infinity, 1, 7)).toEqual({ reason: "invalid-input" });
+    for (const days of [0, -1, NaN, Infinity]) {
+      expect(computeApyFromRate(1, 1, days)).toEqual({ reason: "invalid-window" });
+    }
+  });
+
+  it("rejects overflow without turning it into a zero yield observation", () => {
+    expect(computeApyFromRate(1, 1e-20, 7)).toEqual({ reason: "non-finite-annualization" });
+    expect(computeApyFromPrice(1, 1e-20, 7)).toEqual({ reason: "non-finite-annualization" });
   });
 
   it("returns negative APY for decreasing rate", () => {
@@ -134,6 +142,7 @@ describe("computeApyFromRate", () => {
   it("flags extreme deterministic annualization as outside the sanity envelope", () => {
     const apy = computeApyFromRate(1.02, 1.0, 3);
     expect(apy).toBeGreaterThan(DETERMINISTIC_APY_SANITY_MAX);
+    if (typeof apy !== "number") throw new Error(apy.reason);
     expect(isDeterministicApyWithinSanityBounds(apy)).toBe(false);
     expect(isDeterministicApyWithinSanityBounds(5)).toBe(true);
     expect(isDeterministicApyWithinSanityBounds(Number.POSITIVE_INFINITY)).toBe(false);
@@ -226,6 +235,30 @@ describe("derivePysNullReason", () => {
       }),
     ).toBe("effective-yield-non-positive");
   });
+
+  it("flags missing-inputs for source math outside the PYS envelope", () => {
+    expect(
+      derivePysNullReason({ apy30d: 301, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 8 }),
+    ).toBe("missing-inputs");
+    // A finite but overflowing hurdle re-base makes effective yield infinite.
+    expect(
+      derivePysNullReason({
+        apy30d: 5,
+        benchmarkRate: -1e308,
+        benchmarkCurrency: "EUR",
+        usdBenchmarkRate: 1e308,
+        safetyScore: 80,
+        apyVarianceScore: 0.1,
+        scalingFactor: 8,
+      }),
+    ).toBe("missing-inputs");
+  });
+
+  it("flags missing-inputs when variance is unavailable", () => {
+    expect(
+      derivePysNullReason({ apy30d: 5, safetyScore: 80, apyVarianceScore: null, scalingFactor: 8 }),
+    ).toBe("missing-inputs");
+  });
 });
 
 describe("computeYieldStability", () => {
@@ -310,6 +343,10 @@ describe("detectWarningSignals", () => {
   it("detects yield-divergence when current > 3x median", () => {
     const signals = detectWarningSignals({ ...base, currentApy: 16, medianApy: 5 });
     expect(signals).toContain("yield-divergence");
+  });
+
+  it("skips median divergence when the median is unavailable", () => {
+    expect(detectWarningSignals({ ...base, currentApy: 16, medianApy: null })).not.toContain("yield-divergence");
   });
 
   it("detects negative-trend when current < 70% of 30d avg", () => {
@@ -506,15 +543,14 @@ describe("matchAllDlPools", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("falls through to symbol match when static map UUID is missing from DL pools", () => {
+  it("keeps the native lane unavailable when its curated UUID is missing", () => {
     const poolMap = { "test-coin": "missing-uuid-123" };
     const dlPools = [
       makeDlYieldPool({ pool: "other-uuid", symbol: "TEST", stablecoin: true, tvlUsd: 1_000_000, apy: 5.0, apyBase: 5.0 }),
     ];
 
     const result = matchAllDlPools("test-coin", "TEST", dlPools, poolMap, {});
-    expect(result.length).toBeGreaterThan(0);
-    expect(result[0].pool).toBe("other-uuid");
+    expect(result).toEqual([]);
   });
 
   it("skips Layer 3 symbol fallback for symbols shorter than 4 chars", () => {
@@ -536,7 +572,7 @@ describe("matchAllDlPools", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("keeps Layer 3 wrapper matches when the underlying token address corroborates identity", () => {
+  it("rejects a differently named receipt even when its deposit asset matches", () => {
     const pools = [
       makeDlYieldPool({ pool: "p1", symbol: "FEUSDH", project: "test", tvlUsd: 5e6, apy: 3, apyBase: 3, stablecoin: true, underlyingTokens: ["0x111111a1a0667d36bd57c0a9f569b98057111111"] }),
     ];
@@ -544,8 +580,7 @@ describe("matchAllDlPools", () => {
     const result = matchAllDlPools("usdh-test", "USDH", pools, {}, {}, {
       contractAddresses: ["0x111111A1A0667d36Bd57c0A9f569b98057111111"],
     });
-    expect(result).toHaveLength(1);
-    expect(result[0]?.pool).toBe("p1");
+    expect(result).toEqual([]);
   });
 
   it("never adopts a yield-tokenization PT market as the wrapper's own Layer 3 source", () => {
@@ -714,21 +749,21 @@ describe("isBlockedYieldOpportunitySource", () => {
 });
 
 describe("computeTvlWeightedMedianApy", () => {
-  it("returns 0 for empty input", () => {
-    expect(computeTvlWeightedMedianApy([])).toBe(0);
+  it("returns null for empty input", () => {
+    expect(computeTvlWeightedMedianApy([])).toBeNull();
   });
 
-  it("returns 0 when all rows have null TVL", () => {
+  it("returns null when all rows have null TVL", () => {
     expect(computeTvlWeightedMedianApy([
       { apy_30d: 5, source_tvl_usd: null },
       { apy_30d: 3, source_tvl_usd: null },
-    ])).toBe(0);
+    ])).toBeNull();
   });
 
-  it("returns 0 when all rows have zero TVL", () => {
+  it("returns null when all rows have zero TVL", () => {
     expect(computeTvlWeightedMedianApy([
       { apy_30d: 5, source_tvl_usd: 0 },
-    ])).toBe(0);
+    ])).toBeNull();
   });
 
   it("returns the APY of a single valid row", () => {
@@ -805,29 +840,30 @@ describe("findBestLendingPool with chain scope", () => {
 });
 
 describe("parseWarningSignals", () => {
-  it("returns empty array for empty string", () => {
-    expect(parseWarningSignals("")).toEqual([]);
+  it("distinguishes unreadable empty storage from a valid empty warning array", () => {
+    expect(parseWarningSignals("")).toBeNull();
+    expect(parseWarningSignals("[]")).toEqual([]);
   });
 
   it("parses valid JSON array of strings", () => {
     expect(parseWarningSignals('["yield-spike","tvl-outflow"]')).toEqual(["yield-spike", "tvl-outflow"]);
   });
 
-  it("filters out non-string elements", () => {
-    expect(parseWarningSignals('[1, "yield-spike", null, true]')).toEqual(["yield-spike"]);
+  it("does not call mixed-type warning evidence clean", () => {
+    expect(parseWarningSignals('[1, "yield-spike", null, true]')).toBeNull();
   });
 
-  it("returns empty array and logs warning for malformed JSON", () => {
+  it("returns unavailable and logs warning for malformed JSON", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(parseWarningSignals("{not valid json")).toEqual([]);
+    expect(parseWarningSignals("{not valid json")).toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[yield-sync] failed to parse warning_signals"),
     );
   });
 
-  it("returns empty array and logs warning for non-array JSON", () => {
+  it("returns unavailable and logs warning for non-array JSON", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(parseWarningSignals('{"key": "value"}')).toEqual([]);
+    expect(parseWarningSignals('{"key": "value"}')).toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[yield-sync] warning_signals is not an array"),
     );

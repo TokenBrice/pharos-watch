@@ -71,12 +71,16 @@ describe("yield history transformations", () => {
     expect(result.current.chartData[0].apy).toBe(3);
   });
 
-  it("aligns seconds and milliseconds by hour without turning missing observations into zero", () => {
+  it("preserves actual timestamps across seconds and milliseconds without inventing observations", () => {
     historyBySource.set("a", [point(BASE / 1000 + 10, 5), point(BASE + 3_600_000 + 10_000, 6), point(BASE + 7_200_000 + 10_000, 7)]);
     historyBySource.set("b", [point(BASE + 300_000, 8.5), point(BASE / 1000 + 3600 + 300, 9.5)]);
     const { result } = renderHook(() => useYieldHistoryChartModel({ ...chartProps, externalSourceKeys: ["a", "b"] }));
-    expect(result.current.mergedChartData.map(({ date, apy_overlay_0 }) => [date, apy_overlay_0]))
-      .toEqual([[BASE + 10_000, 8.5], [BASE + 3_610_000, 9.5], [BASE + 7_210_000, null]]);
+    expect(result.current.mergedChartData.map(({ date, apy, apy_overlay_0 }) => [date, apy, apy_overlay_0]))
+      .toEqual([
+        [BASE + 10_000, 5, null], [BASE + 300_000, null, 8.5],
+        [BASE + 3_610_000, 6, null], [BASE + 3_900_000, null, 9.5],
+        [BASE + 7_210_000, 7, null],
+      ]);
   });
 
   it("uses the trailing thirty-day window and includes equality at the spike ratio threshold", () => {

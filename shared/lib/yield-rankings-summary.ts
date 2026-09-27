@@ -64,7 +64,6 @@ function projectRanking(row: YieldRanking): YieldRankingSummary {
   // Summary fields that are NOT a straight copy of the same-named detail field.
   // Everything else is copied verbatim off the schema's own key list.
   const derived: Partial<Record<keyof YieldRankingSummary, unknown>> = {
-    benchmarkIsFallback: row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback ? true : undefined,
     alternateSourceCount: row.altSources.length,
     // Bounded on purpose: the board counts and labels the alternates, it does not
     // render their full evidence. The count above still reports the true total.
@@ -94,6 +93,7 @@ export function projectYieldRankingsSummary(payload: YieldRankingsResponse): Yie
     scalingFactor: payload.scalingFactor,
     medianApy: payload.medianApy,
     updatedAt: payload.updatedAt,
+    _meta: payload._meta,
     provenance: payload.provenance,
     warnings: payload.warnings,
     publication: payload.publication,

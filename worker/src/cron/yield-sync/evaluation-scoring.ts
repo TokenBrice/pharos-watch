@@ -11,7 +11,7 @@ import type { EvaluatedYieldSource } from "./evaluation-types";
 interface PenaltyFieldsInput {
   apy30d: number;
   safetyScore: number;
-  apyVarianceScore: number;
+  apyVarianceScore: number | null;
   benchmarkRate: number;
   benchmarkCurrency: string;
   usdBenchmarkRate: number | null;
@@ -35,11 +35,13 @@ export function resolveEvidenceNullReason(params: {
   sourceFreshness: YieldSourceFreshness;
   benchmarkFreshness: YieldBenchmarkFreshness;
   referenceBenchmarkFreshness: YieldBenchmarkFreshness;
+  opportunityEvidenceComplete?: boolean;
 }): YieldPysNullReason | null {
   if (params.sourceFreshness === "stale") return "source-stale";
   if (params.sourceFreshness === "unknown") return "source-freshness-unknown";
   if (params.benchmarkFreshness === "stale") return "benchmark-stale";
   if (params.referenceBenchmarkFreshness === "stale") return "benchmark-stale";
+  if (params.opportunityEvidenceComplete === false) return "opportunity-evidence-missing";
   return null;
 }
 
@@ -75,22 +77,21 @@ export function resolvePenaltyOrderingFields(params: PenaltyFieldsInput): Penalt
 export function resolvePenaltyDerivedFields(params: PenaltyFieldsInput): PenaltyDerivedFields {
   const components = computePenaltyComponents(params);
   const computedPharosYieldScore = computePYSFromComponents(params.apy30d, PYS_SCALING_FACTOR, components);
+  // One ladder decides both fields: a published reason always means no score,
+  // while a legitimately rounded-zero score keeps a null reason.
+  const pysNullReason = params.safetySnapshotUnavailable
+    ? "safety-unrated"
+    : params.evidenceNullReason
+      ?? derivePysNullReasonFromComponents(params.apy30d, PYS_SCALING_FACTOR, components);
   return {
     sourceRiskPenalty: components.sourceRiskPenalty,
     sourceRiskPenaltyReason: components.sourceRiskPenaltyReason,
     sourceRiskPenaltyProvided: components.sourceRiskPenaltyProvided,
     sourceRiskAdjustedUtility: components.rowUtility,
     hurdleRebase: components.hurdleRebase,
-    pharosYieldScore:
-      !params.safetySnapshotUnavailable && params.evidenceNullReason == null && Number.isFinite(computedPharosYieldScore)
-        ? computedPharosYieldScore
-        : null,
-    pysNullReason: params.safetySnapshotUnavailable
-      ? "safety-unrated"
-      : params.evidenceNullReason ?? (
-          computedPharosYieldScore > 0
-            ? null
-            : derivePysNullReasonFromComponents(params.apy30d, PYS_SCALING_FACTOR, components.effectiveYield)
-        ),
+    pharosYieldScore: pysNullReason == null && Number.isFinite(computedPharosYieldScore)
+      ? computedPharosYieldScore
+      : null,
+    pysNullReason,
   };
 }

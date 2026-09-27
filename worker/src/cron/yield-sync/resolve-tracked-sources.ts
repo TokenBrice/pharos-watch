@@ -14,10 +14,13 @@ import {
   YIELD_VARIANT_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../../lib/yield-config/yield-config";
+import { INTENTIONAL_GAP_REASONS } from "../../lib/yield-config/yield-config-rate-sources";
 import {
   getPriceDerivedApy,
 } from "./sources";
 import {
+  classifyYieldBenchmarkFreshness,
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
   resolveBenchmarkForStablecoin,
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
@@ -30,6 +33,7 @@ import type {
   YieldResolutionResult,
 } from "./types";
 import { buildReservedYieldPoolIds } from "./resolve-helpers";
+import { resolveYieldTypeLabel } from "./evaluation-arbitration";
 import {
   STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY,
   TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID,
@@ -39,6 +43,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import { buildInClause } from "../../lib/db";
 import { buildWeightedYieldPoolGroupSource } from "./weighted-pools";
+import { isPriceDerivedYieldEligible } from "../../lib/yield-config/yield-config-registry";
 
 function buildConfigByStablecoinId<T extends { stablecoinId: string }>(configs: readonly T[]): Map<string, T> {
   const byId = new Map<string, T>();
@@ -67,8 +72,8 @@ function resolveMeasuredSourceTvlUsd(params: {
   return null;
 }
 
-function getBenchmarkSourceObservedAt(meta: ParsedYieldBenchmarkMeta, fallbackObservedAt: number): number {
-  return meta.lastMarketFetchedAt ?? meta.fetchedAt ?? fallbackObservedAt;
+function getBenchmarkSourceObservedAt(meta: ParsedYieldBenchmarkMeta): number | null {
+  return meta.lastMarketFetchedAt ?? meta.fetchedAt ?? null;
 }
 
 export async function loadTier1PrevRateRows(
@@ -174,7 +179,7 @@ export async function resolveTrackedYieldSources(params: {
         const actualDays = (params.startSec - prevRow.recordedAt) / DAY_SECONDS;
         const apy = computeApyFromRate(rate, prevRow.exchangeRate, actualDays);
         const sourceKey = buildOnChainSourceKey(id);
-        if (isDeterministicApyWithinSanityBounds(apy)) {
+        if (typeof apy === "number" && isDeterministicApyWithinSanityBounds(apy)) {
           resolved.push({
             id,
             symbol,
@@ -197,7 +202,8 @@ export async function resolveTrackedYieldSources(params: {
             stablecoinId: id,
             symbol,
             sourceKey,
-            computedApy: Number(apy.toFixed(6)),
+            computedApy: typeof apy === "number" ? Number(apy.toFixed(6)) : null,
+            rejectionReason: typeof apy === "number" ? "apy-sanity-envelope" : apy.reason,
             exchangeRate: rate,
             previousExchangeRate: prevRow.exchangeRate,
             anchorObservedAt: prevRow.recordedAt,
@@ -274,7 +280,11 @@ export async function resolveTrackedYieldSources(params: {
           exchangeRate: null,
           sourceKey: fullPool.pool,
           yieldSource: isVariantPool ? variant.yieldSource : undefined,
-          yieldType: isVariantPool ? variant.yieldType : undefined,
+          yieldType: resolveYieldTypeLabel({
+            id,
+            dataSource: "defillama",
+            explicitType: isVariantPool ? variant.yieldType : undefined,
+          }),
           project: fullPool.project,
           chain: fullPool.chain,
         },
@@ -290,6 +300,7 @@ export async function resolveTrackedYieldSources(params: {
 
     const shouldTryPriceDerived =
       (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(id))
+      && isPriceDerivedYieldEligible(id, INTENTIONAL_GAP_REASONS[id])
       && (!hasAnySource || allDlSourcesZero);
     if (shouldTryPriceDerived) {
       const priceDerived = await getPriceDerivedApy(params.db, id);
@@ -325,26 +336,36 @@ export async function resolveTrackedYieldSources(params: {
         benchmarks: params.riskFreeRates,
         benchmarkCurrency: rateDerivedConfig.benchmarkCurrency ?? null,
       });
-      const apy = Math.max(0, benchmarkSelection.meta.rate - rateDerivedConfig.spreadBps / 100);
-      resolved.push({
-        id,
-        symbol,
-        yield: {
-          currentApy: apy,
-          apyBase: apy,
-          apyReward: null,
-          sourcePool: null,
-          sourceTvlUsd: null,
-          dataSource: "rate-derived",
-          exchangeRate: null,
-          sourceKey: "rate-derived",
-          yieldSource: rateDerivedConfig.label,
-          sourceObservedAt: getBenchmarkSourceObservedAt(benchmarkSelection.meta, params.startSec),
-          comparisonAnchorObservedAt: null,
-          benchmarkOverrideKey: rateDerivedConfig.benchmarkOverrideKey ?? null,
-        },
+      const productBenchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkSelection.meta, {
+        recordDate: benchmarkSelection.meta.recordDate,
+        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[benchmarkSelection.key],
+        nowSec: params.startSec,
       });
-      hasAnySource = true;
+      // Retained market evidence is usable with degraded qualification; a
+      // hardcoded fallback is not a measured product return.
+      if (!(benchmarkSelection.meta.isFallback && benchmarkSelection.meta.lastMarketRate == null)) {
+        const apy = Math.max(0, benchmarkSelection.meta.rate - rateDerivedConfig.spreadBps / 100);
+        resolved.push({
+          id,
+          symbol,
+          yield: {
+            currentApy: apy,
+            apyBase: apy,
+            apyReward: null,
+            sourcePool: null,
+            sourceTvlUsd: null,
+            dataSource: "rate-derived",
+            exchangeRate: null,
+            sourceKey: "rate-derived",
+            yieldSource: rateDerivedConfig.label,
+            sourceObservedAt: getBenchmarkSourceObservedAt(benchmarkSelection.meta),
+            productBenchmarkFreshness,
+            comparisonAnchorObservedAt: null,
+            benchmarkOverrideKey: rateDerivedConfig.benchmarkOverrideKey ?? null,
+          },
+        });
+        hasAnySource = true;
+      }
     }
 
     const trackedOptionalEntries = TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.get(id) ?? [];

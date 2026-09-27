@@ -47,8 +47,8 @@ function buildHourlyYieldSlotGroups(runtime: ScheduledRuntimeContext) {
   let supplementalCatchUpRan = false;
   // Serially ordered on purpose: the catch-up and the benchmark refresh both
   // publish evidence the publication reads in the same slot.
-  // The Dwellir parity lane is a second, independent chain: it publishes no
-  // yield input, so it runs beside the publication instead of in front of it.
+  // The independent one-connection parity chain is included in the registry's
+  // parallel-chain sum: catch-up 3 + parity 1 = 4 connections at peak.
   return bindScheduledSlotPlan("hourlyYieldSync", {
     mode: "parallel-serial",
     label: "post-V9 yield slot",

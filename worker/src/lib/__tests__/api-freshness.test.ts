@@ -176,6 +176,43 @@ describe("buildCacheStatuses sentinel validation", () => {
     }
   });
 
+  it("reads completed yield input quality and its latest cause without changing producer status", async () => {
+    const now = 1_800_000_000;
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const sentinel = sentinelRow("yield-data", now - 60);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        sentinel.key, sentinel.value, sentinel.updated_at,
+      );
+      const insert = sqlite.prepare(
+        "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, degraded_reason) VALUES ('sync-yield-data', ?, 1, ?, ?, ?)",
+      );
+      insert.run(now - 180, "ok", JSON.stringify({ quality: { degraded: false, reasons: [] } }), null);
+      insert.run(now - 120, "degraded", JSON.stringify({ reason: "yield-publication-transaction-failed" }), "yield-publication-transaction-failed");
+      const reason = "yield-supplemental:family-degraded:aaveV3:upstream-unavailable";
+      insert.run(now - 60, "ok", JSON.stringify({ quality: { degraded: true, reasons: [reason] } }), null);
+      const impaired = await buildCacheStatuses(db, now);
+      expect(impaired.caches["yield-data"]).toMatchObject({
+        ageSeconds: 60, degraded: true, degradedReason: reason, streakDegradedRuns: 2,
+      });
+      expect(sqlite.prepare("SELECT status, degraded_reason FROM cron_runs ORDER BY started_at DESC LIMIT 1").get())
+        .toEqual({ status: "ok", degraded_reason: null });
+      insert.run(now - 30, "ok", JSON.stringify({
+        quality: {
+          degraded: false,
+          reasons: [],
+          advisoryReasons: ["yield-supplemental:family-degraded:pendle:pendle-rate-limited-backoff"],
+        },
+      }), null);
+      const recovered = await buildCacheStatuses(db, now);
+      expect(recovered.caches["yield-data"]).toMatchObject({
+        degraded: false, degradedReason: null, streakDegradedRuns: 0, healthy: true,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("uses valid freshness sentinels without hot-table fallback queries", async () => {
     const now = 1_800_000_000;
     const db = mockD1([
@@ -551,7 +588,7 @@ describe("buildCacheStatuses sentinel validation", () => {
       },
       {
         match: "GROUP BY job",
-        rows: [{ job: "sync-yield-data", started_at: now - 7_200, degraded_runs_since_ok: 3 }],
+        rows: [{ job: "sync-yield-data", started_at: now - 7_200, degraded_runs_since_ok: 3, latest_reason: "yield-publication-transaction-failed" }],
       },
     ]);
 
@@ -561,7 +598,7 @@ describe("buildCacheStatuses sentinel validation", () => {
       ageSeconds: 60,
       freshnessSource: "freshness-sentinel",
       degraded: true,
-      degradedReason: "producer-degraded-since-last-clean-run",
+      degradedReason: "yield-publication-transaction-failed",
       streakDegradedRuns: 3,
       healthy: false,
     });

@@ -24,7 +24,9 @@ import {
   parseYieldSupplementalPendleBackoff,
   PENDLE_RATE_LIMIT_BACKOFF_REASON,
 } from "./cache/supplemental-cache-keys";
-import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } from "./sources";
+import { fetchOnChainRates, loadDlStablecoinPools } from "./sources";
+import { loadRiskFreeRateRegistryWithState, type RiskFreeRateRegistryCacheState } from "./sources-riskfree";
+import type { ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import {
   loadStablecoinSupplyMapFromCacheValue,
   type StablecoinSupplyMapLoadResult,
@@ -48,6 +50,8 @@ export interface YieldSupplementalCacheMeta {
   ageSeconds: number | null;
   sourceCount: number;
   fallbackMode: string | null;
+  /** Required snapshots absent, invalid, or outside their family freshness budget. */
+  unavailableRequiredFamilies?: string[];
   /**
    * B1/B16: families whose last producer run ended degraded and therefore kept
    * the previous snapshot (`sync-yield-supplemental` run-outcome row). Empty
@@ -78,7 +82,8 @@ export interface YieldSyncLoadedState {
   allDeterministicFailed: boolean;
   onChainExplorerAttemptedCount: number;
   onChainExplorerResolvedCount: number;
-  riskFreeRates: Awaited<ReturnType<typeof loadRiskFreeRateRegistry>>;
+  riskFreeRates: ParsedYieldBenchmarkRegistry;
+  riskFreeRateRegistryCacheState: RiskFreeRateRegistryCacheState;
   riskFreeRateMeta: YieldBenchmarkMeta;
   stablecoinSupplyById: Map<string, number>;
   stablecoinSupplyMapState: StablecoinSupplyMapState;
@@ -172,6 +177,7 @@ async function loadYieldSupplementalCandidates(
         ageSeconds,
         sourceCount: candidates.length,
         fallbackMode,
+        unavailableRequiredFamilies: REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS.filter((key) => !validFamilyKeys.has(key)),
         degradedFamilies,
         degradedFamilyReasons,
       },
@@ -191,6 +197,7 @@ async function loadYieldSupplementalCandidates(
           : invalidFamilyCacheRows > 0
             ? "invalid-cache"
             : "stale-cache",
+      unavailableRequiredFamilies: [...REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS],
       degradedFamilies,
       degradedFamilyReasons,
     },
@@ -314,15 +321,16 @@ export async function loadYieldSyncState(params: {
     dlPoolsResult,
     supplementalResult,
     onChainHealthCache,
-    riskFreeRates,
+    riskFreeRateRegistry,
     stablecoinSupplyMap,
   ] = await Promise.all([
     loadDlStablecoinPools(params.db, params.signal),
     loadYieldSupplementalCandidates(params.db, params.startSec),
     getCache(params.db, DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY),
-    loadRiskFreeRateRegistry(params.db),
+    loadRiskFreeRateRegistryWithState(params.db, params.startSec),
     loadStablecoinSupplyMap(params.db),
   ]);
+  const { registry: riskFreeRates, cacheState: riskFreeRateRegistryCacheState } = riskFreeRateRegistry;
   const { pools: dlPools, meta: dlPoolsMeta, envelopeRejectedCount } = dlPoolsResult;
   const dlApyEnvelopeRejectedCount = envelopeRejectedCount ?? 0;
   const { candidates: supplementalCandidates, meta: supplementalMeta } = supplementalResult;
@@ -403,6 +411,7 @@ export async function loadYieldSyncState(params: {
     onChainExplorerAttemptedCount,
     onChainExplorerResolvedCount,
     riskFreeRates,
+    riskFreeRateRegistryCacheState,
     riskFreeRateMeta,
     stablecoinSupplyById,
     stablecoinSupplyMapState,

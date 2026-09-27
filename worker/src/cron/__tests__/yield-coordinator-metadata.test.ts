@@ -80,6 +80,12 @@ describe("buildYieldDegradationReasons", () => {
   const baseParams = {
     safetySnapshotDegraded: false,
     safetySnapshotReason: null,
+    defaultBenchmarkMeta: {
+      ...buildHardcodedUsdBenchmark("test"),
+      ageSeconds: 0,
+      isFallback: false,
+      fallbackMode: null,
+    },
     selectedSources: [] as EvaluatedYieldSource[],
     dlPoolsMeta: {
       mode: "dex-cache" as const,
@@ -146,13 +152,13 @@ describe("buildYieldDegradationReasons", () => {
         ageSeconds: 0,
         sourceCount: 40,
         fallbackMode: "partial-family-cache",
-        degradedFamilies: ["morpho-vault"],
+        degradedFamilies: ["morpho"],
       },
     });
 
     expect(reasons).toEqual(expect.arrayContaining([
       "yield-supplemental:partial-family-cache",
-      "yield-supplemental:family-degraded:morpho-vault",
+      "yield-supplemental:family-degraded:morpho",
     ]));
     // B15/W1d: a failed optional family is not a degraded run on its own (the
     // sync-yield-data rates-history contract); it travels in the run metadata
@@ -160,10 +166,10 @@ describe("buildYieldDegradationReasons", () => {
     expect(reasons.filter((reason) => reason.startsWith("yield-source:family-failed:"))).toEqual([]);
   });
 
-  it("appends the producer's machine-readable cause to a degraded family reason", () => {
+  it("excludes the advisory Pendle outage from freshness-blocking degradation", () => {
     const reasons = buildYieldDegradationReasons({
       ...baseParams,
-      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      defaultBenchmarkMeta: baseParams.defaultBenchmarkMeta,
       supplementalMeta: {
         mode: "cache",
         updatedAt: START_SEC,
@@ -175,7 +181,42 @@ describe("buildYieldDegradationReasons", () => {
       },
     });
 
-    expect(reasons).toContain("yield-supplemental:family-degraded:pendle:pendle-rate-limited-backoff");
+    expect(reasons).toEqual([]);
+  });
+
+  it.each([
+    { unavailableRequiredFamilies: ["pendle"], degraded: false },
+    { unavailableRequiredFamilies: ["pendle", "aaveV3"], degraded: true },
+    { unavailableRequiredFamilies: undefined, degraded: true },
+  ])("does not hide non-Pendle or unattributed partial cache loss: $unavailableRequiredFamilies", ({ unavailableRequiredFamilies, degraded }) => {
+    const reasons = buildYieldDegradationReasons({
+      ...baseParams,
+      supplementalMeta: {
+        ...baseParams.supplementalMeta,
+        fallbackMode: "partial-family-cache",
+        degradedFamilies: ["pendle"],
+        unavailableRequiredFamilies,
+      },
+    });
+    expect(reasons.includes("yield-supplemental:partial-family-cache")).toBe(degraded);
+  });
+
+  it("keeps optional vaults.fyi diagnostics out of publication quality", () => {
+    expect(buildYieldDegradationReasons({
+      ...baseParams,
+      supplementalMeta: {
+        ...baseParams.supplementalMeta,
+        degradedFamilies: ["vaultsFyi"],
+        degradedFamilyReasons: { vaultsFyi: "probe-unavailable" },
+      },
+    })).toEqual(buildYieldDegradationReasons(baseParams));
+  });
+
+  it("reports an invalid benchmark registry as input quality", () => {
+    expect(buildYieldDegradationReasons({
+      ...baseParams,
+      riskFreeRateRegistryCacheState: "invalid",
+    })).toContain("yield-benchmarks:registry-invalid");
   });
 
   it("names the stale selected source in the degradation reason", () => {
@@ -222,7 +263,7 @@ describe("buildYieldDegradationReasons", () => {
 });
 
 describe("buildYieldSyncMetadata", () => {
-  it("writes bounded envelope rejections and comparison-anchor freshness under sourceCoverage", () => {
+  it.each(["pendle", "aaveV3"] as const)("preserves %s quality diagnostics separately from publication health and bounded telemetry", (family) => {
     const comparisonAnchorFreshness = buildComparisonAnchorFreshnessMeta({
       startSec: START_SEC,
       evaluatedSources: [
@@ -251,6 +292,7 @@ describe("buildYieldSyncMetadata", () => {
           trackedCount: 1,
           reason: null,
           source: "safety-score-v9-publication",
+          safetyScoreIdentity: null,
           publicationGenerationId: "report-cards:v8.299:1800000000",
           methodologyVersion: "v8.299",
           publishedAt: START_SEC,
@@ -275,9 +317,10 @@ describe("buildYieldSyncMetadata", () => {
           mode: "cache",
           updatedAt: START_SEC,
           ageSeconds: 0,
-          sourceCount: 0,
+          sourceCount: 12,
           fallbackMode: null,
-          degradedFamilies: [],
+          degradedFamilies: [family],
+          degradedFamilyReasons: { [family]: "upstream-unavailable" },
         },
         stablecoinSupplyMapState: "ok",
         optionalSourceFailures: [
@@ -302,7 +345,7 @@ describe("buildYieldSyncMetadata", () => {
           consecutiveAllFailRuns: 0,
           consecutiveMaskedAllFailRuns: 0,
         },
-        fallbackMode: null,
+        qualityReasons: family === "pendle" ? [] : [`yield-supplemental:family-degraded:${family}:upstream-unavailable`],
         validationFailures: 0,
         riskFreeRate: 4,
         cacheWriteSkipped: false,
@@ -321,6 +364,7 @@ describe("buildYieldSyncMetadata", () => {
         },
       }),
     ) as {
+      quality: { degraded: boolean; reasons: string[]; advisoryReasons: string[] };
       publicationStats: { pysInputsPersistedCount: number; pysInputsNullCount: number; largestPayloadChars: number };
       sourceCoverage: {
         publishedRankingCountDelta: number;
@@ -342,6 +386,12 @@ describe("buildYieldSyncMetadata", () => {
       };
     };
 
+    const reason = `yield-supplemental:family-degraded:${family}:upstream-unavailable`;
+    expect(metadata.quality).toEqual({
+      degraded: family !== "pendle",
+      reasons: family === "pendle" ? [] : [reason],
+      advisoryReasons: family === "pendle" ? [reason] : [],
+    });
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionCount).toBe(26);
     expect(metadata.sourceCoverage.dlApyEnvelopeRejectedCount).toBe(3);
     expect(metadata.sourceCoverage.publishedRankingCountDelta).toBe(0);

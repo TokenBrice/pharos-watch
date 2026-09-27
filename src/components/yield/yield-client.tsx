@@ -597,7 +597,7 @@ export function YieldClient() {
                   ) : null}
                   {exhibitTiles.mostStable ? (
                     <HeroHighlightRow
-                      label="Most stable A+"
+                      label="Most stable A/A+"
                       logoSrc={logos?.[exhibitTiles.mostStable.id]}
                       name={exhibitTiles.mostStable.name}
                       symbol={exhibitTiles.mostStable.symbol}
@@ -679,7 +679,7 @@ export function YieldClient() {
               rows={visibleRows}
               logos={logos ?? {}}
               riskFreeRate={data.riskFreeRate}
-              medianApy={data.medianApy ?? 0}
+              medianApy={data.medianApy}
               scalingFactor={data.scalingFactor}
               benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
               methodologyVersion={data.methodology?.version}

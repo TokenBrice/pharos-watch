@@ -64,11 +64,9 @@ vi.mock("@/components/table/client", () => ({
     href?: string | null;
     children: React.ReactNode;
     className?: string;
-  }) => (
-    <a href={href ?? undefined} className={className}>
-      {children}
-    </a>
-  ),
+  }) => href ? (
+    <a href={href} className={className}>{children}</a>
+  ) : <span className={className}>{children}</span>,
 }));
 
 vi.mock("@/components/methodology-hint", () => ({
@@ -150,6 +148,131 @@ describe("YieldDetailSection", () => {
       sourcesParam = params.get("sources") ?? "";
     });
     HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it.each([
+    ["canonical-holder", "rated", "Holder yield"],
+    ["external-opportunity", "partial", "External opportunity"],
+    ["fallback-proxy", "estimated", "Estimated"],
+    [undefined, "rated", null],
+  ] as const)("exposes published identity with disclosures closed for %s", (sourceRole, scoreQualification, prefix) => {
+    mockRankings([makeRanking({
+      sourceRole,
+      yieldSource: "Published venue",
+      yieldSourceUrl: "https://example.com/instrument",
+      sourceRisk: { venueProtocol: "Venue", venueChain: "ethereum" },
+      provenance: makeYieldProvenance({ scoreQualification, sourceSwitch: true }),
+    })]);
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    const link = screen.getByRole("link", { name: "Published venue" });
+    expect(link.getAttribute("href")).toBe("https://example.com/instrument");
+    expect(link.closest("details")).toBeNull();
+    expect(container.querySelector("details[open]")).toBeNull();
+    if (prefix) expect(screen.getAllByText(prefix, { exact: false })[0].closest("details")).toBeNull();
+    else expect(container.textContent).not.toContain("Holder yield");
+    expect(screen.getAllByText("source changed").some((node) => !node.closest("details"))).toBe(true);
+    const qualificationText = scoreQualification === "partial" ? "Partial evidence" : scoreQualification === "estimated" ? "Estimated" : "Rated";
+    expect(screen.getAllByText(qualificationText).some((node) => !node.closest("details"))).toBe(true);
+  });
+
+  it.each(["rate-derived", "price-derived"] as const)("does not repeat the %s badge in deployment facts", (dataSource) => {
+    mockRankings([makeRanking({
+      dataSource,
+      sourceRole: "fallback-proxy",
+      sourceRisk: { deploymentPlace: dataSource },
+      provenance: makeYieldProvenance({ scoreQualification: "estimated" }),
+    })]);
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    const facts = container.querySelector(".text-muted-foreground > .rounded-full")?.parentElement;
+    expect(facts).toBeTruthy();
+    expect(facts!.textContent?.toLowerCase().replaceAll("-", " ")).toBe(dataSource.replaceAll("-", " "));
+    expect(facts!.textContent).not.toContain("·");
+  });
+
+  it("does not prefix chain or deployment facts with a separator without a venue", () => {
+    mockRankings([makeRanking({ sourceRisk: { venueChain: "ethereum", deploymentPlace: "lending-vault" } })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByText("ethereum", { selector: "span" }).textContent).not.toContain("·");
+    expect(screen.getByText("· lending vault")).toBeTruthy();
+  });
+
+  it("never calls a ZCHF deposit holder yield and routes to the existing fallback", () => {
+    mockRankings([makeRanking({
+      id: "zchf-frankencoin", symbol: "ZCHF", sourceRole: "external-opportunity",
+      yieldSource: "Frankencoin Savings", yieldSourceUrl: "https://app.frankencoin.com/savings?chain=ethereum",
+      sourceRisk: { venueProtocol: "Frankencoin", venueChain: "ethereum" },
+    })]);
+    const { container } = render(<YieldDetailSection stablecoinId="zchf-frankencoin" />);
+    expect(container.textContent).not.toContain("Holder yield");
+    expect(screen.getByText(/not yield from simply holding ZCHF/).closest("details")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Warning timeline" })).toBeNull();
+    const destination = new URL(screen.getByRole("link", { name: "View yield opportunities" }).getAttribute("href")!, window.location.origin);
+    expect(destination.pathname.replace(/\/$/, "")).toBe("/yield");
+    expect(destination.searchParams.get("workbenchFallback")).toBe("zchf-frankencoin");
+  });
+
+  it("does not invent a destination or missing venue facts", () => {
+    mockRankings([makeRanking({ yieldSource: "No published URL", yieldSourceUrl: null, sourceRole: "external-opportunity", sourceRisk: null })]);
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.queryByRole("link", { name: "No published URL" })).toBeNull();
+    const identity = screen.getAllByText("No published URL").find((node) => !node.closest("details"));
+    expect(identity?.closest("a")).toBeNull();
+    expect(container.textContent).not.toContain("APY from depositing");
+  });
+
+  it("keeps retained ranking visible while announcing refresh failure", () => {
+    mockRankingsQuery({ data: makeYieldDetailResponse([makeRanking()]), error: new Error("refresh failed") });
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
+  });
+
+  it("gates price appreciation explanation on the published calculation mode", () => {
+    const row = makeRanking({ sourceRole: "fallback-proxy", provenance: makeYieldProvenance({ calculationMode: "benchmark-model", scoreQualification: "estimated" }) });
+    mockRankings([row]);
+    const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.queryByText(/not a quoted deposit rate/)).toBeNull();
+    mockRankings([{ ...row, provenance: makeYieldProvenance({ calculationMode: "price-return", scoreQualification: "estimated" }) }]);
+    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByText(/not a quoted deposit rate/).closest("details")).toBeNull();
+  });
+
+  it("disambiguates duplicate source labels in the visible selected identity", () => {
+    mockRankings([makeRanking({
+      yieldSource: "Shared venue",
+      provenance: makeYieldProvenance({ sourceKey: "selected-key" }),
+      altSources: [altSource("alternate-key", "Shared venue", 3, 3, 1_000_000)],
+    })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByRole("link", { name: "Shared venue (selected-key)" }).closest("details")).toBeNull();
+  });
+
+  it("does not infer a missing chain for a published venue", () => {
+    mockRankings([makeRanking({ sourceRole: "external-opportunity", sourceRisk: { venueProtocol: "Published venue" } })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByText("Venue: Published venue").closest("details")).toBeNull();
+    expect(screen.queryByText(/APY from depositing/)).toBeNull();
+  });
+
+  it("separates a benchmark spread from its negative reference level", () => {
+    mockRankings([makeRanking({ excessYield: 3.55, benchmarkLabel: "CHF 3M compounded SARON", benchmarkRate: -0.05 })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByLabelText(/3.55 pp above CHF 3M compounded SARON \(-0.05%\)/).textContent).toContain("+3.55 pp");
+  });
+
+  it("exposes the published reason when PYS is unavailable", () => {
+    mockRankings([makeRanking({ pharosYieldScore: null, pysNullReason: "opportunity-evidence-missing" })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    const unavailableScore = screen.getByLabelText(/Pharos Yield Score unavailable:.*opportunity.*missing/i);
+    expect(unavailableScore.closest("details")).toBeNull();
+    expect(screen.queryByRole("group", { name: "PYS breakdown" })).toBeNull();
+  });
+
+  it("normalizes sub-precision benchmark spreads without claiming a negative gap", () => {
+    mockRankings([makeRanking({ excessYield: -0.0000596 })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByText("+0.00 pp vs benchmark")).toBeTruthy();
+    expect(screen.queryByText("-0.00 pp vs benchmark")).toBeNull();
   });
 
   it("renders the loading shell for tracked yield-bearing assets", () => {
@@ -338,14 +461,14 @@ describe("YieldDetailSection", () => {
     expect(sourcesParam).toBe("alt-source-1,alt-source-2,alt-source-3,alt-source-4");
   });
 
-  it("renders the 'Why this APY changed' attribution card with a headline", () => {
+  it("keeps embedded attribution compact and links to the full analysis", () => {
     mockRankings([makeRanking()]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
-    expect(screen.getByText(/Why this APY changed/i)).toBeTruthy();
-    // No history points → insufficient-data path
+    expect(screen.queryByText(/Why this APY changed/i)).toBeNull();
     expect(screen.getByText(/Not enough data to attribute/i)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "View full yield analysis" }).getAttribute("href")).toBe("/stablecoin/usdn-smardex/yield");
   });
 
   it("uses decision-ledger reason codes for source arbitration copy", () => {
@@ -382,8 +505,8 @@ describe("YieldDetailSection", () => {
     expect(screen.queryByText("legacy freeform selection reason")).toBeNull();
   });
 
-  it("renders 'no comparison baseline' when rankChangeAttribution is null (E21)", () => {
-    mockRankings([makeRanking()]);
+  it("distinguishes an absent comparison from measured unchanged", () => {
+    mockRankings([makeRanking({ rankChangeAttribution: undefined })]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -392,15 +515,10 @@ describe("YieldDetailSection", () => {
     expect(screen.queryByText("Stable — no movement since last publication.")).toBeNull();
   });
 
-  it("renders 'Stable' only when a measured baseline shows zero movement (E21)", () => {
+  it("renders stable for an explicitly unchanged publication comparison", () => {
     mockRankings([
       makeRanking({
-        rankChangeAttribution: {
-          previousRank: 5,
-          rankDelta: 0,
-          pysDelta: 0,
-          primaryDriver: null,
-        },
+        rankChangeAttribution: null,
       }),
     ]);
 
@@ -409,24 +527,6 @@ describe("YieldDetailSection", () => {
     expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
   });
 
-  it("calls sub-basis-point excess a hurdle match and defaults a missing benchmark label (E20)", () => {
-    mockRankings([
-      makeRanking({ excessYield: -0.0000596, benchmarkLabel: undefined }),
-    ]);
-
-    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(container.textContent ?? "").toMatch(/matches the benchmark hurdle \(0\.00%\)/);
-    expect(container.textContent ?? "").not.toMatch(/misses the/);
-  });
-
-  it("keeps clears/misses wording outside display precision (E20)", () => {
-    mockRankings([makeRanking({ excessYield: 0.02, benchmarkLabel: "SOFR" })]);
-
-    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-
-    expect(container.textContent ?? "").toMatch(/clears the SOFR hurdle \(\+0\.02%\)/);
-  });
 
   it("renders rank delta and PYS delta when rankChangeAttribution carries movement", () => {
     mockRankings([
@@ -439,9 +539,9 @@ describe("YieldDetailSection", () => {
           primaryDriver: "apy",
           driverContributions: {
             apy: 3.2,
-            benchmark: 0.8,
-            stablecoinSafety: null,
-            sourceRisk: null,
+            benchmark: 80,
+            stablecoinSafety: 4.5,
+            sourceRisk: -0.2,
             sourceSwitch: null,
             freshness: null,
             volatility: null,
@@ -458,8 +558,12 @@ describe("YieldDetailSection", () => {
     expect(container.textContent ?? "").toMatch(/▲\s*\+3 places/);
     expect(container.textContent ?? "").toMatch(/\+4\.50\s+PYS/);
     expect(container.textContent ?? "").not.toMatch(/PYS\s*\+4\.50%/);
-    expect(container.textContent ?? "").toMatch(/APY:\s*\+3\.20\s+PYS/);
-    expect(container.textContent ?? "").toMatch(/Benchmark:\s*\+0\.80\s+PYS/);
+    expect(container.textContent ?? "").toMatch(/APY:\s*\+3\.20\s+rank places \(heuristic\)/);
+    expect(container.textContent ?? "").toMatch(/Benchmark:\s*\+80\.00\s+rank places \(heuristic\)/);
+    expect(container.textContent ?? "").toContain("-0.20 multiplier change");
+    expect(container.textContent ?? "").toContain("+4.50 PYS total change (heuristic)");
+    const driverList = Array.from(container.querySelectorAll("ul")).find((list) => list.textContent?.includes("multiplier change"));
+    expect(driverList?.firstElementChild?.textContent).toMatch(/^APY:/);
     expect(container.textContent ?? "").toMatch(/Previous rank/);
     expect(container.textContent ?? "").toMatch(/#12/);
     expect(container.textContent ?? "").toMatch(/#9/);

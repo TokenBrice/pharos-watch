@@ -14,6 +14,14 @@ The slower supplemental source snapshot is missing, malformed, empty, or older t
 
 Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes fresh per-family snapshots. A fresh all-empty family snapshot is valid current state and yields zero supplemental candidates; a family row absent entirely (missing cache with zero sources) means the lane was never provisioned and does not degrade the core run — the hourly chain provisions it. The acceptance bound is per-family and cadence-derived: the lane default is 1.5× the 4-hour producer cadence (6 hours); the Pendle daily lane fetches at most once per day on the free unkeyed quota and accepts its retained row through 48 hours (two daily cycles), so a `skipped-not-due` / `skipped-backoff` Pendle run is healthy, not degraded, while that row is inside the bound.
 
+Applied `sync-yield-data` remains `ok`; input findings live in `metadata.quality`, not top-level `fallbackMode`. Pendle-only loss goes in `quality.advisoryReasons`, leaving `quality.degraded` false: stale candidates are excluded and the admin supplemental tile remains degraded, but public producer quality stays clean. Aggregate `partial-family-cache` is suppressed only when exactly Pendle is unavailable. Other required-family failures affect producer quality. vaults.fyi is optional and never degrades the run.
+
+Aave refreshes three pinned Aave V3 reserves on every successful run: Ethereum USDC, Arbitrum USDT, and Base USDC, plus three rotating tracked-contract targets. Six targets run in two concurrency-three batches within the unchanged 28-second deadline. A successful generation replaces the family snapshot; old rotation windows are not accumulated or renewed with substituted timestamps. Failed/degraded fetches retain the prior snapshot under the usual rules. Rotating targets are discovery probes, not a promise of listed reserves or continuous coverage.
+
+Beefy, Royco, and Aave each cap concurrent outbound work at three. The standalone supplemental peak is three; hourly catch-up alongside parity is declared at four. Do not restore nested fan-out that can exceed these limits.
+
+Rankable vaults.fyi candidates need a parseable upstream observation timestamp no later than assessment time and no older than the six-hour supplemental budget. Missing, invalid, future, or stale observations remain audit-only; run time never substitutes for an upstream observation.
+
 ## First Checks
 
 1. **Access-gated status:** `https://ops.pharos.watch/admin/` -> Crons -> `sync-yield-supplemental` and `sync-yield-data`.

@@ -32,6 +32,8 @@ import type {
   SafetyScoreSnapshot,
 } from "./types";
 import { scanForNewVariants } from "./variant-scanner";
+import { resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
+import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 
 export const CHAIN_LENDING_TVL_FLOOR_USD: Record<string, number> = {
   aptos: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
@@ -406,8 +408,9 @@ function appendResolvedAutoDiscoveredYield(
   resolved: ResolvedYieldEntry[],
   autoDiscoveredIds: Set<string>,
   meta: { id: string; symbol: string },
-  pool: Pick<DlPool, "apy" | "apyBase" | "apyReward" | "pool" | "tvlUsd" | "project"> & { chain?: string | null },
+  pool: Pick<DlPool, "apy" | "apyBase" | "apyReward" | "pool" | "tvlUsd" | "project" | "symbol"> & { chain?: string | null },
 ): void {
+  const yieldType = resolveYieldTypeLabel({ id: meta.id, dataSource: "defillama-auto", pool });
   resolved.push({
     id: meta.id,
     symbol: meta.symbol,
@@ -418,6 +421,12 @@ function appendResolvedAutoDiscoveredYield(
       sourcePool: pool.pool,
       sourceTvlUsd: pool.tvlUsd,
       dataSource: "defillama-auto",
+      yieldType,
+      yieldSource: resolveYieldSourceLabel({
+        id: meta.id,
+        dataSource: yieldType === "lending-opportunity" ? "defillama-auto" : "defillama",
+        project: pool.project,
+      }),
       exchangeRate: null,
       sourceKey: pool.pool,
       project: pool.project,
@@ -685,32 +694,46 @@ function appendDynamicAutoLending(params: {
   const identityLookups = buildYieldIdentityLookups();
 
   for (const meta of lendingCandidates) {
-    const primaryChain = meta.contracts?.[0]?.chain;
-    const minTvlUsd = getRequiredLendingOpportunityTvlUsd({
-      stablecoinId: meta.id,
-      poolChain: primaryChain,
-      stablecoinSupplyById: params.stablecoinSupplyById,
-      stablecoinSupplyMapState: params.stablecoinSupplyMapState,
-    });
-
     const chainFilter = buildDlChainFilter(meta);
     const contractAddresses = getTrackedContractAddresses(meta);
     const allowSymbolMatch = chainFilter
       ? Array.from(chainFilter).every((chain) => canUseSymbolOnlyYieldMatch(meta, identityLookups, chain))
       : canUseSymbolOnlyYieldMatch(meta, identityLookups, null);
 
+    const sameSymbolCounts = new Map<string, number>();
+    for (const candidate of params.dlPools) {
+      if (candidate.exposure !== "single" || normalizeDexSymbol(candidate.symbol) !== normalizeDexSymbol(meta.symbol)) continue;
+      const chain = normalizeYieldPoolChain(candidate.chain);
+      if (chain) sameSymbolCounts.set(chain, (sameSymbolCounts.get(chain) ?? 0) + 1);
+    }
     const pool = findBestLendingPool(
       meta.symbol,
       params.dlPools,
       LENDING_PROTOCOL_ALLOWLIST,
       {
         minApy: MIN_LENDING_POOL_APY,
-        minTvlUsd,
+        minTvlUsd: 0,
         contractAddresses,
         chainFilter,
         allowSymbolMatch,
         reservedPoolIds: params.reservedPoolIds,
-        isBlockedPool: (candidate) => isAutoLendingCollisionBlockedForStablecoin(meta.id, candidate),
+        isBlockedPool: (candidate) => {
+          if (isAutoLendingCollisionBlockedForStablecoin(meta.id, candidate)) return true;
+          const chain = normalizeYieldPoolChain(candidate.chain);
+          if (
+            meta.flags.yieldBearing
+            && normalizeDexSymbol(candidate.symbol) === normalizeDexSymbol(meta.symbol)
+            && (YIELD_POOL_MAP[meta.id] != null || (chain && (sameSymbolCounts.get(chain) ?? 0) > 1))
+            && candidate.pool !== YIELD_POOL_MAP[meta.id]
+          ) return true;
+          return !passesLendingOpportunitySizeGate({
+            stablecoinId: meta.id,
+            poolChain: candidate.chain,
+            sourceTvlUsd: candidate.tvlUsd,
+            stablecoinSupplyById: params.stablecoinSupplyById,
+            stablecoinSupplyMapState: params.stablecoinSupplyMapState,
+          });
+        },
       },
     );
     if (!pool) continue;
@@ -719,7 +742,8 @@ function appendDynamicAutoLending(params: {
       continue;
     }
 
-    appendResolvedAutoDiscoveredYield(params.resolved, params.autoDiscoveredIds, meta, pool);
+    const fullPool = params.dlPools.find((candidate) => candidate.pool === pool.pool)!;
+    appendResolvedAutoDiscoveredYield(params.resolved, params.autoDiscoveredIds, meta, fullPool);
     dynamicCount++;
   }
 

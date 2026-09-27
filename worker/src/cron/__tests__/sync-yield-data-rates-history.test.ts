@@ -398,7 +398,7 @@ describe("syncYieldData", () => {
     onChainConfigs.length = 0;
   });
 
-  it("marks the run degraded when all deterministic on-chain sources fail", async () => {
+  it("publishes independent rows with a quality alarm when all deterministic on-chain sources fail", async () => {
     const onChainConfigs =
       yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
@@ -411,12 +411,17 @@ describe("syncYieldData", () => {
     });
 
     const db = makeDb();
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": dlPoolsCacheRow([
+        makeDlYieldPool({ pool: "pool-u-venus", project: "venus-core-pool", symbol: "U", apy: 5, apyBase: 5 }),
+      ], Math.floor(Date.now() / 1000)),
+    });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode?: string | null;
+      quality: { degraded: boolean; reasons: string[] };
       sourceCoverage?: {
         onChainAttempted?: number;
         onChainAllDeterministicFailed?: boolean;
@@ -424,8 +429,8 @@ describe("syncYieldData", () => {
       };
     };
 
-    expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode ?? "").toContain("onchain-rates:all-deterministic-failed");
+    expect(result.status).toBe("ok");
+    expect(metadata.quality.reasons).toContain("onchain-rates:all-deterministic-failed");
     expect(metadata.sourceCoverage?.onChainAttempted).toBe(1);
     expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(true);
     expect(metadata.sourceCoverage?.onChainFailures).toEqual({ "no-chain-rpcs": 1 });
@@ -470,7 +475,7 @@ describe("syncYieldData", () => {
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode?: string | null;
+      quality: { degraded: boolean; reasons: string[] };
       sourceCoverage?: {
         onChainAllDeterministicFailed?: boolean;
         onChainFailureMaskedByAlternativeCoverage?: boolean;
@@ -479,8 +484,12 @@ describe("syncYieldData", () => {
       };
     };
 
-    expect(result.status).toBeUndefined();
-    expect(metadata.fallbackMode).toBeNull();
+    expect(result.status).toBe("ok");
+    expect(metadata.quality).toEqual({
+      degraded: false,
+      reasons: [],
+      advisoryReasons: ["yield-supplemental:family-unavailable:pendle"],
+    });
     expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(true);
     expect(metadata.sourceCoverage?.onChainFailureMaskedByAlternativeCoverage).toBe(true);
     expect(metadata.sourceCoverage?.onChainAlternativeCoverageMissingIds).toEqual([]);
@@ -543,14 +552,14 @@ describe("syncYieldData", () => {
     ]);
     const result = await syncYieldData(db, undefined, testChainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode?: string | null;
+      quality: { degraded: boolean; reasons: string[] };
       sourceCoverage?: {
         onChainRatesResolved?: number;
         onChainAllDeterministicFailed?: boolean;
       };
     };
 
-    expect(metadata.fallbackMode ?? "").not.toContain("onchain-rates:all-deterministic-failed");
+    expect(metadata.quality.reasons).not.toContain("onchain-rates:all-deterministic-failed");
     expect(metadata.sourceCoverage?.onChainRatesResolved).toBe(1);
     expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(false);
 
@@ -598,7 +607,7 @@ describe("syncYieldData", () => {
       .mockResolvedValue(BigInt("1050000000000000000"));
     const result = await syncYieldData(db, undefined, testChainRpcs, undefined, "etherscan-key");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode?: string | null;
+      quality: { degraded: boolean; reasons: string[] };
       sourceCoverage?: {
         onChainRatesResolved?: number;
         onChainAllDeterministicFailed?: boolean;
@@ -608,7 +617,7 @@ describe("syncYieldData", () => {
       };
     };
 
-    expect(metadata.fallbackMode ?? "").not.toContain("onchain-rates:all-deterministic-failed");
+    expect(metadata.quality.reasons).not.toContain("onchain-rates:all-deterministic-failed");
     expect(metadata.sourceCoverage?.onChainRatesResolved).toBe(1);
     expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(false);
     expect(metadata.sourceCoverage?.onChainExplorerAttempted).toBe(1);
@@ -659,6 +668,9 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(getCache), {
       risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
+      "dl-stablecoin-pools": dlPoolsCacheRow([
+        makeDlYieldPool({ pool: "pool-u-venus", project: "venus-core-pool", symbol: "U", apy: 5, apyBase: 5 }),
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     const testChainRpcs = makeEthereumRpcMap([
@@ -672,7 +684,7 @@ describe("syncYieldData", () => {
 
     const result = await syncYieldData(db, undefined, testChainRpcs, undefined, "etherscan-key");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode?: string | null;
+      quality: { degraded: boolean; reasons: string[] };
       sourceCoverage?: {
         onChainAttempted?: number;
         onChainAllDeterministicFailed?: boolean;
@@ -682,8 +694,8 @@ describe("syncYieldData", () => {
       };
     };
 
-    expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode ?? "").toContain("onchain-rates:all-deterministic-failed");
+    expect(result.status).toBe("ok");
+    expect(metadata.quality.reasons).toContain("onchain-rates:all-deterministic-failed");
     expect(metadata.sourceCoverage?.onChainAttempted).toBe(1);
     expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(true);
     expect(metadata.sourceCoverage?.onChainExplorerAttempted).toBe(1);

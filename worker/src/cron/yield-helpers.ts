@@ -59,23 +59,27 @@ function isChainAllowed(filter: Set<string> | undefined, chain: string | undefin
   return chainId !== null && filter.has(chainId);
 }
 
-export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
-  // B12 — a non-finite input (NaN window, Infinity rate) used to propagate NaN out
-  // of the annualization; callers treat NaN as "finite enough" in places, so fail to
-  // the documented zero instead.
-  if (!Number.isFinite(rateNow) || !Number.isFinite(ratePrev) || !Number.isFinite(days)) return 0;
-  if (ratePrev <= 0 || rateNow <= 0 || days <= 0) return 0;
+export type AnnualizedYieldResult = number | {
+  reason: "invalid-input" | "invalid-window" | "non-finite-annualization";
+};
+
+export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): AnnualizedYieldResult {
+  if (!Number.isFinite(rateNow) || !Number.isFinite(ratePrev) || ratePrev <= 0 || rateNow <= 0) {
+    return { reason: "invalid-input" };
+  }
+  if (!Number.isFinite(days) || days <= 0) return { reason: "invalid-window" };
   const ratio = rateNow / ratePrev;
+  if (!Number.isFinite(ratio) || ratio <= 0) return { reason: "non-finite-annualization" };
   if (ratio === 1) return 0;
   const apy = (Math.pow(ratio, 365.25 / days) - 1) * 100;
-  return Number.isFinite(apy) ? apy : 0;
+  return Number.isFinite(apy) ? apy : { reason: "non-finite-annualization" };
 }
 
 /**
  * Naming-only alias for {@link computeApyFromRate} used when inputs are token prices
  * rather than exchange rates. No additional transformation is applied.
  */
-export function computeApyFromPrice(priceNow: number, pricePrev: number, days: number): number {
+export function computeApyFromPrice(priceNow: number, pricePrev: number, days: number): AnnualizedYieldResult {
   return computeApyFromRate(priceNow, pricePrev, days);
 }
 
@@ -107,7 +111,7 @@ interface WarningInput {
   currentApy: number;
   apy30d: number;
   apyReward: number | null;
-  medianApy: number;
+  medianApy: number | null;
   sourceTvlUsd: number | null;
   prevTvlUsd: number | null;
 }
@@ -120,7 +124,7 @@ interface WarningInput {
 export function detectWarningSignals(input: WarningInput): YieldWarningSignalKey[] {
   const signals: YieldWarningSignalKey[] = [];
   if (input.apy30d > 0 && input.currentApy > YIELD_SPIKE_MIN_APY && input.currentApy / input.apy30d > YIELD_SPIKE_THRESHOLD) signals.push("yield-spike");
-  if (input.medianApy > 0 && input.currentApy > input.medianApy * YIELD_DIVERGENCE_THRESHOLD) signals.push("yield-divergence");
+  if (input.medianApy != null && input.medianApy > 0 && input.currentApy > input.medianApy * YIELD_DIVERGENCE_THRESHOLD) signals.push("yield-divergence");
   if (input.apy30d > NEGATIVE_TREND_MIN_APY && input.currentApy < input.apy30d * NEGATIVE_TREND_THRESHOLD) signals.push("negative-trend");
   if (input.apyReward != null && input.currentApy > 0 && input.apyReward / input.currentApy > REWARD_HEAVY_THRESHOLD) signals.push("reward-heavy");
   if (input.sourceTvlUsd != null && input.prevTvlUsd != null && input.prevTvlUsd > 0) {
@@ -236,14 +240,14 @@ export function matchAllDlPools(
   };
   const isReservedForAnotherCoin = (poolId: string): boolean => reservedPoolIds.has(poolId) && poolId !== nativeId;
 
-  // Layer 1: Static pool map (native/primary source — stablecoin=true required)
+  // Layer 1: Curated native source. An absent pin must not borrow a generic venue's APY.
   if (nativeId) {
     const p = dlPools.find((pool) => pool.pool === nativeId && pool.exposure === "single");
     if (p) {
       found.push({ pool: p.pool, apy: p.apy, apyBase: p.apyBase, apyReward: p.apyReward, tvlUsd: p.tvlUsd });
       seenUuids.add(p.pool);
     } else if (!dlPools.find((pool) => pool.pool === nativeId)) {
-      logWorkerEventArgs("handler", "warn", `[yield-sync] Pool UUID ${nativeId} for ${stablecoinId} not found in DL response, falling through`);
+      logWorkerEventArgs("handler", "warn", `[yield-sync] missing-pool: native-pool ${stablecoinId} ${nativeId}`);
     }
   }
 
@@ -299,10 +303,10 @@ export function matchAllDlPools(
   }
 
   // Layer 3: Base-symbol fallback (only when BOTH static maps miss — stablecoin=true required).
-  // Prefer address corroboration first, then exact normalized symbol equality. Substring-only
-  // matches are intentionally excluded because they can attach a base asset to an unrelated
-  // prefixed/suffixed wrapper.
-  if (found.length === 0 && !options?.skipBaseSymbolFallback) {
+  // An underlying address proves the deposit asset, not receipt ownership. Require
+  // the tracked instrument's own symbol as well; differently named tranches need
+  // a curated pin or their separately typed supplemental lane.
+  if (!nativeId && found.length === 0 && !options?.skipBaseSymbolFallback) {
     const sym = normalizeDexSymbol(symbol);
     if (sym.length >= 4) {
       const baseCandidates = dlPools.filter(
@@ -314,14 +318,27 @@ export function matchAllDlPools(
           isEligibleChain(pool.chain),
       );
 
+      const sameSymbolCounts = new Map<string, number>();
+      for (const pool of baseCandidates) {
+        if (normalizeDexSymbol(pool.symbol) !== sym) continue;
+        const chain = normalizeChainId(pool.chain ?? "") ?? "";
+        sameSymbolCounts.set(chain, (sameSymbolCounts.get(chain) ?? 0) + 1);
+      }
       const addressCandidates = contractSet.size > 0
-        ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, contractSet))
+        ? baseCandidates.filter((pool) =>
+          corroboratesUnderlyingSet(pool, contractSet)
+          && normalizeDexSymbol(pool.symbol) === sym
+          && sameSymbolCounts.get(normalizeChainId(pool.chain ?? "") ?? "") === 1,
+        )
         : [];
       if (addressCandidates.length > 0) {
         const best = addressCandidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
         found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
       } else {
-        const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol) === sym);
+        const symbolCandidates = baseCandidates.filter((pool) =>
+          normalizeDexSymbol(pool.symbol) === sym
+          && (contractSet.size === 0 || !pool.underlyingTokens?.length),
+        );
         if (symbolCandidates.length === 1) {
           const candidate = symbolCandidates[0];
           found.push({

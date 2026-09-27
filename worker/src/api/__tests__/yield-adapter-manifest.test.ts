@@ -44,7 +44,7 @@ describe("handleYieldAdapterManifest", () => {
     expect(body.updatedAt).toBeGreaterThanOrEqual(newestReviewSec);
     expect(body.updatedAt).toBeGreaterThan(1_700_000_000);
     const newestMethodologySec = Math.max(...YIELD_METHODOLOGY_CHANGELOG.map((entry) => entry.effectiveAt));
-    expect(body.updatedAt).toBe(newestMethodologySec);
+    expect(body.updatedAt).toBe(Math.max(newestReviewSec, newestMethodologySec));
   });
 
   it("serves freshness headers derived from the registry revision", async () => {

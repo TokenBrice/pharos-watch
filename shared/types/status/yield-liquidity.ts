@@ -274,6 +274,7 @@ export const YieldHealthSummarySchema = z.object({
       headlineGaps: z.number(),
       recommendationCandidates: z.number(),
     }).optional(),
+    queueBudgetBasis: z.enum(["post-disposition", "raw-detectors"]).optional(),
     /** The rendered queue performs no writes until the admin disposition route lands (C8). */
     queueDisplayOnly: z.boolean().optional(),
   }),

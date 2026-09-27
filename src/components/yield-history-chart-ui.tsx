@@ -25,7 +25,7 @@ import {
   formatTooltipDate,
   getYieldHistorySourceDisplayLabel,
   type YieldHistorySourceOption,
-  type YieldHistoryChartPoint,
+  type YieldHistoryChartSeriesPoint,
   type YieldSourceSegment,
 } from "./yield-history-chart-model";
 
@@ -40,7 +40,7 @@ interface AxisTickProps {
 interface WarningDotProps {
   cx?: number;
   cy?: number;
-  payload?: YieldHistoryChartPoint;
+  payload?: YieldHistoryChartSeriesPoint;
   active?: boolean;
 }
 
@@ -93,8 +93,12 @@ export function YAxisTick({
 }
 
 export function WarningDot({ cx, cy, payload, active = false }: WarningDotProps) {
-  if (typeof cx !== "number" || typeof cy !== "number" || !payload || payload.warningSignals.length === 0) {
+  if (typeof cx !== "number" || typeof cy !== "number" || !payload || payload.apy == null || (payload.warningSignals.length === 0 && payload.warningSignalsStatus !== "unreadable")) {
     return null;
+  }
+
+  if (payload.warningSignalsStatus === "unreadable") {
+    return <circle cx={cx} cy={cy} r={active ? 5 : 4} fill="var(--color-background)" stroke="var(--color-muted-foreground)" strokeWidth={2} aria-label="Warnings unreadable" />;
   }
 
   return (
@@ -144,7 +148,7 @@ export function YieldHistoryTooltip({
   spikesByDate,
 }: {
   active?: boolean;
-  payload?: Array<{ dataKey?: string; payload: YieldHistoryChartPoint }>;
+  payload?: Array<{ dataKey?: string; payload: YieldHistoryChartSeriesPoint }>;
   label?: number | string;
   showBreakdown: boolean;
   compact: boolean;
@@ -177,7 +181,7 @@ export function YieldHistoryTooltip({
         ) : null}
         <div className="flex items-center justify-between gap-4">
           <span>APY</span>
-          <span className="font-mono tabular-nums text-foreground">{formatChartNumber(point.apy)}%</span>
+          <span className="font-mono tabular-nums text-foreground">{point.apy == null ? "Unavailable" : `${formatChartNumber(point.apy)}%`}</span>
         </div>
         {showBreakdown ? (
           <>
@@ -204,13 +208,16 @@ export function YieldHistoryTooltip({
           </span>
         </div>
       ) : null}
-      {spikeInfo ? (
+      {spikeInfo && point.apy != null ? (
         <div className="mt-2 rounded-md border border-orange-500/25 bg-orange-500/10 px-2.5 py-2 text-[10px] text-orange-700 dark:text-orange-300">
           <span className="block font-medium uppercase tracking-[0.14em]">Yield spike</span>
           <span className="mt-1 block normal-case tracking-normal">
             {`Current ${formatChartNumber(point.apy)}% is ${formatChartNumber(spikeInfo.ratio, 1, 1)}× the trailing ${spikeInfo.windowDays}d average of ${formatChartNumber(spikeInfo.trailingAvg)}%.`}
           </span>
         </div>
+      ) : null}
+      {point.warningSignalsStatus === "unreadable" ? (
+        <p className="mt-2 border-t border-border/60 pt-2 text-muted-foreground">Warnings unreadable</p>
       ) : null}
       {point.warningSignals.length > 0 ? (
         <div className="mt-2 border-t border-border/60 pt-2">
@@ -255,7 +262,7 @@ export function Controls({
   hideSourceSelector?: boolean;
 }) {
   const selectedSourceLabel = selectedSourceKey === "best"
-    ? "Canonical (published) source"
+    ? "Published selected source"
     : getYieldHistorySourceDisplayLabel(
         availableSources.find((source) => source.sourceKey === selectedSourceKey) ?? {
           sourceKey: selectedSourceKey,
@@ -307,7 +314,7 @@ export function Controls({
               <DropdownMenuContent align="start" className="max-h-72 w-[min(22rem,calc(100vw-2rem))]">
                 <DropdownMenuRadioGroup value={selectedSourceKey} onValueChange={onSourceChange}>
                   <DropdownMenuRadioItem value="best" className="text-xs">
-                    Canonical (published) source
+                    Published selected source
                   </DropdownMenuRadioItem>
                   {availableSources.map((source) => (
                     <DropdownMenuRadioItem key={source.sourceKey} value={source.sourceKey} className="text-xs">

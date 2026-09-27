@@ -121,6 +121,17 @@ describe("buildYieldSourceExplorerModel", () => {
       "Aave (aave-usdt)",
     ]);
   });
+
+  it("does not present an unretained source key as a human-readable previous venue", () => {
+    const missingKey = "75ff7280-not-retained";
+    const model = buildYieldSourceExplorerModel(ranking({
+      provenance: makeYieldProvenance({ sourceSwitch: true, previousBestSourceKey: missingKey }),
+      altSources: [],
+    }));
+    expect(model.sourceSwitch.previousSourceKey).toBe(missingKey);
+    expect(model.sourceSwitch.previousSourceDisplayLabel).not.toContain(missingKey);
+    expect(model.sourceSwitch.previousSourceDisplayLabel).toMatch(/not retained/i);
+  });
 });
 
 function altSource(overrides: Partial<AltYieldSource> & Pick<AltYieldSource, "sourceKey">): AltYieldSource {

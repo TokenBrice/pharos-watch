@@ -59,6 +59,8 @@ export interface YieldCoverageReviewDispositionSummary {
   candidateItemCount: number;
   suppressedItemCount: number;
   visibleItemCount: number;
+  visibleHeadlineGapCount: number;
+  visibleRecommendationCandidateCount: number;
   publishedItemCount: number;
   truncatedItemCount: number;
   noDispositionCount: number;
@@ -226,6 +228,8 @@ function emptySummary(): YieldCoverageReviewDispositionSummary {
     candidateItemCount: 0,
     suppressedItemCount: 0,
     visibleItemCount: 0,
+    visibleHeadlineGapCount: 0,
+    visibleRecommendationCandidateCount: 0,
     publishedItemCount: 0,
     truncatedItemCount: 0,
     noDispositionCount: 0,
@@ -284,6 +288,8 @@ export async function applyYieldCoverageReviewDispositions<
   const visibleHeadlineGaps = filterVisible(queue.headlineGaps);
   const visibleRecommendationCandidates = filterVisible(queue.recommendationCandidates);
   summary.visibleItemCount = visibleHeadlineGaps.length + visibleRecommendationCandidates.length;
+  summary.visibleHeadlineGapCount = visibleHeadlineGaps.length;
+  summary.visibleRecommendationCandidateCount = visibleRecommendationCandidates.length;
   const headlineGaps = visibleHeadlineGaps.slice(0, publishedItemLimit);
   const recommendationCandidates = visibleRecommendationCandidates.slice(0, publishedItemLimit);
   summary.publishedItemCount = headlineGaps.length + recommendationCandidates.length;

@@ -37,6 +37,44 @@ describe("fetchRoycoDawnSources", () => {
     vi.unstubAllGlobals();
   });
 
+  it("bounds delayed detail requests at three and completes eight markets within the family deadline", async () => {
+    const markets = Array.from({ length: 8 }, (_, index) => makeMarket({
+      marketId: `0x${String(index + 1).padStart(40, "0")}`,
+      seniorVault: makeVault({
+        address: `0x${String(index + 11).padStart(40, "0")}`,
+        apy: 0.05,
+        tvlUsd: 1_000_000,
+        depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        depositSymbol: "apyUSD",
+        shareAddress: `0x${String(index + 11).padStart(40, "0")}`,
+      }),
+    }));
+    const routes = installRoycoMarketRoutes([{
+      match: "https://dawn.royco.org/api/v1/ecosystem/explore",
+      body: { count: markets.length, data: markets },
+    }]);
+    let active = 0;
+    let peak = 0;
+    vi.stubGlobal("fetch", async (...args: Parameters<typeof routes>) => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise<void>((resolve) => setTimeout(resolve, 1_000));
+      active -= 1;
+      return routes(...args);
+    });
+    const started = Date.now();
+    const pending = fetchRoycoDawnSources();
+    await vi.advanceTimersByTimeAsync(5_000);
+    const result = await pending;
+    expect(peak).toBe(3);
+    expect(active).toBe(0);
+    expect(result.degraded).toBe(false);
+    expect(result.candidates.map((candidate) => candidate.yield.sourceKey)).toEqual(
+      markets.map((market) => `royco-dawn:1:${market.marketId}:senior`),
+    );
+    expect(Date.now() - started).toBeLessThan(25_000);
+  });
+
   it("emits senior and junior tranche candidates for tracked deposit tokens", async () => {
     mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
             count: 1,
@@ -285,38 +323,6 @@ describe("Royco discovery boundaries", () => {
     // full snapshot instead of replacing it with this partial page set.
     expect(degraded).toBe(true);
     expect(pages).toEqual([1, 2]);
-  });
-
-  it("limits the detail walk to six concurrent requests", async () => {
-    let activeDetailRequests = 0;
-    let maxActiveDetailRequests = 0;
-    let detailRequestCount = 0;
-    let releaseFirstBatch!: () => void;
-    const firstBatchGate = new Promise<void>((resolve) => {
-      releaseFirstBatch = resolve;
-    });
-    const markets = Array.from({ length: 7 }, (_, index) => makeMarket({ marketId: `market-${index}` }));
-
-    vi.stubGlobal("fetch", vi.fn(async (url) => {
-      if (String(url).endsWith("/ecosystem/explore")) {
-        return Response.json({ count: markets.length, data: markets });
-      }
-      detailRequestCount += 1;
-      activeDetailRequests += 1;
-      maxActiveDetailRequests = Math.max(maxActiveDetailRequests, activeDetailRequests);
-      if (detailRequestCount <= 6) await firstBatchGate;
-      activeDetailRequests -= 1;
-      return Response.json(makeMarket({ marketId: String(url).split("/").pop() }));
-    }));
-
-    const resultPromise = fetchRoycoDawnSources();
-    await vi.waitFor(() => expect(detailRequestCount).toBe(6));
-    expect(maxActiveDetailRequests).toBe(6);
-    releaseFirstBatch();
-
-    const result = await resultPromise;
-    expect(result.degraded).toBe(false);
-    expect(detailRequestCount).toBe(7);
   });
 
   it("rejects caller cancellation during a request", async () => {

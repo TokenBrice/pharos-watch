@@ -1,4 +1,4 @@
-import { guardPublishedYieldCoverage, guardTrackedYieldCoverage } from "./coordinator-guards";
+import { guardPublishedYieldCoverage } from "./coordinator-guards";
 import type { CronMetadataRecord } from "../../lib/cron-result";
 import { computeDeterministicOnChainHealth, logYieldApyDivergences } from "./coordinator-health";
 import {
@@ -56,24 +56,6 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     safetySnapshotReason: fetched.safetySnapshot.reason ?? null,
   };
 
-  const trackedCoverageGuard = guardTrackedYieldCoverage({
-    resolvedYieldBearingCount: normalized.resolvedYieldBearingIds.size,
-    expectedYieldBearingCount: fetched.yieldCoins.length,
-    inputDiagnostics,
-  });
-  if (trackedCoverageGuard) {
-    await fetched.reportYieldProgress("coverage-guard", "Yield tracked coverage guard deferred publication", "yield", {
-      itemsDone: normalized.resolvedYieldBearingIds.size,
-      metadata: {
-        guard: "tracked-coverage",
-        countTotals: {
-          resolvedYieldBearingCoins: normalized.resolvedYieldBearingIds.size,
-          expectedYieldBearingCoins: fetched.yieldCoins.length,
-        },
-      },
-    });
-    return { ok: false as const, result: trackedCoverageGuard };
-  }
 
   const previousYieldPublicationSnapshot = await loadPreviousYieldPublicationSnapshot(params.db);
   const safetySnapshotMeta = buildYieldSafetySnapshotMeta({
@@ -88,7 +70,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     methodologyVersion: fetched.safetySnapshot.methodologyVersion,
     publishedAt: fetched.safetySnapshot.publishedAt,
   });
-  const { previewRankingsPayload, publicationViews } = buildPreviewYieldRankingsArtifacts({
+  const { previewRankingsPayload, publicationViews, acceptedSources, quarantineReasons } = buildPreviewYieldRankingsArtifacts({
     evaluatedSources: normalized.evaluatedSources,
     bestSourceKeyByCoin: normalized.bestSourceKeyByCoin,
     riskFreeRate: fetched.riskFreeRate,
@@ -131,6 +113,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
   const degradationReasons = buildYieldDegradationReasons({
     safetySnapshotDegraded: fetched.safetySnapshotDegraded,
     safetySnapshotReason: fetched.safetySnapshot.reason ?? null,
+    riskFreeRateRegistryCacheState: fetched.riskFreeRateRegistryCacheState,
     defaultBenchmarkMeta: fetched.riskFreeRateMeta,
     selectedSources: normalized.evaluatedSources.filter(
       (source) => normalized.bestSourceKeyByCoin.get(source.id) === source.sourceKey,
@@ -144,6 +127,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     onChainAlternativeCoverageMissingIds: onChainHealth.onChainAlternativeCoverageMissingIds,
     previousTvlRowsTruncated: normalized.historySnapshots.previousTvlRowsTruncated,
   });
+  degradationReasons.push(...quarantineReasons, ...publishedCoverageGuard.qualityReasons);
   await fetched.reportYieldProgress("publication", "Publishing yield rankings generation", "yield-publication", {
     itemsDone: 0,
     itemsTotal: previewRankingsPayload.rankings.length,
@@ -163,6 +147,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
       safetySnapshotMeta,
       previewRankingsPayload,
       publicationViews,
+      acceptedSources,
       degradationReasons,
       previousYieldPublicationSnapshot,
       previousPublishedYieldBearingCount: publishedCoverageGuard.previousPublishedYieldBearingCount,

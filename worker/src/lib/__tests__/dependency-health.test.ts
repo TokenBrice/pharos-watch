@@ -136,7 +136,7 @@ describe("buildDependencyHealth", () => {
           maxAge: 3_600,
           healthy: false,
           degraded: true,
-          degradedReason: "producer-degraded-since-last-clean-run",
+          degradedReason: "yield-supplemental:family-degraded:aaveV3:upstream-unavailable",
           streakDegradedRuns: 135,
           producerJob: "sync-yield-data",
           producerIntervalSec: 3_600,
@@ -149,7 +149,7 @@ describe("buildDependencyHealth", () => {
 
     const yieldRankings = dependencyHealth.dependencies["yield-rankings"];
     expect(yieldRankings.status).toBe("degraded");
-    expect(yieldRankings.reason).toContain("producer-degraded-since-last-clean-run");
+    expect(yieldRankings.reason).toContain("yield-supplemental:family-degraded:aaveV3:upstream-unavailable");
     expect(yieldRankings.reason).toContain("135");
     expect(yieldRankings.reason).not.toContain("Freshness age");
   });

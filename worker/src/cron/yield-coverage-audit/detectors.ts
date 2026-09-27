@@ -109,6 +109,7 @@ export interface StaleAutoLendingOverride {
 
 interface IdentifyStaleAutoLendingOverrideOptions {
   stablecoinSupplyById?: Map<string, number>;
+  stablecoinSupplyMapState?: "ok" | "missing" | "malformed";
   safetyScores?: Map<string, { score: number }>;
 }
 
@@ -938,7 +939,7 @@ export function identifyStaleAutoLendingOverrides(
       safetyScore: safetyScores?.get(stablecoinId)?.score,
       safetySnapshotAvailable: safetyScores != null,
       stablecoinSupplyById,
-      stablecoinSupplyMapState: "ok",
+      stablecoinSupplyMapState: options.stablecoinSupplyMapState ?? (options.stablecoinSupplyById ? "ok" : "missing"),
     });
     if (verdict.eligible) continue;
     const reasons = verdict.reasonCodes.map((reason) => AUTO_LENDING_AUDIT_REASON[reason]);

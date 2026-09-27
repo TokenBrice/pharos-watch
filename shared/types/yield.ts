@@ -146,8 +146,9 @@ const YieldLiveSafetyHydrationMetaSchema = z.object({
 
 const YieldRankingProvenanceSchema = z.object({
   sourceKey: z.string(),
-  sourceObservedAt: z.number(),
-  sourceAgeSeconds: z.number(),
+  sourceObservedAt: z.number().nullable().optional(),
+  sourceAgeSeconds: z.number().nullable(),
+  sourceMaxAgeSeconds: z.number().nullable().optional(),
   comparisonAnchorObservedAt: z.number().nullable().optional(),
   comparisonAnchorAgeSeconds: z.number().nullable().optional(),
   confidenceTier: z.enum(["deterministic", "curated", "discovered", "fallback"]),
@@ -258,13 +259,17 @@ const YieldResponseWarningSchema = z.object({
 });
 
 /**
- * Freshness envelope every cached yield response carries (`_meta`), mirroring
- * `YieldSummaryFreshnessMetaSchema` in `yield-summary.ts`.
+ * Shared freshness envelope for detailed rankings, their summary projection,
+ * and yield history. Every assessment names the budgets used for its verdict.
  */
 const YieldResponseFreshnessMetaSchema = z
   .object({
     updatedAt: z.number(),
     ageSeconds: z.number(),
+    assessedAt: z.number().optional(),
+    freshBudgetSec: z.number().optional(),
+    degradedBudgetSec: z.number().optional(),
+    reason: z.string().nullable().optional(),
     status: z.enum(["fresh", "degraded", "stale"]),
   })
   .strict();
@@ -274,7 +279,7 @@ export const YieldRankingsResponseSchema = z.object({
   riskFreeRate: z.number(),
   benchmarks: YieldBenchmarkRegistrySchema.optional(),
   scalingFactor: z.number(),
-  medianApy: z.number(),
+  medianApy: z.number().nullable(),
   updatedAt: z.number(),
   _meta: YieldResponseFreshnessMetaSchema.optional(),
   provenance: YieldRankingsProvenanceSchema.nullable().optional(),
@@ -288,6 +293,7 @@ export const YieldHistoryResponseSchema = z.object({
   current: YieldHistoryPointSchema.nullable(),
   history: z.array(YieldHistoryPointSchema),
   warning: z.string().optional(),
+  _meta: YieldResponseFreshnessMetaSchema.optional(),
   methodology: MethodologyEnvelopeSchema,
   publication: YieldPublicationMetadataSchema.nullable().optional(),
 });

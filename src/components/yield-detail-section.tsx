@@ -21,6 +21,12 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
+import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
+import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
+import { resolveYieldScoreQualification } from "@/lib/yield-constants";
+import { YIELD_SOURCE_CONFIDENCE_STYLES, getYieldSourceFreshnessDisplay } from "@/lib/yield-source-risk";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
@@ -28,7 +34,7 @@ import {
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
-import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
+import { formatPercent, formatSignedPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
 import { MethodologyHint, MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { useYieldDetailSectionModel } from "@/components/yield-detail-section-model";
@@ -39,7 +45,11 @@ import { StatTile } from "@/components/stat-tile";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { classifyApyChange, type YieldChangeAttributionResult } from "@/lib/yield-change-attribution";
-import { formatSignedPysDelta } from "@/lib/yield-presentation";
+import {
+  formatSignedPysDelta, formatYieldBenchmarkSpread, formatYieldBenchmarkSpreadChip,
+  formatYieldDepositExplanation, formatYieldDriverContext,
+  YIELD_SOURCE_FACT_LABELS, YIELD_CALCULATION_MODE_LABELS, YIELD_SCORE_QUALIFICATION_LABELS,
+} from "@/lib/yield-presentation";
 
 interface YieldDetailSectionProps {
   stablecoinId: string;
@@ -135,10 +145,26 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       {view.yieldTypeLabel}
     </span>
   );
-  const sourceAgeMinutes =
-    ranking.provenance?.sourceAgeSeconds != null ? Math.round(ranking.provenance.sourceAgeSeconds / 60) : null;
-  const sourceTvl = view.sourceExplorer.selectedSource.sourceTvlUsd;
-  const sourceDepthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens];
+  const coin = CLIENT_TRACKED_META_BY_ID.get(stablecoinId);
+  const hasWorkbench = coin != null && hasStaticYieldWorkbench(coin);
+  const qualification = resolveYieldScoreQualification(ranking);
+  const qualificationLabel = YIELD_SCORE_QUALIFICATION_LABELS[qualification as keyof typeof YIELD_SCORE_QUALIFICATION_LABELS];
+  const rolePrefix = ranking.sourceRole === "canonical-holder"
+    ? YIELD_SOURCE_FACT_LABELS.holder
+    : ranking.sourceRole === "external-opportunity"
+      ? YIELD_SOURCE_FACT_LABELS.external
+      : ranking.sourceRole === "fallback-proxy" && qualification === "estimated"
+        ? YIELD_SOURCE_FACT_LABELS.estimated : null;
+  const confidence = ranking.provenance?.confidenceTier;
+  const freshness = getYieldSourceFreshnessDisplay({
+    sourceAgeSeconds: ranking.provenance?.sourceAgeSeconds,
+    sourceFreshness: ranking.provenance?.sourceFreshness,
+    warningSignals: ranking.warningSignals,
+  });
+  const venue = ranking.sourceRisk?.venueProtocol;
+  const chain = ranking.sourceRisk?.venueChain;
+  const deployment = ranking.sourceRisk?.deploymentPlace;
+  const calculationMode = ranking.provenance?.calculationMode;
   const excessYield = ranking.excessYield;
   // An excess that prints as ±0.00% (|excess| below half of the last displayed
   // 0.01% digit) is a hurdle match, not a miss; the hurdle label is
@@ -161,20 +187,48 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
   return (
     <YieldDetailSectionFrame headerEnd={headerEnd}>
+      <QueryErrorNotice error={view.refreshError} hasData />
       {view.apiWarning ? (
         <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
           {view.apiWarning}
         </div>
       ) : null}
       <div className="space-y-3">
+        <div className="space-y-1 text-xs">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            {rolePrefix ? <span className="font-medium">{rolePrefix} ·</span> : null}
+            <YieldSourceIdentity
+              displayLabel={view.sourceExplorer.sourceIdentity.displayLabel}
+              url={view.sourceExplorer.sourceIdentity.url}
+              confidenceStyle={confidence ? YIELD_SOURCE_CONFIDENCE_STYLES[confidence] : null}
+              confidenceLabel={confidence ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidence].label : null}
+              sourceChanged={view.sourceExplorer.sourceSwitch.changed}
+            />
+            {freshness ? <YieldFreshnessLabel freshness={freshness} /> : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+            <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", view.dataSourceMeta.badge)}>
+              {view.dataSourceMeta.label}
+            </span>
+            {venue ? <span>{YIELD_SOURCE_FACT_LABELS.venue}: {venue}</span> : null}
+            {chain ? <span>{venue ? "· " : ""}{chain}</span> : null}
+            {deployment && deployment !== "price-derived" && deployment !== "rate-derived" ? (
+              <span>{venue || chain ? "· " : ""}{deployment.replaceAll("-", " ")}</span>
+            ) : null}
+            {ranking.sourceRole === "external-opportunity" && venue && chain ? (
+              <span>{formatYieldDepositExplanation(ranking.symbol, venue, chain)}</span>
+            ) : null}
+            {calculationMode === "price-return" ? <span>{YIELD_SOURCE_FACT_LABELS.priceReturn}</span>
+              : ranking.sourceRole === "fallback-proxy" && calculationMode
+                ? <span>{YIELD_CALCULATION_MODE_LABELS[calculationMode]}</span> : null}
+          </div>
+        </div>
         {/* Verdict line derived from published figures (excess yield vs the
             benchmark hurdle, PYS after adjustments) — falls back to the
             neutral caption when the hurdle comparison is unavailable. */}
         <p className="text-sm text-muted-foreground">
           {excessYield != null && view.ranking.apy30d != null
-            ? `APY ${formatPercent(view.ranking.apy30d)} ${
-                excessWithinDisplayPrecision ? "matches" : excessYield >= 0 ? "clears" : "misses"
-              } the ${benchmarkHurdleLabel} hurdle (${formatSignedPercent(excessWithinDisplayPrecision ? 0 : excessYield)}); PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
+            ? `APY ${formatPercent(view.ranking.apy30d)} is ${formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, view.benchmarkRate)}; PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
             : "APY trend against the current benchmark hurdle rate and peer median."}
         </p>
 
@@ -212,6 +266,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             </span>
             {excessYield !== null ? (
               <span
+                aria-label={formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, view.benchmarkRate)}
                 className={cn(
                   "rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums",
                   excessWithinDisplayPrecision
@@ -221,7 +276,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                       : "bg-red-500/10 text-red-700 dark:text-red-400",
                 )}
               >
-                {formatSignedPercent(excessWithinDisplayPrecision ? 0 : excessYield)}
+                {formatYieldBenchmarkSpreadChip(excessYield)}
               </span>
             ) : null}
           </div>
@@ -231,9 +286,11 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           </p>
         </StatTile>
         <StatTile label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>} variant="yield">
+          {qualificationLabel ? <span className="rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground">{qualificationLabel}</span> : null}
           <PysBreakdown
             mode="inline"
             score={view.ranking.pharosYieldScore}
+            pysNullReason={ranking.pysNullReason}
             toneClass={view.pysColor}
             apy30d={view.ranking.apy30d}
             effectiveYield={view.pysBreakdown.effectiveYield}
@@ -275,9 +332,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
              active warnings, the chart, and the three stat tiles stay above ── */}
       <ModuleDisclosure label="Yield diagnostics">
       <div className="mt-3 space-y-4">
-      {attribution ? <YieldChangeAttributionCard attribution={attribution} /> : null}
+      {attribution ? <p className="text-sm text-muted-foreground">{attribution.headline}</p> : null}
 
-      <YieldRankMovementCard attribution={ranking.rankChangeAttribution ?? null} />
+      <YieldRankMovementCard attribution={ranking.rankChangeAttribution} />
 
       <YieldSourceRiskCard
         sourceLabel={view.sourceExplorer.selectedSource.displayLabel}
@@ -295,53 +352,6 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
       <YieldDecisionLedgerCard ledger={ranking.decisionLedger} />
 
-      <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
-          <span className="font-semibold text-foreground">
-            <TableSourceLink href={view.sourceExplorer.sourceIdentity.url}>
-              {view.sourceExplorer.sourceIdentity.displayLabel}
-            </TableSourceLink>
-          </span>
-          <span aria-hidden="true" className="text-muted-foreground/40">
-            ·
-          </span>
-          <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", view.dataSourceMeta.badge)}>
-            {view.dataSourceMeta.label}
-          </span>
-          {sourceAgeMinutes !== null ? (
-            <>
-              <span aria-hidden="true" className="text-muted-foreground/40">
-                ·
-              </span>
-              <span className="text-muted-foreground">age {sourceAgeMinutes}m</span>
-            </>
-          ) : null}
-          {sourceTvl !== null ? (
-            <>
-              <span aria-hidden="true" className="text-muted-foreground/40">
-                ·
-              </span>
-              <span className="font-mono tabular-nums text-muted-foreground">TVL {formatCurrency(sourceTvl)}</span>
-              <span className="text-muted-foreground/70" title={sourceDepthMeta.description}>
-                ({sourceDepthMeta.label.toLowerCase()} depth)
-              </span>
-            </>
-          ) : null}
-          {view.sourceExplorer.sourceSwitch.changed ? (
-            <>
-              <span aria-hidden="true" className="text-muted-foreground/40">
-                ·
-              </span>
-              <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
-                source changed
-                {view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel
-                  ? ` from ${view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel}`
-                  : ""}
-              </span>
-            </>
-          ) : null}
-        </div>
-      </div>
 
       {view.sourceExplorer.retainedAlternates.length >= 2 ? (
         <YieldDetailSectionAltSources
@@ -391,7 +401,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       </div>
       </ModuleDisclosure>
 
-      <nav
+      {hasWorkbench ? <nav
         aria-label="More yield analysis"
         className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
       >
@@ -423,14 +433,14 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         >
           Source comparison
         </Link>
-      </nav>
+      </nav> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
         <Link
-          href={buildStablecoinUrl(stablecoinId, "yield/")}
+          href={hasWorkbench ? buildStablecoinUrl(stablecoinId, "yield/") : `/yield/?workbenchFallback=${encodeURIComponent(stablecoinId)}`}
           className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm font-medium underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
-          View full yield analysis
+          {hasWorkbench ? "View full yield analysis" : YIELD_SOURCE_FACT_LABELS.fallbackLink}
           <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
         </Link>
         <MethodologyCardActions topic="pys" className="border-t-0 pt-0" />
@@ -546,7 +556,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
   // attribution object entirely when previousRank/liveRank is missing, and
   // claiming stability then would assert something never measured (E21).
   const allZero = (rankDelta === null || rankDelta === 0) && (pysDelta === null || Math.abs(pysDelta) < 0.005);
-  if (!attribution) {
+  if (attribution === undefined) {
     return (
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -578,16 +588,14 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
 
   const driverLabel = primaryDriver != null ? (YIELD_RANK_CHANGE_DRIVER_LABELS[primaryDriver]?.short ?? null) : null;
 
-  // Top two driver contributions for the hover/disclosure.
+  // Different units are never ranked against each other. Primary first, then
+  // the stable presentation order, with explicit heuristic context.
   const topDrivers = driverContributions
-    ? (
-        Object.entries(driverContributions) as Array<
-          [keyof NonNullable<YieldRankChangeAttribution["driverContributions"]>, number | null | undefined]
-        >
-      )
-        .filter(([, value]) => value != null && Math.abs(value) >= 0.01)
-        .sort(([, a], [, b]) => Math.abs(b ?? 0) - Math.abs(a ?? 0))
-        .slice(0, 2)
+    ? (Object.keys(DRIVER_CONTRIBUTION_TO_DRIVER_KEY) as Array<keyof typeof driverContributions>)
+        .filter((key) => driverContributions[key] != null && driverContributions[key] !== 0)
+        .sort((a, b) => Number(DRIVER_CONTRIBUTION_TO_DRIVER_KEY[b] === primaryDriver)
+          - Number(DRIVER_CONTRIBUTION_TO_DRIVER_KEY[a] === primaryDriver))
+        .map((key) => [key, driverContributions[key]] as const)
     : [];
 
   return (
@@ -632,7 +640,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
       {topDrivers.length > 0 ? (
         <details className="mt-2 text-xs text-muted-foreground">
           <summary className="flex min-h-6 cursor-pointer select-none items-center rounded-sm pharos-focus-ring underline-offset-4 hover:text-foreground hover:underline">
-            Driver breakdown
+            {YIELD_SOURCE_FACT_LABELS.heuristicDrivers}
           </summary>
           <ul className="mt-1.5 space-y-0.5">
             {topDrivers.map(([key, value]) => {
@@ -642,7 +650,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
               return (
                 <li key={key}>
                   <span className="text-foreground">{label.short}</span>:{" "}
-                  <span className="font-mono tabular-nums text-foreground">{formatSignedPysDelta(value)}</span>{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatYieldDriverContext(key, value)}</span>{" "}
                   <span className="text-muted-foreground/80">— {label.long}</span>
                 </li>
               );

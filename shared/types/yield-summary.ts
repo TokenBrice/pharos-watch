@@ -35,6 +35,7 @@ export const YieldRankingSummaryProvenanceSchema = DetailedYieldRankingProvenanc
   evidenceCompleteness: true,
   scoreQualification: true,
   sourceFreshness: true,
+  sourceMaxAgeSeconds: true,
   sourceSwitch: true,
   usedDefaultSafety: true,
   safetyProvenance: true,
@@ -78,6 +79,7 @@ export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   benchmarkLabel: true,
   benchmarkRate: true,
   benchmarkIsFallback: true,
+  benchmarkSelectionMode: true,
   yieldStability: true,
   apyMin30d: true,
   apyMax30d: true,
@@ -100,21 +102,12 @@ export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   })
   .strict();
 
-const YieldSummaryFreshnessMetaSchema = z
-  .object({
-    updatedAt: z.number(),
-    ageSeconds: z.number(),
-    status: z.enum(["fresh", "degraded", "stale"]),
-  })
-  .strict();
-
 export const YieldRankingsSummaryResponseSchema = YieldRankingsResponseSchema.omit({
   rankings: true,
 })
   .extend({
     projection: z.literal(YIELD_RANKINGS_SUMMARY_PROJECTION),
     rankings: z.array(YieldRankingSummarySchema),
-    _meta: YieldSummaryFreshnessMetaSchema.optional(),
   })
   .strict();
 

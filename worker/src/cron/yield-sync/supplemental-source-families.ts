@@ -29,6 +29,7 @@ import {
 } from "./sources";
 import type { SupplementalFamilyFetchResult } from "./sources-optional-protocols-supplemental";
 import { OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT } from "./sources-rpc";
+import { AAVE_V3_PINNED_RESERVES } from "./sources-optional-protocols-constants";
 import { runOptionalSourceFamily } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
 import {
@@ -410,13 +411,19 @@ function buildAaveTargets(startSec: number): AaveV3RateTarget[] {
     }
   }
 
-  if (targets.length <= AAVE_TARGETS_PER_RUN) return targets;
+  const pinned = targets.filter((target) => AAVE_V3_PINNED_RESERVES.some((reserve) =>
+    reserve.stablecoinId === target.stablecoinId
+    && reserve.chain === target.chain
+    && reserve.assetAddress === target.assetAddress.toLowerCase(),
+  ));
+  const rotating = targets.filter((target) => !pinned.includes(target));
+  const rotatingCount = Math.min(AAVE_TARGETS_PER_RUN - pinned.length, rotating.length);
   const rotation = Math.floor(startSec / AAVE_TARGET_ROTATION_INTERVAL_SEC);
-  const start = (rotation * AAVE_TARGETS_PER_RUN) % targets.length;
-  return Array.from(
-    { length: AAVE_TARGETS_PER_RUN },
-    (_, index) => targets[(start + index) % targets.length]!,
-  );
+  const start = (rotation * rotatingCount) % rotating.length;
+  return [
+    ...pinned,
+    ...Array.from({ length: rotatingCount }, (_, index) => rotating[(start + index) % rotating.length]!),
+  ];
 }
 
 function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: string | null): string {

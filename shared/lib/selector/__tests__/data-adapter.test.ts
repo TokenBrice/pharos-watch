@@ -240,4 +240,13 @@ describe("yield ingestion", () => {
       expect(row.yieldSources![1]!.freshness).toEqual({ capturedAt: 1_699_999_880, ageSeconds: 120 });
     }
   });
+
+  it("does not replace unknown observation provenance with source-risk freshness", () => {
+    for (const provenance of [
+      { sourceObservedAt: null, sourceAgeSeconds: 60 },
+      { sourceObservedAt: 123, sourceAgeSeconds: null },
+    ]) {
+      expect(adaptYield({ provenance, sourceRisk: { sourceAgeSeconds: 0 } }).yieldFreshness).toBeNull();
+    }
+  });
 });

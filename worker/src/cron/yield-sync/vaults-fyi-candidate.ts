@@ -3,6 +3,7 @@ import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import { parseEpochSeconds } from "@shared/lib/epoch";
 import { isRecord } from "@shared/lib/type-guards";
 import { MIN_LENDING_POOL_TVL_USD } from "../../lib/constants";
+import { SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import { buildYieldIdentityLookups, resolveYieldCandidateStablecoinId } from "./identity";
 import type { ResolvedYieldCandidate } from "./types";
 import {
@@ -202,6 +203,17 @@ export function parseVaultsFyiCandidateFromDetailedVault(
     return null;
   }
 
+  const sourceObservedAt = parseEpochSeconds(row.lastUpdateTimestamp ?? row.updatedAt, {
+    numericTextPolicy: "any", millisecondsThreshold: 10_000_000_000,
+    millisecondsThresholdInclusive: false, floor: true, minExclusive: 0,
+  });
+  if (sourceObservedAt == null || sourceObservedAt > options.sourceObservedAt
+    || options.sourceObservedAt - sourceObservedAt > SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000) {
+    telemetry.auditOnlyCount += 1;
+    recordVaultsFyiDrop(telemetry, "malformed", vaultId);
+    return null;
+  }
+
   const vaultSourceId = sourceId(getString(row.address) ?? vaultId);
   const protocolLabel = getProtocolLabel(row);
   const protocolSlug = getProtocolSlug(row) ?? sourceId(protocolLabel);
@@ -226,10 +238,7 @@ export function parseVaultsFyiCandidateFromDetailedVault(
       yieldType: "lending-opportunity",
       project: protocolSlug,
       chain,
-      sourceObservedAt: parseEpochSeconds(row.lastUpdateTimestamp ?? row.updatedAt, {
-        numericTextPolicy: "any", millisecondsThreshold: 10_000_000_000,
-        millisecondsThresholdInclusive: false, floor: true, minExclusive: 0,
-      }) ?? options.sourceObservedAt,
+      sourceObservedAt,
       comparisonAnchorObservedAt: null,
       sourceRisk: {
         venueProtocol: protocolSlug,

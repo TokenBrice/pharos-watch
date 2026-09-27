@@ -16,15 +16,16 @@ export interface ExplicitYieldPoolConfig {
  * Exact-pool curated yield venues for tracked assets that should stay outside
  * the generic stablecoin auto-discovery universe.
  */
+// K3 sBOLD's raw Liquity Stability Pool pin is quarantined (2026-09-27):
+// holder exchange-rate APY diverged at 7d (9.82% vs 4.11%) and 30d (4.86% vs 2.92%).
+// Its holder-specific Kong source and eligible price-derived fallback remain available.
 export const EXPLICIT_YIELD_SOURCE_POOL_MAP: Record<string, ExplicitYieldPoolConfig[]> = {
-  "sbold-k3-capital": [
+  "zchf-frankencoin": [
     {
-      // sBOLD - Liquity Stability Pool via K3 sBOLD wrapper on Ethereum
-      poolId: "dac71f4f-7b97-463a-b19f-9796c56c21f1",
-      yieldSource: "Liquity Stability Pool (via K3 sBOLD)",
-      yieldType: "lending-vault",
-      dataSource: "defillama-auto",
-      expectedProject: "liquity-v2",
+      poolId: "8b427366-7bfb-4c61-88be-8dc004fdc3da",
+      yieldSource: "Frankencoin Savings",
+      yieldType: "lending-opportunity",
+      expectedProject: "frankencoin",
       expectedChain: "ethereum",
     },
   ],

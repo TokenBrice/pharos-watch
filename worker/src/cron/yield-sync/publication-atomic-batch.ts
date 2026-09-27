@@ -70,13 +70,13 @@ export async function publishYieldRowsAtomically(
     pysInputsPersistedCount: written ? pysInputsPersistedCount : 0,
     pysInputsNullCount: written ? input.historyRows.length - pysInputsPersistedCount : 0,
   });
-  const cacheFreshGuard = "(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?";
+  const cacheFreshGuard = "(SELECT json_extract(value, '$.publication.generationId') FROM cache WHERE key = 'yield-rankings') = ?";
   const buildStatements = (): D1PreparedStatement[] => [
     db
       .prepare(
         `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-           WHERE cache.updated_at <= excluded.updated_at`,
+           WHERE cache.updated_at < excluded.updated_at`,
       )
       .bind("yield-rankings", cacheValue, input.startSec),
     db
@@ -121,10 +121,10 @@ export async function publishYieldRowsAtomically(
           FROM json_each(?)
           WHERE ${cacheFreshGuard}`,
       )
-      .bind(yieldDataRowsJson, input.startSec),
+      .bind(yieldDataRowsJson, input.generationId),
     db
       .prepare(
-        `INSERT OR IGNORE INTO yield_history (
+        `INSERT INTO yield_history (
               stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
               data_source, warning_signals, yield_source, yield_type, publication_generation_id, publication_state,
               pys_at_publish, safety_at_publish, variance_at_publish, pys_inputs_at_publish
@@ -150,9 +150,10 @@ export async function publishYieldRowsAtomically(
               json_extract(value, '$.variance_at_publish'),
               json_extract(value, '$.pys_inputs_at_publish')
             FROM json_each(?)
-            WHERE ${cacheFreshGuard}`,
+            WHERE ${cacheFreshGuard}
+            ON CONFLICT(stablecoin_id, source_key, recorded_at) DO NOTHING`,
       )
-      .bind(historyRowsJson, input.startSec),
+      .bind(historyRowsJson, input.generationId),
     db
       .prepare(
         `INSERT OR REPLACE INTO yield_source_decisions (
@@ -193,7 +194,7 @@ export async function publishYieldRowsAtomically(
             FROM json_each(?)
             WHERE ${cacheFreshGuard}`,
       )
-      .bind(decisionRowsJson, input.startSec),
+      .bind(decisionRowsJson, input.generationId),
     db
       .prepare(
               `INSERT OR REPLACE INTO yield_source_decision_alternatives (
@@ -211,7 +212,7 @@ export async function publishYieldRowsAtomically(
               FROM json_each(?)
               WHERE ${cacheFreshGuard}`,
       )
-      .bind(decisionAlternativeRowsJson, input.startSec),
+      .bind(decisionAlternativeRowsJson, input.generationId),
     db
       .prepare(
         `UPDATE yield_publication_generations
@@ -219,7 +220,7 @@ export async function publishYieldRowsAtomically(
            WHERE generation_id = ?
              AND ${cacheFreshGuard}`,
       )
-      .bind(input.startSec, input.generationId, input.startSec),
+      .bind(input.startSec, input.generationId, input.generationId),
   ];
 
   const results = await runWithOverloadRetry(() => db.batch(buildStatements()), 3, input.signal);

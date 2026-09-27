@@ -1,7 +1,9 @@
+import { projectYieldWireCompat } from "@shared/lib/yield-wire-compat";
+import { YieldTypeSchema } from "@shared/types/core";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { parseStablecoinHistoryQuery } from "../lib/api-history";
 import { jsonFreshResponse, errorResponse } from "../lib/api-response";
-import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
+import { buildFreshnessMeta, getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getCache } from "../lib/db-cache";
 import { buildOnChainSourceKey, isOnChainBootstrapYieldSeed, parseYieldWarningSignals } from "../lib/yield-utils";
@@ -11,6 +13,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { parseJson } from "../lib/json-parse";
 import { isSuppressedYieldHistoryRow } from "../lib/yield-history-ownership-handoffs";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { isRecord } from "@shared/lib/type-guards";
 import { YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
@@ -219,6 +222,8 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
       publishedCutoffResult.status === "ok"
         ? (publication?.cutoffAt ?? publishedCutoffResult.updatedAt)
         : (publishedCutoffLookup.timestamp ?? fallbackPublishedCutoff);
+    const authorityUnavailable = publishedCutoffResult.status !== "ok" &&
+      (publishedCutoffLookup.status === "lookup_failed" || publishedCutoffLookup.timestamp == null);
     // The published cutoff bounds both history windows, so a 0 (neither the
     // cached payload nor the cron timestamp was readable) would silently serve an
     // empty history with HTTP 200. Skip the cap and say so instead (C19).
@@ -335,8 +340,9 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
               ? null
               : undefined;
         let pysInputsAtPublish = null;
-        if (row.pys_inputs_at_publish) {
-          const parsedJson = parseJson(row.pys_inputs_at_publish);
+        const hasPysInputs = row.pys_inputs_at_publish != null;
+        if (hasPysInputs) {
+          const parsedJson = parseJson(row.pys_inputs_at_publish!);
           const parsedInputs = parsedJson.ok
             ? YieldPysInputsAtPublishSchema.safeParse(parsedJson.value)
             : null;
@@ -344,7 +350,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
         }
         const pysReproducibility =
           pysInputsAtPublish == null
-            ? ("legacy-partial" as const)
+            ? (hasPysInputs ? "invalid" as const : "legacy-partial" as const)
             : classifyPysReproducibility(pysInputsAtPublish, pysAtPublish ?? null);
         if (pysReproducibility === "invalid") {
           invalidPysSnapshotCount += 1;
@@ -355,6 +361,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
           }
         }
 
+        const warningSignals = parseYieldWarningSignals(row.warning_signals);
         return {
           date: row.recorded_at,
           apy: row.apy,
@@ -362,7 +369,8 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
           apyReward: row.apy_reward,
           exchangeRate: row.exchange_rate,
           sourceTvlUsd: row.source_tvl_usd,
-          warningSignals: parseYieldWarningSignals(row.warning_signals),
+          warningSignals: warningSignals ?? [],
+          ...(warningSignals == null ? { warningSignalsStatus: "unreadable" as const } : {}),
           sourceKey: normalizedSourceKey,
           yieldSource: row.yield_source,
           yieldSourceUrl: resolveYieldSourceUrl({
@@ -370,7 +378,9 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
             sourceKey: normalizedSourceKey,
             yieldSource: row.yield_source,
           }),
-          yieldType: row.yield_type,
+          // A legacy or unknown stored type is unavailable, not a reason to fail
+          // the whole history response for this coin.
+          yieldType: row.yield_type == null ? null : (YieldTypeSchema.safeParse(row.yield_type).data ?? null),
           dataSource: row.data_source,
           isBest: row.is_best === 1,
           publicationGenerationId: row.publication_generation_id ?? null,
@@ -388,7 +398,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
       logWorkerEventArgs(
         "api",
         "warn",
-        `[yield-history] ${invalidPysSnapshotCount} published snapshot(s) do not replay to pys_at_publish`
+        `[yield-history] ${invalidPysSnapshotCount} published snapshot(s) are unreadable, invalid, or do not replay to pys_at_publish`
           + ` stablecoin=${parsed.stablecoinId}`
           + ` samples=${invalidPysSnapshotSamples.join(",")}`,
       );
@@ -400,11 +410,27 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
         : publishedCutoff;
 
     const current = history.length > 0 ? (history[history.length - 1] ?? null) : null;
+    const assessedAt = Math.floor(Date.now() / 1000);
+    const interval = CRON_INTERVALS["sync-yield-data"];
+    const bands = getCacheRatioThresholds("yield-data");
+    const freshBudgetSec = interval * bands.degraded;
+    const degradedBudgetSec = interval * bands.stale;
+    const freshness = buildFreshnessMeta(publishedCutoff, interval, "yield-data");
+    const freshnessMeta = {
+      ...freshness,
+      assessedAt,
+      freshBudgetSec,
+      degradedBudgetSec,
+      status: authorityUnavailable ? "stale" as const : freshness.status,
+      reason: authorityUnavailable ? "publication-cutoff-unavailable"
+        : freshness.status !== "fresh" ? "yield-publication-age" : null,
+    };
 
     return jsonFreshResponse(
-      {
+      projectYieldWireCompat({
         current,
         history,
+        _meta: freshnessMeta,
         ...(freshnessWarning ? { warning: freshnessWarning } : {}),
         ...(publication ? { publication } : {}),
         methodology: buildMethodologyEnvelope({
@@ -415,11 +441,15 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
           changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
           asOf: latestHistoryTimestamp,
         }),
-      },
+      }),
       {
-        cacheControl: CACHE_PROFILES.slow,
-        updatedAt: latestHistoryTimestamp,
-        maxAgeSec: CRON_INTERVALS["sync-yield-data"],
+        cacheControl: freshnessMeta.status !== "fresh" ? "no-store" : CACHE_PROFILES.slow,
+        headers: {
+          "X-Data-Age": String(freshnessMeta.ageSeconds),
+          ...(freshnessMeta.status !== "fresh" ? {
+            Warning: `110 - "Yield publication ${freshnessMeta.status} (${freshnessMeta.reason})"`,
+          } : {}),
+        },
       },
     );
   };

@@ -13,7 +13,7 @@ import {
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
-import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
+import { isYieldSafetyFallbackWithinWindow } from "@shared/lib/yield-safety-fallback";
 import type {
   AlertBrokerHealthSummary,
   ActivePriceCoverageHealth,
@@ -428,10 +428,10 @@ async function assessYieldSafetyAvailability(
   try {
     const row = await db
       .prepare(
-        "SELECT updated_at, json_extract(value, '$.provenance.safetySnapshot.safetyScoreIdentity') AS stamped_identity FROM cache WHERE key = ?",
+        "SELECT updated_at, json_extract(value, '$.provenance.safetySnapshot.safetyScoreIdentity') AS stamped_identity, json_extract(value, '$.provenance.safetySnapshot.publishedAt') AS safety_published_at FROM cache WHERE key = ?",
       )
       .bind("yield-rankings")
-      .first<{ updated_at: number; stamped_identity: string | null }>();
+      .first<{ updated_at: number; stamped_identity: string | null; safety_published_at: number | null }>();
     if (!row) {
       // Missing yield cache is the cache-freshness assessment's finding.
       return { impactStatus: "healthy", warning: null };
@@ -453,7 +453,7 @@ async function assessYieldSafetyAvailability(
       return { impactStatus: "healthy", warning: null };
     }
     const reason = live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
-    const withinWindow = now - row.updated_at <= YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC;
+    const withinWindow = isYieldSafetyFallbackWithinWindow(row.updated_at, row.safety_published_at, now);
     return withinWindow
       ? { impactStatus: "healthy", warning: `yield-safety-publish-time-fallback:${reason}` }
       : { impactStatus: "degraded", warning: `yield-safety-unrated-serving:${reason}` };

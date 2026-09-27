@@ -29,7 +29,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
-            makeDlYieldPool({ pool: "pool-placeholder", project: "aave-v3", symbol: "USDC", tvlUsd: 5_000_000, apy: 3.25, apyBase: 3.25, apyMean30d: 3.25 }),
+            makeDlYieldPool({ pool: "pool-sdai-aave", project: "aave-v3", symbol: "aSDAI", tvlUsd: 5_000_000, apy: 3.25, apyBase: 3.25, apyMean30d: 3.25 }),
           ], nowSec - 60),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -56,7 +56,7 @@ describe("syncYieldData", () => {
     expect(autoRow?.yield_type).toBe("lending-opportunity");
   });
 
-  it("passes a supply-relative TVL floor into dynamic lending discovery", async () => {
+  it("rejects undersized dynamic lending pools using the supply-relative TVL floor", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -73,31 +73,31 @@ describe("syncYieldData", () => {
             ],
       }, nowSec),
       "dl-stablecoin-pools": dlPoolsCacheRow([
-            makeDlYieldPool({ pool: "pool-placeholder", project: "aave-v3", symbol: "USDC", tvlUsd: 5_000_000, apy: 3.25, apyBase: 3.25, apyMean30d: 3.25 }),
+        makeDlYieldPool({ pool: "pool-undersized", project: "aave-v3", symbol: "USDC", tvlUsd: 5_000_000, apy: 9, apyBase: 9 }),
+        makeDlYieldPool({ pool: "pool-qualified", project: "aave-v3", symbol: "USDC", tvlUsd: 10_000_000, apy: 3.25, apyBase: 3.25 }),
       ], nowSec - 60),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
-    vi.mocked(yieldHelpersModule.findBestLendingPool).mockReturnValue(null);
+    const actual = await vi.importActual<typeof yieldHelpersModule>("../yield-helpers");
+    vi.mocked(yieldHelpersModule.findBestLendingPool).mockImplementation(actual.findBestLendingPool);
     mockFetch([]);
 
     await syncYieldData(db);
 
-    const usdcDiscoveryCall = vi
-      .mocked(yieldHelpersModule.findBestLendingPool)
-      .mock.calls.find((call) => call[0] === "USDC");
-    expect(usdcDiscoveryCall?.[2]).toEqual(expect.any(Set));
-    expect(usdcDiscoveryCall?.[3]).toMatchObject({
-      minApy: 0.5,
-      minTvlUsd: 10_000_000,
-    });
+    const row = findPublishedYieldRow(db, "usdc-circle", (candidate) => candidate.is_best === 1);
+    expect(row?.source_key).toBe("pool-qualified");
+    expect(row?.current_apy).toBe(3.25);
+    expect(findPublishedYieldRow(db, "usdc-circle", (candidate) => candidate.source_key === "pool-undersized")).toBeUndefined();
   });
 
-  it("marks the run degraded when a retained benchmark is in fallback mode, even if recent", async () => {
+  it("publishes retained-benchmark input degradation as quality without failing the run", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(getCache), {
-      "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec - 6 * 3600),
+      "dl-stablecoin-pools": dlPoolsCacheRow([
+        makeDlYieldPool({ pool: "pool-sdai", project: "maker", symbol: "sDAI", apy: 5, apyBase: 5 }),
+      ], nowSec - 60),
       risk_free_rate: cacheRow({
             rate: 3.71,
             recordDate: "2025-06-13",
@@ -112,11 +112,11 @@ describe("syncYieldData", () => {
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string | null;
+      quality: { degraded: boolean; reasons: string[] };
     };
 
-    expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toContain("risk-free-rate:fred-api-error-retained");
+    expect(result.status).toBe("ok");
+    expect(metadata.quality.reasons).toContain("risk-free-rate:fred-api-error-retained");
 
     const rankingsPayload = getYieldRankingsCachePayload(db) as {
       provenance: { benchmark: { fallbackMode: string | null; isFallback: boolean } };
@@ -125,12 +125,14 @@ describe("syncYieldData", () => {
     expect(rankingsPayload.provenance.benchmark.isFallback).toBe(true);
   });
 
-  it("marks yield sync degraded when the retained benchmark is older than two days", async () => {
+  it("defers publication when a stale retained benchmark disqualifies the only source", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(getCache), {
-      "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec - 49 * 3600),
+      "dl-stablecoin-pools": dlPoolsCacheRow([
+        makeDlYieldPool({ pool: "pool-sdai", project: "maker", symbol: "sDAI", apy: 5, apyBase: 5 }),
+      ], nowSec - 60),
       risk_free_rate: cacheRow({
             rate: 3.71,
             recordDate: "2025-06-10",
@@ -145,11 +147,15 @@ describe("syncYieldData", () => {
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string | null;
+      reason: string;
+      inputDiagnostics: { evaluatedSourceCount: number; rejectedSourceCount: number };
     };
 
     expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toContain("risk-free-rate:fred-api-error-retained");
+    expect(metadata.reason).toBe("rankings-payload-shrunk");
+    expect(metadata.inputDiagnostics.evaluatedSourceCount).toBe(1);
+    expect(metadata.inputDiagnostics.rejectedSourceCount).toBe(1);
+    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
   });
 
   it.each([
@@ -200,7 +206,11 @@ describe("syncYieldData", () => {
 
   it("still publishes a usable but coverage-degraded published safety snapshot", async () => {
     const db = makeDb();
-    installYieldCacheReader(vi.mocked(getCache), {});
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": dlPoolsCacheRow([
+        makeDlYieldPool({ pool: "pool-sdai", project: "maker", symbol: "sDAI", apy: 5, apyBase: 5 }),
+      ], Math.floor(Date.now() / 1000)),
+    });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
     // Usable identity with a partial score map (coverage below the 0.75 degraded
@@ -216,10 +226,10 @@ describe("syncYieldData", () => {
     );
 
     const result = await syncYieldData(db);
-    const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
+    const metadata = JSON.parse(result.metadata ?? "{}") as { quality: { degraded: boolean; reasons: string[] } };
 
-    expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode ?? "").toContain("safety-snapshot-coverage");
+    expect(result.status).toBe("ok");
+    expect(metadata.quality.reasons).toContain("safety-snapshot-coverage");
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
   });
 
@@ -290,25 +300,21 @@ describe("syncYieldData", () => {
     );
 
     const result = await syncYieldData(db);
-    const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
+    const metadata = JSON.parse(result.metadata ?? "{}") as { quality: { degraded: boolean; reasons: string[] } };
     const payload = getYieldRankingsCachePayload(db) as {
       rankings: Array<{ id: string; safetyScore: number | null; safetyGrade: string }>;
       provenance: { safetySnapshot: { safetyScoreIdentity: { publicationGenerationId: string } | null } };
     } | undefined;
 
-    expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode ?? "").toContain("safety-snapshot:v9-publication-held");
+    expect(result.status).toBe("ok");
+    expect(metadata.quality.reasons).toContain("safety-snapshot:v9-publication-held");
     expect(payload).toBeDefined();
     expect(payload?.provenance.safetySnapshot.safetyScoreIdentity?.publicationGenerationId)
       .toBe(acceptedPublicationGenerationId);
-    // The accepted generation's safety reached the row, so it scores normally
-    // instead of the old all-NR collapse that withheld the publication.
+    // The accepted generation's safety reached the row instead of the old
+    // all-NR collapse that withheld the publication.
     expect(findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave"))
       .toMatchObject({ safety_score: 86, safety_grade: "A" });
-    expect(
-      findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave")
-        ?.pharos_yield_score,
-    ).toEqual(expect.any(Number));
     // The hold is recorded, never laundered into a clean run.
     expect(result.itemCount).toBeGreaterThan(0);
   });
@@ -346,7 +352,7 @@ describe("syncYieldData", () => {
     expect(getYieldRankingsCachePayload(db)).toBeUndefined();
   });
 
-  it("skips destructive yield row cleanup on degraded runs", async () => {
+  it("skips destructive yield row cleanup on input-quality-degraded publications", async () => {
     const db = mockD1WithYieldPruneTables(yieldFallbackTableMatches());
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -357,18 +363,19 @@ describe("syncYieldData", () => {
       risk_free_rate: cacheRow({
             rate: 4.0,
             source: "fred",
-            fetchedAt: nowSec - 50 * 3600,
-            recordDate: "2026-03-20",
+            fetchedAt: nowSec - 6 * 3600,
+            recordDate: "2025-06-13",
             isFallback: true,
             fallbackMode: "fred-api-error-retained",
-          }, nowSec - 50 * 3600),
+          }, nowSec - 6 * 3600),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
 
     const result = await syncYieldData(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").quality.degraded).toBe(true);
     const staleDeleteCall = db
       .getHistory()
       .find((entry) => entry.sql.includes("DELETE FROM yield_data") && entry.sql.includes("updated_at <"));

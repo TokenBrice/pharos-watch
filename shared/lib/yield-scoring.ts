@@ -32,7 +32,7 @@ export const PYS_MAX_SOURCE_RISK_PENALTY = 2.5;
 /**
  * Absolute upper envelope on a row's nominal 30d APY (percentage points). Above
  * it the input is a source-math failure — an unusable NAV anchor, a mis-scaled
- * pool or a corrupted exchange rate — so the row scores 0 (NR) instead of
+ * pool or a corrupted exchange rate — so the row is NR instead of
  * clamping into a perfect 100. Mirrors the worker's
  * `DETERMINISTIC_APY_SANITY_MAX` and the per-adapter caps.
  */
@@ -173,11 +173,10 @@ export interface PysSourceRiskPenaltyInput {
 
 /**
  * Convert a 0-1 yield-stability ratio into an APY variance score.
- * Missing and non-finite stabilities return the documented 0 default — never
- * NaN, which would serialize to null and fail the published payload schema (B12).
+ * Missing and non-finite measurements remain unavailable.
  */
-export function yieldStabilityToApyVarianceScore(yieldStability: number | null | undefined): number {
-  if (yieldStability == null || !Number.isFinite(yieldStability)) return 0;
+export function yieldStabilityToApyVarianceScore(yieldStability: number | null | undefined): number | null {
+  if (yieldStability == null || !Number.isFinite(yieldStability)) return null;
   return Math.max(0, Math.min(1, 1 - yieldStability));
 }
 
@@ -190,7 +189,8 @@ export function computePysRewardShare(
   if (reward == null || reward < 0 || current == null || current <= 0) {
     return null;
   }
-  return clamp(reward / current, 0, 1);
+  const ratio = reward / current;
+  return Number.isFinite(ratio) ? ratio : null;
 }
 
 export function resolvePysSourceRiskPenalty(
@@ -286,7 +286,7 @@ export interface PysComponents {
   effectiveYield: number;
   rowUtility: number;
   yieldEfficiency: number;
-  sustainabilityMultiplier: number;
+  sustainabilityMultiplier: number | null;
 }
 
 export function computePysComponents(input: PysComponentInput): PysComponents {
@@ -306,13 +306,10 @@ export function computePysComponents(input: PysComponentInput): PysComponents {
   const sourceRiskPenaltyResolution = resolvePysSourceRiskPenalty(input.sourceRiskPenalty);
   const rowUtility = effectiveYield / sourceRiskPenaltyResolution.penalty;
   const yieldEfficiency = rowUtility / adjustedRiskPenalty;
-  // A missing variance keeps the documented best-case default; a non-finite one
-  // fails closed to maximum variance so an unusable measurement never earns the
-  // full stability credit (B25).
-  const rawVarianceScore = input.apyVarianceScore;
-  const apyVarianceScore =
-    rawVarianceScore == null ? 0 : Number.isFinite(rawVarianceScore) ? clamp(rawVarianceScore, 0, 1) : 1;
-  const sustainabilityMultiplier = Math.max(PYS_SUSTAINABILITY_FLOOR, 1.0 - apyVarianceScore);
+  const apyVarianceScore = numberValue(input.apyVarianceScore);
+  const sustainabilityMultiplier = apyVarianceScore == null
+    ? null
+    : Math.max(PYS_SUSTAINABILITY_FLOOR, 1.0 - clamp(apyVarianceScore, 0, 1));
   return {
     riskPenalty,
     adjustedRiskPenalty,
@@ -332,7 +329,7 @@ export function computePysComponents(input: PysComponentInput): PysComponents {
 interface PYSInput {
   apy30d: number;
   safetyScore: number | null;
-  apyVarianceScore: number;
+  apyVarianceScore: number | null;
   scalingFactor: number;
   benchmarkRate?: number | null;
   benchmarkCurrency?: string | null;
@@ -354,6 +351,7 @@ export function computePYSFromComponents(
   if (apy30d > PYS_APY_SANITY_MAX) return 0;
   if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return 0;
   if (!Number.isFinite(components.effectiveYield) || components.effectiveYield <= 0) return 0;
+  if (components.sustainabilityMultiplier == null) return 0;
   return clamp(
     Math.round(components.yieldEfficiency * components.sustainabilityMultiplier * scalingFactor),
     0,

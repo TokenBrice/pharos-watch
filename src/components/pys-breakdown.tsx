@@ -38,7 +38,7 @@ export interface PysBreakdownProps {
   benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
   sourceRiskPenalty: number;
   adjustedRiskPenalty: number;
-  sustainabilityMult: number;
+  sustainabilityMult: number | null;
   grade: string | null;
   safetyScore: number | null;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
@@ -123,7 +123,7 @@ function NullPysScore({
 interface NeutralizeInput {
   apy30d: number;
   safetyScore: number | null;
-  apyVarianceScore: number;
+  apyVarianceScore: number | null;
   scalingFactor: number;
   benchmarkRate: number | null;
   usdBenchmarkRate: number | null;
@@ -234,11 +234,11 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
     : safetyScore !== null
     ? `${Math.round(safetyScore)}/100 safety`
     : "Safety unavailable";
-  const consistencyPct = Math.round(sustainabilityMult * 100);
+  const consistencyPct = sustainabilityMult == null ? null : Math.round(sustainabilityMult * 100);
   const benchmarkRefLabel = benchmarkLabel ?? "benchmark";
 
   const effectiveScalingFactor = scalingFactor;
-  const apyVarianceScore = Math.max(0, Math.min(1, 1 - sustainabilityMult));
+  const apyVarianceScore = sustainabilityMult == null ? null : Math.max(0, Math.min(1, 1 - sustainabilityMult));
   const benchmarkRate = benchmarkSpread === null ? null : apy30d - benchmarkSpread;
   const neutralizeComponents: NeutralizeInput = {
     apy30d,
@@ -440,7 +440,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
       <div className="space-y-0.5">
         <div
           className="flex items-baseline justify-between gap-3"
-          aria-label={`Multiplied by consistency ${consistencyPct} percent (30-day APY variance)${sustainabilityDelta !== null ? ` (${formatSignedPysDelta(sustainabilityDelta)})` : ""}`}
+          aria-label={consistencyPct == null ? "Consistency unavailable" : `Multiplied by consistency ${consistencyPct} percent (30-day APY variance)${sustainabilityDelta !== null ? ` (${formatSignedPysDelta(sustainabilityDelta)})` : ""}`}
         >
           <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
             <span>{"×"} consistency</span>
@@ -455,7 +455,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
             ) : null}
           </span>
           <span aria-hidden="true" className="flex items-baseline gap-1.5">
-            <span className="font-mono tabular-nums">{consistencyPct}%</span>
+            <span className="font-mono tabular-nums">{consistencyPct == null ? "Unavailable" : `${consistencyPct}%`}</span>
             {sustainabilityDelta !== null ? (
               <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80">
                 ({formatSignedPysDelta(sustainabilityDelta)})

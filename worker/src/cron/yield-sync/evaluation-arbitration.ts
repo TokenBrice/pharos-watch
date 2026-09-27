@@ -2,6 +2,9 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { YieldType } from "@shared/types/core";
 import type { YieldCalculationMode, YieldEvidenceClass } from "@shared/types/yield";
 import { LENDING_PROTOCOL_LABELS } from "../../lib/yield-config/yield-config";
+import { normalizeChainId } from "@shared/lib/chains";
+import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
+import { getTrackedContractAddresses } from "./identity";
 import type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
 import type { ResolvedYield } from "./types";
 
@@ -28,12 +31,20 @@ export function resolveYieldTypeLabel(params: {
   id: string;
   dataSource: string;
   explicitType?: YieldType;
+  pool?: { symbol: string; chain?: string | null };
 }): YieldType {
   const meta = TRACKED_META_BY_ID.get(params.id);
   const yieldConfig = meta?.yieldConfig;
+  const isReceiptHolderPool = params.pool != null
+    && meta?.flags.yieldBearing === true
+    && meta.flags.navToken === true
+    && (yieldConfig?.yieldType === "nav-appreciation" || yieldConfig?.yieldType === "lending-vault")
+    && normalizeDexSymbol(params.pool.symbol) === normalizeDexSymbol(meta.symbol)
+    && normalizeChainId(params.pool.chain ?? "") != null
+    && getTrackedContractAddresses(meta, params.pool.chain).length > 0;
   return (
     params.explicitType ??
-    (params.dataSource === "defillama-auto"
+    (params.dataSource === "defillama-auto" && !isReceiptHolderPool
       ? "lending-opportunity"
       : (yieldConfig?.yieldType ?? "nav-appreciation"))
   );

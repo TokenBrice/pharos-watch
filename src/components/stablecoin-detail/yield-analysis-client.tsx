@@ -266,6 +266,7 @@ function StablecoinYieldDetailHeader({
             <PysBreakdown
               mode="inline"
               score={ranking.pharosYieldScore}
+              pysNullReason={ranking.pysNullReason}
               toneClass={model.pysColor}
               apy30d={ranking.apy30d}
               effectiveYield={model.pysBreakdown.effectiveYield}
@@ -533,6 +534,12 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   return (
     <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={readyModel}>
+      <QueryErrorNotice error={rankingsQuery.error} hasData onRetry={() => { void rankingsQuery.refetch(); }} />
+      {rankingsQuery.meta?.warning ? (
+        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          {rankingsQuery.meta.warning}
+        </div>
+      ) : null}
       {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} /> : null}
 
       <YieldSourceRiskCard
@@ -556,7 +563,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
             APY across every retained source over time, plotted against the benchmark hurdle rate
-            {readyModel.medianApy > 0 ? " and peer median." : "."}
+            {readyModel.medianApy != null ? " and global TVL-weighted median." : "."}
           </p>
           <YieldHistoryChart
             stablecoinId={id}

@@ -189,7 +189,7 @@ interface YieldInstrumentRowProps {
   rank: number;
   logo?: string;
   riskFreeRate: number;
-  medianApy: number;
+  medianApy: number | null;
   scalingFactor: number;
   /**
    * Benchmark registry from the payload. Lets a row with no published rate
@@ -251,14 +251,14 @@ function YieldInstrumentRowBase({
         row,
         scalingFactor,
         // Version-gated: pre-8.43 payloads were scored without the re-base.
-        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate),
+        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate, benchmarks?.USD),
       ),
-    [row, scalingFactor, methodologyVersion, riskFreeRate],
+    [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks],
   );
   const totalSourceCount = 1 + altSourceCount;
-  const benchmarkRate = row.benchmarkRate ?? riskFreeRate;
-  const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
   const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
+  const benchmarkRate = resolvedBenchmark.rate;
+  const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
 
   return (
     <div className="border-b border-border/55 last:border-b-0">
@@ -337,10 +337,10 @@ function YieldInstrumentRowBase({
             {excess != null ? (
               <span>
                 {excess >= 0 ? "+" : ""}
-                {excess.toFixed(1)}% vs {row.benchmarkLabel}
+                {excess.toFixed(1)}% vs {resolvedBenchmark.label}
               </span>
             ) : (
-              <span>{row.benchmarkLabel}</span>
+              <span>{resolvedBenchmark.label}</span>
             )}
           </div>
         </div>
@@ -521,7 +521,7 @@ interface YieldInstrumentBoardProps {
   rows: YieldViewModelRow[];
   logos: Record<string, string>;
   riskFreeRate: number;
-  medianApy: number;
+  medianApy: number | null;
   scalingFactor: number;
   /**
    * Benchmark registry from the payload. Lets a row with no published rate

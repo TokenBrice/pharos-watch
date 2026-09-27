@@ -189,9 +189,33 @@ describe("yield coverage review dispositions", () => {
       candidateItemCount: 25,
       suppressedItemCount: 3,
       visibleItemCount: 22,
+      visibleHeadlineGapCount: 22,
+      visibleRecommendationCandidateCount: 0,
       publishedItemCount: 20,
       truncatedItemCount: 2,
     });
+  });
+
+  it("counts a dead pin and restoration once while excluding reviewed work", async () => {
+    const { db } = createDispositionDb();
+    const reviewed = item("reviewed", { kind: "manifest-missing" });
+    const deadPin = item("dead-pin", { kind: "stale-auto-lending-override" });
+    const restoration = item("restoration", { kind: "quarantine-ready-to-restore" });
+    await upsertYieldCoverageReviewDisposition(db, {
+      item: reviewed, disposition: "dismiss", nextReviewAt: 5_000,
+    }, 1_000);
+    const result = await applyYieldCoverageReviewDispositions(
+      db, queue([reviewed, deadPin], [restoration]), { nowSec: 2_000 },
+    );
+    expect(result.summary).toMatchObject({
+      candidateItemCount: 3,
+      suppressedItemCount: 1,
+      visibleHeadlineGapCount: 1,
+      visibleRecommendationCandidateCount: 1,
+      visibleItemCount: 2,
+    });
+    expect(result.queue.headlineGaps).toEqual([deadPin]);
+    expect(result.queue.recommendationCandidates).toEqual([restoration]);
   });
 
   it("updates review evidence and windows without replacing creation time", async () => {

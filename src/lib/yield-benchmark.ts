@@ -6,6 +6,12 @@ import type {
 } from "@shared/types";
 import type { YieldRanking } from "@shared/types/yield";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
+import {
+  benchmarkRecordAgeSeconds,
+  classifyYieldBenchmarkFreshness,
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+} from "@shared/lib/yield-benchmark-freshness";
+import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 
 type YieldWorkbenchRanking = YieldRanking | YieldRankingSummary;
 
@@ -38,8 +44,10 @@ function getYieldBenchmarkStatusSuffix(value: YieldBenchmarkLike | null | undefi
   // Registry entries carry age evidence, so a stale entry labels itself
   // wherever the shared suffix renders (reference-rates strip, source board,
   // scatter benchmark frame) instead of reading identically to a fresh one.
-  const age = resolveYieldBenchmarkAge(value);
-  if (age.stale) parts.push(age.marker);
+  if ("ageSeconds" in value || "recordDate" in value) {
+    const age = resolveYieldBenchmarkAge(value);
+    if (age.stale && age.marker !== "fallback") parts.push(age.marker);
+  }
   if (parts.length === 0) return "";
   return ` (${parts.join(" · ")})`;
 }
@@ -117,25 +125,17 @@ export function resolveYieldScatterBenchmarkFrame(params: {
 // Benchmark staleness (E9)
 // ---------------------------------------------------------------------------
 
-/**
- * Default observation bound when the payload publishes no per-key
- * `maxRecordAgeSec`: the daily-series bound the producer itself uses
- * (`YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD`, 5 days, in
- * `worker/src/cron/yield-sync/benchmarks.ts`). The producer refines this per
- * key — a monthly series like CAD's Bank rate always ships its own 45-day
- * bound — so the fallback only matters for cached payloads that predate
- * per-key bounds. Mirroring the daily series (instead of a shorter cadence)
- * keeps a healthy 3-day-old observation from tinting amber just because the
- * cached entry carries no bound.
- */
-export const YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC = 5 * 24 * 60 * 60;
+export const YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD;
 
 export interface YieldBenchmarkAgeEvidence {
   /** Fetch age published on the registry entry. */
   ageSeconds?: number | null;
+  fetchedAt?: number | null;
+  isFallback?: boolean;
+  fallbackMode?: string | null;
   /** Observation date published on the registry entry. */
   recordDate?: string | null;
-  /** Pre-computed observation age, when the payload carries one. */
+  /** Informational cached age; assessment recomputes from recordDate. */
   recordAgeSec?: number | null;
   /** Per-key bound on the observation age, when the payload carries one. */
   maxRecordAgeSec?: number | null;
@@ -145,7 +145,7 @@ export interface YieldBenchmarkAgeAssessment {
   stale: boolean;
   /** Slowest of the available age signals (record age beats fetch age). */
   ageSeconds: number | null;
-  /** The bound the ages were measured against. */
+  /** Observation bound, or the fetch TTL when fetch age has expired. */
   boundSeconds: number;
   /** Compact label marker, e.g. "42d old"; empty when fresh. */
   marker: string;
@@ -159,13 +159,7 @@ function formatBenchmarkAge(seconds: number): string {
   return `${Math.max(1, Math.round(seconds / 60))}m`;
 }
 
-/**
- * staleness of one benchmark entry from its own evidence: whichever age signal
- * is available (a published `recordAgeSec`, else the age of `recordDate`, and
- * the fetch age) measured against the published per-key bound, else the 2x
- * daily-cadence fallback. A future-dated record clamps to zero age, mirroring
- * the producer's A2 observation guard.
- */
+/** Assess the registry's own evidence using the same authority as the worker. */
 export function resolveYieldBenchmarkAge(
   value: YieldBenchmarkAgeEvidence | null | undefined,
   nowMs: number = Date.now(),
@@ -174,39 +168,27 @@ export function resolveYieldBenchmarkAge(
     value?.maxRecordAgeSec != null && Number.isFinite(value.maxRecordAgeSec) && value.maxRecordAgeSec > 0
       ? value.maxRecordAgeSec
       : YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC;
-  const hasPublishedBound =
-    value?.maxRecordAgeSec != null && Number.isFinite(value.maxRecordAgeSec) && value.maxRecordAgeSec > 0;
-  const ages: number[] = [];
-  if (value?.ageSeconds != null && Number.isFinite(value.ageSeconds) && value.ageSeconds >= 0) {
-    ages.push(value.ageSeconds);
-  }
-  let recordAgeSec = value?.recordAgeSec;
-  if (recordAgeSec == null || !Number.isFinite(recordAgeSec)) {
-    recordAgeSec = null;
-    const recordDate = value?.recordDate;
-    if (recordDate) {
-      const recordTimestampMs = Date.parse(`${recordDate}T00:00:00Z`);
-      if (Number.isFinite(recordTimestampMs)) {
-        recordAgeSec = Math.max(0, Math.floor(nowMs / 1000) - Math.floor(recordTimestampMs / 1000));
-      }
-    }
-  }
-  if (recordAgeSec != null && recordAgeSec >= 0) ages.push(recordAgeSec);
-
-  const ageSeconds = ages.length > 0 ? Math.max(...ages) : null;
-  if (ageSeconds === null || ageSeconds <= boundSeconds) {
+  const nowSec = Math.floor(nowMs / 1000);
+  const fetchAge = value?.fetchedAt != null ? nowSec - value.fetchedAt : value?.ageSeconds ?? null;
+  const recordAge = benchmarkRecordAgeSeconds(value?.recordDate, nowSec);
+  const freshness = classifyYieldBenchmarkFreshness(
+    { ageSeconds: fetchAge, isFallback: value?.isFallback ?? false, fallbackMode: value?.fallbackMode ?? null },
+    { recordDate: value?.recordDate, maxRecordAgeSec: boundSeconds, nowSec },
+  );
+  const ageSeconds = fetchAge == null ? recordAge : recordAge == null ? fetchAge : Math.max(fetchAge, recordAge);
+  if (freshness === "healthy") {
     return { stale: false, ageSeconds, boundSeconds, marker: "", reason: null };
   }
-  const age = formatBenchmarkAge(ageSeconds);
-  const bound = formatBenchmarkAge(boundSeconds);
+  const fetchExpired = fetchAge != null && fetchAge > YIELD_BENCHMARK_SCORE_TTL_SEC;
+  const effectiveBound = fetchExpired ? YIELD_BENCHMARK_SCORE_TTL_SEC : boundSeconds;
   return {
     stale: true,
     ageSeconds,
-    boundSeconds,
-    marker: `${age} old`,
-    reason: hasPublishedBound
-      ? `Observation is ${age} old — past the ${bound} freshness bound published for this benchmark. Treat the rate as lagging.`
-      : `Observation is ${age} old — past the ${bound} freshness bound of a daily benchmark series (this payload published no per-key bound). Treat the rate as lagging.`,
+    boundSeconds: effectiveBound,
+    marker: freshness === "degraded" ? "fallback" : ageSeconds != null && ageSeconds >= 0 ? `${formatBenchmarkAge(ageSeconds)} old` : "unavailable",
+    reason: freshness === "degraded"
+      ? "Benchmark evidence is a fallback, not a healthy reference."
+      : `Benchmark evidence is unavailable or exceeds its ${formatBenchmarkAge(effectiveBound)} ${fetchExpired ? "fetch" : "observation"} freshness bound.`,
   };
 }
 
@@ -231,16 +213,18 @@ function parseYieldMethodologyVersion(version: string | null | undefined): numbe
 
 /**
  * USD reference rate the *display* breakdown may re-base onto: the payload's
- * risk-free rate once the payload is scored at or after the re-base release,
- * else null so no re-base is synthesized for rows scored without one.
+ * risk-free rate only with healthy USD evidence and a post-re-base methodology.
+ * Otherwise null preserves the API's un-rebased explanation.
  */
 export function resolveYieldDisplayRebaseReferenceRate(
   methodologyVersion: string | null | undefined,
   riskFreeRate: number | null | undefined,
+  usdBenchmark: YieldBenchmarkMeta | null | undefined,
 ): number | null {
   const version = parseYieldMethodologyVersion(methodologyVersion);
   if (version === null || version < YIELD_REBASE_METHODOLOGY_VERSION) return null;
-  return riskFreeRate ?? null;
+  if (!usdBenchmark || resolveYieldBenchmarkAge(usdBenchmark).stale) return null;
+  return riskFreeRate != null && Number.isFinite(riskFreeRate) ? riskFreeRate : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -257,11 +241,8 @@ export interface YieldResolvedRowBenchmark {
 }
 
 function getYieldRowSelectionMode(row: YieldWorkbenchRanking): YieldBenchmarkSelectionMode | undefined {
-  // Mirrors the workbench-row helper without importing it (it imports this
-  // module). Summary rows omit the field; their fallback flag marks the
-  // documented USD-proxy selection.
-  if ("alternateSourceCount" in row) return row.benchmarkIsFallback ? "fallback-usd" : undefined;
-  return row.benchmarkSelectionMode;
+  return row.benchmarkSelectionMode ??
+    ("alternateSourceCount" in row && row.benchmarkIsFallback ? "fallback-usd" : undefined);
 }
 
 function firstFiniteNumber(...values: Array<number | null | undefined>): number | null {
