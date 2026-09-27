@@ -93,6 +93,15 @@ export async function snapshotChainSupply(
       },
     });
   }
+  const sameDayCoverageVerified = lastWrite?.snapshotDate === snapshotDate && lastWrite.exactCoverageVerified;
+  if (sameDayCoverageVerified && lastWrite.chainObservationAdmissionVerified) {
+    return createCronResult({ itemCount: 0, metadata: { reason: "already_written_today", snapshotDate } });
+  }
+  // An identity-matched partial day owns its first admitted observations.
+  // Legacy or changed-coverage generations still require replacement.
+  const admittedChainIds = new Set(
+    sameDayCoverageVerified && lastWrite.chainObservationProgressVerified ? lastWrite.ownedRowIds ?? [] : [],
+  );
 
   // Accumulate per-chain totals
   const chainTotals = new Map<string, { totalUsd: number; coinCount: number }>();
@@ -139,23 +148,15 @@ export async function snapshotChainSupply(
       deferredChainIds.map((chainId) => [chainId, [...deferredChains.get(chainId)!].sort()]),
     ),
   };
-  if (
-    lastWrite?.snapshotDate === snapshotDate
-    && lastWrite.exactCoverageVerified
-    && lastWrite.chainObservationAdmissionVerified
-    && deferredChainIds.length === 0
-  ) {
-    return createCronResult({ itemCount: 0, metadata: { reason: "already_written_today", snapshotDate } });
-  }
 
   const chainRows: Array<readonly [string, number, number, number]> = [];
   for (const [chainId, { totalUsd, coinCount }] of chainTotals) {
     // Never publish a subtotal that subtracts an unavailable contributor.
-    if (deferredChains.has(chainId)) continue;
+    if (deferredChains.has(chainId) || admittedChainIds.has(chainId)) continue;
     chainRows.push([chainId, snapshotDate, totalUsd, coinCount]);
   }
 
-  if (chainRows.length === 0) {
+  if (chainRows.length === 0 && admittedChainIds.size === 0) {
     logWorkerEventArgs("handler", "warn", "[snapshot-chain-supply] No valid chain rows produced, preserving previous snapshot");
     return createCronResult({
       status: "degraded",
@@ -168,25 +169,27 @@ export async function snapshotChainSupply(
     });
   }
 
+  const ownedRowIds = [...admittedChainIds, ...chainRows.map(([chainId]) => chainId)];
   try {
     const markerValue = JSON.stringify({
       ...buildSupplySnapshotCompletionMarker({
         snapshotDate,
         coverage: coverageExpectation,
         accountedActiveCount: publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
-        ownedRowIds: chainRows.map(([chainId]) => chainId),
+        ownedRowIds,
       }),
-      writtenChains: chainRows.length,
+      writtenChains: ownedRowIds.length,
+      chainObservationProgressVersion: 1,
       // Version 1 certifies complete observation admission, not partial progress.
       ...(deferredChainIds.length === 0 ? { chainObservationAdmissionVersion: 1 } : {}),
       ...observationMetadata,
     });
     const replacementStatements = [
-      // Preserve any already-observed rows for deferred chains, without refreshing
-      // them or deleting their unavailable contributors. Drop obsolete peers.
+      // Keep first observations from this coverage generation and preserve
+      // deferred legacy rows until they can be replaced by an admitted value.
       db.prepare(
         "DELETE FROM chain_supply_history WHERE snapshot_date = ? AND chain_id NOT IN (SELECT value FROM json_each(?))",
-      ).bind(snapshotDate, JSON.stringify(deferredChainIds)),
+      ).bind(snapshotDate, JSON.stringify([...admittedChainIds, ...deferredChainIds])),
       ...prepareMultiRowInsertStatements(
         db,
         "INSERT OR REPLACE INTO chain_supply_history (chain_id, snapshot_date, total_usd, stablecoin_count)",

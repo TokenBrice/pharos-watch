@@ -141,12 +141,14 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, DlListQuot
 
 function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): void {
   const source = asset.priceSource || "defillama";
+  // Carried-forward prices already needed an original timestamp in the restore
+  // helpers; `supplyRestored` marks carried supply, so an undated current-run
+  // list quote on a carried-supply row keeps its registry semantics here.
   if (!validateCompositePricingSourceFreshness({
     source,
     observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
     observedAtMode: asset.priceObservedAtMode,
     nowSec: syncStartSec,
-    requireObservedAt: asset.supplyRestored === true,
   }).accepted) {
     clearPriceMetadata(asset);
     return;

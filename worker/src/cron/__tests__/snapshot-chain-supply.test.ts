@@ -151,8 +151,15 @@ describe("snapshotChainSupply", () => {
           "SELECT value FROM cache WHERE key = 'snapshot-chain-supply:last-write'",
         ).get()!.value));
         expect(marker().chainObservationAdmissionVersion).toBeUndefined();
-        // A retry while still restored must not seal the day.
-        expect((await snapshotChainSupply(db, undefined, { nowSec, requiredActiveIds })).itemCount).toBe(12);
+        // Later slots must not move already-admitted chains to later observations.
+        payload.peggedAssets[0]!.chainCirculating = Object.fromEntries(
+          healthyChains.map((chainId) => [chainId, { chainId, current: chainId === "base" ? 2_000_000_000 : 1_000_000_000 }]),
+        );
+        putCache.run("stablecoins", JSON.stringify(payload), nowSec + 30);
+        const retry = await snapshotChainSupply(db, undefined, { nowSec: nowSec + 30, requiredActiveIds });
+        expect(retry.status).toBe("ok");
+        expect(retry.itemCount).toBe(0);
+        expect(rows().find((row) => row.chain_id === "base")!.total_usd).toBe(1_000_000_000);
 
         for (const asset of smallAssets) {
           Object.assign(asset, { supplyRestored: false, supplyObservedAt: nowSec + 60 });
@@ -160,7 +167,8 @@ describe("snapshotChainSupply", () => {
         putCache.run("stablecoins", JSON.stringify(payload), nowSec + 60);
         const recovered = await snapshotChainSupply(db, undefined, { nowSec: nowSec + 60, requiredActiveIds });
         expect(recovered.status).toBe("ok");
-        expect(recovered.itemCount).toBe(16);
+        expect(recovered.itemCount).toBe(4);
+        expect(rows().find((row) => row.chain_id === "base")!.total_usd).toBe(1_000_000_000);
         expect(rows().filter((row) => ["ethereum", "arbitrum", "apechain", "pharos"].includes(String(row.chain_id)))).toEqual([
           { chain_id: "apechain", total_usd: 200, stablecoin_count: 1 },
           { chain_id: "arbitrum", total_usd: 1_079_000_000, stablecoin_count: 2 },
@@ -171,6 +179,22 @@ describe("snapshotChainSupply", () => {
         expect(JSON.parse((await snapshotChainSupply(
           db, undefined, { nowSec: nowSec + 60, requiredActiveIds },
         )).metadata!).reason).toBe("already_written_today");
+        const sealedRows = rows();
+        const sealedMarker = sqlite.prepare(
+          "SELECT value, updated_at FROM cache WHERE key = 'snapshot-chain-supply:last-write'",
+        ).get();
+        Object.assign(smallAssets[2]!, { supplyRestored: true });
+        payload.peggedAssets[0]!.chainCirculating = Object.fromEntries(
+          healthyChains.map((chainId) => [chainId, { chainId, current: 3_000_000_000 }]),
+        );
+        putCache.run("stablecoins", JSON.stringify(payload), nowSec + 120);
+        const laterPartial = await snapshotChainSupply(db, undefined, { nowSec: nowSec + 120, requiredActiveIds });
+        expect(JSON.parse(laterPartial.metadata!).reason).toBe("already_written_today");
+        expect(laterPartial.itemCount).toBe(0);
+        expect(rows()).toEqual(sealedRows);
+        expect(sqlite.prepare(
+          "SELECT value, updated_at FROM cache WHERE key = 'snapshot-chain-supply:last-write'",
+        ).get()).toEqual(sealedMarker);
       } finally {
         sqlite.close();
       }

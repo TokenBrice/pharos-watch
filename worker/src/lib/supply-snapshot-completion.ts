@@ -81,6 +81,7 @@ export interface CompletedSupplySnapshot {
   exactCoverageVerified: boolean;
   ownedRowIds: string[] | null;
   chainObservationAdmissionVerified: boolean;
+  chainObservationProgressVerified: boolean;
 }
 
 export interface SupplySnapshotPreflightOptions<Context> {
@@ -243,6 +244,7 @@ export async function getCompletedSupplySnapshot(
       ownedRowIds?: unknown;
       writtenRows?: unknown;
       chainObservationAdmissionVersion?: unknown;
+      chainObservationProgressVersion?: unknown;
     };
     const ownedRowIds = parseCanonicalOwnedRowIds(parsed.ownedRowIds);
     const structurallyExact = parsed.coverageVersion === SUPPLY_SNAPSHOT_COVERAGE_VERSION
@@ -265,6 +267,7 @@ export async function getCompletedSupplySnapshot(
           exactCoverageVerified: structurallyExact && matchesExpectedCoverage,
           ownedRowIds: structurallyExact ? ownedRowIds : null,
           chainObservationAdmissionVerified: parsed.chainObservationAdmissionVersion === 1,
+          chainObservationProgressVerified: parsed.chainObservationProgressVersion === 1,
         }
       : null;
   } catch {

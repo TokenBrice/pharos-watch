@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { applyConsensusResults, createValidationContextResolver, prevalidatePrices } from "../sync-stablecoins/pricing";
 import { restoreMissingTrackedAssets } from "../sync-stablecoins/shared";
+import { carryForwardSupplyGapFill } from "../sync-stablecoins/supply-gap-reconciliation";
 import { enrichMissingPrices, type PeggedAsset, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
@@ -116,5 +117,35 @@ describe("pricing application policy", () => {
     expect(usdt).toMatchObject({ price: 1.0002, priceSource: candidate.source, priceConfidence: "high", priceObservedAt: nowSec - 1_200 });
     const mxne = assets.find((asset) => asset.id === previousMxne.id);
     expect(mxne).toMatchObject({ price: null, supplyRestored: true, circulating: previousMxne.circulating });
+  });
+
+  it("keeps a current undated DefiLlama quote on a carried gap-fill supply row", () => {
+    const nowSec = 1_790_541_043;
+    const previous: PeggedAsset = {
+      id: "reusd-re-protocol", name: "reUSD", symbol: "reUSD", pegType: "peggedUSD", navToken: true,
+      price: 1.1031, priceSource: "defillama", supplySource: "coingecko-gap-fill", supplyObservedAt: nowSec - 900,
+      circulating: { peggedUSD: 130_000_000 },
+      supplyGapFill: {
+        method: "coingecko-single-missing-chain", admission: "retained", missingChainId: "Arbitrum",
+        canonicalSource: "defillama", canonicalCurrentUsd: 123_800_000,
+        supplementalSource: "coingecko", supplementalCurrentUsd: 130_000_000,
+        ratio: 1.0504, maxRatio: 1.5, observedAt: nowSec - 900,
+      },
+    };
+    // This run's DefiLlama list row: fresh price, no upstream timestamp, supply awaiting reconciliation.
+    const current: PeggedAsset = {
+      id: previous.id, name: "reUSD", symbol: "reUSD", pegType: "peggedUSD", navToken: true,
+      price: 1.1036, priceSource: "defillama", circulating: { peggedUSD: 123_800_000 },
+    };
+    expect(carryForwardSupplyGapFill(current, previous)).toBe(true);
+    const validationContexts = createValidationContextResolver();
+
+    applyConsensusResults({ assets: [current], primaryPriceResults: new Map(), validationContexts, syncStartSec: nowSec, reason: "primary" });
+    prevalidatePrices({ assets: [current], validationContexts, logLabel: "test" });
+
+    expect(current).toMatchObject({
+      price: 1.1036, priceSource: "defillama", priceObservedAt: null, priceSyncedAt: nowSec,
+      supplyRestored: true, circulating: previous.circulating,
+    });
   });
 });
