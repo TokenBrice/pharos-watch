@@ -14,6 +14,9 @@ import {
 import type { YieldBenchmarkKey, YieldBenchmarkRegistry, YieldRanking, YieldRankingProvenance } from "@shared/types";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
+import { classifyYieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
+import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
+import { getYieldBenchmarkSelectionMode } from "@/lib/yield-workbench-row";
 
 // Age markers resolve against the wall clock; pin it so day counts are exact.
 beforeEach(() => {
@@ -21,6 +24,31 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("row benchmark selection evidence", () => {
+  it.each([
+    ["fallback-usd", false], ["native", true],
+  ] as const)("preserves %s selection independently of feed fallback %s", (selectionMode, isFallback) => {
+    const row = makeYieldRanking({ benchmarkSelectionMode: selectionMode, benchmarkIsFallback: isFallback });
+    const summary = projectYieldRankingsSummary({
+      rankings: [row], updatedAt: 1, riskFreeRate: 4.25, scalingFactor: 8, medianApy: 5,
+    }).rankings[0];
+    for (const candidate of [row, summary]) {
+      expect(getYieldBenchmarkSelectionMode(candidate)).toBe(selectionMode);
+      expect(resolveYieldRowBenchmark(candidate, BENCHMARKS).selectionMode).toBe(selectionMode);
+    }
+  });
+
+  it("infers legacy summary selection only when explicit selection evidence is absent", () => {
+    const summary = projectYieldRankingsSummary({
+      rankings: [makeYieldRanking({ benchmarkIsFallback: true })],
+      updatedAt: 1, riskFreeRate: 4.25, scalingFactor: 8, medianApy: 5,
+    }).rankings[0];
+    delete summary.benchmarkSelectionMode;
+    expect(getYieldBenchmarkSelectionMode(summary)).toBe("fallback-usd");
+    expect(resolveYieldRowBenchmark(summary, BENCHMARKS).selectionMode).toBe("fallback-usd");
+  });
 });
 const BENCHMARKS: YieldBenchmarkRegistry = {
   USD: {
@@ -118,9 +146,6 @@ describe("resolveYieldBenchmarkAge", () => {
     expect(age.stale).toBe(true);
     expect(age.boundSeconds).toBe(YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC);
     expect(age.marker).toBe("42d old");
-    expect(age.reason).toContain("42d old");
-    expect(age.reason).toContain("daily benchmark series");
-    expect(age.reason).toContain("published no per-key bound");
   });
 
   it("stays fresh inside the default bound (a 3d-old observation on an old payload does not tint)", () => {
@@ -142,21 +167,19 @@ describe("resolveYieldBenchmarkAge", () => {
     expect(withinBound.stale).toBe(false);
 
     const pastBound = resolveYieldBenchmarkAge(
-      { recordAgeSec: 50 * 24 * 60 * 60, maxRecordAgeSec: 45 * 24 * 60 * 60 },
+      { ageSeconds: 60, recordDate: "2026-07-24", maxRecordAgeSec: 45 * 24 * 60 * 60 },
       NOW,
     );
     expect(pastBound.stale).toBe(true);
-    expect(pastBound.reason).toContain("50d old");
-    expect(pastBound.reason).toContain("45d freshness bound published for this benchmark");
   });
 
-  it("prefers a published recordAgeSec over the record date", () => {
+  it("does not let a cached record age override the actual observation date", () => {
     const age = resolveYieldBenchmarkAge(
-      { recordDate: "2026-08-01", recordAgeSec: 3600 },
+      { ageSeconds: 60, recordDate: "2026-08-01", recordAgeSec: 3600 },
       NOW,
     );
-    expect(age.stale).toBe(false);
-    expect(age.ageSeconds).toBe(3600);
+    expect(age.stale).toBe(true);
+    expect(age.ageSeconds).toBe(42 * 24 * 60 * 60);
   });
 
   it("flags a fetch age past the bound even without a record date", () => {
@@ -165,10 +188,24 @@ describe("resolveYieldBenchmarkAge", () => {
     expect(age.marker).toBe("6d old");
   });
 
-  it("clamps a future-dated record to zero age and is not stale without evidence", () => {
-    expect(resolveYieldBenchmarkAge({ recordDate: "2026-10-01" }, NOW).stale).toBe(false);
-    expect(resolveYieldBenchmarkAge({}, NOW).stale).toBe(false);
-    expect(resolveYieldBenchmarkAge(null, NOW).stale).toBe(false);
+  it("fails closed for missing or future observation evidence", () => {
+    expect(resolveYieldBenchmarkAge({ ageSeconds: 60, recordDate: "2026-10-01" }, NOW).stale).toBe(true);
+    expect(resolveYieldBenchmarkAge({}, NOW).stale).toBe(true);
+    expect(resolveYieldBenchmarkAge(null, NOW).stale).toBe(true);
+  });
+
+  it("applies the 48h fetch bound even when today's observation is within its five-day bound", () => {
+    const age = resolveYieldBenchmarkAge({
+      ageSeconds: 49 * 3600,
+      recordDate: "2026-09-12",
+      maxRecordAgeSec: 5 * 86400,
+    }, NOW);
+    expect(age.stale).toBe(true);
+    expect(age.boundSeconds).toBe(48 * 3600);
+    expect(classifyYieldBenchmarkFreshness(
+      { ageSeconds: 49 * 3600, isFallback: false, fallbackMode: null },
+      { recordDate: "2026-09-12", maxRecordAgeSec: 5 * 86400, nowSec: NOW / 1000 },
+    )).toBe("stale");
   });
 });
 
@@ -203,14 +240,17 @@ describe("resolveYieldRowBenchmark", () => {
     expect(resolved.label).toBe("USD 3M T-Bill (fallback)");
   });
 
-  it("derives the fallback marker from a summary row's fallback flag", () => {
+  it.each([
+    ["fallback-usd", false],
+    ["native", true],
+  ] as const)("preserves summary selection %s separately from fallback evidence", (selectionMode, isFallback) => {
     const summaryRow = {
-      ...makeYieldRanking({ benchmarkIsFallback: true }),
+      ...makeYieldRanking({ benchmarkIsFallback: isFallback, benchmarkSelectionMode: selectionMode }),
       alternateSourceCount: 3,
     } as YieldRankingSummary;
     const resolved = resolveYieldRowBenchmark(summaryRow, BENCHMARKS, 4.25);
-    expect(resolved.selectionMode).toBe("fallback-usd");
-    expect(resolved.label).toBe("USD 3M T-Bill (fallback)");
+    expect(resolved.selectionMode).toBe(selectionMode);
+    expect(resolved.isFallback).toBe(true);
   });
 
   it("resolves to a null rate only when nothing resolves at all", () => {
@@ -288,24 +328,25 @@ describe("resolveYieldScatterBenchmarkFrame", () => {
 });
 
 describe("resolveYieldDisplayRebaseReferenceRate (v8.43 re-base window)", () => {
-  it("passes the risk-free rate through once the payload is scored at the re-base release", () => {
-    expect(resolveYieldDisplayRebaseReferenceRate("v8.43", 3.5)).toBe(3.5);
-    expect(resolveYieldDisplayRebaseReferenceRate("v8.44", 3.5)).toBe(3.5);
+  const healthy = {
+    ...BENCHMARKS.USD,
+    recordDate: "2026-09-12",
+    fetchedAt: Date.parse("2026-09-12T00:00:00Z") / 1000,
+    maxRecordAgeSec: 5 * 86400,
+  };
+
+  it.each(["v8.43", "v8.44", "8.43"])("allows healthy evidence for %s", (version) => {
+    expect(resolveYieldDisplayRebaseReferenceRate(version, 3.5, healthy)).toBe(3.5);
   });
 
-  it("returns null while the payload is scored before the re-base release", () => {
-    expect(resolveYieldDisplayRebaseReferenceRate("v8.42", 3.5)).toBeNull();
-    expect(resolveYieldDisplayRebaseReferenceRate("v8.4", 3.5)).toBeNull();
+  it.each(["v8.42", "v8.4", null, undefined, "not-a-version"])("does not rebase methodology %s", (version) => {
+    expect(resolveYieldDisplayRebaseReferenceRate(version, 3.5, healthy)).toBeNull();
   });
 
-  it("returns null when the payload publishes no version to gate on", () => {
-    expect(resolveYieldDisplayRebaseReferenceRate(null, 3.5)).toBeNull();
-    expect(resolveYieldDisplayRebaseReferenceRate(undefined, 3.5)).toBeNull();
-    expect(resolveYieldDisplayRebaseReferenceRate("not-a-version", 3.5)).toBeNull();
-  });
-
-  it("parses the version with or without the leading v", () => {
-    expect(resolveYieldDisplayRebaseReferenceRate("8.43", 3.5)).toBe(3.5);
-    expect(resolveYieldDisplayRebaseReferenceRate("v8.43", null)).toBeNull();
+  it("rejects fallback, stale and absent reference evidence", () => {
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.44", 3.5, { ...healthy, isFallback: true })).toBeNull();
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.44", 3.5, BENCHMARKS.USD)).toBeNull();
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.44", 3.5, undefined)).toBeNull();
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.44", null, healthy)).toBeNull();
   });
 });

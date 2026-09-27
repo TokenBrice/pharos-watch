@@ -6,7 +6,7 @@ import { DAY_MS } from "@/lib/constants";
 import { toTimestampMs } from "@/lib/time";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { formatChartDate, formatDecimal } from "@shared/lib/format";
-import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
+import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import type { YieldHistoryPoint } from "@shared/types";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
@@ -102,7 +102,7 @@ export interface YieldHistoryChartProps {
   benchmarkRate: number | null;
   benchmarkLabel?: string;
   benchmarkIsFallback?: boolean;
-  medianApy: number;
+  medianApy: number | null;
   defaultDays?: number;
   compact?: boolean;
   availableSources?: YieldHistorySourceOption[];
@@ -118,6 +118,7 @@ export interface YieldHistoryChartPoint {
   apyReward: number | null;
   sourceTvlUsd: number | null;
   warningSignals: string[];
+  warningSignalsStatus?: "unreadable";
   sourceKey: string | null;
   yieldSource: string | null;
   dataSource: string | null;
@@ -125,7 +126,7 @@ export interface YieldHistoryChartPoint {
   sourceSwitch: boolean;
 }
 
-export type YieldHistoryChartSeriesPoint = YieldHistoryChartPoint & Partial<
+export type YieldHistoryChartSeriesPoint = Omit<YieldHistoryChartPoint, "apy"> & { apy: number | null } & Partial<
   Record<`apy_overlay_${number}`, number | null>
 >;
 
@@ -269,7 +270,7 @@ function getSourceDisplay(
   fallbackLabel = sourceKey,
 ): YieldHistorySourceDisplay {
   if (sourceKey === "best") {
-    return { sourceKey, label: "Canonical (published) source" };
+    return { sourceKey, label: "Published selected source" };
   }
 
   const source = allSources.find((candidate) => candidate.sourceKey === sourceKey);
@@ -279,7 +280,7 @@ function getSourceDisplay(
   };
 }
 
-function buildTicks(points: YieldHistoryChartPoint[], days: number) {
+function buildTicks(points: ReadonlyArray<{ date: number }>, days: number) {
   if (points.length === 0) return [];
 
   const first = points[0].date;
@@ -329,6 +330,7 @@ function mapHistoryPoint(point: YieldHistoryPoint): YieldHistoryChartPoint | nul
     apyReward: point.apyReward,
     sourceTvlUsd: point.sourceTvlUsd,
     warningSignals: point.warningSignals,
+    warningSignalsStatus: point.warningSignalsStatus,
     sourceKey: point.sourceKey ?? null,
     yieldSource: point.yieldSource ?? null,
     dataSource: point.dataSource ?? null,
@@ -337,8 +339,54 @@ function mapHistoryPoint(point: YieldHistoryPoint): YieldHistoryChartPoint | nul
   };
 }
 
-function roundHistoryTimestamp(timestamp: number) {
-  return Math.round(timestamp / 3_600_000) * 3_600_000;
+function emptyChartPoint(date: number): YieldHistoryChartSeriesPoint {
+  return {
+    date, apy: null, apyBase: null, apyReward: null, sourceTvlUsd: null,
+    warningSignals: [], sourceKey: null, yieldSource: null, dataSource: null,
+    isBest: false, sourceSwitch: false,
+  };
+}
+
+function mergeHistorySeries(
+  primary: YieldHistoryChartPoint[],
+  overlays: Map<number, number>[],
+  nowMs: number,
+): YieldHistoryChartSeriesPoint[] {
+  const rows = new Map<number, YieldHistoryChartSeriesPoint>();
+  for (const point of primary) rows.set(point.date, { ...point });
+  const seriesDates = [
+    primary.map((point) => point.date),
+    ...overlays.map((series) => [...series.keys()].sort((a, b) => a - b)),
+  ];
+  overlays.forEach((series, index) => {
+    for (const [date, apy] of series) {
+      const row = rows.get(date) ?? emptyChartPoint(date);
+      row[`apy_overlay_${index}`] = apy;
+      rows.set(date, row);
+    }
+  });
+  // Retention is hourly for 30 days, then daily. Insert only genuinely
+  // missing cadence buckets; normal cron timestamp jitter is not a gap.
+  const hourlyCutoff = nowMs - YIELD_HISTORY_RAW_DAYS * DAY_MS;
+  for (const dates of seriesDates) {
+    for (let i = 1; i < dates.length; i++) {
+      let cursor = dates[i - 1];
+      const next = dates[i];
+      while (cursor < next) {
+        const cadence = cursor < hourlyCutoff ? DAY_MS : 3_600_000;
+        const missing = (Math.floor(cursor / cadence) + 1) * cadence;
+        if (Math.floor(next / cadence) <= Math.floor(missing / cadence)) break;
+        if (!rows.has(missing)) rows.set(missing, emptyChartPoint(missing));
+        cursor = missing;
+      }
+    }
+  }
+  return [...rows.values()].sort((a, b) => a.date - b.date).map((row) => {
+    for (let index = 0; index < overlays.length; index++) {
+      row[`apy_overlay_${index}`] ??= null;
+    }
+    return row;
+  });
 }
 
 export function useYieldHistoryChartModel({
@@ -414,7 +462,7 @@ export function useYieldHistoryChartModel({
       for (const point of query.data?.history ?? []) {
         const date = toTimestampMs(point.date);
         if (Number.isFinite(date)) {
-          series.set(roundHistoryTimestamp(date), point.apy);
+          series.set(date, point.apy);
         }
       }
       return series;
@@ -422,20 +470,10 @@ export function useYieldHistoryChartModel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- overlay query result refs are fixed-width
   }, [additionalOverlayKeys.length, overlayQueries[0]?.data, overlayQueries[1]?.data, overlayQueries[2]?.data, overlayQueries[3]?.data, overlayQueries[4]?.data, overlayQueries[5]?.data, overlayQueries[6]?.data]);
 
-  const mergedChartData = useMemo<YieldHistoryChartSeriesPoint[]>(() => {
-    if (overlayData.length === 0 || overlayData.every((series) => series.size === 0)) {
-      return chartData as YieldHistoryChartSeriesPoint[];
-    }
-
-    return chartData.map((point) => {
-      const merged: YieldHistoryChartSeriesPoint = { ...point };
-      const rounded = roundHistoryTimestamp(point.date);
-      for (let index = 0; index < overlayData.length; index++) {
-        merged[`apy_overlay_${index}`] = overlayData[index].get(rounded) ?? null;
-      }
-      return merged;
-    });
-  }, [chartData, overlayData]);
+  const mergedChartData = useMemo(
+    () => mergeHistorySeries(chartData, overlayData, Date.now()),
+    [chartData, overlayData],
+  );
 
   const overlayLabels = useMemo(() => {
     return additionalOverlayKeys.map((key) => {
@@ -450,7 +488,7 @@ export function useYieldHistoryChartModel({
     return chartData.some((point) => point.apyBase !== null);
   }, [chartData]);
   const effectiveShowBreakdown = hasBreakdown && showBreakdown;
-  const tickValues = useMemo(() => buildTicks(chartData, days), [chartData, days]);
+  const tickValues = useMemo(() => buildTicks(mergedChartData, days), [mergedChartData, days]);
 
   const spikeAnnotations = useMemo(() => computeSpikeAnnotations(chartData), [chartData]);
   const spikeDates = useMemo(() => new Set(spikeAnnotations.map((spike) => spike.date)), [spikeAnnotations]);
@@ -468,9 +506,9 @@ export function useYieldHistoryChartModel({
   }, [availableSources, chartData]);
 
   const yDomain = useMemo(() => {
-    if (chartData.length === 0) {
-      const minRef = Math.min(0, benchmarkRate ?? 0, medianApy > 0 ? medianApy : 0);
-      const maxRef = Math.max(benchmarkRate ?? 0, medianApy, 1);
+    if (chartData.length === 0 && overlayData.every((series) => series.size === 0)) {
+      const minRef = Math.min(0, benchmarkRate ?? 0, medianApy ?? 0);
+      const maxRef = Math.max(benchmarkRate ?? 0, medianApy ?? 0, 1);
       return [minRef - 1, maxRef + 1] as const;
     }
 
@@ -478,6 +516,9 @@ export function useYieldHistoryChartModel({
       .filter((point) => !spikeDates.has(point.date))
       .map((point) => point.apy);
     const values: number[] = apyValues.length > 0 ? [...apyValues] : chartData.map((point) => point.apy);
+    if (values.length === 0) {
+      for (const series of overlayData) values.push(...series.values());
+    }
     // Reference lines join the domain only when they sit near the data.
     // A hurdle several data-spans away otherwise empties the plot (ZCHF:
     // a flat 3.5% series stretched to show a -0.04% benchmark); far-away
@@ -488,7 +529,7 @@ export function useYieldHistoryChartModel({
     if (benchmarkRate != null && benchmarkRate >= dataMin - nearBand && benchmarkRate <= dataMax + nearBand) {
       values.push(benchmarkRate);
     }
-    if (medianApy > 0 && medianApy >= dataMin - nearBand && medianApy <= dataMax + nearBand) {
+    if (medianApy != null && medianApy >= dataMin - nearBand && medianApy <= dataMax + nearBand) {
       values.push(medianApy);
     }
 

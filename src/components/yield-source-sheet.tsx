@@ -6,7 +6,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { TableSourceLink } from "@/components/table/client";
+import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
+import { QueryErrorNotice } from "@/components/query-error-notice";
+import { YIELD_SOURCE_FACT_LABELS } from "@/lib/yield-presentation";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -42,17 +44,20 @@ interface YieldSourceSheetProps {
   ranking: YieldRanking | null;
   logo: string | undefined;
   riskFreeRate: number;
-  medianApy: number;
+  medianApy: number | null;
   benchmarks?: YieldBenchmarkRegistry | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  loading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
 interface YieldSourceSheetBodyProps {
   ranking: YieldRanking;
   logo: string | undefined;
   riskFreeRate: number;
-  medianApy: number;
+  medianApy: number | null;
   benchmarks?: YieldBenchmarkRegistry | null;
   onOpenChange: (open: boolean) => void;
 }
@@ -120,19 +125,18 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             </p>
             <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
               <div className="flex items-center gap-2">
-                <TableSourceLink
-                  href={selectedSource.url}
-                  className="text-sm font-medium text-foreground"
-                  onClick={() => {
-                    trackEvent("yield_row_action", {
-                      action: "provider_opened",
-                      coin_id: ranking.id,
-                      warning_count: ranking.warningSignals.length,
-                    });
-                  }}
-                >
-                  {selectedSource.displayLabel}
-                </TableSourceLink>
+                <YieldSourceIdentity
+                  displayLabel={sourceExplorer.sourceIdentity.displayLabel}
+                  url={sourceExplorer.sourceIdentity.url}
+                  confidenceStyle={confidenceStyle}
+                  confidenceLabel={confidenceLabel}
+                  sourceChanged={sourceExplorer.sourceSwitch.changed}
+                  onClick={() => trackEvent("yield_row_action", {
+                    action: "provider_opened",
+                    coin_id: ranking.id,
+                    warning_count: ranking.warningSignals.length,
+                  })}
+                />
                 <Badge variant="outline" className={cn("text-xs", YIELD_TYPE_STYLES[ranking.yieldType]?.badge ?? "")}>
                   {YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType}
                 </Badge>
@@ -144,7 +148,6 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               {selectedSource.sourceTvlUsd !== null && <span>TVL {formatCurrency(selectedSource.sourceTvlUsd)}</span>}
-              {confidenceStyle && confidenceLabel && <span className={confidenceStyle.pill}>{confidenceLabel}</span>}
               <span
                 className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-[10px]"
                 title={YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].description}
@@ -154,14 +157,6 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
               {freshness && (
                 <YieldFreshnessLabel freshness={freshness} mode="plain-title" />
               )}
-              {sourceExplorer.sourceSwitch.changed ? (
-                <span
-                  className={cn("rounded-full border px-1.5 py-0.5 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}
-                  title="The chosen source changed versus the prior published snapshot. This explains source provenance, not stablecoin safety."
-                >
-                  source changed
-                </span>
-              ) : null}
             </div>
             {calculationMode && evidenceClass && scoreQualification ? (
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
@@ -398,12 +393,14 @@ export function YieldSourceSheet({
   benchmarks = null,
   open,
   onOpenChange,
+  loading = false,
+  error,
+  onRetry,
 }: YieldSourceSheetProps) {
-  if (!ranking) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <YieldSourceSheetBody
+      {ranking ? <YieldSourceSheetBody
         key={`${ranking.id}:${open ? "open" : "closed"}`}
         ranking={ranking}
         logo={logo}
@@ -411,7 +408,17 @@ export function YieldSourceSheet({
         medianApy={medianApy}
         benchmarks={benchmarks}
         onOpenChange={onOpenChange}
-      />
+      /> : (
+        <SheetContent side="right" className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{YIELD_SOURCE_FACT_LABELS.sheetTitle}</SheetTitle>
+            <SheetDescription>{error ? YIELD_SOURCE_FACT_LABELS.loadError : loading ? YIELD_SOURCE_FACT_LABELS.loading : YIELD_SOURCE_FACT_LABELS.unavailable}</SheetDescription>
+          </SheetHeader>
+          <div className="px-4">
+            <QueryErrorNotice error={error} hasData={false} onRetry={onRetry} />
+          </div>
+        </SheetContent>
+      )}
     </Sheet>
   );
 }

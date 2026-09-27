@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
 import { mergeSourceRiskGoldenFixtures } from "@shared/test-utils/yield-source-risk-golden-fixtures";
@@ -8,6 +8,9 @@ import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shar
 import type { YieldRanking } from "@shared/types";
 import { renderYieldSourceSheet } from "./yield-source-sheet-test-support";
 import { REGISTRY_WITH_EUR } from "./yield-test-support";
+import { trackEvent } from "@/lib/analytics";
+
+vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) => (open ? <div>{children}</div> : null),
@@ -34,13 +37,6 @@ vi.mock("@/components/yield-history-chart", () => ({
   ),
 }));
 
-vi.mock("@/components/table/client", () => ({
-  TableSourceLink: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  ),
-}));
 
 vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <div>{name}</div>,
@@ -88,6 +84,46 @@ describe("YieldSourceSheet", () => {
       delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
     }
     vi.restoreAllMocks();
+  });
+
+  it("shows the advanced observation age rather than the publication-time age", () => {
+    const ranking = makeRanking("usdc", "selected", "alternate");
+    ranking.sourceRisk = {
+      sourceRiskScore: null, sourceRiskPenalty: null, sourceDepthRatio: null, rewardShare: null,
+      sourceAgeSeconds: 14401, observationCount30d: null, sourceSwitchCount30d: null,
+    };
+    ranking.provenance = makeYieldProvenance({ sourceFreshness: "stale", sourceAgeSeconds: 14401 });
+    renderYieldSourceSheet(ranking);
+    expect(screen.getAllByText(/4h ago/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/0s ago/)).toBeNull();
+  });
+
+  it("keeps the sheet open through loading, error, retry, unavailable and loaded states", () => {
+    const onRetry = vi.fn();
+    const props = { logo: undefined, riskFreeRate: 3, medianApy: null, open: true, onOpenChange: vi.fn(), onRetry };
+    const { rerender } = render(<YieldSourceSheet {...props} ranking={null} loading />);
+    expect(screen.getByRole("heading", { name: "Yield source details" })).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+    rerender(<YieldSourceSheet {...props} ranking={null} error={new Error("source fetch failed")} />);
+    expect(screen.getByRole("heading", { name: "Yield source details" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+    rerender(<YieldSourceSheet {...props} ranking={null} />);
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Yield source details" })).toBeTruthy();
+    rerender(<YieldSourceSheet {...props} ranking={makeRanking("usdc", "best-usdc", "alt-usdc")} />);
+    expect(screen.getByRole("link", { name: "usdc-best" }).getAttribute("href")).toBe("https://example.com/usdc/best");
+    expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
+  });
+
+  it("records provider opens from the chosen source link", () => {
+    const ranking = makeRanking("usdc", "best-usdc", "alt-usdc");
+    renderYieldSourceSheet(ranking);
+    vi.mocked(trackEvent).mockClear();
+    fireEvent.click(screen.getByRole("link", { name: "usdc-best" }));
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("yield_row_action", {
+      action: "provider_opened", coin_id: "usdc", warning_count: ranking.warningSignals.length,
+    });
   });
 
   it("resets the selected source when the ranking changes", () => {

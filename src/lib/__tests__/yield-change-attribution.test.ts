@@ -18,6 +18,7 @@ function point(daysAgo: number, apy: number, overrides: Partial<YieldHistoryPoin
     exchangeRate: null,
     sourceTvlUsd: null,
     warningSignals: [],
+    sourceKey: "same-source",
     ...overrides,
   };
 }
@@ -35,11 +36,23 @@ describe("classifyApyChange", () => {
     expect(result.headline).toMatch(/not enough data/i);
   });
 
-  it("returns insufficient-data when the largest delta is small and no decision ledger", () => {
+  it("distinguishes adequate quiet history from missing history", () => {
     const history = [point(5, 5.0), point(4, 5.05), point(3, 5.0), point(2, 4.97), point(1, 5.01)];
     const result = classifyApyChange({ history, nowMs: NOW_MS });
     expect(result.attribution).toBe("insufficient-data");
     expect(result.largestDelta).not.toBeNull();
+    expect(result.headline).toMatch(/no material APY change/i);
+  });
+
+  it("does not infer mixed drivers from unknown endpoint identities", () => {
+    const result = classifyApyChange({
+      history: [point(2, 4, { sourceKey: null }), point(1, 7, { sourceKey: null })],
+      nowMs: NOW_MS,
+    });
+    expect(result.attribution).toBe("insufficient-data");
+    expect(result.confidence).toBe("low");
+    expect(result.sourceSwitchDetail).toBeUndefined();
+    expect(result.largestDelta?.value).toBe(3);
   });
 
   it("resamples hourly history to daily closes before applying per-day thresholds", () => {
@@ -235,5 +248,46 @@ describe("classifyApyChange", () => {
     ];
     const result = classifyApyChange({ history, nowMs: NOW_MS });
     expect(result.largestDelta?.value).toBeCloseTo(0.5);
+  });
+
+  it("attributes a retained Savings to Frankencoin switch after the ledger resets", () => {
+    const result = classifyApyChange({
+      history: [
+        point(8, 1, { sourceKey: "ethereum", yieldSource: "Frankencoin Savings" }),
+        point(7, 3.5, { sourceKey: "gnosis", yieldSource: "Frankencoin", sourceSwitch: true }),
+        point(1, 3.5, { sourceKey: "gnosis" }),
+      ],
+      decisionLedger: { sourceSwitch: false, apy30dDeltaFromPrevious: null },
+      nowMs: NOW_MS,
+    });
+    expect(result.attribution).toBe("source-switch");
+    expect(result.confidence).toBe("medium");
+    expect(result.sourceSwitchDetail?.apy30dDelta).toBe(2.5);
+    expect(result.sourceSwitchDetail?.previousSourceLabel).toBe("Frankencoin Savings");
+  });
+
+  it("does not borrow a current switch's delta for an older source transition", () => {
+    const result = classifyApyChange({
+      history: [
+        point(12, 1, { sourceKey: "a" }),
+        point(11, 5, { sourceKey: "b", sourceSwitch: true }),
+        point(2, 5, { sourceKey: "b" }),
+        point(1, 6, { sourceKey: "c", sourceSwitch: true }),
+      ],
+      decisionLedger: { sourceSwitch: true, apy30dDeltaFromPrevious: 0.7 },
+      nowMs: NOW_MS,
+    });
+    expect(result.attribution).toBe("source-switch");
+    expect(result.sourceSwitchDetail?.apy30dDelta).toBe(4);
+    expect(result.confidence).toBe("medium");
+  });
+
+  it("does not call matching daily closes organic when a switch marker is nearby", () => {
+    const result = classifyApyChange({
+      history: [point(4, 1), point(3.5, 2, { sourceSwitch: true }), point(3, 4)],
+      nowMs: NOW_MS,
+    });
+    expect(result.attribution).toBe("mixed");
+    expect(result.sourceSwitchDetail?.apy30dDelta).toBe(3);
   });
 });

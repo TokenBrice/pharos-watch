@@ -225,7 +225,8 @@ describe("YieldCompareDrawer", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("exports the compare CSV contract: percent stability, provenance, qualification", () => {
+  it.each(["opportunity-safety", "default-safety", "live-report-card", undefined] as const)("exports raw %s provenance alongside qualification", (safetyProvenance) => {
+    vi.mocked(downloadCsvWithPreamble).mockClear();
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
     render(
       <YieldCompareDrawer
@@ -237,7 +238,7 @@ describe("YieldCompareDrawer", () => {
             provenance: {
               scoreQualification: "partial",
               evidenceCompleteness: 0.71,
-              safetyProvenance: "opportunity-safety",
+              safetyProvenance,
             },
           } as Partial<YieldViewModelRow>),
         ]}
@@ -256,7 +257,7 @@ describe("YieldCompareDrawer", () => {
       ]),
     );
     expect(cells["Stability (%)"]).toBe(92);
-    expect(cells["Safety provenance"]).toBe("opportunity-derived");
+    expect(cells["Safety provenance"]).toBe(safetyProvenance ?? "unknown");
     expect(cells["PYS qualification"]).toBe("partial");
   });
 });

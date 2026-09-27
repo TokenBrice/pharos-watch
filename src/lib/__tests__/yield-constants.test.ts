@@ -68,9 +68,9 @@ describe("computePysBreakdown", () => {
     expect(riskPenalty).toBe(0.5);
   });
 
-  it("defaults sustainability to 1.0 when stability is null", () => {
+  it("keeps sustainability unavailable when stability is null", () => {
     const { sustainabilityMult } = computePysBreakdown(5, 80, null);
-    expect(sustainabilityMult).toBe(1.0);
+    expect(sustainabilityMult).toBeNull();
   });
 
   it("clamps sustainability floor to 0.3 when stability is very low", () => {

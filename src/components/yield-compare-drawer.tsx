@@ -190,8 +190,7 @@ const COMPARE_EXPORT_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
   { header: "Safety score", accessor: (row) => row.safetyScore ?? "NR" },
   {
     header: "Safety provenance",
-    accessor: (row) =>
-      isOpportunityDerivedSafety(row.provenance?.safetyProvenance) ? "opportunity-derived" : "safety-score-v9",
+    accessor: (row) => row.provenance?.safetyProvenance ?? "unknown",
   },
   { header: "Source", accessor: (row) => row.yieldSource },
   { header: "Source posture", accessor: (row) => row.sourcePosture ?? "unknown" },

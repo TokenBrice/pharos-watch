@@ -185,6 +185,22 @@ describe("YieldAnalysisClient", () => {
     expect(screen.getByRole("button", { name: "Reset to all sources" })).toBeTruthy();
   });
 
+  it("retains the workbench and exposes refresh errors and API quality warnings", () => {
+    const refetch = vi.fn();
+    setRankingsQuery({
+      data: makeResponse([makeRanking()]),
+      error: new Error("refresh failed"),
+      meta: { warning: "Required input quality degraded" },
+      refetch,
+    });
+    render(<YieldAnalysisClient id="usdn-smardex" staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)} />);
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByText("Required input quality degraded")).toBeTruthy();
+    expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
   it.each([
     {
       id: "usdn-smardex",
@@ -402,7 +418,6 @@ describe("YieldAnalysisClient", () => {
 
     expect(screen.getByTestId("pys-breakdown")).toBeTruthy();
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
-    // Cached data suppresses the error surface entirely.
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "Retry" }).closest('[role="status"]')).toBe(screen.getByRole("status"));
   });
 });

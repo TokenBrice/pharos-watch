@@ -166,6 +166,7 @@ describe("buildYieldSourceBoardModel", () => {
   });
 
   it("uses benchmark options when row-level labels are absent", () => {
+    vi.useFakeTimers({ now: Date.UTC(2026, 3, 24) });
     const benchmarks: YieldBenchmarkRegistry = {
       USD: {
         key: "USD",
@@ -173,7 +174,7 @@ describe("buildYieldSourceBoardModel", () => {
         currency: "USD",
         rate: 4.25,
         recordDate: "2026-04-23",
-        fetchedAt: 1_776_000_000,
+        fetchedAt: Date.now() / 1000 - 60,
         ageSeconds: 60,
         source: "fred-dgs3mo",
         isFallback: false,
@@ -181,8 +182,6 @@ describe("buildYieldSourceBoardModel", () => {
       },
     };
 
-    // Deterministic clock: the recordDate below is 1 day old, inside the 2-day bound.
-    vi.useFakeTimers({ now: Date.UTC(2026, 3, 24) });
     const model = buildYieldSourceBoardModel(
       [
         makeYieldRanking({
@@ -199,7 +198,7 @@ describe("buildYieldSourceBoardModel", () => {
   });
 
   it("marks a benchmark label stale when its recordDate exceeds the freshness bound", () => {
-    // 142 days after the recordDate below — past the 2-day fallback bound.
+    // 142 days after the recordDate below, with a fresh fetch of the old observation.
     vi.useFakeTimers({ now: Date.UTC(2026, 8, 12) });
     const benchmarks: YieldBenchmarkRegistry = {
       USD: {
@@ -208,7 +207,7 @@ describe("buildYieldSourceBoardModel", () => {
         currency: "USD",
         rate: 4.25,
         recordDate: "2026-04-23",
-        fetchedAt: 1_776_000_000,
+        fetchedAt: Date.now() / 1000 - 60,
         ageSeconds: 60,
         source: "fred-dgs3mo",
         isFallback: false,

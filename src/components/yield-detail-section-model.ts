@@ -35,7 +35,7 @@ export interface YieldDetailReadyModel {
   ranking: YieldRanking;
   benchmarkSubtitle?: string;
   benchmarkRate: number | null;
-  medianApy: number;
+  medianApy: number | null;
   benchmarkIsFallback: boolean;
   sourceExplorer: YieldSourceExplorerModel;
   sourceDepthLens: YieldSourceDepthLens;
@@ -56,7 +56,7 @@ export interface YieldDetailReadyModel {
     scalingFactor: number;
     sourceRiskPenalty: number;
     yieldEfficiency: number;
-    sustainabilityMult: number;
+    sustainabilityMult: number | null;
   };
   pysColor: string;
   yieldTypeLabel: string;
@@ -111,6 +111,7 @@ export function buildYieldDetailModel(
       resolveYieldDisplayRebaseReferenceRate(
         rankingResponse.methodology?.version,
         rankingResponse.riskFreeRate,
+        rankingResponse.benchmarks?.USD,
       ),
       // Same resolution the scoring/read paths use: USD-benchmarked rows
       // (including USD_EFFR) take no v8.43 re-base.
@@ -130,7 +131,7 @@ export function buildYieldDetailModel(
     ranking,
     benchmarkSubtitle: getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false }),
     benchmarkRate: resolvedBenchmark.rate,
-    medianApy: rankingResponse.medianApy ?? 0,
+    medianApy: rankingResponse.medianApy ?? null,
     benchmarkIsFallback: resolvedBenchmark.isFallback,
     sourceExplorer,
     sourceDepthLens: sourceExplorer.sourceDepthLens,
@@ -152,6 +153,7 @@ export function buildYieldDetailModel(
 
 export interface YieldDetailSectionReadyModel extends YieldDetailReadyModel {
   apiWarning: string | null;
+  refreshError: Error | null;
   showAllSources: boolean;
   setShowAllSources: Dispatch<SetStateAction<boolean>>;
   selectedSourceKeys: Set<string>;
@@ -240,6 +242,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   return {
     ...model,
     apiWarning: apiMeta?.warning ?? null,
+    refreshError: error instanceof Error ? error : null,
     showAllSources,
     setShowAllSources,
     selectedSourceKeys,

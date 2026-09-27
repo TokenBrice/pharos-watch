@@ -207,7 +207,7 @@ interface YieldLeaderboardProps {
   rows: YieldViewModelRow[];
   logos: Record<string, string>;
   riskFreeRate: number;
-  medianApy: number;
+  medianApy: number | null;
   scalingFactor: number;
   /**
    * Benchmark registry from the payload. Lets a row with no published rate
@@ -436,6 +436,9 @@ export function YieldLeaderboard({
       </div>
       <YieldSourceSheet
         ranking={sheetRanking}
+        loading={detailedRankings.isLoading}
+        error={detailedRankings.error}
+        onRetry={() => { void detailedRankings.refetch(); }}
         logo={sheetRankingId ? getLogoSrc(logos, sheetRankingId) : undefined}
         riskFreeRate={riskFreeRate}
         medianApy={medianApy}
@@ -477,7 +480,7 @@ export function YieldMobileCard({
   row: YieldViewModelRow;
   logo?: string;
   riskFreeRate: number;
-  medianApy: number;
+  medianApy: number | null;
   /** Payload scaling factor; threaded so any PYS reuse matches the board. */
   scalingFactor: number;
   /**
@@ -525,9 +528,9 @@ export function YieldMobileCard({
         row,
         scalingFactor,
         // Version-gated: pre-8.43 payloads were scored without the re-base.
-        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate),
+        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate, benchmarks?.USD),
       ),
-    [row, scalingFactor, methodologyVersion, riskFreeRate],
+    [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks],
   );
   const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
 

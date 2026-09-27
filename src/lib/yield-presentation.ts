@@ -47,6 +47,44 @@ export const YIELD_SCORE_QUALIFICATION_LABELS: Record<YieldScoreQualification, s
   NR: "Not rated",
 };
 
+export const YIELD_SOURCE_FACT_LABELS = {
+  holder: "Holder yield",
+  external: "External opportunity",
+  estimated: "Estimated",
+  changed: "source changed",
+  venue: "Venue",
+  priceReturn: "Estimated from price appreciation, not a quoted deposit rate.",
+  fallbackLink: "View yield opportunities",
+  loading: "Loading yield source details…",
+  unavailable: "This source is unavailable in the latest ranking snapshot.",
+  loadError: "Yield source details could not be refreshed.",
+  sheetTitle: "Yield source details",
+  heuristicDrivers: "Heuristic movement context, not a causal score decomposition",
+} as const;
+
+export function formatYieldDepositExplanation(symbol: string, venue: string, chain: string): string {
+  return `APY from depositing ${symbol} with ${venue} on ${chain}; not yield from simply holding ${symbol}.`;
+}
+
+export function formatYieldBenchmarkSpread(spread: number, label: string, rate: number | null): string {
+  const reference = `${label}${rate != null ? ` (${rate.toFixed(2)}%)` : ""}`;
+  return Math.abs(spread) < 0.005
+    ? `within displayed precision of ${reference}`
+    : `${Math.abs(spread).toFixed(2)} pp ${spread > 0 ? "above" : "below"} ${reference}`;
+}
+
+export function formatYieldBenchmarkSpreadChip(spread: number): string {
+  const displayed = Math.abs(spread) < 0.005 ? 0 : spread;
+  return `${displayed >= 0 ? "+" : ""}${displayed.toFixed(2)} pp vs benchmark`;
+}
+
+export function formatYieldDriverContext(key: string, value: number): string {
+  const signed = `${value >= 0 ? "+" : ""}${value.toFixed(2)}`;
+  if (key === "sourceRisk") return `${signed} multiplier change`;
+  if (key === "stablecoinSafety") return `${formatSignedPysDelta(value)} total change (heuristic)`;
+  return `${signed} rank places (heuristic)`;
+}
+
 export function formatEvidenceCompleteness(value: number): string {
   return `${Math.round(Math.min(1, Math.max(0, value)) * 100)}% evidence`;
 }

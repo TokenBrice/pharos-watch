@@ -23,7 +23,7 @@ function makeBenchmark(
     currency,
     rate,
     recordDate,
-    fetchedAt: 1_776_000_000,
+    fetchedAt: FAKE_NOW / 1000 - 60,
     ageSeconds: 60,
     source: `${key.toLowerCase()}-source`,
     isFallback: false,
@@ -32,7 +32,7 @@ function makeBenchmark(
 }
 
 // Age markers and amber tints resolve against the wall clock; pin it so the
-// fixture rows are deterministically fresh (1d old against the 2d default
+// fixture rows are deterministically fresh (1d old against the 5d default
 // bound) and the stale-CAD case is deterministically 42 days old.
 const FAKE_NOW = Date.parse("2026-05-20T00:00:00Z");
 
@@ -228,11 +228,10 @@ describe("ReferenceRatesStrip", () => {
       .find((r) => within(r).queryByText("CAD"));
     expect(cadRow).toBeDefined();
 
-    // Amber As-of cell with the staleness reason exposed beyond the tooltip.
+    // The stale observation is visibly marked while a freshly fetched record is not.
     const dateChip = within(cadRow!).getByText("2026-04-08");
     expect(dateChip.className).toContain("amber");
-    expect(dateChip.getAttribute("aria-label")).toContain("42d old");
-    expect(dateChip.getAttribute("aria-label")).toContain("past the 5d");
+    expect(within(cadRow!).getByLabelText(/observation.*freshness/i)).toBe(dateChip);
 
     // Age marker appended through the shared benchmark suffix.
     expect(within(cadRow!).getByText(/42d old/)).toBeTruthy();

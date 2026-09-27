@@ -29,7 +29,7 @@ interface OverviewData {
   /** `null` when the payload carries no safety-snapshot coverage: "unknown", never "N/N". */
   coveredCount: number | null;
   trackedCount: number | null;
-  medianApy: number;
+  medianApy: number | null;
   highestRawYield: { symbol: string; apy: number } | null;
   bestRiskAdjusted: YieldRankingSummary | null;
   leaders: YieldRankingSummary[];
@@ -96,7 +96,7 @@ function StatStrip({
 }: {
   coveredCount: number | null;
   trackedCount: number | null;
-  medianApy: number;
+  medianApy: number | null;
   bestRiskAdjusted: YieldRankingSummary | null;
 }): React.JSX.Element {
   return (
@@ -117,7 +117,7 @@ function StatStrip({
       <div className="flex flex-col gap-1 px-3 py-3">
         <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Median APY</span>
         <span className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
-          {formatPercent(medianApy)}
+          {medianApy === null ? <span className="text-muted-foreground">—</span> : formatPercent(medianApy)}
         </span>
       </div>
       <div className="flex flex-col gap-1 px-3 py-3">
