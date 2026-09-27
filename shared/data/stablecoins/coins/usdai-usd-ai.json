@@ -2,7 +2,7 @@
   "id": "usdai-usd-ai",
   "name": "USD.AI",
   "symbol": "USDai",
-  "oneLiner": "USDai is USD.AI's PYUSD-backed base dollar. Its supply can fall when sUSDai deploys funds into loans, without money leaving the protocol.",
+  "oneLiner": "USDai is USD.AI's PYUSD-backed base dollar. Its supply can fall when sUSDai deploys funds into loans, without an equivalent fall in reported protocol assets.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"

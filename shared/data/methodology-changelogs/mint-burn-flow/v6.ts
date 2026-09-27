@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.21",
+    title: "Reviewed protocol-internal flows",
+    date: "2026-09-27",
+    effectiveAt: 1790539200,
+    summary:
+      "Individually reviewed events that move tokens inside an issuer's own balance sheet are tagged protocol_internal and leave counted flow, starting with USD.AI's September 23 sUSDai loan deployment.",
+    impact: [
+      "The September 23, 2026 burn of 128,895,244.1 USDai no longer counts as an economic burn: the sUSDai vault funded USD.AI's escrow-admin Safe with the exact amount, and the issuer's loan reserves rose by the same amount within the same half hour.",
+      "Tagging is per event, pinned to transaction, log index and token amount. There is no address rule, because the reviewed burn used the same hub withdrawal path an ordinary redemption uses; four earlier Safe burns and four repayment re-deposit mints stay counted until each has matching evidence.",
+      "Tagged rows remain visible in the event ledger with a Protocol-internal label but leave hourly buckets, net flow, pressure shift, the Bank Run Gauge and large-flow Tape projection.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.2",
     title: "Complete BUIDL Ethereum contract coverage",
     date: "2026-09-14",

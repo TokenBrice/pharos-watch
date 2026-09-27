@@ -21,7 +21,7 @@ interface EventRow {
   symbol: string;
   chain_id: string;
   direction: string;
-  flow_type: "standard" | "atomic_roundtrip" | "bridge_transfer";
+  flow_type: "standard" | "atomic_roundtrip" | "bridge_transfer" | "protocol_internal";
   amount: number;
   amount_usd: number | null;
   burn_type: "effective_burn" | "bridge_burn" | "review_required" | null;

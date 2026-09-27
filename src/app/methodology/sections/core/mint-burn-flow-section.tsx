@@ -85,7 +85,8 @@ export function MintBurnFlowMethodologySection() {
                 Pharos tracks on-chain mint and burn events for major stablecoins via Alchemy JSON-RPC (Transfer mints/burns
                 plus USDT Issue/Redeem). These raw events are aggregated into hourly buckets and exposed as two separate
                 signals: raw net flow for current direction, and a baseline-relative pressure score for context. Counted
-                flow excludes bridge transfers, review-required burns, and atomic roundtrips.
+                flow excludes bridge transfers, review-required burns, atomic roundtrips, and individually reviewed
+                protocol-internal movements such as an issuer deploying reserves into its own loan book.
               </p>
               <MethodologyFacts
                 facts={[
