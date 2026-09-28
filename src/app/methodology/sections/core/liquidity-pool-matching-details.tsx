@@ -133,7 +133,8 @@ export function LiquidityPoolMatchingDetails() {
           times. Older readings contribute nothing, even though the remembered discovery row keeps its decaying TVL. A
           source field that is absent or unparseable is stored as unmeasured, never as zero; an explicit provider zero
           (for CoinGecko onchain, only alongside zero reported trades) stays a measured zero. Registry zeros recorded before the v6.9 producer (before its 2026-09-28 07:29 UTC activation) could
-          be coerced missing values, so they count as unmeasured while positive readings from that period stay usable.
+          be coerced missing values, so they count as unmeasured while positive readings from that period stay usable;
+          CoinGecko onchain zeros are the exception, because sampled ones were genuine zero-trade readings.
           A 24h or 7d total is published only when every retained pool is
           admitted; otherwise the total is unavailable and the record shows the observed volume of the admitted pools
           next to their share of retained TVL (volume coverage), including for the ecosystem-wide aggregate.

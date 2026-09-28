@@ -28,16 +28,23 @@ export const CURVE_API_CHAIN_PATHS: Record<string, string> = { gnosis: "xdai" };
 export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 /**
  * Zero-volume provenance cutover (liquidity methodology 6.9). Before this clock,
- * producers coerced an absent 24h volume to 0 (GeckoTerminal, DexScreener and
- * CoinGecko onchain parsers, and the v1 live-lane registry write-back), so a
- * registry zero refreshed earlier cannot be told apart from a missing reading
- * and the registry resolver treats it as absent. Positive legacy readings stay
- * usable. Set to the v6.9 Worker activation (2026-09-28 07:29:14 UTC): every
- * producer that writes registry rows uses the explicit-zero rules from then on
- * (CoinGecko onchain since 06:46 UTC). Inert once every earlier row is older than
+ * the GeckoTerminal and DexScreener parsers and the v1 live-lane registry
+ * write-back coerced an absent 24h volume to 0, so such a registry zero cannot be
+ * told apart from a missing reading and the registry resolver treats it as
+ * absent. Positive legacy readings stay usable. CoinGecko onchain rows are exempt
+ * (see DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES). Set to the v6.9 Worker
+ * activation, 2026-09-28 07:29:14 UTC. Inert once every earlier row is older than
  * the 72h volume admission window (after 2026-10-01 07:30 UTC); remove it then.
  */
-export const DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC = 1_790_566_154;
+export const DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC = 1_790_580_554;
+/**
+ * Registry sources whose pre-cutover zeros are trusted as measured. The old CoinGecko
+ * onchain parser coerced only an absent field to 0, and a 600-pool live sample on
+ * 2026-09-28 found 1 absent field against 187 explicit zeros, all with zero 24h trades.
+ * The stale-first refresh re-reads every CoinGecko onchain row within about 20h
+ * under the explicit zero-trades rule, so any rare legacy absent value is short-lived.
+ */
+export const DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES: Readonly<Record<string, true>> = { cg_onchain: true };
 
 // Uniswap V3 subgraph IDs per chain. Chain expansion is measured-execution
 // coupled: adding a chain here only turns that chain's DeFiLlama `uniswap-v3`
