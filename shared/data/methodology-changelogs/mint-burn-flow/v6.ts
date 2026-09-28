@@ -5,7 +5,7 @@ export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
     version: "6.23",
     title: "Event-time pricing and published valuation gating",
     date: "2026-09-28",
-    effectiveAt: 1790640000,
+    effectiveAt: 1790553600,
     summary:
       "A mint or burn is valued only with a price observed within 24 hours of the event, and the public flow API stops publishing nets, directions, pressure and flight-to-quality that missing valuation could change.",
     impact: [
