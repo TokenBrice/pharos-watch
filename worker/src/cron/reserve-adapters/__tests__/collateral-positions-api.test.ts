@@ -240,6 +240,33 @@ describe("adaptCollateralPositions", () => {
       totalLiabilitiesUsd: 62_500,
       collateralizationRatio: 1.6,
     });
+    expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "unparseable-minted-balance" }));
+  });
+
+  it("fails closed on a Frankencoin position whose minted debt cannot be parsed", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xbtc": {
+          address: "0xBTC",
+          name: "Wrapped BTC",
+          symbol: "WBTC",
+          decimals: 8,
+          positions: [{ collateralBalance: "100000000", minted: "not-an-integer", zchf: "0xZCHF", zchfDecimals: 18 }],
+        },
+      },
+      {
+        "0xbtc": { price: { usd: 100_000 }, timestamp: 1_780_000_000 },
+        "0xzchf": { price: { usd: 1.25 }, timestamp: 1_780_000_000 },
+      },
+      2,
+      undefined,
+      {},
+      1_780_000_000,
+    );
+
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 100_000, mintedCoverageComplete: false });
+    expect(result.metadata?.totalLiabilitiesUsd).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "unparseable-minted-balance", effect: "degraded" }));
   });
 
   it("attaches optional bridge-backed redeemable capacity metadata", () => {
@@ -566,9 +593,10 @@ describe("collateral positions liability admission through fetch and validation"
   type Position = Parameters<typeof adaptCollateralPositions>[0][string]["positions"][number];
   const debtPosition: Position = {
     collateralBalance: "1000000",
-    minted: "1000000000000000000",
-    zchf: DEURO,
-    zchfDecimals: 18,
+    principal: "900000000000000000",
+    interest: "100000000000000000",
+    deuro: DEURO,
+    deuroDecimals: 18,
   };
 
   async function runLiabilities(
@@ -599,14 +627,17 @@ describe("collateral positions liability admission through fetch and validation"
   }
 
   it.each([
-    ["missing minted", { minted: undefined }],
-    ["malformed minted", { minted: "not-an-integer" }],
-    ["negative minted", { minted: "-1" }],
-    ["missing debt decimals", { zchfDecimals: undefined }],
-    ["invalid debt decimals", { zchfDecimals: -1 }],
-    ["missing debt identity", { zchf: undefined }],
-    ["unknown debt identity", { zchf: "0xunknown" }],
-  ] satisfies Array<[string, Partial<Position>]>)("withholds an incomplete denominator: %s", async (_name, patch) => {
+    ["missing principal", { principal: undefined }, true],
+    ["malformed principal", { principal: "not-an-integer" }, true],
+    ["negative principal", { principal: "-1" }, true],
+    ["missing interest", { interest: undefined }, true],
+    ["malformed interest", { interest: "1.5" }, true],
+    ["missing debt decimals", { deuroDecimals: undefined }, true],
+    ["invalid debt decimals", { deuroDecimals: -1 }, true],
+    ["mixed Frankencoin and dEURO debt fields", { minted: "1000000000000000000", zchfDecimals: 18 }, true],
+    ["missing debt identity", { deuro: undefined }, false],
+    ["unknown debt identity", { deuro: "0xunknown" }, false],
+  ] satisfies Array<[string, Partial<Position>, boolean]>)("withholds an incomplete denominator: %s", async (_name, patch, unparseable) => {
     const { result, report } = await runLiabilities({ ...debtPosition, ...patch }, now);
     expect(report.valid).toBe(true);
     expect(result.metadata).toMatchObject({ totalReserveUsd: 2.4, mintedCoverageComplete: false, sourceTimestamp: now });
@@ -614,10 +645,27 @@ describe("collateral positions liability admission through fetch and validation"
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.slices).toEqual([{ sourceKey: "collateral-positions-api:wbtc", name: "WBTC (Wrapped BTC)", pct: 100, risk: "medium" }]);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "liability-coverage-incomplete", effect: "degraded" }));
+    const unparseableWarning = expect.objectContaining({ code: "unparseable-minted-balance", effect: "degraded" });
+    if (unparseable) {
+      expect(result.warnings).toContainEqual(unparseableWarning);
+    } else {
+      expect(result.warnings).not.toContainEqual(unparseableWarning);
+    }
+  });
+
+  it("values dEURO debt as principal plus accrued interest", async () => {
+    const { result } = await runLiabilities(
+      { ...debtPosition, principal: "2000000000000000000", interest: "500000000000000000" },
+      now,
+    );
+    expect(result.metadata?.mintedCoverageComplete).toBe(true);
+    expect(result.metadata?.totalLiabilitiesUsd).toBeCloseTo(4.2, 12);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(2.4 / 4.2, 12);
+    expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "unparseable-minted-balance" }));
   });
 
   it("never borrows 18-decimal collateral units for missing debt units", async () => {
-    const { result } = await runLiabilities({ ...debtPosition, zchfDecimals: undefined }, now, 18);
+    const { result } = await runLiabilities({ ...debtPosition, deuroDecimals: undefined }, now, 18);
     expect(result.metadata?.mintedCoverageComplete).toBe(false);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
   });
@@ -651,7 +699,7 @@ describe("collateral positions liability admission through fetch and validation"
   });
 
   it("retains a complete ratio for explicit zero debt without requiring an unused quote", async () => {
-    const { result } = await runLiabilities({ ...debtPosition, minted: "0", zchf: undefined }, now);
+    const { result } = await runLiabilities({ ...debtPosition, principal: "0", interest: "0", deuro: undefined }, now);
     expect(result.metadata).toMatchObject({ totalLiabilitiesUsd: 1.2, collateralizationRatio: 2, mintedCoverageComplete: true });
   });
 
