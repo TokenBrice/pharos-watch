@@ -9,6 +9,7 @@ import {
   initMetrics,
   normalizeProtocol,
 } from "../pool-helpers";
+import { withCompleteVolume } from "./scoring-test-builders";
 
 describe("normalizeProtocol", () => {
   it("collapses hyphenated PancakeSwap variants", () => {
@@ -102,7 +103,7 @@ describe("computeLiquidityScore", () => {
     m.totalVolume24hUsd = 100_000;
     m.qualityAdjustedTvl = 7_000_000;
     m.poolCount = 10;
-    const { score } = computeLiquidityScore(m, 60, 100_000_000);
+    const { score } = computeLiquidityScore(withCompleteVolume(m), 60, 100_000_000);
     expect(score).toBeGreaterThanOrEqual(0);
     expect(score).toBeLessThanOrEqual(100);
   });
@@ -146,7 +147,7 @@ describe("computeLiquidityScore", () => {
     m.totalVolume24hUsd = 0;
     m.qualityAdjustedTvl = 1_000_000;
     m.poolCount = 5;
-    const { components } = computeLiquidityScore(m, 50, 10_000_000);
+    const { components } = computeLiquidityScore(withCompleteVolume(m), 50, 10_000_000);
     expect(components.volumeActivity).toBe(0);
   });
 
@@ -181,7 +182,7 @@ describe("computeLiquidityScore", () => {
     m.totalVolume24hUsd = 1_000_000_000;
     m.qualityAdjustedTvl = 1_000_000_000;
     m.poolCount = 1000;
-    const { score } = computeLiquidityScore(m, 100, 1_000_000);
+    const { score } = computeLiquidityScore(withCompleteVolume(m), 100, 1_000_000);
     expect(score).toBe(100);
   });
 
@@ -189,7 +190,7 @@ describe("computeLiquidityScore", () => {
     // effectiveTvl=0 → uses absolute fallback: 35*log10(1/700_000) → very negative → clamped to 0
     // all other components also 0 → total = 0
     const m = initMetrics("test", "TEST");
-    const { score } = computeLiquidityScore(m, 0);
+    const { score } = computeLiquidityScore(withCompleteVolume(m), 0);
     expect(score).toBe(0);
   });
 });

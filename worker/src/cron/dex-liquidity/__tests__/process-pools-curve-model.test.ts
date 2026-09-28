@@ -135,6 +135,7 @@ function compositeCapability(
     balanceDetails: undefined,
     volumeUsd1d: 1_000,
     volumeUsd7d: 7_000,
+    volumeObservedAtSec: 1_000,
   };
   return buildPoolExecutionCapability(context, identity, enrichment, stablecoinId);
 }

@@ -11,7 +11,19 @@ import { publishDexMeasuredTargetInventory, publishDexShadowMeasuredTargetInvent
 import { isDexMeasuredExecutionTargetScoreEligible } from "../measured-execution/sync";
 import { buildDexMeasuredTargetFingerprintIndex, resolveDexMeasuredTargetForRetainedPool } from "../measured-execution/retained-target-resolution";
 import { computeDurabilityScore, computeLiquidityScore, initLiquidityFallbackCounters } from "./pool-helpers";
-import { accumulateGlobalAggregate, applyProtocolCaps, applyRebuiltMetrics, classifyCoverage, filterRetainedPools, rebuildMetricsFromPools } from "./scoring-helpers";
+import {
+  accumulateGlobalAggregate,
+  applyPoolVolumeEligibility,
+  applyProtocolCaps,
+  applyRebuiltMetrics,
+  classifyCoverage,
+  filterRetainedPools,
+  rebuildMetricsFromPools,
+  summarizeRetainedPoolVolume,
+  type DexVolumeClock,
+  type GlobalPoolAggregateEntry,
+} from "./scoring-helpers";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { applyDexRouteObservationBounds, selectDexRouteObservationPoolSet, selectDexRouteObservationPools, selectDexRouteObservations, type DexRouteSelectionDiagnostic } from "./dex-route-observation-selection";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeDepthStability, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages } from "./dex-scoring-stage-store";
 import { computeDexPrices, type DexPricePersistenceDiagnostics } from "./dex-price-publisher";
@@ -133,17 +145,21 @@ export async function computeStablecoinScores(
   const retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
   const routeSelectionDiagnostics: DexRouteSelectionDiagnostic[] = [];
   const routeObservedAt = Math.max(0, Math.floor(routeObservedAtSec));
+  // DEC-19 volume windows are evaluated at the run's source clock (the same
+  // clock the staged merge and live fetches used) with one producer budget.
+  const volumeClock: DexVolumeClock = {
+    asOfSec: routeObservedAt,
+    maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC,
+  };
   const slipstreamMeasuredTargetsByFingerprint =
     buildDexMeasuredTargetFingerprintIndex(slipstreamMeasuredTargets.values());
 
   // Global dedup accumulators — accumulated per-coin BEFORE top-10 truncation
-  const seenPoolTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>();
+  const seenPoolTvl = new Map<string, GlobalPoolAggregateEntry>();
   const globalProtocolTvl: Record<string, number> = {};
   const globalChainTvl: Record<string, number> = {};
   const globalProtoChainTvl: Record<string, number> = {}; // "proto:chain" → TVL
   let globalTotalTvl = 0;
-  let globalTotalVol24h = 0;
-  let globalTotalVol7d = 0;
   let globalPoolCount = 0;
   const globalChains = new Set<string>();
   const protocolCapDiagnostics: ProtocolCapDiagnostics = { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 };
@@ -156,6 +172,9 @@ export async function computeStablecoinScores(
   for (const [id, m] of metrics) {
     if (!ACTIVE_IDS.has(id)) continue;
     throwIfAborted(signal);
+    // Eligibility first: retention filters and every later consumer see only
+    // in-window volume (aged/absent readings are null, never decayed or zero).
+    applyPoolVolumeEligibility(m.topPools, volumeClock);
     p4OnlyRetainedPools.set(id, m.topPools.filter(isP4OnlyPausedBalancerPool));
     m.topPools = filterRetainedPools(m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)), fallbackCounters);
     const capResult = applyProtocolCaps(m.topPools, protocolTvlCaps);
@@ -355,6 +374,15 @@ export async function computeStablecoinScores(
     p4OnlyRetainedPools.delete(id);
 
     applyRebuiltMetrics(m, rebuilt);
+    // Measured windows over the COMPLETE retained set, never the visible top 10;
+    // coverage weighs each pool by its retained (post-cap) scoring TVL.
+    const volume = summarizeRetainedPoolVolume(
+      retainedPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
+      volumeClock,
+    );
+    m.totalVolume24hUsd = volume.totalVolume24hUsd;
+    m.totalVolume7dUsd = volume.totalVolume7dUsd;
+    m.volumeAvailability = volume.volumeAvailability;
     const globalDelta = accumulateGlobalAggregate(
       retainedPools,
       globalProtocolTvl,
@@ -364,8 +392,6 @@ export async function computeStablecoinScores(
       seenPoolTvl,
     );
     globalTotalTvl += globalDelta.totalTvl;
-    globalTotalVol24h += globalDelta.totalVol24h;
-    globalTotalVol7d += globalDelta.totalVol7d;
     globalPoolCount += globalDelta.poolCount;
 
     // v2: Compute durability score
@@ -399,6 +425,7 @@ export async function computeStablecoinScores(
       tvl: m.totalTvlUsd,
       effectiveTvl: m.effectiveTvl,
       vol24h: m.totalVolume24hUsd,
+      volumeAvailability: volume.volumeAvailability,
       score,
       hhi: Math.round(rebuilt.hhi * 10000) / 10000,
       durability,
@@ -447,11 +474,18 @@ export async function computeStablecoinScores(
   }
   globalTotalTvl -= globalCapReduction;
 
+  // Observed volume over the admitted deduped pools, published beside its
+  // admitted share of the deduped pool TVL (never a complete total unless
+  // every deduped pool was admitted).
+  const globalVolume = summarizeRetainedPoolVolume(
+    [...seenPoolTvl.values()].map((pool) => ({ reading: pool.reading, tvlUsd: pool.tvl })),
+    volumeClock,
+  );
   const globalAgg: GlobalAgg = {
     totalTvl: globalTotalTvl,
-    totalVol24h: globalTotalVol24h,
-    totalVol7d: globalTotalVol7d,
-    totalVol7dMeasured: [...seenPoolTvl.values()].every((pool) => pool.vol7dMeasured),
+    totalVol24h: globalVolume.totalVolume24hUsd,
+    totalVol7d: globalVolume.totalVolume7dUsd,
+    volumeAvailability: globalVolume.volumeAvailability,
     poolCount: globalPoolCount,
     chainCount: globalChains.size,
     protocolTvl: globalProtocolTvl,

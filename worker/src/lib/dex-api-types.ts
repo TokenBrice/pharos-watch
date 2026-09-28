@@ -39,7 +39,8 @@ export interface DexApiPool {
   /** Raw pool spot price: token[1] received per 1 token[0]. Used for price inversion logic. */
   price: number | null;
   tvlUsd: number;
-  volume24hUsd: number;
+  /** Provider 24h USD volume; null when the source publishes none (pool-state-only sources). */
+  volume24hUsd: number | null;
   feeRate: number | null;
   /** Concentrated-liquidity tick spacing when the source exposes it directly. */
   tickSpacing?: number;

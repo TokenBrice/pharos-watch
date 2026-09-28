@@ -1,8 +1,8 @@
 /**
  * Liquidity Score component weights (current methodology v5.x).
  * Single source of truth consumed by the worker scoring engine (via
- * worker/src/cron/dex-liquidity/score-weights.ts, which derives its map
- * from this table), the dex-liquidity-card breakdown, and the report-card
+ * composeLiquidityScore in shared/lib/dex-volume-availability.ts, which walks
+ * this table), the dex-liquidity-card breakdown, and the report-card
  * detail. Last weight change 2026-04-05, last reviewed 2026-08-19
  * (Liquidity v6 Phase 2).
  */

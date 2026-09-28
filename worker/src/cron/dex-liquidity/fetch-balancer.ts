@@ -443,7 +443,7 @@ function shapeBalancerPool(
     // unless its direction and reference token are captured explicitly.
     price: null,
     tvlUsd,
-    volume24hUsd: Number.isFinite(volume24h) ? volume24h : 0,
+    volume24hUsd: Number.isFinite(volume24h) && volume24h >= 0 ? volume24h : null,
     feeRate: Number.isFinite(swapFee) ? swapFee : null,
     balances: balances.every(Number.isFinite) ? balances : null,
     balancesNormalized: true,

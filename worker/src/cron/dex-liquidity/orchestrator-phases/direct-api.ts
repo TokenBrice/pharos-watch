@@ -694,6 +694,8 @@ export async function integrateDirectApiLiquidityPhase(params: {
   /** `poolSource:chain` keys the fetch phase attempted; see `runDirectApiFetchPhase`. */
   attemptedProtocolChains?: readonly string[];
   fallbackCounters?: LiquidityFallbackCounters;
+  /** Live fetch clock of the direct pools' volume readings (DEC-19). */
+  volumeObservedAtSec?: number;
 }): Promise<DirectApiIntegrationResult> {
   if (
     params.preprocessedPoolCounts &&
@@ -877,6 +879,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
       params.validationReferences,
       params.stablecoinPriceById,
       params.fallbackCounters,
+      params.volumeObservedAtSec,
     );
     if (directApiGtPools.size > 0) {
       await mergeGtPools(params.metrics, directApiGtPools, params.db, params.fallbackCounters);
@@ -891,6 +894,8 @@ export async function integrateDirectApiLiquidityPhase(params: {
       params.symbolToChainScopedIds,
       params.validationReferences,
       params.stablecoinPriceById,
+      undefined,
+      params.volumeObservedAtSec,
     );
     retainExactDuplicatePoolEvidence(params.metrics, exactDuplicateGtPools);
   }

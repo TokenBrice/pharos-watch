@@ -233,8 +233,10 @@ export async function fetchFluidPools(
           return null;
         }
 
-        if (fallbackCounters && (!Number.isFinite(baseVol) || !Number.isFinite(targetVol))) {
-          fallbackCounters.fluidVolumeCoercedToZero++;
+        const tokenVolumesObserved = Number.isFinite(baseVol) && baseVol >= 0 &&
+          Number.isFinite(targetVol) && targetVol >= 0;
+        if (fallbackCounters && !tokenVolumesObserved) {
+          fallbackCounters.fluidVolumeUnmeasured++;
         }
 
         return {
@@ -250,11 +252,12 @@ export async function fetchFluidPools(
           tvlUsd,
           // base_volume/target_volume are raw token-unit amounts; the downstream
           // derivePoolVolume24hUsd path computes USD volume from tokenVolumes24h. Do not
-          // misinterpret them here as USD or double-count the two sides.
-          volume24hUsd: 0,
+          // misinterpret them here as USD or double-count the two sides. A
+          // malformed side leaves the pool's volume unobserved (null), never zero.
+          volume24hUsd: null,
           feeRate: null,
           balances: null,
-          tokenVolumes24h: [Number.isFinite(baseVol) ? baseVol : 0, Number.isFinite(targetVol) ? targetVol : 0],
+          tokenVolumes24h: tokenVolumesObserved ? [baseVol, targetVol] : null,
         };
       }).filter((p): p is DexApiPool => p !== null);
       successfulChains++;

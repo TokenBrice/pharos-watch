@@ -275,7 +275,7 @@ describe("fetchSlipstreamPools", () => {
       tickSpacing: 1,
       tvlUsd: 100,
       price: 1,
-      volume24hUsd: 0,
+      volume24hUsd: null,
       balances: [50, 50],
       tokens: [
         {

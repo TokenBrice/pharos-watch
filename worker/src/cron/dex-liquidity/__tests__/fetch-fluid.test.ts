@@ -34,7 +34,7 @@ describe("fetchFluidPools", () => {
       (p) => p.poolAddress.toLowerCase() === "0xabc0000000000000000000000000000000000000",
     );
     expect(ethPool).toBeDefined();
-    expect(ethPool!.volume24hUsd).toBe(0);
+    expect(ethPool!.volume24hUsd).toBeNull();
     expect(ethPool!.tokenVolumes24h).toEqual([100, 200]);
   });
 
@@ -57,7 +57,7 @@ describe("fetchFluidPools", () => {
     const result = await fetchFluidPools(undefined, new Map(), counters);
     expect(result.pools).toHaveLength(1);
     // base_volume is non-finite → coerced to 0 in tokenVolumes24h.
-    expect(counters.fluidVolumeCoercedToZero).toBe(1);
+    expect(counters.fluidVolumeUnmeasured).toBe(1);
     // No RPC enrichment succeeded, so feeRate/balances retain their neutral null defaults.
     expect(counters.fluidFeeRateUnmeasured).toBe(1);
     expect(counters.fluidBalancesUnmeasured).toBe(1);
@@ -70,7 +70,7 @@ describe("fetchFluidPools", () => {
 
     const counters = initLiquidityFallbackCounters();
     await fetchFluidPools(undefined, new Map(), counters);
-    expect(counters.fluidVolumeCoercedToZero).toBe(0);
+    expect(counters.fluidVolumeUnmeasured).toBe(0);
     expect(counters.fluidFeeRateUnmeasured).toBe(0);
     expect(counters.fluidBalancesUnmeasured).toBe(0);
   });

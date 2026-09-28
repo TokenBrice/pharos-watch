@@ -121,10 +121,12 @@ function derivePoolVolume24hUsd(
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
   trackedStablecoinPrices?: Map<string, number>,
-): number {
+): number | null {
   if (!pool.tokenVolumes24h || pool.tokenVolumes24h.length !== pool.tokens.length) {
     return pool.volume24hUsd;
   }
+  // Every side reporting exactly zero native volume is a measured quiet day.
+  if (pool.tokenVolumes24h.every((volume) => volume === 0)) return 0;
 
   const candidates: number[] = [];
   for (let i = 0; i < pool.tokenVolumes24h.length; i++) {

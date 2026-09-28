@@ -1,3 +1,4 @@
+import { DEX_VOLUME_COVERAGE_MIN, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { LIQUIDITY_SCORE_WEIGHTS, type LiquidityScoreComponentKey } from "@shared/lib/liquidity-score-weights";
 import {
   TableBody,
@@ -18,7 +19,7 @@ const LIQUIDITY_COMPONENT_DETAILS: Record<LiquidityScoreComponentKey, { label: s
   volumeActivity: {
     label: "Volume Activity",
     shortLabel: "Vol. Activity",
-    description: "Log-scale V/T ratio: 38x(log10(vtRatio)+3). ~0.3%->18, ~3.5%->59, ~19%->86, ~32%+->100",
+    description: `Log-scale V/T ratio: 38x(log10(vtRatio)+3). ~0.3%->18, ~3.5%->59, ~19%->86, ~32%+->100. Uses admitted pools only (24h volume observed within ${DEX_VOLUME_OBSERVATION_MAX_AGE_SEC / 3600}h): admitted volume / admitted TVL. Rated when admitted pools cover at least ${Math.round(DEX_VOLUME_COVERAGE_MIN * 100)}% of retained TVL; below that it is unavailable and the Liquidity Score is NR, with no reweighting or estimate for unobserved pools. A measured zero still scores 0.`,
   },
   poolQuality: {
     label: "Pool Quality",

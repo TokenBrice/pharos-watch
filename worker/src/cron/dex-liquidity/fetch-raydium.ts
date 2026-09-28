@@ -104,7 +104,7 @@ async function fetchPoolType(
         ],
         price: Number.isFinite(pool.price) && pool.price > 0 ? pool.price : null,
         tvlUsd: pool.tvl,
-        volume24hUsd: Number.isFinite(pool.day?.volume) ? pool.day.volume : 0,
+        volume24hUsd: Number.isFinite(pool.day?.volume) && pool.day.volume >= 0 ? pool.day.volume : null,
         feeRate: Number.isFinite(pool.feeRate) ? pool.feeRate : null,
         balances: [pool.mintAmountA, pool.mintAmountB].every(Number.isFinite)
           ? [pool.mintAmountA, pool.mintAmountB]

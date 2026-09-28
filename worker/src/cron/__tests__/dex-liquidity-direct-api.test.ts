@@ -260,9 +260,9 @@ describe("fetchFluidPools", () => {
     ]);
 
     const pools = await fetchFluidPools();
-    // volume24hUsd is now 0 — raw token volumes are not summed as USD.
+    // volume24hUsd is unmeasured (null) — raw token volumes are not summed as USD.
     // The downstream derivePoolVolume24hUsd path handles USD conversion via tokenVolumes24h.
-    expect(pools.pools[0].volume24hUsd).toBe(0);
+    expect(pools.pools[0].volume24hUsd).toBeNull();
     expect(pools.pools[0].tokenVolumes24h).toEqual([75000, 25000]);
   });
 

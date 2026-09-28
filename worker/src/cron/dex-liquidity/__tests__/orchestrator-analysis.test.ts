@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-persistence.test-support";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
 import { isDexLiquidityDegraded } from "../orchestrator-metadata";
@@ -9,6 +10,7 @@ const BASE_SCORE_RESULT: FullScoreResult = {
   tvl: 100,
   effectiveTvl: 100,
   vol24h: 10,
+  volumeAvailability: makeCompleteVolumeAvailability(10, 70),
   score: 80,
   hhi: 0.1,
   durability: 0.8,
@@ -39,7 +41,7 @@ const BASE_GLOBAL_AGG: GlobalAgg = {
   totalTvl: 100,
   totalVol24h: 10,
   totalVol7d: 70,
-  totalVol7dMeasured: true,
+  volumeAvailability: makeCompleteVolumeAvailability(10, 70),
   poolCount: 1,
   chainCount: 1,
   protocolTvl: { curve: 100 },

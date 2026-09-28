@@ -39,6 +39,11 @@ export interface ProcessPoolMetricsInput {
   uniV3ExecutionCandidates?: Map<string, UniV3ExecutionCandidate[]>;
   stablecoinPriceById?: Map<string, number>;
   measuredTargetCapturedAt?: number;
+  /**
+   * Live fetch clock of the DeFiLlama volume readings (DEC-19). Without it the
+   * readings cannot prove their window and classify as missing.
+   */
+  volumeObservedAtSec?: number;
   validationReferences?: PriceValidationReferences;
   curvePoolCandidatesByFingerprint?: ReadonlyMap<string, readonly CurvePoolEntry[]>;
   uniswapV4ExecutionCandidates?: ReadonlyMap<
@@ -100,8 +105,11 @@ export interface PoolProtocolEnrichment {
   balanceDetails:
     | { symbol: string; balancePct: number; isTracked: boolean }[]
     | undefined;
-  volumeUsd1d: number;
+  /** Raw DeFiLlama 24h reading; null when the provider published none. */
+  volumeUsd1d: number | null;
   volumeUsd7d: number | null;
+  /** Observation clock of both readings; null when unknown. */
+  volumeObservedAtSec: number | null;
 }
 
 export interface PoolExecutionCapability {

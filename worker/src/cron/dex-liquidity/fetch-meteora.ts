@@ -137,7 +137,7 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
         ],
         price: spotPrice,
         tvlUsd,
-        volume24hUsd: volume24hUsd != null && Number.isFinite(volume24hUsd) ? volume24hUsd : 0,
+        volume24hUsd: volume24hUsd != null && Number.isFinite(volume24hUsd) && volume24hUsd >= 0 ? volume24hUsd : null,
         feeRate: feePct > 0 ? feePct / 100 : null,
         balances: Number.isFinite(reserve0) && Number.isFinite(reserve1) ? [reserve0, reserve1] : null,
       };

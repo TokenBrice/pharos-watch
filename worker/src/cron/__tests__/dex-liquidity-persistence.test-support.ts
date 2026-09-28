@@ -4,6 +4,16 @@ import type {
 } from "@shared/types/market";
 
 import type { FullScoreResult } from "../dex-liquidity/types";
+import { summarizeRetainedPoolVolume } from "../dex-liquidity/scoring-helpers";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+
+/** Availability record of one retained pool whose 24h and 7d readings were observed at `asOfSec`. */
+export function makeCompleteVolumeAvailability(volume24hUsd: number, volume7dUsd: number, asOfSec = 1_800_000_000) {
+  return summarizeRetainedPoolVolume(
+    [{ reading: { volume24hUsd, volume7dUsd, observedAtSec: asOfSec }, tvlUsd: 1 }],
+    { asOfSec, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
+  ).volumeAvailability;
+}
 
 type DexRouteObservationFixture = ExitRouteObservation & {
   capacityCurve: NonNullable<ExitRouteObservation["capacityCurve"]>;
@@ -12,6 +22,10 @@ type DexRouteObservationFixture = ExitRouteObservation & {
 export function makeFullScoreResult(overrides: Partial<FullScoreResult> = {}): FullScoreResult {
   return {
     tvl: 1, effectiveTvl: 1, vol24h: 1, score: 1, hhi: 0.1, durability: 50,
+    volumeAvailability: summarizeRetainedPoolVolume(
+      [{ reading: { volume24hUsd: 1, volume7dUsd: null, observedAtSec: 1_800_000_000 }, tvlUsd: 1 }],
+      { asOfSec: 1_800_000_000, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
+    ).volumeAvailability,
     components: { tvlDepth: 10, volumeActivity: 10, poolQuality: 10, durability: 50, pairDiversity: 5 },
     weightedBalanceRatio: null, organicFrac: null, avgStress: null, lockedLiqPct: null,
     coverageClass: "primary", coverageConfidence: 1,

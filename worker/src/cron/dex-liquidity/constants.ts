@@ -26,6 +26,17 @@ export const CURVE_CHAINS = [...CURVE_NATIVE_DISCOVERY_CHAINS] as const;
  */
 export const CURVE_API_CHAIN_PATHS: Record<string, string> = { gnosis: "xdai" };
 export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
+/**
+ * Zero-volume provenance cutover (liquidity methodology 6.9). Before this clock,
+ * producers coerced an absent 24h volume to 0 (GeckoTerminal, DexScreener and
+ * CoinGecko onchain parsers, and the v1 live-lane registry write-back), so a
+ * registry zero refreshed earlier cannot be told apart from a missing reading
+ * and the registry resolver treats it as absent. Positive legacy readings stay
+ * usable. Set deliberately after the expected v6.9 deploy (2026-09-28 12:00
+ * UTC) so the window fails closed. Inert once every earlier row is older than
+ * the 72h volume admission window (after 2026-10-01 12:00 UTC); remove it then.
+ */
+export const DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC = 1_790_596_800;
 
 // Uniswap V3 subgraph IDs per chain. Chain expansion is measured-execution
 // coupled: adding a chain here only turns that chain's DeFiLlama `uniswap-v3`

@@ -1,6 +1,6 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
-import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { parseDexVolumeAvailabilityRecord, readStoredDexTurnover24h } from "@shared/lib/dex-volume-availability";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { runCappedPruneFamily } from "../shared/capped-delete";
@@ -258,17 +258,19 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
       tvlSeries.push(row.total_tvl_usd);
       tvlByCoin.set(row.stablecoin_id, tvlSeries);
 
-      // DEC-19: a day whose recorded 24h window is partial/missing/stale is not
-      // a measured observation and never enters volume consistency (no
-      // estimate substitutes for it). Legacy unrecorded days keep their value.
-      const measuredVolume = readStoredDexVolumeWindow(
+      // Volume consistency (liquidity v6.9) is the stability of daily 24h
+      // turnover. A recorded day counts when complete or when its admitted
+      // pools cover DEX_VOLUME_COVERAGE_MIN of retained TVL (admitted volume /
+      // admitted TVL); below the floor it is skipped, never estimated. Legacy
+      // unrecorded days keep their stored volume over stored TVL.
+      const turnover = readStoredDexTurnover24h(
         row.total_volume_24h_usd,
+        row.total_tvl_usd,
         parseDexVolumeAvailabilityRecord(row.volume_availability_json),
-        "24h",
-      ).measuredUsd;
-      if (measuredVolume != null) {
+      );
+      if (turnover != null) {
         const volumeSeries = volumeByCoin.get(row.stablecoin_id) ?? [];
-        volumeSeries.push(measuredVolume);
+        volumeSeries.push(turnover);
         volumeByCoin.set(row.stablecoin_id, volumeSeries);
       }
     }

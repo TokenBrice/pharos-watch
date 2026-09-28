@@ -7,6 +7,8 @@ import type { ContractDeployment } from "@shared/types/core";
 import {
   ExitRouteObservationCoverageSchema,
   ExitRouteObservationSchema,
+  type DexVolumeAvailability,
+  type DexVolumeAvailabilityRecord,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
 } from "@shared/types/market";
@@ -18,6 +20,8 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import { createDexGenerationStore } from "./generation-store";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
+import { summarizeRetainedPoolVolume } from "./scoring-helpers";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildDexDeploymentCensusDetail,
@@ -41,7 +45,7 @@ export const DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE = 15;
 const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
   (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
    coverage_class, coverage_confidence, source_mix_json, methodology_version,
-   exit_route_summary_json)`;
+   exit_route_summary_json, volume_availability_json)`;
 
 const DEX_LIQUIDITY_ROW_COLUMNS = [
   "stablecoin_id",
@@ -50,6 +54,7 @@ const DEX_LIQUIDITY_ROW_COLUMNS = [
   "total_volume_24h_usd",
   "total_volume_7d_usd",
   "total_volume_7d_measured",
+  "volume_availability_json",
   "pool_count",
   "pair_count",
   "chain_count",
@@ -78,6 +83,40 @@ const DEX_LIQUIDITY_ROW_COLUMN_SQL = DEX_LIQUIDITY_ROW_COLUMNS.join(", ");
 const DEX_LIQUIDITY_PUBLISH_CURRENT_SET_SQL = DEX_LIQUIDITY_ROW_COLUMNS.filter((column) => column !== "stablecoin_id")
   .map((column) => `${column} = excluded.${column}`)
   .join(",\n  ");
+
+/**
+ * DEC-19 storage projection for a legacy NOT NULL volume column: the complete
+ * measured sum, else the labelled in-budget partial gross, else 0. Readers
+ * publish the column as measured only when `volume_availability_json` records
+ * that window as `complete` (shared/lib/dex-volume-availability.ts).
+ */
+function storedDexVolumeUsd(measuredUsd: number | null, availability: DexVolumeAvailability | undefined): number {
+  return measuredUsd ?? availability?.partialGrossUsd ?? 0;
+}
+
+/** `total_volume_24h_usd`, `total_volume_7d_usd`, `total_volume_7d_measured`, `volume_availability_json`. */
+function buildStoredDexVolumeColumns(
+  measured24hUsd: number | null,
+  measured7dUsd: number | null,
+  record: DexVolumeAvailabilityRecord,
+): [number, number, 0 | 1, string] {
+  return [
+    storedDexVolumeUsd(measured24hUsd, record["24h"]),
+    storedDexVolumeUsd(measured7dUsd, record["7d"]),
+    record["7d"]?.completeness === "complete" ? 1 : 0,
+    JSON.stringify(record),
+  ];
+}
+
+/**
+ * A published row is an observed DEX row when it came from a score result: a
+ * rated score, or an NR composite (DEC-19) that still retained pools. Only
+ * placeholders are unscored AND unobserved.
+ */
+function isObservedDexRow(row: { liquidity_score: number | null; coverage_class: string | null }): boolean {
+  return row.liquidity_score != null || (row.coverage_class != null && row.coverage_class !== "unobserved");
+}
+
 const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
   "(publication_generation_id IS NULL OR publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))";
 
@@ -341,6 +380,8 @@ interface HistoricalSnapshotRow {
   source_mix_json: string | null;
   methodology_version: string;
   exit_route_summary_json: string | null;
+  /** Migration 0249; NULL on legacy snapshots whose completeness was never recorded. */
+  volume_availability_json: string | null;
 }
 
 /** @internal */
@@ -374,7 +415,7 @@ function setsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>): boole
 function canReuseHistoricalSnapshot(
   rows: readonly HistoricalSnapshotRow[],
   expectedActiveIds: ReadonlySet<string>,
-  expectedScoredIds: ReadonlySet<string>,
+  expectedObservedIds: ReadonlySet<string>,
   incomingRouteHistoryIds: ReadonlySet<string>,
 ): boolean {
   // `idx_dex_hist_coin_date_unique` makes (stablecoin_id, snapshot_date) unique, so the row
@@ -382,8 +423,8 @@ function canReuseHistoricalSnapshot(
   const activeIds = new Set(rows.map((row) => row.stablecoin_id));
   if (!setsEqual(activeIds, expectedActiveIds)) return false;
 
-  const scoredIds = new Set(rows.filter((row) => row.liquidity_score != null).map((row) => row.stablecoin_id));
-  if (!setsEqual(scoredIds, expectedScoredIds)) return false;
+  const observedIds = new Set(rows.filter(isObservedDexRow).map((row) => row.stablecoin_id));
+  if (!setsEqual(observedIds, expectedObservedIds)) return false;
 
   const existingRouteHistoryIds = new Set(
     rows.filter((row) => row.exit_route_summary_json != null).map((row) => row.stablecoin_id),
@@ -839,15 +880,14 @@ export async function persistScores(
         id,
         m.symbol,
         m.totalTvlUsd,
-        m.totalVolume24hUsd,
-        m.totalVolume7dUsd,
-        m.totalVolume7dMeasured ? 1 : 0,
+        ...buildStoredDexVolumeColumns(m.totalVolume24hUsd, m.totalVolume7dUsd, sr.volumeAvailability),
         m.poolCount,
         m.pairs.size,
         m.chains.size,
         JSON.stringify(m.protocolTvl),
         JSON.stringify(m.chainTvl),
-        JSON.stringify(m.topPools),
+        // `volumeReading` is producer-internal raw evidence (aged readings included); never published.
+        JSON.stringify(m.topPools.map(({ volumeReading: _volumeReading, ...pool }) => pool)),
         sr.score,
         sr.hhi,
         sr.avgStress,
@@ -869,7 +909,18 @@ export async function persistScores(
     currentRouteSets.clear();
 
     // Write placeholder rows for tracked stablecoins with no DEX presence.
-    // liquidity_score = NULL so report cards treat them as NR (not rated).
+    // liquidity_score = NULL so report cards treat them as NR (not rated). They
+    // retain no pool, so their volume windows are the vacuous complete-zero
+    // summary at the run's volume clock.
+    const placeholderVolume = summarizeRetainedPoolVolume([], {
+      asOfSec: globalAgg.volumeAvailability["24h"].asOfSec ?? nowSec,
+      maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC,
+    });
+    const placeholderVolumeColumns = buildStoredDexVolumeColumns(
+      placeholderVolume.totalVolume24hUsd,
+      placeholderVolume.totalVolume7dUsd,
+      placeholderVolume.volumeAvailability,
+    );
     for (const meta of ACTIVE_STABLECOINS) {
       throwIfAborted(signal);
       if (!metrics.has(meta.id)) {
@@ -886,9 +937,7 @@ export async function persistScores(
           meta.id,
           meta.symbol,
           0,
-          0,
-          0,
-          1,
+          ...placeholderVolumeColumns,
           0,
           0,
           0,
@@ -926,9 +975,7 @@ export async function persistScores(
       "__global__",
       "__global__",
       globalAgg.totalTvl,
-      globalAgg.totalVol24h,
-      globalAgg.totalVol7d,
-      globalAgg.totalVol7dMeasured ? 1 : 0,
+      ...buildStoredDexVolumeColumns(globalAgg.totalVol24h, globalAgg.totalVol7d, globalAgg.volumeAvailability),
       globalAgg.poolCount,
       0,
       globalAgg.chainCount,
@@ -1037,7 +1084,7 @@ export async function writeHistoricalSnapshots(
   const todayMidnight = bucketUnixSecondsToUtcDay(nowSec);
   const expectedActiveIds = new Set(ACTIVE_STABLECOINS.map((coin) => coin.id));
   const activeScoreMap = new Map([...scoreMap].filter(([id]) => expectedActiveIds.has(id)));
-  const incomingScoredIds = new Set(activeScoreMap.keys());
+  const incomingObservedIds = new Set(activeScoreMap.keys());
   const incomingRouteHistoryIds = new Set(
     [...activeScoreMap]
       .filter(([, scoreResult]) => buildDexExitRouteHistoryJson(scoreResult) != null)
@@ -1069,7 +1116,7 @@ export async function writeHistoricalSnapshots(
       .prepare(
         `SELECT id, stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score,
                 snapshot_date, coverage_class, coverage_confidence, source_mix_json,
-                methodology_version, exit_route_summary_json
+                methodology_version, exit_route_summary_json, volume_availability_json
          FROM dex_liquidity_history
          WHERE snapshot_date = ?
          ORDER BY stablecoin_id, id`,
@@ -1078,19 +1125,22 @@ export async function writeHistoricalSnapshots(
       .all<HistoricalSnapshotRow>();
     const existingRows = existing.results ?? [];
     const existingCount = existingRows.length;
-    const existingScored = existingRows.filter((row) => row.liquidity_score != null).length;
-    const incomingScored = activeScoreMap.size;
+    const existingObserved = existingRows.filter(isObservedDexRow).length;
+    const incomingObserved = activeScoreMap.size;
     throwIfAborted(signal);
 
-    const existingScoredRows = new Map<string, HistoricalSnapshotRow>();
+    // Same-day observed rows (rated or DEC-19 NR) survive a run that lacks the
+    // coin; each copy keeps its own availability record, so a copied
+    // non-complete day never becomes a legacy (unknown) number.
+    const existingObservedRows = new Map<string, HistoricalSnapshotRow>();
     for (const row of existingRows) {
-      if (expectedActiveIds.has(row.stablecoin_id) && row.liquidity_score != null) {
-        existingScoredRows.set(row.stablecoin_id, row);
+      if (expectedActiveIds.has(row.stablecoin_id) && isObservedDexRow(row)) {
+        existingObservedRows.set(row.stablecoin_id, row);
       }
     }
-    const targetScoredIds = new Set([...existingScoredRows.keys(), ...incomingScoredIds]);
+    const targetObservedIds = new Set([...existingObservedRows.keys(), ...incomingObservedIds]);
 
-    if (canReuseHistoricalSnapshot(existingRows, expectedActiveIds, targetScoredIds, incomingRouteHistoryIds)) {
+    if (canReuseHistoricalSnapshot(existingRows, expectedActiveIds, targetObservedIds, incomingRouteHistoryIds)) {
       await pruneHistory();
       return {
         snapshotRowsWritten: 0,
@@ -1101,17 +1151,21 @@ export async function writeHistoricalSnapshots(
       };
     }
 
+    const placeholderVolumeAvailabilityJson = JSON.stringify(
+      summarizeRetainedPoolVolume([], { asOfSec: nowSec, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC })
+        .volumeAvailability,
+    );
     const snapshotRows: unknown[][] = [];
     for (const meta of ACTIVE_STABLECOINS) {
       const data = activeScoreMap.get(meta.id);
-      const existingData = existingScoredRows.get(meta.id);
+      const existingData = existingObservedRows.get(meta.id);
       const incomingExitRouteHistoryJson = data ? buildDexExitRouteHistoryJson(data) : null;
       snapshotRows.push(
         data
           ? [
               meta.id,
               data.tvl,
-              data.vol24h,
+              storedDexVolumeUsd(data.vol24h, data.volumeAvailability["24h"]),
               data.score,
               todayMidnight,
               data.coverageClass,
@@ -1119,6 +1173,7 @@ export async function writeHistoricalSnapshots(
               JSON.stringify(data.sourceMix),
               LIQUIDITY_METHODOLOGY_VERSION,
               incomingExitRouteHistoryJson ?? existingData?.exit_route_summary_json ?? null,
+              JSON.stringify(data.volumeAvailability),
             ]
           : existingData
             ? [
@@ -1132,8 +1187,12 @@ export async function writeHistoricalSnapshots(
                 existingData.source_mix_json,
                 existingData.methodology_version,
                 existingData.exit_route_summary_json,
+                existingData.volume_availability_json,
               ]
-            : [meta.id, 0, 0, null, todayMidnight, "unobserved", 0, null, LIQUIDITY_METHODOLOGY_VERSION, null],
+            : [
+                meta.id, 0, 0, null, todayMidnight, "unobserved", 0, null, LIQUIDITY_METHODOLOGY_VERSION, null,
+                placeholderVolumeAvailabilityJson,
+              ],
       );
     }
 
@@ -1150,7 +1209,7 @@ export async function writeHistoricalSnapshots(
     await executeAtomicBatch(db, replacementStatements, { signal });
     await pruneHistory();
     logWorkerEventArgs("handler", "info",
-      `[dex-liquidity] Reconciled daily snapshot (${existingCount}/${existingScored} -> ${snapshotRows.length}/${targetScoredIds.size}, incoming=${incomingScored}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
+      `[dex-liquidity] Reconciled daily snapshot (${existingCount}/${existingObserved} -> ${snapshotRows.length}/${targetObservedIds.size}, incoming=${incomingObserved}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
     );
     return {
       snapshotRowsWritten: snapshotRows.length,

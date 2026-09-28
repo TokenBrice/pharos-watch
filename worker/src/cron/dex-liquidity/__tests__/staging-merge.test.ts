@@ -741,7 +741,8 @@ describe("mergeStagedPools", () => {
     expect(result.priceObservations.get("usdt-tether")).toBeUndefined();
     expect(metric).toBeDefined();
     expect(metric.totalTvlUsd).toBeCloseTo(100000 * decay, 6);
-    expect(metric.totalVolume24hUsd).toBeCloseTo(50000 * decay, 6);
+    // DEC-19: decay scales TVL only; the raw reading keeps its own clock and is stale at scoring.
+    expect(metric.topPools[0]?.volumeReading).toMatchObject({ volume24hUsd: 50000, observedAtSec: now - 3600 * 150 });
     expect(metric.poolCount).toBe(1);
     // pancakeswap-v3 carries GT dex quality 0.5 on top of the age decay.
     expect(metric.qualityAdjustedTvl).toBe(Math.round(100000 * decay * 0.5));
@@ -1455,7 +1456,7 @@ describe("mergeStagedPools", () => {
     expect(result.priceObservations.get("usdt-tether")).toHaveLength(1);
     expect(metric).toBeDefined();
     expect(metric.totalTvlUsd).toBe(100000);
-    expect(metric.totalVolume24hUsd).toBe(50000);
+    expect(metric.topPools[0]?.volumeReading).toMatchObject({ volume24hUsd: 50000, observedAtSec: now });
     expect(metric.totalTvlForBalance).toBe(100000);
     expect(metric.balanceRatioWeightedSum).toBe(80000);
     expect(metric.totalTvlForLocked).toBe(100000);

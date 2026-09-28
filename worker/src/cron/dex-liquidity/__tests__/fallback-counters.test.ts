@@ -275,6 +275,7 @@ describe("accumulatePoolMetrics optimistic balance counter", () => {
       balanceDetails: undefined,
       volumeUsd1d: 50_000,
       volumeUsd7d: 350_000,
+      volumeObservedAtSec: 1_000,
       ...overrides,
     };
   }

@@ -6,7 +6,7 @@ import {
   LIQUIDITY_TVL_DEPTH_ANCHOR_RATIO,
   LIQUIDITY_TVL_DEPTH_SLOPE,
 } from "@shared/lib/liquidity-score-weights";
-import { computeVolumeActivityScore } from "@shared/lib/dex-volume-availability";
+import { composeLiquidityScore, resolveVolumeActivityComponent } from "@shared/lib/dex-volume-availability";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -19,7 +19,6 @@ import {
 } from "../../lib/dex-cron-constants";
 import type { LiquidityFallbackCounters, LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
-import { LIQUIDITY_COMPONENT_WEIGHTS } from "./score-weights";
 import { buildChainAddressKey } from "./token-resolution";
 export { buildPoolFingerprint, getGtDexQuality, normalizeProtocol } from "./pool-normalization";
 
@@ -44,7 +43,7 @@ export function initLiquidityFallbackCounters(): LiquidityFallbackCounters {
     unmeasuredBalanceOptimistic: 0,
     stagedOrganicFractionDefault: 0,
     stagedBalanceRatioFallback: 0,
-    fluidVolumeCoercedToZero: 0,
+    fluidVolumeUnmeasured: 0,
     fluidFeeRateUnmeasured: 0,
     fluidBalancesUnmeasured: 0,
     directApiMaturityDefaulted: 0,
@@ -183,12 +182,22 @@ export function computeDurabilityScore(
   );
 }
 
+/**
+ * LiquidityScore per DEC-19, coverage-gated since methodology 6.9. Volume
+ * activity is admitted 24h volume / admitted TVL, rated when the retained
+ * window is complete (a measured zero scores 0 under the full weights) or its
+ * admitted TVL covers at least DEX_VOLUME_COVERAGE_MIN of the retained scoring
+ * TVL. Below the floor — or for a metric whose retained set was never
+ * summarized — the component is unavailable and the composite NR
+ * (`score: null`): no renormalization, no estimate for excluded pools. The
+ * other components stay displayable.
+ */
 export function computeLiquidityScore(
   m: LiquidityMetrics,
   durabilityScore: number,
   circulatingUsd?: number,
   counters?: LiquidityFallbackCounters,
-): { score: number; components: ScoreComponents } {
+): { score: number | null; components: ScoreComponents } {
   // Component 1: TVL depth (30%) — uses effectiveTvl
   const tvlInput = m.effectiveTvl > 0 ? m.effectiveTvl : m.totalTvlUsd;
   let tvlDepth: number;
@@ -206,38 +215,23 @@ export function computeLiquidityScore(
     tvlDepth = computeTvlDepthScore(Math.max(tvlInput, 1) / TVL_DEPTH_FALLBACK_MCAP_USD);
   }
 
-  // Component 2: Volume activity (20%) — log-scale; formula owned by the shared DEC-19 helper.
-  const volumeActivity = computeVolumeActivityScore(m.totalVolume24hUsd, m.totalTvlUsd);
+  // Component 2: Volume activity (20%) — log-scale over the admitted pools of a coverage-qualified 24h window.
+  const volumeActivity = resolveVolumeActivityComponent(m.volumeAvailability?.["24h"]);
 
   // Component 3: Pool quality (20%) — quality retention ratio
   const qualityRetention = m.totalTvlUsd > 0 ? m.qualityAdjustedTvl / m.totalTvlUsd : 0;
   const poolQuality = clampScore(((qualityRetention - POOL_QUALITY_FLOOR_RATIO) / POOL_QUALITY_WINDOW) * 100);
 
-  // Component 4: Durability (20%) — passed in from durability computation
-  const durability = durabilityScore;
-
-  // Component 5: Pair diversity (10%)
-  const pairDiversity = Math.min(100, m.poolCount * 5);
-
-  const raw =
-    tvlDepth * LIQUIDITY_COMPONENT_WEIGHTS.tvlDepth +
-    volumeActivity * LIQUIDITY_COMPONENT_WEIGHTS.volumeActivity +
-    poolQuality * LIQUIDITY_COMPONENT_WEIGHTS.poolQuality +
-    durability * LIQUIDITY_COMPONENT_WEIGHTS.durability +
-    pairDiversity * LIQUIDITY_COMPONENT_WEIGHTS.pairDiversity;
-
-  const components: ScoreComponents = {
-    tvlDepth: Math.round(tvlDepth),
-    volumeActivity: Math.round(volumeActivity),
-    poolQuality: Math.round(poolQuality),
-    durability: Math.round(durability),
-    pairDiversity: Math.round(pairDiversity),
-  };
-
-  return {
-    score: clampScore(Math.round(raw)),
-    components,
-  };
+  // Component 4: Durability (20%) — passed in from durability computation.
+  // Component 5: Pair diversity (10%).
+  const composite = composeLiquidityScore({
+    tvlDepth,
+    volumeActivity,
+    poolQuality,
+    durability: durabilityScore,
+    pairDiversity: Math.min(100, m.poolCount * 5),
+  });
+  return { score: composite.score, components: composite.components };
 }
 
 export function initMetrics(id: string, symbol: string): LiquidityMetrics {
@@ -245,9 +239,9 @@ export function initMetrics(id: string, symbol: string): LiquidityMetrics {
     stablecoinId: id,
     symbol,
     totalTvlUsd: 0,
-    totalVolume24hUsd: 0,
-    totalVolume7dUsd: 0,
-    totalVolume7dMeasured: true,
+    totalVolume24hUsd: null,
+    totalVolume7dUsd: null,
+    volumeAvailability: null,
     poolCount: 0,
     chains: new Set(),
     pairs: new Set(),

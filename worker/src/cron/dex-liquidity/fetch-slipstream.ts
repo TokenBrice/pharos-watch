@@ -218,7 +218,8 @@ async function recoverSlipstreamPoolsFromStaging(input: {
       tokens: tokenRows.map(({ balance: _balance, ...token }) => token),
       price,
       tvlUsd,
-      volume24hUsd: 0,
+      // On-chain pool state carries no trailing volume: no observation, not zero.
+      volume24hUsd: null,
       feeRate: normalizeFeeRateFromBps(candidate.feeBps),
       tickSpacing,
       balances: tokenRows.map((token) => token.balance),
@@ -559,10 +560,9 @@ export async function fetchSlipstreamPools(
         ],
         price: finalSpotPrice,
         tvlUsd,
-        // Sugar v2 exposes reserves and pool price but not trailing volume.
-        // Keep this as unmeasured zero so downstream filters can distinguish
-        // "unknown volume" from a measured no-volume pool.
-        volume24hUsd: 0,
+        // Sugar v2 exposes reserves and pool price but not trailing volume, so
+        // the reading is absent (null), never a measured no-volume zero.
+        volume24hUsd: null,
         feeRate: normalizeFeeRateFromBps(feeBps),
         tickSpacing,
         balances: [reserve0, reserve1],

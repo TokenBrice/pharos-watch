@@ -21,11 +21,16 @@ export type CrawlToken = {
   stablecoinId: string;
 };
 
-export type ParsedPool = {
+/**
+ * One GT-shaped provider pool. `TVolume` is the provider's 24h volume reading:
+ * GeckoTerminal leaves an absent or unparseable reading `null` (DEC-19, never a
+ * fresh 0); CoinGecko onchain resolves its own reading during admission.
+ */
+export type ParsedPool<TVolume extends number | null = number> = {
   dexId: string;
   poolAddress: string;
   tvlUsd: number;
-  volume24hUsd: number;
+  volume24hUsd: TVolume;
   baseTokenAddress: string;
   quoteTokenAddress: string;
   baseTokenPriceUsd: number;
@@ -41,7 +46,7 @@ export type ParsedPool = {
 
 export type BuildNewPoolArgs<TRawPool> = {
   rawPool: TRawPool;
-  parsed: ParsedPool;
+  parsed: ParsedPool<number | null>;
   stablecoinId: string;
   chain: string;
   price: number;
@@ -81,7 +86,7 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
     status: "success" | "degraded" | "failure",
     pagination?: Pick<PagedTokenPoolsResult<TRawPool>, "complete" | "cappedAtMaxPages" | "failedAfterRows">,
   ) => void;
-  parsePool: (rawPool: TRawPool, chain: string) => ParsedPool | null;
+  parsePool: (rawPool: TRawPool, chain: string) => ParsedPool<number | null> | null;
   buildNewPool: (args: BuildNewPoolArgs<TRawPool>) => TNewPool;
 };
 
@@ -176,7 +181,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
       const page = await config.fetchPools(token.address, token.sourceChain, config.signal);
       config.onRequestResult?.(token, page.complete ? "success" : "degraded", page);
       for (const rawPool of page.rows) {
-        let parsed: ParsedPool | null = null;
+        let parsed: ParsedPool<number | null> | null = null;
         try {
           parsed = config.parsePool(rawPool, token.ourChain);
         } catch {
@@ -224,7 +229,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           continue;
         }
 
-        if (parsed.tvlUsd > 0 && parsed.volume24hUsd / parsed.tvlUsd > 50) {
+        if (parsed.volume24hUsd != null && parsed.tvlUsd > 0 && parsed.volume24hUsd / parsed.tvlUsd > 50) {
           continue;
         }
 

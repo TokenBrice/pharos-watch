@@ -229,6 +229,44 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
+  it("stages an absent DexScreener 24h volume as no reading and an explicit zero as measured", async () => {
+    const pair = (pairAddress: string, volume: unknown) => ({
+      chainId: "ethereum",
+      dexId: "uniswap-v3",
+      pairAddress,
+      labels: ["V3"],
+      baseToken: { address: "0xabc", name: "Test USD", symbol: "TUSD" },
+      quoteToken: { address: "0xquote", name: "USD Coin", symbol: "USDC" },
+      priceUsd: "1.00",
+      volume,
+      liquidity: { usd: 75_000, base: 0, quote: 0 },
+      pairCreatedAt: null,
+    }) as never;
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
+      ok: true,
+      pairs: [
+        pair("0xabsent", null),
+        pair("0xmissingh24", { h6: 1, h1: 0, m5: 0 }),
+        pair("0xzero", { h24: 0, h6: 0, h1: 0, m5: 0 }),
+      ],
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "test-coin",
+      [{ chain: "ethereum", address: "0xAbC", decimals: 18 }],
+      null,
+      new Set(),
+    );
+
+    const volumeByPool = Object.fromEntries(result.pools.map((pool) => [pool.poolId, pool.volume24h]));
+    expect(volumeByPool).toEqual({
+      "ethereum:0xabsent": null,
+      "ethereum:0xmissingh24": null,
+      "ethereum:0xzero": 0,
+    });
+  });
+
   it("reports every eligible DexScreener pair in the deployment census, including known pools", async () => {
     const pair = {
       chainId: "ethereum",

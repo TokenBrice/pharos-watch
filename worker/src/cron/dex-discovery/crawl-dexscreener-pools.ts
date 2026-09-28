@@ -173,9 +173,12 @@ export async function crawlDexScreenerPoolsStage({
         const tvl = pair.liquidity?.usd ?? 0;
         if (tvl < 1_000) continue;
 
-        const vol24h = pair.volume?.h24 ?? 0;
-        if (vol24h === 0 && tvl < 10_000) continue;
-        if (tvl > 0 && vol24h / tvl > 50) continue;
+        // DEC-19: an absent or invalid 24h volume is no reading (null, stored
+        // absent), never a fresh 0; an explicit 0 stays a measured zero.
+        const rawVol24h: unknown = pair.volume?.h24;
+        const vol24h = typeof rawVol24h === "number" && Number.isFinite(rawVol24h) && rawVol24h >= 0 ? rawVol24h : null;
+        if (!(vol24h != null && vol24h > 0) && tvl < 10_000) continue;
+        if (vol24h != null && tvl > 0 && vol24h / tvl > 50) continue;
 
         const poolAddress = canonicalExitRouteScopedId(chain, pair.pairAddress ?? "");
         const dexId = pair.dexId;

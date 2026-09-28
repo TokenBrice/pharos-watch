@@ -40,11 +40,14 @@ export function describeDexVolume(
   const partialGrossUsd = view.partialGrossUsd;
   // A legacy payload's null (e.g. pre-record 7d volume) carries no completeness record.
   const label = availability == null ? "Not measured" : COMPLETENESS_LABEL[view.completeness];
+  const coverage = availability?.volumeCoverage;
+  // Floored so a share just under the rating floor never reads as reaching it.
+  const coverageClause = typeof coverage === "number" ? ` over pools holding ${Math.floor(coverage * 100)}% of retained TVL` : "";
   return {
     text,
     detail: partialGrossUsd != null ? `Partial ≥ ${formatCurrency(partialGrossUsd)}` : label,
     title: partialGrossUsd != null
-      ? `${label}: no full-window measurement; in-budget observations sum to ${formatCurrency(partialGrossUsd)}`
+      ? `${label}: no full-window measurement; admitted observations sum to ${formatCurrency(partialGrossUsd)}${coverageClause}`
       : `${label}: no full-window measurement`,
     view,
   };

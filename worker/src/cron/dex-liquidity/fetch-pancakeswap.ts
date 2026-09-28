@@ -221,6 +221,10 @@ export async function fetchPancakeSwapPools(
         }
 
         const volume24hByPool = new Map<string, number>();
+        // Pools whose hour-data batch answered and whose rows all parsed. Only
+        // these carry a measured 24h volume; a failed batch or a malformed row
+        // leaves the pool's volume unobserved (null), never a measured zero.
+        const volumeObservedPoolIds = new Set<string>();
         const hourDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), HOUR_DATA_BATCH_SIZE);
         let failedHourDataBatches = 0;
         for (let batchIndex = 0; batchIndex < hourDataPoolIdBatches.length; batchIndex++) {
@@ -233,11 +237,19 @@ export async function fetchPancakeSwapPools(
               signal,
             );
 
+            const malformedPoolIds = new Set<string>();
             for (const row of hourData.poolHourDatas ?? []) {
               const poolId = row.pool.id.toLowerCase();
               const volume = parseFloat(row.volumeUSD);
-              const validVolume = Number.isFinite(volume) ? volume : 0;
-              volume24hByPool.set(poolId, (volume24hByPool.get(poolId) ?? 0) + validVolume);
+              if (!Number.isFinite(volume) || volume < 0) {
+                malformedPoolIds.add(poolId);
+                continue;
+              }
+              volume24hByPool.set(poolId, (volume24hByPool.get(poolId) ?? 0) + volume);
+            }
+            for (const poolId of poolIdBatch) {
+              const normalizedPoolId = poolId.toLowerCase();
+              if (!malformedPoolIds.has(normalizedPoolId)) volumeObservedPoolIds.add(normalizedPoolId);
             }
           } catch (error) {
             rethrowIfAborted(error, signal);
@@ -296,7 +308,10 @@ export async function fetchPancakeSwapPools(
                 ? token0PerToken1Price
                 : null,
             tvlUsd,
-            volume24hUsd: volume24hByPool.get(pool.id.toLowerCase()) ?? 0,
+            // An answered query with no hour rows is a measured quiet day (0).
+            volume24hUsd: volumeObservedPoolIds.has(pool.id.toLowerCase())
+              ? volume24hByPool.get(pool.id.toLowerCase()) ?? 0
+              : null,
             feeRate: Number.isFinite(feeTier) && feeTier > 0 ? feeTier / 1_000_000 : null,
             balances: Number.isFinite(reserve0) && Number.isFinite(reserve1) ? [reserve0, reserve1] : null,
           });

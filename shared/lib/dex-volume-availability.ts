@@ -4,13 +4,19 @@
  *
  * One availability calculation serves producers (window summaries), storage
  * readers (legacy vs recorded rows) and views. Rules:
- * - A complete window (every retained contributing pool measured in budget)
- *   publishes its sum; a genuine measured zero stays an observed zero.
+ * - A pool reading is admitted (`measured`) when its observation clock is
+ *   within the producer's admission budget; older readings are `stale`, absent
+ *   ones `missing`. Nothing is decayed, zero-filled or imputed.
+ * - A complete window (every retained contributing pool admitted) publishes
+ *   its sum; a genuine measured zero stays an observed zero.
  * - Partial, missing, stale or unknown windows publish no measured total. The
- *   in-budget observations that were present are labelled `partialGrossUsd`.
- * - Volume activity is scored only from a complete 24h window. Otherwise the
- *   component is unavailable and the composite LiquidityScore is not rated:
- *   no renormalization, no denominator shrink, no estimated activity.
+ *   admitted observations are labelled `partialGrossUsd` beside their
+ *   retained-TVL coverage (`volumeCoverage`).
+ * - Volume activity (liquidity v6.9) is admitted volume / admitted TVL, rated
+ *   only when the window is complete or its coverage reaches
+ *   DEX_VOLUME_COVERAGE_MIN. Otherwise the component is unavailable and the
+ *   composite LiquidityScore is not rated: no renormalization, no denominator
+ *   shrink, no estimated activity for excluded pools.
  */
 import { clampScore } from "./math";
 import { LIQUIDITY_SCORE_WEIGHTS, type LiquidityScoreComponentKey } from "./liquidity-score-weights";
@@ -29,12 +35,39 @@ const DEX_VOLUME_WINDOW_SEC = {
   "7d": 604_800,
 } as const satisfies Record<DexVolumeWindow, number>;
 
+/**
+ * Admission window for a pool's provider volume reading (DEC-19, liquidity
+ * methodology 6.9): a rolling 24h/7d reading whose observation clock is at most
+ * 72h old is admitted (`measured`); the exact boundary is admitted. Older
+ * readings are `stale` and enter no sum, TVL coverage or activity. Deliberately
+ * decoupled from the worker's STAGED_POOL_FRESH_HOURS (24h), which still governs
+ * staged TVL and price freshness: discovery cadences (weekly t2/t3 GeckoTerminal
+ * cohorts, page caps) leave many pools with a reading 1–3 days old, and an
+ * admitted reading remains a provider 24h figure as of its own clock, not a 72h
+ * volume. Availability records echo this budget with the oldest/newest
+ * observation clocks. One constant serves live readings, staged registry rows,
+ * the global aggregate and the public methodology copy.
+ */
+export const DEX_VOLUME_OBSERVATION_MAX_AGE_SEC = 72 * 3600;
+
+/**
+ * Minimum share of a coin's retained scoring TVL that must carry an admitted
+ * 24h reading for Volume Activity — and therefore the composite LiquidityScore —
+ * to be rated (liquidity v6.9). The exact floor is eligible (`coverage >= min`).
+ */
+export const DEX_VOLUME_COVERAGE_MIN = 0.5;
+
 /** One pool's provider rolling-window reading. */
 export interface DexPoolVolumeObservationInput {
   /** Null, undefined, non-finite or negative values are not observations. */
   volumeUsd: number | null | undefined;
   /** Observation clock; without it the reading's window cannot be established. */
   observedAtSec: number | null | undefined;
+  /**
+   * The pool's retained scoring TVL, the coverage weight. Absent, non-finite or
+   * negative values weigh 0 in both admitted and retained TVL.
+   */
+  tvlUsd?: number | null;
 }
 
 /**
@@ -54,7 +87,7 @@ function isEpochSec(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
-/** Exact budget boundary is eligible (`age <= maxObservationAgeSec`). */
+/** Exact budget boundary is admitted (`age <= maxObservationAgeSec`). */
 export function classifyDexPoolVolumeObservation(
   observation: DexPoolVolumeObservationInput,
   clock: DexVolumeWindowClock,
@@ -88,6 +121,7 @@ interface DexVolumeWindowSummary {
 /**
  * Summarize one window over the COMPLETE retained contributing pool set (not a
  * visible top-N projection). An empty pool set is vacuously complete at zero.
+ * Coverage is admitted TVL / retained TVL; null when the set carries no TVL.
  */
 export function summarizeDexVolumeWindow(
   observations: readonly DexPoolVolumeObservationInput[],
@@ -98,9 +132,14 @@ export function summarizeDexVolumeWindow(
   let missing = 0;
   let stale = 0;
   let measuredSum = 0;
+  let admittedTvlUsd = 0;
+  let retainedTvlUsd = 0;
   let oldestObservedAtSec: number | null = null;
   let newestObservedAtSec: number | null = null;
   for (const observation of observations) {
+    const tvlUsd = observation.tvlUsd;
+    const weight = typeof tvlUsd === "number" && Number.isFinite(tvlUsd) && tvlUsd > 0 ? tvlUsd : 0;
+    retainedTvlUsd += weight;
     const status = classifyDexPoolVolumeObservation(observation, clock);
     if (status === "missing") {
       missing += 1;
@@ -115,6 +154,7 @@ export function summarizeDexVolumeWindow(
     }
     measured += 1;
     measuredSum += observation.volumeUsd as number;
+    admittedTvlUsd += weight;
   }
   const completeness = windowCompleteness(measured, missing, stale);
   return {
@@ -131,6 +171,9 @@ export function summarizeDexVolumeWindow(
       maxObservationAgeSec: clock.maxObservationAgeSec,
       oldestObservedAtSec,
       newestObservedAtSec,
+      admittedTvlUsd,
+      retainedTvlUsd,
+      volumeCoverage: retainedTvlUsd > 0 ? admittedTvlUsd / retainedTvlUsd : null,
     },
   };
 }
@@ -148,6 +191,9 @@ function unreadableAvailability(window: DexVolumeWindow): DexVolumeAvailability 
     maxObservationAgeSec: null,
     oldestObservedAtSec: null,
     newestObservedAtSec: null,
+    admittedTvlUsd: null,
+    retainedTvlUsd: null,
+    volumeCoverage: null,
   };
 }
 
@@ -252,16 +298,47 @@ export function dexVolumeToTvlRatio(volumeUsd: number | null | undefined, tvlUsd
   return tvlUsd > 0 ? volumeUsd / tvlUsd : 0;
 }
 
-// ── DEC-19 LiquidityScore contract ───────────────────────────────────────────
+/**
+ * One stored day's 24h turnover (volume / TVL) for durability volume
+ * consistency (liquidity v6.9). A recorded day counts when its window is
+ * complete (measured sum over retained TVL) or its admitted pools cover at
+ * least DEX_VOLUME_COVERAGE_MIN of retained TVL (admitted volume / admitted
+ * TVL; excluded pools are never estimated). A legacy day without a record keeps
+ * its stored volume over its stored TVL. Null when the day does not qualify or
+ * has no positive TVL denominator.
+ */
+export function readStoredDexTurnover24h(
+  storedVolumeUsd: number | null | undefined,
+  storedTvlUsd: number | null | undefined,
+  record: ParsedDexVolumeAvailabilityRecord,
+): number | null {
+  const stored = readStoredDexVolumeWindow(storedVolumeUsd, record, "24h");
+  const availability = stored.availability;
+  let volumeUsd: number | null;
+  let tvlUsd: number | null | undefined;
+  if (availability == null || availability.completeness === "complete") {
+    volumeUsd = stored.measuredUsd;
+    tvlUsd = availability?.retainedTvlUsd ?? storedTvlUsd;
+  } else {
+    const coverage = availability.volumeCoverage;
+    if (typeof coverage !== "number" || coverage < DEX_VOLUME_COVERAGE_MIN) return null;
+    volumeUsd = availability.partialGrossUsd;
+    tvlUsd = availability.admittedTvlUsd;
+  }
+  if (volumeUsd == null || typeof tvlUsd !== "number" || !Number.isFinite(tvlUsd) || tvlUsd <= 0) return null;
+  return volumeUsd / tvlUsd;
+}
+
+// ── DEC-19 LiquidityScore contract (coverage-gated since v6.9) ───────────────
 
 /** Existing log-scale activity formula: 38 × (log10(V/T) + 3), clamped to 0–100. */
-export function computeVolumeActivityScore(volume24hUsd: number, totalTvlUsd: number): number {
+function computeVolumeActivityScore(volume24hUsd: number, totalTvlUsd: number): number {
   const vtRatio = totalTvlUsd > 0 ? volume24hUsd / totalTvlUsd : 0;
   return vtRatio <= 0 ? 0 : clampScore(38 * (Math.log10(vtRatio) + 3));
 }
 
 type VolumeActivityUnavailableReason =
-  | "activity-partial"
+  | "activity-coverage-below-floor"
   | "activity-missing"
   | "activity-stale"
   | "activity-completeness-unknown";
@@ -271,25 +348,41 @@ type VolumeActivityComponent =
   | { status: "unavailable"; score: null; reason: VolumeActivityUnavailableReason };
 
 const ACTIVITY_UNAVAILABLE_REASON: Record<Exclude<DexVolumeCompleteness, "complete">, VolumeActivityUnavailableReason> = {
-  partial: "activity-partial",
+  partial: "activity-coverage-below-floor",
   missing: "activity-missing",
   stale: "activity-stale",
   unknown: "activity-completeness-unknown",
 };
 
-/** Required activity is the 24h window; 7d volume is display-only. */
-export function resolveVolumeActivityComponent(input: {
-  measuredVolume24hUsd: number | null | undefined;
-  completeness: DexVolumeCompleteness;
-  totalTvlUsd: number;
-}): VolumeActivityComponent {
-  if (input.completeness !== "complete") {
-    return { status: "unavailable", score: null, reason: ACTIVITY_UNAVAILABLE_REASON[input.completeness] };
+/**
+ * Required activity is the 24h window; 7d volume is display-only. Activity is
+ * admitted volume / admitted TVL — excluded (stale or missing) pools enter
+ * neither numerator nor denominator — and is rated when the window is complete
+ * or its retained-TVL coverage is at least DEX_VOLUME_COVERAGE_MIN.
+ */
+export function resolveVolumeActivityComponent(
+  availability24h: DexVolumeAvailability | null | undefined,
+): VolumeActivityComponent {
+  if (availability24h == null) {
+    return { status: "unavailable", score: null, reason: "activity-completeness-unknown" };
   }
-  if (!isObservedVolume(input.measuredVolume24hUsd)) {
-    return { status: "unavailable", score: null, reason: "activity-missing" };
+  const { completeness, volumeCoverage } = availability24h;
+  if (completeness === "unknown") {
+    return { status: "unavailable", score: null, reason: ACTIVITY_UNAVAILABLE_REASON.unknown };
   }
-  return { status: "measured", score: computeVolumeActivityScore(input.measuredVolume24hUsd, input.totalTvlUsd) };
+  const admitted = completeness === "complete" ||
+    (typeof volumeCoverage === "number" && volumeCoverage >= DEX_VOLUME_COVERAGE_MIN);
+  if (!admitted) {
+    return { status: "unavailable", score: null, reason: ACTIVITY_UNAVAILABLE_REASON[completeness] };
+  }
+  const admittedTvlUsd = availability24h.admittedTvlUsd;
+  if (typeof admittedTvlUsd !== "number") {
+    // A record without admitted TVL cannot reproduce the activity denominator.
+    return { status: "unavailable", score: null, reason: "activity-completeness-unknown" };
+  }
+  // No admitted pool (vacuous complete window) is a measured zero flow.
+  const admittedVolumeUsd = availability24h.partialGrossUsd ?? 0;
+  return { status: "measured", score: computeVolumeActivityScore(admittedVolumeUsd, admittedTvlUsd) };
 }
 
 type OtherComponentKey = Exclude<LiquidityScoreComponentKey, "volumeActivity">;

@@ -207,7 +207,8 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       const pool = rawPool;
       const tvlUsd = parseFloat(pool.tvlUsdc);
       const price = parseFloat(pool.price);
-      const volume = parseFloat(pool.stats?.["24h"]?.volume ?? "0");
+      const volumeText = pool.stats?.["24h"]?.volume;
+      const volume = volumeText == null ? Number.NaN : parseFloat(volumeText);
       const balA = parseFloat(pool.tokenBalanceA);
       const balB = parseFloat(pool.tokenBalanceB);
       const normalizedBalA = Number.isFinite(balA) ? balA / 10 ** pool.tokenA.decimals : NaN;
@@ -227,7 +228,8 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
         ],
         price: Number.isFinite(price) && price > 0 ? price : null,
         tvlUsd,
-        volume24hUsd: Number.isFinite(volume) ? volume : 0,
+        // An absent or malformed 24h stat is no observation, never a measured zero.
+        volume24hUsd: Number.isFinite(volume) && volume >= 0 ? volume : null,
         // Orca feeRate is in hundredths of a basis point (100 = 1bp = 0.0001)
         feeRate: Number.isFinite(pool.feeRate) ? pool.feeRate / 1_000_000 : null,
         balances: Number.isFinite(normalizedBalA) && Number.isFinite(normalizedBalB)

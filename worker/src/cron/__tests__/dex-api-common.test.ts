@@ -779,7 +779,8 @@ describe("normalizeDexApiPoolsForMerge", () => {
     expect(result.skippedInvalidUnitCount).toBe(0);
     expect(result.pools[0]).toMatchObject({
       price: null,
-      volume24hUsd: 0,
+      // v6.9: an invalid volume is unknown, never a measured zero.
+      volume24hUsd: null,
       feeRate: null,
       balances: null,
       tokenVolumes24h: null,
