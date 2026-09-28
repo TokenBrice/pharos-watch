@@ -22,7 +22,7 @@ const { GT_ONLY_CHAINS, FOOTPRINT, cursorStore } = vi.hoisted(() => {
 
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   const registry = mockRegistry({
-    stablecoins: [{ id: "mega-coin", contracts: FOOTPRINT }],
+    stablecoins: [{ id: "mega-coin", symbol: "MEGA", contracts: FOOTPRINT }],
   });
   return {
     WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS,

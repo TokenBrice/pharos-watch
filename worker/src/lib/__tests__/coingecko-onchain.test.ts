@@ -12,6 +12,7 @@ import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal } from "../abort";
 import { fetchWithRetry } from "../fetch-retry";
 import {
+  fetchCgPoolsByAddressesWithStatus,
   fetchCgTokenPoolsWithStatus,
   onchainRateLimit,
   parseCgPoolVolume,
@@ -204,6 +205,30 @@ describe("coingecko-onchain", () => {
 
     expect(error?.name).toBe("ResponseBodyTooLargeError");
     expect(error?.observedBytes ?? 0).toBeGreaterThan(error?.maxBytes ?? 0);
+  });
+
+  it("reads up to 30 pools per multi-address request and separates transport from schema health", async () => {
+    const { attributes: _attributes, ...missingAttributes } = validPool;
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [validPool, missingAttributes] }), { status: 200 }),
+    );
+    await expect(fetchCgPoolsByAddressesWithStatus("eth", ["0xpool", "0xother"], undefined, "key"))
+      .resolves.toEqual({ transportOk: true, schemaDegraded: true, pools: [validPool] });
+    expect(vi.mocked(fetchWithRetry).mock.calls[0]![0]).toContain(
+      "/onchain/networks/eth/pools/multi/0xpool,0xother?include=base_token,quote_token",
+    );
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(null);
+    await expect(fetchCgPoolsByAddressesWithStatus("eth", ["0xpool"]))
+      .resolves.toEqual({ transportOk: false, schemaDegraded: false, pools: [] });
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 404 }));
+    await expect(fetchCgPoolsByAddressesWithStatus("eth", ["0xgone"]))
+      .resolves.toEqual({ transportOk: true, schemaDegraded: false, pools: [] });
+
+    await expect(fetchCgPoolsByAddressesWithStatus("eth", Array.from({ length: 31 }, (_, index) => `0x${index}`)))
+      .rejects.toThrow(RangeError);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(3);
   });
 
   it("parses pool volume from flat, nested, and invalid payloads", () => {

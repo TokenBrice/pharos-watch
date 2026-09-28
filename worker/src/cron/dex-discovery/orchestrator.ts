@@ -40,6 +40,7 @@ import {
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
+import { refreshStaleRegistryPools, type StalePoolRefreshSummary } from "./refresh-stale-pools";
 
 export type EffectiveTier = "refresh" | "t1" | "t2" | "t3" | "dormant" | "skip";
 
@@ -330,6 +331,7 @@ export async function syncDexDiscovery(
   let targetCursorsChanged = false;
   const allUnresolvedChains = new Set<string>();
   const poolsBySource: Record<string, number> = {};
+  let stalePoolRefresh: StalePoolRefreshSummary | null = null;
   const dexScreenerRunState = createDexScreenerDiscoveryRunState();
   const buildRunMetadata = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
     coinsCrawled,
@@ -346,6 +348,7 @@ export async function syncDexDiscovery(
     deploymentOutcomesWritten,
     windowedCoins,
     windowedDeploymentsDeferred,
+    stalePoolRefresh,
     dexscreener: {
       attemptedRequests: dexScreenerRunState.attemptedRequests,
       successfulRequests: dexScreenerRunState.successfulRequests,
@@ -465,6 +468,26 @@ export async function syncDexDiscovery(
         tierBreakdown,
         runSeq,
       },
+    });
+
+    // Stale-first pool refresh runs before cohort crawling inside its own
+    // bounded slice of the run budget. It never throws except on run abort, so
+    // a provider outage or open circuit leaves the cohort queue untouched.
+    await onProgress?.({
+      stage: "refresh-stale-pools",
+      itemsDone: 0,
+      itemsTotal: eligibleCoins.length,
+      message: "Refreshing stale registry pool readings",
+      metadata: { runSeq },
+    });
+    stalePoolRefresh = await refreshStaleRegistryPools({
+      db,
+      cgApiKey,
+      stablecoins: WORKER_ACTIVE_STABLECOINS,
+      nowSec,
+      deadlineMs: deadlineMs - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
+      signal,
+      references: validationReferences,
     });
 
     for (let index = 0; index < eligibleCoins.length; index++) {
@@ -650,13 +673,18 @@ export async function syncDexDiscovery(
     });
 
     return {
-      status: failedCoins.length > 0 || budgetExhausted || cleanup?.error != null ? "degraded" : "ok",
+      status: failedCoins.length > 0 || budgetExhausted || cleanup?.error != null || stalePoolRefresh.outcome === "failed"
+        ? "degraded"
+        : "ok",
       itemCount: coinsCrawled,
       metadata: JSON.stringify(buildRunMetadata({
-        outputPublishedAt: stagedRowsChanged > 0 || observedDeploymentOutcomesWritten > 0 ? nowSec : null,
-        ...(failedCoins.length > 0 || budgetExhausted || cleanup?.error != null ? {
+        outputPublishedAt: stagedRowsChanged > 0 || observedDeploymentOutcomesWritten > 0 || stalePoolRefresh.rowsWritten > 0
+          ? nowSec
+          : null,
+        ...(failedCoins.length > 0 || budgetExhausted || cleanup?.error != null || stalePoolRefresh.outcome === "failed" ? {
           reason: failedCoins.length > 0 ? "dex-discovery-coins-failed"
-            : budgetExhausted ? "dex-discovery-budget-exhausted" : "dex-discovery-cleanup-failed",
+            : budgetExhausted ? "dex-discovery-budget-exhausted"
+              : cleanup?.error != null ? "dex-discovery-cleanup-failed" : "dex-discovery-stale-pool-refresh-failed",
         } : {}),
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         failedCoins,

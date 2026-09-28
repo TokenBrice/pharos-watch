@@ -35,6 +35,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 - `worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts`
 - `worker/src/cron/sync-stablecoins/post-enrichment.ts`
 - `worker/src/cron/dex-discovery/orchestrator.ts`
+- `worker/src/cron/dex-discovery/refresh-stale-pools.ts`
 - `worker/src/cron/measured-execution/sync.ts`
 - `worker/src/cron/measured-execution/profiles.ts`
 - `worker/src/cron/sync-stablecoins/enrich-prices.ts`
@@ -101,6 +102,7 @@ The same cleanup rule applies to Worker-side integration clients. Telegram deliv
 | --- | --- | --- | --- |
 | DEX discovery overall deadline | `12 minutes` | `worker/src/cron/dex-discovery/orchestrator.ts` | Shared deadline for the discovery pass before persistence/cleanup tail work |
 | DEX discovery per-coin budget | `25 seconds` | `worker/src/cron/dex-discovery/orchestrator.ts` | Prevents one slow coin from consuming the whole staging lane |
+| DEX discovery stale-pool refresh | `150 seconds` slice of the run budget; at most `125` requests x `30` pool addresses (`3,750` pools) per run; `8 s` timeout/request, `0` retries; stops after `3` consecutive provider failures or when the CoinGecko onchain circuit opens | `worker/src/cron/dex-discovery/refresh-stale-pools.ts` | Runs before cohort crawling, one request in flight at the `250 ms` CoinGecko onchain pacing, so the trigger's `2/6` connection declaration is unchanged. The 2026-09-28 backlog (~2,330 pools on 66 networks) packs into ~122 requests, one run at the measured ~0.5 s per paced request (~1 minute); afterwards only pools that reach 20 h without a cohort crawl are due |
 | Stellar Horizon discovery pacing | `1 request start / second`; `8-second` stage timeout | `worker/src/cron/dex-discovery/crawl-horizon-pools.ts`, `worker/src/lib/rate-limit.ts` | Keeps the native Stellar AMM census within Horizon's public 3,600-request/hour limit and inside the shared per-coin deadline |
 | Live reserve sync internal run budget | `9 minutes` | `worker/src/cron/sync-live-reserves-config.ts` | Default cursoring budget; if the remaining budget drops below one adapter attempt, the untouched tail is marked deferred and resumed from cursor on the next run, leaving at least two minutes of wrapper headroom for D1 cleanup and cron logging. Optional finalization cleanup/history pruning is skipped when the D1 tail budget is already exhausted, and the skip is recorded in cron metadata. |
 | Live reserve adapter I/O peak | `2` outbound operations per adapter attempt | `worker/src/cron/reserve-adapters/concurrency.ts`, `shared/lib/cron-jobs.ts` | Coin loop is serialized, but individual adapters can fan out internally; shared fetch/RPC helpers enforce the per-attempt limiter |
@@ -232,6 +234,7 @@ Large cache-backed endpoints can opt into a response-ready companion cache when 
 | Path | Current repo throttle / budget | Source | Notes |
 | --- | --- | --- | --- |
 | CoinGecko onchain discovery | `250 ms` between requests | `worker/src/lib/rate-limit.ts` | Used by discovery crawlers |
+| CoinGecko onchain stale-pool refresh | `250 ms` between requests; `/onchain/networks/{network}/pools/multi/{addresses}` with `30` addresses/request | `worker/src/cron/dex-discovery/refresh-stale-pools.ts`, `worker/src/lib/coingecko-onchain.ts` | Same key, circuit (`coingecko-onchain`), and `2 MiB` bounded body reader as the discovery CG stage; 30 is the documented every-plan ceiling |
 | CoinGecko onchain discovery stage timeout | `8 seconds` per crawl stage | `worker/src/cron/dex-discovery/staged-pool.ts` | `DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain`, inside the `25 s` per-coin and `12 min` run budgets |
 | CoinGecko backfill throttle | `200 ms` between requests | `worker/src/lib/rate-limit.ts` | Used by CoinGecko backfill/admin flows |
 | CoinGecko native-peg quotes | `50` ids/request, `10 s` timeout/request, `1` retry; one shared batch per (`vs_currencies`, id set) per stablecoin sync run | `worker/src/lib/native-peg-quotes.ts`, `worker/src/cron/sync-stablecoins.ts` | `createNativePegQuoteSession()` memoizes each batch response for the run so native-peg hardening, depeg detection, and pending-depeg confirmation reuse one fetch instead of one each; non-2xx responses, malformed payloads, and transport failures are never memoized |
@@ -341,7 +344,7 @@ Reading the triage:
   and cannot retain last-known-good evidence, while an unavailable RPC response
   remains an operational failure. This does not widen the EVM request/runtime
   ceilings.
-- `sync-dex-discovery` is deliberately best-effort. Short per-source request timeouts and the 12-minute shared budget are there to force a partial `degraded` result before the platform can hard-kill the invocation. Lower-priority tier-2/tier-3 candidates are deterministically sharded across their cadence windows so one modulo run does not inherit the entire tier queue at once.
+- `sync-dex-discovery` is deliberately best-effort. Short per-source request timeouts and the 12-minute shared budget are there to force a partial `degraded` result before the platform can hard-kill the invocation. Lower-priority tier-2/tier-3 candidates are deterministically sharded across their cadence windows so one modulo run does not inherit the entire tier queue at once. The stale-pool refresh pass ahead of the cohort queue is capped by its own request count and wall-clock slice; a provider failure or open circuit ends only that pass (`stalePoolRefresh.outcome` in run metadata), and a registry read/write failure additionally marks the run `degraded` (`dex-discovery-stale-pool-refresh-failed`). Cohort crawling continues in every case.
 - Missing-price fallback is intentionally time-bounded so a bad upstream day cannot consume the whole `sync-stablecoins` slot.
 - Replay-safe price continuity has a hard six-hour ceiling and also obeys any shorter per-source `maxTrustedAgeSec`. Low/fallback or non-replay-safe sources are never eligible. The separate verified-CMC provider cache is limited to the original quote's one-hour age, preserves its upstream timestamp, stays fallback confidence, and revalidates identity and peg bounds on reuse.
 - `activePriceCoverage` is independent from cron execution and cache publication. A missing active price degrades public health while the valid remainder of the `stablecoins` payload stays available and a successfully published cron run remains `ok`.

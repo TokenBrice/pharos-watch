@@ -6,10 +6,12 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   const stablecoins = [
     {
       id: "coin-a",
+      symbol: "COINA",
       contracts: [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
     },
     {
       id: "coin-b",
+      symbol: "COINB",
       contracts: [{ chain: "ethereum", address: "0xbbb", decimals: 18 }],
     },
   ];
@@ -226,6 +228,30 @@ describe("syncDexDiscovery", () => {
         dormant: 0,
         skipped: 1,
       },
+    });
+  });
+
+  it("keeps crawling the cohort queue when the stale-pool refresh pass fails", async () => {
+    const failingRegistryDb = makeNoopD1({
+      prepare: (sql: string) => ({
+        all: async () => ({
+          results: sql.includes("FROM dex_liquidity")
+            ? [{ stablecoin_id: "coin-a", pool_count: 0, chain_count: 0 }]
+            : [],
+        }),
+        bind: () => ({ all: async () => { throw new Error("D1_ERROR: registry read failed"); } }),
+      }),
+    });
+
+    const result = await syncDexDiscovery(failingRegistryDb, "cg-key");
+
+    expect(vi.mocked(crawlCoin).mock.calls.map((call) => call[1])).toEqual(["coin-a", "coin-b"]);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBe("degraded");
+    expect(metadata).toMatchObject({
+      coinsCrawled: 2,
+      reason: "dex-discovery-stale-pool-refresh-failed",
+      stalePoolRefresh: { outcome: "failed", error: "D1_ERROR: registry read failed", requests: 0 },
     });
   });
 
