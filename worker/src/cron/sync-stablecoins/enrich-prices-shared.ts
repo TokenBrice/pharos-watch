@@ -1,4 +1,4 @@
-import type { ContractDeployment, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
+import type { ContractDeployment, NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
 import type { SupplyGapFillProvenance } from "@shared/types/market";
 import { stampPriceMetadata } from "./shared";
 
@@ -46,6 +46,8 @@ export interface PeggedAsset {
   priceUpdatedAt?: number | null;
   priceObservedAt?: number | null;
   priceObservedAtMode?: PriceObservedAtMode | null;
+  /** This run's nominal par reference (CR-43); separate from the observed price. */
+  nominalPriceReference?: NominalPriceReference;
   priceSyncedAt?: number | null;
   priceSelectedSource?: string | null;
   supplySource?: string;

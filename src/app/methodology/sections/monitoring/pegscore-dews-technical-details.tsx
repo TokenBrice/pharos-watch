@@ -308,6 +308,7 @@ function DewsTechnicalDetails() {
             {" "}are excluded entirely (price appreciates, not pegged)
           </li>
           <li>Non-USD pegs: cross-source divergence is dampened by 0.7 (noisier FX pricing)</li>
+          <li>Nominal par is not an observed price: without observed primary or DEX evidence, divergence stays unavailable rather than calm</li>
           <li>Small coins (&lt;$50M): supply velocity is dampened via a logarithmic size factor</li>
           <li>Missing or stale DEX and mint/burn freshness stays unavailable; zero-current rows retire; aggregate freshness uses the newest current row while the body exposes oldest-row lag</li>
         </ul>

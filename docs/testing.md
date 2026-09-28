@@ -16,7 +16,7 @@ Use `package.json` for the full live npm-script list. `scripts/lib/automation-re
 
 `npm run typecheck:tests` compiles the complete test surface, including every TypeScript and TSX support file under `tests/` rather than only `*.test.*` and `*.spec.*` entrypoints. The lane runs in nightly/manual validation so shared fixtures and helpers cannot accumulate type errors outside Vitest's selected module graph.
 
-`check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners.
+`check:doc-symbols`, included by `check:doc-sync`, scans the canonical verified corpus (README plus every Markdown document under `docs/`) and explicitly routed extras such as scoped agent guidance and the migration manifest. It reports verified and extra document counts separately; unrouted verified docs are not excluded. It uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners. Reviewed exceptions name external APIs, historical references, or explicitly planned concepts rather than silently treating them as live Pharos identifiers.
 
 `check:verified-doc-links` uses the docs renderer’s Markdown parsing and heading IDs, including repeated punctuation and duplicate headings. It resolves ordinary links and images with optional titles, angle-bracket destinations, and reference definitions, then checks local targets and anchors. A verified doc at or above 400 lines or 50 KB must include a top `> **Agent navigation**` block. (The separate requirement that a doc-ownership reference name a section for such a target is enforced by `scripts/__tests__/doc-ownership-registry.test.ts`, not by this check.)
 

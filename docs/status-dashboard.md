@@ -83,7 +83,7 @@ The active frontend operator mode is now:
 - The public blacklist-ingestion card keeps historical low-ratio amount gaps visible, but only recent or threshold-crossing gaps inherit warning/stale treatment; this matches the shared blacklist gap thresholds instead of flagging any non-zero backlog as degraded
 - Public cache freshness tables show the shared cache-age ratio bands (`>8x` degraded, `>12x` stale, or a tighter per-cache override — see "Per-cache availability overrides" below), while the hero and impacted-surface callouts follow the full shared cache-impact floor: missing cache rows and stale cache age remain stale, and cached-fallback mode degrades a lane even when the age ratio is still inside target. Stale or degraded producer-source freshness can still appear as an admin `/api/status` warning cause without becoming a public impacted-surface callout by itself until the public availability budget is breached.
 - The public mint/burn card, hero tile, and impacted-surface callout now follow the same backend lane contract as `/api/health`: sync freshness is primary, but a fresh cache still degrades publicly when the critical mint/burn lane's latest run is unhealthy
-- The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and the asset-scoped `kava-pricefeed`, `aznd-curve-pool`, `mento-broker`, and `usdaf-uniswap-v4` breakers remain available in raw health and admin provider diagnostics, but they do not make the public `/status/` surface report a source-wide outage. Missing output from an asset-scoped route is owned by exact active-price coverage instead. The retired `usx-stable-pools` and `jusd-citrea-bridge` (removed with the delisted JuiceDollar route) keys remain excluded if encountered in a legacy payload but are filtered from active Worker diagnostics.
+- The public circuit-breaker hero tile, reliability summary badge, and public breaker table derive the same public-impact filter as `/api/health` from `shared/lib/circuit-sources.ts`. Only `source-wide` registry scope contributes to source-wide degradation; dedicated `asset-scoped`, `optional`, retired, and dynamic `live-reserves:*` keys do not. Scoped breakers remain available in raw health and admin diagnostics while exact active-price coverage and reserve sync own their public impact. The shared `protocol-redeem` family remains source-wide even when one member serves a single asset. Retired keys stay excluded in legacy payloads and are not added to the active Worker inventory.
 - Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
 
 ### Data hooks
@@ -260,27 +260,34 @@ logger, cron health and cron-backed dataset freshness. New rows persist `metadat
 (the actual generation clock where available, otherwise confirmed completion) or explicit `null`; metadata
 compaction preserves this clock and quality reasons. Legacy rows require affirmative publication metadata
 or an `ok` result with a positive output count; an unannotated degraded attempt is not success.
+A legacy blacklist scan with positive, equal attempted/succeeded/quiet configuration counts and zero
+coverage failures is a confirmed quiet observation even when it inserts no events. Explicit no-output
+markers still override this legacy evidence.
 Canary and DEWS budgets remain separate named policies; they do not call this producer fact loader.
 Status uses a `2x` window; the staleness watchdog retains its `2x`/`3x` policy.
 Canonical control-plane jobs with `freshnessSurface: "none"` require a completed observation rather than a
 consumer publication. Subject to a successful history read, cron availability is healthy when:
 
 - A fresh non-stale `crons[*].inFlight` heartbeat exists (without advancing the output clock), or
-- The latest attempt is fresh and has confirmed output within `2 * expectedIntervalSec`, regardless of a
-  quality-degraded attempt status; control-plane jobs instead accept a fresh `ok`/`degraded` observation, or
-- A fresh `skipped_neutral` attempt inherits such evidence from the latest required run, or
+- The latest attempt is fresh and `ok`/`degraded`, and its latest confirmed output is within
+  `2 * expectedIntervalSec`. That output can come from an earlier attempt: cadence reuse and
+  `already_written_today` do not erase it or renew its clock. Control-plane jobs instead accept a fresh
+  `ok`/`degraded` observation, or
+- A fresh `skipped_neutral` attempt inherits such evidence from the latest required successful or locked run, or
 - Last run status is `skipped_neutral` whose `metadata.reason` is in `PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS`
   (`shared/lib/cron-jobs.ts`: `same_day_snapshot_exists`, `weekly-recap-exists`) — the skip was recorded only after a
   successful precheck read found the period's write-once artifact, so it is fresh positive evidence the period's
   output exists. Such a skip also supersedes an earlier fresh error for the same period in `summary.cronErrors`
   (the error row and its machine-readable reason stay in history; one transient precheck read failure must not keep
   a write-once daily artifact's producer red until the next day's real run). An inherited `degraded` run stays a
-  warning: the artifact existing proves availability, not that the producing run's inputs were clean, or
+  warning: the artifact existing proves availability, not that the producing run's inputs were clean.
+  Later generic neutral admissions retain this fresh readback evidence; a required attempt after the
+  readback supersedes it, so a newer error still wins, or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run with confirmed output in the same window, or
 - The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
 
-The display retains the latest ten runs. When all ten entries in that window are neutral skips, the loader performs a bounded per-job lookup for the latest non-neutral run so admission skips cannot evict valid producer evidence. Jobs whose display window already contains a required attempt need no extra lookup. This does not extend freshness budgets or treat skipped work as successful. That appended required attempt is also served as an eleventh `recentRuns` entry, so a job counted in `summary.degradedCrons` (or `summary.cronErrors`) through inheritance is always attributable from the served records instead of warning with an all-neutral visible history.
+The display retains the latest ten runs. When all ten entries in that window are neutral skips, the loader performs a bounded per-job lookup for the latest non-neutral run so admission skips cannot evict required-attempt evidence. That appended required attempt is also served as an eleventh `recentRuns` entry, so inherited warning/error counts remain attributable. Separately, a full display window without fresh confirmed output triggers a latest-confirmed-output aggregate over that job's retained history using `CONFIRMED_CRON_OUTPUT_AT_SQL`. This handles daily producers whose publication has fallen behind dozens of successful no-op attempts without expanding display history, extending freshness budgets, or treating skipped work as publication.
 
 Otherwise the job is unhealthy, including stale history, non-fresh errors, or a generic neutral skip (no
 proven-satisfied reason) whose latest required run errored or lacks confirmed output. A required degraded run
@@ -336,7 +343,9 @@ Computed from public cache impact, public mint/burn impact, circuit health, D1 c
 
 `degraded` cron runs are counted separately in `summary.degradedCrons` and shown in the cron UI, but they do not by themselves mark availability degraded.
 
-`openCircuitGroups` here means public-impact circuit groups only. Dynamic per-coin `live-reserves:*` and dedicated single-asset pricing-route breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync and exact active-price coverage already own those asset-scoped diagnostics.
+`openCircuitGroups` here means public-impact circuit groups only, derived from `CIRCUIT_SOURCE_REGISTRY.scope`. Dynamic per-coin `live-reserves:*` and dedicated single-asset pricing-route breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync and exact active-price coverage already own those asset-scoped diagnostics. Unknown circuit keys conservatively remain source-wide.
+
+Price-source health buckets cover every non-retired pricing-source registry key, including `kava-pricefeed`, `mento-fpmm`, `mento-broker`, and `protocol-redeem-cached-rate` emitted by fallback providers, plus the registry-only `aerodrome-onchain` and `velodrome-onchain` keys. The explicit bucket tuple is checked against the registry rather than its own re-export.
 
 Runbook links are intentionally sparse. `worker/src/lib/status/evaluation-causes.ts` attaches `runbookUrl` only for cause codes with maintained operator runbooks; public-impact causes such as `cache_ratio_*`, `cache_freshness_query_failed`, `mint_burn_public_*`, `open_circuit_groups`, `circuit_query_failed`, and `cron_error_runs` can appear without a Runbook link until a dedicated runbook is written.
 

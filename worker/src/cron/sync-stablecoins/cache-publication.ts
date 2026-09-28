@@ -1,6 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { projectLegacyChainCirculatingWire } from "@shared/lib/chains/circulating";
 import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
 import { StablecoinDataSchema, type StablecoinData } from "@shared/types/market";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
@@ -187,8 +186,7 @@ export async function validateAndWriteStablecoinsCache(
     validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache",
   );
   if (cacheWriteAbort) return cacheWriteAbort;
-  // Release A persists the rollback-compatible wire; in-run assets retain unavailable observations.
-  const stablecoinsCacheBody = JSON.stringify(projectLegacyChainCirculatingWire(admission.payload));
+  const stablecoinsCacheBody = JSON.stringify(admission.payload);
   const cacheResult = await setCacheIfNewer(db, "stablecoins", stablecoinsCacheBody, syncStartSec);
   let responseReadyCacheError: string | null = null;
   if (cacheResult.written) {

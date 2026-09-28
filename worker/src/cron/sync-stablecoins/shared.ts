@@ -117,7 +117,8 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
       const priceObservedAtMode =
         asset.priceObservedAtMode === "upstream" ||
         asset.priceObservedAtMode === "local_fetch" ||
-        asset.priceObservedAtMode === "unknown"
+        asset.priceObservedAtMode === "unknown" ||
+        asset.priceObservedAtMode === "nominal_reference"
           ? asset.priceObservedAtMode
           : null;
       const priceSyncedAt =

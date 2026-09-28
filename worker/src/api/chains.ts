@@ -5,7 +5,6 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
@@ -16,21 +15,10 @@ import {
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import type { ChainsFreshnessMeta } from "@shared/types/chains";
+import type { ApiDependencyMeta as ChainsDependencyMeta } from "@shared/types/api-meta";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;
-
-type ChainsDependencyStatus = FreshnessStatus | "unavailable";
-
-interface ChainsDependencyMeta {
-  updatedAt?: number | null;
-  ageSeconds?: number | null;
-  status: ChainsDependencyStatus;
-  reason?: string | null;
-  inputsStale?: boolean;
-  staleInputs?: string[];
-}
-
 
 function getDependencyAgeSeconds(updatedAt: number | null | undefined, nowSec: number): number | null {
   if (updatedAt == null) return null;

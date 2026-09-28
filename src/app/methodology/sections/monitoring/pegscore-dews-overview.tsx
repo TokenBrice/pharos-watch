@@ -70,6 +70,11 @@ export function PegScoreDewsOverview() {
             PegScore begins at a reviewed replay-coverage anchor when one is curated for the asset; otherwise it uses the documented age and first-observation fallbacks. Detail and tracker surfaces distinguish projected incidents from their constituent threshold crossings and publish a recent 90-day peg view whose denominator contains only observed coverage.
           </p>
           <p>
+            PegScore excludes false-positive and disputed audit verdicts, but retains events with no audit data.
+            Unknown non-null verdicts are not scoreable evidence. DDR uses the stricter policy: no-data verdicts
+            are also ineligible there. Legacy unaudited null verdicts remain eligible in both systems.
+          </p>
+          <p>
             DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
             confidence, blacklist, flow, and yield signals, with optional PSI-based amplification during systemic stress.
             Blacklist activity is attributed through the tracker config&apos;s canonical stablecoin ID, so same-symbol

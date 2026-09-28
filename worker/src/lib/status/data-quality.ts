@@ -15,6 +15,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealth, StatusResponse } from "@shared/types/status";
+import { NominalPriceReferenceSchema } from "@shared/types/core";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
 import { loadDdrRepairDebtDetails, loadRepairDebtSummary } from "../repair-tasks";
@@ -127,6 +128,7 @@ export async function getDataQuality(
         price?: number;
         priceSource?: string | null;
         priceObservedAtMode?: string | null;
+        nominalPriceReference?: unknown;
         circulating?: Record<string, number>;
       }>)
     : [];
@@ -168,7 +170,8 @@ export async function getDataQuality(
   } else {
     const missingActiveIds = new Set(
       activeCanonicalAssets
-        .filter((asset) => !isObservedPrice(asset) || asset.price == null || asset.price === 0)
+        .filter((asset) => (!isObservedPrice(asset) || asset.price == null || asset.price === 0)
+          && !NominalPriceReferenceSchema.safeParse(asset.nominalPriceReference).success)
         .map((asset) => asset.id),
     );
     if (stablecoinPublication.status === "incomplete") {

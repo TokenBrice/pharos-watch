@@ -7,7 +7,9 @@ export type PricingSourceTrustTier =
   | "soft_aggregator"
   | "soft_dex"
   | "fallback_search"
-  | "cached_replay";
+  | "cached_replay"
+  /** A reviewed constant (e.g. protocol par), never an observed price. */
+  | "nominal_reference";
 
 export type PricingSourceFreshnessKind = "upstream" | "local_fetch" | "unknown";
 

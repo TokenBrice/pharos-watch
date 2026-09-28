@@ -196,7 +196,7 @@ export async function syncMintBurn(
   );
 
   const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
-  const { prices, priceHistory } = await loadMintBurnPriceContextBatch(
+  const priceContext = await loadMintBurnPriceContextBatch(
     db,
     stablecoinIds,
     D1_SAFE_IN_CLAUSE_BIND_LIMIT,
@@ -232,7 +232,7 @@ export async function syncMintBurn(
       chainContexts,
       signal,
       runTimestamp,
-      priceContext: { prices, priceHistory },
+      priceContext,
       lastBlocksAfterRun,
       maxScanRange: MAX_SCAN_RANGE,
       criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,

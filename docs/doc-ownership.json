@@ -55,8 +55,8 @@
         "shared/lib/shadow-stablecoins.ts"
       ],
       "docs": [
-        "docs/stablecoin-data.md",
-        "docs/classification.md",
+        { "path": "docs/stablecoin-data.md", "anchor": "registry-editing-entry" },
+        { "path": "docs/classification.md", "anchor": "classification-entry" },
         { "path": "docs/process/adding-a-stablecoin.md", "anchor": "source-of-truth" },
         "docs/process/stablecoin-research-sidecars.md"
       ],
@@ -98,7 +98,7 @@
         { "path": "docs/pricing-pipeline.md", "anchor": "primary-consensus" },
         { "path": "docs/supply-snapshot.md", "anchor": "supply-pipeline" }
       ],
-      "background": ["docs/about-page.md", { "path": "docs/data-flow-map.md", "anchor": "core-flows" }],
+      "background": ["docs/about-page.md", { "path": "docs/data-flow-map.md", "anchor": "market-and-supply-flows" }],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
       "rules": [
         "Consume or cancel failed fetch bodies before opening more Worker fetches.",
@@ -215,12 +215,12 @@
       ],
       "docs": [
         "docs/api-endpoint-authoring.md",
-        { "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling" },
+        { "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling-entry" },
         "docs/security-governance.md",
         { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
         { "path": "docs/api-reference.md", "anchor": "public-endpoints" }
       ],
-      "background": [{ "path": "docs/data-flow-map.md", "anchor": "core-flows" }],
+      "background": [{ "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts", "npm run check:site-csp-sync", "npm run check:frozen-invariants"],
       "rules": ["Route flags, auth lane behavior, cache metadata, and site-data allowlists are centralized."]
     },
@@ -246,7 +246,7 @@
       "docs": ["docs/process/cron-trigger-policy.md"],
       "background": [
         { "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" },
-        { "path": "docs/data-flow-map.md", "anchor": "core-flows" },
+        { "path": "docs/data-flow-map.md", "anchor": "risk-and-reserve-flows" },
         { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" },
         { "path": "docs/README.md", "anchor": "stale-output-diagnosis" },
         { "path": "docs/deployment-process.md", "anchor": "monitoring-without-model-polling" },
@@ -333,13 +333,13 @@
         "docs/process/ddrr-calibration.md",
         "docs/process/mechanism-overlay-evidence-standard.md"
       ],
-      "docs": ["docs/methodology-page.md", { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
+      "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "background": [
         { "path": "docs/depeg-detection.md", "anchor": "thresholds--constants" },
         "docs/dews.md",
         { "path": "docs/depeg-resolver.md", "anchor": "methodology-versioning" },
         { "path": "docs/dex-liquidity.md", "anchor": "dex-liquidity-score" },
-        "docs/mint-authority-scoring.md",
+        { "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" },
         "docs/stability-index.md",
         { "path": "docs/mint-burn-flows.md", "anchor": "scoring" },
         "docs/process/ddrr-calibration.md",
@@ -381,7 +381,7 @@
       "docs": [
         { "path": "docs/report-cards.md", "anchor": "v9-model" },
         { "path": "docs/report-cards.md", "anchor": "canonical-publication" },
-        "docs/mint-authority-scoring.md",
+        { "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" },
         "docs/safety-score-map.md",
         { "path": "docs/digest-pipeline.md", "anchor": "generation" },
         { "path": "docs/digest-pipeline.md", "anchor": "distribution" }
@@ -604,7 +604,7 @@
       "risk": "medium",
       "sources": ["shared/**"],
       "docs": [{ "path": "docs/architecture.md", "anchor": "file-tree-guide" }],
-      "background": [{ "path": "docs/data-flow-map.md", "anchor": "core-flows" }],
+      "background": [{ "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }],
       "alsoRead": ["shared/AGENTS.md"],
       "rules": ["Use @shared/lib/... and @shared/types... for shared runtime imports; avoid relative cross-boundary imports."]
     },

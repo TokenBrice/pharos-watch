@@ -4,6 +4,7 @@ import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../.
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
 import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "../cache-publication";
 import { normalizeStablecoinsPayload } from "../shared";
+import { normalizeChainCirculating } from "../phase-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache, getPriceCache } from "../../../lib/db-cache";
 import { makePeggedAsset } from "./_fixtures";
@@ -200,7 +201,12 @@ describe("validateAndWriteStablecoinsCache", () => {
       circulating: { peggedUSD: 1000 }, chainCirculating: {}, chains: [], ...overrides,
     });
     const healthy = Array.from({ length: 50 }, (_, index) => publishable(`healthy-${index}`));
-    healthy[0]!.chainCirculating = { Ethereum: { current: 5, circulatingPrevDay: null } };
+    healthy[0]!.chainCirculating = {
+      Ethereum: { current: 5, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {} },
+      Tron: { current: {} },
+      Base: { current: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: 0 } },
+    };
+    normalizeChainCirculating(healthy);
     const invalid = publishable("negative-history", { circulatingPrevDay: { peggedUSD: -1 } });
     const assets = [...healthy, invalid];
 
@@ -215,11 +221,15 @@ describe("validateAndWriteStablecoinsCache", () => {
     expect(assets.map((asset) => asset.id)).toEqual(healthy.map((asset) => asset.id));
     const canonical = JSON.parse((await getCache(db, "stablecoins"))!.value) as { peggedAssets: Array<{ id: string; chainCirculating: unknown }> };
     expect(canonical.peggedAssets.map((asset) => asset.id)).toEqual(healthy.map((asset) => asset.id));
-    expect(canonical.peggedAssets[0]?.chainCirculating).toEqual({ Ethereum: { current: 5, circulatingPrevDay: 0 } });
-    expect(assets[0]?.chainCirculating).toEqual({ Ethereum: { current: 5, circulatingPrevDay: null } });
+    const expectedChains = {
+      Ethereum: { current: 5, circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null },
+      Tron: { current: null },
+      Base: { current: 0, circulatingPrevDay: 0 },
+    };
+    expect(canonical.peggedAssets[0]?.chainCirculating).toEqual(expectedChains);
     const companion = JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
     expect((JSON.parse(companion.body) as typeof canonical).peggedAssets[0]?.chainCirculating)
-      .toEqual({ Ethereum: { current: 5, circulatingPrevDay: 0 } });
+      .toEqual(expectedChains);
     expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").all("stablecoins:invalid-last")).toHaveLength(1);
   });
   it("strips upstream frozen fields from non-registry assets before publishing", async () => {

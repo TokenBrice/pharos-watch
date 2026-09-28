@@ -37,6 +37,20 @@ export const PRICING_SOURCE_REGISTRY_SPECIAL = [
     isReplaySafe: false,
     canBeDepegAuthoritative: false,
   }),
+  // Nominal par for reviewed direct-redemption routes (DEC-02 / CR-43): a constant
+  // par value, never an observed price, runtime redemption read, replay point or
+  // depeg vote. Published only when no trusted market quote is admitted, and then
+  // with `priceObservedAtMode: "nominal_reference"` and no observation clock.
+  definePricingSource(PRICING_SOURCE_PRESETS.nominalReference, {
+    key: "protocol-par",
+    label: "Nominal par reference (not an observed price)",
+    shortLabel: "Nominal par",
+    depegSourceFamily: "protocol:par",
+    maxTrustedAgeSec: null,
+    defaultWeight: 0,
+    isProtocolOverride: true,
+    bypassesSoftValidationGuardrails: true,
+  }),
   definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
     key: "zephyr-scanner",
     label: "Zephyr Scanner",

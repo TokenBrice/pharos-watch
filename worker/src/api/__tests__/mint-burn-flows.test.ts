@@ -9,7 +9,23 @@ import {
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { makeFlowHourlyRow, makeFlowFallbackScenario, makeValidCachedAggregateFixture } from "./mint-burn-flows.test-support";
 import { handleMintBurnFlows } from "../mint-burn-flows";
-import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
+import { MintBurnFlowsResponseSchema, type MintBurnValuationCompleteness } from "@shared/types/mint-burn";
+
+function cachedCoinValuation(window24h: MintBurnValuationCompleteness) {
+  return {
+    window24h: {
+      completeness: window24h,
+      mintCompleteness: window24h,
+      burnCompleteness: window24h,
+      unpricedMintEventCount: window24h === "partial" ? 1 : 0,
+      unpricedBurnEventCount: window24h === "partial" ? 1 : 0,
+    },
+    baseline: "complete" as const,
+    netFlow7d: window24h,
+    netFlow30d: window24h,
+    netFlow90d: window24h,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Contract tests (handler-level, using D1 mock)
@@ -203,6 +219,19 @@ describe("handleMintBurnFlows contract tests", () => {
             burn_volume_usd: 50_000_000,
             net_flow_usd: -50_000_000,
           },
+          {
+            // Largest known net, but an unpriced mint makes it partial: no net, sorted last.
+            stablecoin_id: "bd-basedollar",
+            chain_id: "base",
+            hour_ts: now - 3600,
+            mint_count: 1,
+            burn_count: 1,
+            mint_unpriced_event_count: 1,
+            burn_unpriced_event_count: 0,
+            mint_volume_usd: 0,
+            burn_volume_usd: 90_000_000,
+            net_flow_usd: -90_000_000,
+          },
         ],
         baseline: [
           {
@@ -222,11 +251,12 @@ describe("handleMintBurnFlows contract tests", () => {
 
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     // Single source for the digest's top-chains block: same tracked-pair
-    // universe as `coins`, ordered by absolute 24h net flow. These buckets
-    // carry no recorded valuation coverage, so each chain reads as unknown.
+    // universe as `coins`, ordered by absolute 24h net flow. Legacy buckets
+    // without recorded coverage read as unknown and keep their net.
     expect(body.chains).toEqual([
       { chainId: "arbitrum", netFlow24hUsd: -50_000_000, valuation: "unknown" },
       { chainId: "ethereum", netFlow24hUsd: 30_000_000, valuation: "unknown" },
+      { chainId: "base", netFlow24hUsd: null, valuation: "partial" },
     ]);
   });
 
@@ -532,13 +562,15 @@ describe("handleMintBurnFlows contract tests", () => {
   });
 
   it.each([
-    { safeNet: 200_000_000, invalid: false, gatedNet: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 40 },
-    { safeNet: -200_000_000, invalid: false, gatedNet: false, sourceUnavailable: false, stale: true, hours: 168, expectedIntensity: 0 },
-    { safeNet: 200_000_000, invalid: true, gatedNet: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 0 },
-    { safeNet: 200_000_000, invalid: false, gatedNet: false, sourceUnavailable: true, stale: false, hours: 24, expectedIntensity: 0 },
-    // A valuation-gated (null) classified net leaves FTQ undecidable: null, never inactive.
-    { safeNet: null, invalid: false, gatedNet: true, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: null },
-  ])("reconciles a newer FTQ publication using cached flows: %j", async ({ safeNet, invalid, sourceUnavailable, stale, hours, expectedIntensity }) => {
+    { safeNet: 200_000_000, invalid: false, gatedNet: false, legacy: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 40 },
+    { safeNet: -200_000_000, invalid: false, gatedNet: false, legacy: false, sourceUnavailable: false, stale: true, hours: 168, expectedIntensity: 0 },
+    { safeNet: 200_000_000, invalid: true, gatedNet: false, legacy: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 0 },
+    { safeNet: 200_000_000, invalid: false, gatedNet: false, legacy: false, sourceUnavailable: true, stale: false, hours: 24, expectedIntensity: 0 },
+    // A partial (null) safe net could still exceed the threshold: FTQ is null, never inactive.
+    { safeNet: null, invalid: false, gatedNet: true, legacy: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: null },
+    // A cached coin without `valuation` predates completeness: unknown, so no decision is re-derived.
+    { safeNet: 200_000_000, invalid: false, gatedNet: false, legacy: true, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: null },
+  ])("reconciles a newer FTQ publication using cached flows: %j", async ({ safeNet, invalid, gatedNet, legacy, sourceUnavailable, stale, hours, expectedIntensity }) => {
     const now = Math.floor(Date.now() / 1000);
     vi.useFakeTimers();
     vi.setSystemTime(now * 1000);
@@ -591,6 +623,9 @@ describe("handleMintBurnFlows contract tests", () => {
         symbol: "TEST",
         // A malformed net (string) breaks the cached contract; `null` is a valuation-gated net.
         netFlow24hUsd: invalid ? "not-a-number" : netFlow24hUsd,
+        ...(legacy ? {} : {
+          valuation: cachedCoinValuation(gatedNet && stablecoinId === "usdc-circle" ? "partial" : "complete"),
+        }),
         pressureShiftScore: null,
         pressureShiftState: "nr",
         netFlowDirection24h: "flat",

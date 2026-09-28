@@ -153,8 +153,17 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Valuation completeness</span> &mdash; events without a USD price
                       are counted as unpriced, never as $0. Known mint and burn totals are then lower bounds, and a signed
-                      net is not a bound: a direction is shown only when missing valuation cannot flip it, otherwise it is
-                      unavailable. Buckets aggregated before v6.22 read as coverage unknown.
+                      net is not a bound: a partial window publishes no net, and a direction is shown only when missing
+                      valuation cannot flip it. Buckets aggregated before v6.22 read as coverage unknown and keep their
+                      old-method net, labelled, until they leave the 30-day baseline and 7/30/90-day windows.
+                    </li>
+                    <li>
+                      <span className="text-foreground">Event-time pricing</span> &mdash; an event is valued only with a
+                      plausible price whose actual observation time is within &plusmn;24 hours of the event (inclusive):
+                      a daily supply snapshot price through its recorded observation time (never its day label; nominal
+                      par is never stored), or a replay-safe cached observation, whichever was observed closer to the event. A current price is never applied to an
+                      old event; without such evidence, including NAV observations more than 24 hours old over weekends,
+                      the event stays unpriced.
                     </li>
                   </ul>
                 </div>
@@ -185,6 +194,13 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Activity gate</span> &mdash; windows with no 24h mint/burn activity
                       or less than $50K absolute 24h flow are marked NR and excluded from gauge weighting
+                    </li>
+                    <li>
+                      <span className="text-foreground">Valuation gate</span> &mdash; pressure is NR, and the coin leaves
+                      gauge weighting, unless the 24h window is fully valued and the baseline has no known unpriced events.
+                      A baseline aggregated before v6.22 (coverage unknown) is still used, labelled, until it ages out.
+                      The gauge discloses how many weighted coins with at least seven days of history, and how much market cap, it left out
+                      this way; the daily digest drops the gauge only when that weight could move it across a band edge
                     </li>
                     <li>
                       <span className="text-foreground">Ingestion safety</span> &mdash; sync state advances only to the

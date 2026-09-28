@@ -404,8 +404,9 @@ describe("authoritative-price-sources", () => {
     // Trust monotonicity: agreeing corroborators must never downgrade a parent
     // whose replay-safe core is trusted on its own. Iterates every registered
     // non-replay-safe lane so a future soft source cannot regress the gate.
+    // Nominal references are not corroborating observations and never join consensus labels.
     const softLanes = PRICING_SOURCE_REGISTRY.filter(
-      (entry) => !entry.isReplaySafe && entry.trustTier !== "cached_replay",
+      (entry) => !entry.isReplaySafe && entry.trustTier !== "cached_replay" && entry.trustTier !== "nominal_reference",
     ).map((entry) => entry.key);
     expect(softLanes.length).toBeGreaterThan(0);
     const oneShareUsdcRaw = 1_010_000n.toString(16).padStart(64, "0");

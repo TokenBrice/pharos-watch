@@ -55,7 +55,7 @@ describe("stablecoin OG card data", () => {
       grade: "A",
       sparklineRows: [{ price: 0.9998 }, { price: 1.0001 }],
       hasActiveDepeg: false,
-      flow7d: null,
+      mintBurn7d: null,
       pegScore: 95,
       backing: "rwa-backed",
       governance: "centralized",
@@ -78,7 +78,7 @@ describe("stablecoin OG card data", () => {
       grade: null,
       sparklineRows: [],
       hasActiveDepeg: false,
-      flow7d: null,
+      mintBurn7d: null,
       pegScore: null,
       backing: null,
       governance: null,
@@ -107,7 +107,7 @@ describe("stablecoin OG card data", () => {
         circulating: { peggedUSD: 100 }, circulatingPrevWeek: { peggedUSD: 50 },
       },
       dexLiquidityScore: 0, dewsBand: null, grade: null, sparklineRows: [{ price: 1 }],
-      hasActiveDepeg: false, flow7d: 0, pegScore: null, backing: null,
+      hasActiveDepeg: false, mintBurn7d: { knownNetUsd: 0, knownGrossUsd: 0, completeness: "complete" }, pegScore: null, backing: null,
       governance: null, redemptionScore: null, change24h: null,
     });
     expect(data.flow7d).toBe(0);
@@ -120,6 +120,62 @@ describe("stablecoin OG card data", () => {
     expect(markup).not.toContain("7D SUPPLY DELTA");
   });
 
+  it("never renders a signed net for a partial window: the known gross is a lower bound", () => {
+    const base = {
+      coin: {
+        name: "Mixed", symbol: "MIX", price: 1,
+        circulating: { peggedUSD: 100_000_000 }, circulatingPrevWeek: { peggedUSD: 90_000_000 },
+      },
+      dexLiquidityScore: null, dewsBand: null, grade: null, sparklineRows: [],
+      hasActiveDepeg: false, pegScore: null, backing: null,
+      governance: null, redemptionScore: null, change24h: null,
+    };
+    // Unknown-value mint plus a priced $1M burn: the known net is -$1M, but that is not a bound.
+    const partial = deriveStablecoinOgCardData({
+      ...base,
+      mintBurn7d: { knownNetUsd: -1_000_000, knownGrossUsd: 1_000_000, completeness: "partial" },
+    });
+    expect(partial).toMatchObject({ flow7d: 1_000_000, flow7dSource: "mint-burn-partial-gross" });
+    const partialMarkup = renderToStaticMarkup(<StablecoinCard data={partial} />);
+    expect(partialMarkup).toContain("7D GROSS (MIN)");
+    expect(partialMarkup).toContain("$1.0M+");
+    expect(partialMarkup).not.toContain("-$1.0M");
+    expect(partialMarkup).not.toContain("7D SUPPLY DELTA");
+
+    const legacy = deriveStablecoinOgCardData({
+      ...base,
+      mintBurn7d: { knownNetUsd: -1_000_000, knownGrossUsd: 1_000_000, completeness: "unknown" },
+    });
+    expect(legacy).toMatchObject({ flow7d: -1_000_000, flow7dSource: "mint-burn-coverage-unknown" });
+    expect(renderToStaticMarkup(<StablecoinCard data={legacy} />)).toContain("7D NET (UNVERIFIED)");
+  });
+
+  it("labels nominal par and draws no price line from legacy supply-history par rows", () => {
+    const input = {
+      coin: {
+        name: "Par", symbol: "PAR", price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+        circulating: { peggedUSD: 100 },
+      },
+      dexLiquidityScore: null, dewsBand: null, grade: null,
+      sparklineRows: [{ price: 1 }, { price: 1 }, { price: 1 }],
+      hasActiveDepeg: false, mintBurn7d: null, pegScore: null, backing: null,
+      governance: null, redemptionScore: null, change24h: null,
+    };
+    const nominal = deriveStablecoinOgCardData(input);
+    expect(nominal).toMatchObject({ pegPrice: 1, pegPriceIsNominal: true, sparklineData: null });
+    const nominalMarkup = renderToStaticMarkup(<StablecoinCard data={nominal} />);
+    expect(nominalMarkup).toContain("NOMINAL PAR");
+    expect(nominalMarkup).not.toContain(">PRICE<");
+
+    const observed = deriveStablecoinOgCardData({
+      ...input,
+      coin: { ...input.coin, priceSource: "binance", priceObservedAtMode: "upstream" },
+    });
+    expect(observed).toMatchObject({ pegPriceIsNominal: false, sparklineData: [1, 1, 1] });
+    const observedMarkup = renderToStaticMarkup(<StablecoinCard data={observed} />);
+    expect(observedMarkup).toContain(">PRICE<");
+    expect(observedMarkup).not.toContain("NOMINAL PAR");
+  });
 
   describe("peg-analytics cache hits", () => {
     const nowSec = Math.floor(Date.now() / 1000);

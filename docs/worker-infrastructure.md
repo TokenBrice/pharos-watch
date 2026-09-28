@@ -6,7 +6,7 @@ Execution note: the `snapshot-supply` retry path runs on the logical quarter-hou
 
 **Deployed at:** `api.pharos.watch` (public integration API), `site-api.pharos.watch` (website-internal data lane), and `ops-api.pharos.watch` (operator lane; pair with Cloudflare Access before use)
 
-> **Agent navigation** — Grep the heading you need: Runtime Limits and Observability · Env Interface · Module Initialization · HTTP Request Handling · Cron Scheduling · Telegram Alert Bot · logCronRun() Wrapper · Alert System · Shared Database Helpers · Cron Job Ownership · Health & Status Endpoints · Key Constants.
+> **Agent navigation** — Grep the heading you need: Runtime Limits and Observability · Env Interface · Module Initialization · [HTTP request handling entry](#http-request-handling-entry) · Cron Scheduling · Telegram Alert Bot · logCronRun() Wrapper · Alert System · Shared Database Helpers · Cron Job Ownership · Health & Status Endpoints · Key Constants.
 
 ---
 
@@ -217,6 +217,17 @@ Public endpoint data and provider-quality exclusions live in `shared/lib/chain-r
 ---
 
 ## HTTP Request Handling
+
+### HTTP request handling entry
+
+Select the contract affected by the request path rather than reading the entire HTTP chapter:
+
+- Routing and browser responses: [Method Routing](#method-routing), [CORS Headers](#cors-headers), and [Edge Cache Strategy](#edge-cache-strategy).
+- Public credentials and traffic: [Public API Auth and Rate Limiting](#public-api-auth-and-rate-limiting) and [Request Attribution](#request-attribution).
+- Privileged callers: [Admin Auth](#admin-auth), [Site-Data Auth](#site-data-auth), and [Idempotent Admin Actions](#idempotent-admin-actions).
+- Stateful reads and maintenance: [D1 Read Snapshots And Pagination](#d1-read-snapshots-and-pagination), [Append-only D1 Retention Policy](#append-only-d1-retention-policy), and [Isolate-Local State Registry](#isolate-local-state-registry).
+
+The [API reference](./api-reference.md) owns endpoint contracts; the [admin reference](./api-reference-admin.md#admin-endpoint-entry) owns operator-only routes.
 
 ### Method Routing
 
@@ -724,9 +735,9 @@ Most high-risk external integrations are protected by per-source circuit breaker
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
 - **Transitions**: state changes emit structured Worker events (`circuit_opened`, `circuit_probe_failed`, `circuit_recovered`); there is no webhook fan-out on the breaker path
-- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and single-asset `kava-pricefeed`, `aznd-curve-pool`, `mento-broker`, and `usdaf-uniswap-v4` breakers are excluded from that source-wide count. They remain in admin provider diagnostics, while reserve and exact active-price coverage own their public impact. The retired `usx-stable-pools`, `pyth-prices`, and `jusd-citrea-bridge` cache keys are no longer active sources and are filtered from Worker diagnostics. `isPublicImpactCircuitKey()` in `shared/lib/public-health.ts` is the exclusion predicate.
+- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`. `isPublicImpactCircuitKey()` derives this from `CIRCUIT_SOURCE_REGISTRY.scope` in `shared/lib/circuit-sources.ts`: only `source-wide` keys count. Asset-scoped, optional and retired keys are excluded, as are dynamic `live-reserves:*` scopes. They remain in applicable diagnostics while reserve sync and exact active-price coverage own scoped public impact. Unknown keys conservatively count as source-wide. The shared `protocol-redeem` family remains source-wide, including its single-asset members.
 
-The breaker key registry is `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`; each entry maps to a `circuit:<source>` cache key, and `sync-live-reserves` additionally opens dynamic `live-reserves:<scope>` keys per configured breaker scope. Read the current inventory and each key's callers from that constant rather than from a table here. Only the classifications that are not obvious from the source belong in this document:
+The breaker authority is `CIRCUIT_SOURCE_REGISTRY` in `shared/lib/circuit-sources.ts`; the Worker imports its derived active `CIRCUIT_SOURCE` through `worker/src/lib/constants.ts`. Each entry owns its key and impact scope; retired entries support legacy classification without joining the active inventory. `sync-live-reserves` additionally opens dynamic `live-reserves:<scope>` keys. Read the current inventory and each key's callers from the registry rather than from a table here. Only the classifications that are not obvious from the source belong in this document:
 
 - Deliberately not circuit-gated: bounded low-volume fallbacks (see above), and synthesized or scoped emitted pricing sources such as `coingecko-native-implied`, `zephyr-scanner`, `dex-promoted`, `uniswap-v3-dex`, `uniswap-v3-exact`, `pool-tvl-weighted`, and `cached`. `shared/lib/pricing-source-registry.ts` and its siblings tie emitted pricing provenance to circuit semantics, and record separately when a source is instead enforced by a producer job, a scoped supplemental fetch, local par/inherited override logic, or a cached row.
 - Legacy retained state: `defillama-confirm` is kept only as stored breaker state; pending depeg confirmation no longer queries DefiLlama's CoinGecko mirror. `dexscreener-search` is likewise retired for new sync runs. `pyth-prices` is also retired: it is no longer in `CIRCUIT_SOURCE`, while the pricing registry keeps the retired `pyth` key only for historical provenance rendering.

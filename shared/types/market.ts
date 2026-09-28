@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DepegAuditVerdictSchema } from "./depeg-audit";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
 import { FreshnessAssessmentSchema } from "./api-meta";
 import {
@@ -83,9 +84,7 @@ const SupplyBucketsSchema = z.record(z.string(), z.number().finite().nonnegative
 
 /**
  * Per-chain supply scalars. `null` = the chain row exists but that observation was unavailable (empty or
- * invalid provider bucket); it is never a zero. RELEASE A: in-run consumers retain `null`, while canonical
- * storage and public wires project to legacy `0` (`projectLegacyChainCirculatingWire`) for rollback safety.
- * Release B activates nullable storage and wire output. Readers must already tolerate `null`.
+ * invalid provider bucket); it is never a zero. Canonical storage and public wires carry `null` (Release B).
  */
 const ChainSupplyValueSchema = z.number().finite().nonnegative().nullable();
 
@@ -711,7 +710,7 @@ const DepegEventObjectSchema = z.object({
       confirmationPolicy: z.string().nullable().optional(),
       confirmationPointCount: z.number().nullable().optional(),
       confidenceTier: z.string().nullable().optional(),
-      auditVerdict: z.string().nullable().optional(),
+      auditVerdict: DepegAuditVerdictSchema.nullable().optional(),
       pegScoreEligible: z.boolean().nullable().optional(),
       updatedAt: z.number().nullable().optional(),
     })

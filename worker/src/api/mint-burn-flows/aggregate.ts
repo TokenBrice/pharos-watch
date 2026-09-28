@@ -1,12 +1,10 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import {
-  getNetFlowDirection24h,
-  getPressureShiftState,
-} from "@shared/lib/mint-burn-signals";
+import { getPressureShiftState } from "@shared/lib/mint-burn-signals";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,
+  provenNetFlowDirection24h,
   summarizeMintBurnValuation,
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
@@ -22,7 +20,14 @@ import {
   MINT_BURN_CONFIGS,
 } from "../../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-state";
-import { computeFlowIntensity } from "../../lib/mint-burn-scoring";
+import {
+  computeFlowIntensity,
+  detectFlightToQuality,
+  FLOW_INTENSITY_MIN_DATA_DAYS,
+  detectFlightToQualityFromValuedNets,
+  type FlightToQualityResult,
+  type ValuedNetFlow24h,
+} from "../../lib/mint-burn-scoring";
 import { buildMintBurnFirstHourSeekStatements } from "../../lib/mint-burn-hourly-queries";
 import {
   MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL,
@@ -56,19 +61,19 @@ export interface CoinFlowSummary {
   symbol: string;
   pressureShiftScore: number | null;
   pressureShiftState: "improving" | "stable" | "worsening" | "nr";
-  netFlowDirection24h: "minting" | "burning" | "flat" | "inactive";
+  netFlowDirection24h: "minting" | "burning" | "flat" | "inactive" | null;
   has24hActivity: boolean;
   baselineDailyNetUsd: number | null;
   baselineDailyAbsUsd: number | null;
   baselineDataDays: number | null;
-  netFlow24hUsd: number;
+  netFlow24hUsd: number | null;
   mintVolume24hUsd: number;
   burnVolume24hUsd: number;
   mintCount24h: number;
   burnCount24h: number;
-  netFlow7dUsd: number;
-  netFlow30dUsd: number;
-  netFlow90dUsd: number;
+  netFlow7dUsd: number | null;
+  netFlow30dUsd: number | null;
+  netFlow90dUsd: number | null;
   largestEvent24h: {
     direction: string;
     amountUsd: number;
@@ -364,10 +369,18 @@ export async function fetchAggregateData(
  * from `trackedMcapUsd` (never counted as a measured `0`) and is counted in
  * `mcapUnavailableCoins`. Its flow row is still published.
  *
- * Release A of valuation completeness: every coin carries its `valuation`
- * block, and `partialValuationInputs` counts weighted coins whose non-null
- * pressure input has partial valuation. Published nets, direction, pressure and
- * FTQ keep their known-valuation values until the producer gates them.
+ * Valuation gating (D11-2): a signed net whose window valuation is `partial` is
+ * published as `null` (a partial net is not a bound); `unknown` legacy windows
+ * keep their known-valuation net, labelled through `valuation`. Direction and
+ * flight-to-quality are published only when missing valuation cannot alter
+ * them. Pressure needs a complete 24h window and a baseline that is not
+ * partial. A weighted coin whose pressure is withheld for that reason (and
+ * could otherwise score: 24h activity and at least the minimum baseline
+ * history) leaves the gauge, which then re-weights over the scored coins. It is
+ * disclosed in `partialValuationInputs` with its weight in
+ * `partialValuationMcapUsd`, beside the weight actually scored
+ * (`scoredMcapUsd`), so consumers can bound what the withheld weight could do
+ * to the score.
  */
 export function buildCoinSummaries(
   data: AggregateData,
@@ -376,20 +389,27 @@ export function buildCoinSummaries(
 ): {
   coins: CoinFlowSummary[];
   gaugeInputs: Array<{ intensity: number | null; mcap: number }>;
-  safeNet24h: number;
-  riskyNet24h: number;
+  /** `null` when missing valuation can alter the decision; inactive when classification is unavailable. */
+  flightToQuality: FlightToQualityResult | null;
   trackedMcapUsd: number;
   mcapUnavailableCoins: number;
+  /** Weighted coins that could score but whose pressure was withheld for incomplete valuation. */
   partialValuationInputs: number;
+  /** Sum of those coins' observed weights. */
+  partialValuationMcapUsd: number;
+  /** Sum of the weights of coins whose pressure entered the gauge score. */
+  scoredMcapUsd: number;
 } {
   const coinAgg = aggregateHourlyRowsByStablecoin(data.hourly24hRows);
   const coins: CoinFlowSummary[] = [];
   const gaugeInputs: Array<{ intensity: number | null; mcap: number }> = [];
-  let safeNet24h = 0;
-  let riskyNet24h = 0;
+  const safeFlows: ValuedNetFlow24h[] = [];
+  const riskyFlows: ValuedNetFlow24h[] = [];
   let trackedMcapUsd = 0;
   let mcapUnavailableCoins = 0;
   let partialValuationInputs = 0;
+  let partialValuationMcapUsd = 0;
+  let scoredMcapUsd = 0;
 
   const seenCoinIds = new Set<string>();
   for (const config of ACTIVE_MINT_BURN_CONFIGS) {
@@ -405,14 +425,18 @@ export function buildCoinSummaries(
       trackedMcapUsd += mcap;
     }
 
-    const netFlow24h = agg?.netFlow ?? 0;
+    const knownNetFlow24h = agg?.netFlow ?? 0;
     const has24hActivity = (agg?.mintCount ?? 0) > 0
       || (agg?.burnCount ?? 0) > 0
       || (agg?.mintVolume ?? 0) > 0
       || (agg?.burnVolume ?? 0) > 0;
-    const pressureShiftScore = has24hActivity && baseline
+    const valuation24h = summarizeMintBurnValuation(agg?.valuation ?? emptyMintBurnValuationTally());
+    // No baseline means no pressure input from it: vacuously complete.
+    const baselineValuation = baseline?.valuation ?? "complete";
+    const valuationAdmitsPressure = valuation24h.completeness === "complete" && baselineValuation !== "partial";
+    const pressureShiftScore = has24hActivity && baseline && valuationAdmitsPressure
       ? computeFlowIntensity({
-          currentDailyNet: netFlow24h,
+          currentDailyNet: knownNetFlow24h,
           baselineDailyNet: baseline.avgNet,
           baselineDailyAbs: baseline.avgAbs,
           dataAgeDays: baseline.dataDays,
@@ -420,21 +444,22 @@ export function buildCoinSummaries(
         })
       : null;
 
-    const valuation24h = summarizeMintBurnValuation(agg?.valuation ?? emptyMintBurnValuationTally());
-    // No baseline means no pressure input from it: vacuously complete.
-    const baselineValuation = baseline?.valuation ?? "complete";
     if (mcap !== null) {
       gaugeInputs.push({ intensity: pressureShiftScore, mcap });
-      if (pressureShiftScore !== null && (valuation24h.completeness === "partial" || baselineValuation === "partial")) {
+      if (pressureShiftScore !== null) scoredMcapUsd += mcap;
+      // A baseline shorter than the minimum history is NR whatever the valuation.
+      if (has24hActivity && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !valuationAdmitsPressure) {
         partialValuationInputs += 1;
+        partialValuationMcapUsd += mcap;
       }
     }
 
     if (gradeClassification) {
+      const flow = { knownNetUsd: knownNetFlow24h, valuation: valuation24h };
       if (gradeClassification.safeIds.has(id)) {
-        safeNet24h += netFlow24h;
+        safeFlows.push(flow);
       } else if (gradeClassification.riskyIds.has(id)) {
-        riskyNet24h += netFlow24h;
+        riskyFlows.push(flow);
       }
     }
 
@@ -450,40 +475,63 @@ export function buildCoinSummaries(
       isPartial: true,
       status: "bootstrapping" as const,
     };
+    const net7d = data.net7dMap.get(id);
+    const net30d = data.net30dMap.get(id);
+    const net90d = data.net90dMap.get(id);
+    // A window without buckets is genuinely empty, hence complete.
+    const net7dValuation = summarizeMintBurnValuation(net7d?.valuation ?? emptyMintBurnValuationTally()).completeness;
+    const net30dValuation = summarizeMintBurnValuation(net30d?.valuation ?? emptyMintBurnValuationTally()).completeness;
+    const net90dValuation = summarizeMintBurnValuation(net90d?.valuation ?? emptyMintBurnValuationTally()).completeness;
     coins.push({
       stablecoinId: id,
       symbol: config.symbol,
       pressureShiftScore,
       pressureShiftState: getPressureShiftState(pressureShiftScore),
-      netFlowDirection24h: getNetFlowDirection24h({ netFlow24hUsd: netFlow24h, has24hActivity }),
+      netFlowDirection24h: provenNetFlowDirection24h({
+        knownNetUsd: knownNetFlow24h,
+        has24hActivity,
+        valuation: valuation24h,
+      }),
       has24hActivity,
       baselineDailyNetUsd: baseline?.avgNet ?? null,
       baselineDailyAbsUsd: baseline?.avgAbs ?? null,
       baselineDataDays: baseline?.dataDays ?? null,
-      netFlow24hUsd: netFlow24h,
+      netFlow24hUsd: valuation24h.completeness === "partial" ? null : knownNetFlow24h,
       mintVolume24hUsd: agg?.mintVolume ?? 0,
       burnVolume24hUsd: agg?.burnVolume ?? 0,
       mintCount24h: agg?.mintCount ?? 0,
       burnCount24h: agg?.burnCount ?? 0,
-      netFlow7dUsd: data.net7dMap.get(id)?.netUsd ?? 0,
-      netFlow30dUsd: data.net30dMap.get(id)?.netUsd ?? 0,
-      netFlow90dUsd: data.net90dMap.get(id)?.netUsd ?? 0,
+      netFlow7dUsd: net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
+      netFlow30dUsd: net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
+      netFlow90dUsd: net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
       largestEvent24h: largest && largest.amount_usd != null
         ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp }
         : null,
       coverage,
-      // A window without buckets is genuinely empty, hence complete.
       valuation: {
         window24h: valuation24h,
         baseline: baselineValuation,
-        netFlow7d: summarizeMintBurnValuation(data.net7dMap.get(id)?.valuation ?? emptyMintBurnValuationTally()).completeness,
-        netFlow30d: summarizeMintBurnValuation(data.net30dMap.get(id)?.valuation ?? emptyMintBurnValuationTally()).completeness,
-        netFlow90d: summarizeMintBurnValuation(data.net90dMap.get(id)?.valuation ?? emptyMintBurnValuationTally()).completeness,
+        netFlow7d: net7dValuation,
+        netFlow30d: net30dValuation,
+        netFlow90d: net90dValuation,
       },
     });
   }
 
-  return { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd, mcapUnavailableCoins, partialValuationInputs };
+  const flightToQuality = gradeClassification
+    ? detectFlightToQualityFromValuedNets({ safe: safeFlows, risky: riskyFlows })
+    : detectFlightToQuality({ safeNet24h: 0, riskyNet24h: 0 });
+
+  return {
+    coins,
+    gaugeInputs,
+    flightToQuality,
+    trackedMcapUsd,
+    mcapUnavailableCoins,
+    partialValuationInputs,
+    partialValuationMcapUsd,
+    scoredMcapUsd,
+  };
 }
 
 export function buildAggregateScope() {

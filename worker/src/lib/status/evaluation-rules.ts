@@ -592,6 +592,15 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
   (input) => {
       const coverage = input.activePriceCoverage;
       const causes: StatusCause[] = [];
+      if (coverage.nominalReferenceCount != null && coverage.nominalReferenceCount > 0) {
+        causes.push(makeCause(
+          "data-quality",
+          "active_price_coverage_nominal_reference",
+          "info",
+          `Reviewed nominal references, not observed market prices, cover: ${(coverage.nominalReferenceIds ?? []).join(", ")}. These are not missing-price gaps.`,
+          { metric: "nominalReferenceCount", value: coverage.nominalReferenceCount },
+        ));
+      }
       if (coverage.status === "incomplete") {
         const acknowledgedIds = new Set(coverage.acknowledgedGapIds ?? []);
         const alertIds = coverage.alertEligibleIds.filter((id) => !acknowledgedIds.has(id));

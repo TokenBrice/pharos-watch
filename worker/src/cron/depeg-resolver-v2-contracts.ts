@@ -1,8 +1,7 @@
-import type { DdrRow } from "@shared/types/depeg-resolver";
+import type { DdrRow, DdrLockTrigger } from "@shared/types/depeg-resolver";
 import type {
   DdrCanonicalIncident as StoreDdrCanonicalIncident,
   DdrIncidentDirection,
-  DdrLockTrigger,
 } from "../lib/depeg-resolver-incident-store";
 import type {
   DdrFirstPublicationMembership as StoreDdrFirstPublicationMembership,

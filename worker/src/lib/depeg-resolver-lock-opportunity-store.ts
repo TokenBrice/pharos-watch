@@ -1,9 +1,9 @@
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
+import type { DdrLockTrigger } from "@shared/types/depeg-resolver";
 import { executeAtomicBatch } from "./db";
 import {
   DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
   DDR_LOCK_STATE_INSERT_COLUMNS_SQL,
-  type DdrLockTrigger,
   assertLockMetadata,
   assertNonEmpty,
   assertPositiveInteger,
@@ -14,7 +14,6 @@ import {
 } from "./depeg-resolver-store-validators";
 import { sha256Hex } from "./hash";
 
-export type { DdrLockTrigger } from "./depeg-resolver-store-validators";
 export type DdrLockState =
   | "pending_lock"
   | "lock_deferred"

@@ -34,13 +34,25 @@ export interface BurnClassificationCounters {
   deferredTxHashes: string[];
 }
 
+/** One daily `supply_history` snapshot price with its recorded observation clock. */
 export interface MintBurnPriceHistoryPoint {
   snapshotDate: number;
   price: number;
+  /** `supply_history.price_observed_at`: the price's actual observation time, not the day label. */
+  observedAt: number;
+}
+
+/** One `price_cache` row projected for event-time admission (see `context.ts`). */
+export interface MintBurnPriceObservation {
+  price: number;
+  /** Actual observation clock (`observed_at`, else the writer's effective `updated_at`). */
+  observedAt: number;
+  source: string | null;
+  observedAtMode: string | null;
 }
 
 export interface MintBurnPriceContext {
-  prices: Map<string, number>;
+  priceObservations: Map<string, MintBurnPriceObservation>;
   priceHistory: Map<string, MintBurnPriceHistoryPoint[]>;
 }
 

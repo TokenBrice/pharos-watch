@@ -1,4 +1,6 @@
 import { DEPEG_SECONDARY_THRESHOLD_RATIO } from "@shared/lib/depeg-config";
+import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
+import { isDdrIneligibleAuditVerdict } from "@shared/lib/depeg-audit";
 import { isCoinGeckoHistoryAllowed } from "../../lib/solomon-usdv-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sleep } from "../../lib/abort";
@@ -15,7 +17,7 @@ import {
 } from "../../lib/price-validation";
 import { logWorkerEvent } from "../../lib/structured-log";
 
-export type Verdict = "false_positive" | "confirmed" | "disputed" | "no_data" | "repaired" | "skipped" | "error";
+export type Verdict = DepegAuditVerdict | "skipped" | "error";
 
 /**
  * Machine-readable reason a batch could not use CoinGecko at all. Reported on
@@ -42,7 +44,7 @@ export interface AuditEventOutcome {
   upstreamError: boolean;
   rejectedByValidationCount: number;
   falsePositiveFound: boolean;
-  provenanceVerdict: Verdict | null;
+  provenanceVerdict: DepegAuditVerdict | null;
   invalidatesProvenance: boolean;
 }
 
@@ -123,7 +125,7 @@ function buildAuditEventOutcome(
       verdict === "no_data" || verdict === "confirmed" || verdict === "disputed" || verdict === "false_positive"
         ? verdict
         : null,
-    invalidatesProvenance: verdict === "no_data" || verdict === "disputed" || verdict === "false_positive",
+    invalidatesProvenance: verdict !== "skipped" && verdict !== "error" && isDdrIneligibleAuditVerdict(verdict),
   };
 }
 

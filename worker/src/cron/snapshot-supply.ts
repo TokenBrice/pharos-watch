@@ -6,7 +6,8 @@ import {
   executeAtomicBatch,
   prepareMultiRowInsertStatements,
 } from "../lib/db";
-import { SUPPLY_HISTORY_UPSERT_PREFIX } from "../lib/supply-history-db";
+import { SUPPLY_SNAPSHOT_UPSERT_PREFIX } from "../lib/supply-history-db";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { prepareCacheUpsert } from "../lib/db-cache";
 import { SHADOW_IDS } from "@shared/lib/shadow-stablecoins";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -45,10 +46,13 @@ interface SnapshotSupplyOptions {
   snapshotEligibleIds?: readonly string[];
 }
 
+/** `[stablecoinId, snapshotDate, circulatingUsd, price, priceObservedAt]` */
+type SupplySnapshotRow = readonly [string, number, number, number | null, number | null];
+
 async function repairSameDayMissingPrices(
   db: D1Database,
   snapshotDate: number,
-  snapshotRows: readonly (readonly [string, number, number, number | null])[],
+  snapshotRows: readonly SupplySnapshotRow[],
   signal?: AbortSignal,
 ): Promise<number> {
   const missing = await db.prepare(
@@ -57,11 +61,12 @@ async function repairSameDayMissingPrices(
   throwIfAborted(signal);
 
   const missingIds = new Set((missing.results ?? []).map((row) => row.stablecoin_id));
+  // Rows carry a price only when it is an actual observation (see deriveCoverage).
   const repairs = snapshotRows
     .filter(([stablecoinId, , , price]) => missingIds.has(stablecoinId) && price != null)
-    .map(([stablecoinId, , , price]) => db.prepare(
-      "UPDATE supply_history SET price = ? WHERE stablecoin_id = ? AND snapshot_date = ? AND price IS NULL",
-    ).bind(price, stablecoinId, snapshotDate));
+    .map(([stablecoinId, , , price, priceObservedAt]) => db.prepare(
+      "UPDATE supply_history SET price = ?, price_observed_at = ? WHERE stablecoin_id = ? AND snapshot_date = ? AND price IS NULL",
+    ).bind(price, priceObservedAt, stablecoinId, snapshotDate));
 
   return batchExecute(db, repairs, { signal });
 }
@@ -90,7 +95,7 @@ export async function snapshotSupply(
       const restoredSnapshotIds = new Set<string>();
       const nonRestoredSnapshotIds = new Set<string>();
       const validSnapshotIds = new Set<string>();
-      const snapshotRows: Array<readonly [string, number, number, number | null]> = [];
+      const snapshotRows: SupplySnapshotRow[] = [];
 
       for (const asset of payload.peggedAssets) {
         if (!snapshotEligibleIds.has(asset.id)) continue;
@@ -106,8 +111,18 @@ export async function snapshotSupply(
         if (circulatingUsd <= 0) continue;
         validSnapshotIds.add(asset.id);
 
-        const price = typeof asset.price === "number" && asset.price > 0 ? asset.price : null;
-        snapshotRows.push([asset.id, snapshotDate, circulatingUsd, price]);
+        // A nominal par reference (or other non-observed provenance) is not a
+        // price observation: it never enters the daily price history. The
+        // observation clock travels with the price; unknown stays NULL.
+        const price = typeof asset.price === "number" && asset.price > 0 && isObservedPrice(asset)
+          ? asset.price
+          : null;
+        const observedAt = asset.priceObservedAt;
+        const priceObservedAt = price != null && typeof observedAt === "number"
+          && Number.isSafeInteger(observedAt) && observedAt > 0
+          ? observedAt
+          : null;
+        snapshotRows.push([asset.id, snapshotDate, circulatingUsd, price, priceObservedAt]);
       }
 
       return {
@@ -271,7 +286,7 @@ export async function snapshotSupply(
       ).bind(snapshotDate, ...stablecoinIds));
       const replacementStatements = [
         ...deleteStatements,
-        ...prepareMultiRowInsertStatements(db, SUPPLY_HISTORY_UPSERT_PREFIX, snapshotRows),
+        ...prepareMultiRowInsertStatements(db, SUPPLY_SNAPSHOT_UPSERT_PREFIX, snapshotRows),
         prepareCacheUpsert(db, { key: SNAPSHOT_SUPPLY_LAST_WRITE_KEY, value: markerValue, updatedAt: nowSec }),
       ];
       await executeAtomicBatch(db, replacementStatements, { signal });

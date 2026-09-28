@@ -1,5 +1,7 @@
 import { CRON_INTERVALS } from "./cron-jobs";
 import type { ActivePriceCoverageHealth, StatusHealthValue } from "../types/status";
+import type { z } from "zod";
+import type { FreshnessStatusSchema } from "../types/api-meta";
 
 // --- Data freshness ratio boundaries ---
 // Canonical thresholds for age/interval ratio. Used by worker buildFreshnessMeta
@@ -18,7 +20,7 @@ export const FRESHNESS_RATIOS = {
  * (e.g. chains' `"unavailable"` dependency state) compose this union rather
  * than redeclaring the base literal in each module.
  */
-export type FreshnessStatus = "fresh" | "degraded" | "stale";
+export type FreshnessStatus = z.output<typeof FreshnessStatusSchema>;
 
 /**
  * Classify an age/interval ratio into the canonical freshness status tier.

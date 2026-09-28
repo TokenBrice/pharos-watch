@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TAPE_EVENT_SEVERITY_VALUES, TAPE_EVENT_TRANSITION_VALUES } from "./tape-event-constants";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
+import { FreshnessStatusSchema } from "./api-meta";
 
 // Wire schemas for the /api/events endpoint backed by the `tape_events` D1
 // table. The Zod-free display constants and simple types live in
@@ -89,7 +90,7 @@ export type TapeEvent = z.infer<typeof TapeEventSchema>;
 const TapeEventsResponseMetaSchema = z.object({
   updatedAt: z.number().nullable(),
   ageSeconds: z.number().nullable(),
-  status: z.enum(["fresh", "degraded", "stale", "unknown"]),
+  status: z.enum([...FreshnessStatusSchema.options, "unknown"]),
   reason: z.string().optional(),
 });
 

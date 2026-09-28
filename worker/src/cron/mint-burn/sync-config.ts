@@ -412,15 +412,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       logs.splice(0, logs.length, ...parseableLogs);
     }
 
-    const parsed = parseMintBurnLogs(
-      config,
-      eventDef,
-      parseableLogs,
-      blockTimestamps,
-      priceContext.prices,
-      priceContext.priceHistory,
-      runTimestamp,
-    );
+    const parsed = parseMintBurnLogs(config, eventDef, parseableLogs, blockTimestamps, priceContext);
 
     summary.rowsDropped += parsed.dropped;
     summary.rowsDroppedDecode += parsed.droppedDecode;

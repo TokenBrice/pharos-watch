@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ChainsResponseSchema } from "../chains";
+import { ChainsFreshnessMetaSchema, ChainsResponseSchema } from "../chains";
 
 const validChainsPayload = {
   chains: [
@@ -71,6 +71,31 @@ const validChainsPayload = {
 };
 
 describe("ChainsResponseSchema", () => {
+  it("preserves unavailable dependency evidence without widening the chains envelope", () => {
+    const meta = {
+      updatedAt: 1777555000,
+      ageSeconds: 30,
+      status: "degraded",
+      dependencies: {
+        reportCards: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: "missing-cache" },
+      },
+    };
+    expect(ChainsFreshnessMetaSchema.parse(meta)).toEqual(meta);
+    for (const invalid of [
+      { ...meta, status: "unavailable" },
+      { ...meta, warning: null },
+      { ...meta, dependencies: null },
+      { ...meta, dependencies: {} },
+      { ...meta, dependencies: { reportCards: { status: "unknown" } } },
+    ]) {
+      expect(ChainsFreshnessMetaSchema.safeParse(invalid).success).toBe(false);
+    }
+    expect(ChainsFreshnessMetaSchema.parse({
+      ...meta,
+      dependencies: { reportCards: { ...meta.dependencies.reportCards, inputsStale: true, staleInputs: ["v8"] } },
+    }).dependencies?.reportCards).toEqual(meta.dependencies.reportCards);
+  });
+
   it("parses the public chains endpoint payload", () => {
     const parsed = ChainsResponseSchema.parse(validChainsPayload);
 

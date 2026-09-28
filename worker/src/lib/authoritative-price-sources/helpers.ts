@@ -4,7 +4,7 @@ import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
+import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { binarySearchNearest } from "../binary-search";
 import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../evm-rpc";
@@ -155,12 +155,18 @@ const INHERITED_PARENT_SYNC_MAX_AGE_SEC = 30 * 60;
 
 const CAP_HISTORICAL_MIN_COVERAGE = 0.8;
 
+/** FX provenance copied verbatim onto a published non-USD `nominalPriceReference`. */
+export type NominalFxProvenance = Required<Pick<NominalPriceReference, "fxReferenceType" | "fxObservedAt">>;
+
 export interface CurrentPriceOverride {
   price: number;
   source: string;
-  confidence: PriceConfidence;
+  /** Null only for nominal references, which carry no observed-price confidence. */
+  confidence: PriceConfidence | null;
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
+  /** Nominal non-USD par only: the FX reference that converted par to USD (CR-43 / m8). */
+  nominalFx?: NominalFxProvenance;
   metadata?: {
     inheritedFrom?: string;
     parentSource?: string | null;
@@ -675,7 +681,7 @@ export function getUsdcQuotedRedeemConfig(stablecoinId: string): {
   };
 }
 
-export function normalizeHistoricalTimestamps(candidateTimestamps: number[]): number[] {
+function normalizeHistoricalTimestamps(candidateTimestamps: number[]): number[] {
   return Array.from(
     new Set(candidateTimestamps.filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0)),
   ).sort((a, b) => a - b);

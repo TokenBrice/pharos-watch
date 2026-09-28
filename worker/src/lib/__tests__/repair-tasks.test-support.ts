@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
+import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
+import { auditVerdictNotInSql } from "../depeg-audit";
 import {
   mockD1Strict,
   type MockD1Database,
@@ -140,8 +142,8 @@ const CANDIDATE_SQL = sql(
   `AND ${safeCurrentEventSql} AND ${predecessorLineageSql}`,
   "AND EXISTS ( SELECT 1 FROM depeg_events_with_provenance canonical_target WHERE canonical_target.id = target.id",
   "AND canonical_target.stablecoin_id = target.stablecoin_id AND canonical_target.direction = target.direction",
-  "AND canonical_target.started_at = target.started_at AND canonical_target.source = 'live' AND (",
-  "canonical_target.provenance_audit_verdict IS NULL OR canonical_target.provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data') ) )",
+  "AND canonical_target.started_at = target.started_at AND canonical_target.source = 'live'",
+  `AND ${auditVerdictNotInSql("canonical_target.provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS).sql} )`,
   "AND NOT EXISTS ( SELECT 1 FROM depeg_resolver_incident_event_links existing_link WHERE existing_link.event_id = target.id )",
   "AND NOT EXISTS ( SELECT 1 FROM depeg_resolver_event_repair_authorizations existing_authorization WHERE existing_authorization.event_id = target.id )",
   "AND NOT EXISTS ( SELECT 1 FROM depeg_resolver_public_predictions prediction WHERE prediction.incident_key = i.incident_key )",

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
+import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
 import type {
   SafetyScoreV8PublicationIdentity,
   SafetyScoreV9PublicationIdentity,
@@ -105,6 +106,24 @@ function v9Identity(
 }
 
 describe("Safety Score history V2", () => {
+  it.each([
+    "initial-baseline",
+    "organic-grade-change",
+    "methodology-boundary-baseline",
+    "rollback-baseline",
+    "restoration-baseline",
+  ])("parses %s history without accepting unknown transition kinds", (transitionKind) => {
+    const point = {
+      date: 300, grade: "A", score: 90, prevGrade: null, prevScore: null,
+      transitionKind, safetyScoreIdentity: v9Identity(),
+    };
+    const payload = { schemaVersion: 2, history: [point] };
+    expect(SafetyScoreHistoryV2ResponseSchema.parse(payload).history[0]).toEqual(point);
+    expect(SafetyScoreHistoryV2ResponseSchema.safeParse({
+      ...payload, history: [{ ...point, transitionKind: "grade-change" }],
+    }).success).toBe(false);
+  });
+
   it("matches the shared V8/V9 identity split and merge contract", () => {
     const v8Current = v8Identity();
     const v8Refreshed = v8Identity({

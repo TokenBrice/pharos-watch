@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Sha256Schema } from "../types/safety-schema-primitives";
 
 const Amount = z.string().regex(/^\d+\.\d{2}$/);
 const Holding = z.object({
@@ -19,7 +20,7 @@ export const HoldingsReportManifestSchema = z.object({
   reportUrl: z.string().url(),
   listingUrl: z.string().url(),
   discoveryMode: z.literal("manual"),
-  reportSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  reportSha256: Sha256Schema,
   reportByteLength: z.number().int().positive().max(4 * 1024 * 1024),
   reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   reportAsOf: z.string().datetime({ offset: true }),

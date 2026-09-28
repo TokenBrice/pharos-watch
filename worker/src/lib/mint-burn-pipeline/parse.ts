@@ -1,51 +1,20 @@
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { decodeAddress, decodeUint256AtSlotOrNull, readDataWord } from "../evm-logs";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
-import { findMintBurnHistoricalPrice } from "./context";
-import type { MintBurnPriceHistoryPoint, MintBurnRow } from "./types";
+import { resolveMintBurnEventPrice } from "./context";
+import type { MintBurnPriceContext, MintBurnRow } from "./types";
 
-interface EventPriceResolution {
-  price: number | null;
-  priceTimestamp: number | null;
-  priceSource: string | null;
-}
-
-function resolveEventPrice(
-  stablecoinId: string,
-  timestamp: number,
-  prices: Map<string, number>,
-  priceHistory: Map<string, MintBurnPriceHistoryPoint[]>,
-  runTimestamp: number,
-): EventPriceResolution {
-  const historical = findMintBurnHistoricalPrice(priceHistory, stablecoinId, timestamp);
-  if (historical?.price != null) {
-    return {
-      price: historical.price,
-      priceTimestamp: historical.snapshotDate,
-      priceSource: "supply-history-daily",
-    };
-  }
-
-  const current = prices.get(stablecoinId);
-  if (current != null) {
-    return {
-      price: current,
-      priceTimestamp: runTimestamp,
-      priceSource: "price-cache-current",
-    };
-  }
-
-  return { price: null, priceTimestamp: null, priceSource: null };
-}
+const PARSE_PRICE_SOURCE_BY_EVIDENCE = {
+  "supply-history": "supply-history-daily",
+  "price-cache": "price-cache-event-window",
+} as const;
 
 export function parseMintBurnLogs(
   config: MintBurnContractConfig,
   eventDef: MintBurnEventDef,
   logs: AlchemyLogEntry[],
   blockTimestamps: Map<number, number>,
-  prices: Map<string, number>,
-  priceHistory: Map<string, MintBurnPriceHistoryPoint[]>,
-  runTimestamp: number,
+  priceContext: MintBurnPriceContext,
 ): {
   rows: MintBurnRow[];
   dropped: number;
@@ -100,14 +69,8 @@ export function parseMintBurnLogs(
       counterparty = counterpartyTopic ? decodeAddress(counterpartyTopic) : null;
     }
 
-    const eventPrice = resolveEventPrice(
-      config.stablecoinId,
-      timestamp,
-      prices,
-      priceHistory,
-      runTimestamp,
-    );
-    const amountUsd = eventPrice.price != null ? amount * eventPrice.price : null;
+    const eventPrice = resolveMintBurnEventPrice(config.stablecoinId, timestamp, priceContext);
+    const amountUsd = eventPrice ? amount * eventPrice.price : null;
 
     rows.push({
       id,
@@ -117,9 +80,9 @@ export function parseMintBurnLogs(
       direction,
       amount,
       amount_usd: amountUsd,
-      price_used: eventPrice.price,
-      price_timestamp: eventPrice.priceTimestamp,
-      price_source: eventPrice.priceSource,
+      price_used: eventPrice?.price ?? null,
+      price_timestamp: eventPrice?.priceTimestamp ?? null,
+      price_source: eventPrice ? PARSE_PRICE_SOURCE_BY_EVIDENCE[eventPrice.evidence] : null,
       burn_type: direction === "burn" ? "effective_burn" : null,
       burn_review_reason: null,
       flow_type: "standard",

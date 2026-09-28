@@ -542,6 +542,39 @@ describe("snapshotSupply", () => {
     }
   });
 
+  it("records only observed prices, each with its actual observation clock", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const payload = { peggedAssets: [
+        makeSnapshotAsset({
+          id: "usdt-tether", price: 1.0002, priceSource: "binance",
+          priceObservedAt: nowSec - 300, priceObservedAtMode: "upstream",
+        }),
+        // A nominal par reference is not a price observation.
+        makeSnapshotAsset({
+          id: "usdc-circle", circulating: { peggedUSD: 50 }, price: 1, priceSource: "protocol-par",
+          priceObservedAt: nowSec - 60, priceObservedAtMode: "nominal_reference",
+        }),
+      ] };
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("stablecoins", JSON.stringify(payload), nowSec);
+
+      await snapshotSupply(db, undefined, {
+        nowSec, requiredActiveIds: DEFAULT_REQUIRED_IDS, snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+      });
+
+      expect(sqlite.prepare(
+        "SELECT stablecoin_id, circulating_usd, price, price_observed_at FROM supply_history ORDER BY stablecoin_id",
+      ).all()).toEqual([
+        { stablecoin_id: "usdc-circle", circulating_usd: 50, price: null, price_observed_at: null },
+        { stablecoin_id: "usdt-tether", circulating_usd: 100, price: 1.0002, price_observed_at: nowSec - 300 },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("invalidates completion when an applied waiver owner or expiry changes", async () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const snapshotDate = Date.UTC(2025, 5, 15) / 1000;

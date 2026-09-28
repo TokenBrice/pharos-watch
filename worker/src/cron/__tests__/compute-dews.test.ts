@@ -58,6 +58,8 @@ vi.mock("../../lib/dews", () => ({
 
 import { getCache, writeFreshnessSentinel } from "../../lib/db-cache";
 import { computeDEWS } from "../../lib/dews";
+import type * as DewsModule from "../../lib/dews";
+import type { DEWSResult } from "../../lib/dews";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -425,6 +427,28 @@ describe("computeAndStoreDEWS", () => {
       if (key === "dews:published-generation") return null;
       return dewsCache([dewsCoin()], { fxFallbackRates: { peggedEUR: 1.08 } }) as never;
     });
+  });
+
+  it.each([
+    ["protocol-par", "nominal_reference", false],
+    ["coingecko", "upstream", true],
+  ])("scores %s price provenance without manufacturing calm from nominal par", async (priceSource, priceObservedAtMode, observed) => {
+    const real = await vi.importActual<typeof DewsModule>("../../lib/dews");
+    const previous = vi.mocked(computeDEWS).getMockImplementation()!;
+    vi.mocked(computeDEWS).mockImplementation(real.computeDEWS);
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete" || key === "dews:published-generation") return null;
+      return dewsCache([dewsCoin({ price: 1, priceSource, priceObservedAtMode })]) as never;
+    });
+    try {
+      await computeAndStoreDEWS(makeDb([], { dexPriceRows: [] }));
+      const reading = vi.mocked(computeDEWS).mock.results[0]?.value as DEWSResult | null;
+      expect(reading?.signals.diverg.available).toBe(observed);
+      if (observed) expect(reading?.signals.diverg.value).toBe(0);
+      else expect(reading?.evidenceKinds).not.toContain("market-price");
+    } finally {
+      vi.mocked(computeDEWS).mockImplementation(previous);
+    }
   });
 
   it("throws before D1 work when the cron signal is already aborted", async () => {

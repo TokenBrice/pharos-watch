@@ -137,24 +137,41 @@ describe("cache-passthrough: handleStablecoins", () => {
     expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins payload is malformed" });
   });
 
-  it("keeps the RELEASE A legacy chain wire: stored unavailable chain values are served as 0", async () => {
+  it.each(["canonical", "companion", "legacy-companion"])("preserves unavailable and observed-zero chain values via %s", async (path) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const row = {
       id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed",
       price: 1, priceSource: "defillama", circulating: { peggedUSD: 150 },
       chainCirculating: {
-        Ethereum: { current: 150, circulatingPrevDay: null, circulatingPrevWeek: 140 },
-        Tron: { current: null },
+        Ethereum: { current: 150, circulatingPrevDay: null, circulatingPrevWeek: 140, circulatingPrevMonth: null },
+        Tron: { current: null, circulatingPrevDay: 0 },
+        Base: { current: 0 },
       },
       chains: ["Ethereum", "Tron"],
     };
-    const db = makeCacheDb("stablecoins", { peggedAssets: [row] }, nowSec);
+    const payload = { peggedAssets: [row] };
+    const legacyPayload = { peggedAssets: [{ ...row, chainCirculating: { Tron: { current: 0 } } }] };
+    const db = path === "canonical" ? makeCacheDb("stablecoins", payload, nowSec) : mockD1([{
+      match: "cache",
+      rows: [
+        { key: "stablecoins", value: JSON.stringify(payload), updated_at: nowSec },
+        {
+          key: getResponseReadyCacheKey("stablecoins"),
+          value: encodeResponseReadyCacheValue(
+            JSON.stringify(path === "legacy-companion" ? legacyPayload : payload),
+            path === "legacy-companion" ? "stablecoins:StablecoinListResponseSchema:v1" : RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
+          ),
+          updated_at: nowSec,
+        },
+      ],
+    }]);
     const res = await handleStablecoins(db);
 
     const body = (await readJsonResponse(res, 200)) as { peggedAssets: Array<{ chainCirculating: unknown }> };
     expect(body.peggedAssets[0]?.chainCirculating).toEqual({
-      Ethereum: { current: 150, circulatingPrevDay: 0, circulatingPrevWeek: 140 },
-      Tron: { current: 0 },
+      Ethereum: { current: 150, circulatingPrevDay: null, circulatingPrevWeek: 140, circulatingPrevMonth: null },
+      Tron: { current: null, circulatingPrevDay: 0 },
+      Base: { current: 0 },
     });
   });
 

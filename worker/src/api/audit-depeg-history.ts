@@ -1,4 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
+import { PEG_SCORE_EXCLUDED_AUDIT_VERDICTS, type DepegAuditVerdict } from "@shared/types/depeg-audit";
+import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
+import { auditVerdictNotInSql } from "../lib/depeg-audit";
 import { jsonResponse, errorResponse } from "../lib/api-response";
 import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { D1_BATCH_SIZE, getDepegThresholdBps } from "../lib/constants";
@@ -146,14 +149,14 @@ function confidenceTierForVerdict(verdict: Verdict): "high" | "medium" | "low" {
 function buildAuditVerdictProvenanceStmt(
   db: D1Database,
   event: DepegRow,
-  verdict: Verdict,
+  verdict: DepegAuditVerdict,
   nowSec: number,
 ): D1PreparedStatement {
   const confidenceTier = confidenceTierForVerdict(verdict);
   const publicJson = JSON.stringify({
     auditVerdict: verdict,
     confidenceTier,
-    pegScoreEligible: verdict !== "false_positive" && verdict !== "disputed",
+    pegScoreEligible: !isPegScoreExcludedAuditVerdict(verdict),
     updatedAt: nowSec,
   });
   return db
@@ -319,18 +322,18 @@ async function loadRemainingDepegEvents(
 ): Promise<PsiDepegEventRow[]> {
   const baseSql =
     "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance";
-  const auditEligibleWhere =
-    "(provenance_audit_verdict IS NULL OR provenance_audit_verdict NOT IN ('false_positive', 'disputed'))";
+  const auditEligible = auditVerdictNotInSql("provenance_audit_verdict", PEG_SCORE_EXCLUDED_AUDIT_VERDICTS);
+  const auditEligibleWhere = auditEligible.sql;
   const orderBy = " ORDER BY started_at";
   if (excludedIds.length === 0) {
-    const rows = await db.prepare(`${baseSql} WHERE ${auditEligibleWhere}${orderBy}`).all<PsiDepegEventRow>();
+    const rows = await db.prepare(`${baseSql} WHERE ${auditEligibleWhere}${orderBy}`).bind(...auditEligible.binds).all<PsiDepegEventRow>();
     return rows.results ?? [];
   }
 
   const idClause = buildInClause(excludedIds);
   const rows = await db
     .prepare(`${baseSql} WHERE ${auditEligibleWhere} AND id NOT IN (${idClause.sql})${orderBy}`)
-    .bind(...idClause.binds)
+    .bind(...auditEligible.binds, ...idClause.binds)
     .all<PsiDepegEventRow>();
   return rows.results ?? [];
 }

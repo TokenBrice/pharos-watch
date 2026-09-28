@@ -300,7 +300,7 @@ The same shared endpoint descriptors now also carry static worker dependency-hyd
 Unless an endpoint section explicitly says `Authentication: exempt`, routes in this section require `X-API-Key` when called on `https://api.pharos.watch`. OpenAPI schemas are published at [`/openapi.json`](https://pharos.watch/openapi.json); endpoint auth and cache flags come from `shared/lib/api-endpoints/definitions.ts`.
 For `GET /api/stablecoin-summary/{stablecoinId}`, `supplyUsd.current`, `supplyUsd.prevDay`, `supplyUsd.prevWeek`, and `supplyUsd.prevMonth` — plus `supplyUsd.change1d`, `supplyUsd.change7d`, and `supplyUsd.change30d` — are `number | null`. `current` is `null` (with `supplyUsd.currentUnavailableReason: "supply-buckets-missing"`) when the coin is present but its current peg buckets are absent, empty or wholly invalid; the reason is `null` whenever current supply was observed. Each change is `null` unless both current and its historical value are observed, so missing current supply never produces a negative delta. An observed zero bucket remains numeric `0`. `supplyByPegUsd` publishes only finite buckets (`{}` when none). A coin absent from the stablecoins publication still returns `404`.
 For `GET /api/dex-liquidity` and `GET /api/dex-liquidity-history`, the measured-volume fields `totalVolume24hUsd`, `totalVolume7dUsd`, history `volume24h`, pool `volumeUsd1d` and `scoreComponents.volumeActivity` are `number | null`. Readers already accept both shapes; the producer activation that emits `null` (upcoming, with the liquidity methodology bump) publishes a measured total only when every contributing pool supplied an in-budget observation (a complete measured zero stays `0`). Otherwise the total is `null` beside an additive `volume24hAvailability` / `volume7dAvailability` record carrying `completeness` (`complete`, `partial`, `missing`, `stale`, `unknown`), a machine-readable `reason`, a separately labelled `partialGrossUsd` lower bound, pool counts and the observation-window clock; an unavailable 24h window also makes `liquidityScore` `null` (NR) without reweighting other components. Rows without an availability record are legacy: their number keeps its historical meaning with unrecorded (`unknown`) completeness. See [DEX liquidity § Measured volume availability](./dex-liquidity.md#measured-volume-availability-dec-19-readers-shipped-activation-pending).
-For `GET /api/mint-burn-flows`, aggregate `coins[].netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, `coins[].netFlowDirection24h`, `chains[].netFlow24hUsd`, `hourly[].netFlowUsd`, `gauge.flightToQuality` and `gauge.flightIntensity`, and per-coin `netFlowUsd` / `chains[].netFlowUsd`, are nullable for valuation gating. Readers already accept both shapes; the current producer still publishes the known-valuation numbers, and a later release publishes `null` where valuation is not complete. Additive `valuation` records qualify them: per coin `{ window24h, baseline, netFlow7d, netFlow30d, netFlow90d }`, per chain/bucket a completeness label, per-coin totals and chains a full record `{ completeness, mintCompleteness, burnCompleteness, unpricedMintEventCount, unpricedBurnEventCount }`, and `gauge.partialValuationInputs` counts weighted coins whose pressure input is partial. `complete` means exact (an empty window is complete); `partial` means unpriced events exist, so mint/burn volumes are lower bounds and a signed net is not a bound; `unknown` marks data aggregated before completeness was recorded. An absent record (older payload) is `unknown`, never complete.
+For `GET /api/mint-burn-flows`, aggregate `coins[].netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, `coins[].netFlowDirection24h`, `chains[].netFlow24hUsd`, `hourly[].netFlowUsd`, `gauge.flightToQuality` and `gauge.flightIntensity`, and per-coin `netFlowUsd` / `chains[].netFlowUsd`, are nullable for valuation gating. Since 2026-09-28 (mint-burn-flow v6.23) the producer publishes `null` for a signed net whose window is `partial`, for a direction or flight-to-quality decision that missing valuation could change, and for pressure unless the 24h window is `complete` and the baseline is not `partial`. Additive `valuation` records qualify them: per coin `{ window24h, baseline, netFlow7d, netFlow30d, netFlow90d }`, per chain/bucket a completeness label, per-coin totals and chains a full record `{ completeness, mintCompleteness, burnCompleteness, unpricedMintEventCount, unpricedBurnEventCount }`, and `gauge.partialValuationInputs` counts weighted coins whose valuation can alter `gauge.score` (from v6.23: coins with at least seven days of baseline history whose pressure was withheld for incomplete valuation, with their weight in the additive `gauge.partialValuationMcapUsd` beside the scored weight `gauge.scoredMcapUsd`; the score re-weights over the scored coins). `complete` means exact (an empty window is complete); `partial` means unpriced events exist, so mint/burn volumes are lower bounds and a signed net is not a bound; `unknown` marks data aggregated before completeness was recorded, whose nets stay published with that label until the legacy buckets age out. An absent record (older payload) is `unknown`, never complete.
 
 <!-- GENERATED-START: public-endpoints -->
 <!-- Generated by scripts/maintenance/generate-api-reference.ts from public/openapi.json and shared/lib/api-endpoints/definitions.ts. -->
@@ -365,7 +365,7 @@ Searches the normalized event tape; cursor pagination is preferred for long resu
 
 ### `GET /api/stablecoins`
 
-Returns the current stablecoin catalogue, prices, supply, chain breakdowns, and FX context.
+Returns the current stablecoin catalogue, prices, supply, chain breakdowns, and FX context. Since 2026-09-28, `StablecoinListResponse.peggedAssets[].chainCirculating` preserves unobserved `current`, `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth` values as `null` instead of the legacy projected `0`; omitted historical keys also mean unavailable. Explicit observed zero remains `0`. Consumers must not interpret unavailable chain observations as redemptions, mints, or a complete distribution denominator. Also since 2026-09-28 (pricing v6.38), nominal par routes carry par in `nominalPriceReference` (`{ price, source: "protocol-par", mode: "nominal_reference" }`) instead of a high-confidence `protocol-redeem` price stamped with the sync clock; non-USD par adds optional `fxReferenceType` (`fresh` or `static`) and `fxObservedAt` (the FX reference's own source time, `null` when unknown). A fresh market quote that depeg detection rates authoritative stays the published `price`; otherwise `price` is par with `priceSource` `protocol-par`, `priceObservedAtMode` `nominal_reference`, and `priceConfidence`, `priceObservedAt` and `priceUpdatedAt` `null`. Such a price is a nominal reference, not an observation.
 
 - **Operation ID:** `stablecoins`
 - **Path:** `/api/stablecoins`
@@ -381,7 +381,7 @@ Returns the current stablecoin catalogue, prices, supply, chain breakdowns, and 
 
 ### `GET /api/stablecoin/:id`
 
-Returns the full current and historical detail payload for one canonical Pharos stablecoin ID.
+Returns the full current and historical detail payload for one canonical Pharos stablecoin ID. Since 2026-09-28 (pricing v6.38), nominal par routes may carry `nominalPriceReference`; a `priceObservedAtMode` of `nominal_reference` marks a published par reference, not an observed price.
 
 - **Operation ID:** `stablecoinStablecoinId`
 - **Path:** `/api/stablecoin/{stablecoinId}`
@@ -391,7 +391,7 @@ Returns the full current and historical detail payload for one canonical Pharos 
 
 ### `GET /api/stablecoin-summary/:id`
 
-Returns the compact stablecoin projection used by lightweight consumers.
+Returns the compact stablecoin projection used by lightweight consumers. Since 2026-09-28 (pricing v6.38), nominal par routes may carry `nominalPriceReference`; a `priceObservedAtMode` of `nominal_reference` marks a published par reference, not an observed price.
 
 - **Operation ID:** `stablecoinSummaryStablecoinId`
 - **Path:** `/api/stablecoin-summary/{stablecoinId}`
@@ -411,7 +411,7 @@ Returns the current and historical market share of tracked non-USD peg groups.
 
 ### `GET /api/chains`
 
-Returns stablecoin distribution and health aggregates grouped by chain. Since 2026-09-27 chain accounting is raw: `chainAttributedTotalUsd` is the unclamped sum of the published chain rows (previously capped at `globalTotalUsd`), each `dominanceShare` is `totalUsd / globalTotalUsd` without rescaling (shares can sum above 1 when chain rows over-attribute supply), `attributionDiscrepancyUsd` is the signed `chainAttributedTotalUsd - globalTotalUsd`, `unattributedTotalUsd` is its positive residual, and `dominanceGeometryTotalUsd` (`max(global, attributed)`) is a bar-geometry denominator, never a share label. `supplyCoverage` and per-chain `unavailableSupplyObservationCount` count unobserved aggregate and chain supply excluded from those totals. `healthFactors.pegStability` is nullable (NR) and each chain carries `pegStabilityCoverage` (observed vs full positive chain supply, unobserved supply by reason, neutral-imputed supply and the observed-only score); the current producer still publishes the Chain Health v1.5 neutral-50 peg value, and a null peg factor makes `healthScore`/`healthBand` null.
+Returns stablecoin distribution and health aggregates grouped by chain. Since 2026-09-27 chain accounting is raw: `chainAttributedTotalUsd` is the unclamped sum of the published chain rows (previously capped at `globalTotalUsd`), each `dominanceShare` is `totalUsd / globalTotalUsd` without rescaling (shares can sum above 1 when chain rows over-attribute supply), `attributionDiscrepancyUsd` is the signed `chainAttributedTotalUsd - globalTotalUsd`, `unattributedTotalUsd` is its positive residual, and `dominanceGeometryTotalUsd` (`max(global, attributed)`) is a bar-geometry denominator, never a share label. `supplyCoverage` and per-chain `unavailableSupplyObservationCount` count unobserved aggregate and chain supply excluded from those totals. Since 2026-09-28 (Chain Health v1.6), zero observed peg coverage publishes `healthFactors.pegStability: null`; partial coverage publishes the observed-only factor with `pegStabilityCoverage`, but both zero and partial coverage publish null `healthScore`/`healthBand`. Complete peg coverage retains the formula and quality gate. `neutralImputedSupplyUsd` is zero for new payloads; old cached payloads retain their original methodology. Since 2026-09-28 the unused V8 fields `_meta.dependencies.reportCards.inputsStale` and `_meta.dependencies.reportCards.staleInputs` are removed from the public contract; dependency status, age, and reason are unchanged.
 
 - **Operation ID:** `chains`
 - **Path:** `/api/chains`
@@ -423,7 +423,7 @@ Returns stablecoin distribution and health aggregates grouped by chain. Since 20
 
 ```json
 {
-  "healthMethodologyVersion": "1.5"
+  "healthMethodologyVersion": "1.6"
 }
 ```
 
@@ -478,7 +478,7 @@ Returns aggregate blacklist counts and exposure totals.
 
 ### `GET /api/depeg-events`
 
-Returns detected depeg incidents with filters for asset, state, and review status. The response exposes pagination totals through `total` and optional `totalExact`; it no longer includes an aggregate `counts` field. Clients that need threshold-crossing totals should sum each event&rsquo;s `constituentEventCount` after loading all pages.
+Returns detected depeg incidents with filters for asset, state, and review status. The response exposes pagination totals through `total` and optional `totalExact`; it no longer includes an aggregate `counts` field. Clients that need threshold-crossing totals should sum each event&rsquo;s `constituentEventCount` after loading all pages. Since 2026-09-28 `auditVerdict` accepts only confirmed, repaired, false_positive, disputed, no_data, or null; unknown archived verdicts are rejected rather than converted into scoreable evidence.
 
 - **Operation ID:** `depegEvents`
 - **Path:** `/api/depeg-events`
@@ -490,13 +490,13 @@ Returns detected depeg incidents with filters for asset, state, and review statu
 
 ```json
 {
-  "currentVersion": "6.29"
+  "currentVersion": "6.30"
 }
 ```
 
 ### `GET /api/depeg-resolver`
 
-Returns machine-resolved depeg-duration evidence used by risk surfaces.
+Returns machine-resolved depeg-duration evidence used by risk surfaces. Since 2026-09-28 unknown audit verdicts fail closed. DDR excludes false_positive, disputed, and no_data; PegScore excludes false_positive and disputed but retains no_data. Null retains legacy eligibility.
 
 - **Operation ID:** `depegResolver`
 - **Path:** `/api/depeg-resolver`
@@ -528,7 +528,7 @@ Returns the current cross-market peg-monitoring summary.
 
 ```json
 {
-  "currentVersion": "6.29"
+  "currentVersion": "6.30"
 }
 ```
 
@@ -644,7 +644,7 @@ Returns one stablecoin projection from a dated public snapshot.
 
 ### `GET /api/health`
 
-Provides the unauthenticated availability canary; it is not the operator status dashboard.
+Provides the unauthenticated availability canary; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide.
 
 - **Operation ID:** `health`
 - **Path:** `/api/health`
@@ -723,7 +723,7 @@ Returns public Telegram adoption and delivery health aggregates.
 
 ### `GET /api/stability-index`
 
-Returns the current Pharos Stability Index and optional component detail.
+Returns the current Pharos Stability Index and optional component detail. Since 2026-09-28 (PSI v3.64), daily snapshots persist all-null components as null rather than zero. Observed zero remains numeric zero; partial components average only observations and disclose `dailyProvenance.componentSampleCounts`. All-day score averaging and mixed-version breakdown are retained; `componentsUnavailable` identifies unavailable components. Legacy rows without counts remain unknown, not assumed complete.
 
 - **Operation ID:** `stabilityIndex`
 - **Path:** `/api/stability-index`
@@ -735,8 +735,8 @@ Returns the current Pharos Stability Index and optional component detail.
 
 ```json
 {
-  "currentVersion": "3.63",
-  "methodologyVersion": "3.63"
+  "currentVersion": "3.64",
+  "methodologyVersion": "3.64"
 }
 ```
 
@@ -899,7 +899,7 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 ### `GET /api/mint-burn-flows`
 
-Returns aggregate mint and burn pressure over the requested window.
+Returns aggregate mint and burn pressure over the requested window. Since 2026-09-28 (mint-burn-flow v6.23) signed nets (`netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, chain `netFlow24hUsd`, per-coin and hourly `netFlowUsd`) are `null` when the matching `valuation` is `partial`; gross mint/burn volumes remain known-valuation lower bounds. `netFlowDirection24h` is `null` unless missing valuation cannot change it, `pressureShiftScore` is `null` (state `nr`) unless the 24h window is `complete` and the baseline is not `partial`, and `gauge.flightToQuality` / `gauge.flightIntensity` are `null` unless exact or provably inactive. `gauge.score` re-weights over coins whose pressure is published; `gauge.partialValuationInputs` counts weighted coins with at least seven days of baseline history whose pressure was withheld for incomplete valuation, the additive `gauge.partialValuationMcapUsd` their weight and `gauge.scoredMcapUsd` the weight actually scored, so the full-cohort score lies within `(scoredMcapUsd·score ± 100·partialValuationMcapUsd) / (scoredMcapUsd + partialValuationMcapUsd)`. Windows with legacy `unknown` coverage keep their nets, labelled by `valuation`, until those buckets age out.
 
 - **Operation ID:** `mintBurnFlows`
 - **Path:** `/api/mint-burn-flows`
@@ -909,7 +909,7 @@ Returns aggregate mint and burn pressure over the requested window.
 
 ### `GET /api/mint-burn-events`
 
-Returns the normalized issuance event stream with cursor or offset pagination.
+Returns the normalized issuance event stream with cursor or offset pagination. Since 2026-09-28 (mint-burn-flow v6.23) `amountUsd` is set only from a price whose actual observation time is within 24 hours either side of the event, and `priceTimestamp` is that observation time: `priceSource` `supply-history-daily` / `supply-history-heal` for a daily snapshot price with a recorded observation clock (never its day label; nominal par is never stored), `price-cache-event-window` / `price_cache_heal` for a replay-safe observed cache price (never a legacy `protocol-redeem` par row of a nominal-par route); the candidate observed closest to the event wins. Events without such evidence keep `amountUsd: null`; this includes NAV tokens whose latest observation is more than 24 hours from the event (for example over weekends). Older rows may still carry `price-cache-current` with a run-time `priceTimestamp`, or `supply-history-daily` with the snapshot day as `priceTimestamp`.
 
 - **Operation ID:** `mintBurnEvents`
 - **Path:** `/api/mint-burn-events`
@@ -933,8 +933,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.29",
-  "methodologyVersion": "6.29"
+  "currentVersion": "6.30",
+  "methodologyVersion": "6.30"
 }
 ```
 

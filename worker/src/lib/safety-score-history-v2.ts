@@ -5,12 +5,7 @@ import {
   type SafetyScorePublicationIdentity,
 } from "@shared/types/safety-score-publication";
 
-export type SafetyScoreHistoryV2TransitionKind =
-  | "initial-baseline"
-  | "organic-grade-change"
-  | "methodology-boundary-baseline"
-  | "rollback-baseline"
-  | "restoration-baseline";
+import type { SafetyScoreHistoryV2TransitionKind } from "@shared/types/safety-score-history";
 
 export type SafetyScoreHistoryIdentity = SafetyScorePublicationIdentity;
 

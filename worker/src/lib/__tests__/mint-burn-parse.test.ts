@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import type { AlchemyLogEntry } from "../alchemy-logs";
+import type { MintBurnPriceContext, MintBurnPriceHistoryPoint } from "../mint-burn-pipeline/types";
 
 describe("parseMintBurnLogs — custom event encodings", () => {
   const ETHEREUM_CHAIN = {
@@ -65,9 +66,12 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     [24_540_392, 1740578939],
     [25_193_105, 1748509227],
   ]);
-  const prices = new Map([["usdt-tether", 1.0]]);
-  const priceHistory = new Map<string, []>();
-  const runTimestamp = 1700000100;
+  // One admissible replay-safe observation at the event time.
+  const cacheContext = (stablecoinId: string, observedAt: number): MintBurnPriceContext => ({
+    priceObservations: new Map([[stablecoinId, { price: 1.0, observedAt, source: "binance", observedAtMode: "local_fetch" }]]),
+    priceHistory: new Map(),
+  });
+  const usdtPriceContext = cacheContext("usdt-tether", 1700000000);
 
   it("parses USDT Issue event as mint with correct amount", () => {
     const config = makeUsdtConfig();
@@ -76,9 +80,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
       usdtIssueEventDef,
       [makeLog()],
       blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
+      usdtPriceContext,
     );
 
     expect(rows).toHaveLength(1);
@@ -101,9 +103,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
       usdtRedeemEventDef,
       [redeemLog],
       blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
+      usdtPriceContext,
     );
 
     expect(rows).toHaveLength(1);
@@ -123,9 +123,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
       usdtIssueEventDef,
       [dustLog],
       blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
+      usdtPriceContext,
     );
 
     expect(rows).toHaveLength(0);
@@ -140,9 +138,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
       usdtIssueEventDef,
       [badLog],
       blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
+      usdtPriceContext,
     );
 
     expect(rows).toHaveLength(0);
@@ -157,9 +153,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
       usdtIssueEventDef,
       [log],
       blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
+      usdtPriceContext,
     );
 
     expect(rows[0].counterparty).toBeNull();
@@ -229,9 +223,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
       reusdTransferMintEventDef,
       [log],
       blockTimestamps,
-      new Map([["reusd-re-protocol", 1.0]]),
-      priceHistory,
-      runTimestamp,
+      cacheContext("reusd-re-protocol", 1748509227),
     );
 
     expect(rows).toHaveLength(1);
@@ -266,9 +258,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
       reusdTransferBurnEventDef,
       [log],
       blockTimestamps,
-      new Map([["reusd-re-protocol", 1.0]]),
-      priceHistory,
-      runTimestamp,
+      cacheContext("reusd-re-protocol", 1740578939),
     );
 
     expect(rows).toHaveLength(1);
@@ -329,128 +319,126 @@ describe("parseMintBurnLogs — price resolution", () => {
     removed: false,
   });
 
-  const blockTimestamps = new Map([[21_012_481, 1700000000]]);
-  const runTimestamp = 1700000100;
+  const EVENT_TS = 1700000000; // 2023-11-14T22:13:20Z, mid-day
+  const EVENT_DAY = Math.floor(EVENT_TS / 86400) * 86400;
+  const blockTimestamps = new Map([[21_012_481, EVENT_TS]]);
 
-  it("uses current price when no history is available", () => {
-    const prices = new Map([["usdc-circle", 0.9998]]);
-    const priceHistory = new Map<string, { snapshotDate: number; price: number }[]>();
+  type ObservationOverrides = Partial<{ price: number; observedAt: number; source: string; observedAtMode: string }>;
+  const context = (
+    observation: ObservationOverrides | null,
+    history: MintBurnPriceHistoryPoint[] = [],
+  ): MintBurnPriceContext => ({
+    priceObservations: observation
+      ? new Map([["usdc-circle", {
+          price: observation.price ?? 0.9998,
+          observedAt: observation.observedAt ?? EVENT_TS,
+          source: observation.source ?? "binance",
+          observedAtMode: observation.observedAtMode ?? "local_fetch",
+        }]])
+      : new Map(),
+    priceHistory: new Map([["usdc-circle", history]]),
+  });
+  const parseOne = (priceContext: MintBurnPriceContext) =>
+    parseMintBurnLogs(config, mintEventDef, [makeTransferLog()], blockTimestamps, priceContext).rows[0];
 
-    const { rows } = parseMintBurnLogs(
-      config,
-      mintEventDef,
-      [makeTransferLog()],
-      blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
-    );
+  it.each([
+    ["-24h", -86_400],
+    ["exact", 0],
+    ["+24h", 86_400],
+  ])("admits a cache observation at %s from the event with its own observation clock", (_label, offset) => {
+    const row = parseOne(context({ observedAt: EVENT_TS + offset }));
 
-    expect(rows).toHaveLength(1);
-    expect(rows[0].price_used).toBe(0.9998);
-    expect(rows[0].price_source).toBe("price-cache-current");
-    expect(rows[0].price_timestamp).toBe(runTimestamp);
-    expect(rows[0].amount_usd).toBeCloseTo(999.8, 1);
+    expect(row.price_used).toBe(0.9998);
+    expect(row.price_source).toBe("price-cache-event-window");
+    expect(row.price_timestamp).toBe(EVENT_TS + offset);
+    expect(row.amount_usd).toBeCloseTo(999.8, 1);
   });
 
-  it("uses historical price when available", () => {
-    const dayTs = Math.floor(1700000000 / 86400) * 86400;
-    const prices = new Map([["usdc-circle", 0.9998]]);
-    const priceHistory = new Map([
-      ["usdc-circle", [{ snapshotDate: dayTs, price: 1.0002 }]],
-    ]);
+  it.each([
+    ["-24h-1s", -86_401],
+    ["+24h+1s", 86_401],
+    ["30 days later (current quote on an old event)", 30 * 86_400],
+  ])("leaves the event unpriced for a cache observation at %s", (_label, offset) => {
+    const row = parseOne(context({ observedAt: EVENT_TS + offset }));
 
-    const { rows } = parseMintBurnLogs(
-      config,
-      mintEventDef,
-      [makeTransferLog()],
-      blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
-    );
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].price_used).toBe(1.0002);
-    expect(rows[0].price_source).toBe("supply-history-daily");
-    expect(rows[0].price_timestamp).toBe(dayTs);
-    expect(rows[0].amount_usd).toBeCloseTo(1000.2, 1);
+    expect(row).toMatchObject({ amount_usd: null, price_used: null, price_timestamp: null, price_source: null });
   });
 
-  it("falls back to current price when historical price is null at runtime", () => {
-    const dayTs = Math.floor(1700000000 / 86400) * 86400;
-    const prices = new Map([["usdc-circle", 0.9998]]);
-    // Simulate runtime drift: price is null despite the type saying number
-    const priceHistory = new Map([
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional: simulates runtime schema drift
-      ["usdc-circle", [{ snapshotDate: dayTs, price: null as any }]],
-    ]);
-
-    const { rows } = parseMintBurnLogs(
-      config,
-      mintEventDef,
-      [makeTransferLog()],
-      blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
-    );
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].price_used).toBe(0.9998);
-    expect(rows[0].price_source).toBe("price-cache-current");
-    expect(rows[0].price_timestamp).toBe(runTimestamp);
-    expect(rows[0].amount_usd).toBeCloseTo(999.8, 1);
+  it.each([
+    ["a non-replay-safe source", { source: "dexscreener-search" }],
+    ["a nominal reference, not an observation", { observedAtMode: "nominal_reference" }],
+    ["an implausible value", { price: 1.4 }],
+  ])("leaves the event unpriced for an in-window observation from %s", (_label, overrides) => {
+    expect(parseOne(context(overrides)).amount_usd).toBeNull();
   });
 
-  it("ignores a supply_history snapshot older than the one-day event-day lookback", () => {
-    const dayTs = Math.floor(1700000000 / 86400) * 86400;
-    const prices = new Map([["usdc-circle", 0.9998]]);
-    const priceHistory = new Map([
-      ["usdc-circle", [{ snapshotDate: dayTs - 30 * 86400, price: 1.0002 }]],
-    ]);
+  it.each([
+    ["-24h", -86_400],
+    ["exact", 0],
+    ["+24h (next day's snapshot)", 86_400],
+  ])("admits a snapshot observed at %s from the event, stamped with its observation clock", (_label, offset) => {
+    const observedAt = EVENT_TS + offset;
+    const snapshotDate = Math.floor(observedAt / 86400) * 86400;
+    const row = parseOne(context(null, [{ snapshotDate, price: 1.0002, observedAt }]));
 
-    const { rows } = parseMintBurnLogs(
-      config,
-      mintEventDef,
-      [makeTransferLog()],
-      blockTimestamps,
-      prices,
-      priceHistory,
-      runTimestamp,
-    );
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].price_used).toBe(0.9998);
-    expect(rows[0].price_source).toBe("price-cache-current");
+    expect(row.price_used).toBe(1.0002);
+    expect(row.price_source).toBe("supply-history-daily");
+    expect(row.price_timestamp).toBe(observedAt);
+    expect(row.amount_usd).toBeCloseTo(1000.2, 1);
   });
 
-  it("accepts the previous-day snapshot but rejects an implausible event-day price", () => {
-    const dayTs = Math.floor(1700000000 / 86400) * 86400;
-    const prices = new Map([["usdc-circle", 0.9998]]);
+  it.each([
+    ["-24h-1s", -86_401],
+    ["+24h+1s", 86_401],
+  ])("rejects a snapshot observed at %s from the event", (_label, offset) => {
+    const observedAt = EVENT_TS + offset;
+    const snapshotDate = Math.floor(observedAt / 86400) * 86400;
 
-    const previousDay = parseMintBurnLogs(
-      config,
-      mintEventDef,
-      [makeTransferLog()],
-      blockTimestamps,
-      prices,
-      new Map([["usdc-circle", [{ snapshotDate: dayTs - 86400, price: 1.0002 }]]]),
-      runTimestamp,
-    );
-    expect(previousDay.rows[0].price_used).toBe(1.0002);
-    expect(previousDay.rows[0].price_source).toBe("supply-history-daily");
+    expect(parseOne(context(null, [{ snapshotDate, price: 1.0002, observedAt }])).amount_usd).toBeNull();
+  });
 
-    const implausible = parseMintBurnLogs(
-      config,
-      mintEventDef,
-      [makeTransferLog()],
-      blockTimestamps,
-      prices,
-      new Map([["usdc-circle", [{ snapshotDate: dayTs, price: 1.4 }]]]),
-      runTimestamp,
-    );
-    expect(implausible.rows[0].price_used).toBe(0.9998);
-    expect(implausible.rows[0].price_source).toBe("price-cache-current");
+  it("never treats the snapshot's day label as its observation time", () => {
+    // Event-day snapshot carrying a price observed 106h earlier (a stale published price).
+    const stale = { snapshotDate: EVENT_DAY, price: 1.0002, observedAt: EVENT_TS - 106 * 3600 };
+
+    expect(parseOne(context(null, [stale])).amount_usd).toBeNull();
+    expect(parseOne(context({}, [stale]))).toMatchObject({
+      price_used: 0.9998,
+      price_source: "price-cache-event-window",
+    });
+  });
+
+  it("picks the in-window snapshot observed closest to the event and skips an implausible one", () => {
+    const history = [
+      { snapshotDate: EVENT_DAY - 86_400, price: 1.0001, observedAt: EVENT_TS - 80_000 },
+      { snapshotDate: EVENT_DAY, price: 1.4, observedAt: EVENT_TS - 100 },
+      { snapshotDate: EVENT_DAY + 86_400, price: 1.0003, observedAt: EVENT_TS + 7_000 },
+    ];
+
+    expect(parseOne(context(null, history))).toMatchObject({
+      price_used: 1.0003,
+      price_timestamp: EVENT_TS + 7_000,
+      price_source: "supply-history-daily",
+    });
+  });
+
+  it("chooses the observation closest to the event across snapshot and cache, keeping the snapshot on a tie", () => {
+    const snapshot = { snapshotDate: EVENT_DAY, price: 1.0002, observedAt: EVENT_TS - 22 * 3600 };
+
+    // A 5-minute-old cached quote beats a 22-hour-old snapshot.
+    expect(parseOne(context({ observedAt: EVENT_TS - 300 }, [snapshot]))).toMatchObject({
+      price_used: 0.9998,
+      price_timestamp: EVENT_TS - 300,
+      price_source: "price-cache-event-window",
+    });
+    // A snapshot closer than the cached quote wins.
+    expect(parseOne(context({ observedAt: EVENT_TS + 23 * 3600 }, [snapshot]))).toMatchObject({
+      price_used: 1.0002,
+      price_source: "supply-history-daily",
+    });
+    // Equal distance keeps the persisted snapshot.
+    expect(parseOne(context({ observedAt: EVENT_TS + 22 * 3600 }, [snapshot]))).toMatchObject({
+      price_source: "supply-history-daily",
+    });
   });
 });

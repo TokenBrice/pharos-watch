@@ -1,4 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
+import { auditVerdictNotInSql } from "./depeg-audit";
 import { DDR_PUBLIC_PREDICTION_DELAY_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { executeAtomicBatch, runChunkedInRead } from "./db";
@@ -17,11 +19,12 @@ import {
   assertNonEmpty,
   assertPositiveInteger,
 } from "./depeg-resolver-store-validators";
-import type { DdrLockState, DdrLockTrigger } from "./depeg-resolver-lock-opportunity-store";
+import type { DdrLockState } from "./depeg-resolver-lock-opportunity-store";
+import type { DdrLockTrigger } from "@shared/types/depeg-resolver";
 import { sha256Hex } from "./hash";
 
 export { recordLockDeferral, recordLockOpportunity } from "./depeg-resolver-lock-opportunity-store";
-export type { DdrLockHealthStatus, DdrLockState, DdrLockTrigger } from "./depeg-resolver-lock-opportunity-store";
+export type { DdrLockHealthStatus, DdrLockState } from "./depeg-resolver-lock-opportunity-store";
 
 export type DdrIncidentDirection = "above" | "below";
 export type DdrIncidentRelation = "observed" | "superseded" | "merged" | "split_from" | "repair_replacement";
@@ -906,6 +909,7 @@ async function assertCanonicalLiveEventProvenance(
   db: D1Database,
   event: DdrCanonicalIncidentEventInput,
 ): Promise<void> {
+  const auditEligible = auditVerdictNotInSql("provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS);
   const persisted = await db
     .prepare(
       `SELECT 1 AS matched
@@ -919,10 +923,7 @@ async function assertCanonicalLiveEventProvenance(
          AND direction = ?
          AND started_at = ?
          AND source = 'live'
-         AND (
-           provenance_audit_verdict IS NULL
-           OR provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')
-         )
+         AND ${auditEligible.sql}
        LIMIT 1`,
     )
     .bind(
@@ -931,6 +932,7 @@ async function assertCanonicalLiveEventProvenance(
       event.pegCurrency,
       event.direction,
       event.startedAt,
+      ...auditEligible.binds,
     )
     .first<{ matched: number }>();
   if (!persisted) {

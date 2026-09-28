@@ -22,26 +22,6 @@ function errataDb() {
 }
 
 describe("loadPredictionErrata", () => {
-  it("maps the durable row contract for an unfiltered read", async () => {
-    const db = errataDb();
-
-    await expect(loadPredictionErrata(db)).resolves.toEqual([{
-      id: 9,
-      publicPredictionId: 77,
-      incidentKey: "ddr:usdc:below",
-      eventId: 42,
-      assessmentId: 101,
-      reason: "input_corruption",
-      operatorNote: "invalid source payload",
-      replacementAssessmentId: 102,
-      replacementRowHash: "b".repeat(64),
-      rowHashBefore: "a".repeat(64),
-      createdAt: 1_800_000_000,
-      createdBy: "operator",
-    }]);
-    expect(db.getHistory()[0]?.sql).not.toContain("WHERE");
-  });
-
   it.each([
     ["public prediction", { publicPredictionIds: [77, 77, 78] }, "public_prediction_id", [77, 78]],
     ["incident", { incidentKeys: ["ddr:usdc:below", "ddr:usdc:below"] }, "incident_key", ["ddr:usdc:below"]],
@@ -64,5 +44,26 @@ describe("loadPredictionErrata", () => {
 
     await expect(loadPredictionErrata(db, filters)).resolves.toEqual([]);
     expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("reads every erratum without a filter and marks each one invalidated", async () => {
+    const db = errataDb();
+
+    await expect(loadPredictionErrata(db, {})).resolves.toEqual([{
+      state: "invalidated",
+      id: 9,
+      publicPredictionId: 77,
+      incidentKey: "ddr:usdc:below",
+      eventId: 42,
+      assessmentId: 101,
+      reason: "input_corruption",
+      operatorNote: "invalid source payload",
+      replacementAssessmentId: 102,
+      replacementRowHash: "b".repeat(64),
+      rowHashBefore: "a".repeat(64),
+      createdAt: 1_800_000_000,
+      createdBy: "operator",
+    }]);
+    expect(db.getHistory()[0]?.sql).not.toContain("WHERE");
   });
 });

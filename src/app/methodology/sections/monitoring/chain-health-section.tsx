@@ -41,7 +41,7 @@ export function ChainHealthMethodologySection() {
 
       <MethodologyFacts
         facts={[
-          { label: "Score range", value: "0–100 (null when safety-score coverage < 50%)" },
+          { label: "Score range", value: "0–100 (NR when safety-score coverage < 50% or peg coverage is incomplete)" },
           {
             label: "Refresh cadence",
             value: "15-minute stablecoins cache cadence; `/api/chains` freshness budget is 1800 seconds",
@@ -116,10 +116,10 @@ export function ChainHealthMethodologySection() {
               <TableCell className="whitespace-normal px-4 py-2 font-medium">Peg Stability</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">20%</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">
-                Supply-weighted average of per-coin peg proximity: 100&nbsp;&minus;&nbsp;deviationBps/5. Coins without a
-                price get a neutral 50. Each chain also publishes its peg-observation coverage against its full supply
-                (including coins without a peg reference) and the supply scored at that neutral 50, and chain pages label
-                that placeholder rather than presenting it as a measurement.
+                Supply-weighted average of observed per-coin peg proximity: max(0, 100&nbsp;&minus;&nbsp;deviationBps/5).
+                Missing prices or peg references receive no imputed score. Zero observed supply makes this factor NR;
+                partial coverage shows the observed-only factor and full-positive-supply coverage, but keeps the
+                composite NR. Complete peg coverage retains the formula and existing safety-score coverage gate.
               </TableCell>
             </TableRow>
             <TableRow className="align-top">

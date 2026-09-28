@@ -8,7 +8,7 @@ import {
   runDirectCli,
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
-import { iterInlineCodeSpans } from "../lib/doc-files.mts";
+import { getVerifiedDocFiles, iterInlineCodeSpans } from "../lib/doc-files.mts";
 import { reportViolations } from "../lib/report-violations.mts";
 import { isRecord } from "@shared/lib/type-guards";
 
@@ -64,6 +64,11 @@ const SYMBOL_EXCLUSIONS = Object.freeze({
   providerJson: "Historical provider wrapper name retained in the Worker limits prose.",
   providerTextBounded: "Historical provider wrapper name retained in the Worker limits prose.",
   jobTimeout: "Worker lease prose uses a conceptual timeout field, not a shared identifier.",
+  useChainStablecoins: "Explicitly removed browser recomputation hook; chains docs prohibit reintroducing it.",
+  exceededCpu: "Cloudflare platform outcome label in the dated ADR-26 measurement evidence.",
+  NonRetryableError: "Cloudflare Workflows SDK error class cited with upstream documentation.",
+  retainedCount: "Historical response field of the explicitly retired admin Telegram adoption report; current SQL uses retained_count.",
+  closedBackfillVolume: "Name of the inline SQL assessment query in yield operations, not a runtime identifier.",
 } as const);
 
 const USAGE = `Usage: node --import tsx scripts/ci/check-doc-symbols.ts [options]
@@ -362,16 +367,26 @@ export function runDocSymbolCheck(
   const args = parseDocSymbolArgs(argv);
   if (writeCliHelpIfRequested(args, USAGE, stdout)) return 0;
 
-  const documents = loadDocuments(repoRoot, getRoutedDocPaths(repoRoot));
+  const verifiedPaths = getVerifiedDocFiles(repoRoot).map((path) => relative(repoRoot, path).replaceAll("\\", "/"));
+  const verifiedSet = new Set(verifiedPaths);
+  // Scoped agent guidance and migration manifests are explicit routed extras;
+  // ownership routing must never narrow the verified documentation corpus.
+  const extraPaths = getRoutedDocPaths(repoRoot).filter((path) => !verifiedSet.has(path));
+  const documents = loadDocuments(repoRoot, [...verifiedPaths, ...extraPaths]);
   const occurrences = collectOccurrences(documents);
   const sourceHits = findTrackedSourceHits([...occurrences.keys()], collectCodePaths(repoRoot), repoRoot);
-  const result = buildScanResult(documents, occurrences, sourceHits, SYMBOL_EXCLUSIONS);
+  const result = {
+    ...buildScanResult(documents, occurrences, sourceHits, SYMBOL_EXCLUSIONS),
+    verifiedDocumentsScanned: verifiedPaths.length,
+    extraDocumentsScanned: extraPaths.length,
+  };
 
   if (args.json) {
     stdout.write(`${JSON.stringify(result)}\n`);
     return result.violations.length === 0 ? 0 : 1;
   }
 
+  stdout.write(`Corpus: ${result.verifiedDocumentsScanned} verified documents + ${result.extraDocumentsScanned} routed extras\n`);
   return reportViolations({
     label: "Documentation symbol references",
     heading: "Documentation symbol check failed",

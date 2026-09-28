@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "./mint-burn-signals";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
+import { FreshnessStatusSchema } from "./api-meta";
 
 export {
   NET_FLOW_DIRECTION_24H_VALUES,
@@ -58,11 +59,20 @@ const MintBurnGaugeSchema = z.object({
    */
   mcapUnavailableCoins: z.number().int().nonnegative().optional(),
   /**
-   * Weighted coins whose pressure input entering `score` has `partial` valuation (unpriced events in
-   * the 24h window or the baseline), so missing valuation can alter the composite. Absent on payloads
-   * produced before valuation completeness existed (unknown).
+   * Weighted coins whose valuation can alter `score`. Since mint-burn-flow v6.23 these are coins with
+   * 24h activity and at least seven days of baseline history whose pressure is withheld because the 24h window is not `complete`
+   * or the baseline is `partial`; `score` re-weights over the remaining coins, so any positive count
+   * means it is not the full-cohort composite. Before v6.23 the count named partial inputs that
+   * entered `score`. Absent on payloads produced before valuation completeness existed (unknown).
    */
   partialValuationInputs: z.number().int().nonnegative().optional(),
+  /** Observed weight of the coins counted in `partialValuationInputs`. Absent before v6.23. */
+  partialValuationMcapUsd: z.number().finite().nonnegative().optional(),
+  /**
+   * Observed weight of the coins whose pressure entered `score` (its re-weighting denominator).
+   * With `partialValuationMcapUsd` it bounds the full-cohort score. Absent before v6.23.
+   */
+  scoredMcapUsd: z.number().finite().nonnegative().optional(),
 });
 export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
 
@@ -73,7 +83,7 @@ const MintBurnScopeSchema = z.object({
 
 const MintBurnSyncSchema = z.object({
   lastSuccessfulSyncAt: z.number().nullable(),
-  freshnessStatus: z.enum(["fresh", "degraded", "stale"]),
+  freshnessStatus: FreshnessStatusSchema,
   warning: z.string().nullable(),
   classificationWarning: z.string().nullable().optional(),
   criticalLaneHealthy: z.boolean(),
@@ -129,9 +139,9 @@ const MintBurnCoinFlowSchema = z.object({
   baselineDailyAbsUsd: z.number().nullable(),
   baselineDataDays: z.number().nullable(),
   /**
-   * Signed nets are nullable for valuation gating: `null` means valuation is not complete. Until the
-   * producer gates them, a non-`complete` `valuation` entry marks the number as unproven (a partial
-   * signed net is not a bound).
+   * Signed nets are `null` when the matching window valuation is `partial` (a partial signed net is
+   * not a bound in either direction). An `unknown` window (legacy buckets aggregated before
+   * completeness was recorded) keeps its known-valuation net, labelled by `valuation`.
    */
   netFlow24hUsd: z.number().finite().nullable(),
   /** Known-valuation subtotals: lower bounds unless the matching `valuation` side is `complete`. */

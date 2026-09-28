@@ -11,6 +11,7 @@ import type { HealthResponse } from "@shared/types/status";
 import { loadStablecoinsPublicationContinuity } from "../../cron/sync-stablecoins/publication";
 import { buildStablecoinsSyncResult } from "../../cron/sync-stablecoins/metadata";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
+import { evaluateStablecoinActivePriceCoverage } from "../../lib/stablecoin-publication-coverage";
 type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
   dexAge?: number;
@@ -187,6 +188,47 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
 
 describe("handleHealth", () => {
   afterEach(cleanupStatusTest);
+  it.each(["nominal", "observed", "neither"] as const)(
+    "keeps %s coverage distinct through the health handler",
+    async (kind) => {
+      const now = Math.floor(Date.now() / 1000);
+      const id = [...ACTIVE_IDS][0]!;
+      const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" as const };
+      const assets = [...ACTIVE_IDS].map((stablecoinId) => ({
+        id: stablecoinId,
+        price: stablecoinId !== id ? 1 : kind === "neither" ? null : kind === "observed" ? 0.97 : 1,
+        priceObservedAtMode: stablecoinId === id && kind === "nominal" ? "nominal_reference" : "upstream",
+        priceSource: stablecoinId === id && kind === "nominal" ? "protocol-par" : "coingecko",
+        ...(stablecoinId === id && kind !== "neither" ? { nominalPriceReference } : {}),
+        circulating: { peggedUSD: 200_000_000 },
+      }));
+      const prior = evaluateStablecoinActivePriceCoverage(
+        [{ id, price: null }], [id], { nowSec: now },
+      );
+      prior.missingActiveAssets[0].consecutiveMissingGenerations = 800;
+      const coverage = evaluateStablecoinActivePriceCoverage(assets, undefined, { previousCoverage: prior, nowSec: now });
+      const body = await (await handleHealth(makeHealthyHealthDb(now, {
+        publicationEntry: completePublicationEntry(now, coverage),
+      }))).json() as HealthResponse;
+      expect(body.activePriceCoverage).toMatchObject({
+        status: kind === "neither" ? "incomplete" : "complete",
+        pricedActiveCount: ACTIVE_IDS.size - (kind === "observed" ? 0 : 1),
+        nominalReferenceCount: kind === "nominal" ? 1 : 0,
+        nominalReferenceMarketCapUsd: kind === "nominal" ? 200_000_000 : 0,
+        nominalReferenceIds: kind === "nominal" ? [id] : [],
+        nominalReferenceReason: "reviewed-nominal-reference",
+        missingActiveIds: kind === "neither" ? [id] : [],
+        alertEligibleIds: kind === "neither" ? [id] : [],
+      });
+      if (kind === "neither") {
+        expect(body.warnings).toContain(`active-price-coverage-incomplete:${id}`);
+        expect(body.warnings).toContain(`active-price-coverage-critical-duration:${id}`);
+      } else {
+        expect(body.warnings.filter((warning) => warning.startsWith("active-price-coverage"))).toEqual([]);
+        expect(body.activePriceCoverage!.missingActiveAssets).toEqual([]);
+      }
+    },
+  );
   it.each(["read-error", "malformed", "missing"] as const)(
     "preserves publication continuity through the writer and health handler: %s",
     async (priorState) => {

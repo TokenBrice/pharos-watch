@@ -11,6 +11,19 @@ function supplyPoint(current: number) {
 }
 
 describe("report-card DEX deployment supply join", () => {
+  it.each([null, 0])("distinguishes unavailable chain supply from observed zero (%s)", (current) => {
+    const coverage = computeDexDeploymentSupplyCoverage(
+      {
+        chainCirculating: { Ethereum: supplyPoint(100), Base: { current } },
+        contracts: [{ chain: "ethereum", address: "0x111", decimals: 18 }],
+      },
+      [{ chain: "ethereum", contractAddress: "0x111", outcome: "observed_pools" }],
+      new Map([["ethereum", 50]]),
+    );
+    if (current === null) expect(coverage).toBeNull();
+    else expect(coverage).toMatchObject({ totalSupplyUsd: 100, observedSupplyRatio: 1 });
+  });
+
   it("weights exact deployment outcomes by current chain supply", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {

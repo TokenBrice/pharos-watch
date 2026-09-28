@@ -2,6 +2,14 @@
 
 `/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/sections/methodology-sections.tsx` composes the authored long-form section bodies from `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`.
 
+> **Agent navigation** — Start at [Methodology editing entry](#methodology-editing-entry), then follow the affected section's runtime source and owning explainer.
+
+## Methodology editing entry
+
+Read [Update Rules](#update-rules) for methodology changes alongside the canonical [ADR-3 obligations](./architecture.md#architectural-decision-records). [Route & Structure](#route--structure) owns page composition, and [Section → Source Mapping](#section--source-mapping) locates the affected runtime contract.
+
+For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-context-anchors). For visible evidence and score breakdowns, use [Show Your Work](#show-your-work); [Verification Shortcuts](#verification-shortcuts) locates the relevant implementation without substituting for its owning methodology doc.
+
 ---
 
 ## Route & Structure

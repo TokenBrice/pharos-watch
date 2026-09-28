@@ -7,6 +7,7 @@ import {
   type SupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
 import { SafetyScoreV9SupplyAttributionSchema } from "../report-cards-fixed-input";
@@ -51,7 +52,6 @@ const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CADENCE_DEFER_MAX_SKEW_SEC =
   30 * 60;
 
 const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const GenerationIdSchema = z
   .string()
   .regex(/^safety-score-v9-supply-attribution:v1:[a-f0-9]{64}$/);
@@ -80,14 +80,12 @@ const SupplyAttributionGenerationPayloadSchema = z
   .object({
     schemaVersion: z.literal(1),
     kind: z.literal("safety-score-v9-supply-attribution-generation"),
-    sourceBaseInputGenerationId: z
-      .string()
-      .regex(/^report-cards-input:v1:[a-f0-9]{64}$/),
+    sourceBaseInputGenerationId: BaseInputGenerationIdSchema,
     sourceGeneration: z.string().min(1),
     registryFingerprint: Sha256Schema,
-    sourceClockSec: z.number().int().nonnegative(),
-    captureClockSec: z.number().int().nonnegative(),
-    capturedAtSec: z.number().int().nonnegative(),
+    sourceClockSec: UnixSecondsSchema,
+    captureClockSec: UnixSecondsSchema,
+    capturedAtSec: UnixSecondsSchema,
     expectedAssetIds: z.array(AssetIdSchema).max(32),
     observedAssetIds: z.array(AssetIdSchema).max(32),
     acceptedAssetIds: z.array(AssetIdSchema).max(32),

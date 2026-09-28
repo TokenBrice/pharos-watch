@@ -231,13 +231,23 @@ describe("market and risk collectors", () => {
     expect(result.value?.topPressure).toEqual([]);
     expect(result.value?.topChains).toEqual([{ chainId: "arbitrum", netUsd: -3e6 }]);
 
-    // A composite with a partial input is withheld as a named quality finding, not a failure.
-    const withheld = await collectMintBurnFlows(ctxFor([publishedGaugeTable({
-      value: JSON.stringify(publishedGaugePayload({ gauge: { ...(base.gauge as object), partialValuationInputs: 1 } })),
+    // Withheld weight is judged by whether it could move the score (37.5, HEALTHY) across a band edge.
+    const withWithheld = (gauge: Record<string, unknown>) => collectMintBurnFlows(ctxFor([publishedGaugeTable({
+      value: JSON.stringify(publishedGaugePayload({ gauge: { ...(base.gauge as object), ...gauge } })),
     })]));
-    expect(withheld.value).toBeUndefined();
-    expect(withheld.degradedReasons).toEqual([]);
-    expect(withheld.qualityReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
+    // ~$58M withheld beside ~$300B scored moves the score by at most ~0.03: the gauge is kept, named.
+    const small = await withWithheld({ partialValuationInputs: 3, partialValuationMcapUsd: 58e6, scoredMcapUsd: 300e9 });
+    expect(small.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, gaugeBand: "HEALTHY" });
+    expect(small.qualityReasons).toContain("mint-burn-gauge-valuation-partial-band-stable");
+    // Equal withheld and scored weight could lift the score to 68.75 (CONFIDENT): withheld as a named quality finding.
+    const large = await withWithheld({ partialValuationInputs: 1, partialValuationMcapUsd: 100e9, scoredMcapUsd: 100e9 });
+    // A withheld count without published weights (pre-v6.23 producer) is unbounded.
+    const unweighted = await withWithheld({ partialValuationInputs: 1 });
+    for (const withheld of [large, unweighted]) {
+      expect(withheld.value).toBeUndefined();
+      expect(withheld.degradedReasons).toEqual([]);
+      expect(withheld.qualityReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
+    }
 
     // A publication predating completeness is unknown: nets and pressure are not restated.
     const legacy = publishedGaugePayload({

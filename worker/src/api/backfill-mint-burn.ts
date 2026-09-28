@@ -203,8 +203,7 @@ export async function handleBackfillMintBurn({
     }
 
     const chunkSize = Math.max(1, Math.min(chunkSizeParam, chunkMax));
-    const { prices, priceHistory } = await loadMintBurnPriceContextBatch(db, [config.stablecoinId]);
-    const runTimestamp = Math.floor(Date.now() / 1000);
+    const priceContext = await loadMintBurnPriceContextBatch(db, [config.stablecoinId]);
     const localTimestampCache = new Map<number, number>();
 
     let cursor = fromBlock;
@@ -277,7 +276,7 @@ export async function handleBackfillMintBurn({
       const allParsedRows: MintBurnRow[] = [];
 
       for (const { eventDef, logs } of collectedLogs) {
-        const parsed = parseMintBurnLogs(config, eventDef, logs, blockTimestamps, prices, priceHistory, runTimestamp);
+        const parsed = parseMintBurnLogs(config, eventDef, logs, blockTimestamps, priceContext);
 
         rowsDropped += parsed.dropped;
         rowsParsed += parsed.rows.length;

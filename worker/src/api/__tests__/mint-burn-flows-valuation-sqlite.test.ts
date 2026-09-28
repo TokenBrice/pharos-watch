@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { provenNetFlowDirection24h } from "@shared/lib/mint-burn-valuation";
+import { computeGaugeScore } from "../../lib/mint-burn-scoring";
 import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../mint-burn-flows/aggregate";
 import { handleMintBurnFlows } from "../mint-burn-flows";
@@ -70,10 +70,21 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     fixtures.closeAll();
   });
 
-  it("publishes partial, complete and empty windows and keeps a mixed hour from reading as outflow", async () => {
-    const { db } = fixtures.open();
+  it("publishes null nets and no direction or pressure for partial windows and keeps them out of the gauge", async () => {
+    const { db, sqlite } = fixtures.open();
     const emptyCoin = MINT_BURN_CONFIGS.find((config) =>
       !["usdt-tether", "usdc-circle", "usdai-usd-ai"].includes(config.stablecoinId))!.stablecoinId;
+    // Complete, fully valued history ten days back gives USDT and USDai a pressure baseline;
+    // USDC's three-day history is below the seven-day minimum, so it is NR whatever the valuation.
+    const baselineHour = Math.floor((NOW - 10 * 24 * HOUR) / HOUR) * HOUR;
+    const shortBaselineHour = Math.floor((NOW - 3 * 24 * HOUR) / HOUR) * HOUR;
+    sqlite.exec(`
+      INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+        mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+      VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000),
+             ('usdai-usd-ai', 'arbitrum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000),
+             ('usdc-circle', 'ethereum', ${shortBaselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000);
+    `);
     await produce(db, [
       // Mixed: unpriced USDT mint plus a priced $1M effective burn.
       event("usdt-tether", "ethereum", "mint", NOW - 2 * HOUR, null),
@@ -85,9 +96,15 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     ]);
 
     const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
-    const { coins } = buildCoinSummaries(data, new Map(), null);
+    const summaries = buildCoinSummaries(
+      data,
+      new Map([["usdt-tether", 100_000_000_000], ["usdai-usd-ai", 1_000_000_000], ["usdc-circle", 50_000_000_000]]),
+      null,
+    );
+    const { coins, gaugeInputs } = summaries;
     const byId = new Map(coins.map((coin) => [coin.stablecoinId, coin]));
 
+    // The known net is -$1M, but the unpriced mint could outweigh it: no outflow claim.
     const usdt = byId.get("usdt-tether")!;
     expect(usdt.valuation.window24h).toEqual({
       completeness: "partial",
@@ -96,25 +113,35 @@ describe("mint/burn valuation completeness on real SQLite", () => {
       unpricedMintEventCount: 1,
       unpricedBurnEventCount: 0,
     });
-    expect(usdt.burnVolume24hUsd).toBe(1_000_000);
-    expect(provenNetFlowDirection24h({
-      knownNetUsd: usdt.netFlow24hUsd,
-      has24hActivity: usdt.has24hActivity,
-      valuation: usdt.valuation.window24h,
-    })).toBeNull();
+    expect(usdt).toMatchObject({
+      burnVolume24hUsd: 1_000_000,
+      netFlow24hUsd: null,
+      netFlowDirection24h: null,
+      pressureShiftScore: null,
+      pressureShiftState: "nr",
+      netFlow7dUsd: null,
+      netFlow30dUsd: null,
+    });
 
     const usdc = byId.get("usdc-circle")!;
     expect(usdc.has24hActivity).toBe(true);
     expect(usdc.valuation.window24h).toMatchObject({ completeness: "partial", unpricedBurnEventCount: 1 });
-    expect(provenNetFlowDirection24h({
-      knownNetUsd: usdc.netFlow24hUsd,
-      has24hActivity: usdc.has24hActivity,
-      valuation: usdc.valuation.window24h,
-    })).toBeNull();
+    expect(usdc).toMatchObject({ netFlow24hUsd: null, netFlowDirection24h: null });
 
     const usdai = byId.get("usdai-usd-ai")!;
     expect(usdai.valuation.window24h.completeness).toBe("complete");
-    expect(usdai.netFlowDirection24h).toBe("minting");
+    expect(usdai).toMatchObject({ netFlowDirection24h: "minting", netFlow24hUsd: 2_000_000 });
+    expect(usdai.pressureShiftScore).toEqual(expect.any(Number));
+
+    // USDT's pressure is withheld, so the score re-weights over the complete coin alone; the
+    // withheld hundredfold weight is disclosed beside the scored weight. USDC is not counted:
+    // its short baseline leaves it NR even with complete valuation.
+    expect(computeGaugeScore(gaugeInputs)).toBeCloseTo(usdai.pressureShiftScore!, 9);
+    expect(summaries).toMatchObject({
+      partialValuationInputs: 1,
+      partialValuationMcapUsd: 100_000_000_000,
+      scoredMcapUsd: 1_000_000_000,
+    });
 
     const empty = byId.get(emptyCoin)!;
     expect(empty.valuation).toEqual({
@@ -162,6 +189,10 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     expect(partial.valuation).toMatchObject({ completeness: "partial", unpricedMintEventCount: 1 });
     expect(partial.chains[0]?.valuation?.completeness).toBe("partial");
     expect(partial.hourly.map((bucket) => bucket.valuation)).toEqual(["partial"]);
+    expect(partial.netFlowUsd).toBeNull();
+    expect(partial.chains[0]?.netFlowUsd).toBeNull();
+    expect(partial.hourly[0]?.netFlowUsd).toBeNull();
+    expect(partial.burnVolumeUsd).toBe(1_000_000);
 
     sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 3000000 WHERE id = ?").run(mint.id);
     await recalcAffectedHours(db, collectAffectedHours([mint]));
@@ -180,21 +211,32 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     sqlite.exec(`
       INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
       VALUES ('usdt-tether', 'ethereum', ${retainedHour}, 1, 0, 500, 0, 500),
-             ('usdt-tether', 'ethereum', ${prunedHour}, 1, 0, 400, 0, 400);
+             ('usdt-tether', 'ethereum', ${prunedHour}, 1, 0, 400, 0, 400),
+             ('usdc-circle', 'ethereum', ${retainedHour}, 1, 1, 800, 300, 500);
     `);
 
     let data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
-    let usdt = buildCoinSummaries(data, new Map(), null).coins.find((coin) => coin.stablecoinId === "usdt-tether")!;
+    const coins = buildCoinSummaries(data, new Map(), null).coins;
+    let usdt = coins.find((coin) => coin.stablecoinId === "usdt-tether")!;
     expect(usdt.valuation.window24h.completeness).toBe("unknown");
     expect(usdt.valuation.netFlow30d).toBe("unknown");
+    // Legacy nets stay published, labelled unknown. Only the mint side is unknown, and
+    // missing mint valuation can only raise the known +$500 net, so minting is proven.
+    expect(usdt).toMatchObject({ netFlow24hUsd: 500, netFlow30dUsd: 900, netFlowDirection24h: "minting" });
+    // With both sides unknown, missing burn valuation could flip the sign: no direction.
+    const usdc = coins.find((coin) => coin.stablecoinId === "usdc-circle")!;
+    expect(usdc.valuation.window24h.completeness).toBe("unknown");
+    expect(usdc).toMatchObject({ netFlow24hUsd: 500, netFlowDirection24h: null, pressureShiftScore: null });
+    sqlite.exec("DELETE FROM mint_burn_hourly WHERE stablecoin_id = 'usdc-circle'");
 
     expect(await rebuildRetainedLegacyValuationHours(db, NOW)).toBe(1);
     data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
     usdt = buildCoinSummaries(data, new Map(), null).coins.find((coin) => coin.stablecoinId === "usdt-tether")!;
     expect(usdt.valuation.window24h.completeness).toBe("complete");
-    expect(usdt.netFlow24hUsd).toBe(500);
+    expect(usdt).toMatchObject({ netFlow24hUsd: 500, netFlowDirection24h: "minting" });
     // The bucket whose raw events are outside retention is never reconstructed.
     expect(usdt.valuation.netFlow30d).toBe("unknown");
+    expect(usdt.netFlow30dUsd).toBe(900);
     expect(sqlite.prepare("SELECT mint_unpriced_event_count FROM mint_burn_hourly WHERE hour_ts = ?").get(prunedHour))
       .toEqual({ mint_unpriced_event_count: null });
   });

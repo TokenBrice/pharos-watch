@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "./depeg-audit";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { DepegDirectionSchema } from "./market";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
@@ -252,9 +253,7 @@ export const DdrForecastReadinessBackstopSchema = z.object({
 export type DdrForecastReadinessBackstop = z.infer<typeof DdrForecastReadinessBackstopSchema>;
 
 export const DDR_ERRATUM_REASON_VALUES = [
-  "false_positive",
-  "disputed",
-  "no_data",
+  ...DDR_INELIGIBLE_AUDIT_VERDICTS,
   "event_identity_error",
   "input_corruption",
   "lifecycle_status_error",
@@ -288,6 +287,7 @@ export const DdrPredictionErratumSchema = z.object({
   createdBy: z.string(),
 });
 export type DdrPredictionErratum = z.infer<typeof DdrPredictionErratumSchema>;
+export type DdrPredictionErratumReason = DdrPredictionErratum["reason"];
 
 export const DdrPredictionMetaSchema = z.object({
   state: z.enum(DDR_PUBLIC_PREDICTION_STATE_VALUES),

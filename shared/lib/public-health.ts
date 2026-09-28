@@ -1,4 +1,5 @@
 import { getCacheImpactStatus } from "./cache-health";
+import { getCircuitScope } from "./circuit-sources";
 import type { CacheStatus, CircuitRecord, HealthResponse, StatusHealthValue } from "../types/status";
 
 export type PublicStatusTone = StatusHealthValue;
@@ -49,18 +50,7 @@ export function getCircuitImpactStatus(openCircuitCount: number): PublicStatusTo
 }
 
 export function isPublicImpactCircuitKey(key: string): boolean {
-  if (key.startsWith("live-reserves:")) return false;
-  if (key === "dexscreener-liquidity") return false;
-  if (key === "dexscreener-search") return false;
-  if (key === "kava-pricefeed") return false;
-  if (key === "jusd-citrea-bridge") return false;
-  if (key === "usx-stable-pools") return false;
-  if (key === "aznd-curve-pool") return false;
-  if (key === "mento-broker") return false;
-  if (key === "usdaf-uniswap-v4") return false;
-  // Supplemental Dwellir RPC sits strictly last in every chain's endpoint list during its trial.
-  if (key === "dwellir-evm") return false;
-  return true;
+  return getCircuitScope(key) === "source-wide";
 }
 
 export function countPublicImpactOpenCircuits(circuits: Record<string, CircuitRecord>): number {

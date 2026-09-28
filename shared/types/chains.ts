@@ -1,22 +1,12 @@
 import { z } from "zod";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 import { RatioSchema } from "./ratio";
-import { FreshnessAssessmentSchema } from "./api-meta";
+import { ApiDependencyMetaSchema, ApiMetaSchema } from "./api-meta";
 
-export const ChainsFreshnessMetaSchema = FreshnessAssessmentSchema.partial().extend({
-  updatedAt: z.number(),
-  ageSeconds: z.number(),
-  status: z.enum(["fresh", "degraded", "stale"]),
+export const ChainsFreshnessMetaSchema = ApiMetaSchema.extend({
   warning: z.string().optional(),
   dependencies: z.object({
-    reportCards: z.object({
-      updatedAt: z.number().nullable().optional(),
-      ageSeconds: z.number().nullable().optional(),
-      status: z.enum(["fresh", "degraded", "stale", "unavailable"]),
-      reason: z.string().nullable().optional(),
-      inputsStale: z.boolean().optional(),
-      staleInputs: z.array(z.string()).optional(),
-    }),
+    reportCards: ApiDependencyMetaSchema,
   }).optional(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
 });
@@ -44,8 +34,8 @@ export type ChainPegStabilityCoverageStatus = z.infer<typeof ChainPegStabilityCo
 /**
  * Peg-observation coverage against the chain's full positive supply (every coin on the chain, including
  * coins without a peg reference). `observedScore` is the supply-weighted peg proximity over observed supply
- * only; `neutralImputedSupplyUsd` is the supply the published `healthFactors.pegStability` scored as a
- * neutral 50 instead of an observation.
+ * only. `neutralImputedSupplyUsd` is zero for v1.6 producers; nonzero values describe neutral-50
+ * imputation only in retained pre-v1.6 payloads and must not be interpreted as observed evidence.
  */
 export const ChainPegStabilityCoverageSchema = z.object({
   status: ChainPegStabilityCoverageStatusSchema,

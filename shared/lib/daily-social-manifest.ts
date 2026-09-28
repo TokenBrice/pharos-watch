@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Sha256Schema } from "../types/safety-schema-primitives";
 import { DailySocialSnapshotSchema, buildDailySocialAltText, buildDailySocialTweetText } from "./daily-social";
 import {
   dailySocialScheduledAt, getDailySocialEdition,
@@ -8,7 +9,7 @@ import {
 export const DailySocialManifestSchema = z.object({
   schemaVersion: z.literal(1),
   snapshot: DailySocialSnapshotSchema,
-  imageSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  imageSha256: Sha256Schema,
   tweetText: z.string().min(1).max(280),
   altText: z.string().min(1).max(1000),
 }).strict().superRefine((manifest, ctx) => {

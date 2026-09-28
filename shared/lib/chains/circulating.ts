@@ -1,6 +1,5 @@
 import { resolveChainId } from "./index";
 import { admitSupplyBuckets } from "../supply";
-import { isRecord } from "../type-guards";
 
 export interface ChainCirculatingNormalizationDiagnostics {
   droppedRows: number;
@@ -38,43 +37,6 @@ export function normalizeChainSupplyValue(value: unknown): number | null {
   if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : null;
   const admission = admitSupplyBuckets(value);
   return admission.status === "observed" ? admission.total : null;
-}
-
-function projectLegacyChainRow(row: unknown): Record<string, unknown> | null {
-  if (!isRecord(row)) return null;
-  let projected: Record<string, unknown> | null = null;
-  for (const key of CHAIN_CIRCULATING_KEYS) {
-    if (row[key] !== null) continue;
-    projected ??= { ...row };
-    projected[key] = 0;
-  }
-  return projected;
-}
-
-/**
- * RELEASE A public-wire projection (CR-13). The stablecoins cache stores an unavailable chain observation
- * as `null` so internal consumers (chain aggregation, snapshots, weighting, gap reconciliation) never read it
- * as supply; the public `/api/stablecoins` wire keeps emitting the pre-CR-13 value (`0`) for those keys until
- * the Release B activation deletes this projection. Payloads without a `null` chain key are returned by identity.
- */
-export function projectLegacyChainCirculatingWire<T extends { peggedAssets: readonly unknown[] }>(payload: T): T {
-  let assets: unknown[] | null = null;
-  for (let index = 0; index < payload.peggedAssets.length; index += 1) {
-    const asset = payload.peggedAssets[index];
-    if (!isRecord(asset) || !isRecord(asset.chainCirculating)) continue;
-    const chainCirculating = asset.chainCirculating;
-    let projectedChains: Record<string, unknown> | null = null;
-    for (const [label, row] of Object.entries(chainCirculating)) {
-      const projected = projectLegacyChainRow(row);
-      if (!projected) continue;
-      projectedChains ??= { ...chainCirculating };
-      projectedChains[label] = projected;
-    }
-    if (!projectedChains) continue;
-    assets ??= [...payload.peggedAssets];
-    assets[index] = { ...asset, chainCirculating: projectedChains };
-  }
-  return assets ? { ...payload, peggedAssets: assets } : payload;
 }
 
 function recordDroppedRow(

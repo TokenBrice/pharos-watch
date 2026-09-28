@@ -20,16 +20,11 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base
 import { ACTIVE_IDS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
-type StressSignalAgeClassification = "fresh" | "lagging" | "stale" | "retainedLastValid";
-type StressSignalDataStatus = "ok" | "degraded" | "unavailable";
-type StressSignalDataReason =
-  | "no-current-rows"
-  | "no-readable-current-rows"
-  | "all-current-rows-malformed"
-  | "single-coin-current-row-missing"
-  | "current-row-malformed"
-  | "computed-count-zero"
-  | "partial-coverage";
+import type {
+  StressSignalAgeClassification,
+  StressSignalDataStatus,
+  StressSignalDataReason,
+} from "@shared/types/market";
 
 interface AggregateCoverage {
   status: StressSignalDataStatus;

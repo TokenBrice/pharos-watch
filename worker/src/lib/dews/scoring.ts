@@ -3,6 +3,7 @@ import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull, sumPegBuc
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { computeDEWS } from "../dews";
 import type { DEWSInput, DEWSResult, PoolEntry } from "../dews";
 import type { TopPoolsUnavailableReason } from "./types";
@@ -193,7 +194,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       tvl7dAgo: liqHist?.tvl ?? null,
       priceConfidence: asset.priceConfidence ?? null,
       prevPriceConfidence: (prev?.price as { confidence?: string })?.confidence ?? null,
-      price: asset.price ?? null,
+      price: isObservedPrice(asset) ? asset.price ?? null : null,
       pegRef,
       pegReferenceAvailable: pegReferenceTrusted,
       pegReferenceUnavailableReason,

@@ -254,7 +254,9 @@ export interface AuthoritativeLivePriceOverrideOptions {
 
 function applyOverrideToLiveContext(context: LivePriceContext, assetId: string, override: CurrentPriceOverride): void {
   const asset = context.assetsById.get(assetId);
-  if (!asset) return;
+  // Nominal par is not an observation and precedence is decided later by the
+  // sync, so it never becomes a same-run parent price for child routes.
+  if (!asset || override.observedAtMode === "nominal_reference") return;
   const nowSec = Math.floor(Date.now() / 1000);
   asset.price = override.price;
   asset.priceSource = override.source;

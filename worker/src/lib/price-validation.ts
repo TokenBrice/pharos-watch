@@ -7,6 +7,7 @@ import {
 import { PEG_HARDCODED_PRICE_BOUNDS, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getFxReferenceTypeFromState, loadFxRateState } from "./fx-rate-state";
 import { sanitizeRecordValues } from "./normalizers";
+import type { PriceReferenceType } from "@shared/types/core";
 
 export type PriceValidationMode =
   | "primary_authoritative"
@@ -14,7 +15,7 @@ export type PriceValidationMode =
   | "dex_observation"
   | "historical_backfill";
 
-export type PriceReferenceType = "fresh" | "stale" | "static" | "none";
+export type { PriceReferenceType } from "@shared/types/core";
 
 export type { PegClass };
 export { pegTypeFromCurrency as normalizePegTypeFromCurrency };

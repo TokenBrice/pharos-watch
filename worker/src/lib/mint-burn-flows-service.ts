@@ -175,25 +175,28 @@ export function aggregateHourlyRowsByChain(rows: HourlyRow[]): Map<string, FlowA
 }
 
 /**
- * Hourly series. `netFlowUsd` stays the known-valuation net (release A); the
- * bucket `valuation` marks hours where it is unproven.
+ * Hourly series. A partial hour publishes `netFlowUsd: null` (a partial net is
+ * not a bound); volumes stay known subtotals and `valuation` qualifies them.
  */
 export function buildHourlyFlowSeries(rows: HourlyRow[]): Array<{
   hourTs: number;
-  netFlowUsd: number;
+  netFlowUsd: number | null;
   mintVolumeUsd: number;
   burnVolumeUsd: number;
   valuation: MintBurnValuationCompleteness;
 }> {
   return [...aggregateHourlyRowsBy(rows, (row) => row.hour_ts).entries()]
     .sort(([a], [b]) => a - b)
-    .map(([ts, value]) => ({
-      hourTs: ts,
-      netFlowUsd: value.netFlow,
-      mintVolumeUsd: value.mintVolume,
-      burnVolumeUsd: value.burnVolume,
-      valuation: summarizeMintBurnValuation(value.valuation).completeness,
-    }));
+    .map(([ts, value]) => {
+      const valuation = summarizeMintBurnValuation(value.valuation).completeness;
+      return {
+        hourTs: ts,
+        netFlowUsd: valuation === "partial" ? null : value.netFlow,
+        mintVolumeUsd: value.mintVolume,
+        burnVolumeUsd: value.burnVolume,
+        valuation,
+      };
+    });
 }
 
 export function resolveFlowUpdatedAt(rows: HourlyRow[], fallbackTs: number): number {

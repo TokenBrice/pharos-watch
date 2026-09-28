@@ -73,9 +73,10 @@ export function DepegResolverMethodologySection() {
         <div className="space-y-3">
           <p>
             Supply history is daily and mint/burn coverage is partial (about 141 of 400 coins), so coins with neither
-            usable source degrade to Insufficient Signal on supply-dependent kill signals rather than guessing. The
-            depeg-event provenance side-table is unpopulated in production, so audit-verdict gating is not used; corpus
-            quality comes from incident grouping, quarantine of flappy coins, and a minimum-severity floor. Terminal
+            usable source degrade to Insufficient Signal on supply-dependent kill signals rather than guessing.
+            Legacy null audit verdicts remain eligible; false-positive, disputed, no-data, and unknown non-null
+            verdicts are excluded. Corpus quality also depends on incident grouping, quarantine of flappy coins,
+            and a minimum-severity floor. Terminal
             truth derives from cemetery/frozen status and the live deep-and-sustained-open pattern, never from the
             presence of a recovery price on a backfilled row.
           </p>

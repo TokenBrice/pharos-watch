@@ -392,6 +392,7 @@ const TRUST_TIER_PRIORITY = {
   soft_dex: 4,
   fallback_search: 5,
   cached_replay: 6,
+  nominal_reference: 7,
 } as const;
 
 function getSourceTrustPriority(source: string): number {

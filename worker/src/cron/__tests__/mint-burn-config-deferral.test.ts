@@ -211,7 +211,7 @@ function makePhaseInput(opts: {
     budget: { limit: 200, count: 0 },
     chainContexts: makeChainContext(),
     runTimestamp: NOW_SEC,
-    priceContext: { prices: new Map(), priceHistory: new Map() },
+    priceContext: { priceObservations: new Map(), priceHistory: new Map() },
     lastBlocksAfterRun: new Map([["ethereum-0xaaaa", 22_000_000]]),
     maxScanRange: 50_000,
     criticalConfigBudgetLimit: 100,

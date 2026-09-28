@@ -95,7 +95,7 @@ describe("classifyChangedFiles", () => {
       name: "stablecoin registry data to the data docs",
       files: ["shared/data/stablecoins/coins/example-usd.json"],
       mappings: ["stablecoin-registry"],
-      docs: ["docs/stablecoin-data.md"],
+      docs: ["docs/stablecoin-data.md#registry-editing-entry"],
       checks: ["npm run check:stablecoin-data"],
       // wording is owner-editable in docs/doc-ownership.json (it was reworded by
       // 38dbd97cf), so pin the invariant rather than the sentence.

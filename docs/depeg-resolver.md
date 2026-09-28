@@ -13,7 +13,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.5`<!-- GENERATED-END: methodology-version-depeg-resolver -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.6`<!-- GENERATED-END: methodology-version-depeg-resolver -->
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
@@ -28,9 +28,11 @@ DDR maintains one official public lock outcome per **canonical confirmed depeg i
 
 - `depeg_events.ended_at IS NULL` (the event is still open), and
 - the tracked stablecoin has not already entered a terminal lifecycle state (`frozen`, `dead`, `defunct`, `failed`, or `cemetery`), and
-- the event passes confirmation (provenance `auditVerdict` is not `false_positive`, `disputed`, or `no_data` where provenance exists).
+- the event passes confirmation: legacy null verdicts remain eligible; known verdicts must not be in `DDR_INELIGIBLE_AUDIT_VERDICTS` (`false_positive`, `disputed`, `no_data`). Unknown non-null verdicts fail closed as of v4.6.
 
 Closed and terminal events feed DDRR coverage and review, not new live DDR predictions. Terminal lifecycle events also leave the live DDR board even when the raw depeg row remains open: once registry status proves the asset is frozen/dead, the "time to repeg" question has no finite observable answer, so DDRR owns the audit result instead of DDR publishing an infinite-duration live incident. DDR inherits the clean confirmed-event stream from the [depeg detection pipeline](./depeg-detection.md) (100 bps USD / 150 bps non-USD thresholds plus multi-source confirmation), so it does not re-run depeg detection.
+
+`shared/types/depeg-audit.ts` owns the five-verdict vocabulary and the distinct PegScore/DDR exclusion constants. Runtime predicates live in `shared/lib/depeg-audit.ts`; Worker SQL eligibility uses the bound `auditVerdictNotInSql()` helper. Migration `0252_depeg_audit_verdict_vocabulary.sql` adds vocabulary guards without rewriting archives or applied baseline triggers. Known invalidating verdicts still require the existing sealed-prediction repair authorization and erratum; unknown writes are rejected outright.
 
 ## Public Forecast Contract
 
@@ -225,7 +227,7 @@ For calibration passes, run `npm run calibrate:ddrr` to generate the advisory DD
 - **Stage 1 is calibrated, not learned.** There are roughly 90 terminal labels, mostly month-precision and not event-linked. Verdicts are domain-prior judgments validated on a small set plus DDRR reviewed forecast outcomes. We state this plainly; forecast readiness is a publication trigger, not a stronger/weaker verdict label.
 - **K6 depends on curation.** Severe K6 only fires when `windDownAnnouncedAt` is curated on the coin entry with a date ≤ lock time. K6-elevated fingerprints are the operational prompt to research and backfill that field (≈3-day SLA) — not a substitute for the announcement.
 - **Supply resolution is coarse.** Supply history is daily, so it can miss intra-day spikes; mint/burn coverage is limited to the contracts and issuance chains in `MINT_BURN_CONFIGS`. A coin with neither usable source degrades to `insufficient_signal` on the supply-dependent kill signals rather than guessing. K1's mint-surge path marks coverage explicitly when falling back to the Δ7d proxy.
-- **Empty provenance, so no verdict gating.** The depeg-event provenance side-table is unpopulated in production (0 rows). Audit-verdict filtering would discard the entire corpus, so DDR treats a null verdict as included and relies on incident grouping, quarantine, and the severity floor for quality. Provenance is a future enrichment, not a v1 dependency.
+- **Legacy null provenance remains eligible.** A null audit verdict is unaudited legacy evidence, not an unknown verdict. DDR includes it and relies on incident grouping, quarantine, and the severity floor for quality. Unknown non-null verdicts are ineligible; `no_data` is also ineligible for DDR even though it remains usable for PegScore.
 - **Terminal ≠ event-recovery.** A backfilled dead coin (for example IRON) shows "recovered" events because replay closed them on a transient in-band print. Stage 1 terminal truth derives from cemetery / frozen `status`, issuer wind-down evidence, and the live deep-and-sustained-open or orphan pattern (the USR signature), never from the presence of a `recovery_price` on a historical row.
 - **Survivorship / selection.** The event corpus spans only the tracking window plus backfill (roughly 2026 onward plus replays). Pre-tracking deaths are not event-linked, so the recovery corpus skews toward the modern, surviving set. Stage 2 bands describe *recovered* incidents — a coin that ultimately dies will look "overdue" before it is reclassified.
 - **Abandoned slow-deaths are out of scope.** A coin that fades without a sharp depeg never triggers DDR. This is documented, not hidden.

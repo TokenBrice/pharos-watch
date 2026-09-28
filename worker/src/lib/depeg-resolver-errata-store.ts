@@ -1,29 +1,6 @@
 import { runChunkedInRead } from "./db";
 
-export type DdrPredictionErratumReason =
-  | "false_positive"
-  | "disputed"
-  | "no_data"
-  | "event_identity_error"
-  | "input_corruption"
-  | "lifecycle_status_error"
-  | "implementation_bug"
-  | "hash_mismatch";
-
-export type DdrPredictionErratum = {
-  id: number;
-  publicPredictionId: number;
-  incidentKey: string;
-  eventId: number;
-  assessmentId: number;
-  reason: DdrPredictionErratumReason;
-  operatorNote: string;
-  replacementAssessmentId: number | null;
-  replacementRowHash: string | null;
-  rowHashBefore: string | null;
-  createdAt: number;
-  createdBy: string;
-};
+import type { DdrPredictionErratum, DdrPredictionErratumReason } from "@shared/types/depeg-resolver";
 
 export interface LoadPredictionErrataFilters {
   // Read-only: the loader measures length and copies through `new Set`, never
@@ -51,6 +28,7 @@ interface ErratumRow {
 
 function mapErratum(row: ErratumRow): DdrPredictionErratum {
   return {
+    state: "invalidated",
     id: row.id,
     publicPredictionId: row.public_prediction_id,
     incidentKey: row.incident_key,

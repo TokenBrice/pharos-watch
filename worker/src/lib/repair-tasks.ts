@@ -1,4 +1,6 @@
 import type { RepairDebtSummary } from "@shared/types/status";
+import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
+import { auditVerdictNotInSql } from "./depeg-audit";
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
 import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
 import { runBoundedPrune } from "./bounded-prune";
@@ -561,6 +563,7 @@ async function loadDdrRepairCandidate(
   db: D1Database,
   eventId: number,
 ): Promise<DdrRepairCandidateRow | null> {
+  const auditEligible = auditVerdictNotInSql("canonical_target.provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS);
   return db
     .prepare(
       `SELECT
@@ -609,10 +612,7 @@ async function loadDdrRepairCandidate(
              AND canonical_target.direction = target.direction
              AND canonical_target.started_at = target.started_at
              AND canonical_target.source = 'live'
-             AND (
-               canonical_target.provenance_audit_verdict IS NULL
-               OR canonical_target.provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')
-             )
+             AND ${auditEligible.sql}
          )
          AND NOT EXISTS (
            SELECT 1
@@ -638,7 +638,7 @@ async function loadDdrRepairCandidate(
        ORDER BY i.current_started_at DESC, i.incident_key
        LIMIT 1`,
     )
-    .bind(eventId)
+    .bind(eventId, ...auditEligible.binds)
     .first<DdrRepairCandidateRow>();
 }
 
@@ -834,6 +834,7 @@ async function executeDdrRepair(
   if (!(await candidateStillMatchesCanonicalIncident(db, candidate))) return "deferred";
 
   const targetBinds = targetIdentityBinds(candidate);
+  const auditEligible = auditVerdictNotInSql("canonical_target.provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS);
   const incidentBinds = candidateIdentityBinds(candidate);
   const authorizationIdentity = { eventId: candidate.target_event_id, incidentKey: candidate.incident_key, createdAt: timestamp, expiresAt: timestamp + DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1, createdBy: DDR_REPAIR_RUNNER_CREATED_BY };
   const prepareAuthorizationPair = (operation: RunnerRepairOperation, columns: string[], reason: string, guard?: { sql: string; binds: readonly unknown[] }) => [prepareRepairAuthorization(db, { ...authorizationIdentity, operation, columns, reason }, guard), prepareRepairAuthorizationConsumption(db, { ...authorizationIdentity, operation }, timestamp, DDR_REPAIR_RUNNER_CREATED_BY)];
@@ -859,10 +860,7 @@ async function executeDdrRepair(
                        AND canonical_target.direction = target.direction
                        AND canonical_target.started_at = target.started_at
                        AND canonical_target.source = 'live'
-                       AND (
-                         canonical_target.provenance_audit_verdict IS NULL
-                         OR canonical_target.provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')
-                       )
+                       AND ${auditEligible.sql}
                    )
                    AND EXISTS (
                      SELECT 1
@@ -878,6 +876,7 @@ async function executeDdrRepair(
           candidate.target_event_id,
           ...targetBinds,
           ...incidentBinds,
+          ...auditEligible.binds,
           task.task_id,
           DDR_REPAIR_TASK_KIND,
           DDR_REPAIR_RUNNER_CREATED_BY,

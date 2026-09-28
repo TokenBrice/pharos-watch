@@ -251,6 +251,21 @@ describe("handleStressSignals contract tests", () => {
     expect(body).toHaveProperty("coverageReasons");
     expect(body).toHaveProperty("methodology");
     expect(body.computedCount).toBe(1);
+    expect(body.coverageStatus).toBe("degraded");
+    expect(body.coverageReasons).toContain("partial-coverage");
+    for (const invalid of [
+      { ...body, coverageStatus: "fresh" },
+      { ...body, coverageReasons: ["unknown-reason"] },
+      {
+        ...body,
+        signals: {
+          ...body.signals,
+          "usdt-tether": { ...body.signals["usdt-tether"], ageClassification: "degraded" },
+        },
+      },
+    ]) {
+      expect(StressSignalsAllResponseSchema.safeParse(invalid).success).toBe(false);
+    }
     expect(body.eligibleCount ?? 0).toBeGreaterThanOrEqual(body.computedCount ?? 0);
     expect(body.signals["usdt-tether"]).toHaveProperty("methodologyVersion");
     expect(body.signals["usdt-tether"]).toHaveProperty("ageClassification");

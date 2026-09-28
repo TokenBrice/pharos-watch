@@ -447,4 +447,42 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(asset.price).toBe(0.3904);
     expect(asset.priceSource).toBe("dexscreener-exact");
   });
+
+  // CR-43 / m6: pre-6.38 par rows (`protocol-redeem`) are never rewritten once a route
+  // publishes nominal references, so the cached-fallback lane must age them out on the
+  // source's own 15-minute registry budget, measured from the row's write clock.
+  it.each([
+    [899, 1.27],
+    [900, null],
+    [84 * 86_400, null],
+  ] as const)("republishes a legacy protocol-redeem par row aged %ss only inside its budget", async (ageSec, expected) => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const asset = makeAsset({
+      id: "chfau-allunity", symbol: "CHFAU", geckoId: undefined, pegType: "peggedCHF", circulating: { peggedCHF: 6_300_000 },
+      price: null, priceSource: undefined, priceConfidence: null, priceObservedAt: null, priceObservedAtMode: null,
+    });
+    const legacyParRow = {
+      price: 1.27, updatedAt: now - ageSec, source: "protocol-redeem", confidence: "high" as const,
+      observedAt: now - ageSec, observedAtMode: "local_fetch" as const, syncedAt: now - ageSec,
+      agreeSources: ["protocol-redeem"], consensusSources: ["protocol-redeem"],
+    };
+    try {
+      const result = await runPostEnrichmentPricePipeline({
+        assets: [asset], db: createSqliteD1(sqlite), syncStartSec: now,
+        priceCache: new Map([[asset.id, legacyParRow]]), validationContexts: { get: makeValidationContext },
+        validationReferences: { rates: { peggedCHF: 1.27 }, type: "fresh", updatedAt: now, typeByPeg: { peggedCHF: "fresh" } },
+        previousTrustedPrices: new Map(), returnIfAborted: () => null,
+        abortResult: () => ({ status: "error", metadata: "{}" }),
+      }, "");
+      if (isAbortResult(result)) throw new Error("unexpected abort");
+      expect(asset.price ?? null).toBe(expected);
+      if (expected != null) expect(asset).toMatchObject({ priceSource: "cached", priceConfidence: "fallback" });
+    } finally {
+      clock.mockRestore();
+      sqlite.close();
+    }
+  });
 });

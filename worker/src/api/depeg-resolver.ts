@@ -31,7 +31,6 @@ import { loadPredictionErrata } from "../lib/depeg-resolver-errata-store";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import type { DdrPublicationManifest } from "../lib/depeg-resolver-publication-store";
-import type { DdrPredictionErratum as StoreDdrPredictionErratum } from "../lib/depeg-resolver-errata-store";
 import type { DdrPredictionErratum } from "@shared/types/depeg-resolver";
 
 function degradedResponse(reason: string): DdrResponse {
@@ -147,31 +146,12 @@ async function loadApiEventState(db: D1Database, eventIds: number[]): Promise<Ma
   return out;
 }
 
-function toPublicErratum(row: StoreDdrPredictionErratum): DdrPredictionErratum {
-  return {
-    state: "invalidated",
-    id: row.id,
-    publicPredictionId: row.publicPredictionId,
-    incidentKey: row.incidentKey,
-    eventId: row.eventId,
-    assessmentId: row.assessmentId,
-    reason: row.reason,
-    createdAt: row.createdAt,
-    operatorNote: row.operatorNote,
-    rowHashBefore: row.rowHashBefore,
-    replacementAssessmentId: row.replacementAssessmentId,
-    replacementRowHash: row.replacementRowHash,
-    createdBy: row.createdBy,
-  };
-}
-
-function errataByPredictionId(rows: readonly StoreDdrPredictionErratum[]): Map<number, DdrPredictionErratum[]> {
+function errataByPredictionId(rows: readonly DdrPredictionErratum[]): Map<number, DdrPredictionErratum[]> {
   const out = new Map<number, DdrPredictionErratum[]>();
   for (const row of rows) {
-    const publicRow = toPublicErratum(row);
     const existing = out.get(row.publicPredictionId);
-    if (existing) existing.push(publicRow);
-    else out.set(row.publicPredictionId, [publicRow]);
+    if (existing) existing.push(row);
+    else out.set(row.publicPredictionId, [row]);
   }
   for (const history of out.values()) history.sort((left, right) => right.createdAt - left.createdAt || right.id - left.id);
   return out;

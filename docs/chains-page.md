@@ -22,6 +22,8 @@ Contract for the public chain analytics surfaces:
 - **Shared chain UI helpers:** `src/lib/chain-ui.ts` (formatting + health band color maps)
 - **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains/index.ts`
 
+The freshness wire contract is `ChainsFreshnessMetaSchema` in `shared/types/chains.ts`, composed from the shared API metadata schemas. Its optional `dependencies` object requires `reportCards` when present; only that dependency may report `unavailable`, while the envelope uses `fresh`, `degraded`, or `stale`. Since 2026-09-28 the unused V8 fields `_meta.dependencies.reportCards.inputsStale` and `staleInputs` are removed from the public contract. Dependency status, age, and reason retain their existing semantics.
+
 The leaderboard is public and indexable. The profile routes are statically generated from `getActiveChainIds()`, which currently returns the sorted `CHAIN_META` key set.
 
 `CHAIN_META` membership is not only a display concern. `resolveChainId()` is what turns a raw DefiLlama supply label into a canonical chain identity, so an unregistered label is pooled into the Safety Score V9 uncanonicalized-chain-label row (`worker/src/lib/safety-score-v9/extension-supply.ts`). Above the common-mode materiality floor that pool fails closed into `unresolved-control-identity`, no matter how well the asset's other deployments are reviewed. Registering a chain is therefore the precondition for attributing its supply — it names the chain, but a reviewed `bridgeRouteRisk` route for that chain is still what clears the residual.
@@ -99,7 +101,7 @@ Default sort is `totalUsd desc`.
 
 The route displays the Chain Health composite and its factor detail from `GET /api/chains`. Formula, factors, weights, coverage gates, evidence precedence, bands, and current methodology version are owned by [chain-health.md](./chain-health.md) and `shared/lib/chains/health.ts`. Do not duplicate those volatile values here.
 
-The page contract is limited to presentation: the leaderboard exposes the composite for comparison, and chain profiles show factor/evidence detail when the coordinated API snapshot provides it. A `null` factor on a loaded chain renders `NR` (loading still shows `—`). The peg-stability row adds a coverage note from `pegStabilityCoverage` whenever coverage is not complete (observed share, neutral-50 placeholder supply, missing-reference supply, or NR when nothing was observed). When the composite is `null` while `quality` is rated, the hero explains that Chain Health is not rated because peg-stability coverage is incomplete; a `null` quality keeps the report-card / safety-coverage explanation.
+The page contract is limited to presentation: the leaderboard exposes the composite for comparison, and chain profiles show factor/evidence detail when the coordinated API snapshot provides it. A `null` factor on a loaded chain renders `NR` (loading still shows `—`). The peg-stability row adds a coverage note whenever coverage is not complete: the observed share and missing-reference supply, or NR when nothing was observed. Partial coverage displays the observed-only factor, never a neutral placeholder, while the composite stays NR. The reader retains the neutral-imputation explanation only for cached pre-v1.6 payloads. When the composite is `null` while `quality` is rated, the hero explains incomplete peg-stability coverage; a `null` quality keeps the safety-coverage explanation.
 
 ---
 

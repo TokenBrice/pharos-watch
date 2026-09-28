@@ -350,7 +350,7 @@ describe("snapshotPublicDataset", () => {
     expect(envelope.stablecoins).toHaveLength(2);
     expect(envelope.stablecoins.map((c) => c.id).sort()).toEqual(["usdc-circle", "usdt-tether"]);
     expect(envelope.stablecoins[0]).toMatchObject({
-      chainCirculating: { Ethereum: { current: 50_000_000_000, circulatingPrevDay: 0, circulatingPrevWeek: 0 } },
+      chainCirculating: { Ethereum: { current: 50_000_000_000, circulatingPrevDay: null, circulatingPrevWeek: 0 } },
     });
     expect(envelope.reportCards?.cards.map((card) => card.id)).toEqual([
       "usdc-circle",

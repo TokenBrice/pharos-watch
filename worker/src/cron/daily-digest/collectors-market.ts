@@ -14,7 +14,7 @@ import {
 } from "@shared/lib/digest-liquidity-admission";
 import { buildInClause } from "../../lib/db";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "../../lib/blacklist/shared";
-import { getGaugeBand } from "../../lib/mint-burn-scoring";
+import { getGaugeBand, isGaugeBandRobustToWithheldWeight } from "../../lib/mint-burn-scoring";
 import {
   readPublishedMintBurnGauge,
   type PublishedGaugeChain,
@@ -404,12 +404,24 @@ export async function collectMintBurnFlows(
     const gaugeScore = gauge.score;
     if (gaugeScore === null) return collectorResult(undefined, degradedReasons);
     // Valuation completeness (D11-2): the digest never restates a flow claim
-    // that missing USD valuation could alter. A composite with a partial input
-    // is withheld; a publication predating completeness is used but named.
+    // that missing USD valuation could alter. Weight withheld from the score is
+    // tolerated only when it cannot move the score across a band edge; a
+    // withheld count without published weights (older producer) is unbounded.
+    // A publication predating completeness is used but named.
+    const qualityReasons: string[] = [];
     if (gauge.partialValuationInputs !== null && gauge.partialValuationInputs > 0) {
-      return collectorResult(undefined, degradedReasons, ["mint-burn-gauge-valuation-partial"]);
+      const bandRobust = gauge.partialValuationMcapUsd !== null && gauge.scoredMcapUsd !== null
+        && isGaugeBandRobustToWithheldWeight({
+          score: gaugeScore,
+          scoredMcapUsd: gauge.scoredMcapUsd,
+          withheldMcapUsd: gauge.partialValuationMcapUsd,
+        });
+      if (!bandRobust) {
+        return collectorResult(undefined, degradedReasons, ["mint-burn-gauge-valuation-partial"]);
+      }
+      qualityReasons.push("mint-burn-gauge-valuation-partial-band-stable");
     }
-    const qualityReasons = gauge.partialValuationInputs === null ? ["mint-burn-valuation-unknown"] : [];
+    if (gauge.partialValuationInputs === null) qualityReasons.push("mint-burn-valuation-unknown");
 
     const ftqFlows = await computeDigestMintBurnFtqFlows(
       ctx.db,

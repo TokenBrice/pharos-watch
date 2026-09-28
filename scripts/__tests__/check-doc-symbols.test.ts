@@ -1,8 +1,41 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { collectCodePaths, findSourceHits, scanDocSymbols } from "../ci/check-doc-symbols.ts";
+import { collectCodePaths, findSourceHits, runDocSymbolCheck, scanDocSymbols } from "../ci/check-doc-symbols.ts";
 
 describe("check-doc-symbols", () => {
+  it("fails for a stale symbol in an unrouted verified document and reports extras separately", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-doc-symbols-"));
+    try {
+      mkdirSync(join(root, "docs"));
+      writeFileSync(join(root, "README.md"), "# Fixture\n");
+      writeFileSync(join(root, "docs/unrouted.md"), "Stale: `missingUnroutedSymbol`.\n");
+      writeFileSync(join(root, "AGENTS.md"), "# Scoped guidance\n");
+      writeFileSync(join(root, "docs/doc-ownership.json"), JSON.stringify({
+        mappings: [{ docs: ["AGENTS.md"] }],
+      }));
+      execFileSync("git", ["init", "--quiet"], { cwd: root });
+      let output = "";
+      const status = runDocSymbolCheck(["--json"], {
+        repoRoot: root,
+        stdout: { write: (chunk) => { output += chunk; } },
+        stderr: { write: () => undefined },
+      });
+      expect(status).toBe(1);
+      expect(JSON.parse(output)).toMatchObject({
+        documentsScanned: 3,
+        verifiedDocumentsScanned: 2,
+        extraDocumentsScanned: 1,
+        violations: [{ doc: "docs/unrouted.md", line: 1, token: "missingUnroutedSymbol" }],
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("collects tracked and standard untracked code paths with the shared extension filter", () => {
     const calls: string[][] = [];
     const paths = collectCodePaths("/tmp/pharos-doc-symbols", (args) => {
