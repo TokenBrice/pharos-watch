@@ -763,10 +763,20 @@ export const PriceObservedAtModeSchema = z.preprocess(
     : value,
   z.enum(PRICE_OBSERVED_AT_MODE_VALUES),
 );
+/** FX reference admission vocabulary shared with worker price validation (`PriceReferenceType`). */
+export const PRICE_REFERENCE_TYPE_VALUES = ["fresh", "stale", "static", "none"] as const;
+export type PriceReferenceType = (typeof PRICE_REFERENCE_TYPE_VALUES)[number];
 export const NominalPriceReferenceSchema = z.object({
   price: z.number().finite().positive(),
   source: z.string(),
   mode: z.literal("nominal_reference"),
+  /**
+   * Non-USD par only: admission type of the FX reference that converted par to USD. Only `fresh` and
+   * `static` references can produce par; USD par carries neither FX field.
+   */
+  fxReferenceType: z.enum(PRICE_REFERENCE_TYPE_VALUES).optional(),
+  /** Non-USD par only: the FX reference's own per-peg source time (unix s); null when the reference has none. */
+  fxObservedAt: z.number().int().positive().nullable().optional(),
 });
 export type NominalPriceReference = z.infer<typeof NominalPriceReferenceSchema>;
 export const DepegPrimaryTrustSchema = z.enum(DEPEG_PRIMARY_TRUST_VALUES);

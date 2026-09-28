@@ -117,10 +117,10 @@ describe("doc-ownership registry integrity", () => {
     // Existing out-of-scope sections only. Remove entries once bounded; new
     // primary sections must stay within 25KB.
     const legacySectionCeilings: Record<string, number> = {
-      "docs/supply-snapshot.md#supply-pipeline": 36_670,
+      "docs/supply-snapshot.md#supply-pipeline": 38_122,
       // Release B adds nullable flow/supply/PSI, nominal-price, and audit-verdict
       // wire contracts to this existing generated catalogue; retain its ratchet.
-      "docs/api-reference.md#public-endpoints": 45_451,
+      "docs/api-reference.md#public-endpoints": 46_462,
       "docs/telegram-alerts.md#commands": 33_389,
       "docs/telegram-mini-app.md": 44_446,
       "docs/worker-infrastructure.md#shared-database-helpers": 25_871,

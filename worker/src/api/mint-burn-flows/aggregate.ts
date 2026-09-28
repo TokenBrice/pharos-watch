@@ -373,7 +373,10 @@ export async function fetchAggregateData(
  * keep their known-valuation net, labelled through `valuation`. Direction and
  * flight-to-quality are published only when missing valuation cannot alter
  * them. Pressure needs a complete 24h window and a baseline that is not
- * partial, so no partial input ever enters the gauge.
+ * partial. A weighted coin whose pressure is withheld for that reason leaves the
+ * gauge, which then re-weights over the remaining coins; it is disclosed in
+ * `partialValuationInputs` with its weight in `partialValuationMcapUsd`, so
+ * consumers never read the re-weighted score as the full-cohort composite.
  */
 export function buildCoinSummaries(
   data: AggregateData,
@@ -386,6 +389,10 @@ export function buildCoinSummaries(
   flightToQuality: FlightToQualityResult | null;
   trackedMcapUsd: number;
   mcapUnavailableCoins: number;
+  /** Weighted coins with 24h activity and a baseline whose pressure was withheld for incomplete valuation. */
+  partialValuationInputs: number;
+  /** Sum of those coins' observed weights. */
+  partialValuationMcapUsd: number;
 } {
   const coinAgg = aggregateHourlyRowsByStablecoin(data.hourly24hRows);
   const coins: CoinFlowSummary[] = [];
@@ -394,6 +401,8 @@ export function buildCoinSummaries(
   const riskyFlows: ValuedNetFlow24h[] = [];
   let trackedMcapUsd = 0;
   let mcapUnavailableCoins = 0;
+  let partialValuationInputs = 0;
+  let partialValuationMcapUsd = 0;
 
   const seenCoinIds = new Set<string>();
   for (const config of ACTIVE_MINT_BURN_CONFIGS) {
@@ -417,8 +426,8 @@ export function buildCoinSummaries(
     const valuation24h = summarizeMintBurnValuation(agg?.valuation ?? emptyMintBurnValuationTally());
     // No baseline means no pressure input from it: vacuously complete.
     const baselineValuation = baseline?.valuation ?? "complete";
-    const pressureShiftScore = has24hActivity && baseline
-      && valuation24h.completeness === "complete" && baselineValuation !== "partial"
+    const valuationAdmitsPressure = valuation24h.completeness === "complete" && baselineValuation !== "partial";
+    const pressureShiftScore = has24hActivity && baseline && valuationAdmitsPressure
       ? computeFlowIntensity({
           currentDailyNet: knownNetFlow24h,
           baselineDailyNet: baseline.avgNet,
@@ -428,7 +437,13 @@ export function buildCoinSummaries(
         })
       : null;
 
-    if (mcap !== null) gaugeInputs.push({ intensity: pressureShiftScore, mcap });
+    if (mcap !== null) {
+      gaugeInputs.push({ intensity: pressureShiftScore, mcap });
+      if (has24hActivity && baseline && !valuationAdmitsPressure) {
+        partialValuationInputs += 1;
+        partialValuationMcapUsd += mcap;
+      }
+    }
 
     if (gradeClassification) {
       const flow = { knownNetUsd: knownNetFlow24h, valuation: valuation24h };
@@ -498,7 +513,15 @@ export function buildCoinSummaries(
     ? detectFlightToQualityFromValuedNets({ safe: safeFlows, risky: riskyFlows })
     : detectFlightToQuality({ safeNet24h: 0, riskyNet24h: 0 });
 
-  return { coins, gaugeInputs, flightToQuality, trackedMcapUsd, mcapUnavailableCoins };
+  return {
+    coins,
+    gaugeInputs,
+    flightToQuality,
+    trackedMcapUsd,
+    mcapUnavailableCoins,
+    partialValuationInputs,
+    partialValuationMcapUsd,
+  };
 }
 
 export function buildAggregateScope() {

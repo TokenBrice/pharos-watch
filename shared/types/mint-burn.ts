@@ -59,11 +59,15 @@ const MintBurnGaugeSchema = z.object({
    */
   mcapUnavailableCoins: z.number().int().nonnegative().optional(),
   /**
-   * Weighted coins whose pressure input entering `score` has `partial` valuation. Producers since
-   * mint-burn-flow v6.23 withhold pressure for partial inputs, so they publish `0`. Absent on payloads
-   * produced before valuation completeness existed (unknown).
+   * Weighted coins whose valuation can alter `score`. Since mint-burn-flow v6.23 these are coins with
+   * 24h activity and a baseline whose pressure is withheld because the 24h window is not `complete`
+   * or the baseline is `partial`; `score` re-weights over the remaining coins, so any positive count
+   * means it is not the full-cohort composite. Before v6.23 the count named partial inputs that
+   * entered `score`. Absent on payloads produced before valuation completeness existed (unknown).
    */
   partialValuationInputs: z.number().int().nonnegative().optional(),
+  /** Observed weight of the coins counted in `partialValuationInputs`. Absent before v6.23. */
+  partialValuationMcapUsd: z.number().finite().nonnegative().optional(),
 });
 export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
 

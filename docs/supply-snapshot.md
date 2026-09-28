@@ -41,14 +41,14 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
 6. Build the exact completion identity and check the once-per-UTC-date guard:
    - read cache key `snapshot-supply:last-write`
    - coverage-version 2 markers bind the UTC date to a SHA-256 digest of the sorted required active IDs plus the exact applied waiver IDs, owners, and expiries; count-only version 1 markers remain readable but cannot authorize a writer skip
-   - when the marker date and digest match the current complete coverage evaluation and no required active ID recovered outside the marker's `ownedRowIds` since that write, conditionally repair only same-day rows whose stored `price` is still `null` and whose current non-restored cache row now has a positive price; otherwise skip with `reason: "already_written_today"`
+   - when the marker date and digest match the current complete coverage evaluation and no required active ID recovered outside the marker's `ownedRowIds` since that write, conditionally repair only same-day rows whose stored `price` is still `null` and whose current non-restored cache row now has a positive observed price (written with its observation clock); otherwise skip with `reason: "already_written_today"`
    - a required active ID that recovered since the last write (present now, absent from the prior `ownedRowIds`) bypasses the price-only repair and falls through to the full atomic date replacement in steps 9–11, so every cron-owned row for that date — including already-written circulating values and prices — is rewritten from the current observations
    - same-day repair never overwrites a non-null historical price, circulating supply, or rows outside cron ownership
 7. For each PSI-eligible cached asset:
    - Skip rows marked `supplyRestored === true`; carried-forward supply is not a fresh daily observation
    - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
    - Skip if sum <= 0
-   - Extract price (must be a number > 0, else `null`)
+   - Extract price (must be a number > 0 and an actual observation per `isObservedPrice`, so a nominal par reference is `null`) with its observation clock `priceObservedAt` (`null` when absent or invalid)
    - Build `INSERT OR REPLACE` statement
 8. Exact-set data quality check: require every active registry ID to have positive cached supply (fresh or restored) or an owned, reasoned, unexpired publication waiver. Restored-only active IDs are deliberate exclusions, not coverage gaps: the snapshot still writes every fresh observation, skips the restored rows, and returns `ok` with `quality: { reason: "snapshot_written_restored_skipped", restoredOnlyIds }` — the atomic write already committed, so this is input quality, not work that did not happen. Genuinely missing cache IDs and invalid-supply rows still block via `partial_snapshot_blocked` metadata (`missingActiveIds`, `missingCacheActiveIds`, `invalidSupplyIds`). Non-restored shadow rows are written when present but do not block active-universe completion. When a required ID that was restored at write time later produces a fresh observation the same UTC day, the snapshot re-writes the date atomically so its row stops missing.
 9. Atomically replace the cron-owned rows for the UTC date and write the completion marker in one bounded D1 batch. Multi-row inserts stay below the 100-bind limit. Supply-row deletion is restricted to the union of current PSI-eligible IDs and the prior version 2 marker's sorted `ownedRowIds`, so same-day admin-backfill rows outside snapshot ownership are preserved.
@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS supply_history (
   snapshot_date INTEGER NOT NULL,  -- UTC midnight epoch seconds
   circulating_usd REAL NOT NULL,
   price REAL,
+  price_observed_at INTEGER,       -- 0253: actual observation clock of price (NULL = unknown)
   PRIMARY KEY (stablecoin_id, snapshot_date)
 );
 
@@ -79,9 +80,10 @@ CREATE INDEX idx_supply_hist_date ON supply_history(snapshot_date DESC);
 | `stablecoin_id` | TEXT | Canonical ticker-issuer ID (e.g. `usdt-tether`) |
 | `snapshot_date` | INTEGER | Unix seconds floored to UTC midnight |
 | `circulating_usd` | REAL | Total market cap in USD |
-| `price` | REAL | USD price at snapshot time (may be `null`) |
+| `price` | REAL | USD price at snapshot time (may be `null`). Since mint-burn-flow v6.23 the cron writes it only when the published price is an actual observation (`isObservedPrice`); a nominal par reference is stored as `null`. Rows written earlier can hold nominal par |
+| `price_observed_at` | INTEGER | Actual observation time of `price` (the asset's `priceObservedAt`), migration `0253`. `null` when unknown: rows written before `0253` or by a prior Worker, admin backfill rows, and prices without an observation clock. Mint/burn event-time valuation admits a snapshot price only through this clock (±24h of the event), never through `snapshot_date` |
 
-The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. The first complete run atomically replaces the cron-owned daily set. Later runs with unchanged complete coverage only fill a same-day `null` price from a current positive cache price, preserving the original circulating value and every non-null price. A later run in which a required active ID has recovered since the last write is the exception: it atomically replaces the whole cron-owned daily set from current observations (see the error-handling table), so same-day first-observation immutability holds only while coverage is unchanged. In the checked-in migration tree this table now lives in `worker/migrations/0000_baseline.sql`.
+The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. The first complete run atomically replaces the cron-owned daily set. Later runs with unchanged complete coverage only fill a same-day `null` price (with its observation clock) from a current positive observed cache price, preserving the original circulating value and every non-null price. A later run in which a required active ID has recovered since the last write is the exception: it atomically replaces the whole cron-owned daily set from current observations (see the error-handling table), so same-day first-observation immutability holds only while coverage is unchanged. In the checked-in migration tree this table lives in `worker/migrations/0000_baseline.sql`, with `price_observed_at` added by `0253_supply_history_price_observed_at.sql`.
 
 ### onchain_supply
 
@@ -344,7 +346,7 @@ The 2026-09-27 owner decision retains this supplemental aggregate path as an exp
 
 **History discontinuity and live-depeg impact:** the rejected fills return to canonical DefiLlama totals, so published supply and the next daily `supply_history` observation step down once. This is a methodology change, not a redemption; prior rows are not rewritten. USDXL and scUSD fall below the **$1M live-depeg floor**, lose live detection, and any open event closes as `coverage-lost-supply`. The bound was set under the delegated DEC-01 decision (2026-09-27) and remains subject to owner review.
 
-**Release A rollback boundary:** unavailable chain observations remain absent in in-run computations, but canonical `stablecoins` cache writes, the response-ready companion and public dataset snapshots all use `projectLegacyChainCirculatingWire` (legacy zero values). Release B removes these wire projections together.
+**Chain wire (Release B):** canonical `stablecoins` cache writes, the response-ready companion and public dataset snapshots carry unavailable chain observations as `null`, never `0`. Rolling back is safe only to the nullable-compatible Release A Worker/Pages pair.
 
 NAV/yield-bearing supplemental assets are never par-valued for supply. When every market price lane fails (e.g. a CoinGecko delisting), an asset with a registered vault NAV route values its on-chain total supply through the pre-intake `resolveVaultNavSupplyPrice` protocol-redeem reuse described in [pricing-pipeline.md](pricing-pipeline.md#coingecko-low-volume-lane); without a trusted NAV the asset stays out and eventually reports as dropped in `trackedCoverage`.
 

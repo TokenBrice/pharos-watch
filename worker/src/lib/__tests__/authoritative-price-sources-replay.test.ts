@@ -339,17 +339,19 @@ describe("authoritative-price-sources", () => {
       },
     );
 
-    // Par is a nominal reference: no runtime observation clock (not even the FX
-    // reference's), no observed-price confidence, never the redemption source key.
+    // Par is a nominal reference: no runtime observation clock, no observed-price
+    // confidence, never the redemption source key. Non-USD par carries its FX
+    // reference's own type and per-peg clock as separate provenance.
     expect(overrides.has("sofid-sofi")).toBe(false);
     const nominal = { source: "protocol-par", confidence: null, observedAt: null, observedAtMode: "nominal_reference" };
+    const fx = (fxObservedAt: number) => ({ nominalFx: { fxReferenceType: "fresh", fxObservedAt } });
     expect(overrides.get("usbd-bima")).toEqual({ price: 1, ...nominal });
     expect(overrides.get("usdq-quill")).toEqual({ price: 1, ...nominal });
-    expect(overrides.get("chfau-allunity")).toEqual({ price: 1.27, ...nominal });
-    expect(overrides.get("cadd-cad-digital")).toEqual({ price: 0.73, ...nominal });
-    expect(overrides.get("jpym-mento")).toEqual({ price: 0.00628, ...nominal });
-    expect(overrides.get("zarm-mento")).toEqual({ price: 0.0608, ...nominal });
-    expect(overrides.get("xofm-mento")).toEqual({ price: 0.00172, ...nominal });
+    expect(overrides.get("chfau-allunity")).toEqual({ price: 1.27, ...nominal, ...fx(1_778_000_000) });
+    expect(overrides.get("cadd-cad-digital")).toEqual({ price: 0.73, ...nominal, ...fx(1_778_000_001) });
+    expect(overrides.get("jpym-mento")).toEqual({ price: 0.00628, ...nominal, ...fx(1_778_000_002) });
+    expect(overrides.get("zarm-mento")).toEqual({ price: 0.0608, ...nominal, ...fx(1_778_000_003) });
+    expect(overrides.get("xofm-mento")).toEqual({ price: 0.00172, ...nominal, ...fx(1_778_000_004) });
   });
 
   it("skips CHF protocol-par overrides when the FX reference is missing or stale", async () => {
@@ -394,6 +396,7 @@ describe("authoritative-price-sources", () => {
       confidence: null,
       observedAt: null,
       observedAtMode: "nominal_reference",
+      nominalFx: { fxReferenceType: "static", fxObservedAt: null },
     });
   });
 

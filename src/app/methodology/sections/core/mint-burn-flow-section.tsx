@@ -159,9 +159,11 @@ export function MintBurnFlowMethodologySection() {
                     </li>
                     <li>
                       <span className="text-foreground">Event-time pricing</span> &mdash; an event is valued only with a
-                      replay-safe, plausible price observed within &plusmn;24 hours of the event (inclusive): the event
-                      day&apos;s supply snapshot or a cached observation stamped with its own observation time. A
-                      current price is never applied to an old event; without such evidence the event stays unpriced.
+                      plausible price whose actual observation time is within &plusmn;24 hours of the event (inclusive):
+                      a daily supply snapshot price through its recorded observation time (never its day label; nominal
+                      par is never stored), or a replay-safe cached observation. A current price is never applied to an
+                      old event; without such evidence, including NAV observations more than 24 hours old over weekends,
+                      the event stays unpriced.
                     </li>
                   </ul>
                 </div>
@@ -195,7 +197,9 @@ export function MintBurnFlowMethodologySection() {
                     </li>
                     <li>
                       <span className="text-foreground">Valuation gate</span> &mdash; pressure is NR, and the coin leaves
-                      gauge weighting, unless the 24h window is fully valued and the baseline has no unpriced events
+                      gauge weighting, unless the 24h window is fully valued and the baseline has no known unpriced events.
+                      A baseline aggregated before v6.22 (coverage unknown) is still used, labelled, until it ages out.
+                      The gauge discloses how many weighted coins, and how much market cap, it left out this way
                     </li>
                     <li>
                       <span className="text-foreground">Ingestion safety</span> &mdash; sync state advances only to the

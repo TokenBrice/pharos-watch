@@ -22,7 +22,7 @@ The frontend chain profile coordinates `GET /api/chains` with `GET /api/stableco
 
 ## Formula
 
-Current `v1.5` composite:
+Current `v1.6` composite:
 
 ```text
 0.30 * quality
@@ -32,7 +32,7 @@ Current `v1.5` composite:
 + 0.10 * backingDiversity
 ```
 
-The score is `null` when `quality` is `null` or when `pegStability` is `null`; otherwise the weighted total is rounded to the nearest integer.
+The composite requires complete peg-observation coverage and non-null `quality` and `pegStability` factors; only then is the weighted total rounded to the nearest integer. Partial peg coverage may publish a numeric observed-only peg factor, but its composite remains `null`. Nominal par references are not observed prices: their supply remains in the peg coverage denominator without entering its observed numerator.
 
 ## Factors
 

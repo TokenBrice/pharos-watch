@@ -301,7 +301,7 @@ export function FlowBrrrOverview({
           </p>
           {gauge?.partialValuationInputs ? (
             <p className="text-xs text-muted-foreground">
-              {gauge.partialValuationInputs} weighted {gauge.partialValuationInputs === 1 ? "coin has" : "coins have"} partial
+              {gauge.partialValuationInputs} weighted {gauge.partialValuationInputs === 1 ? "coin has" : "coins have"} incomplete
               valuation; unpriced events could alter the gauge.
             </p>
           ) : null}

@@ -12,6 +12,7 @@ export const CHAIN_HEALTH_V1: readonly MethodologyChangelogEntry[] = [
       "Zero observed peg supply publishes a null peg factor and null health score/band",
       "Partial coverage publishes the observed-supply-weighted peg factor plus full-universe coverage, but no composite; no partial-coverage threshold is assumed",
       "Fully observed chains retain the existing formula and weights; neutralImputedSupplyUsd is zero for new payloads",
+      "Nominal par references are not observed peg evidence; their supply remains in the coverage denominator",
     ],
     commits: [],
     reconstructed: false,

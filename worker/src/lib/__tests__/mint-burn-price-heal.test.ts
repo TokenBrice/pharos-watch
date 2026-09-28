@@ -31,6 +31,7 @@ interface PriceHistoryRow {
   stablecoin_id: string;
   snapshot_date: number;
   price: number;
+  price_observed_at: number;
 }
 
 interface PriceCacheRow {
@@ -96,17 +97,17 @@ describe("healNullPrices", () => {
     expect(result.affectedHours.size).toBe(0);
   });
 
-  it("prefers the event-day supply_history snapshot over an in-window price_cache observation", async () => {
+  it("prefers an in-window supply_history snapshot, stamped with its observation clock, over price_cache", async () => {
     const dayTs = Math.floor((NOW - 3600) / 86400) * 86400;
     const db = mockDb(
       [{ id: "e1", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 1000, timestamp: NOW - 3600 }],
-      [{ stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 0.98 }],
+      [{ stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 0.98, price_observed_at: NOW - 7200 }],
       [cacheRow({ asset_id: "usdc-circle", price: 1.05 })],
     );
     vi.mocked(batchExecute).mockResolvedValueOnce(1);
 
     expect((await healNullPrices(db, NOW)).healed).toBe(1);
-    expect(healedArgs()).toEqual([[980, 0.98, dayTs, "supply-history-heal", "e1"]]);
+    expect(healedArgs()).toEqual([[980, 0.98, NOW - 7200, "supply-history-heal", "e1"]]);
   });
 
   it("uses an in-window replay-safe observation stamped with its observation clock when no snapshot qualifies", async () => {
@@ -114,8 +115,10 @@ describe("healNullPrices", () => {
     const db = mockDb(
       [{ id: "e1", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 1000, timestamp: NOW - 3600 }],
       [
-        { stablecoin_id: "usdc-circle", snapshot_date: dayTs - 30 * 86400, price: 0.98 },
-        { stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 1.4 },
+        // Event-day snapshot whose price was observed 106h before the event.
+        { stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 0.98, price_observed_at: NOW - 3600 - 106 * 3600 },
+        // In-window but implausible.
+        { stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 1.4, price_observed_at: NOW - 3000 },
       ],
       [cacheRow({ asset_id: "usdc-circle", observed_at: NOW - 600, updated_at: NOW - 600 })],
     );
@@ -218,6 +221,40 @@ describe("healNullPrices", () => {
       insertEvent(sqlite, "e1", "usdt-tether", NOW - 60);
 
       expect((await healNullPrices(db, NOW)).healed).toBe(0);
+    });
+
+    it("never admits a legacy snapshot without a recorded observation clock", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(NOW * 1000);
+      const { db, sqlite } = fixtures.open();
+      const dayTs = Math.floor(NOW / 86400) * 86400;
+      sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, 1, 1)")
+        .run("usdt-tether", dayTs);
+      insertEvent(sqlite, "e1", "usdt-tether", NOW - 60);
+
+      expect((await healNullPrices(db, NOW)).healed).toBe(0);
+
+      sqlite.prepare("UPDATE supply_history SET price_observed_at = ? WHERE stablecoin_id = 'usdt-tether'").run(NOW - 120);
+      expect((await healNullPrices(db, NOW)).healed).toBe(1);
+      expect(sqlite.prepare("SELECT price_timestamp, price_source FROM mint_burn_events WHERE id = 'e1'").get())
+        .toEqual({ price_timestamp: NOW - 120, price_source: "supply-history-heal" });
+    });
+
+    it("skips coins without admissible evidence so their rows cannot starve healable coins", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(NOW * 1000);
+      const { db, sqlite } = fixtures.open();
+      // 600 newer rows of a coin whose only price is weeks old fill more than the 500-row budget.
+      for (let index = 0; index < 600; index++) {
+        insertEvent(sqlite, `stale-${String(index).padStart(3, "0")}`, "usdc-circle", NOW - index);
+      }
+      insertCache(sqlite, "usdc-circle", NOW - 30 * 86_400);
+      insertEvent(sqlite, "healable", "usdt-tether", NOW - 3_600);
+      insertCache(sqlite, "usdt-tether", NOW - 3_000);
+
+      expect((await healNullPrices(db, NOW)).healed).toBe(1);
+      expect(sqlite.prepare("SELECT id FROM mint_burn_events WHERE amount_usd IS NOT NULL").all())
+        .toEqual([{ id: "healable" }]);
     });
 
     it("heals the newest 500 rows with deterministic ID ordering at tied timestamps", async () => {

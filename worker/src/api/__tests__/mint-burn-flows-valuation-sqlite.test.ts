@@ -93,11 +93,12 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     ]);
 
     const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
-    const { coins, gaugeInputs } = buildCoinSummaries(
+    const summaries = buildCoinSummaries(
       data,
       new Map([["usdt-tether", 100_000_000_000], ["usdai-usd-ai", 1_000_000_000]]),
       null,
     );
+    const { coins, gaugeInputs } = summaries;
     const byId = new Map(coins.map((coin) => [coin.stablecoinId, coin]));
 
     // The known net is -$1M, but the unpriced mint could outweigh it: no outflow claim.
@@ -129,8 +130,10 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     expect(usdai).toMatchObject({ netFlowDirection24h: "minting", netFlow24hUsd: 2_000_000 });
     expect(usdai.pressureShiftScore).toEqual(expect.any(Number));
 
-    // Only the complete coin weighs in, despite USDT's hundredfold weight.
+    // USDT's pressure is withheld, so the score re-weights over the complete coin alone; the
+    // withheld hundredfold weight is disclosed so the score is never read as the full cohort.
     expect(computeGaugeScore(gaugeInputs)).toBeCloseTo(usdai.pressureShiftScore!, 9);
+    expect(summaries).toMatchObject({ partialValuationInputs: 1, partialValuationMcapUsd: 100_000_000_000 });
 
     const empty = byId.get(emptyCoin)!;
     expect(empty.valuation).toEqual({

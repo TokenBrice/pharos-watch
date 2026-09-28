@@ -150,6 +150,23 @@ describe("stablecoin OG card data", () => {
     expect(renderToStaticMarkup(<StablecoinCard data={legacy} />)).toContain("7D NET (UNVERIFIED)");
   });
 
+  it("draws no price line from legacy supply-history par rows for a nominal-reference coin", () => {
+    const input = {
+      coin: {
+        name: "Par", symbol: "PAR", price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+        circulating: { peggedUSD: 100 },
+      },
+      dexLiquidityScore: null, dewsBand: null, grade: null,
+      sparklineRows: [{ price: 1 }, { price: 1 }, { price: 1 }],
+      hasActiveDepeg: false, mintBurn7d: null, pegScore: null, backing: null,
+      governance: null, redemptionScore: null, change24h: null,
+    };
+    expect(deriveStablecoinOgCardData(input).sparklineData).toBeNull();
+    expect(deriveStablecoinOgCardData({
+      ...input,
+      coin: { ...input.coin, priceSource: "binance", priceObservedAtMode: "upstream" },
+    }).sparklineData).toEqual([1, 1, 1]);
+  });
 
   describe("peg-analytics cache hits", () => {
     const nowSec = Math.floor(Date.now() / 1000);

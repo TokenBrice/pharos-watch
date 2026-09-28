@@ -16,6 +16,7 @@ import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry"
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { throwIfAborted } from "../lib/abort";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 
 type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string };
 
@@ -94,7 +95,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   // Build price lookup from stablecoins cache
   const priceById = new Map<string, number>();
   for (const coin of tracked) {
-    if (coin.price != null && typeof coin.price === "number" && coin.price > 0) {
+    if (isObservedPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
       priceById.set(coin.id, coin.price);
     }
   }

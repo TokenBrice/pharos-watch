@@ -3,6 +3,7 @@ import { canonicalizeChainCirculating } from "./circulating";
 import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull } from "../supply";
+import { isObservedPrice } from "../pricing-source-policy";
 import { relativeChangeRatio } from "../stats";
 import { ZERO_RATIO, type Ratio } from "../../types/ratio";
 import {
@@ -29,6 +30,8 @@ export interface ChainAggregatorAsset {
   symbol: string;
   name?: string;
   price: number | null;
+  priceSource?: string | null;
+  priceObservedAtMode?: string | null;
   pegType?: string;
   circulating?: Record<string, number>;
   circulatingPrevDay?: Record<string, number>;
@@ -177,7 +180,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         name: asset.name ?? asset.symbol,
         symbol: asset.symbol,
         supplyUsd: current,
-        price: typeof asset.price === "number" ? asset.price : null,
+        price: isObservedPrice(asset) && typeof asset.price === "number" ? asset.price : null,
         pegType: asset.pegType,
         safetyScore: safetyScores[asset.id] ?? null,
         backing: meta?.flags?.backing,

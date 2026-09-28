@@ -18,6 +18,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { resolveOrReject } from "../lib/api-params";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
@@ -214,6 +215,8 @@ interface StablecoinOgCoinInput {
   name: string;
   symbol: string;
   price?: number | null;
+  priceSource?: string | null;
+  priceObservedAtMode?: string | null;
   circulating: Record<string, number>;
   circulatingPrevWeek?: Record<string, number> | null;
 }
@@ -264,7 +267,10 @@ export function deriveStablecoinOgCardData({
   const pegPrice = coin.price ?? null;
   const mcap = getCirculatingRawOrNull(coin);
   const prevWeekMcap = getPrevWeekRawOrNull(coin);
-  const sparklineData = sparklineRows.map((row) => row.price).reverse();
+  // New snapshot rows never carry a nominal par price, but rows written before
+  // mint-burn-flow v6.23 can: a coin currently published as a nominal reference
+  // draws no price line from them.
+  const sparklineData = isObservedPrice(coin) ? sparklineRows.map((row) => row.price).reverse() : [];
   const supplyDelta = mcap != null && prevWeekMcap != null ? mcap - prevWeekMcap : null;
   // A partial window shows only its known gross subtotal as a lower bound; a
   // signed partial net is not a bound. Legacy (unknown) buckets keep their net,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import type { AlchemyLogEntry } from "../alchemy-logs";
-import type { MintBurnPriceContext } from "../mint-burn-pipeline/types";
+import type { MintBurnPriceContext, MintBurnPriceHistoryPoint } from "../mint-burn-pipeline/types";
 
 describe("parseMintBurnLogs — custom event encodings", () => {
   const ETHEREUM_CHAIN = {
@@ -326,7 +326,7 @@ describe("parseMintBurnLogs — price resolution", () => {
   type ObservationOverrides = Partial<{ price: number; observedAt: number; source: string; observedAtMode: string }>;
   const context = (
     observation: ObservationOverrides | null,
-    history: { snapshotDate: number; price: number }[] = [],
+    history: MintBurnPriceHistoryPoint[] = [],
   ): MintBurnPriceContext => ({
     priceObservations: observation
       ? new Map([["usdc-circle", {
@@ -372,25 +372,53 @@ describe("parseMintBurnLogs — price resolution", () => {
     expect(parseOne(context(overrides)).amount_usd).toBeNull();
   });
 
-  it("prefers the event-day supply_history snapshot, stamped with its snapshot date", () => {
-    const row = parseOne(context({}, [{ snapshotDate: EVENT_DAY, price: 1.0002 }]));
+  it.each([
+    ["-24h", -86_400],
+    ["exact", 0],
+    ["+24h (next day's snapshot)", 86_400],
+  ])("prefers a snapshot observed at %s from the event, stamped with its observation clock", (_label, offset) => {
+    const observedAt = EVENT_TS + offset;
+    const snapshotDate = Math.floor(observedAt / 86400) * 86400;
+    const row = parseOne(context({}, [{ snapshotDate, price: 1.0002, observedAt }]));
 
     expect(row.price_used).toBe(1.0002);
     expect(row.price_source).toBe("supply-history-daily");
-    expect(row.price_timestamp).toBe(EVENT_DAY);
+    expect(row.price_timestamp).toBe(observedAt);
     expect(row.amount_usd).toBeCloseTo(1000.2, 1);
   });
 
-  it("rejects a previous-day snapshot outside the window and an implausible event-day snapshot", () => {
-    const history = [
-      { snapshotDate: EVENT_DAY - 86_400, price: 1.0002 },
-      { snapshotDate: EVENT_DAY, price: 1.4 },
-    ];
+  it.each([
+    ["-24h-1s", -86_401],
+    ["+24h+1s", 86_401],
+  ])("rejects a snapshot observed at %s from the event", (_label, offset) => {
+    const observedAt = EVENT_TS + offset;
+    const snapshotDate = Math.floor(observedAt / 86400) * 86400;
 
-    expect(parseOne(context(null, history)).amount_usd).toBeNull();
-    expect(parseOne(context({}, history))).toMatchObject({
+    expect(parseOne(context(null, [{ snapshotDate, price: 1.0002, observedAt }])).amount_usd).toBeNull();
+  });
+
+  it("never treats the snapshot's day label as its observation time", () => {
+    // Event-day snapshot carrying a price observed 106h earlier (a stale published price).
+    const stale = { snapshotDate: EVENT_DAY, price: 1.0002, observedAt: EVENT_TS - 106 * 3600 };
+
+    expect(parseOne(context(null, [stale])).amount_usd).toBeNull();
+    expect(parseOne(context({}, [stale]))).toMatchObject({
       price_used: 0.9998,
       price_source: "price-cache-event-window",
+    });
+  });
+
+  it("picks the in-window snapshot observed closest to the event and skips an implausible one", () => {
+    const history = [
+      { snapshotDate: EVENT_DAY - 86_400, price: 1.0001, observedAt: EVENT_TS - 80_000 },
+      { snapshotDate: EVENT_DAY, price: 1.4, observedAt: EVENT_TS - 100 },
+      { snapshotDate: EVENT_DAY + 86_400, price: 1.0003, observedAt: EVENT_TS + 7_000 },
+    ];
+
+    expect(parseOne(context(null, history))).toMatchObject({
+      price_used: 1.0003,
+      price_timestamp: EVENT_TS + 7_000,
+      price_source: "supply-history-daily",
     });
   });
 });

@@ -477,6 +477,26 @@ describe("aggregateChains", () => {
     expect(referenced.pegStabilityCoverage?.status).toBe("complete");
   });
 
+  it("keeps nominal-only supply unobserved and mixed nominal supply in the peg denominator", () => {
+    const input = makeInput();
+    input.peggedAssets[0].priceSource = "protocol-par";
+    input.peggedAssets[0].priceObservedAtMode = "nominal_reference";
+    const result = aggregateChains(input);
+    const nominalOnly = result.chains.find((chain) => chain.id === "bsc")!;
+    expect(nominalOnly.pegStabilityCoverage).toMatchObject({
+      status: "unavailable", eligibleSupplyUsd: 200, observedSupplyUsd: 0, noUsablePriceSupplyUsd: 200,
+    });
+    expect(nominalOnly.healthFactors.pegStability).toBeNull();
+    expect(nominalOnly.healthScore).toBeNull();
+    const mixed = result.chains.find((chain) => chain.id === "ethereum")!;
+    expect(mixed.pegStabilityCoverage).toMatchObject({
+      status: "partial", eligibleSupplyUsd: 550, observedSupplyUsd: 250, noUsablePriceSupplyUsd: 300,
+    });
+    expect(mixed.healthFactors.pegStability).toBe(98);
+    expect(mixed.healthScore).toBeNull();
+    expect(mixed.healthBand).toBeNull();
+  });
+
   it("publishes NR factor and composite when every price is missing", () => {
     const input = makeInput();
     for (const coin of input.peggedAssets) coin.price = null;

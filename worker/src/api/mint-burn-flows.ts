@@ -157,6 +157,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     flightToQuality,
     trackedMcapUsd,
     mcapUnavailableCoins,
+    partialValuationInputs,
+    partialValuationMcapUsd,
   } = buildCoinSummaries(
     data,
     mcapById,
@@ -195,8 +197,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       trackedCoins: coins.length,
       trackedMcapUsd,
       mcapUnavailableCoins,
-      // Partial inputs are withheld from pressure, so none enters `score`.
-      partialValuationInputs: 0,
+      partialValuationInputs,
+      partialValuationMcapUsd,
     },
     coins,
     chains,

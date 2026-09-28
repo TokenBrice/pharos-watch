@@ -8,7 +8,7 @@ import {
 } from "../../lib/price-validation";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import { clearPriceMetadata, stampPriceMetadata } from "./shared";
-import { classifyPrimaryDepegTrust, hasFreshMultiSourcePrimaryAgreement } from "../../lib/depeg-trust-policy";
+import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
@@ -21,7 +21,10 @@ import {
   validatePublishedAssetPrice,
 } from "../../lib/price-publish-policy";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
-import { getRegistryLivePriceDiagnosticTarget } from "../../lib/authoritative-price-sources/helpers";
+import {
+  getRegistryLivePriceDiagnosticTarget,
+  type NominalFxProvenance,
+} from "../../lib/authoritative-price-sources/helpers";
 import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
@@ -72,6 +75,7 @@ export interface ProtocolPriceOverride {
   confidence: PeggedAsset["priceConfidence"];
   observedAt?: number | null;
   observedAtMode?: PeggedAsset["priceObservedAtMode"];
+  nominalFx?: NominalFxProvenance;
 }
 
 export interface AcceptedPriceCandidate {
@@ -444,20 +448,21 @@ export function applyConsensusResults(input: {
 
 /**
  * DEC-02 trusted-market admission. The incumbent wins over a nominal reference
- * only when the existing trusted-tracked-price gates already admit it — depeg
- * primary trust `authoritative` or fresh multi-family high-confidence agreement,
- * the same pair that admits tracked DEX quote legs. Those gates carry the
- * reviewed freshness (`DEPEG_PRIMARY_PRICE_MAX_AGE_SEC`) and liquidity/authority
- * admission (registry depeg authority, consensus confidence, venue floors), so
- * thin, stale, cached, fallback or single aggregator marks never qualify, and
+ * only when the depeg detector itself would act on it without confirmation:
+ * `classifyPrimaryDepegTrust === "authoritative"`. That requires an observed
+ * price within `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC`, not cached/fallback/low, and
+ * source authority from the registry: at `high` confidence two depeg-authoritative
+ * sources or one upstream-timestamped depeg-authoritative source; at
+ * `single-source` a registry source allowed to stand alone with an upstream
+ * observation time. Soft aggregators (CoinGecko, DefiLlama, CMC) are never
+ * depeg-authoritative, so their agreement alone cannot displace par, and
  * protocol or nominal provenance is never a market quote.
  */
 export function isTrustedMarketQuote(asset: PeggedAsset, nowSec: number): boolean {
   if (!hasCurrentAssetPrice(asset)) return false;
   const sources = normalizePricingSourceKeys([...(asset.agreeSources ?? []), asset.priceSource]);
   if (sources.some(isPricingSourceProtocolOverride)) return false;
-  return classifyPrimaryDepegTrust(asset, nowSec) === "authoritative" ||
-    hasFreshMultiSourcePrimaryAgreement(asset, nowSec);
+  return classifyPrimaryDepegTrust(asset, nowSec) === "authoritative";
 }
 
 /** Publishes par explicitly as a nominal reference: no observation clock, no confidence, no consensus. */
@@ -547,7 +552,12 @@ export function applyProtocolPriceOverrides(input: {
     }
 
     if (override.observedAtMode === "nominal_reference") {
-      asset.nominalPriceReference = { price: override.price, source: override.source, mode: "nominal_reference" };
+      asset.nominalPriceReference = {
+        price: override.price,
+        source: override.source,
+        mode: "nominal_reference",
+        ...override.nominalFx,
+      };
       if (trustedMarket) continue;
       publishNominalPriceReference(asset, asset.nominalPriceReference, syncStartSec);
       appliedCount++;

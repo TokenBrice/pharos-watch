@@ -17,6 +17,7 @@ const REFERENCES: PriceValidationReferences = {
   rates: { peggedCHF: 1.27, peggedCAD: 0.73, peggedJPY: 0.00628, peggedZAR: 0.0608, peggedXOF: 0.00172 },
   type: "fresh",
   updatedAt: NOW - 60,
+  updatedAtByPeg: { peggedCHF: NOW - 120, peggedCAD: NOW - 120, peggedJPY: NOW - 120, peggedZAR: NOW - 120, peggedXOF: NOW - 120 },
   typeByPeg: { peggedCHF: "fresh", peggedCAD: "fresh", peggedJPY: "fresh", peggedZAR: "fresh", peggedXOF: "fresh" },
 };
 const NOMINAL_ROUTES = [
@@ -51,6 +52,10 @@ const UNTRUSTED_MARKETS: Array<[string, (par: number) => MarketState]> = [
     price: par * 0.9, priceSource: "coingecko", priceConfidence: "single-source",
     agreeSources: ["coingecko"], consensusSources: ["coingecko"],
   })],
+  ["fresh high-confidence CoinGecko + DefiLlama soft-aggregator agreement", (par) => market(par, {
+    price: par * 0.9, priceSource: "coingecko+defillama-list", priceConfidence: "high",
+    agreeSources: ["coingecko", "defillama-list"], consensusSources: ["coingecko", "defillama-list"],
+  })],
   ["stale multi-source quote", (par) => market(par, { priceObservedAt: NOW - 86_400, priceUpdatedAt: NOW - 86_400 })],
   ["cached fallback quote", (par) => market(par, { priceSource: "cached", priceConfidence: "fallback" })],
   ["legacy protocol-redeem par row", (par) => market(par, {
@@ -82,7 +87,17 @@ async function runPrecedence(asset: PeggedAsset, references: PriceValidationRefe
   return normalizeStablecoinsPayload({ peggedAssets: [asset] } as never).peggedAssets[0] as PeggedAsset;
 }
 
-function expectPublishedNominal(published: PeggedAsset, par: number) {
+/** USD par has no FX leg; non-USD par records the fresh FX reference's own per-peg clock. */
+function expectedReference(pegType: string, par: number) {
+  return {
+    price: par,
+    source: "protocol-par",
+    mode: "nominal_reference",
+    ...(pegType === "peggedUSD" ? {} : { fxReferenceType: "fresh", fxObservedAt: NOW - 120 }),
+  };
+}
+
+function expectPublishedNominal(published: PeggedAsset, pegType: string, par: number) {
   expect(published).toMatchObject({
     price: par,
     priceSource: "protocol-par",
@@ -93,15 +108,15 @@ function expectPublishedNominal(published: PeggedAsset, par: number) {
     priceSyncedAt: NOW,
     agreeSources: [],
     consensusSources: [],
-    nominalPriceReference: { price: par, source: "protocol-par", mode: "nominal_reference" },
   });
+  expect(published.nominalPriceReference).toEqual(expectedReference(pegType, par));
   expect(isObservedPrice(published)).toBe(false);
   expect(classifyPrimaryDepegTrust(published, NOW)).toBe("unusable");
 }
 
 describe("nominal par precedence (DEC-02 / CR-43)", () => {
   it.each(NOMINAL_ROUTES)("%s without a market quote publishes par only as an explicit nominal reference", async (id, pegType, par) => {
-    expectPublishedNominal(await runPrecedence(makeAsset(id, pegType)), par);
+    expectPublishedNominal(await runPrecedence(makeAsset(id, pegType)), pegType, par);
   });
 
   it.each(NOMINAL_ROUTES)("%s keeps a fresh trusted market discount and carries par separately", async (id, pegType, par) => {
@@ -113,15 +128,15 @@ describe("nominal par precedence (DEC-02 / CR-43)", () => {
       priceConfidence: "high",
       priceObservedAt: NOW - 30,
       priceObservedAtMode: "upstream",
-      nominalPriceReference: { price: par, source: "protocol-par", mode: "nominal_reference" },
     });
+    expect(published.nominalPriceReference).toEqual(expectedReference(pegType, par));
     expect(isObservedPrice(published)).toBe(true);
     expect(classifyPrimaryDepegTrust(published, NOW)).toBe("authoritative");
   });
 
   describe.each(UNTRUSTED_MARKETS)("%s", (_label, buildMarket) => {
     it.each(NOMINAL_ROUTES)("does not displace par for %s", async (id, pegType, par) => {
-      expectPublishedNominal(await runPrecedence(makeAsset(id, pegType, buildMarket(par))), par);
+      expectPublishedNominal(await runPrecedence(makeAsset(id, pegType, buildMarket(par))), pegType, par);
     });
   });
 
@@ -155,6 +170,6 @@ describe("nominal par precedence (DEC-02 / CR-43)", () => {
     Object.assign(asset, { price: 0.8, priceSource: "cached", priceConfidence: "fallback", agreeSources: ["coingecko"] });
     settleNominalPriceReferences([asset], NOW);
 
-    expectPublishedNominal(asset, 1);
+    expectPublishedNominal(asset, "peggedUSD", 1);
   });
 });

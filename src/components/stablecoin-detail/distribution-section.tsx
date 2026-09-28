@@ -293,7 +293,10 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     if (!coin?.chainCirculating) return { data: [], total: 0, unavailable: false };
 
     const raw: Record<string, number> = {};
-    let unavailable = false;
+    // Check before canonicalization: unregistered labels are dropped there, not proven zero.
+    let unavailable = Object.values(coin.chainCirculating).some(
+      (point) => typeof point?.current !== "number" || !Number.isFinite(point.current) || point.current < 0,
+    );
     for (const [chainId, info] of canonicalizeChainCirculating(coin.chainCirculating)) {
       // An unknown balance also makes the full distribution denominator unknown.
       if (info.current == null) unavailable = true;

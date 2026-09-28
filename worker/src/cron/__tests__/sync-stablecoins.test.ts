@@ -280,9 +280,9 @@ describe("syncStablecoins", () => {
       expect(publishedIds).not.toContain(quarantined);
     }
     expect(published.find((asset) => asset.id === "zero-supply")?.circulating).toEqual({ peggedUSD: 0 });
-    // Release A keeps canonical storage rollback-compatible; Release B activates nullable storage.
+    // Canonical storage preserves unavailable chain observations as null (Release B).
     expect(published.find((asset) => asset.id === "usdt-tether")?.chainCirculating).toEqual({
-      Ethereum: { current: 1_000_000, circulatingPrevDay: 0, circulatingPrevWeek: 0 },
+      Ethereum: { current: 1_000_000, circulatingPrevDay: null, circulatingPrevWeek: 0 },
     });
     // The public companion preserves the canonical unavailable-versus-observed-zero distinction.
     const companion = writes.find((write) => write.key === getResponseReadyCacheKey("stablecoins"));

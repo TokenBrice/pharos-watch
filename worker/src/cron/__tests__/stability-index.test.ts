@@ -601,6 +601,25 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(contributors[0]?.bps).toBe(-8800);
   });
 
+  it("does not turn a nominal par reference into observed calm for an open depeg", async () => {
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: { peggedAssets: [makeStabilityAsset({
+        price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+        priceObservedAt: null,
+      })] },
+      updatedAt: Math.floor(Date.now() / 1000),
+    });
+    const db = makeDb();
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("open-depeg-no-price");
+    expect(snapshot.openDepegsWithoutPrice).toBe(1);
+    expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
+    expect(snapshot.contributors).toEqual([]);
+  });
+
   it("publishes with an explicit degraded component when an open depeg has no usable price", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({

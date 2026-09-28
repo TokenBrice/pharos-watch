@@ -39,11 +39,15 @@ it("keeps both distribution modules visible as unavailable when their sources fa
   expect(screen.getByText(/DEX distribution data is temporarily unavailable/)).toBeTruthy();
 });
 
-it.each([null, 100])("renders unavailable rather than a distribution with an unknown chain balance (peer %s)", (current) => {
+it.each([
+  { label: "all missing", chainCirculating: { Ethereum: { current: null }, Base: { current: null } } },
+  { label: "registered partial", chainCirculating: { Ethereum: { current: null }, Base: { current: 100 } } },
+  { label: "unregistered partial", chainCirculating: { Ethereum: { current: 100 }, "not-yet-registered-chain": { current: null } } },
+])("renders unavailable rather than a distribution with an unknown chain balance ($label)", ({ chainCirculating }) => {
   useStablecoinsMock.mockReturnValue({
     data: { peggedAssets: [{
       id: "usdc-circle",
-      chainCirculating: { Ethereum: { current: null }, Base: { current } },
+      chainCirculating,
     }] },
     isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
   });
