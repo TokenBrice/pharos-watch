@@ -294,7 +294,8 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
     const raw: Record<string, number> = {};
     for (const [chainId, info] of canonicalizeChainCirculating(coin.chainCirculating)) {
-      if (info.current > 0) raw[chainId] = info.current;
+      // `null` = unavailable chain observation; it is omitted, not drawn as a zero slice.
+      if (info.current != null && info.current > 0) raw[chainId] = info.current;
     }
 
     return buildDonutData(raw, {

@@ -4,7 +4,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 import { adaptGhoFacilitators, type GhoFacilitatorData } from "../gho";
 import type { AdapterNetworkSpec, AdapterRpcCall } from "./reserve-adapter.test-support";
-import { runAdapter } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
 const CORE = "0x5513224daaeabca31af5280727878d52097afa05";
 const GSM = "0xe9ac5231faecb633da0fe85fcb2785b8363427d2";
@@ -39,7 +39,7 @@ function facilitatorResponse(label: string): string {
 function makeNetwork(options: {
   totalSupply?: bigint;
   frozen?: bigint | null;
-  seized?: bigint;
+  seized?: bigint | null;
   available?: bigint | null;
 } = {}): AdapterNetworkSpec {
   const backing =
@@ -59,12 +59,12 @@ function makeNetwork(options: {
       [`ethereum:eth_call:${MODULE}:0x4101d9f4`]: 0n,
       [`ethereum:eth_call:${MODULE}:0x236fc8ad`]: options.frozen === null ? null : options.frozen ?? 0n,
       [`ethereum:eth_call:${MODULE}:0x476cce03`]: backing,
-      [`ethereum:eth_call:${MODULE}:0x80bc659a`]: options.seized ?? 0n,
+      [`ethereum:eth_call:${MODULE}:0x80bc659a`]: options.seized === null ? null : options.seized ?? 0n,
       "ethereum:eth_call:0x9abeb940": 0n,
       "ethereum:eth_call:0x4101d9f4": 0n,
       "ethereum:eth_call:0x236fc8ad": options.frozen === null ? null : options.frozen ?? 0n,
       "ethereum:eth_call:0x476cce03": backing,
-      "ethereum:eth_call:0x80bc659a": options.seized ?? 0n,
+      "ethereum:eth_call:0x80bc659a": options.seized === null ? null : options.seized ?? 0n,
     },
   };
 }
@@ -148,27 +148,57 @@ describe("GHO fetch boundary", () => {
       network: makeNetwork({ available: 0n }),
       nowSec: 1_800_000_000,
     });
-    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "open", capacityUsd: 0 });
+    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "open", capacityUsd: 0, capacityRatioOfSupply: 0 });
+    expect(result.metadata?.trackedGsmBackingUsd).toBe(0);
+    expectValidAdapterOutput("gho", result, { now: 1_800_000_000 });
   });
 
-  it("reports unreadable status as unknown, not paused, and excludes capacity", async () => {
+  it.each([{ frozen: null }, { seized: null }])("withholds aggregate telemetry for unavailable status %j", async (options) => {
     const { result } = await runAdapter("gho", COIN, {
-      network: makeNetwork({ frozen: null }),
+      network: makeNetwork(options),
       nowSec: 1_800_000_000,
     });
-    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "unknown", capacityUsd: 0 });
+    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "unknown" });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    expect(result.metadata).not.toHaveProperty("trackedGsmBackingUsd");
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct).toBe(50);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "tracked-gsm-status-unavailable", effect: "degraded" }));
+    expectValidAdapterOutput("gho", result, { now: 1_800_000_000 });
   });
 
-  it("does not label all routes paused when another configured module is unreadable", async () => {
+  it.each([false, true])("withholds aggregate capacity when required backing reads fail (partial=%s)", async (partial) => {
     const config = { ...CONFIG, params: { gsmModules: [
       { address: MODULE, facilitatorAddress: GSM, label: "USDC GSM", coinId: "usdc-circle", depType: "collateral" },
       { address: CORE, facilitatorAddress: GSM, label: "Unreadable GSM" },
     ] } };
+    const network = makeNetwork({ available: partial ? 100n * UNIT : null, seized: 1n });
+    network.rpc![`ethereum:eth_call:${CORE}:0x476cce03`] = null;
     const { result } = await runAdapter("gho", { ...COIN, liveReservesConfig: config }, {
-      network: makeNetwork({ available: null, seized: 1n }),
+      network,
       nowSec: 1_800_000_000,
     });
-    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "unknown", capacityUsd: 0 });
+    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "unknown" });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    expect(result.metadata).not.toHaveProperty("trackedGsmBackingUsd");
+    expect(result.slices.find((slice) => slice.name === "CoreGhoDirectMinter")?.pct).toBe(50);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "tracked-gsm-read-failed", effect: "degraded" }));
+    expectValidAdapterOutput("gho", result, { now: 1_800_000_000 });
+  });
+
+  it.each([
+    ["0x9abeb940", null, "tracked-gsm-read-failed"],
+    ["0x476cce03", "0x12", "tracked-gsm-read-unparseable"],
+  ] as const)("withholds capacity on malformed required read %s", async (selector, response, warning) => {
+    const network = makeNetwork();
+    network.rpc![`ethereum:eth_call:${MODULE}:${selector}`] = response;
+    const { result } = await runAdapter("gho", COIN, { network, nowSec: 1_800_000_000 });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    expect(result.metadata).not.toHaveProperty("trackedGsmBackingUsd");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: warning, effect: "degraded" }));
+    expectValidAdapterOutput("gho", result, { now: 1_800_000_000 });
   });
 
   it("publishes explicit seizure as paused and degraded rather than throwing", async () => {
@@ -177,6 +207,8 @@ describe("GHO fetch boundary", () => {
       nowSec: 1_800_000_000,
     });
     expect(result.metadata?.redemption).toMatchObject({ routeStatus: "paused", capacityUsd: 0 });
+    expect(result.metadata?.redemption).toHaveProperty("capacityRatioOfSupply", 0);
+    expect(result.metadata?.trackedGsmBackingUsd).toBe(100);
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "tracked-gsm-seized", effect: "degraded" }),
     ]));

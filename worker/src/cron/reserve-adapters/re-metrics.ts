@@ -10,6 +10,7 @@ import {
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
+  reserveFatalWarning,
   reserveInfoWarning,
   slicesFromValues,
 } from "./helpers";
@@ -113,8 +114,8 @@ const SYMBOL_CONFIG: Record<string, {
   },
 };
 
-function parseValueUsdFromWei(raw: string | undefined): number | null {
-  if (!raw || !/^\d+$/.test(raw)) return null;
+function parseValueUsdFromWei(raw: unknown): number | null {
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
   const value = decimalNumberFromBigInt(BigInt(raw), 18);
   return Number.isFinite(value) ? value : null;
 }
@@ -244,7 +245,7 @@ function extractOffchainCapitalContext(
   );
 }
 
-function extractInstantRedemptionCapacity(html: string): {
+function extractInstantRedemptionCapacity(html: string, warnings: LiveReserveWarning[]): {
   capacityUsd: number;
   rows: Array<{
     chainName?: string;
@@ -254,54 +255,80 @@ function extractInstantRedemptionCapacity(html: string): {
   }>;
 } | null {
   const rows = parseRedemptionRows(html);
-  if (!rows) return null;
-  const parsedRows = rows
-    .map((row) => {
-      const capacityUsd = parseValueUsdFromWei(row.totalReserveValueWei);
-      if (capacityUsd == null || capacityUsd <= 0) return null;
-      return {
-        ...(row.chainName ? { chainName: row.chainName } : {}),
-        ...(row.vaultAddress ? { vaultAddress: row.vaultAddress } : {}),
-        ...(row.custodialWalletAddress ? { custodialWalletAddress: row.custodialWalletAddress } : {}),
-        capacityUsd,
-      };
-    })
-    .filter((row): row is NonNullable<typeof row> => row != null);
-  const capacityUsd = parsedRows.reduce((sum, row) => sum + row.capacityUsd, 0);
-  return capacityUsd > 0 ? { capacityUsd, rows: parsedRows } : null;
+  if (!rows || rows.length === 0) return null;
+  const parsedRows = [];
+  let capacityUsd = 0;
+  for (const [index, row] of rows.entries()) {
+    const value = parseValueUsdFromWei(row?.totalReserveValueWei);
+    if (value == null || !Number.isFinite(capacityUsd + value)) {
+      warnings.push(reserveDegradedWarning(
+        "re-metrics-redemption-incomplete",
+        `Redemption row ${index} (${row?.chainName ?? "unknown chain"}) has an unavailable amount; aggregate capacity withheld`,
+      ));
+      return null;
+    }
+    capacityUsd += value;
+    parsedRows.push({
+      ...(row.chainName ? { chainName: row.chainName } : {}),
+      ...(row.vaultAddress ? { vaultAddress: row.vaultAddress } : {}),
+      ...(row.custodialWalletAddress ? { custodialWalletAddress: row.custodialWalletAddress } : {}),
+      capacityUsd: value,
+    });
+  }
+  return { capacityUsd, rows: parsedRows };
 }
 
 export function adaptReMetrics(html: string): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const breakdowns = parseInitialChainBreakdowns(html);
   const { offchainCapitalUsd, offchainTimestamp } = extractOffchainCapitalContext(html, warnings);
-  const instantRedemptionCapacity = extractInstantRedemptionCapacity(html);
+  const instantRedemptionCapacity = extractInstantRedemptionCapacity(html, warnings);
 
   const tokenValues = new Map<string, number>();
   const componentTimestamps: number[] = [];
   let missingComponentTimestamp = false;
+  let incompleteComposition = false;
+  if (typeof offchainCapitalUsd !== "number" || !Number.isFinite(offchainCapitalUsd) || offchainCapitalUsd < 0) {
+    incompleteComposition = true;
+    warnings.push(reserveFatalWarning("re-metrics-offchain-value-unavailable", "Off-chain capital amount unavailable; composition withheld"));
+  }
 
-  for (const breakdown of Object.values(breakdowns)) {
+  for (const [chain, breakdown] of Object.entries(breakdowns)) {
+    if (!breakdown || !Array.isArray(breakdown.rows)) {
+      incompleteComposition = true;
+      warnings.push(reserveFatalWarning("re-metrics-reserve-rows-unavailable", `${chain} reserve rows unavailable; composition withheld`));
+      continue;
+    }
     const asOf = parseTimestampLikeToUnixSeconds(breakdown.asOf);
-    const hasValue = (breakdown.rows ?? []).some((row) => row.valueKnown && (parseValueUsdFromWei(row.valueWei) ?? 0) > 0);
+    let hasValue = false;
+    for (const [index, row] of breakdown.rows.entries()) {
+      const tokenSymbol = typeof row?.tokenSymbol === "string" ? row.tokenSymbol.trim() : "";
+      const valueUsd = parseValueUsdFromWei(row?.valueWei);
+      const reason = !tokenSymbol ? "identity-unavailable"
+        : row?.valueKnown !== true ? "valuation-unavailable"
+          : valueUsd == null ? "amount-unavailable" : null;
+      if (reason) {
+        incompleteComposition = true;
+        warnings.push(reserveFatalWarning(
+          `re-metrics-reserve-${reason}`,
+          `${chain} reserve row ${index} (${tokenSymbol || "missing identity"}) is incomplete; composition withheld`,
+        ));
+        continue;
+      }
+      if (valueUsd === 0 || valueUsd == null) continue;
+      hasValue = true;
+      const key = normalizeTokenSymbol(tokenSymbol);
+      tokenValues.set(key, (tokenValues.get(key) ?? 0) + valueUsd);
+    }
     if (hasValue) {
       if (asOf != null) componentTimestamps.push(asOf);
       else missingComponentTimestamp = true;
-    }
-
-    for (const row of breakdown.rows ?? []) {
-      if (!row.valueKnown) continue;
-      const tokenSymbol = row.tokenSymbol?.trim();
-      const valueUsd = parseValueUsdFromWei(row.valueWei);
-      if (!tokenSymbol || valueUsd == null || valueUsd <= 0) continue;
-      const key = normalizeTokenSymbol(tokenSymbol);
-      tokenValues.set(key, (tokenValues.get(key) ?? 0) + valueUsd);
     }
   }
   const stableRedeemableUsd = ["usdc", "usdt", "dai", "frax"]
     .reduce((sum, symbol) => sum + (tokenValues.get(symbol) ?? 0), 0);
 
-  const slices = slicesFromValues([
+  const slices = incompleteComposition ? [] : slicesFromValues([
     ...Array.from(tokenValues.entries()).map(([symbol, value]) => {
       const config = SYMBOL_CONFIG[symbol];
       if (!config) {
@@ -326,7 +353,7 @@ export function adaptReMetrics(html: string): AdapterResult {
       : []),
   ].sort((left, right) => right.value - left.value));
 
-  if (slices.length === 0) {
+  if (!incompleteComposition && slices.length === 0) {
     throw htmlLayoutChangedError("re-metrics", "no reserve composition entries found");
   }
 
@@ -341,7 +368,7 @@ export function adaptReMetrics(html: string): AdapterResult {
       "A contributing reserve component has no trustworthy source timestamp",
     ));
   }
-  const sourceTimestamp = !missingComponentTimestamp && componentTimestamps.length > 0
+  const sourceTimestamp = !incompleteComposition && !missingComponentTimestamp && componentTimestamps.length > 0
     ? Math.min(...componentTimestamps)
     : null;
 
@@ -350,7 +377,8 @@ export function adaptReMetrics(html: string): AdapterResult {
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       chainBreakdownCount: Object.keys(breakdowns).length,
-      offchainCapitalUsd,
+      ...(typeof offchainCapitalUsd === "number" && Number.isFinite(offchainCapitalUsd) && offchainCapitalUsd >= 0
+        ? { offchainCapitalUsd } : {}),
       ...(offchainTimestamp != null ? { offchainAsOf: offchainTimestamp } : {}),
       trackedTokenCount: tokenValues.size,
       ...(componentTimestamps.length > 0 ? { newestSourceTimestamp: Math.max(...componentTimestamps) } : {}),
@@ -359,7 +387,7 @@ export function adaptReMetrics(html: string): AdapterResult {
         "nextjs-embedded-payload",
         "Re Metrics embedded payload did not expose a trustworthy source timestamp",
       ),
-      stableAssetUsd: stableRedeemableUsd,
+      ...(!incompleteComposition ? { stableAssetUsd: stableRedeemableUsd } : {}),
       ...(instantRedemptionCapacity
         ? {
             redemptionRowsCount: instantRedemptionCapacity.rows.length,

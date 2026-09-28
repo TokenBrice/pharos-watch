@@ -5,18 +5,21 @@ import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
 } from "@shared/lib/live-reserve-adapters";
+import { CHAIN_META } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { LiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 
 const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 
 const RESERVE_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/domains/reserves");
 
 interface CoinSource {
+  contracts?: Array<{ chain: string }>;
   liveReservesConfig?: {
     adapter: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;
     scoring?: { maxSourceAgeSec?: number };
     inputs?: { primary?: { chain?: string } };
-    params?: { slice?: { expectedAssetAddress?: string } };
+    params?: { slice?: { expectedAssetAddress?: string }; liabilityScope?: LiabilityScope };
   };
 }
 
@@ -102,6 +105,29 @@ describe("live reserve catalog integrity", () => {
       const sourceKey = chain && asset ? `erc4626-single-asset:${chain}:${asset}` : undefined;
       if (!sourceKey || !sidecarKeys.has(sourceKey)) {
         failures.push(`${id}: no reserve slice keyed ${sourceKey ?? "erc4626-single-asset:<chain>:<underlying>"}`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("classifies every catalog chain exactly once in each reviewed liability scope", () => {
+    const failures: string[] = [];
+    const readerChainType: Record<string, (chain: string) => boolean> = {
+      "evm-erc20": (chain) => CHAIN_META[chain]?.type === "evm",
+      "tron-trc20": (chain) => CHAIN_META[chain]?.type === "tron",
+      "solana-spl-mint": (chain) => chain === "solana",
+      "aptos-fungible-asset": (chain) => chain === "aptos",
+    };
+    for (const [id, source] of getCoinSources()) {
+      const scope = source.liveReservesConfig?.params?.liabilityScope;
+      if (scope?.basis !== "issuer-native-supply") continue;
+      const catalogChains = (source.contracts ?? []).map((contract) => contract.chain).sort();
+      const scopedChains = [...scope.included, ...scope.excluded].map((entry) => entry.chain).sort();
+      if (JSON.stringify(catalogChains) !== JSON.stringify(scopedChains)) {
+        failures.push(`${id}: catalog [${catalogChains.join(", ")}] vs scope [${scopedChains.join(", ")}]`);
+      }
+      for (const entry of scope.included) {
+        if (!readerChainType[entry.reader]?.(entry.chain)) failures.push(`${id}: ${entry.reader} cannot read ${entry.chain}`);
       }
     }
     expect(failures).toEqual([]);

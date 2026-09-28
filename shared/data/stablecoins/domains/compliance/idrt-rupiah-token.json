@@ -48,8 +48,7 @@
     "reserveDisclosureUrl": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_March_31_2026_64e7edee6b.pdf?updated_at=2026-04-13T14%3A14%3A20.108Z",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "latestReportDate": "2026-03-31",
-    "notes": "IDRT has an Indonesian issuer and reserve/AUP evidence, but no public U.S. GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception registration was located. The Indonesian/Bappebti context does not substitute for a U.S. GENIUS authorization, and no pathway is inferred while federal rules remain proposed.",
+    "notes": "Evidence as of 2026-08-14 review: IDRT has an Indonesian issuer and reserve/AUP evidence, but no public U.S. GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception registration was located. The Indonesian/Bappebti context does not substitute for a U.S. GENIUS authorization, and no pathway is inferred while federal rules remain proposed. Reserve-report date recorded as of 2026-08-14 review: 2026-03-31 (date kind unspecified).",
     "references": [
       {
         "label": "GENIUS Act statutory text",

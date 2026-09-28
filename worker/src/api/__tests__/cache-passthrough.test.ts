@@ -86,6 +86,32 @@ describe("cache-passthrough: handleStablecoins", () => {
     expect(res.headers.get("X-Data-Age")).toBe(String(body._meta.ageSeconds));
   });
 
+  it.each([false, true])("bounds the remaining runway for response-ready=%s", async (responseReady) => {
+    const assessedAt = Math.floor(Date.now() / 1000);
+    const updatedAt = assessedAt - 4_790;
+    const payload = { peggedAssets: [] };
+    const db = responseReady ? mockD1([{
+      match: "cache",
+      rows: [
+        { key: "stablecoins", value: "{malformed", updated_at: updatedAt },
+        { key: getResponseReadyCacheKey("stablecoins"), updated_at: updatedAt,
+          value: encodeResponseReadyCacheValue(JSON.stringify(payload), RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins) },
+      ],
+    }]) : makeCacheDb("stablecoins", payload, updatedAt);
+    const res = await handleStablecoins(db);
+    const body = await readJsonResponse(res, 200) as {
+      _meta: { assessedAt: number; freshBudgetSec: number; degradedBudgetSec: number; ageSeconds: number; status: string };
+    };
+    expect(body._meta).toMatchObject({
+      assessedAt, freshBudgetSec: 4_800, degradedBudgetSec: 7_200, ageSeconds: 4_790, status: "fresh",
+    });
+    expect(res.headers.get("Cache-Control")).toContain("s-maxage=10");
+    vi.advanceTimersByTime(11_000);
+    const expired = await handleStablecoins(db);
+    expect(expired.headers.get("Cache-Control")).toBe("no-store");
+    expect((await expired.json() as typeof body)._meta.status).toBe("degraded");
+  });
+
   it("returns 200 with stale metadata when cache exceeds 12x maxAge", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const staleUpdatedAt = nowSec - 8000;
@@ -109,6 +135,27 @@ describe("cache-passthrough: handleStablecoins", () => {
     const res = await handleStablecoins(db);
 
     expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins payload is malformed" });
+  });
+
+  it("keeps the RELEASE A legacy chain wire: stored unavailable chain values are served as 0", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const row = {
+      id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed",
+      price: 1, priceSource: "defillama", circulating: { peggedUSD: 150 },
+      chainCirculating: {
+        Ethereum: { current: 150, circulatingPrevDay: null, circulatingPrevWeek: 140 },
+        Tron: { current: null },
+      },
+      chains: ["Ethereum", "Tron"],
+    };
+    const db = makeCacheDb("stablecoins", { peggedAssets: [row] }, nowSec);
+    const res = await handleStablecoins(db);
+
+    const body = (await readJsonResponse(res, 200)) as { peggedAssets: Array<{ chainCirculating: unknown }> };
+    expect(body.peggedAssets[0]?.chainCirculating).toEqual({
+      Ethereum: { current: 150, circulatingPrevDay: 0, circulatingPrevWeek: 140 },
+      Tron: { current: 0 },
+    });
   });
 
   it("serves response-ready stablecoins body when it matches the canonical cache timestamp", async () => {

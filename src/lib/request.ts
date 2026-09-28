@@ -1,6 +1,6 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { formatSchemaLikeIssues, resolveSchemaLike, type SchemaLikeSource } from "@shared/lib/schema-like";
-import { normalizeRequestTimeoutMs, resolveRequestSignal } from "@/lib/request-lifecycle";
+import { normalizeRequestTimeoutMs, resolveRequestSignal, type RequestSignalPolicy } from "@/lib/request-lifecycle";
 
 export type RequestFailureKind = "http" | "network" | "timeout" | "aborted" | "superseded" | "parse" | "schema";
 
@@ -30,6 +30,10 @@ export interface RequestLifecycleOptions {
   signal?: AbortSignal;
   timeoutMs?: number | null;
   allowHttpError?: boolean;
+  signalPolicy?: RequestSignalPolicy;
+  /** API boundaries retain their own error classes and native abort reasons. */
+  errorMode?: "classified" | "passthrough";
+  timeoutMessage?: (timeoutMs: number) => string;
 }
 
 export interface RequestJsonOptions<T> extends RequestLifecycleOptions {
@@ -53,15 +57,18 @@ async function executeRequest<T>(
   readSuccessBody: (response: Response) => Promise<T>,
 ): Promise<RequestResult<T>> {
   const url = inputLabel(input);
-  const parent = resolveRequestSignal(options.init?.signal, options.signal, "compose");
+  const parent = resolveRequestSignal(options.init?.signal, options.signal, options.signalPolicy ?? "compose");
   const parentSignal = parent.signal;
   const timeoutMs = normalizeRequestTimeoutMs(options.timeoutMs);
+  const timeoutMessage = timeoutMs == null
+    ? ""
+    : (options.timeoutMessage?.(timeoutMs) ?? `Request timed out after ${timeoutMs}ms`);
   const timeout =
     timeoutMs == null
       ? null
       : createTimeoutSignal({
           timeoutMs,
-          timeoutReason: new DOMException(`Request timed out after ${timeoutMs}ms`, "TimeoutError"),
+          timeoutReason: new DOMException(timeoutMessage, "TimeoutError"),
           parentSignal,
         });
   const signal = timeout?.signal ?? parentSignal;
@@ -83,8 +90,14 @@ async function executeRequest<T>(
       });
     }
 
-    return { data: await readSuccessBody(response), response };
+    const data = await readSuccessBody(response);
+    signal?.throwIfAborted();
+    return { data, response };
   } catch (error) {
+    if (options.errorMode === "passthrough") {
+      signal?.throwIfAborted();
+      throw error;
+    }
     if (error instanceof RequestFailure) throw error;
     if (timeout?.isTimedOut()) {
       throw new RequestFailure("timeout", url, `Request timed out after ${timeoutMs}ms`, { cause: error });

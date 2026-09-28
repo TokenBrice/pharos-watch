@@ -716,6 +716,44 @@ describe("tracked stablecoin metadata", () => {
     ).toThrowError(/publishedAt cannot precede periodEnd/);
   });
 
+  it("preserves uncertain report dates without fabricating period or publication dates", () => {
+    const report = {
+      reviewReference: { date: "2026-05-31", reviewedAt: "2026-06-18", dateKind: "unspecified" },
+      assuranceMethod: "unknown",
+      scope: "unknown",
+      liabilityReconciliation: "unknown",
+      reviewer: "test",
+      confidence: "unknown",
+      sources: [{ label: "Reserve disclosure", url: "https://example.com/reserves" }],
+    };
+    const proofOfReserves = { type: "attestation", url: "https://example.com/reserves", latestReport: report };
+    const parsed = parseStablecoinMetaAssets(
+      [makeStablecoinAsset({ proofOfReserves })],
+      "uncertain-report.json",
+    )[0]!.proofOfReserves!.latestReport!;
+    expect(parsed.reviewReference).toEqual(report.reviewReference);
+    expect(parsed.periodEnd).toBeUndefined();
+    expect(parsed.publishedAt).toBeUndefined();
+    for (const latestReport of [
+      { ...report, reviewReference: undefined },
+      { ...report, sources: [] },
+    ]) {
+      expect(() => parseStablecoinMetaAssets(
+        [makeStablecoinAsset({ proofOfReserves: { ...proofOfReserves, latestReport } })],
+        "unsupported-report.json",
+      )).toThrow();
+    }
+    for (const dates of [{ periodEnd: "2026-05-31" }, { publishedAt: "2026-06-18" }]) {
+      const latestReport = { ...report, reviewReference: undefined, ...dates };
+      const singleDate = parseStablecoinMetaAssets(
+        [makeStablecoinAsset({ proofOfReserves: { ...proofOfReserves, latestReport } })],
+        "single-date-report.json",
+      )[0]!.proofOfReserves!.latestReport!;
+      expect(singleDate.periodEnd).toBe("periodEnd" in dates ? dates.periodEnd : undefined);
+      expect(singleDate.publishedAt).toBe("publishedAt" in dates ? dates.publishedAt : undefined);
+    }
+  });
+
   it("validates reviewed custody concentration without deriving custodyModel", () => {
     const custodyProfile = {
       providers: [

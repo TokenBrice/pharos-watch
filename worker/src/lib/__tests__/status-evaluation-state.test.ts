@@ -18,8 +18,8 @@ import {
 import { evaluateStablecoinActivePriceCoverage, STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 
 function makeReserveComposition(
-  overrides?: Partial<StatusResponse["reserveComposition"]>,
-): StatusResponse["reserveComposition"] {
+  overrides?: Partial<Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>>,
+): Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }> {
   return makeBaseReserveComposition({
     configuredCoins: 10,
     freshCoins: 10,
@@ -81,6 +81,38 @@ function makeDataQualityEvaluationInput(
 }
 
 describe("status evaluation policy", () => {
+  it("does not recover to healthy when stale reserve evidence becomes unreadable", () => {
+    const stale = makeReserveComposition({ status: "stale", freshCoins: 0, freshCoverageRatio: 0 });
+    const before = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      reserveComposition: stale,
+      reserveCompositionStatus: "stale",
+    }));
+    const unavailable = makeBaseReserveComposition({ status: "unavailable" });
+    const after = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      reserveComposition: unavailable,
+      reserveCompositionStatus: "unavailable",
+      reserveCompositionQueryFailed: true,
+    }));
+    expect(before.status).toBe("stale");
+    expect(after.status).toBe("degraded");
+    expect(after.causes).toContainEqual(expect.objectContaining({
+      code: "reserve_sync_query_failed",
+      severity: "warning",
+    }));
+    expect(unavailable.freshCoverageRatio).toBeNull();
+  });
+
+  it("preserves a successfully observed empty reserve cohort", () => {
+    const empty = makeBaseReserveComposition();
+    expect(deriveReserveCompositionStatus(empty)).toMatchObject({
+      status: "healthy",
+      freshCoverageRatio: 0,
+      authoritativeFreshCoverageRatio: 0,
+    });
+    expect(evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      reserveComposition: empty,
+    })).status).toBe("healthy");
+  });
   it("keeps reserve status healthy for low-count issues when fresh coverage remains high", () => {
     const assessment = deriveReserveCompositionStatus(
       makeReserveComposition({

@@ -1,5 +1,6 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
+import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageHealth,
@@ -29,24 +30,26 @@ export function unknownStablecoinPublicationHealth(
 
 export function unknownActivePriceCoverageHealth(
   observedAt: number | null = null,
+  unavailableReason: ActivePriceCoverageHealth["unavailableReason"] = "coverage-missing",
 ): ActivePriceCoverageHealth {
   return {
     status: "unknown",
-    expectedActiveCount: ACTIVE_IDS.size,
-    presentActiveCount: 0,
-    pricedActiveCount: 0,
-    missingPriceCount: 0,
+    unavailableReason,
+    expectedActiveCount: null,
+    presentActiveCount: null,
+    pricedActiveCount: null,
+    missingPriceCount: null,
     pricedActiveIds: [],
     missingActiveIds: [],
-    affectedMarketCapUsd: 0,
+    affectedMarketCapUsd: null,
     missingActiveAssets: [],
-    alertEligibleCount: 0,
+    alertEligibleCount: null,
     alertEligibleIds: [],
     acknowledgedGapIds: [],
-    acknowledgedGapCount: 0,
+    acknowledgedGapCount: null,
     expiredGapReviewIds: [],
     invalidGapReviewIds: [],
-    maxConsecutiveMissingGenerations: 0,
+    maxConsecutiveMissingGenerations: null,
     observedAt,
   };
 }
@@ -57,9 +60,6 @@ function stringArray(value: unknown): string[] {
     : [];
 }
 
-function finiteNumber(value: unknown, fallback = 0): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
 
 
 function parseStablecoinPublicationHealth(
@@ -105,14 +105,18 @@ function parseActivePriceCoverageHealth(
   const coverage = isRecord(metadata) && isRecord(metadata.activePriceCoverage)
     ? metadata.activePriceCoverage
     : null;
-  if (!coverage) return unknownActivePriceCoverageHealth(observedAt);
+  if (!coverage) return unknownActivePriceCoverageHealth(observedAt, "coverage-malformed");
 
-  const expectedActiveCount = finiteNumber(coverage.expectedActiveCount);
-  const presentActiveCount = finiteNumber(coverage.presentActiveCount);
-  const pricedActiveCount = finiteNumber(coverage.pricedActiveCount);
-  const pricedActiveIds = stringArray(coverage.pricedActiveIds);
-  const missingActiveIds = stringArray(coverage.missingActiveIds);
-  const missingPriceCount = finiteNumber(coverage.missingPriceCount, missingActiveIds.length);
+  const parsed = ActivePriceCoverageHealthSchema.safeParse({
+    ...coverage,
+    status: coverage.complete === true ? "complete" : "incomplete",
+    observedAt,
+  });
+  if (!parsed.success) return unknownActivePriceCoverageHealth(observedAt, "coverage-malformed");
+  const {
+    expectedActiveCount, presentActiveCount, pricedActiveCount,
+    pricedActiveIds, missingActiveIds, missingPriceCount,
+  } = parsed.data;
   const reviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
   const parseOptions = { nowSec, reviewsById: reviews.activeById };
   const missingDetailsById = new Map(
@@ -171,7 +175,7 @@ function parseActivePriceCoverageHealth(
     missingPriceCount,
     pricedActiveIds,
     missingActiveIds,
-    affectedMarketCapUsd: finiteNumber(coverage.affectedMarketCapUsd),
+    affectedMarketCapUsd: parsed.data.affectedMarketCapUsd,
     missingActiveAssets,
     alertEligibleCount: alertEligibleIds.length,
     alertEligibleIds,
@@ -179,13 +183,7 @@ function parseActivePriceCoverageHealth(
     acknowledgedGapCount: acknowledgedGapIds.length,
     expiredGapReviewIds: reviews.expiredGapReviewIds,
     invalidGapReviewIds: reviews.invalidGapReviewIds,
-    maxConsecutiveMissingGenerations: finiteNumber(
-      coverage.maxConsecutiveMissingGenerations,
-      missingActiveAssets.reduce(
-        (max, entry) => Math.max(max, entry.consecutiveMissingGenerations),
-        0,
-      ),
-    ),
+    maxConsecutiveMissingGenerations: parsed.data.maxConsecutiveMissingGenerations,
     observedAt,
   };
 }

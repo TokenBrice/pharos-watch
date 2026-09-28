@@ -153,6 +153,7 @@ export interface DigestPublicationOutcome {
   telegramStatus: string;
   dispositions: Record<"twitter" | "telegram", DigestChannelDisposition>;
   wrapperEditorialAlerts: Record<"twitter" | "telegram", DigestWrapperEditorialFinding[]>;
+  outputPublishedAt?: number | null;
 }
 
 function unavailableSafetyContext(): DigestSafetyContext {
@@ -462,6 +463,7 @@ export async function publishDigestEdition(
   const storedMeta = input.qualityGateStatus
     ? markDigestMetaBlocked(input.copy.meta)
     : input.copy.meta;
+  let inserted = false;
   await insertDigestRecord({
     db: input.db,
     generatedAt: input.generatedAt,
@@ -471,6 +473,7 @@ export async function publishDigestEdition(
     digestExtended: input.copy.extended || null,
     digestMeta: storedMeta,
     signal: input.signal,
+    onInserted: () => { inserted = true; },
   });
   throwIfAborted(input.signal);
 
@@ -480,8 +483,10 @@ export async function publishDigestEdition(
     throwIfAborted(input.signal);
   }
 
-  return deliverDigestEdition({
+  const publication = await deliverDigestEdition({
     ...input,
     editionNumber,
   });
+  publication.outputPublishedAt = inserted && !input.qualityGateStatus ? input.generatedAt : null;
+  return publication;
 }

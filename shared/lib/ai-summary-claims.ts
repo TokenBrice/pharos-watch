@@ -4,6 +4,7 @@ import {
   type AiSummaryClaimTokenName,
   type AiSummaryClaimValues,
 } from "../types/editorial";
+import { ReportCardGradeSchema } from "../types/report-card-grade";
 
 export interface AiSummaryClaimIssue {
   code: "duplicate-token" | "invalid-facts-as-of" | "placeholder-count" | "unregistered-placeholder" | "wrong-registration";
@@ -42,9 +43,8 @@ function formatClaimValue(token: AiSummaryClaimTokenName, value: string | number
   if (token === "score") {
     return typeof value === "number" && Number.isFinite(value) ? String(Math.round(value)) : "N/A";
   }
-  return typeof value === "string" && /^(?:A\+|A-|A|B\+|B-|B|C\+|C-|C|D\+|D-|D|F)$/.test(value)
-    ? value
-    : "N/A";
+  const grade = ReportCardGradeSchema.safeParse(value);
+  return grade.success ? grade.data : "N/A";
 }
 
 export function validateAiSummaryClaimTokens(

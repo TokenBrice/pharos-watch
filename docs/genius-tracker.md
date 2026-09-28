@@ -43,7 +43,6 @@ Required: `applicability`, `authorizationStatus`, `issuerPathway`, `reviewer` (s
 | `reserveDisclosureUrl` | URL | Public reserve disclosure / attestation hub. |
 | `redemptionPolicyPresent` | boolean | Public 1:1 redemption policy exists. |
 | `monthlyAttestationPresent` | boolean | Monthly reserve attestation exists. |
-| `latestReportDate` | `YYYY-MM-DD` | Date of the latest reserve report. |
 | `notes` | string | Reviewer notes / caveats. |
 | `references` | `GeniusReference[]` | See [Sourcing](#sourcing--source-kinds). |
 | `negativeEvidenceReview` | `{ sourcesChecked[], summary (≥12), reviewer, reviewedAt, references? }` | **Required** when `no-public-authorization-found`. |
@@ -134,7 +133,11 @@ For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer 
 
 ## Reserve & redemption disclosure
 
-`reserveDisclosurePresent` / `reserveDisclosureUrl`, `redemptionPolicyPresent`, `monthlyAttestationPresent`, and `latestReportDate` capture the public disclosure footprint GENIUS will require. Record what is **publicly present today**; presence of `reserveDisclosurePresent: true` requires a URL (rule 4).
+`reserveDisclosurePresent` / `reserveDisclosureUrl`, `redemptionPolicyPresent`, and `monthlyAttestationPresent` capture the public disclosure footprint GENIUS will require. Record what is **publicly present today**; presence of `reserveDisclosurePresent: true` requires a URL (rule 4).
+
+Reserve-report dates have one authority: `proofOfReserves.latestReport`. Its independently optional `periodEnd` and `publishedAt` are rendered with their respective labels in both the detail-page regulatory standing and the compliance table. Neither date is inferred from the other or from the compliance review date. A missing report (or a report without known dates) does not fabricate a latest-report note. The compliance projection carries the canonical report alongside the GENIUS profile; GENIUS has no separately authored latest-report date.
+
+Legacy GENIUS-only dates whose semantics were not established are preserved as `latestReport.reviewReference: { date, reviewedAt, dateKind: "unspecified" }`, with required report sources, reviewer, confidence, and assurance metadata retained. They display as a **review reference**, qualified **as of `<reviewedAt>` review**, never as a latest period end or publication date. Older review details remain in compliance sidecar notes with the same explicit review-date qualification.
 
 ---
 

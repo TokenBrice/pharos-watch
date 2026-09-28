@@ -1,4 +1,5 @@
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { SUPPLY_ATTRIBUTION_RPC_URLS } from "@shared/lib/chain-rpc-registry";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -216,7 +217,7 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
         "390adf7418ac002dcb256005648f81dced42b36976d93d0007112fe75b17ea0b",
       controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
       safeBlockLag: 24,
-      extraRpcUrls: ["https://rpc.plume.org"],
+      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.plume,
     },
     "bsc:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b": {
       runtime: "evm",
@@ -233,10 +234,7 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
         "48d61022deeca312150f0a1fcf585e5e0fcb55d0e6c620c1880a7bcccd56173f",
       controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
       safeBlockLag: 10,
-      extraRpcUrls: [
-        "https://rpc.monad.xyz",
-        "https://rpc1.monad.xyz",
-      ],
+      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.monad,
     },
     "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj": {
       runtime: "solana",
@@ -263,7 +261,7 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
         "0212b631a7889adf5f74857c3768a211a2a25dce9c57e5630d25f6f1c056860c",
       controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
       safeBlockLag: 24,
-      extraRpcUrls: ["https://rpc.plume.org"],
+      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.plume,
     },
     "monad:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245": {
       runtime: "evm",
@@ -272,10 +270,7 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
         "5c903ebeaedc9bbbef618bab8106f93c4fae50fb2b8e15870bf346056f9bd1c5",
       controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
       safeBlockLag: 10,
-      extraRpcUrls: [
-        "https://rpc.monad.xyz",
-        "https://rpc1.monad.xyz",
-      ],
+      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.monad,
     },
     "optimism:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245": {
       runtime: "evm",

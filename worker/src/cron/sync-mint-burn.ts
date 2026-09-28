@@ -119,6 +119,8 @@ export async function syncMintBurn(
       ? await pruneMintBurnRetention(db, runTimestamp, signal)
       : null;
     const metadata = JSON.stringify({
+      outputPublishedAt: null,
+      ...(retention?.error ? { reason: "mint-burn-retention-failed" } : {}),
       lane,
       jobName,
       budgetUsed: budget.count,
@@ -301,6 +303,7 @@ export async function syncMintBurn(
   // runs so operators get a signal that hourly aggregates are stale.
   if (recalcFailed && lane !== "extended" && status === "ok") {
     status = "degraded";
+    completion.metadata.reason = "mint-burn-hourly-recalc-failed";
   }
   completion.metadata.recalcFailed = recalcFailed;
   if (recalcError) completion.metadata.recalcError = recalcError;
@@ -309,6 +312,7 @@ export async function syncMintBurn(
     completion.metadata.retention = retention;
     if (retention.error && status === "ok") {
       status = "degraded";
+      completion.metadata.reason = "mint-burn-retention-failed";
     }
   }
   const metadata = JSON.stringify(completion.metadata);

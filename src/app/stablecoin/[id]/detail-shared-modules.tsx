@@ -81,6 +81,9 @@ export function buildDetailSharedModules({
 }): DetailSharedModules {
   const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
   const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
+  const liveScopeMetadata = viewModel.reserves?.mode === "live" || viewModel.reserves?.mode === "live-stale"
+    ? viewModel.reserves.metadata
+    : undefined;
   const failureDomainsView = buildFailureDomainsView(viewModel.reportCard);
   const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
   const controlPosture = buildControlPostureView(viewModel.coin, viewModel.variantParent);
@@ -96,6 +99,8 @@ export function buildDetailSharedModules({
         liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
         liveAtSec={viewModel.reserves?.liveAt ?? null}
         liveFreshnessLabel={viewModel.reserves ? formatReserveSnapshotLabel(viewModel.reserves) : undefined}
+        liveBalanceSheetScope={liveScopeMetadata?.balanceSheetScope}
+        liveSharedBookAssetIds={liveScopeMetadata?.sharedBookAssetIds}
       />
     ),
     failureDomains: <FailureDomainsCard view={failureDomainsView} />,

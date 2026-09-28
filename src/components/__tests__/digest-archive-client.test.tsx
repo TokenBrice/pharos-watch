@@ -28,6 +28,7 @@ vi.mock("@/lib/digest", () => ({
     missed: 0,
     expired: 0,
     pending: 0,
+    unavailable: 0,
     hitRate: null,
     buckets: [],
     unclassifiedCount: 0,

@@ -1,5 +1,5 @@
 import { buildPaginatedQuery, executeAtomicBatch } from "./db";
-import { getLatestSuccessfulCronTimestamp } from "./api-freshness";
+import { buildCronFreshnessHeaders, getLatestSuccessfulCronTimestampResult } from "./api-freshness";
 import {
   encodeJsonCursor,
   parseBooleanParam,
@@ -92,10 +92,9 @@ interface PaginatedEventResponseConfig<TRow, TEvent, TExtra extends Record<strin
   freshness: {
     producerJob: string;
     maxAgeSec: number;
-    fallbackTimestamp: (events: TEvent[]) => number;
   };
   cacheControl: string;
-  buildExtraBody?: (events: TEvent[], total: number, fallbackTimestamp: number) => TExtra | Promise<TExtra>;
+  buildExtraBody?: (events: TEvent[], total: number) => TExtra | Promise<TExtra>;
 }
 
 interface ParsedPagination {
@@ -284,7 +283,7 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
   const hasMore = config.cursor ? rows.length > config.limit : false;
   const pageRows = hasMore ? rows.slice(0, config.limit) : rows;
   const events = pageRows.map(config.mapRow);
-  const lowerBoundTotal = config.cursorValues
+  const lowerBoundTotal = config.cursorValues || events.length === 0
     ? events.length + (hasMore ? 1 : 0)
     : config.offset + events.length + (hasMore ? 1 : 0);
   const result: { events: TEvent[]; total: number; totalExact?: boolean; nextCursor?: string | null } = {
@@ -372,9 +371,8 @@ export async function buildPaginatedEventResponse<
     cursorValues: pagination.cursorValues,
   });
 
-  const fallbackTimestamp = config.freshness.fallbackTimestamp(events);
-  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, config.freshness.producerJob, fallbackTimestamp);
-  const extraBody = config.buildExtraBody ? await config.buildExtraBody(events, total, fallbackTimestamp) : {};
+  const freshness = await getLatestSuccessfulCronTimestampResult(db, config.freshness.producerJob);
+  const extraBody = config.buildExtraBody ? await config.buildExtraBody(events, total) : {};
 
   return jsonFreshResponse(
     {
@@ -385,9 +383,7 @@ export async function buildPaginatedEventResponse<
       ...extraBody,
     },
     {
-      cacheControl: config.cacheControl,
-      updatedAt: freshnessTs,
-      maxAgeSec: config.freshness.maxAgeSec,
+      headers: buildCronFreshnessHeaders(freshness, config.freshness.maxAgeSec, config.cacheControl),
     },
   );
 }

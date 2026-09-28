@@ -57,15 +57,6 @@ vi.mock("../../lib/native-peg-quotes", () => ({
   fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
 }));
 
-// Stub supply
-vi.mock("@shared/lib/supply", () => ({
-  getCirculatingRaw: (asset: { circulating?: Record<string, number> }) => {
-    const c = asset.circulating;
-    if (!c) return 0;
-    return Object.values(c).reduce((a, b) => a + b, 0);
-  },
-}));
-
 import { detectDepegEvents } from "../detect-depegs";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 
@@ -553,6 +544,21 @@ describe("detectDepegEvents", () => {
       entry.sql.includes("INSERT INTO depeg_events") || entry.sql.includes("INSERT INTO depeg_pending"),
     );
     expect(inserts).toHaveLength(0);
+  });
+
+  it.each<{ label: string; circulating: Record<string, number>; closed: boolean }>([
+    { label: "absent supply buckets keep the open event", circulating: {}, closed: false },
+    { label: "an explicit observed zero still closes it", circulating: { ethereum: 0 }, closed: true },
+  ])("persists supply-floor coverage decisions against real storage: $label", async ({ circulating, closed }) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    seedOpenEvent(sqlite);
+    await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.9, circulating })]);
+    expect(sqlite.prepare("SELECT id, ended_at, recovery_price, close_reason FROM depeg_events").all()).toEqual([
+      closed
+        ? { id: 1, ended_at: now, recovery_price: null, close_reason: "coverage-lost-supply" }
+        : { id: 1, ended_at: null, recovery_price: null, close_reason: null },
+    ]);
   });
 
   it("does not suppress a new event when fresh DEX data is below the depeg trust TVL floor", async () => {

@@ -1,4 +1,5 @@
 import { valuePhysicalCommodityDelivery } from "@shared/lib/physical-commodity-delivery";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import {
@@ -96,6 +97,7 @@ function trackedStablecoinValuation(
   observedAtSec: number,
 ): TrackedStablecoinValuation | null {
   const peg = fixedInput.pegDataById[trackedAssetId];
+  if (peg && !isObservedPrice(peg)) return null;
   if (peg?.currentDeviationBps !== null && peg?.currentDeviationBps !== undefined) {
     const unitValueUsd = 1 + peg.currentDeviationBps / 10_000;
     if (!Number.isFinite(unitValueUsd) || unitValueUsd <= 0) return null;
@@ -126,7 +128,7 @@ function trackedStablecoinValuation(
   }
 
   const navPrice = fixedInput.navPriceById?.[trackedAssetId];
-  if (!navPrice) return null;
+  if (!navPrice || !isObservedPrice({ priceSource: navPrice.sourceId })) return null;
   return {
     basis: "nav",
     unitValueUsd: navPrice.priceUsd,
@@ -145,6 +147,7 @@ function expectedTrackedStablecoinUnitValueUsd(
   trackedAssetId: string,
 ): number | null {
   const navPrice = fixedInput.navPriceById?.[trackedAssetId];
+  if (navPrice && !isObservedPrice({ priceSource: navPrice.sourceId })) return null;
   const peg = fixedInput.pegDataById[trackedAssetId];
   const legacyUsdPeg =
     peg?.pegCurrency === undefined &&
@@ -167,6 +170,7 @@ function pinnedDexTrackedStablecoinValuation(
   observedAtSec: number,
 ): TrackedStablecoinValuation | null {
   if (
+    !isObservedPrice({ priceSource: observation.outputUnitValueSourceId }) ||
     observation.outputUnitValueUsd === undefined ||
     observation.outputUnitValueSourceId === undefined ||
     observation.outputUnitValueObservedAt === undefined ||

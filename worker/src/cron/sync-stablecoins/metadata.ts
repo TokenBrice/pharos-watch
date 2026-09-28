@@ -424,13 +424,16 @@ export function buildStablecoinsSyncResult(input: {
   if (input.stalenessSummary) metadata.priceStaleness = input.stalenessSummary;
   if (
     input.supplyGapReconciliation &&
-    (input.supplyGapReconciliation.totalReconciled > 0 || input.supplyGapReconciliation.baselineMismatches.length > 0)
+    (input.supplyGapReconciliation.totalReconciled > 0
+      || input.supplyGapReconciliation.baselineMismatches.length > 0
+      || input.supplyGapReconciliation.gapFillRejections.length > 0)
   ) {
     metadata.supplyGapReconciliation = {
       totalReconciled: input.supplyGapReconciliation.totalReconciled,
       byReason: input.supplyGapReconciliation.byReason,
       assets: compactDiagnosticValue(input.supplyGapReconciliation.assets),
       baselineMismatches: compactDiagnosticValue(input.supplyGapReconciliation.baselineMismatches),
+      gapFillRejections: compactDiagnosticValue(input.supplyGapReconciliation.gapFillRejections),
     };
   }
   if (input.trackedCoverage && (input.trackedCoverage.restoredIds.length > 0 || input.trackedCoverage.droppedIds.length > 0)) {

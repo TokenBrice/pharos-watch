@@ -34,6 +34,21 @@ function minimalRawStatus() {
 }
 
 describe("writeStatusRawSnapshot", () => {
+  it.each([
+    [NOW + 60, NOW + 60, "fresh"],
+    [NOW + 61, NOW, "unreadable"],
+    [NOW, NOW + 61, "unreadable"],
+    [NOW + 86400, NOW, "unreadable"],
+  ] as const)("checks cache %s and generation %s clocks", async (updatedAt, producedAt, kind) => {
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache", rows: [],
+      first: { value: JSON.stringify({ version: 1, producedAt, raw: minimalRawStatus() }), updated_at: updatedAt },
+    }], { requireMatch: true });
+    expect(await loadStatusRawSnapshot(db, NOW)).toMatchObject(kind === "fresh"
+      ? { kind, ageSec: 0 }
+      : { kind, ageSec: null, error: "future-timestamp" });
+  });
+
   it("fences stale writes while accepting equal and newer snapshots", async () => {
     const { db, sqlite } = fixtures.open();
     const raw = minimalRawStatus() as unknown as Parameters<typeof writeStatusRawSnapshot>[2];

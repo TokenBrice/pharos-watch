@@ -19,11 +19,28 @@ export const PsiConditionBandSchema = z.enum(PSI_CONDITION_BAND_VALUES);
 export type PsiConditionBand = z.infer<typeof PsiConditionBandSchema>;
 
 export const StabilityIndexComponentsSchema = z.object({
-  severity: z.number(),
-  breadth: z.number(),
-  stressBreadth: z.number().optional(),
-  trend: z.number(),
+  severity: z.number().nullable(),
+  breadth: z.number().nullable(),
+  stressBreadth: z.number().nullable().optional(),
+  trend: z.number().nullable(),
 });
+
+export const StabilityIndexDailyProvenanceSchema = z.object({
+  aggregation: z.literal("all-day"),
+  sampleCount: z.number().int().nonnegative(),
+  // Legacy daily snapshots recorded versions but not per-component counts.
+  componentSampleCounts: z.object({
+    severity: z.number().int().nonnegative(),
+    breadth: z.number().int().nonnegative(),
+    stressBreadth: z.number().int().nonnegative(),
+    trend: z.number().int().nonnegative(),
+  }).nullable(),
+  methodologyBreakdown: z.record(z.string(), z.number().int().nonnegative()),
+});
+
+const StabilityIndexUnavailableComponentsSchema = z.array(
+  z.enum(["severity", "breadth", "stressBreadth", "trend"]),
+);
 
 export const StabilityContributorSchema = z.object({
   id: z.string(),
@@ -56,6 +73,8 @@ export const StabilityIndexCurrentSchema = z.object({
   totalMcapUsd: z.number().optional(),
   computedAt: z.number(),
   methodologyVersion: z.string(),
+  dailyProvenance: StabilityIndexDailyProvenanceSchema.optional(),
+  componentsUnavailable: StabilityIndexUnavailableComponentsSchema.optional(),
 });
 
 export const StabilityIndexHistoryPointSchema = z.object({
@@ -64,6 +83,8 @@ export const StabilityIndexHistoryPointSchema = z.object({
   band: PsiConditionBandSchema,
   components: StabilityIndexComponentsSchema.optional(),
   methodologyVersion: z.string(),
+  dailyProvenance: StabilityIndexDailyProvenanceSchema.optional(),
+  componentsUnavailable: StabilityIndexUnavailableComponentsSchema.optional(),
 });
 
 export const StabilityIndexResponseSchema = z.object({

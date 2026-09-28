@@ -7,7 +7,7 @@ import { collectSourceFilesUnderRoots } from "../lib/source-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const SCAN_ROOTS = ["scripts", "docs", "package.json", ".github/workflows", ".github/actions"];
-const SOURCE_EXTENSIONS = new Set([".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".yml", ".yaml"]);
+const SOURCE_EXTENSIONS = new Set([".md", ".mjs", ".js", ".ts", ".mts", ".tsx", ".json", ".yml", ".yaml"]);
 const SKIP_DIRS = new Set(["node_modules", ".git", ".next", "out", "coverage"]);
 const ALLOWED_SCRIPT_PREFIXES = [
   "scripts/maintenance/",
@@ -38,9 +38,9 @@ const NODE_FLAGS_WITH_VALUE = [
 // keep it reachable, and doc mentions were what let a batch of never-executed
 // checks survive as orphans.
 const REVERSE_ENTRYPOINT_DIRS = ["scripts/maintenance", "scripts/ci", "scripts/build-data", ".github/scripts"];
-const REVERSE_ENTRYPOINT_EXTENSIONS = new Set([".mjs", ".js", ".ts"]);
+const REVERSE_ENTRYPOINT_EXTENSIONS = new Set([".mjs", ".js", ".ts", ".mts"]);
 const REVERSE_REFERENCE_ROOTS = ["scripts", "package.json", ".github"];
-const REVERSE_REFERENCE_EXTENSIONS = new Set([".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".yml", ".yaml"]);
+const REVERSE_REFERENCE_EXTENSIONS = new Set([".mjs", ".js", ".ts", ".mts", ".tsx", ".json", ".yml", ".yaml"]);
 
 
 function isTestPath(path: string): boolean {
@@ -163,8 +163,8 @@ export function collectScriptEntrypointErrors({ root = process.cwd() }: { root?:
     .map((file) => ({ file, content: readFileSync(resolve(root, file), "utf8") }));
 
   for (const relPath of reverseCandidates) {
-    if (isTestPath(relPath)) continue;
-    const bare = relPath.replace(/\.(mjs|js|ts)$/, "");
+    if (isTestPath(relPath) || /\.d\.[cm]?ts$/.test(relPath)) continue;
+    const bare = relPath.replace(/\.(mjs|js|ts|mts)$/, "");
     const referenced = referenceContents.some(
       ({ file, content }) => file !== relPath && (content.includes(relPath) || content.includes(bare)),
     );

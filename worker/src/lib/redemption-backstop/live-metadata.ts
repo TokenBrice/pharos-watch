@@ -54,6 +54,7 @@ export interface RedemptionBackstopLiveMetadata {
   capacityKind: RedemptionLiveCapacityKind | null;
   freshnessKind: RedemptionLiveFreshnessKind | null;
   sourceTimestamp: number | null;
+  evidenceObservedAt: number | null;
   sourceUrls: string[];
   settlementDelaySec: number | null;
   queueDepthUsd: number | null;
@@ -516,6 +517,13 @@ export function readRedemptionBackstopLiveMetadata(
     sourceTimestamp.value != null &&
     sourceTimestamp.value > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
   const validSourceTimestamp = sourceTimestampFuture ? null : sourceTimestamp.value;
+  const sameRunFreshness = freshnessKind === "same-run-onchain" || freshnessKind === "same-run-api";
+  const evidenceObservedAt = validSourceTimestamp ?? (
+    sameRunFreshness && updatedAt != null && Number.isFinite(updatedAt) && updatedAt >= 0 &&
+    updatedAt <= now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC
+      ? updatedAt
+      : null
+  );
   const verifiedSourceTimestampIssue =
     freshnessKind === "verified-source-timestamp"
       ? sourceTimestampFuture
@@ -630,6 +638,7 @@ export function readRedemptionBackstopLiveMetadata(
     capacityKind,
     freshnessKind,
     sourceTimestamp: validSourceTimestamp,
+    evidenceObservedAt,
     sourceUrls: coerceUrlArray(redemptionTelemetry.sourceUrls),
     settlementDelaySec: settlementDelaySec.value,
     queueDepthUsd: queueDepthUsd.value,

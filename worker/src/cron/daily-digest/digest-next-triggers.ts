@@ -16,6 +16,7 @@ import {
   unique,
   usableCandidates,
 } from "./digest-intelligence-utils";
+import { comparableDepegs, currentDepegBps, findTriggerTarget, type DigestEvidence } from "./digest-evidence";
 
 // A trigger may live at most this many consecutive editions without firing
 // before it expires and cedes its slot. The apxUSD-3,650 trigger once ran 20
@@ -35,10 +36,12 @@ function applyTriggerLifecycle(
   trigger: DigestNextTrigger,
   data: DigestInputData,
   previousTriggers: ReadonlyMap<string, DigestNextTrigger>,
+  previousData: DigestInputData | null,
+  evidence?: DigestEvidence,
 ): DigestNextTrigger | null {
   const previous = previousTriggers.get(trigger.id);
   if (!previous) return trigger;
-  if (previous.thresholdValue != null && triggerHit(previous, data).status === "hit") {
+  if (previous.thresholdValue != null && triggerHit(previous, data, previousData, evidence).status === "hit") {
     return trigger;
   }
   const repeatedCount = (previous.repeatedCount ?? 0) + 1;
@@ -55,6 +58,7 @@ function applyTriggerLifecycle(
 export function buildNextTriggers(
   data: DigestInputData,
   previousData: DigestInputData | null = null,
+  evidence?: DigestEvidence,
 ): DigestNextTrigger[] {
   const triggers: DigestNextTrigger[] = [];
   const previousTriggers = new Map((previousData?.nextTriggers ?? []).map((trigger) => [trigger.id, trigger]));
@@ -64,7 +68,12 @@ export function buildNextTriggers(
 
   const pushWithLifecycle = (trigger: DigestNextTrigger | null): void => {
     if (!trigger || triggers.some((existing) => existing.id === trigger.id)) return;
-    const lively = applyTriggerLifecycle(trigger, data, previousTriggers);
+    const rows: readonly { stablecoinId: string; symbol: string }[] | undefined = trigger.metric === "dews-band" ? evidence?.dews
+      : trigger.metric === "yield-apy" ? evidence?.yields
+      : trigger.metric === "liquidity-score" ? evidence?.liquidity : undefined;
+    const target = rows ? findTriggerTarget(rows, trigger) : undefined;
+    const identified = target ? { ...trigger, stablecoinId: target.stablecoinId } : trigger;
+    const lively = applyTriggerLifecycle(identified, data, previousTriggers, previousData, evidence);
     if (lively) triggers.push(lively);
   };
 
@@ -75,7 +84,7 @@ export function buildNextTriggers(
 
   if (triggers.length < TRIGGER_LIMIT) {
     const topDepeg = data.topDepegs.find((depeg) => !depeg.suppressReason);
-    pushWithLifecycle(topDepeg ? depegTrigger(topDepeg) : null);
+    pushWithLifecycle(topDepeg ? depegTrigger(topDepeg, data.dataQuality?.generatedAt) : null);
   }
 
   if (triggers.length < TRIGGER_LIMIT && data.stabilityIndex) {
@@ -88,12 +97,13 @@ export function buildNextTriggers(
 export function buildForwardLookOutcomes(
   data: DigestInputData,
   previousData: DigestInputData | null,
+  evidence?: DigestEvidence,
 ): DigestForwardLookOutcome[] {
   const triggers = previousData?.nextTriggers ?? [];
   if (triggers.length === 0) return [];
   const sourceDate = toDateString(previousData?.dataQuality?.generatedAt);
   return triggers.slice(0, TRIGGER_LIMIT).map((trigger) => {
-    const result = triggerHit(trigger, data);
+    const result = triggerHit(trigger, data, previousData, evidence);
     // A trigger that has sat pending for its whole TTL records "expired"
     // instead of another identical pending line; buildNextTriggers drops it.
     const expired = result.status === "pending" && (trigger.repeatedCount ?? 0) >= TRIGGER_MAX_EDITIONS - 1;
@@ -122,7 +132,7 @@ function triggerForCandidate(
     const depeg =
       data.topDepegs.find((entry) => entry.stablecoinId != null && entry.stablecoinId === candidateCoinId) ??
       data.topDepegs.find((entry) => entry.symbol.toUpperCase() === symbol);
-    return depeg ? depegTrigger(depeg, candidate.id) : null;
+    return depeg ? depegTrigger(depeg, data.dataQuality?.generatedAt, candidate.id) : null;
   }
   if (candidate.kind === "supply" && symbol) {
     const velocity = (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === symbol);
@@ -203,11 +213,11 @@ function liquidityTrigger(
 
 function depegTrigger(
   depeg: DigestInputData["topDepegs"][number],
+  generatedAt: number | undefined,
   candidateId?: string,
-): DigestNextTrigger {
-  // Threshold arms off the live deviation; a peak-derived threshold can sit
-  // permanently above a static live price and never fire.
-  const absBps = Math.abs(depeg.currentBps ?? depeg.bps);
+): DigestNextTrigger | null {
+  const absBps = currentDepegBps(depeg, generatedAt);
+  if (absBps == null) return null;
   const threshold = roundToStep(Math.max(absBps + 25, absBps * 1.15), 25, "up");
   const symbol = depeg.symbol.toUpperCase();
   return {
@@ -315,26 +325,26 @@ function psiTrigger(score: number, candidateId?: string): DigestNextTrigger {
 function triggerHit(
   trigger: DigestNextTrigger,
   data: DigestInputData,
+  previousData: DigestInputData | null,
+  evidence?: DigestEvidence,
 ): Pick<DigestForwardLookOutcome, "status" | "detail"> {
   const threshold = trigger.thresholdValue;
   if (threshold == null) return { status: "pending", detail: "Trigger had no numeric threshold to evaluate." };
-  if (trigger.metric === "depeg-bps" && trigger.symbol) return depegOutcome(trigger, data, threshold);
+  if (trigger.metric === "depeg-bps" && trigger.symbol) return depegOutcome(trigger, data, threshold, previousData, evidence);
   if (trigger.metric === "supply-1d-usd" && trigger.symbol) return supply1dOutcome(trigger, data, threshold);
   if (trigger.metric === "supply-7d-usd" && trigger.symbol) return supply7dOutcome(trigger, data, threshold);
   if (trigger.metric === "bank-run-gauge") return gaugeOutcome(trigger, data, threshold);
-  if (trigger.metric === "dews-band" && trigger.symbol) return dewsOutcome(trigger, data, threshold);
+  if (trigger.metric === "dews-band" && trigger.symbol) return dewsOutcome(trigger, threshold, evidence);
   if (trigger.metric === "psi-score") return psiOutcome(trigger, data, threshold);
-  if (trigger.metric === "yield-apy" && trigger.symbol) return yieldOutcome(trigger, data, threshold);
-  if (trigger.metric === "liquidity-score" && trigger.symbol) return liquidityOutcome(trigger, data, threshold);
+  if (trigger.metric === "yield-apy" && trigger.symbol) return yieldOutcome(trigger, threshold, evidence);
+  if (trigger.metric === "liquidity-score" && trigger.symbol) return liquidityOutcome(trigger, threshold, evidence);
   return { status: "pending", detail: "No evaluator exists for this trigger." };
 }
 
-function yieldOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
-  const anomaly = (data.yieldAnomalies ?? []).find(
-    (entry) => entry.symbol.toUpperCase() === trigger.symbol?.toUpperCase(),
-  );
+function yieldOutcome(trigger: DigestNextTrigger, threshold: number, evidence?: DigestEvidence) {
+  const anomaly = findTriggerTarget(evidence?.yields ?? [], trigger);
   if (!anomaly) {
-    return { status: "hit" as const, detail: `${trigger.symbol} cleared the yield-anomaly warning set.` };
+    return { status: "unavailable" as const, detail: `${trigger.symbol} has no eligible current yield observation.` };
   }
   return {
     status: anomaly.currentApy <= threshold ? ("hit" as const) : ("pending" as const),
@@ -342,14 +352,12 @@ function yieldOutcome(trigger: DigestNextTrigger, data: DigestInputData, thresho
   };
 }
 
-function liquidityOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
-  const shift = (data.liquidityShifts ?? []).find(
-    (entry) => entry.symbol.toUpperCase() === trigger.symbol?.toUpperCase(),
-  );
+function liquidityOutcome(trigger: DigestNextTrigger, threshold: number, evidence?: DigestEvidence) {
+  const shift = findTriggerTarget(evidence?.liquidity ?? [], trigger);
   if (!shift) {
     return {
-      status: "missed" as const,
-      detail: `${trigger.symbol} had no follow-through liquidity move today.`,
+      status: "unavailable" as const,
+      detail: `${trigger.symbol} has no admitted comparable liquidity observation.`,
     };
   }
   const hit = trigger.comparator === "lte" ? shift.currentScore <= threshold : shift.currentScore >= threshold;
@@ -359,13 +367,20 @@ function liquidityOutcome(trigger: DigestNextTrigger, data: DigestInputData, thr
   };
 }
 
-function depegOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
-  const depeg =
-    (trigger.stablecoinId != null
-      ? data.topDepegs.find((entry) => entry.stablecoinId === trigger.stablecoinId)
-      : undefined) ?? data.topDepegs.find((entry) => entry.symbol.toUpperCase() === trigger.symbol?.toUpperCase());
-  if (!depeg) return { status: "missed" as const, detail: `${trigger.symbol} is no longer in the active depeg set.` };
-  const absBps = Math.abs(depeg.currentBps ?? depeg.bps);
+function depegOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number, previousData: DigestInputData | null, evidence?: DigestEvidence) {
+  const depeg = findTriggerTarget(evidence?.activeDepegs ?? data.topDepegs, trigger);
+  const previous = previousData ? findTriggerTarget(previousData.topDepegs, trigger) : undefined;
+  if (!depeg) {
+    const recovery = findTriggerTarget(evidence?.recoveredDepegs ?? [], trigger);
+    if (recovery && previous?.startedAt != null && recovery.startedAt === previous.startedAt) {
+      return { status: "missed" as const, detail: `${trigger.symbol} has a positively classified recovery closure.` };
+    }
+    return { status: "unavailable" as const, detail: `${trigger.symbol} has no current observation or matching recovery closure.` };
+  }
+  if (!previous || !previousData || !comparableDepegs(depeg, previous, data, previousData)) {
+    return { status: "unavailable" as const, detail: `${trigger.symbol} lacks two fresh same-basis current observations; stored peak is historical context only.` };
+  }
+  const absBps = currentDepegBps(depeg, data.dataQuality?.generatedAt)!;
   return {
     status: absBps >= threshold ? "hit" as const : "pending" as const,
     detail: `${trigger.symbol} is now ${absBps} bps off peg versus ${trigger.thresholdLabel}.`,
@@ -374,7 +389,7 @@ function depegOutcome(trigger: DigestNextTrigger, data: DigestInputData, thresho
 
 function supply1dOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
   const velocity = (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === trigger.symbol?.toUpperCase());
-  if (!velocity) return { status: "missed" as const, detail: `${trigger.symbol} has no current supply-velocity signal.` };
+  if (!velocity) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current supply-velocity observation.` };
   return {
     status: Math.abs(velocity.change1d) >= threshold ? "hit" as const : "missed" as const,
     detail: `${trigger.symbol} moved ${signedCurrency(velocity.change1d)} over 1d versus ${trigger.thresholdLabel}.`,
@@ -390,7 +405,7 @@ function supply7dOutcome(trigger: DigestNextTrigger, data: DigestInputData, thre
   const weeklyChange = (data.supplyChanges7d ?? []).find((entry) => entry.coin.toUpperCase() === symbol)
     ?? biggestWeeklyChange
     ?? (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === symbol);
-  if (!weeklyChange) return { status: "missed" as const, detail: `${trigger.symbol} has no current weekly supply change.` };
+  if (!weeklyChange) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current weekly supply observation.` };
   return {
     status: Math.abs(weeklyChange.change7d) >= threshold ? "hit" as const : "missed" as const,
     detail: `${trigger.symbol} moved ${signedCurrency(weeklyChange.change7d)} over 7d versus ${trigger.thresholdLabel}.`,
@@ -399,18 +414,17 @@ function supply7dOutcome(trigger: DigestNextTrigger, data: DigestInputData, thre
 
 function gaugeOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
   const score = data.mintBurnFlows?.gaugeScore;
-  if (score == null) return { status: "pending" as const, detail: "Bank Run Gauge is unavailable in the current input." };
+  if (score == null) return { status: "unavailable" as const, detail: "Bank Run Gauge is unavailable in the current input." };
   return {
     status: score <= threshold ? "hit" as const : "missed" as const,
     detail: `Bank Run Gauge is ${formatScore(score)} versus ${trigger.thresholdLabel}.`,
   };
 }
 
-function dewsOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
-  const coin = data.dewsStress?.elevatedCoins.find((entry) => entry.symbol.toUpperCase() === trigger.symbol?.toUpperCase())
-    ?? data.dewsStress?.bandChanges.find((entry) => entry.symbol.toUpperCase() === trigger.symbol?.toUpperCase());
-  const band = coin && "band" in coin ? coin.band : coin && "to" in coin ? coin.to : null;
-  if (!band) return { status: "missed" as const, detail: `${trigger.symbol} is no longer elevated in DEWS.` };
+function dewsOutcome(trigger: DigestNextTrigger, threshold: number, evidence?: DigestEvidence) {
+  const coin = findTriggerTarget(evidence?.dews ?? [], trigger);
+  const band = coin?.band;
+  if (!band) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current canonical DEWS observation.` };
   return {
     status: (DEWS_BAND_RANK[band] ?? 0) >= threshold ? "hit" as const : "missed" as const,
     detail: `${trigger.symbol} is ${band} versus ${trigger.thresholdLabel}.`,
@@ -419,7 +433,7 @@ function dewsOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshol
 
 function psiOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
   const score = data.stabilityIndex?.score;
-  if (score == null) return { status: "pending" as const, detail: "PSI is unavailable in the current input." };
+  if (score == null) return { status: "unavailable" as const, detail: "PSI is unavailable in the current input." };
   return {
     status: score <= threshold ? "hit" as const : "missed" as const,
     detail: `PSI is ${formatScore(score)} versus ${trigger.thresholdLabel}.`,

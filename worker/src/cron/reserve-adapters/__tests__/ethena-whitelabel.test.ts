@@ -14,12 +14,8 @@ const ENDPOINT = "https://whitelabel.ethena.fi/api/transparency";
 const NOW_SEC = 1_788_912_032;
 
 
-/** Verbatim mirror of the live suiUSDe entry, including the wire-only
- *  `partnerName` / `collateralizationRatio` fields and the `rows` display
- *  projection that merges USDe+USDC under Coinbase 2 into a single
- *  "USDe/USDC" row. The adapter type deliberately omits those fields (it must
- *  never sum `rows`), so the raw entries keep their inferred shape and only
- *  the assembled payload asserts `EthenaWhitelabelPayload`. */
+/** Live suiUSDe entry: `rows` merges USDe+USDC for display and must never
+ *  enter custody accounting. The six-decimal wire ratio is reconciled. */
 const SUIUSDE_ENTRY = {
   stablecoin: "suiUSDe",
   partnerName: "suiUSDe",
@@ -119,6 +115,8 @@ describe("adaptEthenaWhitelabel", () => {
       data: [
         {
           ...SUIUSDE_ENTRY,
+          totalBacking: TOTAL_RESERVE_USD + 1_000_000,
+          collateralizationRatio: (TOTAL_RESERVE_USD + 1_000_000) / SUPPLY_USD,
           custodians: [
             ...SUIUSDE_ENTRY.custodians,
             { custodian: "Test Custodian", network: "ethereum", address: "0xaaaa", asset: "DAI", amount: 1_000_000 },
@@ -161,6 +159,97 @@ describe("fetchEthenaWhitelabelReserves", () => {
 
     expect(result.slices[0]).toMatchObject({ name: "USDe (Ethena synthetic dollar)" });
     expectWarnings(result, ["off-chain-custody"]);
+  });
+
+  it.each([
+    ["missing positive row", { custodians: SUIUSDE_ENTRY.custodians.slice(1) }],
+    ["overstated rows", { totalBacking: TOTAL_RESERVE_USD - 100 }],
+    ["understated rows", { totalBacking: TOTAL_RESERVE_USD + 100 }],
+    ["null headline", { totalBacking: null }],
+    ["missing headline", { totalBacking: undefined }],
+    ["negative headline", { totalBacking: -1 }],
+    ["malformed headline", { totalBacking: "bad" }],
+    ["missing ratio", { collateralizationRatio: undefined }],
+    ["null ratio", { collateralizationRatio: null }],
+    ["negative ratio", { collateralizationRatio: -1 }],
+    ["malformed ratio", { collateralizationRatio: "bad" }],
+    ["contradictory ratio", { collateralizationRatio: 2 }],
+    ["duplicate custody", {
+      custodians: [...SUIUSDE_ENTRY.custodians, SUIUSDE_ENTRY.custodians[0]],
+      totalBacking: TOTAL_RESERVE_USD + 449,
+      collateralizationRatio: (TOTAL_RESERVE_USD + 449) / SUPPLY_USD,
+    }],
+    ...[null, undefined, "", "bad", -1].map((amount) => [
+      `malformed custody amount ${String(amount)}`,
+      { custodians: [{ ...SUIUSDE_ENTRY.custodians[0], amount }, ...SUIUSDE_ENTRY.custodians.slice(1)] },
+    ] as const),
+    ...["network", "address", "asset"].map((field) => [
+      `missing custody ${field}`,
+      { custodians: [{ ...SUIUSDE_ENTRY.custodians[0], [field]: "" }, ...SUIUSDE_ENTRY.custodians.slice(1)] },
+    ] as const),
+  ] as const)("rejects %s through the fetch boundary", async (_label, patch) => {
+    await expect(runAdapter("ethena-whitelabel", "suiusde-sui", {
+      network: { json: { [ENDPOINT]: { data: [{ ...SUIUSDE_ENTRY, ...patch }] } } },
+      nowSec: NOW_SEC,
+    })).rejects.toThrow();
+  });
+
+  it.each([0.00000049, -0.00000049, 0.00000051, -0.00000051])("enforces six-decimal wire ratio tolerance at %s", async (delta) => {
+    const request = runAdapter("ethena-whitelabel", "suiusde-sui", {
+      network: { json: { [ENDPOINT]: { data: [{
+        ...SUIUSDE_ENTRY,
+        collateralizationRatio: TOTAL_RESERVE_USD / SUPPLY_USD + delta,
+      }] } } },
+      nowSec: NOW_SEC,
+    });
+    if (Math.abs(delta) > 0.0000005) {
+      await expect(request).rejects.toThrow();
+    } else {
+      const { result } = await request;
+      expect(result.metadata?.collateralizationRatio).toBeCloseTo(TOTAL_RESERVE_USD / SUPPLY_USD, 12);
+      expectValidAdapterOutput("ethena-whitelabel", result, { now: NOW_SEC });
+    }
+  });
+
+  it.each([0.001, -0.001, 0.009, -0.009])("accepts rounding-only backing delta %s without changing custody values", async (delta) => {
+    const totalBacking = TOTAL_RESERVE_USD + delta;
+    const { result } = await runAdapter("ethena-whitelabel", "suiusde-sui", {
+      network: { json: { [ENDPOINT]: { data: [{
+        ...SUIUSDE_ENTRY,
+        totalBacking,
+        collateralizationRatio: Number((totalBacking / SUPPLY_USD).toFixed(6)),
+      }] } } },
+      nowSec: NOW_SEC,
+    });
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 6);
+    expect(result.metadata?.details).toMatchObject({ sourceTotalBackingUsd: totalBacking });
+    expectValidAdapterOutput("ethena-whitelabel", result, { now: NOW_SEC });
+    expectWarnings(result, ["off-chain-custody"]);
+  });
+
+  it.each([0.011, -0.011])("rejects backing delta beyond rounding tolerance %s", async (delta) => {
+    await expect(runAdapter("ethena-whitelabel", "suiusde-sui", {
+      network: { json: { [ENDPOINT]: { data: [{ ...SUIUSDE_ENTRY, totalBacking: TOTAL_RESERVE_USD + delta }] } } },
+      nowSec: NOW_SEC,
+    })).rejects.toThrow();
+  });
+
+  it("retains a reconciled undercollateralized mix with a degrading warning and observed zero row", async () => {
+    const { result } = await runAdapter("ethena-whitelabel", "suiusde-sui", {
+      network: { json: { [ENDPOINT]: { data: [{
+        ...SUIUSDE_ENTRY,
+        totalSupply: TOTAL_RESERVE_USD * 2,
+        collateralizationRatio: 0.5,
+        custodians: [...SUIUSDE_ENTRY.custodians, {
+          custodian: "Empty custody", network: "ethereum", address: "0xbbbb", asset: "USDC", amount: 0,
+        }],
+      }] } } },
+      nowSec: NOW_SEC,
+    });
+    expect(result.metadata?.collateralizationRatio).toBe(0.5);
+    expect(result.slices.find((slice) => slice.coinId === "usde-ethena")?.pct).toBe(90.441);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expectValidAdapterOutput("ethena-whitelabel", result, { now: NOW_SEC });
   });
 
   it("propagates an error when the endpoint request fails", async () => {

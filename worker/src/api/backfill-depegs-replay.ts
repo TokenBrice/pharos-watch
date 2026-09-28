@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { buildPriceReasonablenessOptions } from "../lib/price-validation";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../lib/authoritative-price-sources";
 import { normalizeSupportedPegCurrency } from "../lib/native-peg-quotes";
@@ -129,7 +130,7 @@ export async function backfillCoin(opts: {
   let sourceKind: BackfillCoinReplayResult["sourceKind"];
   let marketDiagnostics: HistoricalMarketSourceDiagnostics | null = null;
   if (authoritativeHistory.matched) {
-    if (!prices || prices.length === 0) {
+    if (!isObservedPrice({ priceSource: authoritativeHistory.source }) || !prices || prices.length === 0) {
       logWorkerEventArgs("api", "warn",
         `[backfill-depegs] authoritative historical price source unavailable for ${meta.symbol}` +
           `${authoritativeHistory.source ? ` (${authoritativeHistory.source})` : ""}; preserving existing backfill rows`,

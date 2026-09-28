@@ -92,8 +92,10 @@ Endpoints backed by the cron cache include these additional headers:
 
 | Header       | Description                                                                                                                                                             |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `X-Data-Age` | Seconds elapsed since the cron last wrote this data to D1                                                                                                               |
+| `X-Data-Age` | Seconds elapsed since the authoritative producer observation; `unavailable` when that clock cannot be established |
 | `Warning`    | Freshness warning (`110`) when cached data is older than the generic freshness runway, plus endpoint-specific advisory warnings (`199`) on a few compute-on-read routes |
+| `X-Data-Freshness` | `stale` when retained successful producer history is absent, or `unknown` when its lookup failed |
+| `X-Data-Freshness-Reason` | Machine-readable unavailable-authority reason: `producer-history-missing` or `freshness-lookup-failed` |
 
 Generic freshness status is `fresh` through `8x maxAge`, `degraded` through `12x maxAge`, then `stale`. Generic freshness headers emit `Warning` and downgrade `Cache-Control` to `no-store` after `age > 8x maxAge` so edge/browser caches do not keep serving an old payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still inside that runway; clients should treat body `_meta.status` as authoritative when it exists.
 
@@ -112,7 +114,10 @@ Endpoints that emit `_meta` into plain-object (non-array) response bodies do so 
   "_meta": {
     "updatedAt": 1710500000,
     "ageSeconds": 42,
-    "status": "fresh"
+    "status": "fresh",
+    "assessedAt": 1710500042,
+    "freshBudgetSec": 4800,
+    "degradedBudgetSec": 7200
   }
 }
 ```
@@ -120,10 +125,21 @@ Endpoints that emit `_meta` into plain-object (non-array) response bodies do so 
 | Field        | Type     | Description                                                                                 |
 | ------------ | -------- | ------------------------------------------------------------------------------------------- |
 | `updatedAt`  | `number` | Unix epoch seconds when the cron last wrote this data to D1                                 |
-| `ageSeconds` | `number` | `floor(now / 1000) - updatedAt`                                                             |
-| `status`     | `string` | `"fresh"` (age/max <= 8.0), `"degraded"` (8.0 < ratio <= 12.0), or `"stale"` (ratio > 12.0) |
+| `ageSeconds` | `number` | Nonnegative age of the generation at `assessedAt` |
+| `assessedAt` | `number` | Unix seconds at which the verdict was assessed; not a replacement generation clock |
+| `freshBudgetSec` | `number` | Inclusive maximum generation age for an age-based `fresh` verdict |
+| `degradedBudgetSec` | `number` | Inclusive maximum generation age for an age-based `degraded` verdict; older is `stale` |
+| `status` | `string` | `"fresh"`, `"degraded"`, or `"stale"`; generic bands remain 8x/12x the endpoint max age |
 
 Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses its 1800-second budget directly (`fresh <= 1x`, `degraded <= 2x`, then `stale`) and switches its response to `no-store` whenever the chain snapshot is not fresh.
+
+Generic, chains, and yield producers publish assessment time and effective budgets, including response-ready cache injection. Readers accept legacy cached metadata without these fields but must treat its assessment/budget as unknown, not infer that it used the current policy. Chains can also be degraded by its named `dependencies.reportCards` verdict even when snapshot age is fresh. Timestamps over the public 60-second future allowance are degraded and not cacheable; this is timestamp validity, not an age-band change.
+
+`GET /api/stress-signals` publishes `assessedAt`, `freshBudgetSec`, `degradedBudgetSec`, and `newestReturnedComputedAt` beside each row's `computedAt` and `ageClassification`. The newest-returned clock is the aggregate comparison basis for `retainedLastValid`; single-coin responses have no peer-generation comparison (`null`). These are row-generation verdicts, not a claim that every source used by DEWS was observed at that time.
+
+Event feeds (`events`, `depeg-events`, `blacklist`, `mint-burn-events`) derive freshness only from a successful producer run, never request time or the newest matching event. An empty filtered page is fresh only with a fresh producer observation, including a successful zero-event run. No successful run in the retained seven-day cron history means stale/no authoritative recent run; a failed lookup means unknown. Both use `Cache-Control: no-store`, `Warning: 199`, and `X-Data-Age: unavailable`, with the reason headers above. `/api/events` also publishes null `updatedAt` / `ageSeconds` and `status: "stale" | "unknown"` plus `reason` in `_meta`; normal observed metadata is unchanged. Safety-score history uses the same producer-authority headers. Blacklist-summary retains the producing snapshot's clock and lookup state, not its materialization/request time.
+
+For uncounted offset pages, `total` is a conservative observed lower bound and `totalExact` is false. A nonempty offset page establishes the offset plus its observed rows (and any lookahead row); an empty page establishes only zero, even at offset 50,000. Cursor continuations report only their observed page/lookahead bound. Blacklist defaults to uncounted pages; use `includeTotal=true` for an exact filtered count.
 
 Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full and summary) and `GET /api/yield-history` use the shared `yield-data` bands: `fresh` through 7,200 seconds (2x the hourly producer interval), `degraded` through 14,400 seconds (4x), then `stale`. Both non-fresh states return HTTP `Warning: 110` and `Cache-Control: no-store`. Their `_meta` includes required `assessedAt` (response-time Unix seconds), `freshBudgetSec`, `degradedBudgetSec`, and nullable `reason` alongside `updatedAt`, `ageSeconds`, and `status`. Non-fresh publication age names `yield-publication-age`. History freshness measures the authoritative publication cutoff, not the last point in a requested historical window; unavailable authority is stale with `publication-cutoff-unavailable`.
 
@@ -157,7 +173,7 @@ The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` fro
 
 ## Cache-Control Profiles
 
-These profiles apply while the dataset is within its generic freshness runway. Once a cache-backed response exceeds `8x` its endpoint max age, the worker overrides that response to `Cache-Control: no-store` until a fresh response is generated.
+These profiles are ceilings, not a fresh lifetime renewed on each read. Freshness-aware responses clamp browser `max-age`, shared `s-maxage`, and the combined TTL plus `stale-while-revalidate` window to the remaining fresh runway. At the boundary (no whole second remains), or for a non-fresh/invalid timestamp, the response is `no-store`. Generic responses retain 8x/12x bands, chains 1x/2x, and yield its own publication bands; no cadence or SLO is changed. Edge cache reads reject entries whose HTTP `Age`/`Date` has exhausted that bounded lifetime. Proxies preserve `Age` and `Date`; clients interpreting cached `_meta` must distinguish its `assessedAt` from the current wall clock.
 
 All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/lib/api-cache-profiles.ts`) except `immutable-snapshot`, which is a route-local constant (`IMMUTABLE_CACHE_CONTROL` in `worker/src/api/snapshot.ts`) reused for the immutable public-snapshot routes.
 
@@ -259,6 +275,8 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all non-`OPTIONS` requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations. `OPTIONS` CORS preflights are handled before the maintenance gate. The gate is on the Worker `fetch` path only (`worker/src/handlers/http/gates.ts`, called from `worker/src/handlers/http/request-dispatch.ts`); the `scheduled()` entrypoint in `worker/src/index.ts` never consults it, so cron jobs keep executing and keep writing D1 while maintenance mode is armed. Arming it sheds HTTP traffic, not scheduled writes: a migration or D1-pressure incident that needs quiet writes must disable the affected cron triggers as a separate step.
 
+**Public status history:** `GET /api/public-status-history` returns `503` with `{ "error": "Public status history unavailable" }` and `Cache-Control: no-store` when its transition-ledger query fails, even when current public health is healthy. Only a successful query may return an empty `transitions` array and `lastChangedAt: null`; successful responses retain `public, max-age=60`. The public status page presents missing or failed runway history as unavailable, not as an empty incident observation.
+
 ---
 
 ## Method Gating Policy
@@ -280,7 +298,9 @@ The same shared endpoint descriptors now also carry static worker dependency-hyd
 ## Public Endpoints
 
 Unless an endpoint section explicitly says `Authentication: exempt`, routes in this section require `X-API-Key` when called on `https://api.pharos.watch`. OpenAPI schemas are published at [`/openapi.json`](https://pharos.watch/openapi.json); endpoint auth and cache flags come from `shared/lib/api-endpoints/definitions.ts`.
-For `GET /api/stablecoin-summary/{stablecoinId}`, `supplyUsd.prevDay`, `supplyUsd.prevWeek`, and `supplyUsd.prevMonth` — plus `supplyUsd.change1d`, `supplyUsd.change7d`, and `supplyUsd.change30d` — are `number | null`. A field is `null` when its historical supply bucket is absent; an observed zero bucket remains numeric `0`.
+For `GET /api/stablecoin-summary/{stablecoinId}`, `supplyUsd.current`, `supplyUsd.prevDay`, `supplyUsd.prevWeek`, and `supplyUsd.prevMonth` — plus `supplyUsd.change1d`, `supplyUsd.change7d`, and `supplyUsd.change30d` — are `number | null`. `current` is `null` (with `supplyUsd.currentUnavailableReason: "supply-buckets-missing"`) when the coin is present but its current peg buckets are absent, empty or wholly invalid; the reason is `null` whenever current supply was observed. Each change is `null` unless both current and its historical value are observed, so missing current supply never produces a negative delta. An observed zero bucket remains numeric `0`. `supplyByPegUsd` publishes only finite buckets (`{}` when none). A coin absent from the stablecoins publication still returns `404`.
+For `GET /api/dex-liquidity` and `GET /api/dex-liquidity-history`, the measured-volume fields `totalVolume24hUsd`, `totalVolume7dUsd`, history `volume24h`, pool `volumeUsd1d` and `scoreComponents.volumeActivity` are `number | null`. Readers already accept both shapes; the producer activation that emits `null` (upcoming, with the liquidity methodology bump) publishes a measured total only when every contributing pool supplied an in-budget observation (a complete measured zero stays `0`). Otherwise the total is `null` beside an additive `volume24hAvailability` / `volume7dAvailability` record carrying `completeness` (`complete`, `partial`, `missing`, `stale`, `unknown`), a machine-readable `reason`, a separately labelled `partialGrossUsd` lower bound, pool counts and the observation-window clock; an unavailable 24h window also makes `liquidityScore` `null` (NR) without reweighting other components. Rows without an availability record are legacy: their number keeps its historical meaning with unrecorded (`unknown`) completeness. See [DEX liquidity § Measured volume availability](./dex-liquidity.md#measured-volume-availability-dec-19-readers-shipped-activation-pending).
+For `GET /api/mint-burn-flows`, aggregate `coins[].netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, `coins[].netFlowDirection24h`, `chains[].netFlow24hUsd`, `hourly[].netFlowUsd`, `gauge.flightToQuality` and `gauge.flightIntensity`, and per-coin `netFlowUsd` / `chains[].netFlowUsd`, are nullable for valuation gating. Readers already accept both shapes; the current producer still publishes the known-valuation numbers, and a later release publishes `null` where valuation is not complete. Additive `valuation` records qualify them: per coin `{ window24h, baseline, netFlow7d, netFlow30d, netFlow90d }`, per chain/bucket a completeness label, per-coin totals and chains a full record `{ completeness, mintCompleteness, burnCompleteness, unpricedMintEventCount, unpricedBurnEventCount }`, and `gauge.partialValuationInputs` counts weighted coins whose pressure input is partial. `complete` means exact (an empty window is complete); `partial` means unpriced events exist, so mint/burn volumes are lower bounds and a signed net is not a bound; `unknown` marks data aggregated before completeness was recorded. An absent record (older payload) is `unknown`, never complete.
 
 <!-- GENERATED-START: public-endpoints -->
 <!-- Generated by scripts/maintenance/generate-api-reference.ts from public/openapi.json and shared/lib/api-endpoints/definitions.ts. -->
@@ -391,7 +411,7 @@ Returns the current and historical market share of tracked non-USD peg groups.
 
 ### `GET /api/chains`
 
-Returns stablecoin distribution and health aggregates grouped by chain.
+Returns stablecoin distribution and health aggregates grouped by chain. Since 2026-09-27 chain accounting is raw: `chainAttributedTotalUsd` is the unclamped sum of the published chain rows (previously capped at `globalTotalUsd`), each `dominanceShare` is `totalUsd / globalTotalUsd` without rescaling (shares can sum above 1 when chain rows over-attribute supply), `attributionDiscrepancyUsd` is the signed `chainAttributedTotalUsd - globalTotalUsd`, `unattributedTotalUsd` is its positive residual, and `dominanceGeometryTotalUsd` (`max(global, attributed)`) is a bar-geometry denominator, never a share label. `supplyCoverage` and per-chain `unavailableSupplyObservationCount` count unobserved aggregate and chain supply excluded from those totals. `healthFactors.pegStability` is nullable (NR) and each chain carries `pegStabilityCoverage` (observed vs full positive chain supply, unobserved supply by reason, neutral-imputed supply and the observed-only score); the current producer still publishes the Chain Health v1.5 neutral-50 peg value, and a null peg factor makes `healthScore`/`healthBand` null.
 
 - **Operation ID:** `chains`
 - **Path:** `/api/chains`
@@ -409,7 +429,7 @@ Returns stablecoin distribution and health aggregates grouped by chain.
 
 ### `GET /api/stablecoin-reserves/:id`
 
-Returns reviewed reserve composition and provenance for one stablecoin.
+Returns reviewed reserve composition and provenance for one stablecoin. Since 2026-09-27 the freshness verdict carries its policy values: `sync.freshness` publishes the assessment clock (`assessedAt`), judged generation (`fetchedAt`, `attemptId`), fetch age against the route's fetch budget, and, for verified source timestamps, source age against the effective source budget with the cap that set it; `provenance.scoringRejectionReasons` lists the admission gates behind `scoringEligible`. Both are additive optional fields, and unjudged or legacy values are `null`. Also since 2026-09-27, supply-comparing reserve snapshots publish `metadata.liabilityScope` (reviewed included/excluded chains with reasons), `supplyCoverageComplete`, `reserveObservedAt`, `supplyObservedAt`, and `ratioSkewSec`, and `metadata.collateralizationRatio` is omitted with `metadata.ratioUnavailableReason` when liability coverage or reserve/supply time identity is not established. USD1 now publishes `collateralizationRatio` over its reviewed issuer-native perimeter; the former USD1 `fundBackingTotalRatio` and `details.fundScope` fields are removed.
 
 - **Operation ID:** `stablecoinReservesStablecoinId`
 - **Path:** `/api/stablecoin-reserves/{stablecoinId}`
@@ -441,8 +461,8 @@ Returns normalized issuer freeze, unfreeze, blacklist, and destruction events.
 
 ```json
 {
-  "currentVersion": "4.0",
-  "currentVersionLabel": "v4.0"
+  "currentVersion": "4.1",
+  "currentVersionLabel": "v4.1"
 }
 ```
 
@@ -470,7 +490,7 @@ Returns detected depeg incidents with filters for asset, state, and review statu
 
 ```json
 {
-  "currentVersion": "6.27"
+  "currentVersion": "6.29"
 }
 ```
 
@@ -508,7 +528,7 @@ Returns the current cross-market peg-monitoring summary.
 
 ```json
 {
-  "currentVersion": "6.27"
+  "currentVersion": "6.29"
 }
 ```
 
@@ -715,8 +735,8 @@ Returns the current Pharos Stability Index and optional component detail.
 
 ```json
 {
-  "currentVersion": "3.62",
-  "methodologyVersion": "3.62"
+  "currentVersion": "3.63",
+  "methodologyVersion": "3.63"
 }
 ```
 
@@ -774,10 +794,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.44",
-    "versionLabel": "v4.44",
-    "currentVersion": "4.44",
-    "currentVersionLabel": "v4.44",
+    "version": "4.45",
+    "versionLabel": "v4.45",
+    "currentVersion": "4.45",
+    "currentVersionLabel": "v4.45",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -835,7 +855,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 
 ```json
 {
-  "currentVersion": "8.45",
+  "currentVersion": "8.46",
   "methodologyVersion": "9.92"
 }
 ```
@@ -854,7 +874,7 @@ Returns the public adapter-coverage and source-status manifest.
 
 ```json
 {
-  "methodologyVersion": "v8.45"
+  "methodologyVersion": "v8.46"
 }
 ```
 
@@ -872,8 +892,8 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 ```json
 {
-  "currentVersion": "8.45",
-  "methodologyVersion": "8.45"
+  "currentVersion": "8.46",
+  "methodologyVersion": "8.46"
 }
 ```
 
@@ -913,8 +933,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.27",
-  "methodologyVersion": "6.27"
+  "currentVersion": "6.29",
+  "methodologyVersion": "6.29"
 }
 ```
 

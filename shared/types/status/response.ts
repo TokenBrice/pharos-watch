@@ -96,11 +96,40 @@ export const StatusSummarySchema = z.object({
   transitionsLast24h: z.number(),
 });
 
-const StatusReserveCompositionSchema = ReserveCompositionOverviewSchema.extend({
-  status: StatusHealthValueSchema,
-  freshCoverageRatio: z.number(),
-  authoritativeFreshCoverageRatio: z.number(),
-});
+const StatusReserveCompositionSchema = z.union([
+  ReserveCompositionOverviewSchema.extend({
+    status: StatusHealthValueSchema,
+    freshCoverageRatio: z.number(),
+    authoritativeFreshCoverageRatio: z.number(),
+  }),
+  z.object({
+    status: z.literal("unavailable"),
+    reason: z.literal("reserve_composition_query_failed"),
+    configuredCoins: z.null(),
+    freshCoins: z.null(),
+    staleCoins: z.null(),
+    missingCoins: z.null(),
+    degradedCoins: z.null(),
+    errorCoins: z.null(),
+    corruptCoins: z.null(),
+    independentFreshEligible: z.null(),
+    independentFreshUnverified: z.null(),
+    staticValidatedFresh: z.null(),
+    weakProbeFresh: z.null(),
+    writeTimeoutUncertain: z.null(),
+    deferredCoins: z.null(),
+    runBudgetTruncated: z.null(),
+    deferredAt: z.null(),
+    nextCursorStablecoinId: z.null(),
+    cursorRecordedAt: z.null(),
+    persistentlyStaleIndependentCoins: z.null(),
+    lastSuccessAt: z.null(),
+    oldestFreshAgeSec: z.null(),
+    adapterReliability: z.null(),
+    freshCoverageRatio: z.null(),
+    authoritativeFreshCoverageRatio: z.null(),
+  }),
+]);
 
 const StatusResponseObjectSchema = z
   .object({

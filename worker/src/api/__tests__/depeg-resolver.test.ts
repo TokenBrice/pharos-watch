@@ -22,6 +22,7 @@ import type {
   DdrV2PredictionRow,
   DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -530,6 +531,55 @@ describe("handleDepegResolver", () => {
     expect(body._meta.degradedReason).toBe("manifest-fallback:cache-manifest-token-behind");
     expect(body.rows[0].live.currentEventId).toBeNull();
     expect(body.rows[0].live.eventState).toBe("source_event_missing");
+    expect(body.rows[0].live.ageSec).toBeNull();
+    expect(body.rows[0].live.peakDeviationBps).toBe(-300);
+    expect(body._meta.expiresAt).toBe(latest._meta.computedAt + API_FRESHNESS_MAX_AGE_SEC.depegResolver);
+  });
+
+  it.each([null, 1_999_500])("keeps unavailable manifest facts and original expiry (%s) on an invalid cache contract", async (persistedExpiry) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(2_010_000 * 1000);
+    const computedAt = 1_999_000;
+    const source = predictionRow(computedAt);
+    const pending: DdrV2ResponseRow = {
+      ...source,
+      kind: "pending",
+      frozen: null,
+      prediction: {
+        ...source.prediction,
+        state: "pending_lock",
+        publicPredictionId: null,
+        rowHash: null,
+        source: "pending",
+        lockedAt: null,
+        publishedAt: null,
+        eventAgeAtLockSec: null,
+      },
+    };
+    const payload = snapshot(computedAt, computedAt + 900, [pending]);
+    const manifest = manifestRow(payload);
+    if (persistedExpiry != null) {
+      const base = JSON.parse(manifest.base_payload_json);
+      base._meta.expiresAt = persistedExpiry;
+      manifest.base_payload_json = JSON.stringify(base);
+    }
+    const cached = snapshot(computedAt, computedAt + 900);
+    cached._meta.basePayloadHash = "0".repeat(64);
+    const db = mockD1([
+      { match: "FROM depeg_resolver_publication_snapshots", rows: [manifest] },
+      ...cacheRows(cached),
+    ]);
+    const body = (await readJsonResponse(await handleDepegResolver(db), 200)) as DdrResponse;
+    expect(body.rows[0].live).toMatchObject({
+      ageSec: null,
+      peakDeviationBps: null,
+      currentDeviationBps: null,
+      updatedAt: computedAt,
+      stale: true,
+      eventState: "source_event_missing",
+    });
+    expect(body._meta.computedAt).toBe(computedAt);
+    expect(body._meta.expiresAt).toBe(persistedExpiry ?? computedAt + API_FRESHNESS_MAX_AGE_SEC.depegResolver);
   });
 
   it("returns degraded when the cache base payload hash does not match", async () => {

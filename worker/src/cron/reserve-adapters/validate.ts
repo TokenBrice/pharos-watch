@@ -13,6 +13,7 @@ import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import type { ReserveAdapterDefinition } from "./types";
 import { isReserveRisk, PCT_SUM_ERROR_TOLERANCE } from "./helpers";
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
 
 export interface ValidationInput {
   slices: ReserveSlice[];
@@ -502,6 +503,31 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   }
 
   const maxSourceAgeSec = options?.maxSourceAgeSec ?? options?.adapter?.validation?.maxSourceAgeSec;
+  // Match assessReserveSnapshotFreshness: the stricter coin/adapter source budget,
+  // with the reserve fetch freshness budget only when neither declares one.
+  const nestedSourceMaxAge = Math.min(
+    options?.maxSourceAgeSec ?? Infinity,
+    options?.adapter?.validation?.maxSourceAgeSec ?? Infinity,
+  );
+  const nestedSourceBudget = Number.isFinite(nestedSourceMaxAge)
+    ? nestedSourceMaxAge
+    : LIVE_RESERVE_FRESHNESS_SEC;
+  const nestedSourceTimestamp = getFiniteMetadataNumber(
+    getMetadataObject(input.metadata, "redemption") ?? undefined,
+    "sourceTimestamp",
+  );
+  if (nestedSourceTimestamp != null && now - nestedSourceTimestamp > nestedSourceBudget) {
+    return {
+      valid: false,
+      warnings: [
+        ...warnings,
+        reserveFatalWarning(
+          "stale-redemption-source-timestamp",
+          `Redemption source timestamp is ${now - nestedSourceTimestamp}s old${adapterLabel} (max ${nestedSourceBudget}s)`,
+        ),
+      ],
+    };
+  }
   const policyIsUnverifiedOnly = freshnessPolicyIsUnverifiedOnly(options?.adapter);
   const freshnessMode = input.metadata?.freshnessMode;
   if (maxSourceAgeSec != null && sourceTimestamp != null) {

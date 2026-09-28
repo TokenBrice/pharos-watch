@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
+import { assessBluechipRating } from "@shared/lib/bluechip-freshness";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { BluechipGradeSchema } from "@shared/types/core";
 import type { BluechipRating, BluechipSmidge } from "@shared/types/market";
@@ -18,6 +19,9 @@ import { z } from "zod";
 const CACHE_KEY = "bluechip-ratings";
 const STALE_HOURS = 6;
 const API_BASE = "https://backend.bluechip.org/coin-data";
+const UNRESOLVED_REASONS: Readonly<Record<string, true | undefined>> = {
+  "http-404": true, "empty-data": true, "no-grade": true,
+};
 
 const SMIDGE_CATEGORIES = [
   "stability",
@@ -103,7 +107,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
 
   if (await shouldSkipFreshCache(db, CACHE_KEY, STALE_HOURS * 3600)) {
     logWorkerEventArgs("handler", "info", "[bluechip] Cache still fresh, skipping");
-    return createCronResult({ itemCount: 0, metadata: { reason: "cache-fresh" } });
+    return createCronResult({ status: "skipped_neutral", itemCount: 0, metadata: { reason: "cache-fresh" } });
   }
 
   if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.BLUECHIP))) {
@@ -174,7 +178,10 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
         }
         if (!coin) {
           invalidPayloads++;
-          failedSlugs.push({ slug, reason: "invalid-payload" });
+          const missingGrade = validation.data.data.some((candidate) =>
+            candidate != null && typeof candidate === "object" && !("grade" in candidate && candidate.grade),
+          );
+          failedSlugs.push({ slug, reason: missingGrade ? "no-grade" : "invalid-payload" });
           logWorkerEventArgs("handler", "warn", `[bluechip] No valid records for ${slug}`);
           return null;
         }
@@ -188,6 +195,9 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
         const rating: BluechipRating = {
           grade,
           slug,
+          lastObservedAt: Math.floor(Date.now() / 1000),
+          observationState: "current",
+          observationReason: null,
           collateralization: coin.collateralization ?? null,
           smartContractAudit: coin.smart_contract_audit ?? null,
           dateOfRating: coin.date_of_rating ?? null,
@@ -211,14 +221,30 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
 
   const totalEntries = entries.length;
   const partialCoverage = freshCount > 0 && freshCount < totalEntries;
-  const ratingsMap: Record<string, BluechipRating> = {
-    ...existingRatings,
-    ...freshRatingsMap,
-  };
+  const ratingsMap: Record<string, BluechipRating> = {};
+  for (const [pharosId, rating] of Object.entries(existingRatings)) {
+    const failure = failedSlugs.find(({ slug }) => BLUECHIP_SLUG_MAP[slug] === pharosId);
+    // A later transport error cannot resolve an earlier missing-grade observation.
+    const reason = UNRESOLVED_REASONS[rating.observationReason ?? ""]
+      && !UNRESOLVED_REASONS[failure?.reason ?? ""]
+      ? rating.observationReason
+      : failure?.reason ?? "not-observed";
+    ratingsMap[pharosId] = assessBluechipRating({
+      ...rating,
+      observationState: "retained",
+      observationReason: reason,
+    }, syncStartSec);
+  }
+  Object.assign(ratingsMap, freshRatingsMap);
 
   await recordOutcomeSafe(db, CIRCUIT_SOURCE.BLUECHIP, freshCount > 0);
 
   if (freshCount === 0) {
+    // Persist unresolved attempts without certifying a new successful publication.
+    // Equal-clock CAS cannot overwrite a concurrently published newer generation.
+    if (existingCache && Object.keys(ratingsMap).length > 0) {
+      await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), existingCache.updatedAt, signal);
+    }
     logWorkerEventArgs("handler", "warn", "[bluechip] No ratings fetched, preserving cache");
     return createCronResult({
       status: "degraded",
@@ -234,9 +260,11 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
       : `[bluechip] Cache update skipped; newer row exists (${freshCount} fresh fetched)`,
   );
   return createCronResult({
-    ...(partialCoverage ? { status: "degraded" as const } : {}),
+    status: cacheResult.written ? "ok" : "skipped_neutral",
     itemCount: cacheResult.written ? freshCount : 0,
     metadata: {
+      reason: cacheResult.written ? "ratings-published" : "cache-write-skipped-newer",
+      ...(cacheResult.written && partialCoverage ? { quality: { reason: "partial-cache-merge" } } : {}),
       ratingsFetched: freshCount,
       ratingsPublished: cacheResult.written ? Object.keys(ratingsMap).length : 0,
       totalMappedRatings: totalEntries,

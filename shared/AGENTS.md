@@ -18,6 +18,13 @@ Route with `node --import tsx scripts/ci/pharos-change-contract.ts --file <path>
 - `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts` are schedule authority; see `docs/process/cron-trigger-policy.md` § “Source Of Truth”.
 - Keep `shared/types/status.ts` as the compatibility barrel described by `docs/architecture.md` § “File Tree Guide”.
 
+## Wire contracts
+
+- Own each cross-runtime wire shape and vocabulary once in `shared/types/`; derive TypeScript types from its schema (`z.output<typeof Schema>`) rather than maintaining parallel interfaces or literal unions in consumers. Worker and frontend readers import that authority.
+- Reuse primitive authorities: `shared/types/safety-schema-primitives.ts`, `shared/lib/evm-address.ts`, and `shared/lib/stablecoin-id.ts`. Compose existing schemas instead of retyping their validation.
+- Derive registry-backed lists from the registry; a necessary explicit mapping must have a registry-iterating completeness test (ADR-32).
+- At absence-sensitive supply boundaries use `getCirculatingRawOrNull()` and historical `*OrNull` helpers. Raw zero-default helpers are allowed only after explicit availability proof; absent, empty, or wholly invalid buckets are not observed zero.
+
 ## Common Checks
 
 - `npm run lint` for import boundaries; `npm run check:stablecoin-data` when stablecoin metadata changes.

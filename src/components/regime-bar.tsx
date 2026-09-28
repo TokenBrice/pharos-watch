@@ -89,12 +89,11 @@ export function RegimeBar() {
             <span>PSI {Math.round(score)} · {displayBasis}</span>
             <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>
             <span>
-              sev {components?.severity.toFixed(1) ?? "n/a"} · breadth{" "}
-              {components?.breadth.toFixed(1) ?? "n/a"}
-              {components?.stressBreadth != null &&
-                ` · stress ${components.stressBreadth.toFixed(1)}`}
-              {" "}· trend {(components?.trend ?? 0) > 0 ? "+" : ""}
-              {components?.trend.toFixed(1) ?? "n/a"}
+              sev {components?.severity?.toFixed(1) ?? "n/a"} · breadth{" "}
+              {components?.breadth?.toFixed(1) ?? "n/a"}
+              {" · stress "}{components?.stressBreadth?.toFixed(1) ?? "n/a"}
+              {" "}· trend {components?.trend != null && components.trend > 0 ? "+" : ""}
+              {components?.trend?.toFixed(1) ?? "n/a"}
             </span>
           </div>
           <div className="mx-auto mb-1 flex max-w-3xl items-center gap-2 px-4">

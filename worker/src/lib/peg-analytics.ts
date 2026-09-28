@@ -9,7 +9,8 @@ import {
 } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
 
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
@@ -41,6 +42,11 @@ export interface CurrentPegObservation {
   pegReference: PegSummaryCoin["pegReference"];
   pegReferenceUnavailable: boolean;
   currentPriceUnavailable: boolean;
+  /**
+   * The asset (or its current supply buckets) is absent, so the live-event supply floor cannot be
+   * assessed. The deviation is withheld like a sub-floor coin, but this is NOT a below-floor claim.
+   */
+  currentSupplyUnavailable: boolean;
 }
 
 export function deriveCurrentPegObservationMap(options: {
@@ -58,14 +64,21 @@ export function deriveCurrentPegObservationMap(options: {
 
   for (const meta of ACTIVE_STABLECOINS) {
     const asset = priceById.get(meta.id);
-    const supply = asset ? getCirculatingRaw(asset) : 0;
+    const supply = getCirculatingRawOrNull(asset);
+    const currentSupplyUnavailable = !meta.flags.navToken && supply === null;
     const currentPriceUnavailable =
       !meta.flags.navToken && (asset === undefined || !hasUsableCurrentPrice(asset));
     let currentDeviationBps: number | null = null;
     let pegReferenceUnavailable = false;
     let pegReference: PegSummaryCoin["pegReference"] = null;
 
-    if (!meta.flags.navToken && asset && hasUsableCurrentPrice(asset) && supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
+    if (
+      !meta.flags.navToken &&
+      asset &&
+      hasUsableCurrentPrice(asset) &&
+      supply !== null &&
+      supply >= DEPEG_EVENT_MIN_SUPPLY_USD
+    ) {
       const pegType = normalizePegType(asset.pegType);
       if (
         !isAuthoritativeDepegPegReference({
@@ -102,6 +115,7 @@ export function deriveCurrentPegObservationMap(options: {
       pegReference,
       pegReferenceUnavailable,
       currentPriceUnavailable,
+      currentSupplyUnavailable,
     });
   }
 
@@ -147,7 +161,7 @@ function resolveTrackingAnchor(
 }
 
 function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData & { price: number } {
-  return typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
+  return isObservedPrice(asset) && typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
 }
 
 function buildPriceFirstSeenObservations(
@@ -220,9 +234,12 @@ export async function derivePegAnalyticsSnapshot(
 
     const asset = priceById.get(meta.id);
     const events = eventsByCoin.get(meta.id) ?? [];
-    const supply = asset ? getCirculatingRaw(asset) : 0;
+    // Unknown supply is neither above nor below the floor: it is flagged
+    // `currentSupplyUnavailable`, never counted as coverage-limited.
+    const supply = getCirculatingRawOrNull(asset);
     const depegEventCoverageLimited =
       !meta.flags.navToken &&
+      supply !== null &&
       supply > 0 &&
       supply < DEPEG_EVENT_MIN_SUPPLY_USD;
 
@@ -235,6 +252,7 @@ export async function derivePegAnalyticsSnapshot(
       pegReference: null,
       pegReferenceUnavailable: false,
       currentPriceUnavailable: !meta.flags.navToken,
+      currentSupplyUnavailable: !meta.flags.navToken,
     };
 
     const { trackingStart, coverage: historyCoverage } = resolveTrackingAnchor(
@@ -255,10 +273,17 @@ export async function derivePegAnalyticsSnapshot(
       pegType: asset?.pegType ?? "",
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
+      ...(!isObservedPrice(asset ?? {}) ? {
+        // PegSummaryCoin.priceSource is optional, not nullable: a null list source is published as absent.
+        priceSource: asset?.priceSource ?? undefined,
+        priceObservedAtMode: asset?.priceObservedAtMode,
+      } : {}),
+      ...(asset?.nominalPriceReference ? { nominalPriceReference: asset.nominalPriceReference } : {}),
       currentDeviationBps: currentPegObservation.currentDeviationBps,
       pegReference: currentPegObservation.pegReference,
       ...(currentPegObservation.pegReferenceUnavailable ? { pegReferenceUnavailable: true } : {}),
       ...(currentPegObservation.currentPriceUnavailable ? { currentPriceUnavailable: true } : {}),
+      ...(currentPegObservation.currentSupplyUnavailable ? { currentSupplyUnavailable: true } : {}),
       depegEventCoverageLimited,
       pegScore: scoreResult.pegScore,
       pegPct: scoreResult.pegPct,

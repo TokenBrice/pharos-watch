@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
@@ -16,7 +17,6 @@ import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
-import * as structuredLog from "../../../lib/structured-log";
 
 function findConfig(stablecoinId: string) {
   const config = CONTRACT_CONFIGS.find((c) => c.stablecoinId === stablecoinId && c.chain.chainId === "tron");
@@ -40,7 +40,7 @@ describe("parseTronEvent", () => {
     const row = parseTronEvent(config, {
       block_number: 100,
       block_timestamp: 1_700_000_000_000,
-      transaction_id: "tx_abc",
+      transaction_id: "ab".repeat(32),
       event_index: 0,
       event_name: "AddedBlackList",
       result: { _blackListedUser: "0xaa".padEnd(42, "a") },
@@ -56,7 +56,7 @@ describe("parseTronEvent", () => {
     const row = parseTronEvent(config, {
       block_number: 200,
       block_timestamp: 1_700_000_100_000,
-      transaction_id: "tx_destroy",
+      transaction_id: "cd".repeat(32),
       event_index: 1,
       event_name: "DestroyedBlackFunds",
       result: { _blackListedUser: "0xbb".padEnd(42, "b"), _balance: "12345000000" },
@@ -72,7 +72,7 @@ describe("parseTronEvent", () => {
     const row = parseTronEvent(config, {
       block_number: 300,
       block_timestamp: 1_700_000_200_000,
-      transaction_id: "tx_freeze",
+      transaction_id: "ef".repeat(32),
       event_index: 0,
       event_name: "Freeze",
       result: { caller: "0x11".padEnd(42, "1"), account: "0x22".padEnd(42, "2") },
@@ -95,27 +95,16 @@ describe("parseTronEvent", () => {
     expect(row).toBeNull();
   });
 
-  it("drops and logs a recognized event without an affected address", () => {
-    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => undefined);
+  it("rejects a recognized event without required address evidence", () => {
     const config = findConfig("usdt-tether");
-
-    const row = parseTronEvent(config, {
+    expect(() => parseTronEvent(config, {
       block_number: 401,
       block_timestamp: 1_700_000_300_000,
-      transaction_id: "tx_missing_address",
+      transaction_id: "ab".repeat(32),
       event_index: 1,
       event_name: "AddedBlackList",
       result: {},
-    });
-
-    expect(row).toBeNull();
-    expect(log).toHaveBeenCalledWith(expect.objectContaining({
-      event: "sync_blacklist.trongrid_event_missing_address",
-      metadata: expect.objectContaining({
-        transactionId: "tx_missing_address",
-        eventIndex: 1,
-      }),
-    }));
+    })).toThrow("invalid-address");
   });
 
   it("falls back to positional slot 0 when no named key matches", () => {
@@ -123,7 +112,7 @@ describe("parseTronEvent", () => {
     const row = parseTronEvent(config, {
       block_number: 500,
       block_timestamp: 1_700_000_400_000,
-      transaction_id: "tx_positional",
+      transaction_id: "12".repeat(32),
       event_index: 0,
       event_name: "AddedBlackList",
       result: { "0": "0x33".padEnd(42, "3") },
@@ -186,6 +175,38 @@ describe("fetchTronEventsIncremental cursor safety", () => {
     vi.unstubAllGlobals();
   });
 
+  it("holds malformed address evidence then consumes only after durable third-scan quarantine", async () => {
+    const base = findConfig("usdt-tether");
+    const config = { ...base, events: [base.events.find((event) => event.signature.startsWith("AddedBlackList"))!] };
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)");
+    const db = { prepare(sql: string) {
+      let args: (string | number)[] = [];
+      return { bind(...values: (string | number)[]) { args = values; return this; },
+        async first() { return sqlite.prepare(sql).get(...args) ?? null; },
+        async run() { return sqlite.prepare(sql).run(...args); } };
+    } } as unknown as D1Database;
+    const timestamp = 1_700_000_000_000;
+    const valid = { block_number: 100, block_timestamp: timestamp, transaction_id: "ab".repeat(32),
+      event_index: 0, event_name: "AddedBlackList", result: { _blackListedUser: "0x" + "11".repeat(20) } };
+    mockFetch([{ match: "api.trongrid.io/v1/contracts/", body: { success: true, data: [
+      valid, { ...valid, block_timestamp: timestamp + 1000, event_index: 1, result: {} },
+      { ...valid, block_timestamp: timestamp + 2000, event_index: 2 },
+    ], meta: {} } }], { requireMatch: true });
+    const deadline = Date.now() + 600_000;
+    for (let scan = 1; scan <= 3; scan++) {
+      const result = await fetchTronEventsIncremental(config, null, 0,
+        { ...makeRunBudget(), deadlineMs: deadline + scan }, noopLimiter, undefined, db);
+      expect(result.rows.map((row) => row.timestamp)).toEqual(scan < 3 ? [timestamp / 1000] : [timestamp / 1000, timestamp / 1000 + 2]);
+      if (scan < 3) expect(result.scannedToTimestamp).toBe(timestamp + 999);
+      else expect(result.scannedToTimestamp).toBeGreaterThan(timestamp + 2000);
+      expect(result.incomplete).toBe(scan < 3);
+    }
+    const state = JSON.parse(String(sqlite.prepare("SELECT value FROM cache").get()!.value));
+    expect(state).toMatchObject({ quarantined: true, attempts: 3, reason: "invalid-address" });
+    sqlite.close();
+  });
+
   it("uses confirmed, safe-head-bounded timestamp filters", async () => {
     const baseConfig = findConfig("usdt-tether");
     const config: ContractEventConfig = { ...baseConfig, events: [baseConfig.events[0]!] };
@@ -214,7 +235,7 @@ describe("fetchTronEventsIncremental cursor safety", () => {
             data: [{
               block_number: 100,
               block_timestamp: 1_700_000_000_000,
-              transaction_id: "tx_tron_partial",
+              transaction_id: "34".repeat(32),
               event_index: 0,
               event_name: "AddedBlackList",
               result: { _blackListedUser: "0xaa".padEnd(42, "a") },

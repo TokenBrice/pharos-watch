@@ -7,14 +7,40 @@
  */
 
 import type { DewsSignalKey } from "@shared/lib/dews-config";
+import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 
 export type DEWSEvidenceKind = "market-price" | "dex-liquidity" | "flow" | "issuer-control" | "yield" | "systemic";
 
 export interface PoolEntry {
   tvlUsd: number;
-  balanceRatio: number;
+  /** `null` when the pool carries no balance measurement (never read as perfect balance). */
+  balanceRatio: number | null;
 }
+
+/** Why the top-pool list behind the worst-pool component could not be read. */
+export type TopPoolsUnavailableReason =
+  | "top-pools-missing"
+  | "top-pools-json-parse-failed"
+  | "top-pools-invalid-shape"
+  | "top-pools-entry-malformed";
+
+/**
+ * Worst-pool component state: `observed` = at least one eligible (>= $100K) pool with a measured balance;
+ * `empty` = readable list with no eligible pool (a measured zero); `unavailable` = unreadable list, a
+ * malformed entry, or eligible pools none of which carries a balance measurement.
+ */
+export type WorstPoolComponentStatus = "observed" | "empty" | "unavailable";
+
+export type WorstPoolUnavailableReason = TopPoolsUnavailableReason | "top-pools-balance-unmeasured";
+
+/** Pool-signal smoothing outcome against the previous generation's reading. */
+export type PoolSmoothingOutcome =
+  | "applied"
+  | "no-previous"
+  | "previous-unavailable"
+  | "previous-coverage-unknown"
+  | "coverage-changed";
 
 export interface SignalResult {
   value: number; // 0-100
@@ -25,7 +51,13 @@ export interface SignalResult {
   sizeFactor?: number;
   balanceRatio?: number;
   avgPoolStress?: number;
-  worstPool?: number;
+  /** Worst eligible-pool imbalance; `null` when that component is unavailable (never a measured 0). */
+  worstPool?: number | null;
+  worstPoolStatus?: WorstPoolComponentStatus;
+  worstPoolUnavailableReason?: WorstPoolUnavailableReason;
+  /** Share of the nominal pool blend weight backed by readable components (0.75 or 1). */
+  componentCoverage?: number;
+  smoothing?: PoolSmoothingOutcome;
   scoreDelta7d?: number | null;
   tvlDelta7d?: number | null;
   confidence?: string | null;
@@ -56,7 +88,10 @@ export interface DEWSInput {
   // Pool balance
   weightedBalanceRatio: number | null;
   avgPoolStress: number | null;
+  /** Readable top-pool list (`[]` = observed empty set); `null` = unreadable/missing list. */
   topPools: PoolEntry[] | null;
+  /** Why `topPools` is `null`; absent defaults to `top-pools-missing`. */
+  topPoolsUnavailableReason?: TopPoolsUnavailableReason | null;
   // Liquidity erosion
   liquidityScore: number | null;
   liquidityScore7dAgo: number | null;
@@ -86,6 +121,14 @@ export interface DEWSInput {
   flowDataAgeDays: number;
   /** Observed baseline coverage days in the 30-day mint/burn window. */
   flowBaselineDays?: number | null;
+  /**
+   * Valuation of the 24h mint/burn window; `null` when there is no mint/burn
+   * data. Anything but `complete` makes the flow signal unavailable, since
+   * missing USD valuation on either side can alter both surge and ratio.
+   */
+  flowValuation24h: MintBurnValuationCompleteness | null;
+  /** Burn-side valuation of the 30-day baseline window; `partial` makes the flow signal unavailable. */
+  flowBurnBaselineValuation: MintBurnValuationCompleteness | null;
   // Yield anomaly (optional — from yield_data.warning_signals)
   yieldWarnings: string[];
   // Structured yield-risk evidence. Nullable, omitted, or neutral rows remain
@@ -100,6 +143,8 @@ export interface DEWSInput {
   // `*Available` flag to be explicitly `true`.
   prevPoolValue?: number;
   prevPoolAvailable?: boolean;
+  /** Previous pool reading's `componentCoverage`; smoothing requires the same readable components. */
+  prevPoolComponentCoverage?: number | null;
   prevDivergValue?: number;
   prevDivergAvailable?: boolean;
   /**

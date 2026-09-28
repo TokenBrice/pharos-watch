@@ -30,14 +30,14 @@ export function runCoverageFixture({
 }: {
   env: Record<string, string>;
   lcov: string;
-  baseline?: { files: Record<string, number> };
+  baseline?: unknown;
   execFile?: NonNullable<Parameters<typeof runCriticalCoverageCheck>[0]>["execFile"];
 }) {
   const logs: string[] = [];
   const errors: string[] = [];
   const exits: number[] = [];
   const files = new Map([["coverage/lcov.info", lcov]]);
-  if (baseline) files.set(".ci/critical-coverage-baseline.json", JSON.stringify(baseline));
+  if (baseline !== undefined) files.set(".ci/critical-coverage-baseline.json", JSON.stringify(baseline));
   runCriticalCoverageCheck({
     env: testEnv(env),
     fsImpl: mockFsImpl({

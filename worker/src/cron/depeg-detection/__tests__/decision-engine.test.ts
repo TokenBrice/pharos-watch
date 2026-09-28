@@ -160,6 +160,28 @@ function assertNativeOpening({
 }
 
 describe("decideDepegAsset", () => {
+  it.each([
+    { priceSource: "pyth", priceObservedAtMode: "nominal_reference" as const },
+    { priceSource: "protocol-par" },
+  ])("does not open or recover an event from nominal evidence: %j", (provenance) => {
+    for (const price of [0.98, 1]) {
+      for (const existing of [undefined, makeExistingEvent({
+        stablecoin_id: usdMeta.id, symbol: usdMeta.symbol, peg_type: "peggedUSD", peg_reference: 1,
+      })]) {
+        const decision = decideDepegAsset({
+          now: 1_750_000_000,
+          asset: makeAsset({ price, priceConfidence: "high", ...provenance }),
+          meta: usdMeta,
+          existing,
+          pegRates: { peggedUSD: 1 },
+          pegRateSources: { peggedUSD: "median" },
+          pegRateCounts: { peggedUSD: 4 },
+        });
+        expect(decision.commands).toEqual([]);
+      }
+    }
+  });
+
   it("routes an authoritative small-cap depeg through pending confirmation", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,
@@ -702,6 +724,52 @@ describe("decideDepegAsset", () => {
         level: "log",
         message: "[depeg] Closing live event for USDT: supply $1 is below the live-event floor",
       },
+    ]);
+  });
+
+  it.each<{ label: string; circulating: Record<string, number> }>([
+    { label: "absent buckets", circulating: {} },
+    { label: "wholly invalid buckets", circulating: { ethereum: Number.NaN } },
+  ])("keeps a live event open when current supply is unavailable ($label)", ({ circulating }) => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ circulating }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Kept live event for USDT open: current supply is unavailable, so the live-event floor cannot be assessed",
+      },
+    ]);
+  });
+
+  it("still closes a live event on an explicit observed zero supply", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ circulating: { ethereum: 0 } }),
+      meta: usdMeta,
+      existing: makeExistingEvent({ stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below", peg_reference: 1 }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.commands).toEqual([
+      { type: "close-event", id: 7, endedAt: 1_750_000_900, recoveryPrice: null, closeReason: "coverage-lost-supply" },
     ]);
   });
 

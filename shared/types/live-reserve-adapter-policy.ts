@@ -12,10 +12,10 @@ export const VERIFIED_ONLY_FRESHNESS = [
 const NOT_APPLICABLE_ONLY_FRESHNESS = [
   "not-applicable",
 ] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
-export const UNVERIFIED_ONLY_FRESHNESS = [
+const UNVERIFIED_ONLY_FRESHNESS = [
   "unverified",
 ] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
-export const UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS = [
+const UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS = [
   "unverified",
   "not-applicable",
 ] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
@@ -38,7 +38,7 @@ export const LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 4_000_000;
  *  up to ~71 days old the day before its successor lands, so the late-monthly
  *  46-day cap degraded ~16 days of every healthy cycle. 75 days = observed
  *  worst case plus publication grace. Decision 2026-09-11. */
-export const LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC = 75 * DAY_SECONDS;
+const LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC = 75 * DAY_SECONDS;
 /** Month-end disclosures whose successor lands weeks into the following month,
  *  rather than just past the month boundary. Measured period-end to publication
  *  lag from each publisher's own report index: Paxos PAXG/PYUSD/USDP/USDG 23-28

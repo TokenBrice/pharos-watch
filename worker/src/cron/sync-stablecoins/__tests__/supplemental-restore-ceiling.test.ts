@@ -7,6 +7,7 @@ import {
   mergeSupplementalLastKnownGood,
   normalizeStablecoinsPayload,
   replaceZeroSupplyPrimaryAssets,
+  restoreMissingTrackedAssets,
   SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
 } from "../shared";
@@ -53,6 +54,52 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
+  it.each([
+    ["audx-aussie-dollar-token", "coingecko", 30_551, false],
+    ["mxne-real-mxn", "coingecko", 135_461, false],
+    ["hbusdt-hyperbeat", "coingecko", 94_041, false],
+    ["tryb-bilira", "coingecko-low-volume", 604_800, true],
+    ["usdc-circle", "chainlink-nav", 345_600, true],
+    ["usdc-circle", "coingecko+pyth", 300, true],
+    ["usdc-circle", "coingecko+pyth", 301, false],
+  ] as const)("restores %s supply independently of %s price age %i", (id, source, age, admitted) => {
+    const previous = asset({
+      id, symbol: id, price: 1, priceSource: source,
+      priceObservedAt: NOW_SEC - age, priceObservedAtMode: "upstream",
+      supplyObservedAt: NOW_SEC - 60, circulating: { peggedUSD: 123_456 },
+    });
+    const previousById = new Map([[id, previous]]);
+    const supplemental = mergeSupplementalLastKnownGood(
+      [asset({ id, symbol: id })], previousById, new Set(), NOW_SEC,
+    ).assets[0];
+    const missing = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets[0];
+    for (const restored of [supplemental, missing]) {
+      expect(restored.circulating).toEqual(previous.circulating);
+      expect(restored.supplyObservedAt).toBe(NOW_SEC - 60);
+      expect(restored.supplyRestored).toBe(true);
+      expect(restored.price).toBe(admitted ? 1 : null);
+      expect(normalizeStablecoinsPayload({ peggedAssets: [restored] }).peggedAssets[0].priceSource)
+        .toBe(admitted ? source : "missing");
+      expect(restored.priceObservedAt).toBe(admitted ? NOW_SEC - age : null);
+    }
+    expect(previous.price).toBe(1);
+    expect(previous.priceSource).toBe(source);
+  });
+  it.each([
+    ["coingecko", null],
+    ["coingecko", Number.NaN],
+    ["coingecko", NOW_SEC + 601],
+    ["defillama", null],
+  ] as const)("drops a carried %s price whose original observation %s is unproven", (source, priceObservedAt) => {
+    const previous = asset({
+      id: "usdc-circle", symbol: "USDC", price: 1, priceSource: source, priceObservedAt,
+      supplyObservedAt: NOW_SEC - 60, circulating: { peggedUSD: 123_456 },
+    });
+    const [restored] = restoreMissingTrackedAssets([], new Map([["usdc-circle", previous]]), NOW_SEC).assets;
+    expect(restored.circulating).toEqual(previous.circulating);
+    expect(restored.supplyRestored).toBe(true);
+    expect(restored.price).toBeNull();
+  });
   it("strips legacy synthetic chain history before cache restoration, preserving observed zero", async () => {
     const db = mockD1([{ match: "FROM cache", rows: [{ updated_at: NOW_SEC, value: JSON.stringify({ peggedAssets: [
       asset({ id: "paxg-paxos", symbol: "PAXG", supplySource: "onchain-total-supply", chainCirculating: { Ethereum: chainRow(100) } }),

@@ -21,7 +21,7 @@ import {
 import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg-board-primitives";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { GOVERNANCE_FILTER_OPTIONS, PEG_FILTER_OPTIONS } from "@shared/lib/classification";
-import { formatCurrency, formatElapsedSeconds, formatPercent, formatTrackingSpanDays } from "@shared/lib/format";
+import { formatCurrency, formatElapsedSeconds, formatPegOccupancy, formatTrackingSpanDays } from "@shared/lib/format";
 import type { ThreatBand } from "@shared/lib/classification";
 
 
@@ -193,7 +193,7 @@ function InstrumentRow({
         <MetricCell
           label="Peg health"
           value={pegHealthValue}
-          subline={`${formatPercent(coin.pegPct, 1)} at peg`}
+          subline={`${formatPegOccupancy(coin.pegPct, 1)} at peg`}
         >
           <LinearGauge value={coin.pegScore} tone={metricTone(coin.pegScore)} ariaLabel={`Peg score for ${coin.symbol}`} />
         </MetricCell>

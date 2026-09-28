@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { SelectorCallout } from "@/components/selector/selector-callout";
@@ -39,7 +40,7 @@ import {
   resolveMintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
-import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
@@ -56,7 +57,7 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
     accessor: (row) => (row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : ""),
   },
   { header: "peg", accessor: (row) => PEG_METADATA[row.peg]?.filterLabel ?? row.peg },
-  { header: "supply_usd", accessor: (row) => (row.supplyUsd > 0 ? row.supplyUsd : "") },
+  { header: "supply_usd", accessor: (row) => row.supplyUsd ?? "" },
   { header: "peg_score", accessor: (row) => row.pegScore ?? "" },
   { header: "dews_score", accessor: (row) => row.dewsScore ?? "" },
   { header: "liquidity_score", accessor: (row) => row.liquidityScore ?? "" },
@@ -83,9 +84,9 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
 
 function buildSupplySeries(asset: StablecoinData | undefined): ReadonlyArray<number | null> | undefined {
   if (!asset) return undefined;
-  const current = getCirculatingRaw(asset);
   const prevMonth = getPrevMonthRawOrNull(asset);
-  return prevMonth == null ? undefined : [prevMonth, current];
+  // A missing current bucket stays a gap, never a fabricated zero endpoint.
+  return prevMonth == null ? undefined : [prevMonth, getCirculatingRawOrNull(asset)];
 }
 
 // The two endpoints are the all-time worst tracked deviation and the current
@@ -168,10 +169,12 @@ export function ScreenerClient() {
   // momentarily hide coins whose scores haven't streamed in yet.
   const allRows = useMemo<ScreenerRow[]>(() => {
     if (!stablecoinsData?.peggedAssets) return [];
-    const supplyById = new Map<string, number>();
+    const supplyById = new Map<string, number | null>();
     const supplySeriesById = new Map<string, ReadonlyArray<number | null>>();
+    const unobservedPriceIds = new Set<string>();
     for (const asset of stablecoinsData.peggedAssets) {
-      supplyById.set(asset.id, getCirculatingRaw(asset));
+      if (!isObservedPrice(asset)) unobservedPriceIds.add(asset.id);
+      supplyById.set(asset.id, getCirculatingRawOrNull(asset));
       const supplySeries = buildSupplySeries(asset);
       if (supplySeries) supplySeriesById.set(asset.id, supplySeries);
     }
@@ -196,7 +199,7 @@ export function ScreenerClient() {
         type: meta.flags.governance,
         mechanism: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
         peg: meta.flags.pegCurrency,
-        supplyUsd: supplyById.get(meta.id) ?? 0,
+        supplyUsd: supplyById.get(meta.id) ?? null,
         pegScore: pegCoin?.pegScore ?? null,
         dewsScore: stressData?.signals[meta.id]?.score ?? null,
         liquidityScore: dexData?.[meta.id]?.liquidityScore ?? null,
@@ -223,7 +226,7 @@ export function ScreenerClient() {
         mintAuthorityScoreBandLabel: mintAuthorityScore.bandLabel,
         mintAuthorityScoreBadgeClassName: mintAuthorityScore.badgeClassName,
         mintAuthorityScoreDetail: mintAuthorityScore.detail,
-        pegDeviationSeries: buildPegDeviationSeries(pegCoin),
+        pegDeviationSeries: unobservedPriceIds.has(meta.id) ? undefined : buildPegDeviationSeries(pegCoin),
         supplySeries: supplySeriesById.get(meta.id),
       });
     }

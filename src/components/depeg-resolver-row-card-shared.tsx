@@ -86,10 +86,10 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
         Live incident
       </span>
       <span>
-        age <span className="text-foreground">{formatElapsedSeconds(ageSec)}</span>
+        age <span className="text-foreground">{ageSec == null ? "—" : formatElapsedSeconds(ageSec)}</span>
       </span>
       <span>
-        peak <span className="text-foreground">{formatBps(peakDeviationBps)}</span>
+        peak <span className="text-foreground">{peakDeviationBps == null ? "—" : formatBps(peakDeviationBps)}</span>
       </span>
       {currentDeviationBps != null ? (
         <span>

@@ -11,7 +11,9 @@ export const CacheStatusSchema = z.object({
   /**
    * Input quality for the generation the freshness verdict describes (rule R3).
    * `degraded` is the producer-run quality, independent of age; `null` where the
-   * evidence could not be read. Only sentinel-backed caches publish these.
+   * evidence could not be read. Sentinel-backed caches publish these, and
+   * `fx-rates` publishes them for per-peg source admission (`fx-metadata-*` /
+   * `fx-source-provenance-unknown:<peg>=<reason>,…`).
    */
   degraded: z.boolean().nullable().optional(),
   degradedReason: z.string().nullable().optional(),

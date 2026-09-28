@@ -1,4 +1,5 @@
 import { deriveIndicativeDeviationBps } from "@/lib/stablecoin-detail-derive";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCompactUsd } from "@shared/lib/format";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
@@ -49,7 +50,7 @@ export function buildStablecoinLiveMetadata(
     let health: CommandPaletteStablecoinHealth | undefined;
     if (meta?.flags.navToken) {
       health = { kind: "nav" };
-    } else if (peg && asset.price != null) {
+    } else if (peg && isObservedPrice(asset) && asset.price != null) {
       const reference = getPegReference(peg, rates, meta?.commodityOunces);
       const deviationBps = deriveIndicativeDeviationBps(asset.price, reference);
       if (deviationBps != null) {

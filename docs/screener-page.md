@@ -25,7 +25,7 @@ The row builder starts from `CLIENT_TRACKED_STABLECOINS` and explicitly excludes
 - `useLogos()` for identity assets
 - the slim client registry for lifecycle, governance type, mechanism, peg, blacklistability, Mint Authority summary, and curated custody model (with the shared backing/governance fallback)
 
-The Screener uses `getCirculatingRaw()` for USD supply. It does not introduce its own API endpoint.
+The Screener reads USD supply through `getCirculatingRawOrNull()`. `ScreenerRow.supplyUsd` is `null` when the asset is absent from `/api/stablecoins` (for example a pre-launch row) or its current peg buckets are absent, empty or wholly invalid; only an explicit finite zero is `0`. An active supply range (including a max-only filter from a URL or the command-palette `supply<=N` verb) never matches `null`, while an explicit zero passes a max-only filter. The palette drops a non-positive `supply<=` ceiling, because `supplyMax=0` means "no maximum". Table cells render `—` for `null` and the formatted value for an explicit zero; the CSV `supply_usd` cell is empty for `null` and `0` for an explicit zero. The **30d Supply** sparkline keeps a missing current endpoint as a gap rather than a zero. The Screener does not introduce its own API endpoint.
 
 ## URL Contract
 

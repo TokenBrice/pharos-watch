@@ -35,6 +35,8 @@ import {
 import {
   type SafetyScoreV9FactSetExtensionV2,
 } from "./fact-set";
+import { quarantinedSafetyScoreV9ExtensionAsset } from "./fact-set-schema";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { controlCanCarryKnownStatus } from "./fact-set-control";
 import {
   buildSafetyScoreV9MechanismReview,
@@ -1564,143 +1566,20 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       documentedTermsMaxAgeSec: SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec,
     },
     assets: fixedInput.activeAssetIds.map((assetId) => {
-      const meta = metaById.get(assetId)!;
-      assertMintBridgeOwnership(meta);
-      const prepared = preparedById.get(assetId)!;
-      const cycle = cycleByAsset.get(assetId);
-      const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
-      const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
-      // The audited fallback rung applies only where a live producer was
-      // observed returning nothing this capture. It sits inside that gate, not
-      // ahead of it, so an asset excluded from falling back is not rescued; and
-      // it is deliberately absent from the standalone branch, where no live
-      // producer exists and nothing has gone stale.
-      const reviewedStaticReserveRows = resolveReviewedReserveRows({
-        meta,
-        clockSec,
-        liveReserveRows: liveReserves,
-        liveFallbackAllowed: liveToFallbackAssetIds.has(assetId),
-      });
-      const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
-      const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
-      const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
-      addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
-      const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
-      const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
-      const mechanismReviewGapDisposition =
-        getSafetyScoreV9MechanismReviewGapDisposition(assetId, archetype, clockSec);
-      const mechanismReviewedUnavailable = getSafetyScoreV9MechanismReviewedUnavailableComponents(
-        assetId,
-        archetype,
-        clockSec,
-      );
-      const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
-      if (mechanismRiskReview && mechanismOverlayEvidence) {
-        reviewEvidence.add({
-          componentKeys: ["mechanism-risk-review"],
-          sourceId: "safety-score-v9.mechanism-review-overlay",
-          reviewedAt: mechanismOverlayEvidence.reviewedAt,
-          publishedBy: "unknown",
-          confidence: "manual-review",
-          sources: mechanismOverlayEvidence.sources,
-          payload: mechanismOverlayEvidence.payload,
-          maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
-        });
-      }
-      const assuranceReport = meta.proofOfReserves?.latestReport;
-      const assuranceComponent =
-        archetype === "tbill"
-          ? "lossRecoveryDesign"
-          : archetype === "fiat-cash" || archetype === "commodity-claim"
-            ? "assuranceAndReconciliation"
-            : null;
-      if (mechanismRiskReview && assuranceReport && assuranceComponent) {
-        reviewEvidence.add({
-          componentKeys: [`mechanism-risk-review:${assuranceComponent}`],
-          sourceId: "stablecoin.proof-of-reserves.latest-report",
-          reviewedAt: assuranceReport.publishedAt,
-          observedAt: assuranceReport.periodEnd,
-          publishedAt: assuranceReport.publishedAt,
-          publishedBy: "issuer",
-          confidence: confidenceForResearch(assuranceReport.confidence),
-          sources: assuranceReport.sources,
-          payload: assuranceReport,
-          maxAgeSec:
-            V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec,
-        });
-      }
-      const reserveClassifications = buildReviewedReserveClassifications(
-        reserveRows,
-        meta,
-        clockSec,
-        V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveClassificationMaxAgeSec,
-      );
-      addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
-      addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence, clockSec);
-      addDependencyEvidence(meta, reviewEvidence);
-      addWrapperCustodyEvidence(meta, reviewEvidence);
-      addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence);
-      const supplyReview = buildSafetyScoreV9SupplyReview(
-        fixedInput,
-        assetId,
-        meta.bridgeRouteRisk,
-        {
-          meta,
-          transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
-        },
-      );
-      const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
-      const deployedChainCount = Object.keys(chainRows).length;
-      const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
-      const mint = adaptMintReview(meta, prepared.dependency, supplyReview, reviewEvidence, clockSec);
-      const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);
-      const bridge = adaptBridgeReview(
-        meta,
-        supplyReview,
-        deployedChainCount,
-        reviewEvidence,
-        clockSec,
-        chainRows,
-      );
-      const incidentControlRoute = routeSafetyScoreV9ControlIncidents(
-        mint.controls,
-        mint.review,
-        reviewedIncidents,
-      );
-      const controls = [...incidentControlRoute.controls, ...bridge.controls].sort((left, right) =>
-        compareText(left.controlKey, right.controlKey),
-      );
-      const accessReview = adaptAccessReview(
-        meta,
-        metaById,
-        activeIds,
-        reviewEvidence,
-        reviewedTransferFacts.get(assetId),
-        transferMaterialScope(
-          fixedInput,
-          assetId,
-          meta,
-          options.transferMaterialityGeneration ?? null,
-          reviewedTransferFacts.get(assetId),
-        ),
-        clockSec,
-      );
-      const reviewedEvidence = reviewEvidence.finish();
-      const controlsFullyResolved =
-        controls.length > 0 &&
-        controls.every(controlCanCarryKnownStatus);
-      return {
-        assetId,
-        assetIssuerKey,
-        archetype,
-        variantKind: meta.variantKind ?? null,
-        ...(meta.wrapperOperator === undefined ? {} : { wrapperOperator: meta.wrapperOperator }),
-        launchedAtSec: conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec),
-        mechanismRiskReview,
-        ...(mechanismReviewGapDisposition ? { mechanismReviewGapDisposition } : {}),
-        ...(mechanismReviewedUnavailable.length > 0 ? { mechanismReviewedUnavailable } : {}),
-        mechanismExitFacts: getSafetyScoreV9MechanismExitFacts(assetId, archetype, clockSec),
-        dependencies: {
+      // Asset-local admission boundary (R8): a curation, adapter, or
+      // point-in-time failure below — including the future-review guards — is
+      // recorded on a conservative stub naming the failing field and reason.
+      // Compilation quarantines that asset to producer-failed NR and its
+      // dependents become unavailable, while the rest of the cohort proceeds to
+      // the unchanged publication gate. Registry identity and the dependency
+      // graph above stay cohort-global.
+      const admitted: Partial<ExtensionAsset> = {};
+      let admissionPath = "dependencies";
+      try {
+        const meta = metaById.get(assetId)!;
+        const prepared = preparedById.get(assetId)!;
+        const cycle = cycleByAsset.get(assetId);
+        const dependencies: NonNullable<ExtensionAsset["dependencies"]> = {
           ...prepared.dependency,
           diagnostics: cycle
             ? {
@@ -1709,61 +1588,250 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
                 sccMemberAssetIds: [...cycle].sort(compareText),
               }
             : prepared.dependency.diagnostics,
-        },
-        reserveApplicability: { state: "required" },
-        reserveClassifications,
-        reviewedStaticReserveRows,
-        routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
-        retainedRoutes: buildSafetyScoreV9RetainedRoutes(fixedInput, assetId),
-        controlReview:
-          controls.length > 0
-            ? controlsFullyResolved
-              ? { state: "reviewed-controls", controls }
-              : {
-                  state: "partially-reviewed-controls",
-                  controls,
-                  rationale:
-                    "Reviewed metadata identifies controls, but reconciliation, incident, cap, economic-loss, or materiality semantics remain unresolved.",
-                }
-            : null,
-        economicControlReview:
-          meta.mintAuthority || meta.oracleRisk || meta.bridgeRouteRisk
-            ? {
-                mint: incidentControlRoute.mintReview,
-                oracle,
-                bridge: bridge.review,
-              }
-            : null,
-        accessReview,
-        pegReference: buildPegReference(meta, metaById),
-        supplyReview,
-        operationalResilience: routeSafetyScoreV9OperationalIncidents(
+        };
+        admitted.dependencies = dependencies;
+        admitted.variantKind = meta.variantKind ?? null;
+        admissionPath = "assetIssuerKey";
+        const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
+        admitted.assetIssuerKey = assetIssuerKey;
+        admissionPath = "archetype";
+        const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
+        admitted.archetype = archetype;
+        admissionPath = "pegReference";
+        const pegReference = buildPegReference(meta, metaById);
+        admitted.pegReference = pegReference;
+        admissionPath = "registry.mintBridgeOwnership";
+        assertMintBridgeOwnership(meta);
+        const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
+        // The audited fallback rung applies only where a live producer was
+        // observed returning nothing this capture. It sits inside that gate, not
+        // ahead of it, so an asset excluded from falling back is not rescued; and
+        // it is deliberately absent from the standalone branch, where no live
+        // producer exists and nothing has gone stale.
+        admissionPath = "reviewedStaticReserveRows";
+        const reviewedStaticReserveRows = resolveReviewedReserveRows({
+          meta,
+          clockSec,
+          liveReserveRows: liveReserves,
+          liveFallbackAllowed: liveToFallbackAssetIds.has(assetId),
+        });
+        const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
+        const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+        admissionPath = "reviewedIncidents";
+        const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
+        addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
+        admissionPath = "wrapperAllocationReview";
+        const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
+        admissionPath = "mechanismRiskReview";
+        const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
+        admissionPath = "mechanismReviewGapDisposition";
+        const mechanismReviewGapDisposition =
+          getSafetyScoreV9MechanismReviewGapDisposition(assetId, archetype, clockSec);
+        admissionPath = "mechanismReviewedUnavailable";
+        const mechanismReviewedUnavailable = getSafetyScoreV9MechanismReviewedUnavailableComponents(
+          assetId,
+          archetype,
+          clockSec,
+        );
+        admissionPath = "componentEvidence.mechanism-risk-review";
+        const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
+        if (mechanismRiskReview && mechanismOverlayEvidence) {
+          reviewEvidence.add({
+            componentKeys: ["mechanism-risk-review"],
+            sourceId: "safety-score-v9.mechanism-review-overlay",
+            reviewedAt: mechanismOverlayEvidence.reviewedAt,
+            publishedBy: "unknown",
+            confidence: "manual-review",
+            sources: mechanismOverlayEvidence.sources,
+            payload: mechanismOverlayEvidence.payload,
+            maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
+          });
+        }
+        const assuranceReport = meta.proofOfReserves?.latestReport;
+        const assuranceComponent =
+          archetype === "tbill"
+            ? "lossRecoveryDesign"
+            : archetype === "fiat-cash" || archetype === "commodity-claim"
+              ? "assuranceAndReconciliation"
+              : null;
+        if (
+          mechanismRiskReview &&
+          assuranceReport?.periodEnd &&
+          assuranceReport.publishedAt &&
+          assuranceReport.assuranceMethod !== "unknown" &&
+          assuranceReport.scope !== "unknown" &&
+          assuranceComponent
+        ) {
+          admissionPath = `componentEvidence.mechanism-risk-review:${assuranceComponent}`;
+          reviewEvidence.add({
+            componentKeys: [`mechanism-risk-review:${assuranceComponent}`],
+            sourceId: "stablecoin.proof-of-reserves.latest-report",
+            reviewedAt: assuranceReport.publishedAt,
+            observedAt: assuranceReport.periodEnd,
+            publishedAt: assuranceReport.publishedAt,
+            publishedBy: "issuer",
+            confidence: confidenceForResearch(assuranceReport.confidence),
+            sources: assuranceReport.sources,
+            payload: assuranceReport,
+            maxAgeSec:
+              V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec,
+          });
+        }
+        admissionPath = "reserveClassifications";
+        const reserveClassifications = buildReviewedReserveClassifications(
+          reserveRows,
+          meta,
+          clockSec,
+          V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveClassificationMaxAgeSec,
+        );
+        addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
+        admissionPath = "componentEvidence.reviewed-static-reserve-rows";
+        addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence, clockSec);
+        admissionPath = "componentEvidence.dependencies";
+        addDependencyEvidence(meta, reviewEvidence);
+        admissionPath = "componentEvidence.wrapper-custody";
+        addWrapperCustodyEvidence(meta, reviewEvidence);
+        admissionPath = "componentEvidence.wrapper-allocation";
+        addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence);
+        admissionPath = "supplyReview";
+        const supplyReview = buildSafetyScoreV9SupplyReview(
+          fixedInput,
+          assetId,
+          meta.bridgeRouteRisk,
+          {
+            meta,
+            transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
+          },
+        );
+        const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
+        const deployedChainCount = Object.keys(chainRows).length;
+        admissionPath = "economicControlReview.mint";
+        const mint = adaptMintReview(meta, prepared.dependency, supplyReview, reviewEvidence, clockSec);
+        admissionPath = "economicControlReview.oracle";
+        const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);
+        admissionPath = "economicControlReview.bridge";
+        const bridge = adaptBridgeReview(
+          meta,
+          supplyReview,
+          deployedChainCount,
+          reviewEvidence,
+          clockSec,
+          chainRows,
+        );
+        admissionPath = "controlReview";
+        const incidentControlRoute = routeSafetyScoreV9ControlIncidents(
+          mint.controls,
+          mint.review,
+          reviewedIncidents,
+        );
+        const controls = [...incidentControlRoute.controls, ...bridge.controls].sort((left, right) =>
+          compareText(left.controlKey, right.controlKey),
+        );
+        admissionPath = "accessReview";
+        const accessReview = adaptAccessReview(
+          meta,
+          metaById,
+          activeIds,
+          reviewEvidence,
+          reviewedTransferFacts.get(assetId),
+          transferMaterialScope(
+            fixedInput,
+            assetId,
+            meta,
+            options.transferMaterialityGeneration ?? null,
+            reviewedTransferFacts.get(assetId),
+          ),
+          clockSec,
+        );
+        admissionPath = "researchEvidence";
+        const reviewedEvidence = reviewEvidence.finish();
+        admissionPath = "controlReview";
+        const controlsFullyResolved =
+          controls.length > 0 &&
+          controls.every(controlCanCarryKnownStatus);
+        admissionPath = "launchedAtSec";
+        const launchedAtSec = conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec);
+        admissionPath = "mechanismExitFacts";
+        const mechanismExitFacts = getSafetyScoreV9MechanismExitFacts(assetId, archetype, clockSec);
+        admissionPath = "routeReviews";
+        const routeReviews = buildSafetyScoreV9RouteReviews(fixedInput, assetId);
+        admissionPath = "retainedRoutes";
+        const retainedRoutes = buildSafetyScoreV9RetainedRoutes(fixedInput, assetId);
+        admissionPath = "operationalResilience";
+        const operationalResilience = routeSafetyScoreV9OperationalIncidents(
           getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec),
           reviewedIncidents,
-        ),
-        wrapperAllocationReview,
-        wrapperCustodyReview:
-          (meta.variantKind === "savings-passthrough" ||
-            meta.variantKind === "risk-absorption" ||
-            meta.variantKind === "strategy-vault") &&
-          meta.custodyProfile
-          ? {
-              providers: meta.custodyProfile.providers.map((provider) => ({
-                providerKey: provider.name,
-                role: provider.role,
-                shareFraction: provider.sharePct === undefined ? null : provider.sharePct / 100,
-              })),
-              segregation: meta.custodyProfile.segregation,
-              bankruptcyRemoteness: meta.custodyProfile.bankruptcyRemoteness,
-              rehypothecation: meta.custodyProfile.rehypothecation,
-              knownUnknownExposureShare:
-                meta.custodyProfile.knownUnknownExposurePct === undefined
-                  ? null
-                  : meta.custodyProfile.knownUnknownExposurePct / 100,
-            }
-          : null,
-        ...reviewedEvidence,
-      };
+        );
+        return {
+          assetId,
+          assetIssuerKey,
+          archetype,
+          variantKind: meta.variantKind ?? null,
+          ...(meta.wrapperOperator === undefined ? {} : { wrapperOperator: meta.wrapperOperator }),
+          launchedAtSec,
+          mechanismRiskReview,
+          ...(mechanismReviewGapDisposition ? { mechanismReviewGapDisposition } : {}),
+          ...(mechanismReviewedUnavailable.length > 0 ? { mechanismReviewedUnavailable } : {}),
+          mechanismExitFacts,
+          dependencies,
+          reserveApplicability: { state: "required" },
+          reserveClassifications,
+          reviewedStaticReserveRows,
+          routeReviews,
+          retainedRoutes,
+          controlReview:
+            controls.length > 0
+              ? controlsFullyResolved
+                ? { state: "reviewed-controls", controls }
+                : {
+                    state: "partially-reviewed-controls",
+                    controls,
+                    rationale:
+                      "Reviewed metadata identifies controls, but reconciliation, incident, cap, economic-loss, or materiality semantics remain unresolved.",
+                  }
+              : null,
+          economicControlReview:
+            meta.mintAuthority || meta.oracleRisk || meta.bridgeRouteRisk
+              ? {
+                  mint: incidentControlRoute.mintReview,
+                  oracle,
+                  bridge: bridge.review,
+                }
+              : null,
+          accessReview,
+          pegReference,
+          supplyReview,
+          operationalResilience,
+          wrapperAllocationReview,
+          wrapperCustodyReview:
+            (meta.variantKind === "savings-passthrough" ||
+              meta.variantKind === "risk-absorption" ||
+              meta.variantKind === "strategy-vault") &&
+            meta.custodyProfile
+            ? {
+                providers: meta.custodyProfile.providers.map((provider) => ({
+                  providerKey: provider.name,
+                  role: provider.role,
+                  shareFraction: provider.sharePct === undefined ? null : provider.sharePct / 100,
+                })),
+                segregation: meta.custodyProfile.segregation,
+                bankruptcyRemoteness: meta.custodyProfile.bankruptcyRemoteness,
+                rehypothecation: meta.custodyProfile.rehypothecation,
+                knownUnknownExposureShare:
+                  meta.custodyProfile.knownUnknownExposurePct === undefined
+                    ? null
+                    : meta.custodyProfile.knownUnknownExposurePct / 100,
+              }
+            : null,
+          ...reviewedEvidence,
+        };
+      } catch (error) {
+        return quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
+          code: "fact-build-failed",
+          path: admissionPath,
+          message: toErrorMessage(error),
+        });
+      }
     }),
   };
 }

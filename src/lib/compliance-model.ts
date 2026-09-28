@@ -20,7 +20,9 @@ import type {
   MicaTokenType,
   PegCurrency,
   StablecoinLink,
+  StablecoinMeta,
 } from "@shared/types";
+import { formatReserveReportNote } from "@/lib/regulatory-standing";
 
 import type { GeniusComplianceProfile } from "@shared/types/stablecoin-client-meta";
 
@@ -28,6 +30,7 @@ interface ComplianceProjectionEntry {
   id: string;
   mica?: MicaProfile;
   genius?: GeniusComplianceProfile;
+  proofOfReserves?: Pick<NonNullable<StablecoinMeta["proofOfReserves"]>, "latestReport">;
 }
 
 const MICA_COMPLIANCE_PROFILE_BY_ID = new Map(
@@ -39,7 +42,7 @@ const MICA_COMPLIANCE_PROFILE_BY_ID = new Map(
 const GENIUS_COMPLIANCE_PROFILE_BY_ID = new Map(
   (complianceAsset as ComplianceProjectionEntry[])
     .filter((entry) => entry.genius != null)
-    .map((entry) => [entry.id, entry.genius!] as const),
+    .map((entry) => [entry.id, entry] as const),
 );
 
 export const COMPLIANCE_REGIME_VALUES = ["all", "mica", "genius"] as const;
@@ -82,7 +85,7 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   reserveDisclosureUrl?: string;
   redemptionPolicyPresent: boolean;
   monthlyAttestationPresent: boolean;
-  latestReportDate?: string;
+  reserveReportNote?: string;
   notes?: string;
   applicabilitySummary?: string;
   foreignExceptionSummary?: string;
@@ -228,7 +231,9 @@ function buildMicaRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], mica: M
 function buildGeniusRow(
   meta: (typeof CLIENT_TRACKED_STABLECOINS)[number],
   genius: GeniusComplianceProfile,
+  report: NonNullable<StablecoinMeta["proofOfReserves"]>["latestReport"],
 ): GeniusComplianceRow {
+  const reserveReportNote = formatReserveReportNote(report);
   return {
     regime: "genius",
     id: meta.id,
@@ -251,13 +256,13 @@ function buildGeniusRow(
         genius.reserveDisclosureUrl ||
         genius.redemptionPolicyPresent ||
         genius.monthlyAttestationPresent ||
-        genius.latestReportDate,
+        reserveReportNote,
     ),
     reserveDisclosurePresent: genius.reserveDisclosurePresent ?? false,
     reserveDisclosureUrl: genius.reserveDisclosureUrl,
     redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
     monthlyAttestationPresent: genius.monthlyAttestationPresent ?? false,
-    latestReportDate: genius.latestReportDate,
+    reserveReportNote,
     notes: genius.notes,
     applicabilitySummary: genius.applicabilityBasis?.summary,
     foreignExceptionSummary: genius.foreignExceptionEvidence?.summary,
@@ -298,9 +303,9 @@ function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: Complianc
       rows.push(buildMicaRow(meta, mica));
     }
 
-    const genius = GENIUS_COMPLIANCE_PROFILE_BY_ID.get(meta.id);
-    if (!genius || (meta.status !== "pre-launch" && !isActiveStablecoinMeta(meta))) continue;
-    const geniusRow = buildGeniusRow(meta, genius);
+    const entry = GENIUS_COMPLIANCE_PROFILE_BY_ID.get(meta.id);
+    if (!entry?.genius || (meta.status !== "pre-launch" && !isActiveStablecoinMeta(meta))) continue;
+    const geniusRow = buildGeniusRow(meta, entry.genius, entry.proofOfReserves?.latestReport);
     if (geniusEffective && isActiveStablecoinMeta(meta)) {
       rows.push(geniusRow);
     } else {

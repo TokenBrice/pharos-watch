@@ -4,6 +4,7 @@ import { CURRENT_DEPLOYMENT_KEYS, deploymentKey } from "./dex-liquidity";
 import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
   DexExitRouteObservationsSchema,
+  DexPoolVolumeObservationSchema,
   ExitRouteObservationCoverageSchema,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
@@ -74,10 +75,16 @@ const UNKNOWN_EXIT_ROUTE_COVERAGE: ExitRouteObservationCoverage = {
 
 const SCORE_COMPONENT_KEYS = ["tvlDepth", "volumeActivity", "poolQuality", "durability", "pairDiversity"] as const;
 
-function projectLegacyScoreComponents(details: Record<string, unknown>): Record<string, number> | null {
-  const projected: Record<string, number> = {};
+function projectLegacyScoreComponents(details: Record<string, unknown>): Record<string, number | null> | null {
+  const projected: Record<string, number | null> = {};
   for (const key of SCORE_COMPONENT_KEYS) {
     const value = details[key];
+    // DEC-19: an unavailable activity component is an explicit null; the valid
+    // components stay displayable. Every other component must be finite.
+    if (key === "volumeActivity" && value === null) {
+      projected[key] = null;
+      continue;
+    }
     if (typeof value !== "number" || !Number.isFinite(value)) return null;
     projected[key] = value;
   }
@@ -256,6 +263,12 @@ export function normalizeTopPools(
     }
     if (poolRecord.extra && typeof poolRecord.extra === "object" && !Array.isArray(poolRecord.extra)) {
       cleaned.extra = pickAllowedKeys(poolRecord.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
+    }
+    // Absent = legacy row whose volume eligibility was never recorded; a
+    // malformed observation is dropped rather than published as measured.
+    const volumeObservation = DexPoolVolumeObservationSchema.safeParse(poolRecord.volumeObservation);
+    if (volumeObservation.success) {
+      cleaned.volumeObservation = volumeObservation.data;
     }
     const normalizedSource = normalizePoolSource(poolRecord.source);
     if (normalizedSource != null) {

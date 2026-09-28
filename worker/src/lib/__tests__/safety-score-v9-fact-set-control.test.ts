@@ -224,10 +224,24 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.control.score).toBe(45);
   });
 
-  it("rejects registry drift and future reviews before quarantining stale known evidence", () => {
+  it("rejects registry drift, and quarantines a future review like stale known evidence", () => {
     const fixed = exactFixedInput();
     expect(() => buildSafetyScoreV9BaselineExtension(fixed, { registryFingerprint: "f".repeat(64), metaById: metaMap(alphaMeta()) })).toThrow(/registry fingerprint/);
-    expect(() => buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta({ blacklistabilityReview: { reviewedStatus: true, sourceFreeRationale: "Fixture-only review.", evidence: "Future review.", reviewer: "Fixture reviewer", reviewedAt: "2026-07-14" } })) })).toThrow(/later than the scoring clock/);
+    // The future-review guard still refuses the review; the refusal is an
+    // asset-local admission quarantine naming the field, not a cohort abort.
+    const futureReview = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta({ blacklistabilityReview: { reviewedStatus: true, sourceFreeRationale: "Fixture-only review.", evidence: "Future review.", reviewer: "Fixture reviewer", reviewedAt: "2026-07-14" } })) });
+    expect(futureReview.assets[0]).toMatchObject({
+      assetId: "alpha",
+      accessReview: null,
+      admissionQuarantine: { code: "fact-build-failed", path: "accessReview", message: expect.stringMatching(/later than the scoring clock/) },
+    });
+    const futureCompiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, materializeSafetyScoreV9FactSetExtension(fixed, futureReview));
+    expect(futureCompiled.quarantines).toEqual([{
+      assetId: "alpha",
+      code: "fact-build-failed",
+      message: expect.stringMatching(/^accessReview: .*later than the scoring clock/),
+    }]);
+    expect(evaluateV9FactSet(futureCompiled.factSet, V9_CANDIDATE_POLICY_V1).assets[0]!.trace).toMatchObject({ finalGrade: "NR", finalScore: null });
     const stale = strategyVaultExtension();
     stale.assets[0]!.researchEvidence = [{ evidenceKey: "stale-control-review", sourceId: "fixture.stale-control-review", observedAtSec: 8_000, publishedAtSec: null, url: "https://example.com/stale", contentSha256: "a".repeat(64), confidence: "verified", maxAgeSec: 500 }];
     stale.assets[0]!.componentEvidence = [{ componentKey: "control", evidenceKeys: ["stale-control-review"] }];

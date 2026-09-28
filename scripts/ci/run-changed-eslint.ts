@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import { existsSync } from "node:fs";
-import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
+import { collectChangedFiles, collectGitPaths } from "../lib/changed-files.mts";
 import { createExecutionUnit, createSpawnCommand, runExecutionUnit, runSpawnCommand, type CommandImplementation, type SpawnCommand } from "../lib/command-runner.mts";
 import { localBin } from "../lib/local-bin.mts";
-import { runDirectCli } from "../lib/cli-args.mjs";
+import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 
 const LINTABLE_EXTENSION = /\.(?:[cm]?[jt]sx?)$/;
 
@@ -30,15 +30,40 @@ export async function runChangedEslint({
   env = process.env,
   runCommand = runSpawnCommand,
 }: RunChangedEslintOptions = {}): Promise<number> {
-  const { base, head, rest } = parseChangedFileArgs(argv, env);
-  const files = selectLintableFiles(collectChangedFiles({ base, head }));
+  const separator = argv.indexOf("--");
+  const { values } = parseStrictCliArgs(separator < 0 ? argv : argv.slice(0, separator), {
+    conflicts: [["file", "staged", "base"], ["file", "head"], ["staged", "head"]],
+    options: {
+      file: { type: "string", multiple: true },
+      staged: { type: "boolean" },
+      base: { type: "string" },
+      head: { type: "string" },
+    },
+  });
+  if (values.help) {
+    console.log("Usage: npm run lint:changed -- [--file <path> ... | --staged | --base <ref> [--head <ref>]] [-- <eslint options>]\nWithout selection flags or PR range environment, lint the working tree (including staged and untracked files).");
+    return 0;
+  }
+  const rest = separator < 0 ? [] : argv.slice(separator + 1);
+  const explicitFiles = values.file as string[] | undefined;
+  const base = typeof values.base === "string" ? values.base : env.PR_BASE_SHA || env.GITHUB_BASE_SHA;
+  const head = typeof values.head === "string" ? values.head : env.PR_HEAD_SHA || env.GITHUB_HEAD_SHA;
+  const selection = explicitFiles
+    ? explicitFiles
+    : values.staged
+      ? collectGitPaths({ kind: "staged", noRenames: true })
+      : base || head
+        ? collectChangedFiles({ base: base || "origin/main", head: head || "HEAD" })
+        : collectGitPaths({ kind: "working", includeUntracked: true, noRenames: true });
+  const files = selectLintableFiles([...new Set(selection)]);
+  const scope = explicitFiles ? "explicit selection" : values.staged ? "staged files" : base || head ? `${base || "origin/main"}...${head || "HEAD"}` : "working tree and untracked files";
 
   if (files.length === 0) {
-    console.log(`[lint:changed] No lintable files changed in ${base}...${head}.`);
+    console.log(`[lint:changed] No lintable files selected from ${scope}.`);
     return 0;
   }
 
-  console.log(`[lint:changed] Checking ${files.length} file(s) changed in ${base}...${head}.`);
+  console.log(`[lint:changed] Checking ${files.length} file(s) from ${scope}.`);
   const command = createSpawnCommand(localBin("eslint"), [
       ...files,
       "--cache",

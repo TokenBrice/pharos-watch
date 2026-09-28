@@ -1,7 +1,9 @@
 import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getCirculatingRaw, sumPegBuckets } from "@shared/lib/supply";
+import { admitSupplyBuckets, getCirculatingRaw, type SupplyBucketInvalidReason } from "@shared/lib/supply";
+import { CHAIN_CIRCULATING_KEYS, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
+import { isRecord } from "@shared/lib/type-guards";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
@@ -9,11 +11,34 @@ import type { PeggedAsset } from "./enrich-prices";
 import type { PreviousStablecoinsCacheState } from "./shared";
 import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
 
-const CHAIN_CIRCULATING_KEYS = ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"];
+/**
+ * Why one upstream row was quarantined at intake (DEC-03: per-asset quarantine, never a whole-list hold).
+ * `circulating-absent` = no current aggregate bucket observed (`{}`/missing), distinct from an observed zero.
+ */
+export type IntakeQuarantineReason =
+  | "row-not-object"
+  | "id-missing"
+  | "name-or-symbol-invalid"
+  | "circulating-absent"
+  | `circulating-${SupplyBucketInvalidReason}`;
+
+export interface IntakeQuarantinedRow {
+  index: number;
+  id: string | null;
+  reason: IntakeQuarantineReason;
+}
 
 export interface StructuralValidationResult {
   validAssets: PeggedAsset[];
   droppedMalformedAssets: number;
+  quarantined: IntakeQuarantinedRow[];
+  /** Asset ids whose invalid historical aggregate buckets were dropped to absence (asset kept). */
+  invalidHistoryIds: string[];
+}
+
+export interface RowAdmissionResult {
+  rows: PeggedAsset[];
+  quarantined: IntakeQuarantinedRow[];
 }
 
 export interface CanonicalDeduplicationResult {
@@ -71,29 +96,102 @@ function compareCanonicalAssetQuality(left: PeggedAsset, right: PeggedAsset): nu
   return 0;
 }
 
-export function filterStructurallyValidAssets(assets: PeggedAsset[]): StructuralValidationResult {
-  const validAssets = assets.filter(
-    (asset) => asset.id != null && typeof asset.name === "string" && typeof asset.symbol === "string" && asset.circulating != null,
-  );
+function readRowId(row: Record<string, unknown>): string | null {
+  const id = row.id;
+  return (typeof id === "string" && id.length > 0) || (typeof id === "number" && Number.isFinite(id)) ? String(id) : null;
+}
+
+/**
+ * Admit only non-null object rows from an untrusted provider list, before any transform (frozen merge,
+ * aliasing, structural field access) dereferences them. Null, primitive and array rows are quarantined with
+ * their index so one malformed row cannot crash the run or stall every valid peer (D01-5, R8).
+ */
+export function admitPeggedAssetRows(rows: readonly unknown[]): RowAdmissionResult {
+  const admitted: PeggedAsset[] = [];
+  const quarantined: IntakeQuarantinedRow[] = [];
+  rows.forEach((row, index) => {
+    if (!isRecord(row)) {
+      quarantined.push({ index, id: null, reason: "row-not-object" });
+      return;
+    }
+    // Structural fields are checked by filterStructurallyValidAssets; this boundary only proves object shape.
+    const assetRow: PeggedAsset = row as unknown as PeggedAsset;
+    admitted.push(assetRow);
+  });
+  return { rows: admitted, quarantined };
+}
+
+const HISTORY_BUCKET_KEYS = ["circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"] as const;
+
+/**
+ * Per-asset structural and supply admission. Rows need an id, string name/symbol and an observed current
+ * aggregate supply whose buckets are finite and nonnegative (an explicit zero is observed supply; `{}` is
+ * absence). Invalid historical buckets are dropped to absence rather than quarantining the asset.
+ */
+export function filterStructurallyValidAssets(assets: readonly unknown[]): StructuralValidationResult {
+  const validAssets: PeggedAsset[] = [];
+  const quarantined: IntakeQuarantinedRow[] = [];
+  const invalidHistoryIds: string[] = [];
+  assets.forEach((asset, index) => {
+    if (!isRecord(asset)) {
+      quarantined.push({ index, id: null, reason: "row-not-object" });
+      return;
+    }
+    const id = readRowId(asset);
+    if (id == null) {
+      quarantined.push({ index, id: null, reason: "id-missing" });
+      return;
+    }
+    if (typeof asset.name !== "string" || typeof asset.symbol !== "string") {
+      quarantined.push({ index, id, reason: "name-or-symbol-invalid" });
+      return;
+    }
+    const current = admitSupplyBuckets(asset.circulating);
+    if (current.status !== "observed") {
+      quarantined.push({
+        index,
+        id,
+        reason: current.status === "absent" ? "circulating-absent" : `circulating-${current.reason}`,
+      });
+      return;
+    }
+    let historyDropped = false;
+    for (const key of HISTORY_BUCKET_KEYS) {
+      if (admitSupplyBuckets(asset[key]).status !== "invalid") continue;
+      asset[key] = null;
+      historyDropped = true;
+    }
+    if (historyDropped) invalidHistoryIds.push(id);
+    // Every structural and supply field read above was checked on this row.
+    const validAsset: PeggedAsset = asset as unknown as PeggedAsset;
+    validAssets.push(validAsset);
+  });
   return {
     validAssets,
-    droppedMalformedAssets: assets.length - validAssets.length,
+    droppedMalformedAssets: quarantined.length,
+    quarantined,
+    invalidHistoryIds,
   };
 }
 
+/**
+ * Collapse provider chain peg-bucket records to scalar totals for all four chain keys. An absent/empty or
+ * invalid bucket becomes `null` (unavailable) instead of `0`, so an empty `circulatingPrevDay` cannot
+ * manufacture a mint and an empty `current` cannot manufacture a redemption; an observed zero stays `0`.
+ * A chain row without any `current` key keeps the row (the chain is known) with `current: null`.
+ */
 export function normalizeChainCirculating(assets: PeggedAsset[]): void {
   for (const asset of assets) {
-    const chainCirculating = asset.chainCirculating as Record<string, Record<string, unknown>> | undefined;
-    if (!chainCirculating || typeof chainCirculating !== "object") continue;
+    const chainCirculating = asset.chainCirculating;
+    if (!isRecord(chainCirculating)) continue;
 
     for (const chain of Object.keys(chainCirculating)) {
       const entry = chainCirculating[chain];
-      if (!entry || typeof entry !== "object") continue;
+      if (!isRecord(entry)) continue;
 
       for (const key of CHAIN_CIRCULATING_KEYS) {
-        const value = entry[key];
-        if (!value || typeof value !== "object") continue;
-        entry[key] = sumPegBuckets(value as Record<string, number>);
+        if (key !== "current" && entry[key] === undefined) continue;
+        entry[key] = normalizeChainSupplyValue(entry[key]);
       }
     }
   }

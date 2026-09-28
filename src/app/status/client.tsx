@@ -52,6 +52,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     isLoading: historyLoading,
     error: historyError,
   } = usePublicStatusHistory(historyWindow);
+  const runwayHistoryAvailable = runwayHistoryData != null && runwayHistoryError == null;
 
   const handleRefresh = () => {
     void refetchHealth();
@@ -142,10 +143,10 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
         />
 
         <UptimeBar
-          transitions={runwayHistoryData?.transitions ?? []}
-          currentStatus={runwayHistoryData?.currentStatus ?? healthData.status}
-          lastChangedAt={runwayHistoryData?.lastChangedAt ?? null}
-          historyUnavailable={runwayHistoryError != null}
+          transitions={runwayHistoryAvailable ? runwayHistoryData.transitions : []}
+          currentStatus={runwayHistoryAvailable ? runwayHistoryData.currentStatus : healthData.status}
+          lastChangedAt={runwayHistoryAvailable ? runwayHistoryData.lastChangedAt : null}
+          historyUnavailable={!runwayHistoryAvailable}
         />
 
         <NoticeRail notices={notices} />

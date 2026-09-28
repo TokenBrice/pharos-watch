@@ -33,7 +33,7 @@ import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/dig
 import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-style";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
-import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
+import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
 
 const DEFAULT_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 const fixture = (opts: { extended?: string; text?: string; lead?: string; leadSignalId?: string; tone?: string } = {}): ParsedDigestResponse => ({ digestTitle: "T", digestText: opts.text ?? "T.", digestExtended: opts.extended ?? DEFAULT_EXTENDED, digestMeta: JSON.stringify({ leadSignalId: opts.leadSignalId, lead: opts.lead ?? "depeg", tone: opts.tone ?? "dry", coins: ["USDT"] }), strippedDashCount: 0, usedRawTextFallback: false });
@@ -105,23 +105,59 @@ describe("response and editorial contracts", () => {
     expect(facts("APXUSD narrowed from 3,650 bps yesterday.", { prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159, bps: -3159 }] })).toContain("unverifiable-movement-claim");
     expect(facts("APXUSD widened from 3,159 bps to 3,410 bps overnight.", { prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159 }] })).not.toContain("unverifiable-movement-claim");
     expect(facts("APXUSD narrowed from 3,159 bps overnight.", { prevDepegFacts: [{ symbol: "APXUSD", currentBps: -420 }, { symbol: "OTHER", currentBps: -3159 }] })).toContain("unverifiable-movement-claim");
+    expect(facts("APXUSD narrowed from 3,159 bps overnight.", { prevDepegFacts: [{ symbol: "APXUSD", bps: -3159, peakBps: -3159 }] })).toContain("unverifiable-movement-claim");
+    expect(facts("APXUSD narrowed from 3,159 bps overnight.", { prevDepegFacts: [{ symbol: "APXUSD", currentBps: -420, bps: -3159, peakBps: -3159 }] })).toContain("unverifiable-movement-claim");
     expect(issueCodes(fixture({ leadSignalId: "yield:usdc", extended: `USDTB remains 2,950 bps under peg, unchanged. ${DEFAULT_EXTENDED}` }), { kind: "daily", recentMeta: [], leadRequirements: [{ candidateIds: [], severity: "hard" as const, mentionTokens: ["USDT"], reason: "ongoing critical" }] })).toContain("required-lead-missing");
     const titles = [{ meta: null, title: "USX Turns Twenty Days Old" }, { meta: null, title: "USX Passes 450 Hours Broken" }];
     expect(issueCodes({ ...fixture(), digestTitle: "USX Enters Week Four" }, { kind: "daily", recentMeta: titles })).toEqual(expect.arrayContaining(["title-symbol-streak", "title-day-counting"]));
     expect(issueCodes({ ...fixture(), digestTitle: "USDC Touches Its Ceiling" }, { kind: "daily", recentMeta: [], recentTitles: ["USDC Touches Its Ceiling"] })).toContain("repeated-title");
   });
+
+  it.each([
+    ["contradictory hook", "USDC trades at $0.90, 50 bps below peg.", "hard"],
+    ["consistent quote", "USDC trades at $0.995, 50 bps below peg.", null],
+    ["rounded quote", "USDC trades at $1.00, 50 bps below peg.", null],
+    ["supply before price", "USDC has $50B in supply, trades at $0.995, and sits 50 bps below peg.", null],
+    ["contradiction after supply", "USDC has $50B in supply, trades at $0.90, and sits 50 bps below peg.", "hard"],
+    ["unscaled supply", "USDC has supply at $500,000 and sits 50 bps below peg.", "soft"],
+    ["multi-coin sentence", "USDC trades at $0.995 while USDT sits 1,000 bps below peg at $0.90.", "soft"],
+    ["coin without a depeg fact", "USDC trades at $0.995 while DAI sits 1,000 bps below peg.", "soft"],
+    ["competing deviations", "USDC trades at $0.995, 50 bps below peg after a peak of 1,000 bps.", "soft"],
+  ] as const)("binds numeric claims conservatively: %s", (_label, text, severity) => {
+    const parsed = { ...extended("USDT held its peg; watch the next print tomorrow."), digestText: text };
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      depegFacts: [
+        { symbol: "USDC", currentPriceUsd: 0.995, currentBps: -50 },
+        { symbol: "USDT", currentPriceUsd: 0.9, currentBps: -1000 },
+      ],
+    }).filter((issue) => issue.code.startsWith("price-bps-"));
+    if (severity) expect(issues).toContainEqual(expect.objectContaining({ severity }));
+    else expect(issues).toEqual([]);
+    expect(hasBlockingDigestQualityIssues(issues)).toBe(severity === "hard");
+  });
 });
 
 describe("intelligence, prompt, and regime contracts", () => {
   const current: DigestInputData = { ...BASE_DIGEST_INPUT, editorialCandidates: [{ id: "depeg:usdt-tether:active", kind: "depeg", title: "USDT active 175 bps below peg", symbols: ["USDT"], impactScore: 17.5, novelty: "worsening", confidence: "high", artifactRisk: "low", headlineFacts: ["175 bps below peg"], whyItMatters: "Active peg stress is relevant." }, { id: "supply:usdc:accelerating", kind: "supply", title: "USDC supply accelerating", symbols: ["USDC"], impactScore: 12, novelty: "accelerating", confidence: "high", artifactRisk: "low", headlineFacts: ["+$12M in 1d"], whyItMatters: "Supply velocity shows allocation." }] };
+  current.dataQuality = { generatedAt: 200_000, stablecoinsCacheUpdatedAt: 200_000, stablecoinsCacheAgeSec: 0, windows: { blacklistActivity: { label: "24h", start: 113_600, end: 200_000 }, mintBurnFlows: { label: "24h", start: 113_600, end: 200_000 }, supplyVelocity: { label: "UTC", dates: [] }, psi: { label: "latest", sampleAt: 200_000, dailySnapshotAt: null } } };
+  current.topDepegs = [{ ...current.topDepegs[0], currentBps: -175, severityBasis: "current", startedAt: 1, pegReference: 1, priceObservedAt: 200_000 }];
   const previous: DigestInputData = { ...current, topDepegs: [{ ...current.topDepegs[0], bps: -100 }], stabilityIndex: { score: 91, band: "BEDROCK", components: { severity: 2, breadth: 1, trend: 0 } }, nextTriggers: [{ id: "trigger:depeg:usdt", label: "USDT depeg widening", metric: "depeg-bps", comparator: "abs-gte", thresholdValue: 125, thresholdLabel: "125 bps off peg", symbol: "USDT", rationale: "Wider deviation raises severity.", detail: "If USDT reaches 125 bps off peg, severity rises." }] };
+  previous.dataQuality = { ...current.dataQuality, generatedAt: 113_600 };
+  previous.topDepegs = [{ ...current.topDepegs[0], currentBps: -100, priceObservedAt: 113_600 }];
   it("builds change, trigger, risk, and calm-frame intelligence and expires stale triggers", () => {
     const intelligence = buildDigestIntelligence(current, previous);
     expect(intelligence.calmNarrativeFrame).toMatchObject({ label: "Supply rotation" }); expect(intelligence.nextTriggers?.[0]).toMatchObject({ metric: "depeg-bps" });
     expect(intelligence.changeSummary?.worsenedSignals[0]).toMatchObject({ label: "USDT depeg widened" });
     expect(intelligence.forwardLookOutcomes?.[0]).toMatchObject({ status: "hit", triggerId: "trigger:depeg:usdt" });
     let prior: DigestInputData | null = null;
-    const editions = Array.from({ length: 4 }, () => { const data = { ...current, nextTriggers: buildNextTriggers(current, prior) }; prior = data; return data; });
+    const editions = Array.from({ length: 4 }, (_, index) => {
+      const generatedAt = 200_000 + index * 86_400;
+      const observed = { ...current, dataQuality: { ...current.dataQuality!, generatedAt }, topDepegs: [{ ...current.topDepegs[0], priceObservedAt: generatedAt }] };
+      const data = { ...observed, nextTriggers: buildNextTriggers(observed, prior) };
+      prior = data;
+      return data;
+    });
     expect(editions.slice(0, 3).map((data) => data.nextTriggers?.[0]?.repeatedCount ?? 0)).toEqual([0, 1, 2]);
     expect(editions[3].nextTriggers?.some((trigger) => trigger.id === "trigger:depeg:usdt-tether")).toBe(false);
     expect(buildForwardLookOutcomes(editions[3], editions[2])).toContainEqual(expect.objectContaining({ status: "expired" }));
@@ -178,6 +214,40 @@ describe("market and risk collectors", () => {
     const db = mockD1([publishedGaugeTable()]); const result = await collectMintBurnFlows(makeCollectorCtx(db));
     expect(result.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, gaugeBand: "HEALTHY", classificationSource: "safety-score-v9-publication", topChains: [{ chainId: "ethereum", netUsd: 150e6 }, { chainId: "arbitrum", netUsd: -3e6 }] });
     expect(result.value?.topPressure.map(({ symbol }) => symbol)).toEqual(["USDT", "USDC"]); expect(buildUserPrompt({ ...BASE_DIGEST_INPUT, mintBurnFlows: result.value! })).toContain("Top chains by net flow"); expect(db.getHistory().some(({ sql }) => sql.includes("mint_burn_hourly"))).toBe(false);
+  });
+  it("never restates flow claims that missing valuation could alter", async () => {
+    const partialMint = {
+      window24h: { completeness: "partial", mintCompleteness: "partial", burnCompleteness: "complete", unpricedMintEventCount: 1, unpricedBurnEventCount: 0 },
+      baseline: "complete", netFlow7d: "partial", netFlow30d: "partial", netFlow90d: "partial",
+    };
+    const base = publishedGaugePayload();
+    const coins = base.coins as Record<string, unknown>[];
+    // Mixed USDC: unpriced mint plus priced burns; USDT's baseline is partial.
+    const mixed = publishedGaugePayload({
+      coins: [{ ...coins[0], valuation: { ...(coins[0].valuation as object), baseline: "partial" } }, { ...coins[1], valuation: partialMint }, coins[2]],
+      chains: [{ chainId: "ethereum", netFlow24hUsd: 150_000_000, valuation: "partial" }, { chainId: "arbitrum", netFlow24hUsd: -3_000_000, valuation: "complete" }],
+    });
+    const result = await collectMintBurnFlows(ctxFor([publishedGaugeTable({ value: JSON.stringify(mixed) })]));
+    expect(result.value?.topPressure).toEqual([]);
+    expect(result.value?.topChains).toEqual([{ chainId: "arbitrum", netUsd: -3e6 }]);
+
+    // A composite with a partial input is withheld as a named quality finding, not a failure.
+    const withheld = await collectMintBurnFlows(ctxFor([publishedGaugeTable({
+      value: JSON.stringify(publishedGaugePayload({ gauge: { ...(base.gauge as object), partialValuationInputs: 1 } })),
+    })]));
+    expect(withheld.value).toBeUndefined();
+    expect(withheld.degradedReasons).toEqual([]);
+    expect(withheld.qualityReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
+
+    // A publication predating completeness is unknown: nets and pressure are not restated.
+    const legacy = publishedGaugePayload({
+      gauge: { score: PUBLISHED_GAUGE_SCORE, band: "HEALTHY", flightToQuality: false, flightIntensity: 0 },
+      coins: coins.map(({ valuation: _valuation, ...coin }) => coin),
+      chains: [{ chainId: "ethereum", netFlow24hUsd: 150_000_000 }],
+    });
+    const legacyResult = await collectMintBurnFlows(ctxFor([publishedGaugeTable({ value: JSON.stringify(legacy) })]));
+    expect(legacyResult.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, topPressure: [], topChains: [] });
+    expect(legacyResult.qualityReasons).toContain("mint-burn-valuation-unknown");
   });
   const activeRows = { usdc: { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: -100, started_at: 0 }, usdt: { stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -500, peak_price: 0.95, peg_reference: 1, started_at: 0 } };
   it.each([["sorts and suppresses", [{ ...activeRows.usdc }, { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: 0 }], { first: "USDC", suppressed: true }], ["keeps critical", [activeRows.usdt, { ...activeRows.usdc, peak_deviation_bps: -5200 }, { ...activeRows.usdc, stablecoin_id: "dai-makerdao", symbol: "DAI2", peak_deviation_bps: 150 }, { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: 0 }], { count: 4, unsuppressed: true }], ["uses peak", [activeRows.usdc], { bps: -100 }], ["filters frozen", [{ ...activeRows.usdc, stablecoin_id: "usr-resolv", symbol: "USR", peak_deviation_bps: -9025 }, activeRows.usdc], { count: 1 }], ["uses stale peak", [{ ...activeRows.usdc, peak_deviation_bps: -3000, peak_price: 0.7, peg_reference: 1 }], { bps: -3000, basis: "peak-fallback" }]] as const)("%s", async (_label, rows, expected) => {

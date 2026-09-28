@@ -144,12 +144,29 @@ function buildAreaPath({
   layer: ChartLayer;
   scales: ReturnType<typeof makeScales>;
 }): string {
-  if (rows.length === 0) return "";
-  const topPoints = rows.map((row) => formatPoint(scales.x(row.ts), scales.y(row[layer.key])));
+  const commands: string[] = [];
   const baseY = scales.y(0).toFixed(1);
-  const firstX = scales.x(rows[0]!.ts).toFixed(1);
-  const lastX = scales.x(rows[rows.length - 1]!.ts).toFixed(1);
-  return `M ${topPoints.join(" L ")} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
+  let firstX: string | null = null;
+  let lastX = "";
+  const closeSegment = () => {
+    if (firstX !== null) {
+      commands.push(`L ${lastX} ${baseY} L ${firstX} ${baseY} Z`);
+      firstX = null;
+    }
+  };
+  for (const row of rows) {
+    const value = row[layer.key];
+    if (value === null || !Number.isFinite(value)) {
+      closeSegment();
+      continue;
+    }
+    const x = scales.x(row.ts);
+    commands.push(`${firstX === null ? "M" : "L"} ${formatPoint(x, scales.y(value))}`);
+    firstX ??= x.toFixed(1);
+    lastX = x.toFixed(1);
+  }
+  closeSegment();
+  return commands.join(" ");
 }
 
 function buildTopLinePath({
@@ -161,10 +178,7 @@ function buildTopLinePath({
   layer: ChartLayer;
   scales: ReturnType<typeof makeScales>;
 }): string {
-  if (rows.length === 0) return "";
-  return rows
-    .map((row, index) => `${index === 0 ? "M" : "L"} ${formatPoint(scales.x(row.ts), scales.y(row[layer.key]))}`)
-    .join(" ");
+  return buildCohortLinePath({ rows, line: layer, scales });
 }
 
 function buildCohortLinePath({
@@ -173,7 +187,7 @@ function buildCohortLinePath({
   scales,
 }: {
   rows: TotalMcapChartRow[];
-  line: CohortLine;
+  line: Pick<CohortLine | ChartLayer, "key">;
   scales: ReturnType<typeof makeScales>;
 }): string {
   let hasPreviousPoint = false;
@@ -477,6 +491,11 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >
+      {rows.some((row) => row.usdt === null || row.usdc === null || row.sky === null || row.others === null) ? (
+        <p className="absolute left-2 top-0 z-10 text-xs text-muted-foreground">
+          Some cohort history is unavailable; gaps are not zero.
+        </p>
+      ) : null}
       {chartReady ? (
         <HomeAltChartFrame width={width} height={height} rows={rows} yDomain={yDomain} />
       ) : (

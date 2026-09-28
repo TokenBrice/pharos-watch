@@ -42,6 +42,7 @@ describe("missing-price duration bands", () => {
     expect(getMissingPriceDurationStatus(generationsElevated)).toBe("degraded");
     expect(getMissingPriceDurationStatus(generationsCritical - 1)).toBe("degraded");
     expect(getMissingPriceDurationStatus(generationsCritical)).toBe("stale");
+    expect(getMissingPriceDurationStatus(null)).toBe("degraded");
   });
 
   it("leaves the ratio bands that drive the missing-price rules untouched", () => {

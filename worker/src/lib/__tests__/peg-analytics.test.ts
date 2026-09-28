@@ -281,6 +281,31 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(snapshot.pegDataById.get("usdt-tether")?.currentPriceUnavailable).toBeUndefined();
   });
 
+  it("marks unknown supply separately instead of claiming the coin is below or above the event floor", async () => {
+    const snapshotFor = (circulating: Record<string, number> | undefined) =>
+      derivePegAnalyticsSnapshot(db, {
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "AAA", name: "AAA Stable", pegType: "peggedUSD", price: 0.9, circulating } as never,
+        ],
+        methodologyAsOf: 1_700_000_000,
+      });
+
+    for (const circulating of [undefined, {}, { peggedUSD: Number.NaN }] as Array<Record<string, number> | undefined>) {
+      const coin = (await snapshotFor(circulating)).pegDataById.get("usdt-tether");
+      expect(coin?.currentSupplyUnavailable).toBe(true);
+      expect(coin?.depegEventCoverageLimited).toBe(false);
+      expect(coin?.currentDeviationBps).toBeNull();
+    }
+
+    // Observed supply (sub-floor or above-floor) is never marked unavailable.
+    const lowCap = (await snapshotFor({ peggedUSD: 500_000 })).pegDataById.get("usdt-tether");
+    expect(lowCap?.currentSupplyUnavailable).toBeUndefined();
+    expect(lowCap?.depegEventCoverageLimited).toBe(true);
+    const observed = (await snapshotFor({ peggedUSD: 8_000_000 })).pegDataById.get("usdt-tether");
+    expect(observed?.currentSupplyUnavailable).toBeUndefined();
+    expect(observed?.currentDeviationBps).not.toBeNull();
+  });
+
   it("marks coins with no usable price observation so a null deviation is not read as at peg", async () => {
     const snapshot = await derivePegAnalyticsSnapshot(db, {
       peggedAssets: [

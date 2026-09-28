@@ -146,6 +146,7 @@ describe("TriageSummary reserve score-input hold", () => {
 
   it("hides the reserve recovery notice for a healthy lane at live 73.7% score-grade coverage", () => {
     const base = makeHealthyStatusResponse();
+    if (base.reserveComposition.status === "unavailable") throw new Error("Expected an observed reserve fixture");
     renderTriage({
       ...base,
       reserveComposition: {
@@ -163,6 +164,7 @@ describe("TriageSummary reserve score-input hold", () => {
 
   it("shows the reserve recovery notice when the lane itself is degraded", () => {
     const base = makeHealthyStatusResponse();
+    if (base.reserveComposition.status === "unavailable") throw new Error("Expected an observed reserve fixture");
     renderTriage({
       ...base,
       reserveComposition: {

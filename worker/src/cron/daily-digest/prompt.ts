@@ -113,9 +113,9 @@ export function buildUserPrompt(
 
   if (data.stabilityIndex) {
     const { score, band, components } = data.stabilityIndex;
-    const trendStr = components.trend >= 0 ? `+${components.trend}` : `${components.trend}`;
+    const trendStr = components.trend == null ? "unavailable" : components.trend >= 0 ? `+${components.trend}` : `${components.trend}`;
     lines.push(
-      `Pharos Stability Index: ${score} [${band}] (severity=${components.severity}, breadth=${components.breadth}, trend=${trendStr})`,
+      `Pharos Stability Index: ${score} [${band}] (severity=${components.severity ?? "unavailable"}, breadth=${components.breadth ?? "unavailable"}, trend=${trendStr})`,
     );
     lines.push(
       "  (severity: weighted depeg impact 0-68; breadth: coin-count pressure 0-17; trend: 7d mcap momentum -5 to +5)",
@@ -483,7 +483,7 @@ function pushOngoingStoryLines(
     if (streak.inWindow === 0) continue;
     const severityBps = depeg.currentBps ?? depeg.bps;
     streakEntries.push(
-      `  ${depeg.symbol}: led ${streak.consecutive} consecutive edition${streak.consecutive === 1 ? "" : "s"} (${streak.inWindow} of the last 7); now ${Math.abs(severityBps)} bps, day ${Math.round((depeg.ageHours ?? 0) / 24)}`,
+      `  ${depeg.symbol}: led ${streak.consecutive} consecutive edition${streak.consecutive === 1 ? "" : "s"} (${streak.inWindow} of the last 7); ${depeg.currentBps == null ? "historical peak" : "now"} ${Math.abs(severityBps)} bps, day ${Math.round((depeg.ageHours ?? 0) / 24)}`,
     );
   }
   if (streakEntries.length === 0) return;

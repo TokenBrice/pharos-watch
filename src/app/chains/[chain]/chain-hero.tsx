@@ -13,7 +13,12 @@ import {
   getHealthBand,
 } from "@shared/lib/chains/health";
 import { formatCompactUsd, formatElapsedSeconds, formatSignedPercent } from "@shared/lib/format";
-import type { ChainEnvironmentEvidence, ChainSummary, HealthBand } from "@shared/types/chains";
+import type {
+  ChainEnvironmentEvidence,
+  ChainPegStabilityCoverage,
+  ChainSummary,
+  HealthBand,
+} from "@shared/types/chains";
 import type { ApiMeta } from "@/lib/api";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
@@ -73,8 +78,18 @@ function resolveScoreBand(score: number): HealthBand {
   return getHealthBand(score) ?? "concentrated";
 }
 
-function buildHealthUnavailableMessage(meta: ApiMeta | null): string {
+function formatSupplyShare(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
+function buildHealthUnavailableMessage(meta: ApiMeta | null, chain: ChainSummary): string {
   const reportCards = meta?.dependencies?.reportCards;
+  if (chain.healthFactors.quality != null) {
+    // Quality cleared its gate, so the composite is withheld for peg evidence (DEC-04).
+    const coverage = chain.pegStabilityCoverage;
+    const observed = coverage ? ` Peg prices are observed for ${formatSupplyShare(coverage.coverage)} of chain supply.` : "";
+    return `Chain Health is not rated because peg-stability coverage is incomplete.${observed} Sub-factors are shown below.`;
+  }
   if (!reportCards || reportCards.status === "fresh") {
     return "Insufficient safety score coverage for a composite Chain Health score. Sub-factors are shown below.";
   }
@@ -85,6 +100,27 @@ function buildHealthUnavailableMessage(meta: ApiMeta | null): string {
     return `Chain Health is temporarily unavailable because report-card inputs are stale${ageText}. Sub-factors are still shown below.`;
   }
   return "Chain Health is temporarily unavailable because report-card inputs are unavailable. Sub-factors are still shown below.";
+}
+
+/** Discloses peg-observation coverage behind the peg factor, including any neutral-50 placeholder supply. */
+function formatPegStabilityContext(
+  coverage: ChainPegStabilityCoverage | undefined,
+  score: number | null,
+): string | null {
+  if (!coverage || coverage.status === "complete") return null;
+  if (score == null) return "Not rated: no usable peg price was observed for this chain's supply.";
+  if (coverage.status === "unavailable") {
+    return "No usable peg price was observed; the value shown is a neutral 50 placeholder, not a measurement.";
+  }
+  const parts = [`Peg observed on ${formatSupplyShare(coverage.coverage)} of chain supply`];
+  const eligible = coverage.eligibleSupplyUsd;
+  if (eligible > 0 && coverage.neutralImputedSupplyUsd > 0) {
+    parts.push(`${formatSupplyShare(coverage.neutralImputedSupplyUsd / eligible)} without a usable price is scored neutral 50`);
+  }
+  if (eligible > 0 && coverage.noPegReferenceSupplyUsd > 0) {
+    parts.push(`${formatSupplyShare(coverage.noPegReferenceSupplyUsd / eligible)} has no peg reference`);
+  }
+  return `${parts.join("; ")}.`;
 }
 
 function TrendValue({ value }: { value: number | null }) {
@@ -102,12 +138,15 @@ function FactorRow({
   label,
   weight,
   score,
+  loaded,
   methodology,
   context,
 }: {
   label: string;
   weight: number;
   score: number | null;
+  /** Once the chain has loaded, a null factor is not rated (NR) rather than pending. */
+  loaded: boolean;
   methodology: "chainHealthQuality" | "chainHealthEnvironment" | "chainHealthConcentration" | "chainHealthPegStability" | "chainHealthBackingDiversity";
   context?: string | null;
 }) {
@@ -125,7 +164,7 @@ function FactorRow({
           </span>
         </MethodologyLabel>
         <span className={cn("font-mono text-sm font-semibold tabular-nums", textClass)}>
-          {hasScore ? score : "—"}
+          {hasScore ? score : loaded ? "NR" : "—"}
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -274,25 +313,31 @@ function HealthZone({
         </div>
       ) : (
         <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
-          {buildHealthUnavailableMessage(apiMeta)}
+          {buildHealthUnavailableMessage(apiMeta, chain)}
         </p>
       )}
 
       <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-        {FACTOR_DEFS.map((def) => (
-          <FactorRow
-            key={def.key}
-            label={def.label}
-            weight={def.weight}
-            score={chain?.healthFactors[def.key] ?? null}
-            methodology={def.methodology}
-            context={
-              def.key === "chainEnvironment"
-                ? formatChainEnvironmentContext(chain?.chainEnvironmentEvidence)
-                : null
-            }
-          />
-        ))}
+        {FACTOR_DEFS.map((def) => {
+          const score = chain?.healthFactors[def.key] ?? null;
+          return (
+            <FactorRow
+              key={def.key}
+              label={def.label}
+              weight={def.weight}
+              score={score}
+              loaded={chain != null}
+              methodology={def.methodology}
+              context={
+                def.key === "chainEnvironment"
+                  ? formatChainEnvironmentContext(chain?.chainEnvironmentEvidence)
+                  : def.key === "pegStability"
+                    ? formatPegStabilityContext(chain?.pegStabilityCoverage, score)
+                    : null
+              }
+            />
+          );
+        })}
       </div>
 
       <MethodologyCardActions topic="chainHealth" showWorkToggle />

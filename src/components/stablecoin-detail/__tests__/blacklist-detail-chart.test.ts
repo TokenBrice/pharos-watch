@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
 import { cloneElement, createElement, isValidElement, type ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { QuarterlyStackedBarChart } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
 import { BlacklistDetailChart } from "@/components/stablecoin-detail/blacklist-detail-chart";
+import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 
 const { quarterlyChartMock } = vi.hoisted(() => ({
   quarterlyChartMock: vi.fn(),
@@ -64,22 +65,33 @@ describe("BlacklistDetailChart", () => {
     expect(screen.getByText("Events per Quarter")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Quarterly blacklist events chart showing 2 quarters" })).toBeTruthy();
 
-    expect(screen.getByTestId("plotted-Q1 '26").textContent).toBe("Q1 '26blacklist3unblacklist1destroy2");
+    expect(screen.getByTestId("plotted-Q1 '26").textContent).toBe(
+      `Q1 '26${EVENT_LABELS.blacklist}3${EVENT_LABELS.unblacklist}1${EVENT_LABELS.destroy}2`,
+    );
     // Zero-count series must not be drawn as rows in the quarter tooltip.
-    expect(screen.getByTestId("plotted-Q2 '26").textContent).toBe("Q2 '26blacklist4");
+    expect(screen.getByTestId("plotted-Q2 '26").textContent).toBe(`Q2 '26${EVENT_LABELS.blacklist}4`);
   });
 
-  it("keeps the feature-owned legend for all three event types", () => {
-    render(
+  it("uses the same event meaning and color in the legend and quarter tooltip", () => {
+    const { container } = render(
       createElement(BlacklistDetailChart, {
-        data: [{ quarter: "Q1 '26", blacklist: 1, unblacklist: 0, destroy: 0 }],
+        data: [{ quarter: "Q1 '26", blacklist: 3, unblacklist: 1, destroy: 2 }],
         isLoading: false,
       }),
     );
 
-    expect(screen.getByText("Blacklist")).toBeTruthy();
-    expect(screen.getByText("Unblacklist")).toBeTruthy();
-    expect(screen.getByText("Destroy")).toBeTruthy();
+    const legend = container.querySelectorAll(".pharos-chart-legend-chip");
+    for (const [index, key] of (["blacklist", "unblacklist", "destroy"] as const).entries()) {
+      expect(legend[index].textContent).toBe(EVENT_LABELS[key]);
+      const legendSwatch = legend[index].querySelector("span") as HTMLElement;
+      const tooltipLabel = within(screen.getByTestId("plotted-Q1 '26")).getByText(EVENT_LABELS[key]);
+      const tooltipSwatch = tooltipLabel.querySelector("span") as HTMLElement;
+      const expectedSwatch = document.createElement("span");
+      expectedSwatch.style.backgroundColor = EVENT_CHART_COLORS[key];
+      expect(legendSwatch.style.backgroundColor).toBe(expectedSwatch.style.backgroundColor);
+      expect(tooltipSwatch.style.backgroundColor).toBe(expectedSwatch.style.backgroundColor);
+      expect(tooltipLabel.textContent).toBe(EVENT_LABELS[key]);
+    }
   });
 
   it("keeps the feature-owned empty state outside the shared chart", () => {

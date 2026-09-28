@@ -12,6 +12,19 @@ interface SnapshotPsiDailyOptions {
   completionReason?: string;
 }
 
+interface DailyAggregateRow {
+  avg_score: number | null;
+  avg_severity: number | null;
+  avg_breadth: number | null;
+  avg_stress_breadth: number | null;
+  avg_trend: number | null;
+  severity_count: number;
+  breadth_count: number;
+  stress_breadth_count: number;
+  trend_count: number;
+  cnt: number;
+}
+
 export async function snapshotPsiDaily(
   db: D1Database,
   signal?: AbortSignal,
@@ -22,7 +35,7 @@ export async function snapshotPsiDaily(
   const todayMidnight = bucketUnixSecondsToUtcDay(now);
   const yesterdayMidnight = todayMidnight - DAY_SECONDS;
 
-  let row: { avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_stress_breadth: number | null; avg_trend: number | null; cnt: number } | null;
+  let row: DailyAggregateRow | null;
   let versionRows: D1Result<{ methodology_version: string; cnt: number }>;
   try {
     row = await db
@@ -32,12 +45,16 @@ export async function snapshotPsiDaily(
                 AVG(json_extract(components, '$.breadth')) as avg_breadth,
                 AVG(json_extract(components, '$.stressBreadth')) as avg_stress_breadth,
                 AVG(json_extract(components, '$.trend')) as avg_trend,
+                COUNT(json_extract(components, '$.severity')) as severity_count,
+                COUNT(json_extract(components, '$.breadth')) as breadth_count,
+                COUNT(json_extract(components, '$.stressBreadth')) as stress_breadth_count,
+                COUNT(json_extract(components, '$.trend')) as trend_count,
                 COUNT(*) as cnt
          FROM stability_index_samples
          WHERE stored_at >= ? AND stored_at < ?`
       )
       .bind(yesterdayMidnight, todayMidnight)
-      .first<{ avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_stress_breadth: number | null; avg_trend: number | null; cnt: number }>();
+      .first<DailyAggregateRow>();
     throwIfAborted(signal);
 
     versionRows = await db
@@ -67,6 +84,8 @@ export async function snapshotPsiDaily(
 
   const score = round1(row.avg_score);
   const band = getConditionBand(score);
+  // Release A retains numeric output until nullable readers have shipped; the
+  // additive counts below distinguish unobserved components from observed zero.
   const components = {
     severity: Math.round((row.avg_severity ?? 0) * 100) / 100,
     breadth: Math.round((row.avg_breadth ?? 0) * 100) / 100,
@@ -98,6 +117,13 @@ export async function snapshotPsiDaily(
         JSON.stringify({
           source: "daily-avg",
           sampleCount: row.cnt,
+          aggregation: "all-day",
+          componentSampleCounts: {
+            severity: row.severity_count,
+            breadth: row.breadth_count,
+            stressBreadth: row.stress_breadth_count,
+            trend: row.trend_count,
+          },
           methodologyVersion,
           methodologyBreakdown,
         }),

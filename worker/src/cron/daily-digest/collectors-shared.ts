@@ -7,6 +7,7 @@ import type {
 } from "@shared/types/digest";
 import type { StablecoinData } from "@shared/types/market";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { DigestEvidence } from "./digest-evidence";
 
 export interface CanonicalSafetyGradeRow {
   id: string;
@@ -21,6 +22,7 @@ export interface CanonicalSafetyGradeRow {
 
 export interface CollectorContext {
   db: D1Database;
+  evidence?: DigestEvidence;
   trackedStablecoinAssets: StablecoinData[];
   trackedStablecoinIds: ReadonlySet<string>;
   coreAggregateStablecoinAssets: StablecoinData[];

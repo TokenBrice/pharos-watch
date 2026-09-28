@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+/** Effective age bands and the wall clock at which a freshness verdict was assessed. */
+export const FreshnessAssessmentSchema = z.object({
+  assessedAt: z.number(),
+  freshBudgetSec: z.number().nonnegative(),
+  degradedBudgetSec: z.number().nonnegative(),
+});
+
 export const ApiDependencyMetaSchema = z.object({
   updatedAt: z.number().nullable().optional(),
   ageSeconds: z.number().nullable().optional(),
@@ -9,7 +16,9 @@ export const ApiDependencyMetaSchema = z.object({
 
 export type ApiDependencyMeta = z.output<typeof ApiDependencyMetaSchema>;
 
-export const ApiMetaSchema = z.object({
+// Legacy cached responses and header-only unavailable verdicts may lack the
+// assessment; readers preserve that absence rather than inventing policy.
+export const ApiMetaSchema = FreshnessAssessmentSchema.partial().extend({
   updatedAt: z.number(),
   ageSeconds: z.number(),
   status: z.enum(["fresh", "degraded", "stale"]),
@@ -25,9 +34,19 @@ export const ApiMetaWarningOnlySchema = z.object({
   dependencies: z.undefined().optional(),
 });
 
+const ApiMetaUnavailableSchema = FreshnessAssessmentSchema.partial().extend({
+  updatedAt: z.null(),
+  ageSeconds: z.null(),
+  status: z.enum(["stale", "unknown"]),
+  reason: z.string(),
+  warning: z.string().nullish(),
+  dependencies: z.record(z.string(), ApiDependencyMetaSchema).nullish(),
+});
+
 export const ApiMetaEnvelopeSchema = z.union([
   ApiMetaSchema,
   ApiMetaWarningOnlySchema,
+  ApiMetaUnavailableSchema,
 ]);
 
 export type ApiMeta = z.output<typeof ApiMetaSchema>;

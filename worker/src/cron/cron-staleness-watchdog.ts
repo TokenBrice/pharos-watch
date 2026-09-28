@@ -482,6 +482,8 @@ export async function runCronStalenessWatchdog(
     status: stale.length > 0 || detailWriteFailures.length > 0 ? "degraded" : "ok",
     itemCount: stale.length + detailWriteFailures.length,
     metadata: JSON.stringify({
+      reason: stale.length > 0 ? "producer-output-stale"
+        : detailWriteFailures.length > 0 ? "detail-cache-write-failed" : "producer-output-current",
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),
       stale,
       detailWriteFailures,

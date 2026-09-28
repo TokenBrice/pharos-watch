@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USDC is issuer-minted by Circle; Ethereum USDC uses a MinterAdmin contract for minter management, an EOA token owner, and a separate EOA proxy admin. All addressable controls were rechecked at block 25711753.",
+    "summary": "USDC is issuer-minted by Circle. Ethereum's MinterAdmin, token owner and proxy admin were checked at block 25711753 on August 8, 2026; native X Layer's MasterMinter, token owner and proxy admin were checked at block 71772542 on September 27, 2026. These observations establish control paths, not exhaustive minter coverage or off-chain key custody.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -125,6 +125,95 @@
           }
         ],
         "evidence": "At Ethereum block 25711753, the Zeppelinos proxy-admin storage slot resolved to this address and eth_getCode returned no bytecode. This EOA can replace the token implementation, including mint logic, with no observed timelock; it has no ordinary direct mint entrypoint."
+      },
+      {
+        "chain": "xlayer",
+        "address": "0xa2a9f84222659d4e1639d38488e7024882fa90ff",
+        "deploymentRefs": [
+          "xlayer:0xb6ceceab302e2e4948951ee7843fc24e92933061"
+        ],
+        "label": "X Layer USDC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-09-27",
+        "observedBlock": 71772542,
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
+          {
+            "label": "X Layer public RPC; pinned calls at block 71772542",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "Circle reference design, not a reproduced deployment build",
+            "url": "https://github.com/circlefin/stablecoin-evm"
+          }
+        ],
+        "evidence": "At X Layer block 71772542, native USDC masterMinter() returned this contract (5,346 runtime bytes), getMinterManager() returned the native token, and owner() returned 0x2b533e2079e83c22c4c75f3ad9c89ef6a7d43e42 with no deployed code. Read-only configureMinter(tokenOwner, 0) simulation from this address returned true; an unauthorized caller reverted. This proves the observed allowance-configuration path, not an exhaustive minter/controller or allowance census. Exact source/runtime equivalence, modules/guards inventory, and ultimate signing/key custody remain unverified."
+      },
+      {
+        "chain": "xlayer",
+        "address": "0x88deee3d8bd65d0b73fef679eeddc7867c0d69e6",
+        "deploymentRefs": [
+          "xlayer:0xb6ceceab302e2e4948951ee7843fc24e92933061"
+        ],
+        "label": "X Layer USDC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-27",
+        "observedBlock": 71772542,
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
+          {
+            "label": "X Layer public RPC; pinned calls at block 71772542",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "Circle reference design, not a reproduced deployment build",
+            "url": "https://github.com/circlefin/stablecoin-evm"
+          }
+        ],
+        "evidence": "At X Layer block 71772542, native USDC owner() returned this address and eth_getCode returned no bytecode. Read-only updateMasterMinter(currentMasterMinter) simulation succeeded from this owner; an unauthorized caller reverted with Ownable: caller is not the owner. Replacing the master minter can alter issuance permissions. No deployed code establishes EOA status at this block, not ultimate key custody, signer count, organizational assignment, or secure custody; those remain unverified."
+      },
+      {
+        "chain": "xlayer",
+        "address": "0x86a2b15f6ef67af32a6b7c43903cdecb1f540ec1",
+        "deploymentRefs": [
+          "xlayer:0xb6ceceab302e2e4948951ee7843fc24e92933061"
+        ],
+        "label": "X Layer USDC proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-27",
+        "observedBlock": 71772542,
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
+          {
+            "label": "X Layer public RPC; pinned calls at block 71772542",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "Circle reference design, not a reproduced deployment build",
+            "url": "https://github.com/circlefin/stablecoin-evm"
+          }
+        ],
+        "evidence": "At X Layer block 71772542, admin() and the org.zeppelinos.proxy.admin slot of native proxy 0xb6ceceab302e2e4948951ee7843fc24e92933061 returned this address with no deployed code; implementation() and the implementation slot returned 0x908cb63cded85ee69525e2f95f7f38da25ae0245. Read-only upgradeTo(currentImplementation) succeeded from this admin and reverted from an unauthorized caller. This establishes the observed upgrade permission, not all arbitrary implementation replacements, deployment-wide delay, exact implementation-source equivalence, or off-chain key custody. No signer count or organizational assignment is proven. The aggregate upgradeability block remains scoped to Ethereum because its single controlRef cannot truthfully describe these independently controlled deployments; this deployment-scoped row records the native X Layer upgrade path."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -132,6 +221,14 @@
     "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "Circle native X Layer USDC identity checked 2026-09-27",
+          "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+        },
+        {
+          "label": "X Layer native controls at block 71772542, 2026-09-27",
+          "url": "https://rpc.xlayer.tech"
+        },
         {
           "label": "Circle May 2026 Deloitte USDC examination",
           "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
@@ -157,7 +254,7 @@
           "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
         }
       ],
-      "evidence": "At Ethereum block 25711753, masterMinter() returned MinterAdmin 0xe982615d, whose manager target was USDC and whose owner was EOA 0xc1d9fe41; token owner() returned EOA 0xfcb19e6a; and the Zeppelinos proxy-admin slot resolved to EOA 0x807a9628. The owner and master-minter paths can replace or expand configured issuance permissions, so economic cap semantics remain unbounded. The prior storage-slot claim naming 0x4914f61d as proxy admin was removed as incorrect. Circle's May 2026 Deloitte examination compares USDC in circulation with reserve assets on a monthly cadence, supporting periodic reconciliation. The ESMA electronic-money-token issuer register and NYDFS virtual-currency business and greenlist records are the named primary prudential sources supporting the supervision classification for Circle's regulated issuance channels.",
+      "evidence": "Ethereum controls were checked on August 8, 2026 at block 25711753: masterMinter() returned MinterAdmin 0xe982615d, whose manager target was USDC and whose owner was EOA 0xc1d9fe41; token owner() returned EOA 0xfcb19e6a; and the Zeppelinos proxy-admin slot resolved to EOA 0x807a9628. Native X Layer controls were separately checked on September 27, 2026 at block 71772542: the MasterMinter, token owner and proxy admin paths are recorded in the deployment-scoped rows. Circle's directory proves native identity and two RPC endpoints confirmed six decimals. Exact verified source/runtime equivalence, exhaustive minter/controller roster and allowances, ultimate EOA key custody and organizational assignment, and behavior of arbitrary replacement implementations remain unverified. No CCTP support or deployment-level supply allocation is inferred. The owner and master-minter paths can replace or expand configured issuance permissions, so economic cap semantics remain unbounded. The prior Ethereum storage-slot claim naming 0x4914f61d as proxy admin was removed as incorrect. The August review's reconciliation and supervision evidence is retained without refreshing it: Circle's May 2026 Deloitte examination compares USDC in circulation with reserve assets on a monthly cadence, supporting periodic reconciliation. The ESMA electronic-money-token issuer register and NYDFS virtual-currency business and greenlist records are the named primary prudential sources supporting the supervision classification for Circle's regulated issuance channels.",
       "reviewer": "OpenAI Codex C01 control review",
       "reviewedAt": "2026-08-08",
       "disposition": "scoreable"

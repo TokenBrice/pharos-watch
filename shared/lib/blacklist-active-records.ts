@@ -1,3 +1,4 @@
+import { compareBlacklistEvents } from "./blacklist-event-order";
 import {
   buildBlacklistAddressCountKey,
   buildBlacklistContractBalanceKey,
@@ -31,12 +32,15 @@ export interface BlacklistActiveRecord {
   blacklistedAt: number;
   destroyedAt: number | null;
   frozenAmountUsd: number | null;
+  /** No transaction position is available for conflicting Tron block events. */
+  orderAmbiguityReason?: "tron-cross-transaction-order";
 }
 
 export interface BlacklistActiveSummaryStats {
   activeAddressCount: number;
   activeFrozenTotal: number;
   activeAmountGapCount: number;
+  ambiguousOrderCount: number;
 }
 
 export interface BlacklistTrackedSummaryStats {
@@ -130,10 +134,33 @@ export function buildBlacklistActiveRecords(
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot> = new Map(),
 ): BlacklistActiveRecord[] {
   const active = new Map<string, BlacklistActiveRecord>();
-  const ordered = [...events].sort((a, b) => (a.timestamp === b.timestamp ? a.id.localeCompare(b.id) : a.timestamp - b.timestamp));
+  const ordered = [...events].sort(compareBlacklistEvents);
+  const tronGroups = new Map<string, { effects: Map<string, Set<string>>; ambiguous: boolean }>();
+  for (const event of ordered) {
+    if (event.chainId !== "tron") continue;
+    const groupKey = `${buildBlacklistRecordIdentityKey(event)}:${event.blockNumber}`;
+    const group = tronGroups.get(groupKey) ?? { effects: new Map<string, Set<string>>(), ambiguous: false };
+    for (const [effect, transactions] of group.effects) {
+      if (effect !== event.eventType
+        && (effect === "blacklist" || event.eventType === "blacklist")
+        && (transactions.size > 1 || !transactions.has(event.txHash))) group.ambiguous = true;
+    }
+    const transactions = group.effects.get(event.eventType) ?? new Set<string>();
+    transactions.add(event.txHash);
+    group.effects.set(event.eventType, transactions);
+    tronGroups.set(groupKey, group);
+  }
 
   for (const event of ordered) {
     const key = buildBlacklistRecordIdentityKey(event);
+    if (event.chainId === "tron" && tronGroups.get(`${key}:${event.blockNumber}`)?.ambiguous) {
+      active.set(key, {
+        key, stablecoin: event.stablecoin, chainId: event.chainId, address: event.address,
+        blacklistedAt: event.timestamp, destroyedAt: null, frozenAmountUsd: null,
+        orderAmbiguityReason: "tron-cross-transaction-order",
+      });
+      continue;
+    }
     if (event.eventType === "blacklist") {
       const amount = resolveBlacklistAmount(event, currentBalances);
       active.set(key, {
@@ -176,11 +203,15 @@ export function computeBlacklistActiveSummaryStats(
 ): BlacklistActiveSummaryStats {
   let activeFrozenTotal = 0;
   let activeAmountGapCount = 0;
+  let ambiguousOrderCount = 0;
 
   for (const record of activeRecords) {
+    if (record.orderAmbiguityReason) {
+      ambiguousOrderCount++;
+      continue;
+    }
     // Destroyed funds are no longer frozen — exclude from the frozen total
-    // and gap counts. Only count toward activeAddressCount (set below from
-    // array length) so the ledger retains a record of all blacklisted addresses.
+    // and gap counts. They still count toward confirmed active addresses.
     if (record.destroyedAt != null) continue;
     if (record.frozenAmountUsd == null) {
       activeAmountGapCount++;
@@ -190,9 +221,10 @@ export function computeBlacklistActiveSummaryStats(
   }
 
   return {
-    activeAddressCount: activeRecords.length,
+    activeAddressCount: activeRecords.length - ambiguousOrderCount,
     activeFrozenTotal,
     activeAmountGapCount,
+    ambiguousOrderCount,
   };
 }
 

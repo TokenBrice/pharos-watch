@@ -14,6 +14,7 @@ import { useDexLiquidity } from "@/hooks/api-hooks";
 import type { DexLiquidityData } from "@shared/types/market";
 import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
+import { describeDexVolume } from "@/lib/dex-volume-display";
 import { getScoreTier, SCORE_TIER_CUTOFFS, TIER_PILL } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import {
@@ -21,6 +22,7 @@ import {
   getConcentrationLabel,
   getLiquidityEvidenceLabel,
   getOrganicFractionTier,
+  isLiquidityActivityNotRated,
 } from "@/components/dex-liquidity-card-model";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
@@ -185,8 +187,19 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         ) : null}
         {!isRated && (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-            <p>No observed direct DEX market for this token in the current pipeline.</p>
-            <p className="mt-1">Liquidity Score stays unrated until Pharos sees exact-token pool evidence.</p>
+            {isLiquidityActivityNotRated(liq) ? (
+              <>
+                <p>Liquidity Score is not rated: 24h DEX volume was not measured across every contributing pool.</p>
+                <p className="mt-1">
+                  Pharos does not estimate missing activity or reweight the remaining components to fill its share.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>No observed direct DEX market for this token in the current pipeline.</p>
+                <p className="mt-1">Liquidity Score stays unrated until Pharos sees exact-token pool evidence.</p>
+              </>
+            )}
           </div>
         )}
 
@@ -224,16 +237,18 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               </div>
               {evidenceLabel && <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>}
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">24h Volume</p>
-              <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalVolume24hUsd)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">7d Volume</p>
-              <p className="text-lg font-extrabold font-mono tabular-nums">
-                {liq.totalVolume7dUsd != null ? formatCurrency(liq.totalVolume7dUsd) : "—"}
-              </p>
-            </div>
+            {[
+              { label: "24h Volume", display: describeDexVolume(liq.totalVolume24hUsd, liq.volume24hAvailability) },
+              { label: "7d Volume", display: describeDexVolume(liq.totalVolume7dUsd, liq.volume7dAvailability) },
+            ].map(({ label, display }) => (
+              <div key={label}>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-lg font-extrabold font-mono tabular-nums" title={display.title}>
+                  {display.text}
+                </p>
+                {display.detail && <p className="text-xs text-muted-foreground">{display.detail}</p>}
+              </div>
+            ))}
             <div>
               <p className="text-xs text-muted-foreground">Pools</p>
               <p className="text-lg font-extrabold font-mono tabular-nums">{liq.poolCount}</p>
@@ -246,8 +261,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
         </div>
 
-        {/* The score explanation is the module's one summary visual. */}
-        {isRated && <ScoreBreakdown components={liq.scoreComponents} />}
+        {/* The score explanation is the module's one summary visual. A DEC-19
+            activity NR still shows the valid components beside the NR bar. */}
+        {(isRated || isLiquidityActivityNotRated(liq)) && <ScoreBreakdown components={liq.scoreComponents} />}
 
         {/* ── Detail layer: market structure folds behind the standard
                disclosure — headline KPIs and the score read stay above ── */}

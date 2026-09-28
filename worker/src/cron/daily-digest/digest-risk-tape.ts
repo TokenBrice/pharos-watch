@@ -28,7 +28,7 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
     label: "Depegs",
     value:
       topDepeg && topDepegBps != null
-        ? `${topDepeg.symbol} ${Math.abs(topDepegBps)}bps`
+        ? `${topDepeg.symbol} ${Math.abs(topDepegBps)}bps${topDepeg.currentBps == null ? " historical peak" : ""}`
         : depegsUnavailable
           ? "Unavailable"
           : "None active",

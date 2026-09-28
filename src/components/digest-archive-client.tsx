@@ -20,6 +20,7 @@ import {
   parseDigestParagraph,
   splitDigestParagraphs,
   type DigestTriggerRecord,
+  type DigestTriggerRecordStatus,
 } from "@/lib/digest";
 import { cn } from "@/lib/utils";
 
@@ -160,18 +161,20 @@ function WireSectionRule({ label }: { label: string }) {
   );
 }
 
-const TRIGGER_STATUS_LABELS: Record<"hit" | "missed" | "expired" | "pending", string> = {
+const TRIGGER_STATUS_LABELS: Record<DigestTriggerRecordStatus, string> = {
   hit: "Hit",
   missed: "Missed",
   expired: "Expired",
   pending: "Pending",
+  unavailable: "Unavailable",
 };
 
-const TRIGGER_STATUS_CLASSES: Record<"hit" | "missed" | "expired" | "pending", string> = {
+const TRIGGER_STATUS_CLASSES: Record<DigestTriggerRecordStatus, string> = {
   hit: "text-emerald-700 dark:text-emerald-300",
   missed: "text-red-700 dark:text-red-300",
   expired: "text-muted-foreground",
   pending: "text-amber-700 dark:text-amber-300",
+  unavailable: "text-muted-foreground",
 };
 
 function TriggerRecordStat({
@@ -181,7 +184,7 @@ function TriggerRecordStat({
 }: {
   label: string;
   value: number;
-  status: "hit" | "missed" | "expired" | "pending";
+  status: DigestTriggerRecordStatus;
 }) {
   return (
     <div className="rounded-md border border-border/50 bg-background/45 px-2.5 py-2">
@@ -214,11 +217,12 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               <TriggerRecordStat label={TRIGGER_STATUS_LABELS.hit} value={record.hit} status="hit" />
               <TriggerRecordStat label={TRIGGER_STATUS_LABELS.missed} value={record.missed} status="missed" />
               <TriggerRecordStat label={TRIGGER_STATUS_LABELS.expired} value={record.expired} status="expired" />
               <TriggerRecordStat label={TRIGGER_STATUS_LABELS.pending} value={record.pending} status="pending" />
+              <TriggerRecordStat label={TRIGGER_STATUS_LABELS.unavailable} value={record.unavailable} status="unavailable" />
             </div>
 
             <div className="space-y-2 border-t border-border/50 pt-3">
@@ -231,7 +235,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
                 </p>
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Headline denominator: hit ÷ (hit + missed + expired). Pending stays outside that denominator and remains listed above.
+                Headline denominator: hit ÷ (hit + missed + expired). Pending and unavailable stay outside that denominator and remain listed above.
               </p>
             </div>
 
@@ -253,6 +257,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
                       <span className={TRIGGER_STATUS_CLASSES.missed}>M {bucket.missed}</span>
                       <span className={TRIGGER_STATUS_CLASSES.expired}>E {bucket.expired}</span>
                       <span className={TRIGGER_STATUS_CLASSES.pending}>P {bucket.pending}</span>
+                      <span className={TRIGGER_STATUS_CLASSES.unavailable}>Unavailable {bucket.unavailable}</span>
                     </div>
                   </div>
                 ))}

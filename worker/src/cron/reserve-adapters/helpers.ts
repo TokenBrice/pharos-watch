@@ -99,16 +99,20 @@ export {
   type OnchainRateProbe,
   type OnchainUint256Caller,
 } from "./onchain";
-export { fetchMovementFungibleAssetSupply, fetchSolanaTokenSupply, probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
+export { fetchMoveFungibleAssetSupply, fetchSolanaTokenSupply, probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
 export { fetchStarknetTotalSupply } from "./starknet";
 export { fetchIcrcLedgerTotalSupply } from "./icp";
 export {
   aggregateMultichainErc20Supply,
+  aggregateScopedLiabilitySupply,
   chainHasRpc,
+  evaluateLiabilityCoverage,
   isEvmContract,
   isTronContract,
+  pinnedEvmTokenReader,
   type MultichainSupplyAggregate,
   type MultichainSupplyContribution,
+  type ScopedLiabilitySupply,
 } from "./multichain-supply";
 export {
   parseDigitString,

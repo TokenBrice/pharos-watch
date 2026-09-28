@@ -16,6 +16,8 @@ import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liqui
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareLiquidityRows, type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
+import { describeDexVolume } from "@/lib/dex-volume-display";
+import { dexVolumeToTvlRatio } from "@shared/lib/dex-volume-availability";
 import { MethodologyHint } from "@/components/methodology-hint";
 
 export { type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
@@ -111,7 +113,9 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
       >
         {paginated.map((row, index) => {
           const liq = row.liq;
-          const vtRatio = liq.totalTvlUsd > 0 ? liq.totalVolume24hUsd / liq.totalTvlUsd : 0;
+          const vtRatio = dexVolumeToTvlRatio(liq.totalVolume24hUsd, liq.totalTvlUsd);
+          const volume24h = describeDexVolume(liq.totalVolume24hUsd, liq.volume24hAvailability);
+          const volume7d = describeDexVolume(liq.totalVolume7dUsd, liq.volume7dAvailability);
           const topProtocol = Object.entries(liq.protocolTvl).sort((a, b) => b[1] - a[1])[0];
           const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass ?? "unobserved");
 
@@ -167,16 +171,18 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                   <span className="text-muted-foreground">—</span>
                 )}
               </TableCell>
-              <TableCell className="text-right pharos-numeric">
-                {formatCurrency(liq.totalVolume24hUsd)}
+              <TableCell className="text-right pharos-numeric" title={volume24h.title}>
+                {volume24h.view.valueUsd != null ? volume24h.text : (
+                  <span className="text-muted-foreground">{volume24h.text}</span>
+                )}
               </TableCell>
-              <TableCell className="hidden lg:table-cell text-right pharos-numeric">
-                {liq.totalVolume7dUsd != null ? formatCurrency(liq.totalVolume7dUsd) : (
-                  <span className="text-muted-foreground">—</span>
+              <TableCell className="hidden lg:table-cell text-right pharos-numeric" title={volume7d.title}>
+                {volume7d.view.valueUsd != null ? volume7d.text : (
+                  <span className="text-muted-foreground">{volume7d.text}</span>
                 )}
               </TableCell>
               <TableCell className="hidden sm:table-cell text-right pharos-numeric text-sm">
-                {formatPercent(vtRatio * 100, 1)}
+                {vtRatio != null ? formatPercent(vtRatio * 100, 1) : <span className="text-muted-foreground">—</span>}
               </TableCell>
               <TableCell className="hidden sm:table-cell text-right pharos-numeric">{liq.poolCount}</TableCell>
               <TableCell className="hidden sm:table-cell text-right pharos-numeric">{liq.chainCount}</TableCell>

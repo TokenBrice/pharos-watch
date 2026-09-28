@@ -853,6 +853,7 @@ export async function fetchTbillRate(
       status: "skipped_neutral",
       itemCount: 0,
       metadata: buildMetadata({
+        reason: "risk-free-registry-fresh",
         skipped: true,
         skipReason: "risk-free-registry-fresh",
         minRegistryAgeSec,
@@ -928,11 +929,13 @@ export async function fetchTbillRate(
   return {
     status: degradationReasons.length > 0 ? "degraded" : "ok",
     itemCount: BENCHMARK_METADATA_DESCRIPTORS.filter(({ key }) => benchmarks[key] != null).length,
+    productivity: { productive: registryCacheWrite === "written" },
     metadata: buildBenchmarkRunMetadata({
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       benchmarks,
       includeDetails: true,
       extraFields: {
+        ...(degradationReasons.length > 0 ? { reason: degradationReasons.join(",") } : {}),
         ...gbpRetainedFallbackMonitor,
         ...usdFreshStreakMonitor,
         registryCacheState: loaded.cacheState,

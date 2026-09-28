@@ -37,8 +37,11 @@ export function createEmptyPriceSourceHealthDistribution(): Record<PriceSourceHe
 export function getPricingSourceLabel(sourceKey: string): string {
   const parts = normalizePricingSourceKeys(sourceKey);
   if (parts.length > 1) {
-    return parts.map((part) => getPricingSourceRegistryEntry(part)?.label ?? part).join(" + ");
+    return parts.map((part) => part === "protocol-par"
+      ? "nominal par reference (not an observed price)"
+      : getPricingSourceRegistryEntry(part)?.label ?? part).join(" + ");
   }
+  if (parts[0] === "protocol-par") return "nominal par reference (not an observed price)";
   return getPricingSourceRegistryEntry(parts[0] ?? sourceKey)?.label ?? sourceKey;
 }
 

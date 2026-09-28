@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
@@ -93,6 +94,36 @@ describe("EVM blacklist contiguous coverage", () => {
     vi.mocked(getAlchemyBlockNumber).mockResolvedValue(1_000_000);
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map());
     vi.mocked(getChainRpc).mockReturnValue(undefined);
+  });
+
+  it("holds malformed state for two scans then durably quarantines it without losing valid rows", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)");
+    const db = { prepare(sql: string) {
+      let args: (string | number)[] = [];
+      return { bind(...values: (string | number)[]) { args = values; return this; },
+        async first() { return sqlite.prepare(sql).get(...args) ?? null; },
+        async run() { return sqlite.prepare(sql).run(...args); } };
+    } } as unknown as D1Database;
+    const config = makeConfig();
+    const valid = {
+      address: config.contractAddress, topics: [TOPIC_A, ADDRESS_WORD], data: "0x",
+      blockNumber: "0x64", timeStamp: "0x3e8", transactionHash: "0x" + "55".repeat(32), logIndex: "0x0",
+    };
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue({
+      logs: [valid, { ...valid, blockNumber: "0x69", logIndex: "0x1", topics: [TOPIC_A] }],
+      complete: true, scannedToBlock: 120, calls: 1, maxDepth: 0,
+    });
+    const deadline = Date.now() + 600_000;
+    for (let scan = 1; scan <= 3; scan++) {
+      const result = await fetchEvmEventsIncremental(db, config, "key", 100, new Map(),
+        { ...makeBudget(), deadlineMs: deadline + scan }, limiter, undefined, undefined, 10_000);
+      expect(result.rows.map((row) => row.block_number)).toEqual([100]);
+      expect(result.scannedToBlock).toBe(scan < 3 ? 104 : 120);
+    }
+    const state = JSON.parse(String(sqlite.prepare("SELECT value FROM cache").get()!.value));
+    expect(state).toMatchObject({ attempts: 3, quarantined: true, reason: "invalid-address", evidence: { blockNumber: "0x69" } });
+    sqlite.close();
   });
 
   it("scans above the retired 99,999,999 fence and bounds Arbitrum ranges", async () => {

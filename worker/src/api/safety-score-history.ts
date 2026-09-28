@@ -1,19 +1,15 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
-import { getLatestSuccessfulCronTimestamp } from "../lib/api-freshness";
+import { buildCronFreshnessHeaders, getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { fetchSafetyScoreHistoryCompatibilityRows } from "../lib/safety-score-history-v2";
 
-export async function safetyScoreHistoryFreshness(context: {
+export async function safetyScoreHistoryHeaders(context: {
   db: D1Database;
-  history: readonly { date: number }[];
-}): Promise<{ updatedAt: number; maxAgeSec: number }> {
-  const latestTs = context.history[context.history.length - 1]?.date ?? Math.floor(Date.now() / 1000);
-  return {
-    updatedAt: await getLatestSuccessfulCronTimestamp(context.db, "snapshot-safety-grade-history", latestTs),
-    maxAgeSec: DAY_SECONDS,
-  };
+}): Promise<Record<string, string>> {
+  const freshness = await getLatestSuccessfulCronTimestampResult(context.db, "snapshot-safety-grade-history");
+  return buildCronFreshnessHeaders(freshness, DAY_SECONDS, CACHE_PROFILES.slow);
 }
 
 export const handleSafetyScoreHistory = async (db: D1Database, url: URL): Promise<Response> => {
@@ -31,6 +27,6 @@ export const handleSafetyScoreHistory = async (db: D1Database, url: URL): Promis
         prevScore: row.prev_score,
         methodologyVersion: row.methodology_version,
       }),
-      freshness: safetyScoreHistoryFreshness,
+      buildHeaders: safetyScoreHistoryHeaders,
     });
   };

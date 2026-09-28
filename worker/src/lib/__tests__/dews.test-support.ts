@@ -35,6 +35,8 @@ export function makeDewsInput(overrides: Partial<DEWSInput> = {}): DEWSInput {
     mintVolume24hUsd: null,
     burnBaseline30dUsd: null,
     flowDataAgeDays: 0,
+    flowValuation24h: "complete",
+    flowBurnBaselineValuation: "complete",
     // Yield anomaly
     yieldWarnings: [],
     // Systemic backdrop

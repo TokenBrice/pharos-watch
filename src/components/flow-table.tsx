@@ -17,11 +17,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { logosById } from "@/lib/logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedTableRows } from "@/hooks/use-sorted-table-rows";
-import {
-  formatCurrency,
-  getNetColor,
-  getNetPrefix,
-} from "@shared/lib/format";
+import { formatCurrency, formatSignedCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
+import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
@@ -36,6 +33,9 @@ import {
   type FlowTableSortKey,
 } from "@/components/flow-table-logic";
 import { MethodologyHint } from "@/components/methodology-hint";
+import { FlowSignedNetValue, FlowVolumeValue } from "@/components/flow-valuation-value";
+import { resolveCoinNetFlow, resolvePressureUnavailableNote } from "@/lib/mint-burn-coin-helpers";
+import type { MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
 
 interface FlowTableProps {
   coins: MintBurnCoinFlow[];
@@ -61,17 +61,17 @@ const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
 ] as const;
 
 function FlowNetCell({
-  value,
+  net,
   hasWindow,
   cellClassName,
   windowLabel,
 }: {
-  value: number;
+  net: MintBurnSignedNetView;
   hasWindow: boolean | undefined;
   cellClassName: string;
   windowLabel: string;
 }) {
-  const isPartial = hasWindow === false;
+  const isPartial = hasWindow === false && net.valueUsd != null;
   return (
     <TableCell className={cellClassName}>
       <div
@@ -82,10 +82,12 @@ function FlowNetCell({
             : undefined
         }
       >
-        <span className={cn(getNetColor(value), isPartial && "opacity-60")}>
-          {getNetPrefix(value)}
-          {formatCurrency(value)}
-        </span>
+        <FlowSignedNetValue
+          net={net}
+          format={formatSignedCurrency}
+          colorClassName={getNetColor}
+          className={cn(isPartial && "opacity-60")}
+        />
         {isPartial && <span className="text-xs text-muted-foreground">partial</span>}
       </div>
     </TableCell>
@@ -149,7 +151,9 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
             const name = meta?.name ?? coin.symbol;
             const pressureScore = getPressureScore(coin);
             const pressureState = getPressureState(coin);
+            const pressureUnavailableNote = resolvePressureUnavailableNote(coin);
             const coverageBadge = getCoverageBadge(coin);
+            const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
             const pressureDisplay = pressureScore != null
               ? getPressureShiftDisplay(pressureScore)
               : null;
@@ -201,43 +205,53 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                             <TooltipTrigger asChild>
                               <span>NR</span>
                             </TooltipTrigger>
-                            <TooltipContent>Needs at least 7 days of data plus current activity</TooltipContent>
+                            <TooltipContent>
+                              {pressureUnavailableNote ?? "Needs at least 7 days of data plus current activity"}
+                            </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       )}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <span
-                    className={cn(
-                      "pharos-numeric text-sm font-semibold",
-                      getNetColor(coin.netFlow24hUsd),
-                    )}
-                  >
-                    {getNetPrefix(coin.netFlow24hUsd)}
-                    {formatCurrency(coin.netFlow24hUsd)}
-                  </span>
+                  <FlowSignedNetValue
+                    net={resolveCoinNetFlow(coin, "24h")}
+                    format={formatSignedCurrency}
+                    colorClassName={getNetColor}
+                    className="pharos-numeric text-sm font-semibold"
+                  />
                 </TableCell>
                 <TableCell className="hidden text-right pharos-numeric sm:table-cell">
-                  {formatCurrency(coin.mintVolume24hUsd)}
+                  <FlowVolumeValue
+                    valueUsd={coin.mintVolume24hUsd}
+                    completeness={window24h.mintCompleteness}
+                    unpricedEventCount={window24h.unpricedMintEventCount}
+                    format={formatCurrency}
+                  />
                 </TableCell>
                 <TableCell className="hidden text-right pharos-numeric sm:table-cell">
-                  {formatCurrency(coin.burnVolume24hUsd)}
+                  <FlowVolumeValue
+                    valueUsd={coin.burnVolume24hUsd}
+                    completeness={window24h.burnCompleteness}
+                    unpricedEventCount={window24h.unpricedBurnEventCount}
+                    format={formatCurrency}
+                  />
                 </TableCell>
                 <TableCell className="hidden text-right pharos-numeric md:table-cell">
-                  <span className={getNetColor(coin.netFlow7dUsd)}>
-                    {getNetPrefix(coin.netFlow7dUsd)}
-                    {formatCurrency(coin.netFlow7dUsd)}
-                  </span>
+                  <FlowSignedNetValue
+                    net={resolveCoinNetFlow(coin, "7d")}
+                    format={formatSignedCurrency}
+                    colorClassName={getNetColor}
+                  />
                 </TableCell>
                 <FlowNetCell
-                  value={coin.netFlow30dUsd}
+                  net={resolveCoinNetFlow(coin, "30d")}
                   hasWindow={coin.coverage?.has30dWindow}
                   cellClassName="hidden text-right pharos-numeric lg:table-cell"
                   windowLabel="30-day"
                 />
                 <FlowNetCell
-                  value={coin.netFlow90dUsd}
+                  net={resolveCoinNetFlow(coin, "90d")}
                   hasWindow={coin.coverage?.has90dWindow}
                   cellClassName="hidden text-right pharos-numeric xl:table-cell"
                   windowLabel="90-day"

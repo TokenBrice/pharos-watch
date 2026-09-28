@@ -190,6 +190,24 @@ describe("applyFilters", () => {
       expected: ["at-min", "inside", "at-max"],
     },
     {
+      name: "max-only supply filter excludes unknown supply and keeps an explicit zero",
+      rows: [
+        makeRow({ id: "unknown", supplyUsd: null }),
+        makeRow({ id: "prelaunch-unknown", lifecycle: "pre-launch", supplyUsd: null }),
+        makeRow({ id: "explicit-zero", supplyUsd: 0 }),
+        makeRow({ id: "inside", supplyUsd: 500 }),
+        makeRow({ id: "above-max", supplyUsd: 1_001 }),
+      ],
+      filters: { supplyMax: 1_000 },
+      expected: ["explicit-zero", "inside"],
+    },
+    {
+      name: "keeps unknown supply when no supply range is active",
+      rows: [makeRow({ id: "unknown", supplyUsd: null }), makeRow({ id: "known", supplyUsd: 1 })],
+      filters: {},
+      expected: ["unknown", "known"],
+    },
+    {
       name: "applies the Picker-compatible score, custody, and evidence filters inclusively",
       rows: [
         makeRow({ id: "usdc-circle", pegScore: 80, liquidityScore: 65, custodyModel: "institutional-top", safetyEvidence: "strong" }),

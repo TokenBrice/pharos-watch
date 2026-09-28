@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USD1 has three issuer-native issuance deployments in the catalog: Ethereum, BNB Chain, and Tron. Each has a separate TokenGovernor/controller and native MINTER_ROLE set; Ethereum and BNB share the EVM token implementation and issuer ProxyAdmin architecture, while Tron has its own transparent proxy and admin. CCIP pools use the distinct BRIDGE_MINTER_OR_BURNER_ROLE and remain assessed separately in bridgeRouteRisk.",
+    "summary": "USD1 has six issuer-native issuance deployments in the catalog: KPMG's July 2026 examination (Note A) states USD1 is minted and redeemed on Ethereum, BNB Chain, Solana, Tron, Aptos, and Tempo, and the issuer's proof-of-reserves code marks exactly those chains native. The structured controls below cover Ethereum, BNB Chain, and Tron: each has a separate TokenGovernor/controller and native MINTER_ROLE set; Ethereum and BNB share the EVM token implementation and issuer ProxyAdmin architecture, while Tron has its own transparent proxy and admin. Solana (mint authority BQh68x9D7TDqgJUXiJX1BsD1eR7kkV978owqwBEftpwK, a 1-of-4 SPL multisig whose signers include the CCIP pool signer PDA and three other signers), Aptos (regulated-token direct-mint signers besides the CCIP pool), and Tempo native mint controllers are not yet enumerated as structured controls; that is an open coverage gap, not evidence of bridge-only issuance. CCIP pools use distinct bridge roles and remain assessed separately in bridgeRouteRisk.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [

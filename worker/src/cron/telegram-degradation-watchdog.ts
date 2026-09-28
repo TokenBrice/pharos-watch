@@ -443,6 +443,12 @@ export async function runTelegramDegradationWatchdog(
 
   return createCronResult({
     status: degraded ? "degraded" : "ok",
-    metadata: result,
+    metadata: {
+      ...result,
+      reason: pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
+        : pendingBacklog.triggered ? "pending-backlog-threshold"
+          : safetySource.triggered ? "safety-source-unavailable"
+            : zeroSend.triggered ? "zero-send-streak" : "watchdog-completed",
+    },
   });
 }

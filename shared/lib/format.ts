@@ -457,6 +457,13 @@ export function formatPercent(value: number | null | undefined, decimals = 2): s
   return isFiniteNumber(value) ? `${value.toFixed(decimals)}%` : "-";
 }
 
+/** Keep rounded at-peg occupancy distinguishable from a truly perfect record. */
+export function formatPegOccupancy(value: number | null | undefined, decimals = 2): string {
+  if (!isFiniteNumber(value)) return "-";
+  const rounded = value.toFixed(decimals);
+  return value < 100 && Number(rounded) === 100 ? "<100%" : `${rounded}%`;
+}
+
 /** Format a signed percentage-point value (0-100 scale) with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
 export function formatSignedPercent(value: number | null | undefined, decimals = 2, nullFallback = "-"): string {
   if (!isFiniteNumber(value)) return nullFallback;

@@ -1,4 +1,5 @@
 import { downloadCsv } from "@/lib/exports/csv";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { createTableComparator } from "@/lib/table-comparator";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
@@ -175,7 +176,7 @@ export function sortStablecoins({
 }: SortStablecoinsParams): StablecoinData[] {
   const extractors: Record<StablecoinTableSortKey, (row: StablecoinData) => StablecoinSortValue> = {
     name: (r) => r.name.toLowerCase(),
-    price: (r) => r.price ?? null,
+    price: (r) => isObservedPrice(r) ? r.price ?? null : null,
     mcap: (r) => getCirculatingRaw(r),
     change24h: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevDayRaw(r)),
     change7d: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevWeekRaw(r)),
@@ -192,7 +193,7 @@ export function sortStablecoins({
     mintAuthority: (r) => resolveMintAuthorityScoreDisplay(reportCards?.[r.id]?.mint).score,
     peg: (r) => {
       const pegSummary = pegScores?.get(r.id);
-      if (pegSummary?.pegReferenceUnavailable === true) return null;
+      if (!isObservedPrice(r) || pegSummary?.pegReferenceUnavailable === true) return null;
       return pegSummary?.currentDeviationBps == null
         ? null
         : Math.abs(pegSummary.currentDeviationBps);
@@ -224,7 +225,7 @@ export function exportStablecoinsCsv(
       { header: "Rank", accessor: (_row, i) => i + 1 },
       { header: "Name", accessor: (row) => row.name },
       { header: "Symbol", accessor: (row) => row.symbol },
-      { header: "Price", accessor: (row) => row.price ?? null },
+      { header: "Price", accessor: (row) => isObservedPrice(row) ? row.price ?? null : null },
       { header: "Market Cap (USD)", accessor: (row) => getCirculatingRaw(row) },
       {
         header: "24h Change (%)",

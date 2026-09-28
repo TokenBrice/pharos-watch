@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { STATUS_ONCHAIN_FRESH_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 
 import {
   handleStatus,
@@ -58,6 +59,7 @@ function buildPriceCoverage(total: number, missingIds: string[]): Record<string,
     pricedActiveIds,
     missingPriceCount: missingIds.length,
     missingActiveIds: missingIds,
+    affectedMarketCapUsd: 0,
     missingActiveAssets: [],
     alertEligibleCount: 0,
     alertEligibleIds: [],
@@ -173,11 +175,7 @@ describe("handleStatus", () => {
           makeCacheRow("stablecoins"),
           makeCacheRow("stablecoin-charts"),
           makeCacheRow("usds-status"),
-          {
-            key: "fx-rates",
-            updated_at: now - 60,
-            value: JSON.stringify({ peggedEUR: 1.08 }),
-          },
+          ...fxRatesCacheRows(now - 60),
           makeCacheRow("bluechip-ratings"),
         ],
       },
@@ -518,7 +516,7 @@ describe("handleStatus", () => {
           makeCacheRow("stablecoins"),
           makeCacheRow("stablecoin-charts"),
           makeCacheRow("usds-status"),
-          makeCacheRow("fx-rates"),
+          ...fxRatesCacheRows(now - 300),
           makeCacheRow("bluechip-ratings"),
         ],
       },

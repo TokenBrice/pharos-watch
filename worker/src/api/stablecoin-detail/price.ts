@@ -1,5 +1,6 @@
 import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib/solomon-usdv-identity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { logWorkerEventArgs } from "../../lib/structured-log";
@@ -23,7 +24,18 @@ export async function enrichMissingDetailPrice(
       headers.delete("Content-Length");
       response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
     }
-    if (typeof detail.price === "number" && Number.isFinite(detail.price) && detail.price > 0) return response;
+    if (!isObservedPrice({
+      priceSource: typeof detail.priceSource === "string" ? detail.priceSource : null,
+      priceObservedAtMode: typeof detail.priceObservedAtMode === "string" ? detail.priceObservedAtMode : null,
+    })) {
+      detail.price = null;
+      detail.priceConfidence = null;
+      detail.priceObservedAt = null;
+      const headers = new Headers(response.headers);
+      headers.delete("Content-Length");
+      response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+    }
+    const hasDetailPrice = typeof detail.price === "number" && Number.isFinite(detail.price) && detail.price > 0;
 
     // Read the publication, not price_cache: a last-good replay could resurrect
     // a quote that the current pricing pipeline deliberately withheld.
@@ -34,9 +46,16 @@ export async function enrichMissingDetailPrice(
     if (!Number.isFinite(cacheAge) || canonical.updatedAt <= 0 || cacheAge < 0) return response;
 
     const coin = canonical.payload.peggedAssets.find((asset) => asset.id === stablecoinId);
+    if (coin?.nominalPriceReference) {
+      detail.nominalPriceReference = coin.nominalPriceReference;
+      const headers = new Headers(response.headers);
+      headers.delete("Content-Length");
+      response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+    }
+    if (hasDetailPrice) return response;
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;
     if (
-      !coin || coin.frozen ||
+      !coin || coin.frozen || !isObservedPrice(coin) ||
       !isSolomonPriceIdentityAllowed(stablecoinId, coin.priceSource, coin.agreeSources) ||
       typeof coin.price !== "number" || !Number.isFinite(coin.price) || coin.price <= 0 ||
       !coin.priceSource || coin.priceSource === "cached" ||

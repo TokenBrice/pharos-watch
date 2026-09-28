@@ -128,7 +128,7 @@ export function buildPublicHealthStatusCauses(healthData: HealthResponse | null 
       severity: "info",
       message: acknowledgement,
       metric: "missingActivePrices",
-      value: coverage?.missingPriceCount,
+      value: coverage?.missingPriceCount ?? undefined,
       threshold: 1,
     }];
   }
@@ -143,7 +143,7 @@ export function buildPublicHealthStatusCauses(healthData: HealthResponse | null 
     severity: "warning",
     message,
     metric: "missingActivePrices",
-    value: coverage?.missingPriceCount,
+    value: coverage?.missingPriceCount ?? undefined,
     threshold: 1,
   }];
 }

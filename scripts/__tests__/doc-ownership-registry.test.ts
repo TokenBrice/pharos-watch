@@ -77,7 +77,8 @@ describe("doc-ownership registry integrity", () => {
 
   it("uses mappings as the sole authored routing model", () => {
     expect(mappings.length).toBeGreaterThan(0);
-    expect(mappings.length).toBeLessThanOrEqual(20);
+    // DEC-14: nine bounded domain/admin mappings, without additional check trees.
+    expect(mappings.length).toBeLessThanOrEqual(29);
     expect(ownership.taskFamilies).toBeUndefined();
     expect(new Set(mappings.map((mapping) => mapping.id)).size).toBe(mappings.length);
     expect(mappings.find((mapping) => mapping.id === "documentation")?.tier).toBe("fallback");
@@ -110,6 +111,45 @@ describe("doc-ownership registry integrity", () => {
     for (const reference of fileReferences) {
       if (reference.anchor) expect(anchors.has(reference.anchor), `${path}#${reference.anchor}`).toBe(true);
       if (bounded) expect(reference.anchor, `${path} requires a bounded anchor`).toBeTruthy();
+    }
+  });
+  it("bounds newly routed domain sections without growing their check suites", () => {
+    const domainIds = [
+      "live-reserves", "yield-intelligence", "homepage", "about-page",
+      "coverage-page", "start-page", "feedback-pipeline", "compliance", "worker-admin-api",
+    ];
+    for (const mapping of mappings.filter((entry) => domainIds.includes(entry.id))) {
+      expect(mapping.checks ?? [], mapping.id).toEqual([]);
+      for (const reference of mapping.docs.map(normalizeDoc)) {
+        expect(reference.anchor, mapping.id).toBeTruthy();
+        const lines = readFileSync(resolve(REPO_ROOT, reference.path), "utf8").split("\n");
+        let start = -1;
+        let level = 0;
+        let end = lines.length;
+        let fence: string | undefined;
+        for (let index = 0; index < lines.length; index++) {
+          const marker = /^\s*(`{3,}|~{3,})/.exec(lines[index])?.[1];
+          if (marker) {
+            if (!fence) fence = marker;
+            else if (marker[0] === fence[0] && marker.length >= fence.length) fence = undefined;
+            continue;
+          }
+          if (fence) continue;
+          const heading = /^(#{1,6}) /.exec(lines[index]);
+          if (!heading) continue;
+          if (start >= 0 && heading[1].length <= level) {
+            end = index;
+            break;
+          }
+          if (start < 0 && collectMarkdownReferences(lines[index]).anchors.has(reference.anchor!)) {
+            start = index;
+            level = heading[1].length;
+          }
+        }
+        expect(start, `${reference.path}#${reference.anchor}`).toBeGreaterThanOrEqual(0);
+        expect(Buffer.byteLength(lines.slice(start, end).join("\n")), `${reference.path}#${reference.anchor}`)
+          .toBeLessThanOrEqual(25_000);
+      }
     }
   });
   it("keeps npm run checks wired to package scripts", () => {

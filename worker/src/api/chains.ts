@@ -14,6 +14,8 @@ import {
   type ActiveSafetyScoreSource,
 } from "../lib/safety-score-active-source";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
+import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
+import type { ChainsFreshnessMeta } from "@shared/types/chains";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;
@@ -29,16 +31,6 @@ interface ChainsDependencyMeta {
   staleInputs?: string[];
 }
 
-interface ChainsFreshnessMeta {
-  updatedAt: number;
-  ageSeconds: number;
-  status: FreshnessStatus;
-  warning?: string | null;
-  dependencies?: {
-    reportCards: ChainsDependencyMeta;
-  };
-  safetyScoreIdentity: SafetyScorePublicationIdentity | null;
-}
 
 function getDependencyAgeSeconds(updatedAt: number | null | undefined, nowSec: number): number | null {
   if (updatedAt == null) return null;
@@ -104,17 +96,12 @@ function buildChainsFreshnessMeta(
   reportCards: ChainsDependencyMeta,
   safetyScoreIdentity: SafetyScorePublicationIdentity | null,
 ): { headers: Record<string, string>; meta: ChainsFreshnessMeta } {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const ageSeconds = Math.max(0, nowSec - updatedAt);
-  let status: FreshnessStatus;
-
-  if (ageSeconds <= CHAINS_FRESHNESS_MAX_AGE_SEC) {
-    status = "fresh";
-  } else if (ageSeconds <= CHAINS_STALE_THRESHOLD_SEC) {
-    status = "degraded";
-  } else {
-    status = "stale";
-  }
+  const freshness = buildFreshnessMeta(updatedAt, CHAINS_FRESHNESS_MAX_AGE_SEC, undefined, {
+    freshBudgetSec: CHAINS_FRESHNESS_MAX_AGE_SEC,
+    degradedBudgetSec: CHAINS_STALE_THRESHOLD_SEC,
+  });
+  const { ageSeconds } = freshness;
+  let status = freshness.status;
 
   const warnings: string[] = [];
   if (status !== "fresh") {
@@ -133,14 +120,12 @@ function buildChainsFreshnessMeta(
   const warning = warnings.length > 0 ? warnings.join("; ") : null;
 
   return {
-    headers: {
+    headers: addFreshnessHeaders({
       "Cache-Control": status === "fresh" ? CACHE_PROFILES.producerBacked : "no-store",
-      "X-Data-Age": String(ageSeconds),
       ...(warning ? { Warning: warning } : {}),
-    },
+    }, updatedAt, CHAINS_FRESHNESS_MAX_AGE_SEC, freshness),
     meta: {
-      updatedAt,
-      ageSeconds,
+      ...freshness,
       status,
       dependencies: {
         reportCards,

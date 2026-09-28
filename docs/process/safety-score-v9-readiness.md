@@ -20,13 +20,20 @@ R2 credentials `R2_MEASUREMENTS_ACCESS_KEY_ID` and
 
 ## Replay and expiry
 
-Replay resolution is deterministic and fail-closed:
+Replay resolution first returns an existing requested local raw file unchanged,
+before reading a summary or comparing its SHA-256. Local raw bytes therefore
+take precedence over the cache and R2; this resolver does not attest them.
+Downstream replay/attestation validation is a separate boundary.
 
-1. check `agents/.cache/measurements/<sha256>.json` and verify its SHA-256;
-2. fetch the pinned R2 object, if the summary identifies one;
-3. fetch the lifecycle-managed `captures/` object;
-4. decompress, verify the summary SHA-256, and write the verified bytes to the
-   local cache.
+Only when the requested raw path is absent does summary-backed resolution:
+
+1. read the companion summary, then check `agents/.cache/measurements/<sha256>.json`
+   and verify its SHA-256;
+2. try the pinned R2 key derived from the summary's `captures/` key;
+3. try the lifecycle-managed `captures/` object if the pinned object is absent;
+4. decompress the fetched body, verify the summary SHA-256, and write verified
+   bytes to the local cache. An integrity mismatch fails closed, not over to
+   another source.
 
 A missing or expired object is not regenerated, approximated, or silently
 skipped. The exact terminal error is:

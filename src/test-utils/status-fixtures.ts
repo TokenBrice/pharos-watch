@@ -55,7 +55,8 @@ export function makeActivePriceCoverage(
     acknowledgedGapCount: acknowledgedGapIds.length,
     expiredGapReviewIds: [],
     invalidGapReviewIds: [],
-    maxConsecutiveMissingGenerations: Math.max(0, ...missingAssets.map((asset) => asset.consecutiveMissingGenerations)),
+    maxConsecutiveMissingGenerations: missingAssets.some((asset) => asset.consecutiveMissingGenerations == null)
+      ? null : Math.max(0, ...missingAssets.map((asset) => asset.consecutiveMissingGenerations!)),
     observedAt: STATUS_FIXTURE_NOW_SECONDS,
     ...overrides,
   };
@@ -271,6 +272,44 @@ export function makeHealthyStatusResponse(): StatusResponse {
  */
 export function degraded(base: StatusResponse, mutations: Partial<StatusResponse>): StatusResponse {
   return { ...base, ...mutations };
+}
+
+/** Healthy dependency, provider, and canary evidence for reliability workspace tests. */
+export function makeHealthyReliabilityStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
+  return degraded(base, {
+    dependencyHealth: {
+      checkedAt: base.timestamp,
+      dependencies: {},
+      rootCauseGroups: [],
+      summary: { total: 0, healthy: 0, degraded: 0, stale: 0, unknown: 0, rootCauseGroupCount: 0 },
+    },
+    providerCircuitHealth: {
+      checkedAt: base.timestamp,
+      status: "healthy",
+      totalTracked: 0,
+      closedCount: 0,
+      halfOpenCount: 0,
+      openCount: 0,
+      openProviders: [],
+      byFamily: {},
+    },
+    canaries: {
+      checkedAt: base.timestamp,
+      status: "healthy",
+      latestRunAt: base.timestamp,
+      maxAgeSec: 900,
+      totalChecks: 0,
+      expectedCheckIds: [],
+      presentCheckIds: [],
+      missingCheckIds: [],
+      okCount: 0,
+      degradedCount: 0,
+      errorCount: 0,
+      skippedCount: 0,
+      staleCount: 0,
+      checks: {},
+    },
+  });
 }
 
 export function makePublicationFailureStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
@@ -598,6 +637,9 @@ export function makeOperationalDependencyFailureStatusResponse(base = makeHealth
       latestRunAt: base.timestamp - 30,
       maxAgeSec: 900,
       totalChecks: 1,
+      expectedCheckIds: ["fixture-publication-check"],
+      presentCheckIds: ["fixture-publication-check"],
+      missingCheckIds: [],
       okCount: 0,
       degradedCount: 0,
       errorCount: 1,
@@ -678,7 +720,7 @@ export function makeActionBlockedStatusResponse(base = makeActionRecommendedStat
       dataQuality: [...base.causes.dataQuality],
       overall: [...base.causes.overall, dbCause],
     },
-    reserveComposition: {
+    reserveComposition: base.reserveComposition.status === "unavailable" ? base.reserveComposition : {
       ...base.reserveComposition,
       writeTimeoutUncertain: 1,
       status: "degraded",

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PriceConfidenceSchema } from "@shared/types/core";
+import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
 import { ChainsResponseSchema } from "@shared/types/chains";
 import {
   DigestArchiveResponseSchema,
@@ -81,15 +81,21 @@ export const StablecoinSummaryResponseSchema = z.object({
   priceUsd: z.number().nullable(),
   priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable(),
+  priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
+  nominalPriceReference: NominalPriceReferenceSchema.optional(),
   supplySource: z.string().nullable(),
   supplyObservedAt: z.number().nullable(),
   supplyRestored: z.boolean(),
   supplyByPegUsd: PegBucketsSchema,
   supplyUsd: z.object({
-    current: z.number(),
+    /** `null` when the coin is present but its current peg buckets are absent, empty or wholly invalid. */
+    current: z.number().nullable(),
+    /** Machine-readable reason when `current` is null; `null` when current supply was observed (including an explicit zero). */
+    currentUnavailableReason: z.enum(["supply-buckets-missing"]).nullable(),
     prevDay: z.number().nullable(),
     prevWeek: z.number().nullable(),
     prevMonth: z.number().nullable(),
+    /** Each change is null unless both current and the previous value were observed. */
     change1d: z.number().nullable(),
     change7d: z.number().nullable(),
     change30d: z.number().nullable(),

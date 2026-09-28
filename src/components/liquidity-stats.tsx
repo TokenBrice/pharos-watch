@@ -11,6 +11,7 @@ import {
 import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
 import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency, getNetColor } from "@shared/lib/format";
+import { describeDexVolume } from "@/lib/dex-volume-display";
 import {
   chainColorClass,
   chainLogo,
@@ -134,12 +135,17 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
           }
         />
 
-        <MetricStatCard
-          variant="compact"
-          title="24h DEX Volume"
-          value={formatCurrency(stats.totalVol)}
-          subtext="Trading volume today"
-        />
+        {(() => {
+          const volume = describeDexVolume(stats.totalVol, stats.totalVolAvailability);
+          return (
+            <MetricStatCard
+              variant="compact"
+              title="24h DEX Volume"
+              value={volume.text}
+              subtext={volume.detail ?? "Trading volume today"}
+            />
+          );
+        })()}
 
         <MetricStatCard
           variant="compact"

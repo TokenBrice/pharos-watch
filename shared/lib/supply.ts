@@ -23,14 +23,47 @@ export function sumPegBucketsOrNull(obj: PegBucketRecord): number | null {
   return val === 0 && !hasAnyBucket(obj) ? null : val;
 }
 
+export type SupplyBucketInvalidReason = "not-a-record" | "non-finite-bucket" | "negative-bucket" | "overflow";
+
+/**
+ * Admission verdict for one provider peg-bucket record (aggregate or chain):
+ * `observed` carries the finite nonnegative total (an explicit `0` stays a real zero);
+ * `absent` means no bucket was observed (`null`/`undefined`/`{}`);
+ * `invalid` names why the record cannot be admitted (never coerced to zero).
+ */
+export type SupplyBucketAdmission =
+  | { status: "observed"; total: number }
+  | { status: "absent" }
+  | { status: "invalid"; reason: SupplyBucketInvalidReason };
+
+/**
+ * Validate an untrusted peg-bucket record at an intake/publication boundary. Every bucket value must be a
+ * finite nonnegative number and the sum must stay finite; an empty record is absence, not zero (ADR-28).
+ */
+export function admitSupplyBuckets(value: unknown): SupplyBucketAdmission {
+  if (value == null) return { status: "absent" };
+  if (typeof value !== "object" || Array.isArray(value)) return { status: "invalid", reason: "not-a-record" };
+  let total = 0;
+  let observed = false;
+  for (const bucket of Object.values(value as Record<string, unknown>)) {
+    if (typeof bucket !== "number" || !Number.isFinite(bucket)) return { status: "invalid", reason: "non-finite-bucket" };
+    if (bucket < 0) return { status: "invalid", reason: "negative-bucket" };
+    total += bucket;
+    observed = true;
+  }
+  if (!Number.isFinite(total)) return { status: "invalid", reason: "overflow" };
+  return observed ? { status: "observed", total } : { status: "absent" };
+}
+
 /**
  * Sum circulating values across all peg buckets.
  * DefiLlama's list API returns values already in USD for all peg types,
  * so the values we receive here are always in USD — no FX conversion needed.
  *
  * Reserved for callers that have already established availability — absent, empty and wholly-invalid buckets
- * collapse to `0` here. Callers that must keep "no supply data" distinct from a genuine zero read
- * `getCirculatingRawOrNull()`; migrating them off this default is owned by plan task P1-05.
+ * collapse to `0` here. At publication, scoring, filtering, and history/delta boundaries, use
+ * `getCirculatingRawOrNull()` and historical `*OrNull` helpers unless availability is explicitly proven.
+ * Preserve unavailable values with a reason; a finite observed zero remains zero (ADR-28).
  */
 export function getCirculatingRaw(c: { circulating?: PegBucketRecord }): number {
   return sumPegBuckets(c.circulating);

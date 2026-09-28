@@ -39,6 +39,8 @@ const OBSERVED_AT_MODE_PRIORITY: Record<PriceObservedAtMode, number> = {
   upstream: 0,
   local_fetch: 1,
   unknown: 2,
+  nominal_reference: 3,
+  unsupported: 4,
 };
 
 export function pickConservativeObservedAtMode(

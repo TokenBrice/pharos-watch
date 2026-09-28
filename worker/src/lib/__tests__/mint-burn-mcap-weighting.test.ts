@@ -74,8 +74,14 @@ describe("sumMcapForTrackedChains", () => {
     ).toBe(200_000_000);
   });
 
-  it("returns 0 when both chainCirculating and circulating are undefined", () => {
-    expect(sumMcapForTrackedChains("usdc-circle", undefined, undefined)).toBe(0);
+  it("returns null, not 0, when the fallback supply is absent, empty or wholly invalid", () => {
+    expect(sumMcapForTrackedChains("usdc-circle", undefined, undefined)).toBeNull();
+    expect(sumMcapForTrackedChains("usdc-circle", {}, {})).toBeNull();
+    expect(sumMcapForTrackedChains("nonexistent", undefined, { peggedUSD: Number.NaN })).toBeNull();
+  });
+
+  it("keeps an explicit zero fallback bucket as a measured zero", () => {
+    expect(sumMcapForTrackedChains("usdc-circle", undefined, { peggedUSD: 0 })).toBe(0);
   });
 
   it("treats current=0 as real data (contributes 0, does NOT trigger fallback)", () => {

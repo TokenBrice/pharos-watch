@@ -2,7 +2,7 @@ import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_M
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { weightedMedian } from "@shared/lib/stats";
 import { corroboratingProtocolGroupsOutvote, divergingProtocolGroupsOutvote, getDepegRecoveryThresholdBps, getDepegThresholdBps, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/constants";
 import {
@@ -39,12 +39,12 @@ import type {
 } from "./types";
 import {
   applyNativeQuoteVeto,
-  isNativePegEvent,
   recoveryPriceForEvent,
   resolveDirectRecovery,
   resolvePeakUpdateCommand,
 } from "./native-quote-policy";
 import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 
 interface DecisionContext {
   trackedCoinId: string;
@@ -359,7 +359,22 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     return { kind: "skip", decision: emptyDecision(trackedCoinId) };
   }
 
-  const supply = getCirculatingRaw(asset);
+  // Unavailable supply (asset buckets absent/empty/invalid) cannot assess the live-event floor: keep an
+  // open event open and unchanged, and open nothing new. Only an observed sub-floor supply (including an
+  // explicit zero) closes with `coverage-lost-supply` (CR-13 / D03-2).
+  const supply = getCirculatingRawOrNull(asset);
+  if (supply == null) {
+    const decision = emptyDecision(trackedCoinId);
+    if (existing) {
+      decision.seenEventIds.push(existing.id);
+      decision.diagnostics.push(withDiagnostic(
+        "warn",
+        `[depeg] Kept live event for ${asset.symbol} open: current supply is unavailable, ` +
+        "so the live-event floor cannot be assessed",
+      ));
+    }
+    return { kind: "skip", decision };
+  }
   if (supply < DEPEG_EVENT_MIN_SUPPLY_USD) {
     const decision = emptyDecision(trackedCoinId);
     if (existing) {

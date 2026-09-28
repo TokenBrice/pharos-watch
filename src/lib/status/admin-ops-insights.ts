@@ -34,6 +34,17 @@ function getCronNextRunAt(cron: CronStatus | undefined): number | null {
 export function buildReserveRecoveryForecast(data: StatusResponse): ReserveRecoveryForecast {
   const reserve = data.reserveComposition;
   const cron = data.crons["sync-live-reserves"];
+  if (reserve.status === "unavailable") {
+    return {
+      state: cron?.inFlight?.stale ? "blocked" : "watch",
+      headline: "Reserve recovery evidence is unavailable",
+      detail: "The reserve overview could not be read; queue pressure and write outcomes are unknown.",
+      nextRunAt: getCronNextRunAt(cron),
+      resumeCursor: null,
+      estimatedRunsToClear: null,
+      lastThroughput: null,
+    };
+  }
   const metadata = readRecord(cron?.lastRun?.metadata);
   const synced = readNumber(metadata?.synced) ?? cron?.lastRun?.itemCount ?? null;
   const total = readNumber(metadata?.total);
@@ -154,9 +165,11 @@ export function buildActionReadinessChecks({
     {
       id: "d1-writes",
       label: "D1 write path",
-      state: !data.dbHealthy || reserve.writeTimeoutUncertain > 0 ? "blocked" : "ready",
+      state: !data.dbHealthy || (reserve.writeTimeoutUncertain != null && reserve.writeTimeoutUncertain > 0) ? "blocked" : reserve.status === "unavailable" ? "watch" : "ready",
       detail: !data.dbHealthy
         ? "Status reports D1 unhealthy; avoid write-heavy recovery actions."
+        : reserve.status === "unavailable"
+          ? "Reserve write outcomes are unavailable; D1 health alone does not confirm them."
         : reserve.writeTimeoutUncertain > 0
           ? `${reserve.writeTimeoutUncertain} live reserve write outcome(s) are uncertain.`
           : "D1 is healthy and no uncertain live-reserve writes are active.",
@@ -164,7 +177,7 @@ export function buildActionReadinessChecks({
     {
       id: "reserve-lane",
       label: "Reserve lane",
-      state: reserveForecast.state === "blocked" ? "blocked" : reserveCron?.inFlight ? "watch" : "ready",
+      state: reserveForecast.state === "blocked" ? "blocked" : reserve.status === "unavailable" || reserveCron?.inFlight ? "watch" : "ready",
       detail: reserveCron?.inFlight
         ? `sync-live-reserves is running${reserveCron.inFlight.stage ? ` at ${reserveCron.inFlight.stage}` : ""}.`
         : reserveForecast.headline,

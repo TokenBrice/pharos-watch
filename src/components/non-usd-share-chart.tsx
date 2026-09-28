@@ -100,14 +100,14 @@ export function NonUsdShareChart({
 
   const { chartData, latestShare, latestNonUsd, latestTotal } = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0)
-      return { chartData: [] as SharePoint[], latestShare: 0, latestNonUsd: 0, latestTotal: 0 };
+      return { chartData: [] as SharePoint[], latestShare: null, latestNonUsd: null, latestTotal: null };
 
     const points: SharePoint[] = data.map((point) => ({
       ts: point.date * 1000,
-      commodityShare: point.commodityShare ?? 0,
-      fiatNonUsdShare: point.fiatNonUsdShare ?? 0,
-      commodity: point.commodity ?? 0,
-      fiatNonUsd: point.fiatNonUsd ?? 0,
+      commodityShare: point.commodityShare,
+      fiatNonUsdShare: point.fiatNonUsdShare,
+      commodity: point.commodity,
+      fiatNonUsd: point.fiatNonUsd,
       total: point.total,
     }));
 
@@ -121,6 +121,8 @@ export function NonUsdShareChart({
   }, [data]);
 
   const coverageStartLabel = chartData[0] ? formatChartDate(chartData[0].ts, "long") : null;
+  const latestSample = chartData[chartData.length - 1];
+  const asOfLabel = latestSample ? formatChartDate(latestSample.ts, "long") : null;
   const getYDomain = useCallback(
     (filteredData: SharePoint[], range: TimeRangeOption) =>
       computeChartYDomain(
@@ -138,9 +140,9 @@ export function NonUsdShareChart({
       title="Share Of Total Stablecoin Market Outside USD"
       loadingTitle="Non-USD Market Share"
       subtitle={
-        latestTotal > 0 ? (
+        latestTotal != null && latestTotal > 0 ? (
           <p className="text-sm text-muted-foreground">
-            Current share: {formatPercent(latestShare)} of total stablecoin market &middot; current outside-USD
+            As of {asOfLabel}: {formatPercent(latestShare)} of total stablecoin market &middot; outside-USD
             segment size: {formatCurrency(latestNonUsd, 1)}
           </p>
         ) : null
@@ -168,7 +170,9 @@ export function NonUsdShareChart({
       openFocusLabel="Open large share chart"
       closeFocusLabel="Return share chart to overview"
       focusedHeightClassName={FOCUSED_CHART_HEIGHT}
-      ariaLabel={`Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} current share`}
+      ariaLabel={asOfLabel
+        ? `Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} share as of ${asOfLabel}`
+        : "Share of total stablecoin market outside USD chart; data unavailable"}
       emptyMessage="No market share data available"
       series={SHARE_SERIES}
       tooltip={<ShareTooltip />}

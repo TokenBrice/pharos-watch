@@ -338,7 +338,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         <div className="shrink-0 text-right">
           <p className="pharos-kicker">Supply</p>
           <p className="pharos-numeric text-sm font-semibold text-foreground">
-            {row.supplyUsd > 0 ? formatCompactUsd(row.supplyUsd) : "—"}
+            {row.supplyUsd != null ? formatCompactUsd(row.supplyUsd) : "—"}
           </p>
         </div>
       </div>
@@ -427,7 +427,7 @@ function ScreenerTableRow({
         </Link>
       </TableCell>
       <TableCell className="text-right pharos-numeric">
-        {row.supplyUsd > 0 ? formatCompactUsd(row.supplyUsd) : (
+        {row.supplyUsd != null ? formatCompactUsd(row.supplyUsd) : (
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>

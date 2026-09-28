@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode, Ref } from "react";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { Hourglass, Sparkles } from "lucide-react";
 import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -54,7 +55,7 @@ export function DetailHistoryExploreSections({
               <DepegHistory
                 stablecoinId={viewModel.id}
                 earliestTrackingDate={viewModel.earliestTrackingDate}
-                hasPriceData={viewModel.coinData.price != null}
+                hasPriceData={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null}
                 depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
                 historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}
                 recent90d={viewModel.pegScoreResult?.recent90d ?? null}

@@ -47,6 +47,30 @@ function makeCoin(id: string, name: string, overrides: Partial<StablecoinData> =
 
 const sortAsc = (key: StablecoinTableSortKey) => ({ key, direction: "asc" as const });
 const sortDesc = (key: StablecoinTableSortKey) => ({ key, direction: "desc" as const });
+describe("nominal price consumers", () => {
+  it("sorts nominal prices as missing and exports no observed quote", () => {
+    downloadCsvMock.mockReset();
+    const nominal = makeCoin("nominal", "Nominal", {
+      price: 1,
+      priceSource: "protocol-par",
+      priceObservedAtMode: "nominal_reference",
+      priceConfidence: "high",
+    });
+    const market = makeCoin("market", "Market", { price: 1.1 });
+    const sorted = sortStablecoins({
+      filtered: [nominal, market],
+      sort: sortAsc("price"),
+      effectiveSortKey: "price",
+    });
+    expect(sorted.map((coin) => coin.id)).toEqual(["market", "nominal"]);
+    exportStablecoinsCsv(sorted);
+    const [, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[], string];
+    const priceColumn = columns.find((column) => column.header === "Price")!;
+    expect(priceColumn.accessor(nominal, 1)).toBeNull();
+    expect(priceColumn.accessor(market, 0)).toBe(1.1);
+  });
+});
+
 
 describe("filterStablecoins", () => {
   it("returns empty array for undefined data", () => {

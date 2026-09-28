@@ -151,7 +151,9 @@ export async function computeRawStatus(db: D1Database, now: number) {
     hasActiveOnchainMonitor,
     onchainAssessment,
   } = deriveStatusAssessmentInputs(dataQuality);
-  const reserveAssessment = deriveReserveCompositionStatus(reserveComposition);
+  const reserveCompositionStatus = reserveComposition.status === "unavailable"
+    ? "unavailable"
+    : deriveReserveCompositionStatus(reserveComposition).status;
   const diagnosticIssueCount = countStatusDiagnosticIssues({
     publicHealth,
     dataQuality,
@@ -179,7 +181,7 @@ export async function computeRawStatus(db: D1Database, now: number) {
     blacklistMissingRatio,
     blacklistRecentMissing,
     onchainAssessment,
-    reserveCompositionStatus: reserveAssessment.status,
+    reserveCompositionStatus,
     activePriceCoverageImpactStatus: publicHealth.activePriceCoverageImpactStatus,
     repairRunnerAutoRepairCount: publicHealth.repairRunnerAutoRepairCount,
     activePriceCoverage: publicHealth.activePriceCoverage,

@@ -1,6 +1,7 @@
 import { PRESSURE_SHIFT_STATE_VALUES, type PressureShiftState } from "@shared/lib/mint-burn-signals";
 import { createTableComparator } from "@/lib/table-comparator";
 import {
+  resolveCoinNetFlow,
   resolvePressureScore as getPressureScore,
   resolvePressureState as getPressureState,
 } from "@/lib/mint-burn-coin-helpers";
@@ -61,13 +62,14 @@ export function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; class
 
 const _compareFlowRows = createTableComparator<FlowTableSortKey, MintBurnCoinFlow>({
   // The net columns render a signed value, so ranking them by magnitude put a
-  // large burn above a smaller mint in descending order.
-  net24h: (r) => r.netFlow24hUsd,
+  // large burn above a smaller mint in descending order. Unavailable nets (null
+  // or partial valuation) sort last instead of ranking as zero.
+  net24h: (r) => resolveCoinNetFlow(r, "24h").valueUsd,
   mint24h: (r) => r.mintVolume24hUsd,
   burn24h: (r) => r.burnVolume24hUsd,
-  net7d: (r) => r.netFlow7dUsd,
-  net30d: (r) => r.netFlow30dUsd,
-  net90d: (r) => r.netFlow90dUsd,
+  net7d: (r) => resolveCoinNetFlow(r, "7d").valueUsd,
+  net30d: (r) => resolveCoinNetFlow(r, "30d").valueUsd,
+  net90d: (r) => resolveCoinNetFlow(r, "90d").valueUsd,
   largest: (r) => r.largestEvent24h?.amountUsd ?? 0,
   pressure: (r) => getPressureScore(r),
 });

@@ -12,6 +12,7 @@ import {
   STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC,
 } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealth, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
@@ -124,6 +125,8 @@ export async function getDataQuality(
     ? (stablecoinsCacheResult.payload.peggedAssets as Array<{
         id: string;
         price?: number;
+        priceSource?: string | null;
+        priceObservedAtMode?: string | null;
         circulating?: Record<string, number>;
       }>)
     : [];
@@ -154,17 +157,18 @@ export async function getDataQuality(
     }
   }
   const activePriceCoverage = options?.activePriceCoverage;
-  const hasExactPriceEvidence = activePriceCoverage != null && activePriceCoverage.status !== "unknown";
-  const totalStablecoins = hasExactPriceEvidence
-    ? activePriceCoverage.expectedActiveCount
-    : activeCanonicalAssets.length;
+  const exactPriceEvidence = activePriceCoverage != null && activePriceCoverage.status !== "unknown"
+    && activePriceCoverage.expectedActiveCount != null && activePriceCoverage.missingPriceCount != null
+    ? { total: activePriceCoverage.expectedActiveCount, missing: activePriceCoverage.missingPriceCount }
+    : null;
+  const totalStablecoins = exactPriceEvidence?.total ?? activeCanonicalAssets.length;
   let missingPrices: number;
-  if (hasExactPriceEvidence) {
-    missingPrices = activePriceCoverage.missingPriceCount;
+  if (exactPriceEvidence != null) {
+    missingPrices = exactPriceEvidence.missing;
   } else {
     const missingActiveIds = new Set(
       activeCanonicalAssets
-        .filter((asset: { price?: number | null }) => asset.price == null || asset.price === 0)
+        .filter((asset) => !isObservedPrice(asset) || asset.price == null || asset.price === 0)
         .map((asset) => asset.id),
     );
     if (stablecoinPublication.status === "incomplete") {

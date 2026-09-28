@@ -18,6 +18,7 @@ import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
 import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
+import { comparableDepegs } from "./daily-digest/digest-evidence";
 import { logWorkerEvent } from "../lib/structured-log";
 import {
   buildDigestSafetyMapCaptions,
@@ -223,7 +224,9 @@ export async function generateDailyDigest(
       })),
       leadRequirements,
       depegFacts: llmSignals.topDepegs,
-      prevDepegFacts: previousInputData?.topDepegs ?? [],
+      prevDepegFacts: (previousInputData?.topDepegs ?? []).filter((previous) =>
+        previousInputData != null && llmSignals.topDepegs.some((current) =>
+          comparableDepegs(current, previous, inputData, previousInputData))),
       recentTitles,
       forbidSafetyClaims: inputData.safetyContext?.status !== "available",
       suppressedCandidateIds: (inputData.editorialCandidates ?? [])

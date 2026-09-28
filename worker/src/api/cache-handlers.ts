@@ -1,9 +1,13 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { assessBluechipRating } from "@shared/lib/bluechip-freshness";
+import { projectLegacyChainCirculatingWire } from "@shared/lib/chains/circulating";
 import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import {
   BluechipRatingsMapSchema,
   STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
+  type BluechipRatingsMap,
   StablecoinListResponseSchema,
+  type StablecoinListResponse,
 } from "@shared/types/market";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse } from "../lib/api-response";
@@ -21,6 +25,9 @@ export const handleStablecoins = createCacheHandler(
   {
     schema: StablecoinListResponseSchema,
     malformedMessage: "Cached stablecoins payload is malformed",
+    // RELEASE A (CR-13): unavailable chain observations are `null` in the canonical cache; keep the
+    // legacy public wire (`0`) until the Release B activation removes this projection.
+    transform: (payload) => projectLegacyChainCirculatingWire(payload as StablecoinListResponse),
     responseReadyCache: "json-object",
     responseReadySchemaId: RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
   },
@@ -55,6 +62,12 @@ export const handleBluechipRatings = createCacheHandler(
   {
     schema: BluechipRatingsMapSchema,
     malformedMessage: "Cached bluechip-ratings payload is malformed",
+    transform: (payload) => {
+      const now = Math.floor(Date.now() / 1000);
+      return Object.fromEntries(Object.entries(payload as BluechipRatingsMap).map(
+        ([id, rating]) => [id, assessBluechipRating(rating, now)],
+      ));
+    },
   },
 );
 

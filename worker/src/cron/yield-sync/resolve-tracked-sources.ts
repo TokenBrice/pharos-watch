@@ -19,8 +19,6 @@ import {
   getPriceDerivedApy,
 } from "./sources";
 import {
-  classifyYieldBenchmarkFreshness,
-  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
   resolveBenchmarkForStablecoin,
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
@@ -44,6 +42,7 @@ import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import { buildInClause } from "../../lib/db";
 import { buildWeightedYieldPoolGroupSource } from "./weighted-pools";
 import { isPriceDerivedYieldEligible } from "../../lib/yield-config/yield-config-registry";
+import { resolveYieldBenchmarkDependencies } from "../../lib/yield-config/yield-benchmark-dependencies";
 
 function buildConfigByStablecoinId<T extends { stablecoinId: string }>(configs: readonly T[]): Map<string, T> {
   const byId = new Map<string, T>();
@@ -331,15 +330,17 @@ export async function resolveTrackedYieldSources(params: {
 
     const rateDerivedConfig = rateDerivedConfigById.get(id);
     if (rateDerivedConfig) {
+      const dependencies = resolveYieldBenchmarkDependencies({
+        stablecoinId: id,
+        dataSource: "rate-derived",
+        benchmarks: params.riskFreeRates,
+        benchmarkCurrency: null,
+        nowSec: params.startSec,
+      });
       const benchmarkSelection = resolveBenchmarkForStablecoin({
         stablecoinId: id,
         benchmarks: params.riskFreeRates,
-        benchmarkCurrency: rateDerivedConfig.benchmarkCurrency ?? null,
-      });
-      const productBenchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkSelection.meta, {
-        recordDate: benchmarkSelection.meta.recordDate,
-        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[benchmarkSelection.key],
-        nowSec: params.startSec,
+        benchmarkCurrency: dependencies.productKey,
       });
       // Retained market evidence is usable with degraded qualification; a
       // hardcoded fallback is not a measured product return.
@@ -359,7 +360,6 @@ export async function resolveTrackedYieldSources(params: {
             sourceKey: "rate-derived",
             yieldSource: rateDerivedConfig.label,
             sourceObservedAt: getBenchmarkSourceObservedAt(benchmarkSelection.meta),
-            productBenchmarkFreshness,
             comparisonAnchorObservedAt: null,
             benchmarkOverrideKey: rateDerivedConfig.benchmarkOverrideKey ?? null,
           },

@@ -2,10 +2,10 @@ import { DAY_SECONDS } from "./time-constants";
 import { bucketUnixSecondsToUtcDay } from "./time-buckets";
 
 export interface PsiComponentsLike {
-  severity: number;
-  breadth: number;
-  stressBreadth?: number;
-  trend: number;
+  severity: number | null;
+  breadth: number | null;
+  stressBreadth?: number | null;
+  trend: number | null;
 }
 
 export interface PsiCurrentLike {

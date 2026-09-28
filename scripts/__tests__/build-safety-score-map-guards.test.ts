@@ -407,7 +407,8 @@ describe("safety-score map — join coverage guard", () => {
     a[0] = { ...a[0], circulating: { peggedUSD: -1 } };
     const run = await runGenerator({ cards: c, assets: a });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Negative circulating supply for coin-00\.peggedUSD/);
+    // The published list schema (CR-13) rejects negative aggregate buckets before the join.
+    expect(run.stderr).toMatch(/Stablecoin response is malformed at peggedAssets\.0\.circulating\.peggedUSD/);
     expect(existsSync(run.pngPath)).toBe(false);
   });
 });

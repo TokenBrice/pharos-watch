@@ -8,6 +8,7 @@ import {
   StressSignalDetailResponseSchema,
 } from "@shared/types/market";
 import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 afterEach(() => vi.restoreAllMocks());
 const nowSec = Math.floor(Date.now() / 1000);
@@ -723,6 +724,12 @@ describe("handleStressSignals contract tests", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
     expect(body.signals["usdt-tether"].ageClassification).toBe("fresh");
     expect(body.signals["usdc-circle"].ageClassification).toBe("retainedLastValid");
+    expect(body.signals["usdc-circle"]).toMatchObject({
+      newestReturnedComputedAt: freshComputedAt,
+      assessedAt: expect.any(Number),
+      freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+      degradedBudgetSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
+    });
   });
 
   it("does not warn on DEWS aggregate data that is inside the 30-minute cadence runway", async () => {
@@ -927,7 +934,18 @@ describe("handleStressSignals contract tests", () => {
         score: 25, band: "WATCH", signals_json: signalsJson, computed_at: nowSec - Number(age),
       });
       const res = await handleStressSignals(db, new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"));
-      expect(await readJsonResponse(res, 200)).toMatchObject({ current: { ageClassification: expected } });
+      const body = StressSignalDetailResponseSchema.parse(await readJsonResponse(res, 200));
+      expect(body.current).toMatchObject({
+        ageClassification: expected,
+        assessedAt: nowSec,
+        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+        degradedBudgetSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
+        newestReturnedComputedAt: null,
+      });
+      const current = body.current!;
+      const elapsed = current.assessedAt! - current.computedAt;
+      expect(elapsed <= current.freshBudgetSec! ? "fresh" : elapsed <= current.degradedBudgetSec! ? "lagging" : "stale")
+        .toBe(current.ageClassification);
     },
   );
 

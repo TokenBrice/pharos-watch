@@ -144,10 +144,12 @@ const WHITELABEL_CAPTURE = {
   data: [{
     stablecoin: "suiUSDe",
     totalSupply: 100,
+    totalBacking: 100,
+    collateralizationRatio: 1,
     lastUpdated: 1_757_000_000_000,
     custodians: [
-      { network: "sui", asset: "USDC", amount: 20 },
-      { network: "ethereum", asset: "USDe", amount: 80 },
+      { network: "sui", address: "0x1620", asset: "USDC", amount: 20 },
+      { network: "ethereum", address: "0x79f876", asset: "USDe", amount: 80 },
     ],
   }],
 };

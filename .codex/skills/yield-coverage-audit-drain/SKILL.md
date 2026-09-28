@@ -138,9 +138,10 @@ Reject or defer when:
 Update routed docs when the source roster, benchmark registry, publication
 gates, queue shape, or methodology-visible behavior changes. New providers
 also update `docs/about-page.md`; methodology changes update the owning UI/doc,
-`shared/lib/methodology-versions/yield-methodology.ts`, and the structured
-`shared/data/methodology-changelogs/yield-methodology/` entry. Read the current
-numeric version from source and choose a strictly greater numeric value.
+`shared/lib/methodology-versions/constants.ts`, and the structured
+`shared/data/methodology-changelogs/yield-methodology/` entry, following ADR-3 in
+`docs/architecture.md`. Read the current numeric version from source and choose
+a strictly greater numeric value with at most two decimal digits.
 
 ## Validation
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canonicalizeChainCirculating,
+  projectLegacyChainCirculatingWire,
   type RawChainCirculating,
 } from "../chains/circulating";
 
@@ -13,6 +14,27 @@ describe("chain-circulating", () => {
     expect(point?.current).toBe(150);
     expect(point?.circulatingPrevDay).toBeUndefined();
     expect(point?.circulatingPrevMonth).toBeUndefined();
+  });
+  it("keeps an unavailable current unavailable across alias merges instead of summing a zero", () => {
+    const point = canonicalizeChainCirculating({
+      Ethereum: { current: null, circulatingPrevDay: 100 },
+      ethereum: { current: 50, circulatingPrevDay: 50 },
+    }).get("ethereum");
+    // A partial current (50) paired against the complete baseline (150) would read as a -100 redemption.
+    expect(point).toEqual({ current: null, circulatingPrevDay: 150, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined });
+    expect(canonicalizeChainCirculating({ Tron: { current: 0, circulatingPrevDay: 10 } }).get("tron")?.current).toBe(0);
+  });
+  it("projects unavailable chain keys to the legacy public wire without touching observed rows", () => {
+    const complete = { id: "complete", chainCirculating: { Ethereum: { current: 5, circulatingPrevDay: 0 } } };
+    const payload = {
+      peggedAssets: [complete, { id: "partial", chainCirculating: { Tron: { current: null, circulatingPrevDay: null, circulatingPrevWeek: 3 } } }],
+      fxFallbackRates: { peggedEUR: 1.1 },
+    };
+    const projected = projectLegacyChainCirculatingWire(payload);
+    expect(projected.peggedAssets[0]).toBe(complete);
+    expect(projected.peggedAssets[1]).toEqual({ id: "partial", chainCirculating: { Tron: { current: 0, circulatingPrevDay: 0, circulatingPrevWeek: 3 } } });
+    expect(payload.peggedAssets[1]).toEqual({ id: "partial", chainCirculating: { Tron: { current: null, circulatingPrevDay: null, circulatingPrevWeek: 3 } } });
+    expect(projectLegacyChainCirculatingWire({ peggedAssets: [complete] }).peggedAssets[0]).toBe(complete);
   });
   it("canonicalizes aliases into one chain bucket", () => {
     const chainCirculating: RawChainCirculating = {
@@ -164,8 +186,9 @@ describe("chain-circulating", () => {
       },
     });
 
+    // The NaN alias current is unavailable, so the merged current is unavailable, not the other alias's 2.
     expect(canonical.get("ethereum")).toEqual({
-      current: 2,
+      current: null,
       circulatingPrevDay: undefined,
       circulatingPrevWeek: undefined,
       circulatingPrevMonth: undefined,

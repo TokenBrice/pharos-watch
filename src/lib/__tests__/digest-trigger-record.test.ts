@@ -19,7 +19,7 @@ function trigger(id: string, metric: DigestNextTrigger["metric"]): DigestNextTri
 
 function outcome(
   id: string,
-  status: "hit" | "missed" | "expired" | "pending",
+  status: NonNullable<DigestArchiveEntry["forwardLookOutcomes"]>[number]["status"],
 ): NonNullable<DigestArchiveEntry["forwardLookOutcomes"]>[number] {
   return {
     id: `outcome:${id}`,
@@ -62,6 +62,22 @@ describe("buildDigestTriggerRecord", () => {
     });
     expect(record.buckets.map((bucket) => bucket.key)).toEqual(["depeg-bps", "psi-score"]);
     expect(record.buckets[0]).toMatchObject({ total: 2, hit: 1, expired: 1, resolved: 2, hitRate: 0.5 });
+  });
+
+  it("retains unavailable outcomes without diluting resolved hit shares", () => {
+    const record = buildDigestTriggerRecord([
+      entry([trigger("depeg", "depeg-bps")], [
+        outcome("depeg", "hit"),
+        outcome("depeg", "unavailable"),
+        outcome("unknown", "unavailable"),
+      ]),
+    ]);
+
+    expect(record).toMatchObject({ total: 3, unavailable: 2, resolved: 1, hitRate: 1, unclassifiedCount: 1 });
+    expect(record.buckets).toEqual([
+      expect.objectContaining({ key: "depeg-bps", total: 2, unavailable: 1, resolved: 1, hitRate: 1 }),
+      expect.objectContaining({ key: "unknown", total: 1, unavailable: 1, resolved: 0, hitRate: null }),
+    ]);
   });
 
   it("keeps outcomes without a matching trigger metric in an explicit unclassified bucket", () => {

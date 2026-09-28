@@ -416,6 +416,8 @@ describe("mint-burn shared pipeline modules", () => {
       hour_ts: 3600,
       mint_count: 1,
       burn_count: 1,
+      mint_unpriced_event_count: 0,
+      burn_unpriced_event_count: 0,
       mint_volume_usd: 100,
       burn_volume_usd: 25,
       net_flow_usd: 75,
@@ -464,6 +466,8 @@ describe("mint-burn shared pipeline modules", () => {
       hour_ts: 3600,
       mint_count: 1,
       burn_count: 1,
+      mint_unpriced_event_count: 0,
+      burn_unpriced_event_count: 0,
       mint_volume_usd: 100,
       burn_volume_usd: 25,
       net_flow_usd: 75,
@@ -490,6 +494,8 @@ describe("mint-burn shared pipeline modules", () => {
       hour_ts: 3600,
       mint_count: 0,
       burn_count: 1,
+      mint_unpriced_event_count: 0,
+      burn_unpriced_event_count: 0,
       mint_volume_usd: 0,
       burn_volume_usd: 125,
       net_flow_usd: -125,
@@ -499,6 +505,48 @@ describe("mint-burn shared pipeline modules", () => {
     await recalcAffectedHours(db, collectAffectedHours([burnRow]));
 
     expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").all()).toEqual([]);
+  });
+
+  it("records unpriced counted events beside known subtotals instead of zero dollars", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    // Mixed hour: one unpriced standard mint and one priced $1M effective burn.
+    const unpricedMint = { ...makeRow({ id: "mint-unpriced", direction: "mint", timestamp: 3_605, tx_hash: "0xmint" }), amount_usd: null };
+    const pricedBurn = makeRow({
+      id: "burn-priced", direction: "burn", burn_type: "effective_burn", amount_usd: 1_000_000, timestamp: 3_610, tx_hash: "0xburn",
+    });
+    // All-unpriced hour.
+    const unpricedBurn = {
+      ...makeRow({ id: "burn-unpriced", direction: "burn", burn_type: "effective_burn", timestamp: 7_210, tx_hash: "0xburn-2" }),
+      amount_usd: null,
+    };
+    const rows = [unpricedMint, pricedBurn, unpricedBurn];
+    await insertMintBurnRows(db, rows);
+    await recalcAffectedHours(db, collectAffectedHours(rows));
+
+    const hourly = () => sqlite.prepare(
+      `SELECT hour_ts, mint_count, burn_count, mint_unpriced_event_count, burn_unpriced_event_count,
+              mint_volume_usd, burn_volume_usd, net_flow_usd
+         FROM mint_burn_hourly ORDER BY hour_ts`,
+    ).all();
+    expect(hourly()).toEqual([
+      {
+        hour_ts: 3600, mint_count: 1, burn_count: 1, mint_unpriced_event_count: 1, burn_unpriced_event_count: 0,
+        mint_volume_usd: 0, burn_volume_usd: 1_000_000, net_flow_usd: -1_000_000,
+      },
+      {
+        hour_ts: 7200, mint_count: 0, burn_count: 1, mint_unpriced_event_count: 0, burn_unpriced_event_count: 1,
+        mint_volume_usd: 0, burn_volume_usd: 0, net_flow_usd: 0,
+      },
+    ]);
+
+    // Heal: the mint gains its valuation; one recalc rewrites count and subtotals together.
+    sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 3000000 WHERE id = 'mint-unpriced'").run();
+    await recalcAffectedHours(db, collectAffectedHours([unpricedMint]));
+    expect(hourly()[0]).toEqual({
+      hour_ts: 3600, mint_count: 1, burn_count: 1, mint_unpriced_event_count: 0, burn_unpriced_event_count: 0,
+      mint_volume_usd: 3_000_000, burn_volume_usd: 1_000_000, net_flow_usd: 2_000_000,
+    });
   });
 
   it("ignores duplicate IDs, excludes unclassified burns, and persists reclassification", async () => {

@@ -193,6 +193,17 @@ describe("show-your-work formatters", () => {
     expect(table.formula).not.toContain("max(per-signal stress");
   });
 
+  it("discloses a pool signal reweighted over readable components", () => {
+    const poolValue = (pool: { value: number; available: boolean; componentCoverage?: number }) =>
+      formatDews({ score: 42, band: "ALERT", signals: { pool }, computedAt: 0, methodologyVersion: "v6.29" })
+        .rows.find((r) => r.label === "pool")?.value;
+    expect(poolValue({ value: 50, available: true, componentCoverage: 0.75 }))
+      .toBe("50 (reweighted over 75% of pool components; worst pool unavailable)");
+    expect(poolValue({ value: 50, available: true, componentCoverage: 1 })).toBe("50");
+    // Pre-6.29 rows carry no coverage and keep the bare value.
+    expect(poolValue({ value: 50, available: true })).toBe("50");
+  });
+
   it("formats liquidity components with weighted contributions", () => {
     const table = formatLiquidity({
       tvlDepth: 80,
@@ -206,6 +217,20 @@ describe("show-your-work formatters", () => {
     expect(tvl?.value).toBe("80.0");
     expect(tvl?.weight).toBe("30%");
     expect(tvl?.contribution).toBe("24.0");
+  });
+
+  it("shows an unavailable activity component as NR without rescaling the other weights", () => {
+    const table = formatLiquidity({
+      tvlDepth: 80,
+      volumeActivity: null,
+      poolQuality: 70,
+      durability: 50,
+      pairDiversity: 40,
+    });
+    const volume = table.rows.find((r) => r.label === "Volume");
+    expect(volume).toMatchObject({ value: "—", weight: "20%", contribution: "—" });
+    expect(table.rows.find((r) => r.label === "TVL Depth")).toMatchObject({ weight: "30%", contribution: "24.0" });
+    expect(table.rows.find((r) => r.label === "Composite score")?.value).toBe("NR (24h volume activity unavailable)");
   });
 
   it("formats PSI components", () => {
@@ -282,6 +307,18 @@ describe("show-your-work formatters", () => {
     expect(quality?.weight).toBe("30%");
     expect(quality?.contribution).toBe("21.0");
     expect(table.rows.find((r) => r.label === "Chain environment")?.value).toBe("100 (Pharos tier 1)");
+  });
+
+  it("renders an NR peg factor without a numeric contribution", () => {
+    const peg = formatChainHealth({
+      concentration: 80,
+      quality: 70,
+      pegStability: null,
+      backingDiversity: 60,
+      chainEnvironment: 100,
+    }).rows.find((r) => r.label === "Peg stability");
+    expect(peg?.contribution).toBe("—");
+    expect(peg?.value).not.toMatch(/\d|NaN/);
   });
 
   it("formats L2BEAT chain-health evidence", () => {

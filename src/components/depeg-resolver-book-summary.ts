@@ -27,7 +27,9 @@ const PAST_PEAK_FLOOR_BPS = 25;
 function isPastEventPeak(row: DdrV2ResponseRow): boolean {
   const live = getLiveCurrentDeviationBps(row);
   if (live == null) return false;
-  const peak = Math.abs(getPeakDeviationBps(row));
+  const peakDeviationBps = getPeakDeviationBps(row);
+  if (peakDeviationBps == null) return false;
+  const peak = Math.abs(peakDeviationBps);
   if (peak <= 0) return false;
   return Math.abs(live) > peak + Math.max(PAST_PEAK_FLOOR_BPS, peak * 0.02);
 }

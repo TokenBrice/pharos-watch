@@ -97,6 +97,37 @@ describe("generateDailyDigest publication contract", () => {
     const blocked = await invoke(enforceDb); expect(blocked.status).toBe("degraded"); expect(fetchWithRetry).toHaveBeenCalledTimes(2); expect(postDigestTweet).not.toHaveBeenCalled(); expect(bindJson(enforceDb, 5)).toMatchObject({ qualityGate: "blocked", styleGateMode: "enforce", editorialStyleGate: { retry: { attempted: true, outcome: "unresolved" } } });
   });
 
+  it("retries a bound numeric contradiction once and holds the unrepaired edition", async () => {
+    const contradictory = JSON.stringify({
+      ...JSON.parse(ANTHROPIC_OK_TEXT),
+      text: "USDT trades at $0.90, 150 bps below peg.",
+    });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => makeStreamResponse(contradictory));
+    const result = await invoke();
+    expect(result.status).toBe("degraded");
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    const retryBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[1]?.[1]?.body));
+    expect(JSON.stringify(retryBody.messages)).toContain("price-bps-mismatch");
+    expect(bindJson(scenario.db as MockD1Database, 5)).toMatchObject({ qualityGate: "blocked" });
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
+  it("publishes the corrected numeric copy after the bounded retry", async () => {
+    const response = JSON.parse(ANTHROPIC_OK_TEXT);
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(makeStreamResponse(JSON.stringify({ ...response, text: "USDT trades at $0.90, 150 bps below peg." })))
+      .mockResolvedValueOnce(makeStreamResponse(JSON.stringify({ ...response, text: "USDT trades at $0.985, 150 bps below peg." })));
+    const result = await invoke();
+    expect(result.itemCount).toBe(1);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(bindJson(scenario.db as MockD1Database, 5)).not.toMatchObject({ qualityGate: "blocked" });
+    expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    expect(getInsertDigestBinds(scenario.db as MockD1Database)?.[1]).toBe("USDT trades at $0.985, 150 bps below peg.");
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+  });
+
   it("repairs malformed model output once, but skips repair after the time budget is spent", async () => {
     const malformed = '```json\n{"title":"Broken", "text":\n```';
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(makeStreamResponse(malformed));

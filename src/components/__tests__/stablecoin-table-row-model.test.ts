@@ -28,6 +28,29 @@ function build(price: number | null, currentDeviationBps: number | null) {
 }
 
 describe("buildStablecoinTableRowModel peg deviation", () => {
+  it("does not display nominal price or a cached on-peg signal as an observation", () => {
+    const coin = makeStablecoin({
+      id: "usdc-circle",
+      price: 1,
+      priceSource: "protocol-par",
+      priceObservedAtMode: "nominal_reference",
+      priceConfidence: "high",
+    });
+    const model = buildStablecoinTableRowModel({
+      coin,
+      pegScores: new Map([[coin.id, makePegSummaryCoin({
+        id: coin.id,
+        currentDeviationBps: 0,
+        pegReference: { valueUsd: 1, source: "median", contributorCount: 2, asOf: 1_700_000_000 },
+      })]]),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.priceCell).toBe("—");
+    expect(model.pegDeviationBps).toBeNull();
+    expect(model.absPegDeviationBps).toBeNull();
+  });
+
   it("uses the Worker deviation for both display and severity", () => {
     const model = build(1.02, -50);
 

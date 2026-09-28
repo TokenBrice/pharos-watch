@@ -52,6 +52,23 @@ describe("handleCoinGeckoOnlyDetail", () => {
     shouldAttemptFetchMock.mockResolvedValue(true);
   });
 
+  it.each([undefined, 0, -1])("preserves USD history without usable CoinGecko price %s", async (price) => {
+    const timestamp = Date.UTC(2026, 0, 1);
+    fetchWithRetryMock.mockResolvedValue(Response.json({
+      market_caps: [[timestamp, 100]],
+      prices: price === undefined ? [] : [[timestamp, price]],
+    }));
+    const response = await handleCoinGeckoOnlyDetail(
+      { db, stablecoinId: "susds-sky", geckoId: "susds", pegType: "peggedUSD" },
+      makeDetailHelpers(async (tokens) => tokens),
+    );
+    expect(await response.json()).toEqual({ tokens: [{
+      date: timestamp / 1000,
+      totalCirculatingUSD: { peggedUSD: 100 },
+      totalCirculating: {},
+    }] });
+  });
+
   it("keeps the source breaker healthy when CoinGecko responds with stale per-asset history", async () => {
     const oldTimestampMs = Date.UTC(2024, 0, 1);
     fetchWithRetryMock.mockResolvedValue(Response.json({

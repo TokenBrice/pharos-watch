@@ -222,11 +222,38 @@ describe("handleMintBurnFlows contract tests", () => {
 
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     // Single source for the digest's top-chains block: same tracked-pair
-    // universe as `coins`, ordered by absolute 24h net flow.
+    // universe as `coins`, ordered by absolute 24h net flow. These buckets
+    // carry no recorded valuation coverage, so each chain reads as unknown.
     expect(body.chains).toEqual([
-      { chainId: "arbitrum", netFlow24hUsd: -50_000_000 },
-      { chainId: "ethereum", netFlow24hUsd: 30_000_000 },
+      { chainId: "arbitrum", netFlow24hUsd: -50_000_000, valuation: "unknown" },
+      { chainId: "ethereum", netFlow24hUsd: 30_000_000, valuation: "unknown" },
     ]);
+  });
+
+  it("excludes tracked coins without observed supply from the gauge mcap and counts them", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } },
+        // Empty buckets are unavailable supply, not a measured zero weight.
+        { id: "usdc-circle", symbol: "USDC", circulating: {} },
+        // An explicit zero is a measured weight and is not counted as unavailable.
+        { id: "usdai-usd-ai", symbol: "USDai", circulating: { peggedUSD: 0 } },
+      ],
+    });
+    const db = mintBurnScenario({
+      nowSec: now,
+      rows: {},
+      stablecoinsCache: { value: cacheValue, updatedAt: now },
+    });
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.gauge.trackedMcapUsd).toBe(100_000_000_000);
+    // Every tracked coin except the two observed rows (USDT, explicit-zero USDai) lacks a weight.
+    expect(body.gauge.mcapUnavailableCoins).toBe(body.gauge.trackedCoins - 2);
+    expect(body.coins.some((coin) => coin.stablecoinId === "usdc-circle")).toBe(true);
   });
 
   it("keeps aggregate coin fields on a fixed 24h window even when hours changes", async () => {
@@ -372,6 +399,7 @@ describe("handleMintBurnFlows contract tests", () => {
         netFlowUsd: 10_000_000,
         mintVolumeUsd: 15_000_000,
         burnVolumeUsd: 5_000_000,
+        valuation: "unknown",
       },
     ]);
     expect(usdt?.netFlow24hUsd).toBe(40_000_000);
@@ -504,10 +532,12 @@ describe("handleMintBurnFlows contract tests", () => {
   });
 
   it.each([
-    { safeNet: 200_000_000, invalid: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 40 },
-    { safeNet: -200_000_000, invalid: false, sourceUnavailable: false, stale: true, hours: 168, expectedIntensity: 0 },
-    { safeNet: 200_000_000, invalid: true, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 0 },
-    { safeNet: 200_000_000, invalid: false, sourceUnavailable: true, stale: false, hours: 24, expectedIntensity: 0 },
+    { safeNet: 200_000_000, invalid: false, gatedNet: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 40 },
+    { safeNet: -200_000_000, invalid: false, gatedNet: false, sourceUnavailable: false, stale: true, hours: 168, expectedIntensity: 0 },
+    { safeNet: 200_000_000, invalid: true, gatedNet: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 0 },
+    { safeNet: 200_000_000, invalid: false, gatedNet: false, sourceUnavailable: true, stale: false, hours: 24, expectedIntensity: 0 },
+    // A valuation-gated (null) classified net leaves FTQ undecidable: null, never inactive.
+    { safeNet: null, invalid: false, gatedNet: true, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: null },
   ])("reconciles a newer FTQ publication using cached flows: %j", async ({ safeNet, invalid, sourceUnavailable, stale, hours, expectedIntensity }) => {
     const now = Math.floor(Date.now() / 1000);
     vi.useFakeTimers();
@@ -559,7 +589,8 @@ describe("handleMintBurnFlows contract tests", () => {
       ].map(([stablecoinId, netFlow24hUsd]) => ({
         stablecoinId,
         symbol: "TEST",
-        netFlow24hUsd: invalid ? null : netFlow24hUsd,
+        // A malformed net (string) breaks the cached contract; `null` is a valuation-gated net.
+        netFlow24hUsd: invalid ? "not-a-number" : netFlow24hUsd,
         pressureShiftScore: null,
         pressureShiftState: "nr",
         netFlowDirection24h: "flat",
@@ -598,7 +629,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const unavailable = invalid || sourceUnavailable;
     expect(body.gauge).toMatchObject({
       score: cachedBody.gauge.score,
-      flightToQuality: expectedIntensity > 0,
+      flightToQuality: expectedIntensity === null ? null : expectedIntensity > 0,
       flightIntensity: expectedIntensity,
       classificationSource: unavailable ? "unavailable" : "safety-score-v9-publication",
       safetyScoreIdentity: unavailable ? null : activeSnapshot.safetyScoreIdentity,

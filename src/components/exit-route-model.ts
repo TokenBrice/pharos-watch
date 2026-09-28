@@ -76,7 +76,8 @@ export interface LiquidityExitRouteSelection {
 
 export interface LiquidityExitRouteModel {
   totalTvlUsd: number;
-  totalVolume24hUsd: number;
+  /** Global measured 24h volume; null when the window is not complete. */
+  totalVolume24hUsd: number | null;
   protocolCount: number;
   chainCount: number;
   poolCount: number;

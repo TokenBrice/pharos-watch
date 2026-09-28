@@ -35,8 +35,7 @@
     "reserveDisclosureUrl": "https://www.straitsx.com/xusd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "StraitsX MAS licensing and XUSD reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception. Under the GENIUS Act, StraitsX would need to register with the OCC as a foreign payment stablecoin issuer (FPSI) to offer XUSD to U.S. persons. No such application has been filed or announced as of 2026-06-18. StraitsX's own blog positions XUSD as B2B/Asia-focused; no US-market authorisation is claimed.",
+    "notes": "Evidence as of 2026-06-18 review: StraitsX MAS licensing and XUSD reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception. Under the GENIUS Act, StraitsX would need to register with the OCC as a foreign payment stablecoin issuer (FPSI) to offer XUSD to U.S. persons. No such application has been filed or announced as of 2026-06-18. StraitsX's own blog positions XUSD as B2B/Asia-focused; no US-market authorisation is claimed. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

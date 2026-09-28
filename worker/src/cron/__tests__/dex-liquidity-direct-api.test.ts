@@ -7,6 +7,8 @@ import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 import { jsonResponse, mockFetch as createFetchMock } from "@shared/test-utils/mock-fetch";
 import { makeFluidTicker, makeFluidRpcResponse, makeBalancerPool, makeOrcaPool, makeCursorDb, orcaRoute } from "./dex-liquidity-direct-api.test-support";
+import { acknowledgeDexSourcePagination } from "../dex-liquidity/source-pagination-state";
+import { buildAuthoritativeStagedPoolConfirmationIndex } from "../dex-liquidity/orchestrator-phases/authoritative";
 
 vi.mock("../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");
@@ -1058,6 +1060,11 @@ describe("fetchOrcaPools", () => {
 
     const pools = await fetchOrcaPools();
     expect(pools.pools).toHaveLength(2);
+    expect(pools.censusScope).toBe("exhaustive");
+    expect(buildAuthoritativeStagedPoolConfirmationIndex([{
+      name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"],
+      result: pools, authoritativeExactPoolKeys: new Set(["solana:pool1", "solana:pool2"]),
+    }]).enforcedChainsByProtocol.get("orca")).toEqual(new Set(["solana"]));
     expect(mockFetch).toHaveBeenCalledTimes(2);
     // Second call should include the cursor
     const secondCallUrl = mockFetch.mock.calls[1][0] as string;
@@ -1080,11 +1087,17 @@ describe("fetchOrcaPools", () => {
     expect(String(mockFetch.mock.calls[1][0])).toContain("next=stored-cursor");
     expect(String(mockFetch.mock.calls[1][0])).toContain("minTvl=10000");
     expect(result.pools.map((pool) => pool.poolAddress)).toEqual(["head", "stored-tail"]);
-    expect(result.pagination).toMatchObject({ state: "complete", headRefreshed: true, cycleCompleted: true });
+    expect(result.pagination).toMatchObject({ state: "partial", headRefreshed: true, cycleCompleted: true });
+    expect(buildAuthoritativeStagedPoolConfirmationIndex([{
+      name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"],
+      result, authoritativeExactPoolKeys: new Set(["solana:head", "solana:stored-tail"]),
+    }]).enforcedChainsByProtocol.has("orca")).toBe(false);
+    expect(state.cursor).toBe("stored-cursor");
+    await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? []);
     expect(state.cursor).toBe("fresh-head-tail");
   });
 
-  it("degrades on cursor write failure and retries the stored tail next run", async () => {
+  it("keeps a failed acknowledgement retryable without degrading fetched evidence", async () => {
     mockFetch = createFetchMock([
       orcaRoute(null, [1, 2].map((run) => ({
         body: { data: [makeOrcaPool(`head-${run}`)], meta: { cursor: { next: `fresh-head-tail-${run}` } } },
@@ -1097,19 +1110,18 @@ describe("fetchOrcaPools", () => {
     const { db, state } = makeCursorDb("stored-tail", 1);
 
     const failedWrite = await fetchOrcaPools(undefined, db);
+    expect(state.writeAttempts).toBe(0);
+    const failedAck = await acknowledgeDexSourcePagination(db, failedWrite.pendingPaginationUpdates ?? []);
     const retriedWrite = await fetchOrcaPools(undefined, db);
 
-    expect(failedWrite).toMatchObject({ ok: true, degraded: true });
-    expect(failedWrite.warnings).toContain(
-      "orca: pagination cursor persistence failed (write-failed); stored cursor remains retryable",
-    );
-    expect(failedWrite.pagination?.cursorPersistence).toEqual({
+    expect(failedWrite).toMatchObject({ ok: true, degraded: false });
+    expect(failedAck).toEqual({
       attempts: 1,
       written: 0,
       failures: [{ sourceKey: "orca:solana", errorClass: "write-failed" }],
     });
     expect(retriedWrite).toMatchObject({ ok: true, degraded: false });
-    expect(retriedWrite.pagination?.cursorPersistence).toEqual({
+    expect(await acknowledgeDexSourcePagination(db, retriedWrite.pendingPaginationUpdates ?? [])).toEqual({
       attempts: 1,
       written: 1,
       failures: [],
@@ -1133,7 +1145,9 @@ describe("fetchOrcaPools", () => {
     const { db, state } = makeCursorDb("far-tail-cursor");
 
     const transientFailure = await fetchOrcaPools(undefined, db);
+    await acknowledgeDexSourcePagination(db, transientFailure.pendingPaginationUpdates ?? []);
     const retriedTail = await fetchOrcaPools(undefined, db);
+    await acknowledgeDexSourcePagination(db, retriedTail.pendingPaginationUpdates ?? []);
 
     expect(transientFailure).toMatchObject({ ok: true, degraded: true });
     expect(transientFailure.pagination).toMatchObject({
@@ -1159,6 +1173,8 @@ describe("fetchOrcaPools", () => {
 
     expect(result.pagination).toMatchObject({ state: "partial", cursor: "fresh-head-tail" });
     expect(result.errors).toContain("API rejected tail cursor (404); restarting from refreshed head");
+    expect(state.cursor).toBe("expired-tail");
+    await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? []);
     expect(state.cursor).toBe("fresh-head-tail");
   });
 

@@ -267,7 +267,13 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
                 )}
               </TableCell>
               <TableCell className="hidden px-3 py-1.5 text-right font-mono tabular-nums sm:table-cell">
-                {formatCurrency(pool.volumeUsd1d)}
+                {pool.volumeUsd1d != null ? (
+                  formatCurrency(pool.volumeUsd1d)
+                ) : (
+                  <span className="text-muted-foreground text-xs" title="No in-budget 24h observation for this pool">
+                    &mdash;
+                  </span>
+                )}
               </TableCell>
               <TableCell className="hidden px-3 py-1.5 text-right text-xs text-muted-foreground lg:table-cell">
                 {(() => {
@@ -406,9 +412,12 @@ export function ScoreBreakdown({ components }: { components: DexLiquidityData["s
             {label} <span className="opacity-60">({weight})</span>
           </span>
           <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-            <div className={`h-full rounded-full ${getDurabilityBgColor(value)}`} style={{ width: `${value}%` }} />
+            {value != null && (
+              <div className={`h-full rounded-full ${getDurabilityBgColor(value)}`} style={{ width: `${value}%` }} />
+            )}
           </div>
-          <span className="w-8 text-right font-mono tabular-nums">{value}</span>
+          {/* DEC-19: unavailable activity stays NR; its weight is not redistributed. */}
+          <span className="w-8 text-right font-mono tabular-nums">{value ?? "NR"}</span>
         </div>
       ))}
     </div>

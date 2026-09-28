@@ -28,6 +28,41 @@ function fixtureRoot(): string {
 }
 
 describe("script entrypoint validation", () => {
+  it("checks unreferenced .mts scripts and command targets inside .mts consumers", () => {
+    const root = fixtureRoot();
+    writeFileSync(join(root, "scripts/maintenance/orphan.mts"), "export {};");
+    writeFileSync(join(root, "scripts/ci/runner.mts"), 'const command = "node ' + 'scripts/maintenance/missing.mts";');
+    writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: { run: "node " + "scripts/ci/runner.mts" } }));
+    expect(collectScriptEntrypointErrors({ root }).errors).toEqual([
+      "scripts/ci/runner.mts:1: stale script entrypoint `scripts/maintenance/missing.mts`",
+      "scripts/maintenance/orphan.mts: unreferenced script — wire it into package.json/CI or delete it",
+    ]);
+  });
+
+  it("accepts .mts reference consumers, extensionless references and retained operator policy", () => {
+    const root = fixtureRoot();
+    mkdirSync(join(root, "scripts/lib"), { recursive: true });
+    writeFileSync(join(root, "scripts/maintenance/operator.mts"), "export {};");
+    writeFileSync(join(root, "scripts/ci/runner.mts"), 'const retained = "scripts/maintenance/operator";');
+    writeFileSync(join(root, "scripts/lib/policy.mts"), 'const retained = ["scripts/ci/runner.mts"];');
+    expect(collectScriptEntrypointErrors({ root }).errors).toEqual([]);
+  });
+
+  it.each(["scripts/notes.md", ".github/notes.md"])("does not retain an orphan from %s", (path) => {
+    const root = fixtureRoot();
+    writeFileSync(join(root, "scripts/maintenance/orphan.mts"), "export {};");
+    writeFileSync(join(root, path), "node " + "scripts/maintenance/orphan.mts");
+    expect(collectScriptEntrypointErrors({ root }).errors).toEqual([
+      "scripts/maintenance/orphan.mts: unreferenced script — wire it into package.json/CI or delete it",
+    ]);
+  });
+
+  it("does not treat TypeScript declarations as runnable scripts", () => {
+    const root = fixtureRoot();
+    writeFileSync(join(root, "scripts/maintenance/types.d.mts"), "export declare const value: number;");
+    expect(collectScriptEntrypointErrors({ root }).errors).toEqual([]);
+  });
+
   it("forward-scans workflow commands across YAML line breaks", () => {
     const command = "node";
     const helper = ".github/scripts/deploy.mjs";

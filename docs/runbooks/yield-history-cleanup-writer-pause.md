@@ -51,6 +51,7 @@ LIMIT 20;
 
 ```sql
 SELECT stablecoin_id, source_key, COUNT(*) AS daily_rows, MAX(snapshot_date) AS newest_day
+FROM yield_history_daily
 GROUP BY stablecoin_id, source_key
 ORDER BY newest_day DESC
 LIMIT 20;

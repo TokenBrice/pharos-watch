@@ -54,6 +54,7 @@ describe("DEWS signal family curves", () => {
       ],
       prevPoolValue: 45,
       prevPoolAvailable: true,
+      prevPoolComponentCoverage: 1,
     }));
 
     expect(result.available).toBe(true);
@@ -74,6 +75,67 @@ describe("DEWS signal family curves", () => {
       prevPoolAvailable: false,
     }));
     expect(afterUnavailableCycle.value).toBeCloseTo(34.5, 5);
+    expect(afterUnavailableCycle.smoothing).toBe("previous-unavailable");
+  });
+
+  it("reweights over readable pool components and never publishes unreadable detail as measured calm", () => {
+    // balance .5 -> 50 stress, avg stress 50: both required components read 50.
+    const base = { weightedBalanceRatio: 0.5, avgPoolStress: 50 };
+
+    const unreadable = computePoolSignal(makeDewsInput({
+      ...base, topPools: null, topPoolsUnavailableReason: "top-pools-json-parse-failed",
+    }));
+    expect(unreadable).toMatchObject({
+      available: true,
+      value: 50,
+      worstPool: null,
+      worstPoolStatus: "unavailable",
+      worstPoolUnavailableReason: "top-pools-json-parse-failed",
+      componentCoverage: 0.75,
+    });
+
+    // Eligible pools without a balance measurement are unmeasured, not perfectly balanced.
+    const unmeasured = computePoolSignal(makeDewsInput({
+      ...base, topPools: [{ tvlUsd: 1_000_000, balanceRatio: null }],
+    }));
+    expect(unmeasured).toMatchObject({
+      value: 50, worstPool: null, worstPoolStatus: "unavailable",
+      worstPoolUnavailableReason: "top-pools-balance-unmeasured", componentCoverage: 0.75,
+    });
+
+    // A readable list with no eligible (>= $100K) pool is an observed empty set: a measured zero.
+    const empty = computePoolSignal(makeDewsInput({ ...base, topPools: [{ tvlUsd: 50_000, balanceRatio: 0.1 }] }));
+    expect(empty).toMatchObject({ value: 37.5, worstPool: 0, worstPoolStatus: "empty", componentCoverage: 1 });
+    expect(empty).not.toHaveProperty("worstPoolUnavailableReason");
+
+    const balanced = computePoolSignal(makeDewsInput({ ...base, topPools: [{ tvlUsd: 1_000_000, balanceRatio: 1 }] }));
+    expect(balanced).toMatchObject({ value: 37.5, worstPool: 0, worstPoolStatus: "observed", componentCoverage: 1 });
+
+    const imbalanced = computePoolSignal(makeDewsInput({
+      ...base,
+      topPools: [{ tvlUsd: 1_000_000, balanceRatio: 0.5 }, { tvlUsd: 2_000_000, balanceRatio: null }],
+    }));
+    expect(imbalanced).toMatchObject({ value: 50, worstPool: 50, worstPoolStatus: "observed", componentCoverage: 1 });
+
+    // Losing the pool detail can no longer lower stress below the imbalanced observation.
+    expect(unreadable.value).toBeGreaterThanOrEqual(balanced.value);
+  });
+
+  it("smooths only against a previous pool reading with the same component coverage", () => {
+    const current = { weightedBalanceRatio: 0.5, avgPoolStress: 50, topPools: null, prevPoolValue: 10, prevPoolAvailable: true };
+
+    const sameCoverage = computePoolSignal(makeDewsInput({ ...current, prevPoolComponentCoverage: 0.75 }));
+    expect(sameCoverage).toMatchObject({ value: 30, smoothing: "applied" });
+
+    const changedCoverage = computePoolSignal(makeDewsInput({ ...current, prevPoolComponentCoverage: 1 }));
+    expect(changedCoverage).toMatchObject({ value: 50, smoothing: "coverage-changed" });
+
+    // Legacy previous rows never recorded coverage, so they cannot vouch for the same blend.
+    const legacyPrevious = computePoolSignal(makeDewsInput({ ...current, prevPoolComponentCoverage: null }));
+    expect(legacyPrevious).toMatchObject({ value: 50, smoothing: "previous-coverage-unknown" });
+
+    expect(computePoolSignal(makeDewsInput({ weightedBalanceRatio: 0.5, avgPoolStress: 50, topPools: [] })).smoothing)
+      .toBe("no-previous");
   });
 
   it("pins liquidity score and TVL erosion curves", () => {
@@ -232,6 +294,24 @@ describe("DEWS signal family curves", () => {
     expect(result.value).toBe(85);
     expect(result.net24hUsd).toBe(-2_000_000);
     expect(result.baselineDays).toBe(14);
+  });
+
+  it("never scores flow from valuation that missing prices could alter", () => {
+    const scored = { burnVolume24hUsd: 1_000_000, mintVolume24hUsd: 0, burnBaseline30dUsd: 100_000, flowBaselineDays: 14, flowDataAgeDays: 0.1 };
+    const unavailable = (unavailableReason: string) => ({ value: 0, available: false, baselineDays: 14, unavailableReason });
+    // Mixed 24h window (unpriced mint beside priced burns) cannot read as a burn surge.
+    expect(computeFlowSignal(makeDewsInput({ ...scored, flowValuation24h: "partial" })))
+      .toEqual(unavailable("mint-burn-valuation-partial"));
+    // Legacy 24h buckets with unrecorded coverage are unknown, never complete.
+    expect(computeFlowSignal(makeDewsInput({ ...scored, flowValuation24h: "unknown" })))
+      .toEqual(unavailable("mint-burn-valuation-unknown"));
+    // Unpriced baseline burns understate the baseline and would overstate the surge.
+    expect(computeFlowSignal(makeDewsInput({ ...scored, flowBurnBaselineValuation: "partial" })))
+      .toEqual(unavailable("mint-burn-baseline-valuation-partial"));
+    // Unknown pre-completeness baseline coverage is tolerated while legacy buckets age out.
+    expect(computeFlowSignal(makeDewsInput({ ...scored, flowBurnBaselineValuation: "unknown" })).available).toBe(true);
+    // Genuine empty activity stays a measured zero.
+    expect(computeFlowSignal(makeDewsInput({ ...scored, burnVolume24hUsd: 0 }))).toMatchObject({ available: true, value: 0 });
   });
 
   it("pins legacy yield warning scores", () => {

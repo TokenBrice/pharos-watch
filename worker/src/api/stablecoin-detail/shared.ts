@@ -256,17 +256,29 @@ async function fetchSupplyHistoryFallback(
     .map((row) => ({
       date: row.snapshot_date,
       totalCirculatingUSD: { [pegType]: row.circulating_usd },
-      totalCirculating: {
-        [pegType]: row.price && row.price > 0 ? row.circulating_usd / row.price : 0,
-      },
+      totalCirculating: buildNativeSupplyBuckets(pegType, row.circulating_usd, row.price),
     }));
 }
 
 export function findNearestPrice(
   sortedPrices: { timestamp: number; price: number }[],
   date: number,
-): number {
-  return binarySearchNearest(sortedPrices, date, (p) => p.timestamp)?.price ?? 0;
+): number | null {
+  const price = binarySearchNearest(sortedPrices, date, (p) => p.timestamp)?.price;
+  return typeof price === "number" && Number.isFinite(price) && price > 0 ? price : null;
+}
+
+/** An omitted bucket means USD supply could not be converted with a usable price. */
+export function buildNativeSupplyBuckets(
+  pegType: string,
+  supplyUsd: number,
+  price: number | null | undefined,
+): Record<string, number> {
+  if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) return {};
+  const nativeSupply = supplyUsd / price;
+  return Number.isFinite(nativeSupply) && (nativeSupply > 0 || supplyUsd === 0)
+    ? { [pegType]: nativeSupply }
+    : {};
 }
 
 function dateKeyFromTimestampMs(tsMs: number): string {
@@ -331,18 +343,21 @@ export function buildTokenRowsFromMarketCaps(
   marketCaps: [number, number][],
   pegType: string,
   priceMap: Map<string, number>,
-  resolveMcap?: (mcap: number, price: number) => number,
+  resolveMcap?: (mcap: number, price: number | null) => number,
 ): Record<string, unknown>[] {
   return marketCaps
     .filter(([, mcap]) => Number.isFinite(mcap) && mcap > 0)
     .map(([ts, mcap]) => {
       const date = Math.floor(ts / 1000);
-      const price = priceMap.get(dateKeyFromTimestampMs(ts)) ?? 0;
+      const candidatePrice = priceMap.get(dateKeyFromTimestampMs(ts));
+      const price = typeof candidatePrice === "number" && Number.isFinite(candidatePrice) && candidatePrice > 0
+        ? candidatePrice
+        : null;
       const marketCap = resolveMcap ? resolveMcap(mcap, price) : mcap;
       return {
         date,
         totalCirculatingUSD: { [pegType]: marketCap },
-        totalCirculating: { [pegType]: price > 0 ? marketCap / price : 0 },
+        totalCirculating: buildNativeSupplyBuckets(pegType, marketCap, price),
       };
     });
 }

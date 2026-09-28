@@ -53,4 +53,40 @@ describe("FlowTable", () => {
     expect(html).toContain("Partial history");
     expect((html.match(/partial/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
+
+  it("renders a partial 24h net as unavailable and its incomplete volume as a lower bound", () => {
+    const partialCoin = {
+      ...coin,
+      valuation: {
+        window24h: {
+          completeness: "partial" as const,
+          mintCompleteness: "complete" as const,
+          burnCompleteness: "partial" as const,
+          unpricedMintEventCount: 0,
+          unpricedBurnEventCount: 3,
+        },
+        baseline: "complete" as const,
+        netFlow7d: "partial" as const,
+        netFlow30d: "complete" as const,
+        netFlow90d: "complete" as const,
+      },
+    };
+    const html = renderToStaticMarkup(<FlowTable coins={[partialCoin]} isLoading={false} />);
+
+    expect(html).not.toContain("-$12.00M");
+    expect(html).not.toContain("-$15.00M");
+    expect(html).toContain("0 mint / 3 burn events unpriced; signed net unavailable");
+    expect(html).toContain("≥ $20.00M");
+    expect(html).not.toContain("≥ $8.00M");
+    expect(html).toContain("-$30.00M");
+  });
+
+  it("renders a null net as unavailable instead of $0", () => {
+    const html = renderToStaticMarkup(
+      <FlowTable coins={[{ ...coin, netFlow24hUsd: null, netFlowDirection24h: null }]} isLoading={false} />,
+    );
+
+    expect(html).not.toContain("$0.00");
+    expect(html).toContain("Signed net unavailable");
+  });
 });

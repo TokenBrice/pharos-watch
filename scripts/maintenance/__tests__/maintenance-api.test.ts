@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import type {
   PegSummaryResponse,
   StablecoinListResponse,
@@ -59,6 +60,29 @@ describe("maintenance API access", () => {
 });
 
 describe("AI summary V9 current-value projection", () => {
+  it.each(ReportCardGradeSchema.options)("recognizes canonical %s claims in the refresh queue", (grade) => {
+    const current = grade === "NR" ? "A" : "NR";
+    expect(extractFindings(`${grade} overall grade`, makeCurrent({ overallGrade: current }))).toEqual([
+      { kind: "overall-grade", claim: `${grade} overall grade`, claimed: grade, current, severity: "high" },
+    ]);
+    expect(extractFindings(`${grade} overall grade`, makeCurrent({ overallGrade: grade }))).toEqual([]);
+  });
+
+  it.each(["D+", "D-"])("does not reinterpret unsupported %s as a published grade", (grade) => {
+    const current = makeCurrent({ overallGrade: "A", overallScore: 85, backingGrade: "A" });
+    expect(extractFindings(
+      `${grade} overall grade. Overall grade of ${grade}. ${grade} in backing. Backing grade of ${grade}. The ${grade} at 42.`,
+      current,
+    )).toEqual([]);
+  });
+
+  it("does not turn a missing current grade into a not-rated mismatch", () => {
+    expect(extractFindings("NR overall grade", makeCurrent())).toEqual([]);
+    expect(extractFindings("NR at 42", makeCurrent({ overallGrade: "A", overallScore: 42 }))).toEqual([
+      { kind: "overall-grade", claim: "NR at 42", claimed: "NR", current: "A", severity: "high" },
+    ]);
+  });
+
   it("uses the current report-card pillars and peg-summary identity", () => {
     const cards = [{
       id: "usdt-tether",

@@ -115,7 +115,27 @@ function buildRegulatorFact(genius: GeniusProfile): RegulatoryFact | null {
   };
 }
 
-function buildGeniusRegime(genius: GeniusProfile): RegulatoryRegimeView {
+/** Report dates retain their own semantics; legacy review dates are never "latest". */
+export function formatReserveReportNote(
+  report: NonNullable<StablecoinMeta["proofOfReserves"]>["latestReport"],
+): string | undefined {
+  if (!report) return undefined;
+  const dates = [
+    report.periodEnd ? `period end ${report.periodEnd}` : undefined,
+    report.publishedAt ? `published ${report.publishedAt}` : undefined,
+  ].filter(Boolean);
+  const reference = report.reviewReference;
+  const notes = [
+    dates.length ? `Latest report: ${dates.join("; ")}` : undefined,
+    reference ? `Review reference ${reference.date} (date kind unspecified; as of ${reference.reviewedAt} review)` : undefined,
+  ].filter(Boolean);
+  return notes.length ? notes.join(" · ") : undefined;
+}
+
+function buildGeniusRegime(
+  genius: GeniusProfile,
+  report: NonNullable<StablecoinMeta["proofOfReserves"]>["latestReport"],
+): RegulatoryRegimeView {
   const facts: RegulatoryFact[] = [
     {
       key: "status",
@@ -151,7 +171,7 @@ function buildGeniusRegime(genius: GeniusProfile): RegulatoryRegimeView {
       label: "Reserve disclosure",
       present: genius.reserveDisclosurePresent,
       ...(genius.reserveDisclosureUrl ? { href: genius.reserveDisclosureUrl } : {}),
-      ...(genius.latestReportDate ? { note: `latest ${genius.latestReportDate}` } : {}),
+      note: formatReserveReportNote(report),
     });
   }
 
@@ -217,14 +237,14 @@ function composeSummary(symbol: string, genius: GeniusProfile | null, mica: Mica
 }
 
 export function buildRegulatoryStandingView(
-  coin: Pick<StablecoinMeta, "symbol" | "genius" | "mica">,
+  coin: Pick<StablecoinMeta, "symbol" | "genius" | "mica" | "proofOfReserves">,
 ): RegulatoryStandingView | null {
   const genius = coin.genius && isGeniusRelevant(coin.genius) ? coin.genius : null;
   const mica = coin.mica ?? null;
   if (!genius && !mica) return null;
 
   const regimes: RegulatoryRegimeView[] = [];
-  if (genius) regimes.push(buildGeniusRegime(genius));
+  if (genius) regimes.push(buildGeniusRegime(genius, coin.proofOfReserves?.latestReport));
   if (mica) regimes.push(buildMicaRegime(mica));
 
   const sources: { label: string; url: string }[] = [];

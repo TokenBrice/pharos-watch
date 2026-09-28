@@ -79,6 +79,7 @@ describe("public API response schemas", () => {
       supplyByPegUsd: { peggedUSD: 100 },
       supplyUsd: {
         current: 100,
+        currentUnavailableReason: null,
         prevDay: 90,
         prevWeek: 80,
         prevMonth: 70,
@@ -98,12 +99,26 @@ describe("public API response schemas", () => {
       ]);
     }
   });
+  it("accepts unavailable current summary supply only with its reason field present", () => {
+    const base = {
+      id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed",
+      priceUsd: 1, priceSource: null, priceConfidence: null, supplySource: null, supplyObservedAt: null,
+      supplyRestored: false, supplyByPegUsd: {}, chainCount: 0, updatedAt: 1_779_105_600,
+    };
+    const unavailable = {
+      current: null, currentUnavailableReason: "supply-buckets-missing",
+      prevDay: 90, prevWeek: null, prevMonth: null, change1d: null, change7d: null, change30d: null,
+    };
+    expect(StablecoinSummaryResponseSchema.safeParse({ ...base, supplyUsd: unavailable }).success).toBe(true);
+    const { currentUnavailableReason: _omitted, ...withoutReason } = unavailable;
+    expect(StablecoinSummaryResponseSchema.safeParse({ ...base, supplyUsd: withoutReason }).success).toBe(false);
+  });
   it("isolates invalid date in NonUsdShareResponseSchema", () => {
     const payload = [{
       date: 1_779_105_600,
-      commodityShare: null,
+      commodityShare: 0,
       fiatNonUsdShare: 0.0456,
-      commodity: null,
+      commodity: 0,
       fiatNonUsd: 456,
       total: 10_000,
     }];

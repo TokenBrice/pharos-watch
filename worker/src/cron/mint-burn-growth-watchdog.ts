@@ -7,7 +7,7 @@ import { throwIfAborted } from "../lib/abort";
  * bounded retention pass after rows are valued, aggregated, and projected to
  * Tape. Count the current retained events independently of prior watchdog runs.
  * ~2.3M rows is the proxy for the agreed ~5 GB revisit point; crossing it
- * reports degraded before D1 approaches its cap.
+ * reports an operator quality warning before D1 approaches its cap.
  */
 export const MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD = 2_300_000;
 
@@ -33,8 +33,12 @@ export async function runMintBurnGrowthWatchdog(
   }
 
   return createCronResult({
-    status: "degraded",
+    status: "ok",
     itemCount: rowCount,
-    metadata: { rowCount, thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD },
+    metadata: {
+      rowCount,
+      thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,
+      quality: { reason: "row-count-threshold" },
+    },
   });
 }

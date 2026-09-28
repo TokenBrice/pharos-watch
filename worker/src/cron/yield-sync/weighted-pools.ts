@@ -1,5 +1,6 @@
 import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";
 import type { DlPool, ResolvedYield } from "./types";
+import { resolveYieldRewardShare } from "./source-risk";
 
 function normalizeDlIdentity(value: string): string {
   return value.trim().toLowerCase();
@@ -29,12 +30,15 @@ function weightedAverage(
   pools: DlPool[],
   readValue: (pool: DlPool) => number | null,
 ): number | null {
-  const rows = pools
-    .map((pool) => ({ value: readValue(pool), tvlUsd: pool.tvlUsd }))
-    .filter((row): row is { value: number; tvlUsd: number } => row.value != null && Number.isFinite(row.value));
-  const totalTvlUsd = rows.reduce((sum, row) => sum + row.tvlUsd, 0);
+  let totalTvlUsd = 0;
+  let weightedTotal = 0;
+  for (const pool of pools) {
+    const value = readValue(pool);
+    if (value == null || !Number.isFinite(value)) return null;
+    totalTvlUsd += pool.tvlUsd;
+    weightedTotal += value * pool.tvlUsd;
+  }
   if (!Number.isFinite(totalTvlUsd) || totalTvlUsd <= 0) return null;
-  const weightedTotal = rows.reduce((sum, row) => sum + row.value * row.tvlUsd, 0);
   if (!Number.isFinite(weightedTotal)) return null;
   const weightedValue = weightedTotal / totalTvlUsd;
   return Number.isFinite(weightedValue) ? weightedValue : null;
@@ -83,7 +87,13 @@ export function buildWeightedYieldPoolGroupSource(
   if (currentApy == null) return null;
 
   const apyBase = weightedAverage(pools, (pool) => pool.apyBase);
-  const apyReward = weightedAverage(pools, (pool) => pool.apyReward);
+  const apyReward = weightedAverage(pools, (pool) =>
+    pool.apyReward ?? (resolveYieldRewardShare({
+      apyReward: pool.apyReward,
+      apyBase: Number.isFinite(pool.apyBase) ? pool.apyBase : null,
+      currentApy: pool.apy,
+    }) === 0 ? 0 : null),
+  );
 
   return {
     currentApy,

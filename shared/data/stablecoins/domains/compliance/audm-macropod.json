@@ -34,8 +34,7 @@
     "reserveDisclosureUrl": "https://www.macropod.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "latestReportDate": "2026-08-01",
-    "notes": "Macropod publicly identifies an Australian AFSL and AUSTRAC context for AUDM, but no token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found. Australian licensing was not treated as U.S. GENIUS authorization; foreign-exception status remains unknown.",
+    "notes": "Evidence as of 2026-08-14 review: Macropod publicly identifies an Australian AFSL and AUSTRAC context for AUDM, but no token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found. Australian licensing was not treated as U.S. GENIUS authorization; foreign-exception status remains unknown. Reserve-report date recorded as of 2026-08-14 review: 2026-08-01 (date kind unspecified).",
     "references": [
       {
         "label": "OCC GENIUS Act regulations proposed rule",

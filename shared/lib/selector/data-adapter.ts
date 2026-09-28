@@ -7,6 +7,8 @@ import { SELECTOR_VERSION } from "./version";
 import { sha256Hex } from "../sha256";
 import { resolveCustodyModel } from "../report-card-policy";
 import { isOpportunityDerivedSafety } from "../yield-opportunity-provenance";
+import { isObservedPrice } from "../pricing-source-policy";
+import { isBluechipRatingCurrent } from "../bluechip-freshness";
 import type {
   AltYieldSource,
   BluechipRatingsMap,
@@ -45,6 +47,7 @@ export interface BuildSelectorRowsResult {
 
 export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRowsResult {
   const rows = new Map<string, MergedRow>();
+  const nowSeconds = toUnixSeconds(args.now);
 
   const pegById = new Map((args.pegData?.coins ?? []).map((coin) => [coin.id, coin] as const));
   const reportById = new Map((args.reportData?.cards ?? []).map((card) => [card.id, card] as const));
@@ -129,7 +132,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       // exclusion prose all read the pillar directly.
       safetyLiquidityScore: safety?.pillars.exit.score ?? null,
       custodyModel: resolveCustodyModel(meta),
-      bluechipGrade: bluechip?.grade ?? null,
+      bluechipGrade: bluechip && isBluechipRatingCurrent(bluechip, nowSeconds) ? bluechip.grade : null,
 
       liquidityScore: dex?.liquidityScore ?? null,
       effectiveTvlUsd: dex?.effectiveTvlUsd ?? null,
@@ -162,7 +165,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       trackingSpanDays: peg?.trackingSpanDays ?? 0,
       isRecentListing: (peg?.trackingSpanDays ?? 0) > 0 && (peg?.trackingSpanDays ?? 0) < 90,
       pegSummaryAgeSec: ageSecondsFromTimestamp(
-        peg?.priceObservedAt ?? peg?.priceUpdatedAt ?? peg?.priceSyncedAt ?? null,
+        peg && isObservedPrice(peg) ? peg.priceObservedAt ?? peg.priceUpdatedAt ?? peg.priceSyncedAt ?? null : null,
         args.now,
       ),
       dexTvlAgeSec: ageSecondsFromTimestamp(dex?.updatedAt ?? null, args.now),

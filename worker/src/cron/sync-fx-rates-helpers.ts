@@ -1,6 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { fetchRealtimeFxRates } from "../lib/fx-realtime";
+import { fetchRealtimeFxRates, type RealtimeFxObservation } from "../lib/fx-realtime";
 import { fetchChainlinkReferenceQuoteSnapshot, type ChainlinkReferenceQuote } from "../lib/chainlink-feeds";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -121,19 +121,19 @@ export async function persistFxSyncResult(
   secondaryPegKeys: string[],
 ): Promise<CronResult> {
   const cacheResult = await persistFxRateState(db, state.usableRates, meta, syncStartSec);
-  const canonicalCache = cacheResult.rates.written ? null : await getCache(db, "fx-rates");
-  const lastWriteAdvanced = cacheResult.rates.written || (!!canonicalCache && canonicalCache.updatedAt > syncStartSec);
+  const canonicalCache = cacheResult.written ? null : await getCache(db, "fx-rates");
+  const lastWriteAdvanced = cacheResult.written || (!!canonicalCache && canonicalCache.updatedAt > syncStartSec);
   await state.flushCronEvents(db);
   await logCronEvent(db, {
     job: "sync-fx-rates",
-    eventType: cacheResult.rates.written ? "fx-rates-cache-published" : "fx-rates-cache-write-skipped",
+    eventType: cacheResult.written ? "fx-rates-cache-published" : "fx-rates-cache-write-skipped",
     severity: "info",
-    message: cacheResult.rates.written
+    message: cacheResult.written
       ? "Cached FX rates."
       : "Cache write skipped because a newer FX rates row exists.",
     metadata: {
       rates: state.usableRates,
-      cacheWriteMode: cacheResult.rates.written ? "published" : "skipped-newer",
+      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
       syncStartSec,
     },
   });
@@ -143,15 +143,15 @@ export async function persistFxSyncResult(
     ?? (repeatedCachedFallback ? "repeated-cached-fallback" : undefined);
   return {
     status: degradedReason ? "degraded" : undefined,
-    itemCount: cacheResult.rates.written ? Object.keys(state.usableRates).length : 0,
+    itemCount: cacheResult.written ? Object.keys(state.usableRates).length : 0,
     metadata: JSON.stringify({
       ...state.buildResultMetadata(secondaryPegKeys),
       reason: degradedReason,
-      cacheWriteMode: cacheResult.rates.written ? "published" : "skipped-newer",
-      casSkipped: cacheResult.rates.skippedBecauseNewer || cacheResult.meta.skippedBecauseNewer,
+      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
+      casSkipped: cacheResult.skippedBecauseNewer,
       cacheKey: "fx-rates",
       syncStartSec,
-      cacheWriteSucceeded: cacheResult.rates.written,
+      cacheWriteSucceeded: cacheResult.written,
       lastWriteAdvanced,
     }),
   };
@@ -495,13 +495,18 @@ export class FxSyncRunState {
     }
   }
 
-  applyRealtimeOverlayRates(rates: Map<string, number>): number {
+  /**
+   * Overlays one validated OXR snapshot. Every applied rate carries the snapshot's
+   * upstream `observedAt`, never this run's clock, so a later Chainlink comparison
+   * sees the real observation age.
+   */
+  applyRealtimeOverlayRates(observation: RealtimeFxObservation): number {
     let applied = 0;
     const applyRealtimeRate = (pegKey: string, realtimeRate: number) => {
       this.usableRates[pegKey] = realtimeRate;
       applyRealtimeOverlaySourceMetadata(
         pegKey,
-        this.syncStartSec,
+        observation.observedAt,
         this.syncStartSec,
         this.sourceUpdatedAtByPeg,
         this.sourceModeByPeg,
@@ -511,7 +516,7 @@ export class FxSyncRunState {
       applied++;
     };
 
-    for (const [pegKey, realtimeRate] of rates) {
+    for (const [pegKey, realtimeRate] of observation.rates) {
       const currentRate = this.usableRates[pegKey];
       if (currentRate != null) {
         const delta = Math.abs(realtimeRate - currentRate) / currentRate;
@@ -830,15 +835,30 @@ export async function runOpenExchangeRatesOverlay(
     runBestEffort,
     run: async () => {
       const attemptedAt = Math.floor(Date.now() / 1000);
-      const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
+      const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal, attemptedAt);
       if (realtimeFetch.completed) {
         await runBestEffort("fx-oxr-last-fetch-write", async () => {
           await setCache(db, OXR_LAST_ATTEMPT_KEY, String(attemptedAt));
         });
       }
 
-      const realtimeApplied = state.applyRealtimeOverlayRates(realtimeFetch.rates);
-      if (realtimeFetch.rates.size > 0) {
+      if (realtimeFetch.rejection) {
+        await logCronEvent(db, {
+          job: "sync-fx-rates",
+          eventType: "openexchange-rates-observation-rejected",
+          severity: "warning",
+          message: "Rejected Open Exchange Rates snapshot because its upstream timestamp is not admissible.",
+          metadata: {
+            reason: realtimeFetch.rejection.reason,
+            upstreamTimestamp: realtimeFetch.rejection.upstreamTimestamp,
+            attemptedAt,
+          },
+        });
+      }
+      const observation = realtimeFetch.observation;
+      const availableCount = observation?.rates.size ?? 0;
+      const realtimeApplied = observation ? state.applyRealtimeOverlayRates(observation) : 0;
+      if (availableCount > 0) {
         await runBestEffort("fx-oxr-last-success-write", async () => {
           await setCache(db, OXR_LAST_SUCCESS_KEY, String(attemptedAt));
         });
@@ -847,15 +867,15 @@ export async function runOpenExchangeRatesOverlay(
       await logCronEvent(db, {
         job: "sync-fx-rates",
         eventType: "openexchange-rates-applied",
-        severity: realtimeApplied === realtimeFetch.rates.size ? "info" : "warning",
+        severity: realtimeApplied === availableCount ? "info" : "warning",
         message: "Applied realtime FX overlay rates.",
-        metadata: { applied: realtimeApplied, available: realtimeFetch.rates.size },
+        metadata: { applied: realtimeApplied, available: availableCount, observedAt: observation?.observedAt ?? null },
       });
       await runBestEffort("recordOutcome:fx-realtime", async () => {
-        await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeFetch.rates.size > 0);
+        await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, availableCount > 0);
       });
-      return realtimeFetch.rates.size > 0
-        ? (realtimeApplied === realtimeFetch.rates.size ? "ok" : "partial")
+      return availableCount > 0
+        ? (realtimeApplied === availableCount ? "ok" : "partial")
         : "unavailable";
     },
   });

@@ -22,12 +22,13 @@ import {
 import { cn } from "@/lib/utils";
 import { clamp } from "@shared/lib/math";
 import {
-  getNetFlowDirection24h,
   getPressureShiftState,
   type NetFlowDirection24h,
   type PressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
+import { aggregateCoinFlows24h } from "@/lib/mint-burn-coin-helpers";
+import { describeUnpricedEvents, type MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface FlowBrrrOverviewProps {
@@ -44,14 +45,17 @@ interface FlowBrrrOverviewProps {
 interface FlowSnapshot {
   mint24h: number;
   burn24h: number;
-  net24h: number;
+  /** Summed signed net; unavailable when any coin's 24h net is null or partial. */
+  net24h: MintBurnSignedNetView;
+  /** Lower-bound caveat for the summed volumes; `null` when both sides are complete. */
+  volumeNote: string | null;
   score: number | null;
   trackedCoins: number;
   headline: string;
   description: string;
   leverPct: number | null;
   has24hActivity: boolean;
-  netDirection: NetFlowDirection24h;
+  netDirection: NetFlowDirection24h | null;
   pressureState: PressureShiftState;
   directionUi: FlowDirectionUi;
   pressureUi: FlowPressureUi;
@@ -61,35 +65,29 @@ function buildSnapshot(
   gauge: MintBurnGauge | null,
   coins: MintBurnCoinFlow[],
 ): FlowSnapshot {
-  let mint24h = 0;
-  let burn24h = 0;
-  let net24h = 0;
-
-  for (const coin of coins) {
-    mint24h += coin.mintVolume24hUsd;
-    burn24h += coin.burnVolume24hUsd;
-    net24h += coin.netFlow24hUsd;
-  }
-
+  const aggregate = aggregateCoinFlows24h(coins);
   const score = gauge?.score ?? null;
-  const has24hActivity = Boolean(mint24h || burn24h || net24h);
-  const netDirection = getNetFlowDirection24h({
-    netFlow24hUsd: net24h,
-    has24hActivity,
-  });
+  const netDirection = aggregate.direction;
   const pressureState = getPressureShiftState(score);
   const leverPct = score === null ? null : clamp((score + 100) / 2, 0, 100);
+  const hasPartialSide = aggregate.mintCompleteness === "partial" || aggregate.burnCompleteness === "partial";
+  const hasUnknownSide = aggregate.mintCompleteness === "unknown" || aggregate.burnCompleteness === "unknown";
 
   return {
-    mint24h,
-    burn24h,
-    net24h,
+    mint24h: aggregate.mintVolumeUsd,
+    burn24h: aggregate.burnVolumeUsd,
+    net24h: aggregate.net,
+    volumeNote: hasPartialSide
+      ? `Volumes are known-valuation lower bounds: ${describeUnpricedEvents(aggregate)}.`
+      : hasUnknownSide
+        ? "Volumes are lower bounds: part of the window was aggregated before valuation completeness was recorded."
+        : null,
     score,
     trackedCoins: gauge?.trackedCoins ?? coins.length,
     headline: buildFlowOverviewHeadline(netDirection, pressureState),
     description: buildFlowOverviewDescription(netDirection, pressureState),
     leverPct,
-    has24hActivity,
+    has24hActivity: aggregate.has24hActivity,
     netDirection,
     pressureState,
     directionUi: getFlowDirectionUi(netDirection, "overview"),
@@ -131,8 +129,10 @@ export function FlowBrrrOverview({
 
   const isCompact = variant === "compact";
   const totalFlow24h = snapshot.mint24h + snapshot.burn24h;
-  const netDominance = snapshot.has24hActivity
-    ? Math.abs(snapshot.net24h) / Math.max(totalFlow24h, 1)
+  // An unavailable net (partial valuation) has no measured dominance; it takes the
+  // same idle intensity as an inactive window instead of reading as zero.
+  const netDominance = snapshot.has24hActivity && snapshot.net24h.valueUsd != null
+    ? Math.abs(snapshot.net24h.valueUsd) / Math.max(totalFlow24h, 1)
     : 0.08;
   const pressurePower = snapshot.score === null
     ? 0.18
@@ -185,9 +185,18 @@ export function FlowBrrrOverview({
               >
                 {snapshot.pressureUi.label}
               </span>
-              {gauge?.flightToQuality && (
+              {gauge?.flightToQuality === true && (
                 <span className="inline-flex rounded-full border border-amber-600/35 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
-                  FTQ {Math.round(gauge.flightIntensity)}%
+                  FTQ{gauge.flightIntensity != null ? ` ${Math.round(gauge.flightIntensity)}%` : ""}
+                </span>
+              )}
+              {gauge?.flightToQuality === null && (
+                <span
+                  className="inline-flex rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground"
+                  title="Flight-to-quality unavailable: missing valuation could alter the conclusion"
+                >
+                  FTQ unavailable
+                  <span className="sr-only"> (missing valuation could alter the flight-to-quality conclusion)</span>
                 </span>
               )}
             </div>
@@ -290,11 +299,18 @@ export function FlowBrrrOverview({
           <p className="text-xs text-muted-foreground">
             The gauge is a market-cap-weighted pressure-shift signal, not a literal mint-vs-burn direction meter.
           </p>
+          {gauge?.partialValuationInputs ? (
+            <p className="text-xs text-muted-foreground">
+              {gauge.partialValuationInputs} weighted {gauge.partialValuationInputs === 1 ? "coin has" : "coins have"} partial
+              valuation; unpriced events could alter the gauge.
+            </p>
+          ) : null}
         </div>
 
         <MintingPressureGauge
           mintVolume24hUsd={snapshot.mint24h}
           burnVolume24hUsd={snapshot.burn24h}
+          volumeNote={snapshot.volumeNote}
         />
       </section>
     </div>

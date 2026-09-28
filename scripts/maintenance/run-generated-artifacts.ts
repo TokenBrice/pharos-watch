@@ -8,6 +8,7 @@ import {
 } from "../lib/command-runner.mts";
 import { buildGeneratedArtifactPhases } from "../lib/automation-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { CliUsageError } from "../lib/cli-args.mjs";
 
 // Each phase is a dependency barrier. Four-way concurrency keeps the
 // browser-rendering OG builders from stacking up on constrained runners.
@@ -269,13 +270,15 @@ export async function runGeneratedArtifacts({
     phases,
   });
 
+  if (executionPhases.length === 0) {
+    log("[generated-artifacts] No eligible generated artifacts selected; skipping (no checks executed).");
+    return { status: 0, failedCmd: null, aborted: false, failures: [], results: [] };
+  }
+
   if (dryRun) {
     const commandCount = executionPhases.reduce((sum, phase) => sum + phase.units.length, 0);
     log(`[generated-artifacts] Dry run enabled; ${commandCount} command(s) will not execute.`);
     log("[generated-artifacts] Command plan:");
-    if (executionPhases.length === 0) {
-      log("(no generated artifacts selected)");
-    }
     for (const { phase, units } of executionPhases) {
       log(`phase ${phase}:`);
       for (const [index, unit] of units.entries()) {
@@ -348,7 +351,7 @@ async function runDirect(): Promise<void> {
     process.exitCode = result.status;
   } catch (error) {
     console.error(`[generated-artifacts] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-    process.exitCode = 1;
+    process.exitCode = error instanceof CliUsageError ? 2 : 1;
   }
 }
 

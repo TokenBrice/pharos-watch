@@ -33,7 +33,7 @@ function fixedInputStub(
 
 const BARE_META: MechanismMeta = { id: "alpha" } as MechanismMeta;
 
-// P1-32: assurance fixtures carry the schema's required date-only report fields.
+// Scoring admission requires both independently sourced report dates.
 const ASSURANCE_REPORT_FIXTURE = {
   periodEnd: "2026-07-15",
   publishedAt: "2026-07-15",
@@ -71,6 +71,28 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.custodyContinuity.status.observationState).toBe("bounded-unknown");
     expect(review.assuranceAndReconciliation.status.observationState).toBe("known");
     expect(review.assuranceAndReconciliation.quality).toBe("adequate");
+  });
+
+  it.each([
+    { periodEnd: undefined },
+    { publishedAt: undefined },
+    { assuranceMethod: "unknown" as const },
+    { scope: "unknown" as const },
+  ])("keeps incomplete report observations bounded instead of upgrading assurance: %o", (missing) => {
+    const review = buildSafetyScoreV9MechanismReview(
+      fixedInputStub(),
+      {
+        ...ATTESTED_META,
+        proofOfReserves: {
+          ...ATTESTED_META.proofOfReserves,
+          latestReport: { ...ATTESTED_META.proofOfReserves.latestReport, ...missing },
+        },
+      },
+      "fiat-cash",
+    );
+    if (review?.archetype !== "fiat-cash") throw new Error("unexpected archetype");
+    expect(review.assuranceAndReconciliation.status.observationState).toBe("bounded-unknown");
+    expect(review.assuranceAndReconciliation.quality).toBeNull();
   });
 
   it("restates every recorded assurance tier from the proof-of-reserves report", () => {

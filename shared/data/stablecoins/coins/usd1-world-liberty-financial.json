@@ -88,7 +88,7 @@
     {
       "chain": "monad",
       "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
-      "decimals": 18
+      "decimals": 6
     },
     {
       "chain": "mantle",
@@ -113,7 +113,7 @@
     {
       "chain": "tempo",
       "address": "0x20c000000000000000000000111111111e910f0f",
-      "decimals": 18
+      "decimals": 6
     },
     {
       "chain": "xlayer",
@@ -125,7 +125,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "usd1-bundle-oracle",
-    "version": 2,
+    "version": 3,
     "semantics": "single-asset",
     "breakerScope": "usd1-world-liberty-financial",
     "display": {
@@ -141,7 +141,76 @@
     },
     "params": {
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
-      "fallbackRpcUrl": "https://eth.llamarpc.com"
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "liabilityScope": {
+        "basis": "issuer-native-supply",
+        "reviewedAt": "2026-09-27",
+        "evidenceRef": "KPMG examination of the BitGo USD1 Reserve Report for July 2026 (https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_July_2026.pdf) Note A; worldliberty/cre-por-dashboard@109a68ae lib/contracts/usd1-token.ts native flags; https://docs.chain.link/ccip/directory/mainnet/token/USD1",
+        "included": [
+          {
+            "chain": "ethereum",
+            "reader": "evm-erc20"
+          },
+          {
+            "chain": "bsc",
+            "reader": "evm-erc20"
+          },
+          {
+            "chain": "tron",
+            "reader": "tron-trc20"
+          },
+          {
+            "chain": "solana",
+            "reader": "solana-spl-mint"
+          },
+          {
+            "chain": "aptos",
+            "reader": "aptos-fungible-asset"
+          },
+          {
+            "chain": "tempo",
+            "reader": "evm-erc20"
+          }
+        ],
+        "excluded": [
+          {
+            "chain": "plume",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "CCIP bridge-only representation backed by USD1 locked in the Ethereum LockReleaseTokenPool 0x36a72eD0096B414521C45E3ddC9ed657d1D9c141, already inside Ethereum totalSupply; outside KPMG's minted-and-redeemed chains"
+          },
+          {
+            "chain": "monad",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "CCIP bridge-only representation backed by USD1 locked in the Ethereum LockReleaseTokenPool 0x36a72eD0096B414521C45E3ddC9ed657d1D9c141, already inside Ethereum totalSupply; outside KPMG's minted-and-redeemed chains"
+          },
+          {
+            "chain": "mantle",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "CCIP bridge-only representation backed by USD1 locked in the Ethereum LockReleaseTokenPool 0x36a72eD0096B414521C45E3ddC9ed657d1D9c141, already inside Ethereum totalSupply; outside KPMG's minted-and-redeemed chains"
+          },
+          {
+            "chain": "morph-l2",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "CCIP bridge-only representation backed by USD1 locked in the Ethereum LockReleaseTokenPool 0x36a72eD0096B414521C45E3ddC9ed657d1D9c141, already inside Ethereum totalSupply; outside KPMG's minted-and-redeemed chains"
+          },
+          {
+            "chain": "abcore",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "CCIP bridge-only representation backed by USD1 locked in the Ethereum LockReleaseTokenPool 0x36a72eD0096B414521C45E3ddC9ed657d1D9c141, already inside Ethereum totalSupply; outside KPMG's minted-and-redeemed chains"
+          },
+          {
+            "chain": "xlayer",
+            "relation": "lock-mint-representation",
+            "backedBy": "ethereum",
+            "reason": "CCIP representation listed in the Chainlink CCIP USD1 directory, backed by the Ethereum LockReleaseTokenPool 0x36a72eD0096B414521C45E3ddC9ed657d1D9c141; absent from the issuer's native chain list and outside KPMG's minted-and-redeemed chains"
+          }
+        ]
+      }
     }
   },
   "launchDate": "2025-03-25"

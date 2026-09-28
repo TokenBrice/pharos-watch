@@ -36,8 +36,7 @@
     "reserveDisclosureUrl": "https://aid.gaib.ai/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-05-31",
-    "notes": "AID has issuer-style 1:1 mint/redeem and reserve disclosures attested by McMillan Woods (HK) CPA Limited, but no public GENIUS authorization or foreign-issuer comparability exception was found. The GENIUS Act was enacted July 18, 2025; all implementing rules remain at NPRM stage as of 2026-06-18 with no PPSI approvals granted and no Singapore comparability determination issued by Treasury. GAIB is Singapore-domiciled; the foreign-exception pathway (GENIUS Act s.18) requires a Treasury comparability determination for Singapore's regime, which has not been published.",
+    "notes": "Evidence as of 2026-06-18 review: AID has issuer-style 1:1 mint/redeem and reserve disclosures attested by McMillan Woods (HK) CPA Limited, but no public GENIUS authorization or foreign-issuer comparability exception was found. The GENIUS Act was enacted July 18, 2025; all implementing rules remain at NPRM stage as of 2026-06-18 with no PPSI approvals granted and no Singapore comparability determination issued by Treasury. GAIB is Singapore-domiciled; the foreign-exception pathway (GENIUS Act s.18) requires a Treasury comparability determination for Singapore's regime, which has not been published. Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act NPRM",

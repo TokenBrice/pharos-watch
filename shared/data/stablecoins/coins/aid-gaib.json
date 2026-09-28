@@ -35,7 +35,25 @@
     "url": "https://aid.gaib.ai/transparency",
     "provider": "GAIB transparency dashboard (the claimed monthly McMillan Woods (Hong Kong) CPA attestation exists only in GAIB blog marketing — no attestation report is retrievable anywhere, McMillan Woods appears nowhere in GAIB's docs corpus, and the docs promise only forward-looking quarterly third-party audits)",
     "attestorTier": "self",
-    "cadence": "undisclosed"
+    "cadence": "undisclosed",
+    "latestReport": {
+      "reviewReference": {
+        "date": "2026-05-31",
+        "reviewedAt": "2026-06-18",
+        "dateKind": "unspecified"
+      },
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Pharos compliance research",
+      "confidence": "unknown",
+      "sources": [
+        {
+          "label": "GAIB AID transparency (as of 2026-06-18 review; date kind unspecified)",
+          "url": "https://aid.gaib.ai/transparency"
+        }
+      ]
+    }
   },
   "links": [
     {

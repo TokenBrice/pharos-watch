@@ -21,6 +21,16 @@ function asset(
 }
 
 describe("derivePegRates", () => {
+  it("excludes nominal references from observed peer counts and medians", () => {
+    const result = derivePegRates([
+      { ...asset("nominal", "peggedEUR", 1, 2_000_000), priceObservedAtMode: "nominal_reference" },
+      { ...asset("nominal-source", "peggedEUR", 1, 2_000_000), priceSource: "protocol-par" },
+      asset("market", "peggedEUR", 1.2, 2_000_000),
+    ]);
+    expect(result.rates.peggedEUR).toBe(1.2);
+    expect(result.counts.peggedEUR).toBe(1);
+  });
+
   it("rejects invalid fallback rates consistently with and without fiat peers", () => {
     for (const rate of [-1, Infinity]) {
       const populated = derivePegRates([asset("eur", "peggedEUR", 1.2, 2_000_000)], undefined, { peggedEUR: rate });

@@ -729,6 +729,9 @@ export function buildComplianceRegistryOutput({
     const entry = { id: coin.id };
     if (genius && isPlainObject(genius)) {
       entry.genius = genius;
+      if (coin.proofOfReserves?.latestReport) {
+        entry.proofOfReserves = { latestReport: coin.proofOfReserves.latestReport };
+      }
       validateGeniusComplianceProjection(entry, coin, index, geniusComplianceFields);
       geniusEntries.push({ id: coin.id, genius });
     }

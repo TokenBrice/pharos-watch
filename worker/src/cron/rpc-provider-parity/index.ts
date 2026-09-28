@@ -106,7 +106,7 @@ export async function syncRpcProviderParity(
       status: "error",
       itemCount: 0,
       error: toErrorMessage(error),
-      metadata: JSON.stringify({ attempted: 0, deadlineMs }),
+      metadata: JSON.stringify({ reason: "rpc-parity-probe-failed", attempted: 0, deadlineMs }),
     };
   }
 
@@ -156,6 +156,11 @@ export async function syncRpcProviderParity(
     status: degraded ? "degraded" : "ok",
     itemCount: probe.samples.length,
     metadata: JSON.stringify({
+      outputPublishedAt: write.published && probe.samples.length > 0 ? nowSec : null,
+      ...(degraded ? {
+        reason: !write.ok ? "rpc-parity-store-degraded"
+          : probe.aborted ? "rpc-parity-probe-aborted" : "rpc-parity-deadline-exhausted",
+      } : {}),
       attempted: probe.attempted,
       headOk: probe.headOk,
       skipped: probe.skipped.length,

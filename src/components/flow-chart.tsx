@@ -16,7 +16,12 @@ import { ChartFigure } from "@/components/chart-primitives/figure";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
-import type { MintBurnHourlyBucket } from "@shared/types";
+import type { MintBurnHourlyBucket, MintBurnValuationCompleteness } from "@shared/types";
+import {
+  combineMintBurnValuationCompleteness,
+  resolveMintBurnValuationCompleteness,
+} from "@shared/lib/mint-burn-valuation";
+import { formatMintBurnVolume, MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@/lib/mint-burn-valuation-display";
 import { DAY_HOURS, HOUR_SECONDS } from "@/lib/constants";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
@@ -35,13 +40,28 @@ interface ChartDatum {
   /** Raw mint and burn volumes for the tooltip. */
   mint: number | null;
   burn: number | null;
-  /** Net flow for this bucket. */
+  /** Net flow for this bucket; `null` for a gap or an unavailable (partial-valuation) net. */
   net: number | null;
-  /** Running cumulative of net flow across the visible series. */
+  /** Running cumulative of net flow; stops at the first bucket whose net is unavailable. */
   cumulative: number | null;
   /** 7-period trailing mean of observed net flow. Drives the reference band. */
   rollingNet: number | null;
+  /** Bucket valuation completeness; `null` for an interpolated gap. */
+  valuation: MintBurnValuationCompleteness | null;
   isInterpolated: boolean;
+}
+
+const PARTIAL_BUCKET_NOTE = "Partial valuation: net unavailable";
+
+function formatBucketVolume(value: number | null, valuation: MintBurnValuationCompleteness | null, decimals: number): string {
+  if (value == null) return "—";
+  return formatMintBurnVolume(value, valuation, (v) => formatCurrency(v, decimals));
+}
+
+function describeBucketValuation(valuation: MintBurnValuationCompleteness | null): string {
+  if (valuation === "partial") return PARTIAL_BUCKET_NOTE;
+  if (valuation === "unknown") return MINT_BURN_COVERAGE_UNKNOWN_NOTE;
+  return valuation === "complete" ? "Complete" : "—";
 }
 
 const FLOW_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
@@ -55,10 +75,11 @@ const FLOW_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
 
 const FLOW_TABLE_COLUMNS: ChartDataTableColumn<ChartDatum>[] = [
   { id: "time", label: "Time (UTC)", format: (row) => FLOW_TABLE_DATE_FMT.format(new Date(row.ts)) },
-  { id: "mint", label: "Minted (USD)", format: (row) => row.mint == null ? "—" : formatCurrency(row.mint, 0) },
-  { id: "burn", label: "Burned (USD)", format: (row) => row.burn == null ? "—" : formatCurrency(row.burn, 0) },
+  { id: "mint", label: "Minted (USD)", format: (row) => formatBucketVolume(row.mint, row.valuation, 0) },
+  { id: "burn", label: "Burned (USD)", format: (row) => formatBucketVolume(row.burn, row.valuation, 0) },
   { id: "net", label: "Net flow (USD)", format: (row) => row.net == null ? "—" : formatCurrency(row.net, 0) },
   { id: "cumulative", label: "Cumulative (USD)", format: (row) => row.cumulative == null ? "—" : formatCurrency(row.cumulative, 0) },
+  { id: "valuation", label: "Valuation", format: (row) => describeBucketValuation(row.valuation) },
 ];
 
 const DAY_SECONDS = DAY_HOURS * 60 * 60;
@@ -83,36 +104,39 @@ function useMotionDurationMs(token = "--motion-duration-entrance"): number {
   return ms;
 }
 
-function aggregateBuckets(
-  sorted: MintBurnHourlyBucket[],
-  bucketSeconds: number,
-): Array<{
+interface AggregatedBucket {
   ts: number;
   mint: number | null;
   burn: number | null;
   net: number | null;
+  valuation: MintBurnValuationCompleteness | null;
   isInterpolated: boolean;
-}> {
+}
+
+function aggregateBuckets(
+  sorted: MintBurnHourlyBucket[],
+  bucketSeconds: number,
+): AggregatedBucket[] {
   if (sorted.length === 0) return [];
-  const byBucket = new Map<number, { mint: number; burn: number; net: number }>();
+  const byBucket = new Map<
+    number,
+    { mint: number; burn: number; net: number | null; valuation: MintBurnValuationCompleteness }
+  >();
   for (const b of sorted) {
     const bucketTs = Math.floor(b.hourTs / bucketSeconds) * bucketSeconds;
-    const entry = byBucket.get(bucketTs) ?? { mint: 0, burn: 0, net: 0 };
+    const entry = byBucket.get(bucketTs) ?? { mint: 0, burn: 0, net: 0, valuation: "complete" };
+    const valuation = resolveMintBurnValuationCompleteness(b.valuation);
     entry.mint += b.mintVolumeUsd;
     entry.burn += b.burnVolumeUsd;
-    entry.net += b.netFlowUsd;
+    // A null or partial hourly net makes the re-bucketed net unavailable, never 0.
+    entry.net = entry.net == null || b.netFlowUsd == null || valuation === "partial" ? null : entry.net + b.netFlowUsd;
+    entry.valuation = combineMintBurnValuationCompleteness(entry.valuation, valuation);
     byBucket.set(bucketTs, entry);
   }
 
   const startBucket = Math.floor(sorted[0].hourTs / bucketSeconds) * bucketSeconds;
   const endBucket = Math.floor(sorted[sorted.length - 1].hourTs / bucketSeconds) * bucketSeconds;
-  const result: Array<{
-    ts: number;
-    mint: number | null;
-    burn: number | null;
-    net: number | null;
-    isInterpolated: boolean;
-  }> = [];
+  const result: AggregatedBucket[] = [];
   for (let bucketTs = startBucket; bucketTs <= endBucket; bucketTs += bucketSeconds) {
     const entry = byBucket.get(bucketTs);
     result.push({
@@ -120,6 +144,7 @@ function aggregateBuckets(
       mint: entry?.mint ?? null,
       burn: entry?.burn ?? null,
       net: entry?.net ?? null,
+      valuation: entry?.valuation ?? null,
       isInterpolated: entry == null,
     });
   }
@@ -159,10 +184,13 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     // so the daily view shows a 7-day band; hourly view shows a 7-hour band.
     const window = 7;
     let cumulative = 0;
+    // Once a bucket's net is unavailable the running total is unproven from there on.
+    let cumulativeUnavailable = false;
     const result: ChartDatum[] = [];
     for (let i = 0; i < buckets.length; i += 1) {
       const b = buckets[i];
       const hasObservation = b.net != null;
+      if (!b.isInterpolated && b.net == null) cumulativeUnavailable = true;
       if (b.net != null) cumulative += b.net;
       const start = Math.max(0, i - (window - 1));
       let rolling = 0;
@@ -180,8 +208,9 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
         mint: b.mint,
         burn: b.burn,
         net: b.net,
-        cumulative: hasObservation ? cumulative : null,
+        cumulative: hasObservation && !cumulativeUnavailable ? cumulative : null,
         rollingNet: hasObservation && rollingCount > 0 ? rolling / rollingCount : null,
+        valuation: b.valuation,
         isInterpolated: b.isInterpolated,
       });
     }
@@ -189,6 +218,10 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   }, [hourly, bucketSeconds]);
 
   const hasInterpolated = useMemo(() => chartData.some((d) => d.isInterpolated), [chartData]);
+  const partialBucketCount = useMemo(
+    () => chartData.filter((d) => !d.isInterpolated && d.net == null).length,
+    [chartData],
+  );
 
   const { bandX1, bandX2, bandY1, bandY2 } = useMemo(() => {
     // Reference area uses the min/max of the rolling-net series so the band
@@ -332,6 +365,13 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
           Gaps in {useDailyBuckets ? "daily" : "hourly"} data are shown as breaks and excluded from rolling averages.
         </p>
       )}
+      {partialBucketCount > 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Partial valuation: {partialBucketCount} {useDailyBuckets ? "daily" : "hourly"}{" "}
+          {partialBucketCount === 1 ? "bucket has" : "buckets have"} unpriced events, so no net bar is drawn and the
+          cumulative line stops at the first one. Mint and burn volumes there are lower bounds.
+        </p>
+      )}
     </div>
   );
 }
@@ -362,8 +402,8 @@ function FlowTooltip({
       <TooltipLabel>{time}</TooltipLabel>
       {datum ? (
         <>
-          <TooltipRow color={CHART_GREEN} label="Mint" value={datum.mint == null ? "—" : formatCurrency(datum.mint)} />
-          <TooltipRow color={CHART_RED} label="Burn" value={datum.burn == null ? "—" : formatCurrency(datum.burn)} />
+          <TooltipRow color={CHART_GREEN} label="Mint" value={formatBucketVolume(datum.mint, datum.valuation, 2)} />
+          <TooltipRow color={CHART_RED} label="Burn" value={formatBucketVolume(datum.burn, datum.valuation, 2)} />
           <TooltipRow
             color={datum.net == null || datum.net >= 0 ? CHART_GREEN : CHART_RED}
             label="Net"
@@ -376,6 +416,12 @@ function FlowTooltip({
               ? "—"
               : `${datum.cumulative >= 0 ? "+" : "-"}${formatCurrency(Math.abs(datum.cumulative))}`}
           />
+          {datum.valuation === "partial" || datum.valuation === "unknown" ? (
+            <TooltipRow
+              label="Valuation"
+              value={datum.valuation === "partial" ? PARTIAL_BUCKET_NOTE : "Coverage unknown"}
+            />
+          ) : null}
         </>
       ) : null}
     </PharosChartTooltip>

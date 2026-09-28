@@ -92,6 +92,7 @@ interface InsertDigestRecordOptions {
   digestExtended: string | null;
   digestMeta: string | null;
   signal?: AbortSignal;
+  onInserted?: () => void;
 }
 
 interface RunDigestChannelDeliveryOptions<TCreds> {
@@ -211,6 +212,7 @@ export async function finalizeDigestCronResult(
     itemCount: 1,
     ...(degradedReason ? { status: "degraded" as const } : {}),
     metadata: JSON.stringify({
+      outputPublishedAt: options.publication.outputPublishedAt ?? null,
       ...(degradedReason ? { reason: degradedReason } : {}),
       summary: `${options.summaryBeforeQuality}${qualityMetadata}${options.summaryAfterQuality ?? ""}`,
       ...options.metadataAfterSummary,
@@ -263,6 +265,7 @@ export async function reportDigestRefusal(
   llmAttempts: DigestLlmAttemptTelemetry[],
 ): Promise<CronResult> {
   const metadata = {
+    reason: "anthropic-refusal",
     skipped: "anthropic-refusal" as const,
     refusalCategory,
     llmAttempts,
@@ -431,7 +434,7 @@ export async function insertDigestRecord(options: InsertDigestRecordOptions): Pr
   throwIfAborted(options.signal);
   const inputDataJson = JSON.stringify(options.inputData);
 
-  await runWithOverloadRetry(() =>
+  const result = await runWithOverloadRetry(() =>
     options.db
       .prepare(
         `INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta)
@@ -466,6 +469,7 @@ export async function insertDigestRecord(options: InsertDigestRecordOptions): Pr
     options.signal,
   );
   throwIfAborted(options.signal);
+  if ((result.meta?.changes ?? 0) > 0) options.onInserted?.();
 }
 
 export function didDigestChannelDeliver(status: string): boolean {

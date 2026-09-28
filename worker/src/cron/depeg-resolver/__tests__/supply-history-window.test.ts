@@ -62,7 +62,8 @@ describe("DDR supply-history window", () => {
     expect(windowed.length).toBeLessThan(full.length / 5);
     expect(windowed.length).toBe(40 * DAY / DAY + 7 * DAY / DAY + SUPPLY_CONTEXT_LOOKBACK_ROWS);
 
-    for (const mintBurnRows of [[], [{ hourTs: startedAt - 3600, netFlowUsd: 500_000 }]]) {
+    const valuation = { unpricedMintEventCount: 0, unpricedBurnEventCount: 0, unknownMintHours: 0, unknownBurnHours: 0 };
+    for (const mintBurnRows of [[], [{ hourTs: startedAt - 3600, netFlowUsd: 500_000, valuation }]]) {
       expect(buildSupplyContext(windowed, startedAt, nowSec, mintBurnRows, false))
         .toEqual(buildSupplyContext(full, startedAt, nowSec, mintBurnRows, false));
       expect(buildSupplyContext(windowed, startedAt, nowSec, mintBurnRows, true))

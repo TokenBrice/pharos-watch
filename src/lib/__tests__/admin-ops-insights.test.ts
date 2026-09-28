@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { buildActionReadinessChecks, buildReserveRecoveryForecast } from "@/lib/status/admin-ops-insights";
 import type { StatusResponse } from "@shared/types";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 
 function withReservePressure(base: StatusResponse): StatusResponse {
+  if (base.reserveComposition.status === "unavailable") throw new Error("Expected an observed reserve fixture");
   return {
     ...base,
     reserveComposition: {
@@ -40,6 +42,23 @@ function withReservePressure(base: StatusResponse): StatusResponse {
 }
 
 describe("admin ops insights", () => {
+  it("does not claim a clear queue or confirmed writes after a failed reserve read", () => {
+    const data = withReservePressure(makeHealthyStatusResponse());
+    data.reserveComposition = makeReserveComposition({ status: "unavailable" });
+    expect(buildReserveRecoveryForecast(data)).toMatchObject({
+      state: "watch",
+      estimatedRunsToClear: null,
+      resumeCursor: null,
+    });
+    const checks = buildActionReadinessChecks({
+      data, healthData: makeHealthyHealthResponse(), clientDataStale: false, recommendedActions: [],
+    });
+    expect(checks.find((check) => check.id === "d1-writes")?.state).toBe("watch");
+    expect(checks.find((check) => check.id === "reserve-lane")?.state).toBe("watch");
+    expect(checks.find((check) => check.id === "reserve-cursor")?.state).toBe("watch");
+    data.crons["sync-live-reserves"].inFlight = { startedAt: 1, updatedAt: 1, stale: true };
+    expect(buildReserveRecoveryForecast(data).state).toBe("blocked");
+  });
   it("estimates reserve catch-up from deferred queue and last-run throughput", () => {
     const data = withReservePressure(makeHealthyStatusResponse());
 

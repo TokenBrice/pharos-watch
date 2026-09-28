@@ -1,4 +1,5 @@
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import {
   STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
 } from "@shared/lib/status-thresholds";
@@ -242,7 +243,7 @@ async function loadCoinGeckoPriceDiff(
   let comparedCoins = 0;
   const rows = trackedWithGeckoId.flatMap((asset) => {
     const meta = ACTIVE_META_BY_ID.get(asset.id);
-    const ourPrice = typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0
+    const ourPrice = isObservedPrice(asset) && typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0
       ? asset.price
       : null;
     const geckoId = asset.geckoId;

@@ -12,6 +12,7 @@ export function makePorSupply(overrides: Partial<Supply> = {}): Supply {
       decimals: 18,
     }],
     omittedNonEvmChains: [],
+    omittedNoRpcChains: [],
     omittedReadFailureChains: [],
     ...overrides,
   };

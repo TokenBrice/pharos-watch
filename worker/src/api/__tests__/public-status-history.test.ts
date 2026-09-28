@@ -30,6 +30,37 @@ describe("handlePublicStatusHistory", () => {
     vi.restoreAllMocks();
   });
 
+  it("returns unavailable without caching when only the history query fails", async () => {
+    const db = mockD1([{
+      match: "FROM status_transitions",
+      rows: [],
+      throwError: new Error("history read failed"),
+    }]);
+
+    const res = await handlePublicStatusHistory(db, new Request("https://pharos.watch/api/public-status-history"));
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.error).toEqual(expect.any(String));
+    expect(body).not.toHaveProperty("transitions");
+    expect(body).not.toHaveProperty("lastChangedAt");
+  });
+
+  it("preserves a cacheable empty history after a successful zero-row query", async () => {
+    const db = mockD1([{ match: "FROM status_transitions", rows: [] }]);
+
+    const res = await handlePublicStatusHistory(db, new Request("https://pharos.watch/api/public-status-history"));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    await expect(res.json()).resolves.toMatchObject({
+      currentStatus: "healthy",
+      transitions: [],
+      lastChangedAt: null,
+    });
+  });
+
   it("filters transitions to the requested time window", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([

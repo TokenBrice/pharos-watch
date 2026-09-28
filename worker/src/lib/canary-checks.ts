@@ -1,5 +1,6 @@
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
+import { CANARY_INCIDENT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { CanaryStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
@@ -66,6 +67,7 @@ interface DexCurrentSummaryRow {
 
 interface DexLatestGenerationSummaryRow {
   live_generation_rows: number | null;
+  global_rows: number | null;
 }
 
 interface DexPublishedGenerationRow {
@@ -101,6 +103,7 @@ interface WorkerCanaryRunRow {
 
 interface CanaryCheckContext {
   latestPublishedDexGeneration?: Promise<DexPublishedGenerationRow | null>;
+  latestDexCurrentSummary?: Promise<DexLatestGenerationSummaryRow>;
 }
 
 type CanaryCheckDefinition = {
@@ -127,8 +130,8 @@ const CANARY_SEVERITY_ORDER: Record<CanaryRunSeverity, number> = {
 const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
 const MAX_CANARY_ERROR_CHARS = 800;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
-const PSI_MAX_AGE_SEC = 4 * 3600;
-const DEWS_MAX_AGE_SEC = 4 * 3600;
+const PSI_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stabilityIndex;
+const DEWS_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stressSignals;
 const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
 const GBP_BENCHMARK_MAX_RECORD_AGE_SEC = 7 * 24 * 3600;
 const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
@@ -148,6 +151,8 @@ function isFreshAt(timestampSec: number | null, observedAt: number, maxAgeSec: n
       staleAt: { absoluteSec: maxAgeSec },
     },
     observedAt,
+    // The serial run's assessment clock can precede a publication read later in the run.
+    { readAtSec: nowSec() },
   ).state === "fresh";
 }
 
@@ -281,14 +286,23 @@ async function loadDexLatestGenerationCurrentSummary(
     db
       .prepare(
         `SELECT /* canary-dex-latest-generation-summary */
-           COUNT(*) AS live_generation_rows
+           COUNT(*) AS live_generation_rows,
+           SUM(CASE WHEN stablecoin_id = '__global__' THEN 1 ELSE 0 END) AS global_rows
          FROM dex_liquidity
          WHERE publication_generation_id = ?
            AND publication_state = 'published'`,
       )
       .bind(generationId)
       .first<DexLatestGenerationSummaryRow>(),
-  )) ?? { live_generation_rows: 0 };
+  )) ?? { live_generation_rows: 0, global_rows: 0 };
+}
+
+function loadDexLatestGenerationCurrentSummaryOnce(
+  db: D1Database,
+  generationId: string,
+  context: CanaryCheckContext,
+): Promise<DexLatestGenerationSummaryRow> {
+  return context.latestDexCurrentSummary ??= loadDexLatestGenerationCurrentSummary(db, generationId);
 }
 
 async function checkDexCurrentPublication(
@@ -319,10 +333,14 @@ async function checkDexCurrentPublication(
     if (unpublishedRows > 0) {
       return errorResult(`${unpublishedRows} current DEX liquidity rows are not published`, metadata);
     }
-    const publishedGeneration = latestPublished!;
-    const latestGenerationSummary = await loadDexLatestGenerationCurrentSummary(
+    if (!latestPublished) {
+      return degradedResult("DEX published generation is unavailable", metadata);
+    }
+    const publishedGeneration = latestPublished;
+    const latestGenerationSummary = await loadDexLatestGenerationCurrentSummaryOnce(
       db,
       publishedGeneration.generation_id,
+      context,
     );
     const latestGenerationPublishedRows = Number(latestGenerationSummary.live_generation_rows ?? 0);
     metadata.latestGenerationPublishedRows = latestGenerationPublishedRows;
@@ -349,26 +367,21 @@ async function checkDexGlobalRow(
 ) {
   try {
     const row = await loadLatestPublishedDexGenerationOnce(db, context);
-    const currentRows = Number(row?.current_row_count ?? 0);
-    const expectedRows =
-      typeof row?.expected_row_count === "number" && Number.isFinite(row.expected_row_count)
-        ? row.expected_row_count
-        : null;
-    const generationMetadata = parseObjectMetadata(row?.metadata_json);
-    const activeRows =
-      typeof generationMetadata?.activeStablecoinCount === "number" &&
-      Number.isFinite(generationMetadata.activeStablecoinCount)
-        ? generationMetadata.activeStablecoinCount
-        : null;
-    const metadata = { currentRows, expectedRows, activeRows, globalRows: null as number | null };
-    if (activeRows == null && expectedRows == null) {
-      return degradedResult("DEX global row evidence is unavailable", metadata);
+    const metadata = {
+      generationId: row?.generation_id ?? null,
+      currentRows: null as number | null,
+      globalRows: null as number | null,
+    };
+    if (!row) {
+      return degradedResult("DEX published generation is unavailable", metadata);
     }
-    const expectedActiveRows = activeRows ?? Math.max(0, expectedRows! - 1);
-    const globalRows = currentRows > 0 ? currentRows - expectedActiveRows : 0;
+    const summary = await loadDexLatestGenerationCurrentSummaryOnce(db, row.generation_id, context);
+    const currentRows = Number(summary.live_generation_rows ?? 0);
+    const globalRows = Number(summary.global_rows ?? 0);
+    metadata.currentRows = currentRows;
     metadata.globalRows = globalRows;
     if (currentRows === 0) {
-      return skippedResult("dex_liquidity has no published current rows", metadata);
+      return degradedResult("dex_liquidity has no published current rows", metadata);
     }
     if (globalRows !== 1) {
       return degradedResult(`expected one DEX __global__ row, found ${globalRows}`, metadata);
@@ -681,7 +694,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     run: checkUsdBenchmarkCurrent,
   },
 ] as const;
-const ACTIVE_CANARY_CHECK_IDS = CANARY_CHECKS.map((definition) => definition.checkId);
+export const ACTIVE_CANARY_CHECK_IDS: readonly string[] = CANARY_CHECKS.map((definition) => definition.checkId);
 
 async function runOneCanaryCheck(
   db: D1Database,
@@ -846,6 +859,9 @@ function emptyCanaryStatus(now: number): CanaryStatus {
     latestRunAt: null,
     maxAgeSec: CANARY_STATUS_MAX_AGE_SEC,
     totalChecks: 0,
+    expectedCheckIds: [...ACTIVE_CANARY_CHECK_IDS],
+    presentCheckIds: [],
+    missingCheckIds: [...ACTIVE_CANARY_CHECK_IDS],
     okCount: 0,
     degradedCount: 0,
     errorCount: 0,
@@ -895,12 +911,14 @@ export async function loadCanaryStatus(
   const values = Object.values(checks);
   const staleCount = values.filter((check) => now - check.observedAt > CANARY_STATUS_MAX_AGE_SEC).length;
   const counts = summarizeCanaryResults(values);
+  const presentCheckIds = Object.keys(checks);
+  const missingCheckIds = ACTIVE_CANARY_CHECK_IDS.filter((checkId) => !(checkId in checks));
   let status: CanaryStatus["status"];
   if (values.length === 0) {
     status = "unknown";
   } else if (staleCount > 0) {
     status = "stale";
-  } else if (counts.errorCount > 0 || counts.degradedCount > 0) {
+  } else if (missingCheckIds.length > 0 || counts.errorCount > 0 || counts.degradedCount > 0 || counts.skippedCount > 0) {
     status = "degraded";
   } else {
     status = "healthy";
@@ -911,6 +929,9 @@ export async function loadCanaryStatus(
     latestRunAt,
     maxAgeSec: CANARY_STATUS_MAX_AGE_SEC,
     totalChecks: values.length,
+    expectedCheckIds: [...ACTIVE_CANARY_CHECK_IDS],
+    presentCheckIds,
+    missingCheckIds,
     ...counts,
     staleCount,
     checks,

@@ -149,6 +149,49 @@ describe("handleStablecoinSummary", () => {
     });
   });
 
+  it.each([
+    { name: "missing", circulating: undefined },
+    { name: "empty", circulating: {} },
+    { name: "invalid-only", circulating: { peggedUSD: null, peggedEUR: "n/a" } },
+  ])("publishes $name current supply as unavailable with no fabricated deltas", async ({ circulating }) => {
+    const payload = JSON.parse(makeStablecoinsCacheValue());
+    payload.peggedAssets[0].circulating = circulating;
+    const db = mockD1([{ match: "cache", rows: [], first: {
+      value: JSON.stringify(payload), updated_at: Math.floor(Date.now() / 1000),
+    } }]);
+
+    const body = await readJsonResponse(await handleStablecoinSummary(db, "usdt-tether"), 200);
+
+    expect(body).toMatchObject({
+      supplyByPegUsd: {},
+      supplyUsd: {
+        current: null,
+        currentUnavailableReason: "supply-buckets-missing",
+        prevDay: 90,
+        prevWeek: 80,
+        prevMonth: 70,
+        change1d: null,
+        change7d: null,
+        change30d: null,
+      },
+    });
+  });
+
+  it("keeps an explicit zero current supply as a measured value", async () => {
+    const payload = JSON.parse(makeStablecoinsCacheValue());
+    payload.peggedAssets[0].circulating = { peggedUSD: 0 };
+    const db = mockD1([{ match: "cache", rows: [], first: {
+      value: JSON.stringify(payload), updated_at: Math.floor(Date.now() / 1000),
+    } }]);
+
+    const body = await readJsonResponse(await handleStablecoinSummary(db, "usdt-tether"), 200);
+
+    expect(body).toMatchObject({
+      supplyByPegUsd: { peggedUSD: 0 },
+      supplyUsd: { current: 0, currentUnavailableReason: null, change1d: -90, change7d: -80, change30d: -70 },
+    });
+  });
+
   it("returns stale publication data with a warning and no reusable cache policy", async () => {
     const now = 1_800_000_000;
     const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);

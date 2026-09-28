@@ -9,9 +9,12 @@ plus a higher chat-wide ceiling.
 Each admission is one conditional `cache` upsert with `RETURNING`; it either
 increments the existing window or starts a new window at the exact expiry
 boundary. This avoids lost increments when Telegram delivers webhook updates
-concurrently. The counter remains an advisory availability guard: if D1 cannot
-execute the statement or return a valid count, the webhook logs
-`command-flood` and fails open for that update.
+concurrently. If D1 cannot execute a scope's statement or return a valid count,
+the webhook logs `command-flood`. Admission requires at least one successfully
+evaluated scope and no evaluated scope blocking the update. All scopes failing
+denies admission with a best-effort busy reply; a private chat has only one
+scope, so its counter failure denies the update. A group may still be admitted
+when one scope fails and the other evaluates as allowed.
 
 ## Callback acknowledgements
 

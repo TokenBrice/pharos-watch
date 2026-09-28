@@ -9,6 +9,12 @@ import { computeGaugeScore, detectFlightToQuality, getGaugeBand } from "../lib/m
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
+import {
+  addMintBurnValuationTally,
+  emptyMintBurnValuationTally,
+  summarizeMintBurnValuation,
+} from "@shared/lib/mint-burn-valuation";
+import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../lib/mint-burn-hourly-valuation";
 import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
 import {
   buildFlightToQualityClassificationFromV9Snapshot,
@@ -117,7 +123,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const safetyScoreIdentity = classification.kind === "ok" ? classification.classification.safetyScoreIdentity : null;
   if (classificationWarning) logWorkerEventArgs("api", "warn", `[mint-burn-flows] ${classificationWarning}`);
 
-  // Load stablecoins cache for mcap lookup
+  // Load stablecoins cache for mcap lookup. Only observed weights enter the map;
+  // an absent id is an unavailable weight, counted by buildCoinSummaries.
   const mcapById = new Map<string, number>();
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   if (stablecoinsCacheResult.kind !== "ok") {
@@ -132,12 +139,21 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   }
   for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
     if (TRACKED_IDS.has(asset.id)) {
-      mcapById.set(asset.id, sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating));
+      const mcap = sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating);
+      if (mcap !== null) mcapById.set(asset.id, mcap);
     }
   }
 
   const data = await fetchAggregateData(db, params);
-  const { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd } = buildCoinSummaries(
+  const {
+    coins,
+    gaugeInputs,
+    safeNet24h,
+    riskyNet24h,
+    trackedMcapUsd,
+    mcapUnavailableCoins,
+    partialValuationInputs,
+  } = buildCoinSummaries(
     data,
     mcapById,
     gradeClassification,
@@ -152,7 +168,11 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   // consumers of the published payload (daily digest) never re-derive a chain
   // breakdown from a different universe.
   const chains = [...aggregateHourlyRowsByChain(data.hourly24hRows).entries()]
-    .map(([chainId, aggregate]) => ({ chainId, netFlow24hUsd: aggregate.netFlow }))
+    .map(([chainId, aggregate]) => ({
+      chainId,
+      netFlow24hUsd: aggregate.netFlow,
+      valuation: summarizeMintBurnValuation(aggregate.valuation).completeness,
+    }))
     .sort((a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd));
 
   const body = {
@@ -166,6 +186,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       safetyScoreIdentity,
       trackedCoins: coins.length,
       trackedMcapUsd,
+      mcapUnavailableCoins,
+      partialValuationInputs,
     },
     coins,
     chains,
@@ -180,7 +202,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     },
   };
 
-  return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt ?? 0);
+  return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt);
 }
 
 function cachedAggregateNeedsSafetyValidation(payload: unknown): boolean {
@@ -248,21 +270,27 @@ async function reconcileCachedAggregateSafetyResponse(
             if (coins.success) {
               let safeNet24h = 0;
               let riskyNet24h = 0;
+              // A null classified net (valuation-gated payload) leaves FTQ undecidable here.
+              let unresolvedNet = false;
               for (const coin of coins.data) {
-                if (current.classification.safeIds.has(coin.stablecoinId)) {
+                const isSafe = current.classification.safeIds.has(coin.stablecoinId);
+                if (!isSafe && !current.classification.riskyIds.has(coin.stablecoinId)) continue;
+                if (coin.netFlow24hUsd === null) {
+                  unresolvedNet = true;
+                } else if (isSafe) {
                   safeNet24h += coin.netFlow24hUsd;
-                } else if (current.classification.riskyIds.has(coin.stablecoinId)) {
+                } else {
                   riskyNet24h += coin.netFlow24hUsd;
                 }
               }
-              const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
+              const ftq = unresolvedNet ? null : detectFlightToQuality({ safeNet24h, riskyNet24h });
               return cloneResponse(fallback, {
                 body: JSON.stringify({
                   ...payload,
                   gauge: {
                     ...(isRecord(payload.gauge) ? payload.gauge : {}),
-                    flightToQuality: ftq.active,
-                    flightIntensity: ftq.intensity,
+                    flightToQuality: ftq?.active ?? null,
+                    flightIntensity: ftq?.intensity ?? null,
                     classificationSource: "safety-score-v9-publication",
                     safetyScoreIdentity: current.classification.safetyScoreIdentity,
                   },
@@ -351,8 +379,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     const [hourlyResult, latestCronSnapshot, latestSuccessfulSyncLookup] = await Promise.all([
       db
         .prepare(
-          `SELECT chain_id, hour_ts, mint_count, burn_count,
-                  mint_volume_usd, burn_volume_usd, net_flow_usd
+          `SELECT chain_id, hour_ts, ${MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL}
            FROM mint_burn_hourly
            WHERE chain_id IN (${chainInClause.sql}) AND stablecoin_id = ? AND hour_ts >= ?
            ORDER BY hour_ts ASC`,
@@ -382,6 +409,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       mintCount: v.mintCount,
       burnCount: v.burnCount,
       netFlowUsd: v.netFlow,
+      valuation: summarizeMintBurnValuation(v.valuation),
     }));
 
     const hourly = buildHourlyFlowSeries(rows);
@@ -391,11 +419,13 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     let totalBurn = 0;
     let totalMintCount = 0;
     let totalBurnCount = 0;
+    const totalValuation = emptyMintBurnValuationTally();
     for (const c of chainMap.values()) {
       totalMint += c.mintVolume;
       totalBurn += c.burnVolume;
       totalMintCount += c.mintCount;
       totalBurnCount += c.burnCount;
+      addMintBurnValuationTally(totalValuation, c.valuation);
     }
 
     const updatedAt = resolveFlowUpdatedAt(rows, nowSec);
@@ -410,6 +440,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       burnCount: totalBurnCount,
       chains,
       hourly,
+      valuation: summarizeMintBurnValuation(totalValuation),
       updatedAt,
       windowHours: hours,
       scope: {
@@ -422,6 +453,6 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       },
     };
 
-    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncAt ?? 0);
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncAt);
   });
 }

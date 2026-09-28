@@ -376,7 +376,7 @@ interface GhoSliceValue {
 
 interface GhoRedemptionTelemetry {
   routeStatus: "open" | "paused" | "unknown";
-  immediateRedeemableUsd: number;
+  immediateRedeemableUsd?: number;
   immediateRedeemableRatio?: number;
   redemptionFeeBps?: number;
 }
@@ -480,7 +480,7 @@ function buildGhoSlices(
 function buildGhoRedemptionMetadata(telemetry: GhoRedemptionTelemetry) {
   const { routeStatus, immediateRedeemableUsd, immediateRedeemableRatio, redemptionFeeBps } = telemetry;
   return {
-    capacityUsd: immediateRedeemableUsd,
+    ...(immediateRedeemableUsd != null ? { capacityUsd: immediateRedeemableUsd } : {}),
     ...(immediateRedeemableRatio != null ? { capacityRatioOfSupply: immediateRedeemableRatio } : {}),
     capacityKind: "live-direct" as const,
     freshnessKind: "same-run-onchain" as const,
@@ -495,6 +495,8 @@ function buildGhoRedemptionMetadata(telemetry: GhoRedemptionTelemetry) {
 
 export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
   const { coveredModules, allocations, issuedRaw, exposureRaw, coveredRaw } = allocateGhoExposure(data);
+  const trackedObservationsComplete = !data.trackedModuleReadIncomplete
+    && data.trackedModules.every((module) => module.isFrozen != null && module.isSeized != null);
   const trackedBackingRaw = data.trackedModules.reduce((sum, module) => sum + module.currentBackingGho, 0n);
   const residualRaw = exposureRaw - coveredRaw;
   const immediateRedeemableRaw = data.trackedModules
@@ -512,9 +514,9 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
   if (values.length === 0) return { slices: [] };
 
   const activeFacilitators = data.facilitators.filter((facilitator) => facilitator.bucketLevel > 0n);
-  const immediateRedeemableUsd = scale18ToUsd(immediateRedeemableRaw);
+  const immediateRedeemableUsd = trackedObservationsComplete ? scale18ToUsd(immediateRedeemableRaw) : undefined;
   const immediateRedeemableRatio =
-    typeof data.totalSupply === "bigint" && data.totalSupply > 0n
+    immediateRedeemableUsd != null && typeof data.totalSupply === "bigint" && data.totalSupply > 0n
       ? immediateRedeemableUsd / scale18ToUsd(data.totalSupply)
       : undefined;
   const buyFeeBpsValues = data.trackedModules
@@ -547,7 +549,7 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
       swappableTrackedGsmCount: data.trackedModules.filter(
         (trackedModule) => trackedModule.isFrozen === false && trackedModule.isSeized === false && trackedModule.currentBackingGho > 0n,
       ).length,
-      trackedGsmBackingUsd: scale18ToUsd(trackedBackingRaw),
+      ...(trackedObservationsComplete ? { trackedGsmBackingUsd: scale18ToUsd(trackedBackingRaw) } : {}),
       residualSupplyUsd: residualRaw > 0n ? scale18ToUsd(residualRaw) : 0,
       ...(typeof data.totalSupply === "bigint" ? { supplyUsd, totalReserveUsd: exposureUsd } : {}),
       ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: supplyUsd } : {}),

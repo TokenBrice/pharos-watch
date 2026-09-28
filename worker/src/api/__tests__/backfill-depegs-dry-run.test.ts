@@ -5,6 +5,9 @@ import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helper
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeReplayDiagnostics } from "./depeg-replay.test-support";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { fetchAuthoritativeHistoricalPriceSeries } from "../../lib/authoritative-price-sources";
+import { backfillCoin } from "../backfill-depegs-replay";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -64,6 +67,38 @@ describe("handleBackfillDepegs replay windows", () => {
       },
     ]);
   });
+  it.each(["protocol-par", "protocol-redeem"])(
+    "distinguishes nominal source-only replay from legacy executable history: %s",
+    async (source) => {
+      vi.mocked(fetchAuthoritativeHistoricalPriceSeries).mockResolvedValueOnce({
+        matched: true,
+        source,
+        prices: [
+          { timestamp: 1_000, price: 1.02 },
+          { timestamp: 2_000, price: 1.03 },
+          { timestamp: 3_000, price: 1 },
+        ],
+      });
+      const result = await backfillCoin({
+        meta: TRACKED_META_BY_ID.get("usdt-tether")!,
+        geckoId: "tether",
+        getPegRef: () => 1,
+        supplyByDate: [{ ts: 1_000, supply: 2_000_000_000 }],
+      });
+      if (source === "protocol-par") {
+        expect(result.events).toBeNull();
+        expect(result.sourceKind).toBe("preserve-existing");
+      } else {
+        expect(result.sourceKind).toBe("authoritative");
+        expect(result.events).toEqual([expect.objectContaining({
+          direction: "above",
+          startedAt: 1_000,
+          endedAt: 3_000,
+          peakDeviationBps: 300,
+        })]);
+      }
+    },
+  );
 
   it("previews replay-vs-backfill differences without mutating existing rows", async () => {
     const db = mockD1([

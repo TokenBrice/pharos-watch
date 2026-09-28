@@ -1,5 +1,5 @@
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { StablecoinListResponse } from "@shared/types";
 import { HOMEPAGE_COHORT_BUCKET_IDS, type HomepageCohortBucketKey } from "@/lib/homepage-cohort-config";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
@@ -19,13 +19,19 @@ export interface HomepageHeroSnapshot {
   totalUsd: number;
   nonUsdUsd: number;
   nonUsdShare: number | null;
+  /**
+   * Core-aggregate rows present in the source whose current supply is unavailable. They are
+   * excluded from every sum (never counted as $0), so a nonzero count marks the totals partial.
+   */
+  supplyUnavailableCount: number;
   cohort: TotalMcapChartRow;
 }
 
 interface HomepageHeroMarketRow {
   id: string;
   pegType: string;
-  circulatingUsd: number;
+  /** `null` when the source row carries no observed supply; `0` only for an explicit zero. */
+  circulatingUsd: number | null;
 }
 
 export type HomepageHeroSelection =
@@ -46,46 +52,54 @@ export function buildHomepageHeroSnapshot(
 ): HomepageHeroSnapshot {
   let totalUsd = 0;
   let nonUsdUsd = 0;
-  let usdt = 0;
-  let usdc = 0;
-  let sky = 0;
+  let supplyUnavailableCount = 0;
+  const cohortSums: Record<HomepageCohortBucketKey, number> = { usdt: 0, usdc: 0, sky: 0 };
+  const observedIds = new Set<string>();
 
   for (const row of rows) {
     if (!CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(row.id)) {
       continue;
     }
 
-    const circulatingUsd = Number.isFinite(row.circulatingUsd) ? row.circulatingUsd : 0;
+    const circulatingUsd = row.circulatingUsd;
+    if (circulatingUsd == null || !Number.isFinite(circulatingUsd)) {
+      supplyUnavailableCount += 1;
+      continue;
+    }
+    observedIds.add(row.id);
     totalUsd += circulatingUsd;
 
     if (row.pegType !== "peggedUSD") {
       nonUsdUsd += circulatingUsd;
     }
 
-    switch (COHORT_BUCKET_BY_ID.get(row.id)) {
-      case "usdt":
-        usdt += circulatingUsd;
-        break;
-      case "usdc":
-        usdc += circulatingUsd;
-        break;
-      case "sky":
-        sky += circulatingUsd;
-        break;
-    }
+    const bucket = COHORT_BUCKET_BY_ID.get(row.id);
+    if (bucket) cohortSums[bucket] += circulatingUsd;
   }
+
+  // A cohort is known only when every core-aggregate member reported an observed supply;
+  // an absent or unavailable member leaves the cohort unavailable rather than understated.
+  const cohortValue = (bucket: HomepageCohortBucketKey): number | null =>
+    HOMEPAGE_COHORT_BUCKET_IDS[bucket].every((id) => !CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(id) || observedIds.has(id))
+      ? cohortSums[bucket]
+      : null;
+  const usdt = cohortValue("usdt");
+  const usdc = cohortValue("usdc");
+  const sky = cohortValue("sky");
 
   return {
     asOfISO,
     totalUsd,
     nonUsdUsd,
     nonUsdShare: totalUsd > 0 ? nonUsdUsd / totalUsd : null,
+    supplyUnavailableCount,
     cohort: {
       ts: asOfISO ? Date.parse(asOfISO) : 0,
       usdt,
       usdc,
       sky,
-      others: Math.max(0, totalUsd - usdt - usdc - sky),
+      others: supplyUnavailableCount === 0 && usdt !== null && usdc !== null && sky !== null
+        && totalUsd >= usdt + usdc + sky ? totalUsd - usdt - usdc - sky : null,
       nonUsd: nonUsdUsd,
       total: totalUsd,
     },
@@ -104,7 +118,7 @@ export function buildLiveHomepageHeroSnapshot(
     data.peggedAssets.map((asset) => ({
       id: asset.id,
       pegType: asset.pegType,
-      circulatingUsd: getCirculatingRaw(asset),
+      circulatingUsd: getCirculatingRawOrNull(asset),
     })),
     asOfISO,
   );

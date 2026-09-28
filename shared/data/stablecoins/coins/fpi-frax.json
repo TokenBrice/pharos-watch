@@ -56,7 +56,7 @@
   },
   "liveReservesConfig": {
     "adapter": "frax-fpi-collateral",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "fpi-frax",
     "display": {

@@ -56,6 +56,13 @@ export function RedemptionBackstopMethodologySection() {
           at or below -2500 bps; if current evidence cannot be established, the route is unknown and its score is
           withheld rather than inferred from the incident&apos;s historical peak.
         </p>
+        <p>
+          Reserve-backed observations keep the validated source time, or the producing snapshot&apos;s fetch time
+          for same-run on-chain and API evidence, separate from publication time. Republishing retained evidence
+          does not reset its age or V9&apos;s eight-hour redemption evidence budget. Capacity percentages divide
+          finalized executable dollars by the same positive current supply, including daily scoring bounds;
+          issuer-reported ratios cannot override that denominator.
+        </p>
         <MethodologyFacts
           facts={[
             { label: "Access", value: `${weights.access * 100}%` },

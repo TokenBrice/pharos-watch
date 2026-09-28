@@ -119,6 +119,7 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyRpcTelemetry() });
     vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch());
     vi.mocked(getCaches).mockResolvedValue(new Map());
+    vi.mocked(setCacheIfNewer).mockResolvedValue({ written: true, skippedBecauseNewer: false });
   });
 
   afterEach(() => {
@@ -489,6 +490,7 @@ describe("syncYieldSupplemental", () => {
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
 
+    expect(result.productivity?.productive).toBe(true);
     expect(
       vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:beefy"),
     ).toBe(true);
@@ -513,6 +515,26 @@ describe("syncYieldSupplemental", () => {
       degradedFamilies: ["morpho"],
       familyCacheResults: { morpho: "retained-previous", beefy: "published" },
     });
+  });
+
+  it("does not claim output when candidate-bearing family writes lose the newer-cache fence", async () => {
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+    vi.mocked(setCacheIfNewer).mockResolvedValue({ written: false, skippedBecauseNewer: true });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(result.productivity?.productive).toBe(false);
+    expect(JSON.parse(result.metadata ?? "{}").outputPublishedAt).toBeUndefined();
+  });
+
+  it("counts an accepted empty family snapshot as output that clears previous candidates", async () => {
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+    const metadata = JSON.parse(result.metadata ?? "{}");
+
+    expect(result.itemCount).toBe(0);
+    expect(result.productivity?.productive).toBe(true);
+    expect(metadata.outputPublishedAt).toBe(metadata.syncStartSec);
+    expect(metadata.familyCacheResults.beefy).toBe("empty-published");
   });
 
   it("retains the previous Aave snapshot when the miss ratio reaches the family threshold", async () => {

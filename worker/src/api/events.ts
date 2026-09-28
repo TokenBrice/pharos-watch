@@ -6,7 +6,7 @@ import {
   resolveOrReject,
 } from "../lib/api-params";
 import { errorResponse, jsonFreshResponse } from "../lib/api-response";
-import { getLatestSuccessfulCronTimestamp, buildFreshnessMeta } from "../lib/api-freshness";
+import { getLatestSuccessfulCronTimestampResult, buildCronFreshnessMeta, buildCronFreshnessHeaders } from "../lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { queryTapeEvents, type TapeEventQueryFilters } from "../lib/tape-event-store";
 import { mapTapeEventRow } from "../lib/tape-event-helpers";
@@ -214,10 +214,8 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
     nextCursor = encodeCursor({ ts: last.ts, id: last.id });
   }
 
-  const nowSec = Math.floor(Date.now() / 1000);
-  const fallbackTs = events.length > 0 ? Math.floor(events[0]!.ts / 1000) : nowSec;
-  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "project-tape", fallbackTs);
-  const meta = buildFreshnessMeta(freshnessTs, FRESHNESS_MAX_AGE_SEC);
+  const freshness = await getLatestSuccessfulCronTimestampResult(db, "project-tape");
+  const meta = buildCronFreshnessMeta(freshness, FRESHNESS_MAX_AGE_SEC);
 
   return jsonFreshResponse(
     {
@@ -226,16 +224,10 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
       nextCursor,
       total: includeTotal ? total : null,
       totalExact: includeTotal,
-      _meta: {
-        updatedAt: meta.updatedAt,
-        ageSeconds: meta.ageSeconds,
-        status: meta.status,
-      },
+      _meta: meta,
     },
     {
-      cacheControl: CACHE_PROFILES.realtime,
-      updatedAt: freshnessTs,
-      maxAgeSec: FRESHNESS_MAX_AGE_SEC,
+      headers: buildCronFreshnessHeaders(freshness, FRESHNESS_MAX_AGE_SEC, CACHE_PROFILES.realtime),
     },
   );
 };

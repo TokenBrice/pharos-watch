@@ -18,7 +18,7 @@ Requires `pyftsubset` (fontTools) on PATH; the command exits `127` with install 
 
 ## What `--check` Does Not Cover
 
-`npm run subset:fonts -- --check` is structural only: each committed woff2 exists, parses through fontTools (so `--check` needs Python with `fontTools` importable), carries a `cmap`, and — for the Newsreader subsets — retains a `wght` axis spanning `200..800` and a non-trivial glyph count. It deliberately does not compare bytes, because pyftsubset's woff2 compressor is not deterministic across runs, so a byte comparison would never pass.
+`npm run subset:fonts -- --check` is structural only: the five pipeline-produced woff2 files (Geist Regular, Geist Bold, Geist Mono Regular, Newsreader roman, and Newsreader italic) must exist, parse through fontTools (so `--check` needs Python with `fontTools` importable), carry a `cmap`, and — for the Newsreader subsets — retain a `wght` axis spanning `200..800` and a non-trivial glyph count. It does not open the manually supplied Bricolage Grotesque or JetBrains Mono files, so it cannot certify those runtime faces. It deliberately does not compare bytes, because pyftsubset's woff2 compressor is not deterministic across runs, so a byte comparison would never pass.
 
 Two gaps follow from that, and both need operator discipline:
 

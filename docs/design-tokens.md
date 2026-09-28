@@ -112,6 +112,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 | ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `CHART_GREEN`, `CHART_ORANGE`, `CHART_RED`, `CHART_SLATE`, `CHART_SLATE_SOFT`, `CHART_SLATE_STRONG`, `CHART_AMBER`, `CHART_TEAL`, `CHART_HEIGHT`, `RECHARTS_TOOLTIP_STYLES` | Shared chart fill/stroke colors, chart-height utility, and tooltip styles (also has module-private `TOKEN` map) |
 | `src/lib/severity-colors.ts` | `deviationColorClass()`, `deviationBorderClass()`, `deviationBgClass()`, `deviationIconName()`, `TIER_TEXT` / `TIER_PILL`, `getScoreTier()`, `getScoreColor()`, `pegScoreColor()`, `getDurabilityColor()` | Peg-deviation and score-tier Tailwind class helpers (text classes are light/dark aware) |
+| `shared/lib/classification.ts` | `EVENT_LABELS`, `EVENT_BADGE_STYLES`, `EVENT_CHART_COLORS` | One freeze-event descriptor projects badge styles, labels, and solid chart fills (Freeze/red, Release/emerald, Wipe/amber); overview and detail charts share it in both themes |
 
 `chart-colors.ts` uses the same hex values as the `--chart-*-hex` CSS custom properties in `semantic.css`; `severity-colors.ts` emits Tailwind class strings only. Some runtime-only exports, such as signal colors and brand helpers, live only in the JS maps.
 

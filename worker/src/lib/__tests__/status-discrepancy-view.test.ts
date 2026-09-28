@@ -2,6 +2,21 @@ import { describe, it, expect } from "vitest";
 import { buildDiscrepancy } from "../status-discrepancy-view";
 
 describe("buildDiscrepancy — discrepancyReason", () => {
+  it.each([1061, 87400, NaN, Infinity])("rejects invalid probe timestamp %s", (timestamp) => {
+    expect(buildDiscrepancy("healthy", {
+      timestamp, status: "degraded", sampleCount: 1, passCount: 0, failCount: 1, p95LatencyMs: 100,
+    }, 1000, 0)).toMatchObject({
+      hasDivergence: false, probeAgeSeconds: null, discrepancyReason: "probe-invalid-timestamp",
+    });
+  });
+
+  it("admits the inclusive clock-skew boundary", () => {
+    expect(buildDiscrepancy("healthy", {
+      timestamp: 1060, status: "degraded", sampleCount: 1, passCount: 0, failCount: 1, p95LatencyMs: 100,
+    }, 1000, 0)).toMatchObject({
+      hasDivergence: true, probeAgeSeconds: 0, discrepancyReason: "probe-disagrees",
+    });
+  });
   it("returns in-sync when severities match and probe is fresh", () => {
     const d = buildDiscrepancy(
       "healthy",

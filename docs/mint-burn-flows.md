@@ -1,5 +1,7 @@
 # Mint/Burn Flow Tracker
 
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Methodology Versioning · Cron Schedule · Constants & Thresholds · Contract Configurations · Raw Token Conservation · Sync Algorithm · Shared Ingestion Pipeline Boundaries · Scoring · Valuation Completeness · Retention · Database Schema · API Endpoints · Cron Metadata Fields · Frontend · Error Handling & Edge Cases · Testing · Future Work.
+
 On-chain mint and burn event tracker for stablecoins on their **configured issuance chains** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion runs in two lanes: a critical 30-minute lane for major coverage and an offset extended 30-minute lane for long-tail backlog drain.
 
 Product scope note: the public `/flows` page now surfaces the configured issuance scope plus per-coin `coverage` metadata so partial history, lagging sync, or unknown current chain-head states are visible to users instead of implied as complete market-wide coverage. Current production scope is Ethereum for most tracked assets, with USDai tracked on native Arbitrum and Base Dollar tracked on native Base as their canonical issuance/redemption chains.
@@ -17,6 +19,8 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intentionally allow one missed 30-minute critical-lane slot before warning. User-facing freshness is `fresh <= 60m`, `degraded <= 90m`, `stale > 90m`, which keeps the public warning surface aligned with `/status` cron-health grace windows instead of flagging a single late slot as an incident.
 
+Fresh and cached flow responses without a sync timestamp retain their body sync warnings and return `Cache-Control: no-store`, `X-Data-Age: unavailable`, and HTTP `Warning: 199`. Neither response-generation time nor cache-write time substitutes for the missing sync clock.
+
 > **Agent navigation** — Grep the heading you need: Methodology Versioning · Cron Schedule · Constants & Thresholds · Contract Configurations · Sync Algorithm · Shared Ingestion Pipeline Boundaries · Scoring · Retention · Database Schema · API Endpoints · Cron Metadata Fields · Frontend · Error Handling & Edge Cases · Testing · Future Work.
 
 Mint and burn events measure token creation and destruction, not investor intent. USDai is the reviewed counterexample: a burn can release PYUSD from the hub for sUSDai loan deployment without an equivalent fall in protocol assets. Since methodology v6.21, individually reviewed events of this kind are tagged `flow_type='protocol_internal'` and leave counted flow; see [Reviewed protocol-internal events](#reviewed-protocol-internal-events). The public FAQ and USDai's curated chart annotation keep the measured burn visible without calling it a redemption or investor outflow.
@@ -25,7 +29,7 @@ Mint and burn events measure token creation and destruction, not investor intent
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.21`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.22`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
@@ -344,10 +348,11 @@ Implementation (`worker/src/lib/mint-burn-mcap-weighting.ts`):
 - `getMintBurnTrackedChains(stablecoinId)` derives the active `chainId` set from `MINT_BURN_CONFIGS`.
 - `sumMcapForTrackedChains(stablecoinId, chainCirculating, circulating)` sums `chainCirculating[chainId].current` over those tracked chains, after `canonicalizeChainCirculating(...)` normalizes DefiLlama's capitalized keys (e.g. `Ethereum`) to canonical chain IDs.
 - Fallback policy (preserves legacy behavior where per-chain data isn't available):
-  1. Coin with no tracked chains → `getCirculatingRaw({ circulating })`.
-  2. Canonicalized `chainCirculating` is empty → `getCirculatingRaw({ circulating })` (keeps CG-fallback assets alive).
-  3. No tracked chain has an entry in the canonicalized map → `getCirculatingRaw({ circulating })`.
+  1. Coin with no tracked chains → `getCirculatingRawOrNull({ circulating })`.
+  2. Canonicalized `chainCirculating` is empty → `getCirculatingRawOrNull({ circulating })` (keeps CG-fallback assets alive).
+  3. No tracked chain has an entry in the canonicalized map → `getCirculatingRawOrNull({ circulating })`.
   4. Otherwise sum `current` across tracked chains. `current = 0` is treated as real data (zero supply) and does not trigger fallback.
+- A fallback with no observed circulating bucket returns `null`: that coin's weight is unavailable, not `0`. The aggregate excludes it from the gauge inputs and from `gauge.trackedMcapUsd` and counts it in `gauge.mcapUnavailableCoins` (absent on payloads produced before the count existed). Its flow row is still published. Because a zero weight already contributed nothing, the gauge score formula is unchanged.
 
 ### Flight-to-Quality Detection
 
@@ -359,6 +364,16 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 - On aggregate API reads, a changed publication identity triggers FTQ recomputation from the validated cached per-coin `netFlow24hUsd` values and current cohorts. This updates only the response's FTQ fields, classification identity, and classification warning; the cached flow data, producer timestamps, freshness headers, and database row are preserved. Missing, held, stale, or malformed Safety Score sources and invalid cached coin inputs still fail closed.
 
 ---
+
+## Valuation Completeness
+
+Since methodology v6.22 (CR-18 release A, migration `0251`), every hourly bucket stores `mint_unpriced_event_count` and `burn_unpriced_event_count` beside the existing columns. Counted flow is standard mints and standard effective burns; an event without `amount_usd` increments its side's unpriced count and adds nothing to `mint_volume_usd` / `burn_volume_usd` / `net_flow_usd`, which are known-valuation subtotals. All materializers (sync recalc, retention evidence repair, heal rebuild and its verification) share `mintBurnHourlyBucketAggregatesSql`, so counts, unpriced counts and subtotals are rebuilt together in the existing atomic per-hour delete+insert pair.
+
+- **Completeness:** `complete` (no unpriced counted event; an empty window is complete, genuine zero stays zero), `partial` (unpriced events exist: gross subtotals are explicit lower bounds, a signed partial net is not a bound), `unknown` (a bucket written before `0251`, or rewritten by a prior Worker, has NULL counts on a side with counted events). Precedence is partial > unknown > complete. Shared logic: `shared/lib/mint-burn-valuation.ts`; SQL tally: `worker/src/lib/mint-burn-hourly-valuation.ts`.
+- **Legacy rebuild:** after each completed run, `rebuildRetainedLegacyValuationHours` re-aggregates up to 500 NULL-count buckets that start at least one hour inside the 8-day event-retention window (their raw events cannot have been pruned), newest first, through the partial index `idx_mbh_valuation_unrecorded`. Older legacy buckets stay `unknown` until hourly retention prunes them; nothing reconstructs pruned history.
+- **Proven direction:** unpriced mints can only raise the true net and unpriced burns can only lower it. A direction survives only when that proven range excludes zero; `flat` requires complete valuation.
+- **Internal consumers (active now):** DEWS flow is unavailable (`mint-burn-valuation-partial` / `-unknown`) unless the 24h window is complete, and when its burn baseline is partial (`mint-burn-baseline-valuation-partial`); an unknown legacy baseline is tolerated until it ages out of the 30-day window. DDR mint surge uses hourly evidence only when the proven range decides the 20% threshold, otherwise the supply-history proxy. The daily digest withholds the gauge when `gauge.partialValuationInputs > 0`, restates pressure and chain nets only for complete 24h windows, and marks FTQ unavailable (`valuation-incomplete`) unless exact or provably inactive.
+- **Public API (release A):** additive `valuation` fields on coins, chains, hourly buckets and per-coin totals/chains, plus `gauge.partialValuationInputs`; nets, direction and FTQ are schema-nullable but still published with today's known-valuation values. Release B (before CR-23's stricter event-time price admission) publishes `null` where valuation is not complete.
 
 ## Retention
 
@@ -508,9 +523,21 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 | `MintingPressureGauge` | `src/components/minting-pressure-gauge.tsx` | Shared literal 24h mint-vs-burn gauge used by both the aggregate overview and stablecoin detail summary cards |
 | `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: explicit net windows, `Pressure Shift vs 30D`, and a literal `Minting Pressure (24h)` gauge, plus contextual methodology hints / footer links for the flow model. Its 30d/90d cells use the API coverage flags and mark incomplete windows `partial`, matching the per-coin table. |
 
+### Valuation Completeness Rendering
+
+Frontend consumers read the additive `valuation` fields through `resolveMintBurnValuation()` / `resolveMintBurnValuationCompleteness()` (`shared/lib/mint-burn-valuation.ts`), so a payload without `valuation` is `unknown`, never complete. Presentation helpers live in `src/lib/mint-burn-valuation-display.ts` and `src/lib/mint-burn-coin-helpers.ts`; the shared `FlowSignedNetValue` / `FlowVolumeValue` components (`src/components/flow-valuation-value.tsx`) render them.
+
+- **Signed nets** (`netFlow*Usd`, hourly `netFlowUsd`): `null` or a `partial` window renders the component's unavailable placeholder (`—` or `NR`) with an accessible reason naming the unpriced mint/burn event counts; a partial signed net is not a bound, so it is never shown as a number or `$0`. `unknown` keeps the value with a `*` coverage-unknown marker.
+- **24h direction**: a partial window is re-derived with `provenNetFlowDirection24h()` from the published known net; a `null` direction renders "Direction unavailable", never `flat` or `No activity`.
+- **Pressure shift**: a coin whose `window24h` or `baseline` valuation is `partial` renders `NR` with a partial-valuation reason, sorts last, and its baseline average daily net is withheld.
+- **Gross volumes**: a non-complete side renders as a `≥` lower bound (known-valuation subtotal).
+- **Client-side sums** (overview/receipt totals, home mini card, chart re-bucketing): any null or partial component makes the summed signed net unavailable; leaders and sorts rank only displayable nets. The aggregate chart draws no bar for a partial bucket, stops the cumulative line at the first one, and lists bucket valuation in its accessible table; the compare chart omits such hours.
+- **Gauge**: `flightToQuality: null` renders "FTQ unavailable"; `partialValuationInputs > 0` adds a note that N weighted coins have partial valuation.
+- No frontend CSV/NDJSON export carries mint/burn flow values.
+
 ### Dashboard Integration
 
-`FlowSummaryCard` (`src/components/flow-summary-card.tsx`) now keys machine visuals from raw `netFlow24hUsd` and also renders the same literal `Minting Pressure (24h)` gauge used in the aggregate overview, while Bank Run Gauge band labels remain available for baseline-relative pressure semantics.
+`FlowSummaryCard` (`src/components/flow-summary-card.tsx`) keys machine visuals from the valuation-gated 24h direction (see [Valuation Completeness Rendering](#valuation-completeness-rendering)) and also renders the same literal `Minting Pressure (24h)` gauge used in the aggregate overview, while Bank Run Gauge band labels remain available for baseline-relative pressure semantics.
 
 ---
 

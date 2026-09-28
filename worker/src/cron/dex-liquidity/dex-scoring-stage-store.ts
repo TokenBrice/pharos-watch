@@ -1,5 +1,6 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
+import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { runCappedPruneFamily } from "../shared/capped-delete";
@@ -206,7 +207,8 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   while (true) {
     const historyResult = await db
       .prepare(
-        `SELECT stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_confidence
+        `SELECT stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_confidence,
+                volume_availability_json
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
            AND (stablecoin_id > ? OR (stablecoin_id = ? AND snapshot_date > ?))
@@ -226,6 +228,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
         total_tvl_usd: number;
         total_volume_24h_usd: number;
         coverage_confidence: number | null;
+        volume_availability_json?: string | null;
       }>();
     const rows: Array<
       | {
@@ -234,6 +237,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
           total_tvl_usd: number;
           total_volume_24h_usd: number;
           coverage_confidence: number | null;
+          volume_availability_json?: string | null;
         }
       | undefined
     > = historyResult.results ?? [];
@@ -254,9 +258,19 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
       tvlSeries.push(row.total_tvl_usd);
       tvlByCoin.set(row.stablecoin_id, tvlSeries);
 
-      const volumeSeries = volumeByCoin.get(row.stablecoin_id) ?? [];
-      volumeSeries.push(row.total_volume_24h_usd);
-      volumeByCoin.set(row.stablecoin_id, volumeSeries);
+      // DEC-19: a day whose recorded 24h window is partial/missing/stale is not
+      // a measured observation and never enters volume consistency (no
+      // estimate substitutes for it). Legacy unrecorded days keep their value.
+      const measuredVolume = readStoredDexVolumeWindow(
+        row.total_volume_24h_usd,
+        parseDexVolumeAvailabilityRecord(row.volume_availability_json),
+        "24h",
+      ).measuredUsd;
+      if (measuredVolume != null) {
+        const volumeSeries = volumeByCoin.get(row.stablecoin_id) ?? [];
+        volumeSeries.push(measuredVolume);
+        volumeByCoin.set(row.stablecoin_id, volumeSeries);
+      }
     }
     rows.length = 0;
     if (rowCount < HISTORY_STABILITY_BATCH_SIZE) break;

@@ -222,6 +222,16 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
   }
 
+  const decodeRetryRows = await db.prepare(`
+    SELECT substr(remainder, 1, instr(remainder, ':') - 1) AS configKey, COUNT(*) AS count
+    FROM (SELECT substr(key, length('blacklist:decode-retry:') + 1) AS remainder
+      FROM cache WHERE key GLOB 'blacklist:decode-retry:*')
+    GROUP BY configKey
+  `).all<{ configKey: string; count: number }>();
+  const decodeRetryCounts = Object.fromEntries(
+    (decodeRetryRows.results ?? []).map((row) => [row.configKey, row.count]),
+  );
+
   logWorkerEventArgs("handler", "info", `[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
   await reportCronProgress(
     onProgress,
@@ -248,8 +258,17 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     itemCount: counters.totalInsertedRows,
     metadata: JSON.stringify(
       withBudgetMetadata(budget, {
+        outputPublishedAt: status !== "error" && (counters.totalInsertedRows > 0 || configsSucceeded > 0)
+          ? Math.floor(Date.now() / 1000) : null,
+        ...(status !== "ok" ? {
+          reason: stateConflicts > 0 ? "blacklist-state-conflict"
+            : runtimeBudgetHit || subrequestBudgetReached ? "blacklist-budget-exhausted"
+            : providerCircuitSkips > 0 ? "blacklist-provider-circuit-open"
+            : "blacklist-source-coverage-incomplete",
+        } : {}),
         rowsWritten: counters.totalInsertedRows,
         eventsFetched: totalFetchedEvents,
+        decodeRetryCounts,
         contractsSkipped,
         apiErrors,
         apiErrorConfigs,

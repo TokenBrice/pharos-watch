@@ -133,6 +133,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
           status: "skipped_neutral",
           itemCount: priorGeneration.acceptedAssetIds.length,
           metadata: {
+            reason: "supply-attribution-generation-fresh",
             stage: "cooldown",
             generationId: priorGeneration.generationId,
             acceptedCount: priorGeneration.acceptedAssetIds.length,
@@ -213,6 +214,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
     status: complete ? "ok" : "degraded",
     itemCount: generation.acceptedAssetIds.length,
     metadata: {
+      reason: complete ? "supply-attribution-generation-published" : "supply-attribution-blocking-rejections",
       stage: "published",
       generationId: generation.generationId,
       sourceBaseInputGenerationId:

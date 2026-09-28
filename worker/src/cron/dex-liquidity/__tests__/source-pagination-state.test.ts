@@ -15,6 +15,23 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 describe("DEX source pagination state", () => {
+  it("fences stale same-second acknowledgements and permits idempotent data-first replay", async () => {
+    const { db } = fixtures.open();
+    const expectedRevision = (await readDexSourcePaginationState(db, "orca:solana")).revision!;
+    const first = {
+      db, sourceKey: "orca:solana", cursor: "page9", cycleStartedAt: 100, nowSec: 100,
+      completed: false, pagesFetched: 4, expectedRevision, generation: "attempt-a",
+    };
+    await expect(writeDexSourcePaginationState(first)).resolves.toEqual({ written: true, errorClass: null });
+    // An ambiguous response after the data/cursor commit can replay the same attempt.
+    await expect(writeDexSourcePaginationState(first)).resolves.toEqual({ written: true, errorClass: null });
+    const nextRevision = (await readDexSourcePaginationState(db, "orca:solana")).revision!;
+    await writeDexSourcePaginationState({
+      ...first, expectedRevision: nextRevision, generation: "attempt-b", cursor: "page12",
+    });
+    await expect(writeDexSourcePaginationState(first)).resolves.toEqual({ written: false, errorClass: "write-failed" });
+    await expect(readDexSourcePaginationState(db, "orca:solana")).resolves.toMatchObject({ cursor: "page12" });
+  });
   it("round-trips opaque cursors and bounds persisted diagnostics", async () => {
     const { db, sqlite } = fixtures.open();
     const sourceKey = "orca:solana";
@@ -22,7 +39,7 @@ describe("DEX source pagination state", () => {
       db, sourceKey, cursor: "opaque-tail", cycleStartedAt: 90, nowSec: 100,
       completed: false, pagesFetched: 4,
     });
-    await expect(readDexSourcePaginationState(db, sourceKey)).resolves.toEqual({
+    await expect(readDexSourcePaginationState(db, sourceKey)).resolves.toMatchObject({
       cursor: "opaque-tail", cycleStartedAt: 90, updatedAt: 100, completedAt: null, pagesFetched: 4,
     });
     await expect(writeDexSourcePaginationState({
@@ -30,7 +47,7 @@ describe("DEX source pagination state", () => {
       completed: true, pagesFetched: 7,
       diagnostics: ["x".repeat(250), ...Array.from({ length: 19 }, (_, index) => `failure-${index}`)],
     })).resolves.toEqual({ written: true, errorClass: null });
-    await expect(readDexSourcePaginationState(db, sourceKey)).resolves.toEqual({
+    await expect(readDexSourcePaginationState(db, sourceKey)).resolves.toMatchObject({
       cursor: "next-tail", cycleStartedAt: 95, updatedAt: 110, completedAt: 110, pagesFetched: 7,
     });
     const rows = sqlite.prepare("SELECT source_key, diagnostics_json FROM dex_source_pagination_state").all();

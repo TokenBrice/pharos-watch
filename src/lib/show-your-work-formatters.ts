@@ -270,10 +270,21 @@ export function formatReportCardV9(
 // DEWS
 // ---------------------------------------------------------------------------
 
+function formatDewsSignalValue(key: string, sig: StressSignalEntry["signals"][string]): string {
+  if (!sig.available) return "n/a";
+  const rounded = Math.round(sig.value).toString();
+  // The pool signal renormalizes over its readable components when worst-pool detail is unavailable.
+  const coverage = key === "pool" ? sig.componentCoverage : undefined;
+  if (typeof coverage === "number" && coverage < 1) {
+    return `${rounded} (reweighted over ${Math.round(coverage * 100)}% of pool components; worst pool unavailable)`;
+  }
+  return rounded;
+}
+
 export function formatDews(current: StressSignalEntry): ShowYourWorkTable {
   const rows: ShowYourWorkRow[] = Object.entries(current.signals).map(([key, sig]) => ({
     label: key,
-    value: sig.available ? Math.round(sig.value).toString() : "n/a",
+    value: formatDewsSignalValue(key, sig),
   }));
 
   rows.push({ label: "Composite score", value: Math.round(current.score).toString() });
@@ -303,16 +314,20 @@ export function formatDews(current: StressSignalEntry): ShowYourWorkTable {
 // ---------------------------------------------------------------------------
 
 export function formatLiquidity(scoreComponents: NonNullable<DexLiquidityData["scoreComponents"]>): ShowYourWorkTable {
+  // DEC-19: an unavailable activity component is shown as not reported and the
+  // composite is NR; the remaining weights are never rescaled to fill its share.
   const rows: ShowYourWorkRow[] = LIQUIDITY_SCORE_WEIGHTS.map((w) => {
     const value = scoreComponents[w.key];
-    const contribution = value * w.weight;
     return {
       label: w.label,
-      value: value.toFixed(1),
+      value: fmtNum(value, 1),
       weight: w.displayWeight,
-      contribution: contribution.toFixed(1),
+      contribution: fmtNum(value == null ? null : value * w.weight, 1),
     };
   });
+  if (scoreComponents.volumeActivity == null) {
+    rows.push({ label: "Composite score", value: "NR (24h volume activity unavailable)" });
+  }
 
   return {
     rows,
@@ -327,16 +342,11 @@ export function formatLiquidity(scoreComponents: NonNullable<DexLiquidityData["s
 
 export function formatPsi(current: StabilityIndexCurrent): ShowYourWorkTable {
   const rows: ShowYourWorkRow[] = [
-    { label: "Severity penalty", value: current.components.severity.toFixed(1) },
-    { label: "Breadth penalty", value: current.components.breadth.toFixed(1) },
+    { label: "Severity penalty", value: fmtNum(current.components.severity, 1) },
+    { label: "Breadth penalty", value: fmtNum(current.components.breadth, 1) },
+    { label: "Stress breadth penalty", value: fmtNum(current.components.stressBreadth, 1) },
+    { label: "Trend offset", value: fmtNum(current.components.trend, 1) },
   ];
-  if (current.components.stressBreadth != null) {
-    rows.push({
-      label: "Stress breadth penalty",
-      value: current.components.stressBreadth.toFixed(1),
-    });
-  }
-  rows.push({ label: "Trend offset", value: current.components.trend.toFixed(1) });
   rows.push({ label: "Composite score", value: current.score.toFixed(1) });
   rows.push({ label: "Band", value: current.band });
 
@@ -442,7 +452,7 @@ export function formatChainHealth(
       label: "Peg stability",
       value: fmtNum(factors.pegStability),
       weight: `${Math.round(PEG_STABILITY_WEIGHT * 100)}%`,
-      contribution: (factors.pegStability * PEG_STABILITY_WEIGHT).toFixed(1),
+      contribution: factors.pegStability != null ? (factors.pegStability * PEG_STABILITY_WEIGHT).toFixed(1) : "—",
     },
     {
       label: "Backing diversity",

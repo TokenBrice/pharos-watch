@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.45",
+    title: "Producing evidence clocks and one capacity denominator",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "Retained reserve-backed redemption observations preserve their producing evidence time, while published capacity percentages use the same current supply as their finalized USD amounts.",
+    impact: [
+      "Live evidence uses a validated nested source timestamp, or the producing reserve snapshot fetch time for same-run onchain/API telemetry; publication updatedAt does not refresh evidence. Retained observations therefore expire under V9's existing eight-hour redemption evidence budget.",
+      "Positive-supply capacity ratios are finalized capacity USD divided by that same supply, including daily scoring bounds. Issuer ratios remain source diagnostics and may infer USD only when the amount is absent; this changes the standalone capacity diagnostic, not V9 CDP-ratio scoring.",
+      "Nested redemption timestamps are rejected beyond the existing stricter adapter/coin reserve source-age budget, with the existing reserve freshness fallback when neither declares a budget.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.44",
     title: "Noon USN and sUSN settlement corrections",
     date: "2026-09-23",

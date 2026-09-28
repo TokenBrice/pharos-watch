@@ -1,6 +1,7 @@
 import { V9_EVALUATION_BUILD_SOURCE_PATHS } from "./safety-score-v9-evaluation-inputs.mts";
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./sitemap-source-paths.mts";
 import { createRequire } from "node:module";
+import { CliUsageError } from "./cli-args.mjs";
 
 const PUBLIC_DOC_SOURCE_FILES = createRequire(import.meta.url)("../../shared/lib/public-doc-manifest.json");
 
@@ -598,6 +599,15 @@ export function selectAutoStageArtifactIds(ids) {
   return { autoStage, manual };
 }
 
+/** @param {readonly string[]} ids */
+export function selectCheckableArtifactIds(ids) {
+  assertKnownGeneratedArtifactIds([...ids]);
+  const selected = new Set(ids);
+  return GENERATED_ARTIFACT_REGISTRY
+    .filter((artifact) => selected.has(artifact.id) && artifact.checkable !== false)
+    .map((artifact) => artifact.id);
+}
+
 /**
  * @param {{
  *   bootstrap?: boolean,
@@ -617,6 +627,18 @@ export function selectGeneratedArtifacts({
   assertKnownGeneratedArtifactIds(only);
   assertKnownGeneratedArtifactPhases(phases);
   assertKnownGeneratedArtifactBuildLifecycles(buildLifecycles);
+  if (check) {
+    const uncheckable = GENERATED_ARTIFACT_REGISTRY.filter((artifact) => only.includes(artifact.id) && artifact.checkable === false);
+    if (uncheckable.length > 0) {
+      const details = uncheckable.map((artifact) => {
+        const remedy = artifact.reproducibility === "git-history-derived"
+          ? "fetch full Git history, then run npm run bootstrap:generated:history"
+          : `run node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=${artifact.id}`;
+        return `${artifact.id} (${artifact.buildLifecycle}; ${artifact.reproducibility}): ${remedy}`;
+      });
+      throw new CliUsageError(`Cannot check build-time artifact(s): ${details.join("; ")}. Remove these IDs from --only; no checks were executed.`);
+    }
+  }
 
   const artifactById = generatedArtifactById();
   const buildLifecycleSet = new Set(buildLifecycles);

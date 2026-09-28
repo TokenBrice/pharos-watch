@@ -52,6 +52,21 @@ function makeActiveRecord(overrides: Partial<BlacklistActiveRecord> = {}): Black
 }
 
 describe("buildBlacklistActiveRecords", () => {
+  it.each([["0xf", "0x10"], ["9", "10"]])("uses numeric block-global positions %s then %s across transactions", (first, second) => {
+    const freeze = makeEvent({ id: `ethereum-0xff-${first}`, txHash: "0xff" });
+    const release = makeEvent({ id: `ethereum-0xaa-${second}`, txHash: "0xaa", eventType: "unblacklist" });
+    expect(buildBlacklistActiveRecords([release, freeze])).toEqual([]);
+  });
+
+  it("withholds conflicting Tron transaction order instead of ordering hashes", () => {
+    const freeze = makeEvent({ chainId: "tron", id: "tron-zz-9", txHash: "zz" });
+    const release = makeEvent({ chainId: "tron", id: "tron-aa-10", txHash: "aa", eventType: "unblacklist" });
+    for (const events of [[freeze, release], [release, freeze]]) {
+      const records = buildBlacklistActiveRecords(events);
+      expect(records[0].orderAmbiguityReason).toBe("tron-cross-transaction-order");
+      expect(computeBlacklistActiveSummaryStats(records)).toMatchObject({ activeAddressCount: 0, ambiguousOrderCount: 1 });
+    }
+  });
   it("marks a destroyed record and keeps it out of the frozen total", () => {
     const events = [
       makeEvent({ id: "1", eventType: "blacklist", amountNative: 10, amountUsdAtEvent: 10, timestamp: 10 }),
@@ -287,7 +302,7 @@ describe("computeBlacklistActiveSummaryStats", () => {
       makeEvent({ id: "destroy", eventType: "destroy", timestamp: 2, amountNative: null, amountUsdAtEvent: null }),
     ]);
     expect(computeBlacklistActiveSummaryStats(records)).toEqual({
-      activeAddressCount: 1, activeFrozenTotal: 0, activeAmountGapCount: 0,
+      activeAddressCount: 1, activeFrozenTotal: 0, activeAmountGapCount: 0, ambiguousOrderCount: 0,
     });
   });
 
@@ -320,6 +335,7 @@ describe("computeBlacklistActiveSummaryStats", () => {
       activeAddressCount: 2,
       activeFrozenTotal: 100,
       activeAmountGapCount: 1,
+      ambiguousOrderCount: 0,
     });
   });
 });

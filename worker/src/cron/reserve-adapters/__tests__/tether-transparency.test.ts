@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import {
   adaptTetherTransparency,
   type TetherTransparencyParams,
@@ -38,20 +39,44 @@ const XAUT_PARAMS: TetherTransparencyParams = {
   slices: [{ name: "Physical gold bars (LBMA Good Delivery, Swiss vaults)", pct: 100, risk: "very-low" }],
 };
 
+function withChains(blockChains: unknown): TetherTransparencyResponse {
+  return {
+    data_formatted: TETHER_TRANSPARENCY_FIXTURE.data_formatted!.map((entry) => ({ ...entry, blockChains })),
+  };
+}
+
 describe("adaptTetherTransparency", () => {
+  it.each(["2026-02-30", "2026-6-30", "not-a-date"])("rejects unsupported composition date %s", (compositionAsOf) => {
+    expect(() => parseLiveReserveAdapterParams("tether-transparency", {
+      ...USDT_PARAMS,
+      compositionAsOf,
+    })).toThrow();
+  });
+
+  it("keeps reviewed composition precision and date independent of balance-sheet freshness", () => {
+    const params: TetherTransparencyParams = {
+      currencyIso: "usdt",
+      compositionAsOf: "2026-06-30",
+      slices: [
+        { name: "Treasury bills", pct: 99.995359, risk: "very-low" },
+        { name: "Corporate bonds", pct: 0.00464, risk: "high" },
+      ],
+    };
+    const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, params);
+    expect(result.slices.find((slice) => slice.name === "Corporate bonds")?.pct).toBe(0.00464);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(99.999999, 6);
+    expect(result.metadata?.details).toMatchObject({
+      compositionSource: "reviewed-config",
+      compositionAsOf: "2026-06-30",
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(1783555140);
+    const xaut = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, XAUT_PARAMS);
+    expect(xaut.metadata?.details?.compositionAsOf).toBeUndefined();
+    expect(xaut.metadata?.sourceTimestamp).toBeDefined();
+  });
+
   it("selects the usdt entry, computes the honest ratio, and persists USD-denominated totals", () => {
     const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, USDT_PARAMS);
-
-    expect(result.slices).toEqual([
-      { name: "Direct & indirect U.S. Treasury Bills", pct: 73.5, risk: "very-low" },
-      {
-        name: "Other reserves (cash & equivalents, secured loans, corporate bonds, other investments)",
-        pct: 12.4,
-        risk: "medium",
-      },
-      { name: "Physical gold bars", pct: 10.4, risk: "very-low" },
-      { name: "Bitcoin", pct: 3.7, risk: "medium" },
-    ]);
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
@@ -90,9 +115,83 @@ describe("adaptTetherTransparency", () => {
     expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
     expect(result.metadata).not.toHaveProperty("totalLiabilitiesUsd");
     expect(result.metadata).not.toHaveProperty("shareholderEquityUsd");
+  });
 
-    const details = result.metadata?.details as { chains: Array<{ name: string }> };
-    expect(details.chains.map((chain) => chain.name).sort()).toEqual(["BNB Smart Chain", "Ethereum"]);
+  describe.each([USDT_PARAMS, XAUT_PARAMS])("$currencyIso chain availability", (params) => {
+    it.each([
+      [undefined, "missing"],
+      [null, "missing"],
+      ["broken", "malformed"],
+      ["", "malformed"],
+      [false, "malformed"],
+      [Number.NaN, "malformed"],
+      [Number.POSITIVE_INFINITY, "malformed"],
+      [-1, "negative"],
+    ])("preserves unavailable components for %s", (value, reason) => {
+      for (const field of ["totalAuthorized", "notIssued", "quarantined"] as const) {
+        const row = { name: "Ethereum", totalAuthorized: 100, notIssued: 10, quarantined: 0, [field]: value };
+        const result = adaptTetherTransparency(withChains([row]), params);
+        expect(result.metadata?.details).toMatchObject({
+          chains: [{
+            [field]: null,
+            [`${field}Reason`]: reason,
+            issued: field === "quarantined" ? 90 : null,
+            issuedReason: field === "totalAuthorized"
+              ? "authorization-unavailable"
+              : field === "notIssued" ? "not-issued-unavailable" : null,
+          }],
+        });
+        const clean = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, params);
+        expect(result.slices).toEqual(clean.slices);
+        expect(result.metadata?.collateralizationRatio).toBe(clean.metadata?.collateralizationRatio);
+        expect(result.metadata?.sourceTimestamp).toBe(clean.metadata?.sourceTimestamp);
+        expect(result.metadata?.totalAssetsUsd).toBe(clean.metadata?.totalAssetsUsd);
+        expect(result.metadata?.totalLiabilitiesUsd).toBe(clean.metadata?.totalLiabilitiesUsd);
+      }
+    });
+
+    it("retains explicit zero and rejects impossible net issuance without clamping", () => {
+      const result = adaptTetherTransparency(withChains([
+        { name: "Zero", totalAuthorized: 0, notIssued: 0, quarantined: 0 },
+        { name: "Impossible", totalAuthorized: 100, notIssued: 150, quarantined: 0 },
+      ]), params);
+      expect(result.metadata?.details).toMatchObject({
+        chains: [
+          { totalAuthorized: 0, notIssued: 0, issued: 0, issuedReason: null, quarantined: 0, quarantinedReason: null },
+          { totalAuthorized: 100, notIssued: 150, issued: null, issuedReason: "not-issued-exceeds-authorized" },
+        ],
+        chainsReason: null,
+      });
+    });
+
+    it.each([
+      [undefined, "missing"],
+      [null, "missing"],
+      [{}, "malformed"],
+    ])("does not publish a known empty census for %s", (value, reason) => {
+      const result = adaptTetherTransparency(withChains(value), params);
+      expect(result.metadata?.details).toMatchObject({ chains: null, chainsReason: reason });
+    });
+
+    it("distinguishes an observed empty census and retains unreadable rows", () => {
+      expect(adaptTetherTransparency(withChains([]), params).metadata?.details).toMatchObject({
+        chains: [], chainsReason: null,
+      });
+      expect(adaptTetherTransparency(withChains([null]), params).metadata?.details).toMatchObject({
+        chains: [{ name: null, nameReason: "missing", issued: null, quarantined: null }],
+      });
+    });
+
+    it("reports observed quarantine even when another chain's quarantine is unavailable", () => {
+      const result = adaptTetherTransparency(withChains([
+        { name: "Unknown", totalAuthorized: 100, notIssued: 10 },
+        { name: "Observed", totalAuthorized: 100, notIssued: 10, quarantined: 5 },
+      ]), params);
+      expect(result.metadata?.details).toMatchObject({
+        chains: [{ quarantined: null, quarantinedReason: "missing" }, { quarantined: 5, quarantinedReason: null }],
+      });
+      expect(result.warnings).toEqual([expect.objectContaining({ code: "quarantined-balance", effect: "info" })]);
+    });
   });
 
   it("throws when the requested currencyIso has no matching data_formatted entry", () => {

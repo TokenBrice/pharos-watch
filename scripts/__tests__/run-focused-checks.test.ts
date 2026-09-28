@@ -18,7 +18,7 @@ function writer() {
 }
 
 const frontendCommands = [
-  "npm run lint:changed",
+  "npm run lint:changed -- --file src/components/query-error-notice.tsx",
   "npm run typecheck",
   "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx",
 ];
@@ -127,7 +127,6 @@ describe("focused checks", () => {
     const plan = buildFocusedCheckPlan(["src/unclassified.ts"]);
 
     expect(plan.checks).toMatchObject([
-      { command: "npm run lint:changed", source: "frontend-routes" },
       { command: "npm run typecheck", source: "frontend-routes" },
       { command: "npx vitest run src", source: "frontend-routes" },
     ]);
@@ -151,13 +150,11 @@ describe("focused checks", () => {
     });
   });
 
-  it("passes an explicit base only to the working-tree lint command", () => {
-    const plan = buildFocusedCheckPlan(["src/components/query-error-notice.tsx"], { base: "origin/main" });
-
-    expect(plan.checks.map((check) => check.command)).toEqual([
-      "npm run lint:changed -- --base=origin/main",
-      ...frontendCommands.slice(1),
-    ]);
+  it("forwards the resolved files without reselecting a branch range", () => {
+    const file = "src/components/query-error-notice.tsx";
+    const plan = buildFocusedCheckPlan([file]);
+    const lint = plan.checks.find((check) => check.argv?.includes("lint:changed"));
+    expect(lint?.argv).toEqual(["npm", "run", "lint:changed", "--", "--file", file]);
   });
 
   it("does not invoke a check in plan-only mode", async () => {
@@ -242,66 +239,16 @@ describe("focused checks", () => {
   });
 });
 
-describe("smallest-adequate matrix routing", () => {
+describe("sensitive selection boundaries", () => {
   it.each([
-    {
-      area: "Shared runtime",
-      file: "shared/lib/format.ts",
-      checks: [],
-    },
-    {
-      area: "Worker cron",
-      file: "worker/src/cron/sync-stablecoins.ts",
-      checks: [
-        "npm run lint:changed",
-        "npm run typecheck:worker",
-        "npm run check:cron-sync",
-        "npm run check:cron-connections",
-        "npx vitest run worker/src/cron worker/src/handlers/scheduled",
-        "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts",
-      ],
-    },
-    {
-      area: "src/components",
-      file: "src/components/query-error-notice.tsx",
-      checks: frontendCommands,
-    },
-    {
-      area: "API route",
-      file: "worker/src/api/og.tsx",
-      checks: [
-        "npm run lint:changed",
-        "npm run typecheck",
-        "npm run typecheck:worker",
-        "npm run test:critical-contracts",
-        "npm run check:site-csp-sync",
-        "npm run check:frozen-invariants",
-      ],
-    },
-    {
-      area: "D1 migration",
-      file: "worker/migrations/0001_initial.sql",
-      checks: ["npm run lint:changed", "npm run typecheck:worker", "npm run check:migrations", "npx vitest run worker/src"],
-    },
-    {
-      area: "Stablecoin JSON",
-      file: "shared/data/stablecoins/coins/usdc-circle.json",
-      checks: [
-        "npm run lint:changed",
-        "npm run check:stablecoin-data",
-        "npm run check:generated-artifacts -- --only=stablecoin-client-projections",
-        "npm run typecheck",
-        "npm run typecheck:worker",
-        "npx vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts",
-      ],
-    },
-    {
-      area: "Docs-only",
-      file: "docs/testing.md",
-      checks: [],
-    },
-  ])("keeps the $area row exactly represented by routed checks", ({ file, checks }) => {
-    const routed = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
-    expect(routed).toEqual(checks);
+    ["worker/src/cron/reserve-adapters/3jane-usd3.ts"],
+    ["worker/src/cron/sync-yield-data.ts"],
+    ["worker/src/handlers/scheduled.ts"],
+    ["worker/src/cron/reserve-adapters/3jane-usd3.ts", "worker/src/handlers/scheduled.ts"],
+  ])("retains broad cron lifecycle coverage for %j", (...files) => {
+    const commands = buildFocusedCheckPlan(files).checks.map((check) => check.command);
+    expect(commands).toContain("npx vitest run worker/src/cron worker/src/handlers/scheduled");
+    expect(commands.some((command) => command.includes("cron-leases.test.ts"))).toBe(true);
+    expect(commands.some((command) => command.includes("vitest related"))).toBe(false);
   });
 });

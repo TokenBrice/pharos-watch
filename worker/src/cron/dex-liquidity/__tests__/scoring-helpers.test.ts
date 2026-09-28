@@ -12,6 +12,26 @@ import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { LiquiditySourceMixByFamily } from "../types";
 import { makeObs, makePool } from "./scoring-test-builders";
 
+describe("protocol price evidence admission", () => {
+  it("omits a zero-weight cross-source price while retaining healthy protocols", () => {
+    const retained = buildDexPriceObservationsFromRetainedPools(new Map([["usdc-circle", [
+      makePool({ project: "orca", price: 1, priceEvidenceTvlUsd: 0 }),
+      makePool({ project: "balancer", price: 0.999, priceEvidenceTvlUsd: 200_000 }),
+    ]]]));
+    expect(retained.get("usdc-circle")).toEqual([
+      expect.objectContaining({ protocol: "balancer", price: 0.999, tvl: 200_000 }),
+    ]);
+    const sources = aggregateProtocolSources([
+      ...retained.get("usdc-circle")!,
+      makeObs({ protocol: "orca", tvl: 0 }),
+    ]);
+    expect(sources).toEqual([
+      expect.objectContaining({ protocol: "balancer", price: 0.999, tvl: 200_000 }),
+    ]);
+    expect(aggregateProtocolSources([makeObs({ tvl: 0 })])).toEqual([]);
+  });
+});
+
 describe("isPlausibleDexObservationPrice guards peg", () => {
   it("rejects extreme off-peg prices for usdc-circle", () => {
     // Below the reference lower bound (1% of peg = $0.01)

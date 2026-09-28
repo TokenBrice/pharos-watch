@@ -36,8 +36,7 @@
     "reserveDisclosureUrl": "https://www.paxos.com/usdp-transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "Paxos converted its NYDFS limited purpose trust charter to an OCC national trust bank charter on December 12, 2025 (conditional approval). This positions Paxos on the federal-qualified-nonbank pathway under GENIUS. No PPSI application framework exists yet (still in proposed-rule stage as of 2026-06-18); no PPSI approval has been granted to any issuer. USDP continues to be Paxos-issued and covered by federal OCC oversight but has no GENIUS PPSI authorization.",
+    "notes": "Evidence as of 2026-06-18 review: Paxos converted its NYDFS limited purpose trust charter to an OCC national trust bank charter on December 12, 2025 (conditional approval). This positions Paxos on the federal-qualified-nonbank pathway under GENIUS. No PPSI application framework exists yet (still in proposed-rule stage as of 2026-06-18); no PPSI approval has been granted to any issuer. USDP continues to be Paxos-issued and covered by federal OCC oversight but has no GENIUS PPSI authorization. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Conditional Approval: Paxos Trust Company Charter Conversion (December 2025)",

@@ -1,6 +1,6 @@
 /**
- * Half-hourly charts trigger (16,46 * * * *):
- *   sync-dex-liquidity (0) → cron-sentinel turnover source (0)
+ * Half-hourly charts trigger (physical 16 * * * * and 46 * * * * aliases):
+ *   sync-dex-liquidity (0 normally, 5 during source recovery) → cron-sentinel turnover source (0)
  *   → prepare-safety-score-v9-input (3)
  *   sync-stablecoin-charts (1), failure-independent and serial
  * :16 consumes and publishes the hourly source generation; :46 reuses the
@@ -8,7 +8,8 @@
  * never-started hourly stage is re-run inline by the :16 consumer (bounded by
  * the stage job's lease and the consumer's own wall-clock budget), and :46
  * publishes the hour's still-unconsumed stage when :16 never completed.
- * The charts writer uses the same lightweight trigger.
+ * The serial chain peaks at 3 normally and 5 during bounded source recovery;
+ * the registry/checker therefore treats this slot as headroom-full.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
 import {

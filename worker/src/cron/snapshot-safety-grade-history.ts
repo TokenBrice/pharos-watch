@@ -267,12 +267,14 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   return createCronResult({
     ...(degradedReportCardInputs || suppressedIdentityTransitions > 0 ? { status: "degraded" as const } : {}),
     itemCount: seeded + changed + identityBoundaryBaselines,
+    productivity: { productive: seeded + changed + identityBoundaryBaselines > 0 },
     metadata: {
-      ...(degradedReportCardInputs
-        ? { reason: "degraded-report-card-inputs" }
+      reason: degradedReportCardInputs
+        ? "degraded-report-card-inputs"
         : suppressedIdentityTransitions > 0
-          ? { reason: "identity-transitions-suppressed" }
-          : {}),
+          ? "identity-transitions-suppressed"
+          : "grade-history-completed",
+      ...(seeded + changed + identityBoundaryBaselines > 0 ? { outputPublishedAt: nowSec } : {}),
       snapshotDay,
       methodologyVersion,
       model: identity.model,

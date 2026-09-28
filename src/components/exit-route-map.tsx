@@ -481,7 +481,11 @@ export function LiquidityExitRouteMap({
               icon={<Route className="h-4 w-4" aria-hidden />}
               label={<MethodologyLabel topic="liquidityScore">Organic</MethodologyLabel>}
               value={model.organicPct == null ? "NR" : `${model.organicPct}%`}
-              detail={`${formatCurrency(model.totalVolume24hUsd, 0)} 24h routed volume`}
+              detail={
+                model.totalVolume24hUsd != null
+                  ? `${formatCurrency(model.totalVolume24hUsd, 0)} 24h routed volume`
+                  : "24h routed volume not measured"
+              }
             />
           </div>
         </div>

@@ -86,6 +86,73 @@ afterEach(() => {
 });
 
 describe("handleTelegramMiniAppMutation", () => {
+  it.each([
+    { name: "snoozed", enabled: 1, override: 1, band: null, mode: null, step: null, snooze: NOW_SEC + 14_400 },
+    { name: "snooze-only", enabled: 0, override: 0, band: null, mode: null, step: null, snooze: NOW_SEC + 14_400 },
+    { name: "explicit-off", enabled: 0, override: 1, band: null, mode: null, step: null, snooze: null },
+    { name: "tuned", enabled: 1, override: 1, band: "DANGER", mode: "downgrade-only", step: 250, snooze: NOW_SEC + 3_600 },
+  ])("round-trips an exact $name row through signed remove and fenced undo", async (row) => {
+    const { db, sqlite } = persistedDb();
+    sqlite.prepare(`
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
+        alert_launch, alert_reserve, alert_freeze,
+        alert_dews_override, alert_depeg_override, alert_safety_override,
+        alert_launch_override, alert_reserve_override, alert_freeze_override,
+        dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
+      ) VALUES ('42', 'usdc-circle', ?, ?, ?, 0, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(row.enabled, row.enabled, row.enabled, row.override, row.override, row.override,
+      row.override, row.override, row.override, row.band, row.mode, row.step, row.snooze);
+    const before = sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42'").all();
+    const initData = await privateInitData();
+    const removed = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
+      initData, operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
+    }), BOT_TOKEN);
+    expect(removed.status).toBe(200);
+    const snapshot = TelegramMiniAppSnapshotSchema.parse(await removed.json());
+    expect(snapshot.state.subscriptions).toEqual([]);
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42'").all()).toEqual([]);
+    expect(snapshot.undo?.restoreDirectRows[0]?.snoozeUntilTs).toBe(row.snooze);
+    const restored = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
+      initData, operation: { kind: "undo-bulk-watchlist", ...snapshot.undo },
+    }), BOT_TOKEN);
+    expect(restored.status).toBe(200);
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42'").all()).toEqual(before);
+    expect(TelegramMiniAppSnapshotSchema.parse(await restored.json()).state.subscriptions[0]?.snoozeUntilTs).toBe(row.snooze);
+  });
+
+  it.each(["invalid-fingerprint", "concurrent-edit"] as const)("rejects %s undo without changing persisted preferences", async (scenario) => {
+    const { db, sqlite } = persistedDb();
+    sqlite.prepare(`
+      INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_dews_override)
+      VALUES ('42', 'usdc-circle', 1, 1)
+    `).run();
+    const initData = await privateInitData();
+    const removed = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
+      initData, operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
+    }), BOT_TOKEN);
+    expect(removed.status).toBe(200);
+    const { undo } = TelegramMiniAppSnapshotSchema.parse(await removed.json());
+    if (!undo) throw new Error("Missing server-derived undo");
+    if (scenario === "concurrent-edit") {
+      const edited = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
+        initData, operation: { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true }, safetyMode: "upgrade-only" } },
+      }), BOT_TOKEN);
+      expect(edited.status).toBe(200);
+    } else {
+      undo.expectedFingerprint = "preview-v1-1-deadbeef";
+    }
+    const beforeRows = sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42'").all();
+    const beforePreferences = sqlite.prepare("SELECT * FROM telegram_subscribers WHERE chat_id = '42'").get();
+    const rejected = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
+      initData, operation: { kind: "undo-bulk-watchlist", ...undo },
+    }), BOT_TOKEN);
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toMatchObject({ code: "stale-bulk-preview" });
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42'").all()).toEqual(beforeRows);
+    expect(sqlite.prepare("SELECT * FROM telegram_subscribers WHERE chat_id = '42'").get()).toEqual(beforePreferences);
+  });
+
   it("returns only mutable state and revision for a routine versioned mutation", async () => {
     const initData = await privateInitData();
     const db = makeMiniAppDb(stateReadTables());
@@ -544,19 +611,6 @@ describe("handleTelegramMiniAppMutation", () => {
     ]);
   });
 
-  it("removes explicit coin subscriptions", async () => {
-    const initData = await privateInitData();
-    const db = makeMiniAppDb(stateReadTables());
-
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
-    }), BOT_TOKEN);
-
-    expect(response.status).toBe(200);
-    expect(historyMatches(db, "DELETE FROM telegram_subscriptions", { 0: "42", 1: "usdc-circle" })).toBe(true);
-    expect(historyMatches(db, "preference_generation = preference_generation + 1", { 0: NOW_SEC, 1: "42" })).toBe(true);
-  });
 
   it("writes recommended setup as preset provenance without materializing coin rows", async () => {
     const initData = await privateInitData();
@@ -848,7 +902,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
     const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
-      operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
+      operation: { kind: "pause" },
     }), BOT_TOKEN);
 
     expect(response.status).toBe(500);
@@ -961,13 +1015,14 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(clearResponse.status).toBe(200);
     expect(historyMatches(clearDb, "UPDATE telegram_subscriptions", { 0: "42", 1: frozen.id })).toBe(true);
 
-    const removeDb = makeMiniAppDb(stateReadTables());
+    const { db: removeDb, sqlite } = persistedDb();
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_dews_override) VALUES ('42', ?, 1, 1)").run(frozen.id);
     const removeResponse = await handleTelegramMiniAppMutation(removeDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "remove-coin", stablecoinId: frozen.id },
     }), BOT_TOKEN);
     expect(removeResponse.status).toBe(200);
-    expect(historyMatches(removeDb, "DELETE FROM telegram_subscriptions", { 0: "42", 1: frozen.id })).toBe(true);
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = ?").get(frozen.id)).toBeUndefined();
   });
 
   it("rejects set-coin-snooze with a stable unknown-coin code on unknown coin", async () => {

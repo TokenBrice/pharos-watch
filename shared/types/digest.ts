@@ -358,6 +358,9 @@ export interface DigestInputData {
     currentPriceUsd?: number;
     /** Signed deviation computed from the live price vs the event's peg reference. */
     currentBps?: number;
+    /** Event reference and producing quote time; absent on legacy archived rows. */
+    pegReference?: number;
+    priceObservedAt?: number;
     /** Which deviation severity decisions were made on: live price ("current") or the stored peak ("peak-fallback"). */
     severityBasis?: "current" | "peak-fallback";
     suppressReason?: string;
@@ -373,10 +376,10 @@ export interface DigestInputData {
     score: number;
     band: string;
     components: {
-      severity: number;
-      breadth: number;
-      stressBreadth?: number;
-      trend: number;
+      severity: number | null;
+      breadth: number | null;
+      stressBreadth?: number | null;
+      trend: number | null;
     };
   } | null;
   yesterdayIndex: { score: number; band: string } | null;
@@ -587,7 +590,7 @@ export const DigestForwardLookOutcomeSchema = z.object({
   id: z.string(),
   triggerId: z.string(),
   label: z.string(),
-  status: z.enum(["hit", "missed", "pending", "expired"]),
+  status: z.enum(["hit", "missed", "pending", "expired", "unavailable"]),
   detail: z.string(),
   sourceDate: z.string().nullable().optional(),
 });
@@ -760,6 +763,8 @@ const DigestSnapshotInputDataSchema = z
             mcapUsd: z.number(),
             startedAt: z.number().optional(),
             currentBps: z.number().optional(),
+            pegReference: z.number().positive().optional(),
+            priceObservedAt: z.number().optional(),
             severityBasis: z.enum(["current", "peak-fallback"]).optional(),
           })
           .passthrough(),
@@ -772,10 +777,10 @@ const DigestSnapshotInputDataSchema = z
         band: z.string(),
         components: z
           .object({
-            severity: z.number(),
-            breadth: z.number(),
-            stressBreadth: z.number().optional(),
-            trend: z.number(),
+            severity: z.number().nullable(),
+            breadth: z.number().nullable(),
+            stressBreadth: z.number().nullable().optional(),
+            trend: z.number().nullable(),
           })
           .passthrough(),
       })

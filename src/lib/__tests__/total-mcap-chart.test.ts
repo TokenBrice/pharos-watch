@@ -52,12 +52,12 @@ describe("buildTotalMcapChartRows", () => {
     );
 
     expect(rows).toEqual([
-      { ts: 100000, usdt: 0, usdc: 0, sky: 0, others: 50, nonUsd: 0, total: 50 },
-      { ts: 200000, usdt: 20, usdc: 0, sky: 0, others: 55, nonUsd: 0, total: 75 },
+      { ts: 100000, usdt: null, usdc: null, sky: null, others: null, nonUsd: 0, total: 50 },
+      { ts: 200000, usdt: 20, usdc: null, sky: null, others: null, nonUsd: 0, total: 75 },
     ]);
   });
 
-  it("keeps pre-2021 rows aligned with long-range cohort history instead of zeroing the majors", () => {
+  it("retains observed long-range cohorts without inventing pre-observation coverage", () => {
     const rows = buildTotalMcapChartRows(
       [
         { date: 1_580_000_000, totalCirculatingUSD: { peggedUSD: 10_000 } },
@@ -73,7 +73,7 @@ describe("buildTotalMcapChartRows", () => {
           { date: 1_610_000_000, circulatingUsd: 4_000, price: 1 },
         ],
         usdsHistory: [
-          { date: 1_570_000_000, circulatingUsd: 500, price: 1 },
+          { date: 1_610_000_000, circulatingUsd: 500, price: 1 },
         ],
         daiHistory: [
           { date: 1_570_000_000, circulatingUsd: 1_000, price: 1 },
@@ -83,7 +83,7 @@ describe("buildTotalMcapChartRows", () => {
     );
 
     expect(rows).toEqual([
-      { ts: 1_580_000_000_000, usdt: 4_000, usdc: 2_000, sky: 1_500, others: 2_500, nonUsd: 0, total: 10_000 },
+      { ts: 1_580_000_000_000, usdt: 4_000, usdc: 2_000, sky: null, others: null, nonUsd: 0, total: 10_000 },
       { ts: 1_620_000_000_000, usdt: 8_000, usdc: 4_000, sky: 2_500, others: 5_500, nonUsd: 0, total: 20_000 },
     ]);
   });
@@ -117,18 +117,59 @@ describe("buildTotalMcapChartRows", () => {
         ],
         usdcHistory: [], usdsHistory: [], daiHistory: [],
       },
-    )).toEqual([{ ts: 100000, usdt: 30, usdc: 0, sky: 0, others: 70, nonUsd: 0, total: 100 }]);
+    )).toEqual([{ ts: 100000, usdt: 30, usdc: null, sky: null, others: null, nonUsd: 0, total: 100 }]);
   });
 
-  it("clamps others when major cohorts exceed the aggregate", () => {
+  it("withholds an unexplained negative residual without changing the observed cohorts or total", () => {
     expect(buildTotalMcapChartRows(
       [{ date: 100, totalCirculatingUSD: { peggedUSD: 20 } }],
       {
         usdtHistory: [{ date: 100, circulatingUsd: 30, price: 1 }],
-        usdcHistory: [], usdsHistory: [], daiHistory: [],
+        usdcHistory: [{ date: 100, circulatingUsd: 0, price: 1 }],
+        usdsHistory: [{ date: 100, circulatingUsd: 0, price: 1 }],
+        daiHistory: [{ date: 100, circulatingUsd: 0, price: 1 }],
       },
-    )).toEqual([{ ts: 100000, usdt: 30, usdc: 0, sky: 0, others: 0, nonUsd: 0, total: 20 }]);
+    )).toEqual([{ ts: 100000, usdt: 30, usdc: 0, sky: 0, others: null, nonUsd: 0, total: 20 }]);
   });
+
+  it("preserves explicit observed zero and computes a known residual", () => {
+    const zero = [{ date: 100, circulatingUsd: 0, price: 1 }];
+    expect(buildTotalMcapChartRows(
+      [{ date: 100, totalCirculatingUSD: { peggedUSD: 20 } }],
+      { usdtHistory: zero, usdcHistory: zero, usdsHistory: zero, daiHistory: zero },
+    )).toEqual([{ ts: 100000, usdt: 0, usdc: 0, sky: 0, others: 20, nonUsd: 0, total: 20 }]);
+  });
+
+  it("retains the aggregate when all histories are unavailable", () => {
+    expect(buildTotalMcapChartRows(
+      [{ date: 100, totalCirculatingUSD: { peggedUSD: 100 } }],
+      { usdtHistory: null, usdcHistory: null, usdsHistory: null, daiHistory: null },
+    )).toEqual([{ ts: 100000, usdt: null, usdc: null, sky: null, others: null, nonUsd: 0, total: 100 }]);
+  });
+
+  it.each(["usdtHistory", "usdcHistory", "usdsHistory", "daiHistory"] as const)(
+    "withholds only dependent cohorts until %s recovers",
+    (missing) => {
+      const observed = [{ date: 100, circulatingUsd: 10, price: 1 }];
+      const histories = {
+        usdtHistory: observed, usdcHistory: observed, usdsHistory: observed, daiHistory: observed,
+      };
+      const points = [{ date: 100, totalCirculatingUSD: { peggedUSD: 100 } }];
+      const [unavailable] = buildTotalMcapChartRows(points, { ...histories, [missing]: null });
+      expect(unavailable).toEqual({
+        ts: 100000,
+        total: 100,
+        nonUsd: 0,
+        usdt: missing === "usdtHistory" ? null : 10,
+        usdc: missing === "usdcHistory" ? null : 10,
+        sky: missing === "usdsHistory" || missing === "daiHistory" ? null : 20,
+        others: null,
+      });
+      expect(buildTotalMcapChartRows(points, histories)).toEqual([
+        { ts: 100000, total: 100, nonUsd: 0, usdt: 10, usdc: 10, sky: 20, others: 60 },
+      ]);
+    },
+  );
 
   it("returns no rows for an empty chart", () => {
     expect(buildTotalMcapChartRows([], {

@@ -35,7 +35,6 @@ function clampUnitInterval(value: number): number {
 
 function buildReserveSyncCapacityFields(params: {
   rawCapacityUsd: number;
-  reportedCapacityRatio?: number | null;
   supplyUsd: number | null;
   dailyLimitUsd?: number | null;
   queueDepthUsd?: number | null;
@@ -49,12 +48,9 @@ function buildReserveSyncCapacityFields(params: {
   const immediateCapacityUsd = hasSupplyCeiling
     ? Math.max(0, Math.min(params.supplyUsd as number, params.rawCapacityUsd))
     : Math.max(0, params.rawCapacityUsd);
-  const immediateCapacityRatio =
-    params.reportedCapacityRatio != null
-      ? clampUnitInterval(params.reportedCapacityRatio)
-      : hasPositiveSupply
-        ? clampUnitInterval(immediateCapacityUsd / (params.supplyUsd as number))
-        : null;
+  const immediateCapacityRatio = hasPositiveSupply
+    ? immediateCapacityUsd / (params.supplyUsd as number)
+    : null;
   const dailyLimitCapsCapacity =
     params.applyDailyLimit && params.dailyLimitUsd != null
       ? params.dailyLimitUsd < immediateCapacityUsd
@@ -195,6 +191,7 @@ export async function resolveReserveSyncCapacity(
       ...(liveMetadata.capacityKind ? { capacityKind: liveMetadata.capacityKind } : {}),
       ...(liveMetadata.freshnessKind ? { freshnessKind: liveMetadata.freshnessKind } : {}),
       ...(liveMetadata.sourceTimestamp != null ? { sourceTimestamp: liveMetadata.sourceTimestamp } : {}),
+      ...(liveMetadata.evidenceObservedAt != null ? { evidenceObservedAt: liveMetadata.evidenceObservedAt } : {}),
       ...(liveMetadata.sourceUrls.length > 0 ? { sourceUrls: liveMetadata.sourceUrls } : {}),
       ...(liveMetadata.settlementDelaySec != null ? { settlementDelaySec: liveMetadata.settlementDelaySec } : {}),
       ...(liveMetadata.queueDepthUsd != null ? { queueDepthUsd: liveMetadata.queueDepthUsd } : {}),
@@ -241,7 +238,6 @@ export async function resolveReserveSyncCapacity(
       ...capacityFields
     } = buildReserveSyncCapacityFields({
       rawCapacityUsd,
-      reportedCapacityRatio: liveMetadata.immediateRedeemableRatio,
       supplyUsd,
       dailyLimitUsd: liveMetadata.dailyLimitUsd,
       queueDepthUsd: liveMetadata.queueDepthUsd,
@@ -278,6 +274,7 @@ export async function resolveReserveSyncCapacity(
       ...(capacityKind ? { capacityKind } : {}),
       ...(liveMetadata.freshnessKind ? { freshnessKind: liveMetadata.freshnessKind } : {}),
       ...(liveMetadata.sourceTimestamp != null ? { sourceTimestamp: liveMetadata.sourceTimestamp } : {}),
+      ...(liveMetadata.evidenceObservedAt != null ? { evidenceObservedAt: liveMetadata.evidenceObservedAt } : {}),
       ...(liveMetadata.sourceUrls.length > 0 ? { sourceUrls: liveMetadata.sourceUrls } : {}),
       ...(liveMetadata.settlementDelaySec != null ? { settlementDelaySec: liveMetadata.settlementDelaySec } : {}),
       ...(liveMetadata.queueDepthUsd != null ? { queueDepthUsd: liveMetadata.queueDepthUsd } : {}),
@@ -298,7 +295,6 @@ export async function resolveReserveSyncCapacity(
   if (model.fallbackRatio != null && supplyUsd != null && supplyUsd > 0) {
     const capacityFields = buildReserveSyncCapacityFields({
       rawCapacityUsd: supplyUsd * model.fallbackRatio,
-      reportedCapacityRatio: model.fallbackRatio,
       supplyUsd,
       dailyLimitUsd: liveMetadata.dailyLimitUsd,
       capacityProfileConfidence: fallbackCapacityConfidence,

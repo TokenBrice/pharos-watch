@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
@@ -7,6 +8,8 @@ import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import {
+  ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
+  resolveStablecoinPriceGapReviews,
   evaluateStablecoinActivePriceCoverage,
   loadPreviousStablecoinActivePriceCoverage,
   type PreviousStablecoinActivePriceCoverage,
@@ -115,14 +118,21 @@ export async function loadStablecoinsPublicationContinuity(
   previousActivePriceCoverage: PreviousStablecoinActivePriceCoverage | null;
   previousMissingGenerationsById: Map<string, number>;
 }> {
-  const previousActivePriceCoverage = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
+  const previousRead = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
+  const previousActivePriceCoverage = previousRead.status === "ok" ? previousRead.coverage
+    : previousRead.status === "missing" ? null
+      : { missingActiveIds: [], missingActiveAssets: [], unavailableReason: previousRead.reason };
+  const reviews = resolveStablecoinPriceGapReviews(WORKER_ACTIVE_STABLECOINS.map((asset) => asset.id), syncStartSec);
+  // Provider input is a priority projection, not persisted continuity evidence.
+  // Unknown continuity stays conservatively alert-eligible, but cannot prioritize every provider lookup.
+  const priorityEntries: [string, number][] = previousRead.status === "read-error"
+    ? []
+    : (previousActivePriceCoverage?.missingActiveAssets ?? []).map((detail) => [
+        detail.stablecoinId, detail.consecutiveMissingGenerations ?? ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
+      ]);
   return {
     previousActivePriceCoverage,
-    previousMissingGenerationsById: new Map(
-      (previousActivePriceCoverage?.missingActiveAssets ?? []).map(
-        (detail) => [detail.stablecoinId, detail.consecutiveMissingGenerations] as const,
-      ),
-    ),
+    previousMissingGenerationsById: new Map(priorityEntries.filter(([id]) => !reviews.activeById.has(id))),
   };
 }
 
@@ -490,7 +500,8 @@ export async function runStablecoinsPostIntakePublication(
         surface: "stablecoins",
         generationId: `stablecoins:${cacheResult.syncStartSec}`,
         publishedAt: cacheResult.syncStartSec,
-        candidateRows: input.assets.length,
+        // `input.assets` already excludes rows the publication boundary quarantined (DEC-03).
+        candidateRows: input.assets.length + cacheResult.quarantinedAssets.length,
         publishedRows: input.assets.length,
         expectedRows: input.assets.length,
         artifactCacheKey: cacheResult.cacheKey,

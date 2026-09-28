@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.63",
+    title: "Quote-domain-safe event inputs and daily provenance",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "Live and historical PSI preserve native event quote domains; daily all-sample averages disclose methodology and component sample counts.",
+    impact: [
+      "Native events use timestamped native start or recovery evidence retained in D1, strictly as-of and younger than six hours; USD prices and changing FX cannot manufacture native deviation",
+      "No continuous native quote history is retained: unprovable windows disclose open-depeg-no-price instead of borrowing an untimed event peak or rewriting native references",
+      "Daily scores still average every sample across version transitions, with explicit mixed-version breakdown and per-component sample counts",
+      "Release A readers accept null daily components; the numeric snapshot writer remains unchanged until the separately gated nullable-producer activation",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.62",
     title: "As-of historical supply lookup",
     date: "2026-09-22",

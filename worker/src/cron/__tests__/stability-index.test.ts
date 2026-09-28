@@ -127,7 +127,7 @@ function makeDb(opts: {
   const originalPrepare = db.prepare.bind(db);
   db.prepare = ((sql: string) => {
     const statement = originalPrepare(sql);
-    if (opts.depegQueryFails && sql === "SELECT stablecoin_id, peg_reference, started_at FROM depeg_events WHERE ended_at IS NULL") {
+    if (opts.depegQueryFails && sql.includes("FROM depeg_events e")) {
       return failAll(statement, "no such table: depeg_events");
     }
     if (opts.dewsUnavailable && sql.includes("pharos:stress-signals:published-exact")) {
@@ -167,6 +167,37 @@ describe("computeAndStoreStabilityIndex", () => {
     });
   });
 
+
+  it.each([
+    ["eurc-circle", "peggedEUR", 1.08],
+    ["jpyc-jpyc", "peggedJPY", 0.0067],
+    ["usdt-tether", "peggedUSD", 0.98],
+  ])("keeps %s event evidence in its quote domain", async (id, pegType, usdPrice) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeDb({ depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: now - 60 }] });
+    db.sqlite.prepare("UPDATE depeg_events SET peg_type = ?, start_price = 0.98").run(pegType);
+    vi.mocked(loadStablecoinsCache).mockResolvedValue({
+      kind: "ok", updatedAt: now,
+      payload: { peggedAssets: [makeStabilityAsset({ id, pegType, price: usdPrice })] },
+    });
+    await computeAndStoreStabilityIndex(db);
+    const first = readInsertedInputSnapshot(db);
+    expect(first.contributors).toEqual([expect.objectContaining({ id, bps: -200 })]);
+    if (pegType !== "peggedUSD") {
+      vi.mocked(loadStablecoinsCache).mockResolvedValue({
+        kind: "ok", updatedAt: now,
+        payload: { peggedAssets: [makeStabilityAsset({ id, pegType, price: usdPrice * 1.2 })] },
+      });
+      await computeAndStoreStabilityIndex(db);
+      expect(readInsertedInputSnapshot(db).contributors).toEqual(first.contributors);
+      db.sqlite.prepare("UPDATE depeg_events SET started_at = ?").run(now - 6 * 3600);
+      await computeAndStoreStabilityIndex(db);
+      const missing = readInsertedInputSnapshot(db);
+      expect(missing.contributors).toEqual([]);
+      expect(missing.degradedComponents).toEqual(["open-depeg-no-price"]);
+      expect(missing.openDepegsWithoutPrice).toBe(1);
+    }
+  });
   it("returns degraded when DEWS dependency is unavailable", async () => {
     const db = makeDb({ dewsUnavailable: true });
 

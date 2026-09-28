@@ -20,7 +20,25 @@
     "provider": "Fact Finance Ltda technical verification memos (an RWA oracle firm, not an audit practice; signer is a technical lead, not a licensed accountant; monthly reports are published through August 2026, while the 'daily audits' claim has no daily artefact)",
     "attestorTier": "none",
     "cadence": "monthly",
-    "attestorJurisdiction": "Brazil"
+    "attestorJurisdiction": "Brazil",
+    "latestReport": {
+      "reviewReference": {
+        "date": "2026-05-31",
+        "reviewedAt": "2026-08-14",
+        "dateKind": "unspecified"
+      },
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Pharos compliance research",
+      "confidence": "unknown",
+      "sources": [
+        {
+          "label": "Crown BRLV transparency and redemption disclosure (as of 2026-08-14 review; date kind unspecified)",
+          "url": "https://www.crown-brlv.com/transparencia/"
+        }
+      ]
+    }
   },
   "links": [
     {

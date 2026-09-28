@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { freshnessDb } from "./api-freshness.test-support";
+import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 import {
   buildFreshnessMeta,
   buildCacheStatuses,
-  getLatestSuccessfulCronTimestamp,
   getLatestSuccessfulCronTimestampResult,
 } from "../api-freshness";
 import { addFreshnessHeaders } from "../api-freshness-headers";
@@ -24,7 +24,7 @@ describe("public freshness clock skew", () => {
         ageSeconds: 0,
         futureSkewSeconds: API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC + 1,
       });
-      expect(buildFreshnessMeta(updatedAt, 60)).toEqual({
+      expect(buildFreshnessMeta(updatedAt, 60)).toMatchObject({
         updatedAt,
         ageSeconds: 0,
         status: "degraded",
@@ -49,6 +49,32 @@ describe("public freshness clock skew", () => {
     } finally {
       nowSpy.mockRestore();
     }
+  });
+});
+
+describe("self-describing freshness bands", () => {
+  it.each([
+    [480, "fresh"], [481, "degraded"], [720, "degraded"], [721, "stale"],
+  ] as const)("reconstructs the generic verdict at age %s", (age, expected) => {
+    const meta = buildFreshnessMeta(1_800_000_000 - age, 60, undefined, { assessedAt: 1_800_000_000 });
+    expect(meta.assessedAt - meta.updatedAt).toBe(meta.ageSeconds);
+    expect(meta.freshBudgetSec).toBe(480);
+    expect(meta.degradedBudgetSec).toBe(720);
+    const reconstructed = meta.ageSeconds <= meta.freshBudgetSec ? "fresh"
+      : meta.ageSeconds <= meta.degradedBudgetSec ? "degraded" : "stale";
+    expect(meta.status).toBe(expected);
+    expect(meta.status).toBe(reconstructed);
+  });
+
+  it.each([
+    [1800, "fresh"], [1801, "degraded"], [3600, "degraded"], [3601, "stale"],
+  ] as const)("preserves explicit route bands at age %s", (age, expected) => {
+    const meta = buildFreshnessMeta(1_800_000_000 - age, 1800, undefined, {
+      assessedAt: 1_800_000_000, freshBudgetSec: 1800, degradedBudgetSec: 3600,
+    });
+    expect(meta.status).toBe(expected);
+    expect(meta.freshBudgetSec).toBe(1800);
+    expect(meta.degradedBudgetSec).toBe(3600);
   });
 });
 
@@ -136,19 +162,6 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
   });
 });
 
-describe("getLatestSuccessfulCronTimestamp", () => {
-  it("falls back when the lookup result is missing", async () => {
-    const db = mockD1([
-      {
-        match: "MAX(started_at) as started_at FROM cron_runs",
-        rows: [],
-        first: { started_at: null },
-      },
-    ]);
-
-    await expect(getLatestSuccessfulCronTimestamp(db, "sync-yield-data", 123)).resolves.toBe(123);
-  });
-});
 
 describe("buildCacheStatuses sentinel validation", () => {
   it("ignores newer non-best yield sources when measuring fallback freshness", async () => {
@@ -222,7 +235,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           sentinelRow("yield-data", now - 180),
@@ -275,7 +288,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120, { source: "sync-yield-data" }),
           sentinelRow("yield-data", now - 180),
@@ -314,7 +327,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           { key: "freshness:dex-liquidity", updated_at: now - 120, value: "{bad-json" },
           sentinelRow("yield-data", now - 180),
@@ -354,7 +367,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           sentinelRow("yield-data", now - 180),
@@ -393,7 +406,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           // 1800s = 1x the half-hourly budget: one missed publish stays healthy.
@@ -419,7 +432,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           // ~2.06x the hourly budget: two missed publishes -> public-unhealthy.
@@ -445,7 +458,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           sentinelRow("yield-data", now - 180),
@@ -482,7 +495,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           // No freshness:dex-liquidity sentinel row at all: the fallback path
           // must surface the table failure, not a sentinel validation reason.
@@ -519,7 +532,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           // ~5.5x the hourly budget: past the yield-data override stale
@@ -546,7 +559,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           sentinelRow("dews", now - 240),
@@ -579,7 +592,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           sentinelRow("yield-data", now - 60),
@@ -613,7 +626,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           sentinelRow("yield-data", now - 60),
@@ -648,7 +661,7 @@ describe("buildCacheStatuses sentinel validation", () => {
             cacheRow("stablecoins", now - 60),
             cacheRow("stablecoin-charts", now - 60),
             cacheRow("usds-status", now - 60),
-            cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+            ...fxRatesCacheRows(now - 60),
             cacheRow("bluechip-ratings", now - 60),
             sentinelRow("dex-liquidity", now - 120),
             sentinelRow("yield-data", now - 60),
@@ -682,7 +695,7 @@ describe("buildCacheStatuses", () => {
         cacheRow("stablecoins", nowSec - 60),
         cacheRow("stablecoin-charts", nowSec - 60),
         cacheRow("usds-status", nowSec - 60),
-        cacheRow("fx-rates", nowSec - 60, { peggedEUR: 1.08 }),
+        ...fxRatesCacheRows(nowSec - 60),
         cacheRow("bluechip-ratings", nowSec - 60),
         sentinelRow("dex-liquidity", nowSec - 60),
         sentinelRow("yield-data", nowSec - 60),
@@ -854,8 +867,8 @@ describe("buildCacheStatuses", () => {
         cacheRow("stablecoins", nowSec - 60),
         cacheRow("stablecoin-charts", nowSec - 60),
         cacheRow("usds-status", nowSec - 60),
-        cacheRow("fx-rates", nowSec - 60, { peggedEUR: 1.08 }),
-        cacheRow("fx-rates-meta", nowSec - 30, {
+        // Row clock (publication) and usableSyncAt (last usable sync) differ on purpose.
+        ...fxRatesCacheRows(nowSec - 30, { peggedEUR: 1.08 }, {
           usableSyncAt: nowSec - 180,
           mode: "cached-fallback",
           sourceUpdatedAtByPeg: { peggedEUR: nowSec - 8 * 3600 },
@@ -886,7 +899,7 @@ describe("buildCacheStatuses", () => {
           cacheRow("stablecoins", now - 60),
           cacheRow("stablecoin-charts", now - 60),
           cacheRow("usds-status", now - 60),
-          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
           // ~2.06x the hourly budget: two missed publishes, past the override ceiling.

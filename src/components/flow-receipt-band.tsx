@@ -7,6 +7,8 @@ import {
   type FlowPressureReceiptRow,
 } from "@/lib/flow-pressure-receipt-model";
 import { formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
+import { formatMintBurnVolume } from "@/lib/mint-burn-valuation-display";
+import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 import type {
   MintBurnCoinFlow,
   MintBurnGauge,
@@ -23,19 +25,33 @@ interface FlowReceiptBandProps {
   variant?: "default" | "compact";
 }
 
-function formatReceiptCurrency(row: FlowPressureReceiptRow): string {
-  if (row.valueUsd === null) return "NR";
-  return row.tone === "net" ? formatSignedCurrency(row.valueUsd) : formatCurrency(row.valueUsd);
-}
-
 function toneClass(tone: FlowPressureReceiptRow["tone"]): string {
   if (tone === "mint") return "text-emerald-700 dark:text-emerald-300";
   if (tone === "burn") return "text-red-700 dark:text-red-300";
   return "text-foreground";
 }
 
-function valueClass(row: FlowPressureReceiptRow): string {
-  return row.tone === "net" && row.valueUsd !== null ? getNetColor(row.valueUsd) : toneClass(row.tone);
+/** Net rows: unavailable nets render NR with their reason, never $0. Volumes: NR without hourly data, `≥` when a lower bound. */
+function ReceiptValue({ row }: { row: FlowPressureReceiptRow }) {
+  const className = "pharos-numeric text-sm font-semibold";
+  if (row.tone === "net") {
+    return (
+      <FlowSignedNetValue
+        net={{ valueUsd: row.valueUsd, completeness: row.completeness, note: row.note }}
+        format={formatSignedCurrency}
+        colorClassName={getNetColor}
+        className={className}
+        placeholder="NR"
+      />
+    );
+  }
+  if (row.valueUsd === null) return <span className={cn(className, toneClass(row.tone))}>NR</span>;
+  return (
+    <span className={cn(className, toneClass(row.tone))} title={row.note ?? undefined}>
+      {formatMintBurnVolume(row.valueUsd, row.completeness, formatCurrency)}
+      {row.note ? <span className="sr-only"> ({row.note})</span> : null}
+    </span>
+  );
 }
 
 function statusLabel(status: string): string {
@@ -65,11 +81,11 @@ function ReceiptRow({
     <div className={styles.container}>
       <div className="flex items-center justify-between gap-3">
         <span className={styles.label}>{row.label}</span>
-        <span className={cn("pharos-numeric text-sm font-semibold", valueClass(row))}>
-          {formatReceiptCurrency(row)}
-        </span>
+        <ReceiptValue row={row} />
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {row.tone === "net" && row.valueUsd === null && row.note ? row.note : row.detail}
+      </p>
     </div>
   );
 }

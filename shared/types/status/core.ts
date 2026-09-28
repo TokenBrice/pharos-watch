@@ -81,7 +81,7 @@ export const StatusProbeComparisonSchema = z.object({
 });
 export type StatusProbeComparison = z.output<typeof StatusProbeComparisonSchema>;
 
-export const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing"] as const;
+export const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing", "probe-invalid-timestamp"] as const;
 export type StatusDiscrepancyReason = (typeof STATUS_DISCREPANCY_REASON_VALUES)[number];
 
 export const StatusDiscrepancySchema = z.object({
@@ -236,57 +236,68 @@ export type DataQuality = z.output<typeof DataQualitySchema>;
  * simply stops being alert-eligible until the review expires, after which it
  * alerts again until renewed or resolved. Never applies to depegs or to assets
  * that have a price. */
-export interface ActivePriceCoverageGapAcknowledgement {
-  owner: string;
-  reason: string;
-  sources: string[];
-  reviewedAt: number;
-  expiresAt: number;
-}
+export const ActivePriceCoverageGapAcknowledgementSchema = z.object({
+  owner: z.string(),
+  reason: z.string(),
+  sources: z.array(z.string()),
+  reviewedAt: z.number(),
+  expiresAt: z.number(),
+});
+export type ActivePriceCoverageGapAcknowledgement = z.output<typeof ActivePriceCoverageGapAcknowledgementSchema>;
 
-export interface ActivePriceCoverageGap {
-  stablecoinId: string;
-  symbol: string;
-  marketCapUsd: number | null;
-  currentPrice: number | null;
-  currentSource: string | null;
-  currentObservedAt: number | null;
-  currentConfidence: string | null;
-  consecutiveMissingGenerations: number;
-  lastAcceptedPrice: number | null;
-  lastAcceptedSource: string | null;
-  lastAcceptedObservedAt: number | null;
-  rejectionReason: string;
-  alertEligible: boolean;
-  /** Present only while a valid, unexpired registry review acknowledges this
-   * gap. Older payloads may omit it; treat missing as null. */
-  acknowledgedGap?: ActivePriceCoverageGapAcknowledgement | null;
-}
+export const ActivePriceCoverageGapSchema = z.object({
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  marketCapUsd: z.number().nullable(),
+  currentPrice: z.number().nullable(),
+  currentSource: z.string().nullable(),
+  currentObservedAt: z.number().nullable(),
+  currentConfidence: z.string().nullable(),
+  consecutiveMissingGenerations: z.number().int().positive().nullable(),
+  streakUnavailableReason: z.enum(["previous-coverage-read-failed", "previous-coverage-malformed"]).nullable().optional(),
+  lastAcceptedPrice: z.number().nullable(),
+  lastAcceptedSource: z.string().nullable(),
+  lastAcceptedObservedAt: z.number().nullable(),
+  rejectionReason: z.string(),
+  alertEligible: z.boolean(),
+  acknowledgedGap: ActivePriceCoverageGapAcknowledgementSchema.nullable().optional(),
+}).refine((gap) => gap.consecutiveMissingGenerations != null || gap.streakUnavailableReason != null, {
+  path: ["streakUnavailableReason"], message: "Unknown continuity requires a reason",
+});
+export type ActivePriceCoverageGap = z.output<typeof ActivePriceCoverageGapSchema>;
 
-export interface ActivePriceCoverageHealth {
-  status: "complete" | "incomplete" | "unknown";
-  expectedActiveCount: number;
-  presentActiveCount: number;
-  pricedActiveCount: number;
-  missingPriceCount: number;
-  pricedActiveIds: string[];
-  missingActiveIds: string[];
-  affectedMarketCapUsd: number;
-  missingActiveAssets: ActivePriceCoverageGap[];
-  alertEligibleCount: number;
-  alertEligibleIds: string[];
-  /** Missing active IDs currently covered by a valid, unexpired price-gap
-   * review. Optional so older payloads without acknowledgement evidence still
-   * parse; consumers should default to empty. */
-  acknowledgedGapIds?: string[];
-  acknowledgedGapCount?: number;
-  /** Reviews whose expiry has passed — their gaps alert again until each
-   * review is renewed or the asset is frozen or delisted. */
-  expiredGapReviewIds?: string[];
-  invalidGapReviewIds?: string[];
-  maxConsecutiveMissingGenerations: number;
-  observedAt: number | null;
-}
+export const ActivePriceCoverageHealthSchema = z.object({
+  status: z.enum(["complete", "incomplete", "unknown"]),
+  unavailableReason: z.enum(["coverage-missing", "coverage-read-failed", "coverage-malformed"]).nullable().optional(),
+  expectedActiveCount: z.number().int().nonnegative().nullable(),
+  presentActiveCount: z.number().int().nonnegative().nullable(),
+  pricedActiveCount: z.number().int().nonnegative().nullable(),
+  missingPriceCount: z.number().int().nonnegative().nullable(),
+  pricedActiveIds: z.array(z.string()),
+  missingActiveIds: z.array(z.string()),
+  affectedMarketCapUsd: z.number().nonnegative().nullable(),
+  missingActiveAssets: z.array(ActivePriceCoverageGapSchema),
+  alertEligibleCount: z.number().int().nonnegative().nullable(),
+  alertEligibleIds: z.array(z.string()),
+  acknowledgedGapIds: z.array(z.string()).optional(),
+  acknowledgedGapCount: z.number().int().nonnegative().nullable().optional(),
+  expiredGapReviewIds: z.array(z.string()).optional(),
+  invalidGapReviewIds: z.array(z.string()).optional(),
+  maxConsecutiveMissingGenerations: z.number().int().nonnegative().nullable(),
+  observedAt: z.number().nullable(),
+}).superRefine((coverage, ctx) => {
+  const countKeys = ["expectedActiveCount", "presentActiveCount", "pricedActiveCount",
+    "missingPriceCount", "alertEligibleCount", "affectedMarketCapUsd"] as const;
+  for (const key of countKeys) {
+    if ((coverage.status === "unknown") !== (coverage[key] == null)) {
+      ctx.addIssue({ code: "custom", path: [key], message: "Unknown coverage requires null measurements; observed coverage requires measurements" });
+    }
+  }
+  if (coverage.status === "unknown" && (coverage.unavailableReason == null || coverage.maxConsecutiveMissingGenerations != null)) {
+    ctx.addIssue({ code: "custom", path: ["unavailableReason"], message: "Unknown coverage requires a reason and null continuity" });
+  }
+});
+export type ActivePriceCoverageHealth = z.output<typeof ActivePriceCoverageHealthSchema>;
 
 export const DatasetFreshnessSchema = z.object({
   stablecoins: z.number().nullable(),

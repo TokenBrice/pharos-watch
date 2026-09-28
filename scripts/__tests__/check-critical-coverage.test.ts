@@ -27,6 +27,19 @@ import { buildCriticalLcov, runCoverageFixture } from "./check-critical-coverage
 
 
 describe("critical coverage changed-file detection", () => {
+  it.each([null, [], 42, { files: null }, { files: [] }].map((baseline) => ({ baseline })))("rejects a malformed baseline $baseline even with below-floor LCOV", ({ baseline }) => {
+    const { exits, errors, logs } = runCoverageFixture({
+      env: {},
+      baseline,
+      lcov: buildCriticalLcov({
+        lineCoverage: { [CRITICAL_FILES[0]]: { lf: 100, lh: 0 } },
+      }),
+    });
+    expect(exits).toEqual([1]);
+    expect(errors).toContainEqual(expect.stringContaining("baseline"));
+    expect(logs).not.toContain("[coverage] Critical coverage gate passed.");
+  });
+
   it("parses explicit changed files before falling back to git", () => {
     expect(
       parseChangedFilesFromEnv(testEnv({
@@ -353,6 +366,17 @@ describe("critical coverage changed-file detection", () => {
     ]);
   });
 
+  it("fails closed when the baseline file is absent", () => {
+    const { logs, errors, exits } = runCoverageFixture({
+      env: { CRITICAL_COVERAGE_CHANGED_FILES: CRITICAL_FILES[0] },
+      lcov: buildCriticalLcov(),
+    });
+
+    expect(exits).toEqual([1]);
+    expect(errors.some((line) => line.includes("Missing baseline file"))).toBe(true);
+    expect(logs.some((line) => line.includes("Critical coverage gate passed"))).toBe(false);
+  });
+
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {
     const { logs, errors, exits } = runCoverageFixture({
       env: {
@@ -383,6 +407,7 @@ describe("critical coverage changed-file detection", () => {
     const { logs, errors, exits } = runCoverageFixture({
       env: { CI: "1", CRITICAL_COVERAGE_CHANGED_FILES: file },
       lcov,
+      baseline: { files: { [file]: 100 } },
     });
 
     expect(exits).toEqual([]);

@@ -12,7 +12,7 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { MintBurnCoinFlow, MintBurnPerCoinResponse, StablecoinData } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
+import type { PressureShiftState } from "@shared/lib/mint-burn-signals";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 
@@ -362,6 +362,29 @@ describe("deriveFlowSeries", () => {
     expect(result[0].data[1].netFlowUsd).toBe(-20_000);
   });
 
+  it("omits null and partial-valuation hours instead of plotting them as zero", () => {
+    const detail = makeFlowDetail({
+      hourly: [
+        { hourTs: 1700000000, netFlowUsd: 10, mintVolumeUsd: 10, burnVolumeUsd: 0, valuation: "complete" },
+        { hourTs: 1700003600, netFlowUsd: 5, mintVolumeUsd: 5, burnVolumeUsd: 0, valuation: "partial" },
+        { hourTs: 1700007200, netFlowUsd: null, mintVolumeUsd: 0, burnVolumeUsd: 0, valuation: "partial" },
+        { hourTs: 1700010800, netFlowUsd: -3, mintVolumeUsd: 0, burnVolumeUsd: 3 },
+      ],
+    });
+    const [series] = deriveFlowSeries({
+      selectedIds: ["usdc"],
+      flowDetails: [detail],
+      metaMap: new Map([["usdc", { symbol: "USDC" }]]),
+    });
+    expect(series.data).toEqual([
+      { ts: 1700000000 * 1000, netFlowUsd: 10 },
+      { ts: 1700010800 * 1000, netFlowUsd: -3 },
+    ]);
+    expect(series.unavailableHours).toBe(2);
+    // The legacy hour without `valuation` stays plotted but is counted as coverage unknown.
+    expect(series.unknownCoverageHours).toBe(1);
+  });
+
   it("uses coin id as symbol fallback", () => {
     const detail = makeFlowDetail({
       hourly: [{ hourTs: 1700000000, netFlowUsd: 0, mintVolumeUsd: 0, burnVolumeUsd: 0 }],
@@ -416,25 +439,72 @@ describe("deriveFlowCardData", () => {
       flowCoinMap,
       metaMap: new Map([["usdc", { symbol: "USDC" }]]),
     });
-    expect(result[0].netFlow24hUsd).toBe(500_000);
+    expect(result[0].netFlow24h).toEqual({
+      valueUsd: 500_000,
+      completeness: "unknown",
+      note: expect.stringMatching(/coverage unknown/i),
+    });
     expect(result[0].pressureShiftScore).toBe(0.75);
     expect(result[0].netFlowDirection24h).toBe("minting");
     expect(result[0].pressureShiftState).toBe("worsening");
   });
 
-  it.each<{ field: "netFlowDirection24h" | "pressureShiftState"; expected: string }>([
-    { field: "netFlowDirection24h", expected: "inactive" },
-    { field: "pressureShiftState", expected: "nr" },
-  ])("defaults a null $field to '$expected'", ({ field, expected }) => {
+  it("defaults a null pressureShiftState to 'nr'", () => {
     const coin = makeFlowCoin("usdc", {
-      [field]: null as unknown as NetFlowDirection24h & PressureShiftState,
+      pressureShiftState: null as unknown as PressureShiftState,
     });
     const result = deriveFlowCardData({
       selectedIds: ["usdc"],
       flowCoinMap: new Map([["usdc", coin]]),
       metaMap: new Map([["usdc", { symbol: "USDC" }]]),
     });
-    expect(result[0][field]).toBe(expected);
+    expect(result[0].pressureShiftState).toBe("nr");
+  });
+
+  it("keeps a null wire direction unavailable instead of defaulting it to inactive", () => {
+    const coin = makeFlowCoin("usdc", { netFlowDirection24h: null, netFlow24hUsd: null, has24hActivity: true });
+    const [card] = deriveFlowCardData({
+      selectedIds: ["usdc"],
+      flowCoinMap: new Map([["usdc", coin]]),
+      metaMap: new Map([["usdc", { symbol: "USDC" }]]),
+    });
+    expect(card.netFlowDirection24h).toBeNull();
+    expect(card.netFlow24h.valueUsd).toBeNull();
+  });
+
+  it("withholds net, pressure, and unproven direction for a partial 24h window", () => {
+    const coin = makeFlowCoin("usdc", {
+      has24hActivity: true,
+      netFlow24hUsd: -2_000,
+      netFlowDirection24h: "burning",
+      pressureShiftScore: -40,
+      pressureShiftState: "worsening",
+      valuation: {
+        window24h: {
+          completeness: "partial",
+          mintCompleteness: "partial",
+          burnCompleteness: "complete",
+          unpricedMintEventCount: 3,
+          unpricedBurnEventCount: 0,
+        },
+        baseline: "complete",
+        netFlow7d: "complete",
+        netFlow30d: "complete",
+        netFlow90d: "complete",
+      },
+    });
+    const [card] = deriveFlowCardData({
+      selectedIds: ["usdc"],
+      flowCoinMap: new Map([["usdc", coin]]),
+      metaMap: new Map([["usdc", { symbol: "USDC" }]]),
+    });
+    // Unpriced mints could lift the net above zero, so "burning" is not proven.
+    expect(card.netFlowDirection24h).toBeNull();
+    expect(card.netFlow24h.valueUsd).toBeNull();
+    expect(card.netFlow24h.note).toContain("3 mint / 0 burn events unpriced");
+    expect(card.pressureShiftScore).toBeNull();
+    expect(card.pressureShiftState).toBe("nr");
+    expect(card.pressureUnavailableNote).toMatch(/partial valuation/i);
   });
 
   it("uses coin id as symbol fallback when meta is missing", () => {

@@ -1,6 +1,5 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { isRecord } from "@shared/lib/type-guards";
 import {
   ApiDependencyMetaSchema,
@@ -19,7 +18,7 @@ import {
   type StablecoinLiveSummary,
 } from "@/lib/api-query-descriptors";
 import { formatSchemaLikeIssues, type SchemaLike } from "@shared/lib/schema-like";
-import { normalizeRequestTimeoutMs, resolveRequestSignal } from "@/lib/request-lifecycle";
+import { requestResponse } from "@/lib/request";
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";
 
@@ -109,37 +108,24 @@ function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): numb
   return Math.max(0, Math.floor(referenceNowSec - ageSeconds - edgeAgeSeconds));
 }
 
-export async function apiRequest(path: string, init?: RequestInit, options?: ApiRequestOptions): Promise<Response> {
-  const parent = resolveRequestSignal(init?.signal, options?.signal, "explicit-over-init");
-  const requestInit = withPublicApiAcceptMarker(path, {
-    ...init,
-    signal: parent.signal,
-  });
-  const timeoutMs = normalizeRequestTimeoutMs(options?.timeoutMs);
-
-  if (timeoutMs == null) {
-    try {
-      return await fetch(buildRequestUrl(path, requestInit), requestInit);
-    } finally {
-      parent.dispose();
-    }
-  }
-
-  const timeout = createTimeoutSignal({
-    timeoutMs,
-    timeoutReason: new DOMException(`API request timed out after ${timeoutMs}ms`, "TimeoutError"),
-    parentSignal: parent.signal,
-  });
-
-  try {
-    return await fetch(buildRequestUrl(path, requestInit), {
-      ...(requestInit ?? {}),
-      signal: timeout.signal,
-    });
-  } finally {
-    timeout.dispose();
-    parent.dispose();
-  }
+/** Consume the response inside the request's timeout and cancellation lifetime. */
+export async function apiRequest<T>(
+  path: string,
+  handleResponse: (response: Response) => Promise<T>,
+  init?: RequestInit,
+  options?: ApiRequestOptions,
+): Promise<T> {
+  const requestInit = withPublicApiAcceptMarker(path, init);
+  const result = await requestResponse(buildRequestUrl(path, requestInit), {
+    init: requestInit,
+    signal: options?.signal,
+    timeoutMs: options?.timeoutMs,
+    signalPolicy: "explicit-over-init",
+    errorMode: "passthrough",
+    timeoutMessage: (timeoutMs) => `API request timed out after ${timeoutMs}ms`,
+    allowHttpError: true,
+  }, handleResponse);
+  return result.data;
 }
 
 export class SchemaValidationError extends Error {
@@ -288,14 +274,15 @@ export async function apiFetch<T>(
   contractMode?: ApiContractMode,
   options?: ApiFetchOptions,
 ): Promise<T | null> {
-  const res = await apiRequest(path, init, options);
-  if (!res.ok) {
-    if (options?.nullOn404 && res.status === 404) return null;
-    throw await buildFetchError(path, res);
-  }
+  return apiRequest(path, async (res) => {
+    if (!res.ok) {
+      if (options?.nullOn404 && res.status === 404) return null;
+      throw await buildFetchError(path, res);
+    }
 
-  const data: unknown = await res.json();
-  return validateApiPayload(path, data, schema, contractMode);
+    const data: unknown = await res.json();
+    return validateApiPayload(path, data, schema, contractMode);
+  }, init, options);
 }
 
 // --- Meta-aware fetch ---
@@ -308,10 +295,11 @@ export async function apiFetchWithMeta<T>(
   contractMode?: ApiContractMode,
   requestOptions?: ApiRequestOptions,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
-  const res = await apiRequest(path, init, requestOptions);
-  if (!res.ok) throw await buildFetchError(path, res);
-
-  const json: unknown = await res.json();
+  const { res, json } = await apiRequest(path, async (res) => {
+    if (!res.ok) throw await buildFetchError(path, res);
+    const json: unknown = await res.json();
+    return { res, json };
+  }, init, requestOptions);
 
   // Extract only the generic freshness envelope. Some endpoints expose domain
   // metadata under `_meta`; that must stay in `data` for consumers.
@@ -327,6 +315,15 @@ export async function apiFetchWithMeta<T>(
     }
   }
   const bodyWarning = getBodyWarning(data);
+
+  if (!meta && res.headers.get("X-Data-Age") === "unavailable") {
+    meta = normalizeApiMeta({
+      updatedAt: null,
+      ageSeconds: null,
+      status: res.headers.get("X-Data-Freshness") === "stale" ? "stale" : "unknown",
+      reason: res.headers.get("X-Data-Freshness-Reason") ?? "producer-timestamp-unavailable",
+    });
+  }
 
   // Fill a missing producer clock from headers (for array responses,
   // warning-only body metadata, or non-cache-handler endpoints).
@@ -350,12 +347,7 @@ export async function apiFetchWithMeta<T>(
     if (meta) {
       meta =
         meta.updatedAt !== undefined && meta.ageSeconds !== undefined
-          ? {
-              ...meta,
-              updatedAt: meta.updatedAt,
-              ageSeconds: meta.ageSeconds,
-              warning: warningHeader,
-            }
+          ? { ...meta, warning: warningHeader }
           : ApiMetaWarningOnlySchema.parse({ status: "degraded", warning: warningHeader });
     } else {
       // Preserve warning context without inventing freshness timestamps.

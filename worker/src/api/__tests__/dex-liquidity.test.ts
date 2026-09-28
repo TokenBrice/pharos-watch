@@ -4,6 +4,8 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
+import { DexLiquidityMapSchema } from "@shared/types/market";
 
 function makeDexDeploymentOutcomeFallbackTable() {
   return { match: "FROM dex_deployment_outcomes", rows: [] };
@@ -617,5 +619,106 @@ describe("handleDexLiquidity", () => {
     expect(age).toBeGreaterThanOrEqual(before - scoreUpdatedAt);
     expect(age).toBeLessThanOrEqual(after - scoreUpdatedAt);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+});
+
+describe("handleDexLiquidity DEC-19 volume availability (release A readers)", () => {
+  const AS_OF = 1_790_000_000;
+  const clock = { asOfSec: AS_OF, maxObservationAgeSec: 86_400 };
+  const fresh = (volumeUsd: number | null): DexPoolVolumeObservationInput => ({ volumeUsd, observedAtSec: AS_OF - 600 });
+  const aged = (volumeUsd: number): DexPoolVolumeObservationInput => ({ volumeUsd, observedAtSec: AS_OF - 180 * 3600 });
+  const missing: DexPoolVolumeObservationInput = { volumeUsd: null, observedAtSec: null };
+  const record = (pools: DexPoolVolumeObservationInput[]) => JSON.stringify({
+    "24h": summarizeDexVolumeWindow(pools, "24h", clock).availability,
+    "7d": summarizeDexVolumeWindow(pools, "7d", clock).availability,
+  });
+
+  async function publish(overrides: Parameters<typeof makeDexLiquidityRow>[0]) {
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: AS_OF, ...overrides })] },
+    ]);
+    const body = (await readJsonResponse(await handleDexLiquidity(db), 200)) as Record<string, unknown>;
+    // Every emitted shape must satisfy the widened public contract.
+    expect(DexLiquidityMapSchema.safeParse(body).success).toBe(true);
+    return body["usdt-tether"] as Record<string, unknown> & {
+      volume24hAvailability?: Record<string, unknown>;
+      volume7dAvailability?: Record<string, unknown>;
+    };
+  }
+
+  it("keeps legacy numeric rows numeric with unrecorded completeness", async () => {
+    const coin = await publish({ total_volume_24h_usd: 1_234, total_volume_7d_usd: 5_000, total_volume_7d_measured: 1 });
+    expect(coin.totalVolume24hUsd).toBe(1_234);
+    expect(coin.totalVolume7dUsd).toBe(5_000);
+    expect(coin).not.toHaveProperty("volume24hAvailability");
+    expect(coin).not.toHaveProperty("volume7dAvailability");
+  });
+
+  it("publishes a complete measured zero as 0, not unavailable", async () => {
+    const coin = await publish({
+      total_volume_24h_usd: 0,
+      total_volume_7d_usd: 0,
+      volume_availability_json: record([fresh(0), fresh(0)]),
+    });
+    expect(coin.totalVolume24hUsd).toBe(0);
+    expect(coin.totalVolume7dUsd).toBe(0);
+    expect(coin.volume24hAvailability).toMatchObject({ completeness: "complete", reason: null, measuredPoolCount: 2 });
+  });
+
+  it.each([
+    ["all-missing", [missing, missing], 0, "missing", "pool-observations-missing", null],
+    ["mixed", [fresh(50_000), missing], 50_000, "partial", "pool-observations-missing", 50_000],
+    ["stale", [aged(50_000)], 50_000, "stale", "pool-observations-stale", null],
+  ] as const)("publishes %s 24h/7d windows as null beside their availability", async (
+    _name,
+    pools,
+    storedUsd,
+    completeness,
+    reason,
+    partialGrossUsd,
+  ) => {
+    const coin = await publish({
+      total_volume_24h_usd: storedUsd,
+      total_volume_7d_usd: storedUsd,
+      volume_availability_json: record([...pools]),
+    });
+    expect(coin.totalVolume24hUsd).toBeNull();
+    expect(coin.totalVolume7dUsd).toBeNull();
+    for (const availability of [coin.volume24hAvailability, coin.volume7dAvailability]) {
+      expect(availability).toMatchObject({ completeness, reason, partialGrossUsd, asOfSec: AS_OF, maxObservationAgeSec: 86_400 });
+    }
+  });
+
+  it("never publishes a stored total whose availability record is unreadable", async () => {
+    const coin = await publish({ total_volume_24h_usd: 9_999, volume_availability_json: "{not json" });
+    expect(coin.totalVolume24hUsd).toBeNull();
+    expect(coin.volume24hAvailability).toMatchObject({ completeness: "unknown", reason: "availability-record-unreadable" });
+  });
+
+  it("accepts nullable pool volume, pool observations and an NR activity component", async () => {
+    const coin = await publish({
+      liquidity_score: null,
+      score_components_json: JSON.stringify({
+        tvlDepth: 70, volumeActivity: null, poolQuality: 60, durability: 50, pairDiversity: 40,
+      }),
+      top_pools_json: JSON.stringify([
+        {
+          project: "curve", chain: "Ethereum", tvlUsd: 100_000, symbol: "USDT/USDC", poolType: "stable",
+          source: "dl", volumeUsd1d: null, volumeObservation: { status: "missing", observedAtSec: null },
+        },
+        {
+          project: "uniswap-v3", chain: "Ethereum", tvlUsd: 50_000, symbol: "USDT/USDC", poolType: "generic",
+          source: "dl", volumeUsd1d: 10_000, volumeObservation: { status: "measured-ish", observedAtSec: -1 },
+        },
+      ]),
+    });
+    expect(coin.scoreComponents).toEqual({
+      tvlDepth: 70, volumeActivity: null, poolQuality: 60, durability: 50, pairDiversity: 40,
+    });
+    const pools = coin.topPools as Array<Record<string, unknown>>;
+    expect(pools[0]).toMatchObject({ volumeUsd1d: null, volumeObservation: { status: "missing", observedAtSec: null } });
+    expect(pools[1]).not.toHaveProperty("volumeObservation");
   });
 });

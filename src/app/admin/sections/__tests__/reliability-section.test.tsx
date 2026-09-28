@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { degraded, makeApiRequestAttributionResponse, makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import { degraded, makeApiRequestAttributionResponse, makeHealthyHealthResponse, makeHealthyReliabilityStatusResponse } from "@/test-utils/status-fixtures";
 
 vi.mock("@/components/status/reliability-impact-panel", () => ({
   ReliabilityImpactPanel: () => <div>Impact panel mounted</div>,
@@ -30,38 +30,8 @@ const REQUEST_STATS = makeApiRequestAttributionResponse({
 });
 
 function completeData() {
-  const base = makeHealthyStatusResponse();
-  return degraded(base, {
+  return degraded(makeHealthyReliabilityStatusResponse(), {
     caches: { fixture: { ageSeconds: 30, maxAge: 60, healthy: true } },
-    dependencyHealth: {
-      checkedAt: base.timestamp,
-      dependencies: {},
-      rootCauseGroups: [],
-      summary: { total: 0, healthy: 0, degraded: 0, stale: 0, unknown: 0, rootCauseGroupCount: 0 },
-    },
-    providerCircuitHealth: {
-      checkedAt: base.timestamp,
-      status: "healthy",
-      totalTracked: 0,
-      closedCount: 0,
-      halfOpenCount: 0,
-      openCount: 0,
-      openProviders: [],
-      byFamily: {},
-    },
-    canaries: {
-      checkedAt: base.timestamp,
-      status: "healthy",
-      latestRunAt: base.timestamp,
-      maxAgeSec: 900,
-      totalChecks: 0,
-      okCount: 0,
-      degradedCount: 0,
-      errorCount: 0,
-      skippedCount: 0,
-      staleCount: 0,
-      checks: {},
-    },
   });
 }
 

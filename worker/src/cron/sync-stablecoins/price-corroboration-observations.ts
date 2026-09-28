@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { PriceObservedAtModeSchema } from "@shared/types/core";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { rethrowIfAborted } from "../../lib/abort";
 import { logWorkerEventArgs } from "../../lib/structured-log";
@@ -15,7 +17,7 @@ const ObservationsSchema = z.array(z.object({
   target: z.string().optional(),
   price: z.number().finite().positive(),
   observedAt: z.number().int().positive().nullable(),
-  observedAtMode: z.enum(["upstream", "local_fetch", "unknown"]).nullable(),
+  observedAtMode: PriceObservedAtModeSchema.nullable(),
 }));
 export type PriceCorroborationObservation = z.infer<typeof ObservationsSchema>[number];
 
@@ -82,7 +84,8 @@ async function loadObservationCache(
     for (const observation of parsed.data) {
       const source = getPricingSourceRegistryEntry(observation.source);
       const maxAge = source?.maxTrustedAgeSec;
-      if (!source || source.isRetired || source.trustTier === "cached_replay" || !maxAge || maxAge <= 0) {
+      if (!isObservedPrice({ priceSource: observation.source, priceObservedAtMode: observation.observedAtMode }) ||
+        !source || source.isRetired || source.trustTier === "cached_replay" || !maxAge || maxAge <= 0) {
         summary.discarded.sourceIneligible++;
         continue;
       }

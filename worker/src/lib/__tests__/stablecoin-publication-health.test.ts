@@ -101,8 +101,8 @@ describe("stablecoin publication health", () => {
     });
     expect(unknownActivePriceCoverageHealth(1_800)).toMatchObject({
       status: "unknown",
-      expectedActiveCount: activeIds.length,
-      pricedActiveCount: 0,
+      expectedActiveCount: null,
+      pricedActiveCount: null,
       missingActiveIds: [],
       alertEligibleIds: [],
       acknowledgedGapIds: [],
@@ -187,181 +187,27 @@ describe("stablecoin publication health", () => {
     expect((await loadStablecoinCoverageHealth(db, 1_000)).publication.status).toBe("complete");
   });
 
-  it("parses missing price state and asset details with fallbacks and asset precedence", async () => {
-    const { sqlite, db } = fixtures.open();
-    const trackedId = activeIds[0];
-    insertRun(sqlite, "sync-stablecoins", 100, {
-      activePublicationCoverage: publicationCoverage(),
-      activePriceCoverage: priceCoverage({
-        complete: false,
-        pricedActiveCount: activeIds.length - 2,
-        pricedActiveIds: activeIds.slice(2),
-        // missingPriceCount omitted: derived from missingActiveIds.length
-        missingActiveIds: [],
-        affectedMarketCapUsd: 123.5,
-        missingActiveState: [
-          [trackedId, 2, 1.5, "pyth", 1_700, "stale-price"],
-          ["ghost-usd", 0, null, 7, null, null],
-          // Skipped: first entry not a string id, too short, not an array.
-          [1, 2, 3, 4, 5, 6],
-          ["x", 1, 2, 3, 4],
-          "junk",
-        ],
-        missingActiveAssets: [
-          {
-            stablecoinId: trackedId,
-            symbol: "TRACK",
-            marketCapUsd: 5_000_000_000,
-            currentPrice: 0.99,
-            currentSource: "coinbase",
-            currentObservedAt: 1_800,
-            currentConfidence: "high",
-            consecutiveMissingGenerations: 5,
-            lastAcceptedPrice: 1.001,
-            lastAcceptedSource: "binance",
-            lastAcceptedObservedAt: 1_750,
-            rejectionReason: "depegged",
-            alertEligible: false,
-          },
-          {
-            stablecoinId: "ghost-usd",
-            consecutiveMissingGenerations: 1,
-          },
-          {
-            stablecoinId: "ghost-2",
-            consecutiveMissingGenerations: 1,
-            alertEligible: true,
-          },
-          // Skipped: not a record, record without stablecoinId.
-          "junk",
-          { symbol: "NOPE" },
-        ],
-        // alertEligibleCount/alertEligibleIds/maxConsecutiveMissingGenerations
-        // omitted: derived from the parsed missing assets.
-        alertEligibleCount: undefined,
-        alertEligibleIds: undefined,
-        maxConsecutiveMissingGenerations: undefined,
-      }),
-    });
-
-    const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
-    expect(price.status).toBe("incomplete");
-    expect(price.pricedActiveCount).toBe(activeIds.length - 2);
-    expect(price.pricedActiveIds).toEqual(activeIds.slice(2));
-    expect(price.missingPriceCount).toBe(0);
-    expect(price.missingActiveIds).toEqual([]);
-    expect(price.affectedMarketCapUsd).toBe(123.5);
-    // Asset details win over compact state rows for the same stablecoin.
-    expect(price.missingActiveAssets).toEqual([
-      {
-        stablecoinId: trackedId,
-        symbol: "TRACK",
-        marketCapUsd: 5_000_000_000,
-        currentPrice: 0.99,
-        currentSource: "coinbase",
-        currentObservedAt: 1_800,
-        currentConfidence: "high",
-        consecutiveMissingGenerations: 5,
-        lastAcceptedPrice: 1.001,
-        lastAcceptedSource: "binance",
-        lastAcceptedObservedAt: 1_750,
-        rejectionReason: "depegged",
-        alertEligible: true,
-        acknowledgedGap: null,
-      },
-      {
-        stablecoinId: "ghost-usd",
-        symbol: "ghost-usd",
-        marketCapUsd: null,
-        currentPrice: null,
-        currentSource: null,
-        currentObservedAt: null,
-        currentConfidence: null,
-        consecutiveMissingGenerations: 1,
-        lastAcceptedPrice: null,
-        lastAcceptedSource: null,
-        lastAcceptedObservedAt: null,
-        rejectionReason: "no-accepted-price",
-        alertEligible: false,
-        acknowledgedGap: null,
-      },
-      {
-        stablecoinId: "ghost-2",
-        symbol: "ghost-2",
-        marketCapUsd: null,
-        currentPrice: null,
-        currentSource: null,
-        currentObservedAt: null,
-        currentConfidence: null,
-        consecutiveMissingGenerations: 1,
-        lastAcceptedPrice: null,
-        lastAcceptedSource: null,
-        lastAcceptedObservedAt: null,
-        rejectionReason: "no-accepted-price",
-        alertEligible: true,
-        acknowledgedGap: null,
-      },
-    ]);
-    expect(price.alertEligibleIds).toEqual([trackedId, "ghost-2"]);
-    expect(price.alertEligibleCount).toBe(2);
-    expect(price.maxConsecutiveMissingGenerations).toBe(5);
-  });
-
-  it("retains explicit eligible IDs but derives their count instead of trusting contradictory metadata", async () => {
+  it.each([
+    { affectedMarketCapUsd: "unreadable" },
+    { affectedMarketCapUsd: undefined },
+    { expectedActiveCount: undefined },
+    { missingActiveAssets: [{ stablecoinId: activeIds[0] }] },
+  ])("withholds malformed coverage rather than zero-filling it: %j", async (override) => {
     const { sqlite, db } = fixtures.open();
     insertRun(sqlite, "sync-stablecoins", 100, {
       activePublicationCoverage: publicationCoverage(),
-      activePriceCoverage: priceCoverage({
-        complete: false,
-        missingActiveIds: [activeIds[1], "never-parsed"],
-        missingPriceCount: 2,
-        missingActiveAssets: [
-          {
-            stablecoinId: activeIds[1],
-            symbol: "MISS",
-            marketCapUsd: null,
-            currentPrice: null,
-            currentSource: null,
-            currentObservedAt: null,
-            currentConfidence: null,
-            consecutiveMissingGenerations: 1,
-            alertEligible: false,
-          },
-        ],
-        alertEligibleIds: ["somewhere-else"],
-        alertEligibleCount: 9,
-        maxConsecutiveMissingGenerations: 7,
-        affectedMarketCapUsd: 5,
-      }),
+      activePriceCoverage: priceCoverage(override),
     });
-
-    const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
-    expect(price.status).toBe("incomplete");
-    expect(price.missingActiveIds).toEqual([activeIds[1], "never-parsed"]);
-    expect(price.missingActiveAssets).toEqual([
-      {
-        stablecoinId: activeIds[1],
-        symbol: "MISS",
-        marketCapUsd: null,
-        currentPrice: null,
-        currentSource: null,
-        currentObservedAt: null,
-        currentConfidence: null,
-        consecutiveMissingGenerations: 1,
-        lastAcceptedPrice: null,
-        lastAcceptedSource: null,
-        lastAcceptedObservedAt: null,
-        rejectionReason: "no-accepted-price",
-        alertEligible: false,
-        acknowledgedGap: null,
-      },
-    ]);
-    expect(price.alertEligibleIds).toEqual(["somewhere-else"]);
-    expect(price.alertEligibleCount).toBe(1);
-    expect(price.maxConsecutiveMissingGenerations).toBe(7);
+    expect((await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage).toMatchObject({
+      status: "unknown",
+      unavailableReason: "coverage-malformed",
+      expectedActiveCount: null,
+      missingPriceCount: null,
+      affectedMarketCapUsd: null,
+    });
   });
 
-  it("treats non-array missing-price evidence as empty", async () => {
+  it("withholds non-array missing-price evidence", async () => {
     const { sqlite, db } = fixtures.open();
     insertRun(sqlite, "sync-stablecoins", 100, {
       activePublicationCoverage: publicationCoverage(),
@@ -373,11 +219,10 @@ describe("stablecoin publication health", () => {
     });
 
     const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
-    expect(price.status).toBe("incomplete");
-    expect(price.missingActiveAssets).toEqual([]);
-    expect(price.alertEligibleIds).toEqual([]);
-    expect(price.alertEligibleCount).toBe(0);
-    expect(price.maxConsecutiveMissingGenerations).toBe(0);
+    expect(price.status).toBe("unknown");
+    expect(price.unavailableReason).toBe("coverage-malformed");
+    expect(price.alertEligibleCount).toBeNull();
+    expect(price.maxConsecutiveMissingGenerations).toBeNull();
   });
 
   it("caps parsed missing price state at the active registry size", async () => {
@@ -403,43 +248,6 @@ describe("stablecoin publication health", () => {
     );
   });
 
-  it("applies the writer sanitizer to missing-price details", async () => {
-    const { sqlite, db } = fixtures.open();
-    const trackedId = activeIds[0]!;
-    insertRun(sqlite, "sync-stablecoins", 100, {
-      activePublicationCoverage: publicationCoverage(),
-      activePriceCoverage: priceCoverage({
-        complete: false,
-        missingActiveIds: [trackedId],
-        missingPriceCount: 1,
-        missingActiveAssets: [{
-          stablecoinId: trackedId,
-          symbol: "   ",
-          currentSource: "",
-          currentConfidence: "  ",
-          currentObservedAt: 9_000_000_000_000_000,
-          lastAcceptedPrice: -1,
-          lastAcceptedSource: "\t",
-          lastAcceptedObservedAt: -9_000_000_000_000_000,
-          rejectionReason: " ",
-          consecutiveMissingGenerations: 1,
-        }],
-      }),
-    });
-
-    const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
-    expect(price.missingActiveAssets).toEqual([expect.objectContaining({
-      stablecoinId: trackedId,
-      symbol: trackedId,
-      currentSource: null,
-      currentConfidence: null,
-      currentObservedAt: null,
-      lastAcceptedPrice: null,
-      lastAcceptedSource: null,
-      lastAcceptedObservedAt: null,
-      rejectionReason: "no-accepted-price",
-    })]);
-  });
 
   it("marks price coverage incomplete unless every completeness check passes", async () => {
     const { sqlite, db } = fixtures.open();

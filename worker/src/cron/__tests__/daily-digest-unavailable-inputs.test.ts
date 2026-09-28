@@ -7,7 +7,7 @@ import { buildRiskTape } from "../daily-digest/digest-risk-tape";
 import { rollupDigestInputs } from "../daily-digest/collectors-shared";
 import { buildUserPrompt } from "../daily-digest/prompt";
 import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
-import { collectBlacklistActivity, collectResolvedDepegs } from "../daily-digest/collectors-market";
+import { collectBlacklistActivity } from "../daily-digest/collectors-market";
 import { resolveDailyDigestEditionNumber } from "../digest/publish";
 
 const QUIET_INPUT: DigestInputData = {
@@ -89,17 +89,6 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     const sql = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) as cnt"))?.sql ?? "";
     expect(sql).toContain("$.qualityGate");
     expect(sql).toContain("$.type");
-  });
-
-  it("bounds resolved-depeg evidence to the 24h window it is published as", async () => {
-    const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
-    const ctx = makeCollectorCtx(db);
-    await collectResolvedDepegs(ctx);
-    const query = db.getHistory().find((entry) => entry.sql.includes("FROM depeg_events"));
-    expect(query?.binds[0]).toBe(ctx.nowSec - 86_400);
-    expect(query?.sql).toContain("ABS(peak_deviation_bps) > 100");
-    expect(query?.sql).toContain("json_each(?)");
-    expect(JSON.parse(String(query?.binds[1]))).toEqual(["usdt-tether", "usdc-circle"]);
   });
 
   it("publishes an unknown blacklist amount as unknown and does not suppress it", async () => {

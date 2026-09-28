@@ -149,6 +149,64 @@ describe("ChainProfileClient", () => {
     expect(screen.getByText(/report-card inputs are stale/i)).toBeTruthy();
   });
 
+  it("renders an NR peg factor and an NR composite withheld for peg coverage", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: makeChain({
+        healthScore: null,
+        healthBand: null,
+        healthFactors: { quality: 82, chainEnvironment: 80, concentration: 78, pegStability: null, backingDiversity: 76 },
+        pegStabilityCoverage: {
+          status: "unavailable",
+          observedSupplyUsd: 0,
+          eligibleSupplyUsd: 1_500_000_000,
+          coverage: RatioSchema.parse(0),
+          noUsablePriceSupplyUsd: 1_500_000_000,
+          noPegReferenceSupplyUsd: 0,
+          neutralImputedSupplyUsd: 0,
+          observedScore: null,
+        },
+      }),
+    }));
+
+    render(<ChainProfileClient chainId="ethereum" />);
+    const health = within(screen.getByRole("region", { name: "Chain Health" }));
+
+    expect(health.getByText(/not rated because peg-stability coverage is incomplete/i).textContent)
+      .toContain("observed for 0% of chain supply");
+    expect(health.queryByText(/Insufficient safety score coverage/i)).toBeNull();
+    expect(health.getByText("Not rated: no usable peg price was observed for this chain's supply.")).toBeTruthy();
+    // Only the peg factor is null here; quality cleared its gate and keeps its number.
+    expect(health.getByText("NR")).toBeTruthy();
+    expect(health.getByText("82")).toBeTruthy();
+  });
+
+  it("discloses partial peg coverage and neutral placeholder supply beside a published peg factor", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: makeChain({
+        healthFactors: { quality: 82, chainEnvironment: 80, concentration: 78, pegStability: 70, backingDiversity: 76 },
+        pegStabilityCoverage: {
+          status: "partial",
+          observedSupplyUsd: 600,
+          eligibleSupplyUsd: 1_000,
+          coverage: RatioSchema.parse(0.6),
+          noUsablePriceSupplyUsd: 300,
+          noPegReferenceSupplyUsd: 100,
+          neutralImputedSupplyUsd: 300,
+          observedScore: 83,
+        },
+      }),
+    }));
+
+    render(<ChainProfileClient chainId="ethereum" />);
+    const health = within(screen.getByRole("region", { name: "Chain Health" }));
+
+    expect(health.getByText(
+      "Peg observed on 60% of chain supply; 30% without a usable price is scored neutral 50; 10% has no peg reference.",
+    )).toBeTruthy();
+    expect(health.getByText("70")).toBeTruthy();
+    expect(health.queryByText("NR")).toBeNull();
+  });
+
   it("filters the stablecoin table by backing and restores all rows when cleared", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
       coins: [

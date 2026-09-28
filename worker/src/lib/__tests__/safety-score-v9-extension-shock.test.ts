@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import {
-  hydrateSafetyScoreV9ShockCoverageExtension,
+  hydrateSafetyScoreV9ShockCoverageAsset,
   selectSafetyScoreV9CdpShockMeasurement,
 } from "../safety-score-v9/extension-shock";
 
@@ -197,22 +197,17 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
     expect(selectSafetyScoreV9CdpShockMeasurement("unsupported-cdp", CAPTURE_9_CLOCK_SEC)).toBeUndefined();
   });
 
-  it("hydrates old extensions once while preserving replay-pinned measurements", () => {
+  it("hydrates old extension assets once while preserving replay-pinned measurements", () => {
     const pinnedLusd = requireMeasurement("lusd-liquity", CAPTURE_9_CLOCK_SEC);
-    const extension = {
-      assets: [
-        { assetId: "lusd-liquity", archetype: "cdp", cdpStressCoverage: pinnedLusd },
-        { assetId: "bold-liquity", archetype: "cdp" },
-        { assetId: "mim-abracadabra", archetype: "cdp" },
-      ],
-    };
+    const pinnedAsset = { assetId: "lusd-liquity", archetype: "cdp", cdpStressCoverage: pinnedLusd };
 
-    const hydrated = hydrateSafetyScoreV9ShockCoverageExtension(extension, CAPTURE_9_CLOCK_SEC) as typeof extension;
-    expect(hydrated.assets[0]?.cdpStressCoverage).toBe(pinnedLusd);
-    expect(hydrated.assets[1]?.cdpStressCoverage).toMatchObject({
-      stressLiquidationCoverageRatio: 0.815501292745,
-    });
-    expect(hydrated.assets[2]).not.toHaveProperty("cdpStressCoverage");
+    expect(hydrateSafetyScoreV9ShockCoverageAsset(pinnedAsset, CAPTURE_9_CLOCK_SEC)).toBe(pinnedAsset);
+    expect(
+      hydrateSafetyScoreV9ShockCoverageAsset({ assetId: "bold-liquity", archetype: "cdp" }, CAPTURE_9_CLOCK_SEC),
+    ).toMatchObject({ cdpStressCoverage: { stressLiquidationCoverageRatio: 0.815501292745 } });
+    expect(
+      hydrateSafetyScoreV9ShockCoverageAsset({ assetId: "mim-abracadabra", archetype: "cdp" }, CAPTURE_9_CLOCK_SEC),
+    ).not.toHaveProperty("cdpStressCoverage");
   });
 
   it("rejects a fabricated replay-pinned measurement", () => {
@@ -221,8 +216,8 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
     fabricated.source.journalSha256 = "f".repeat(64);
 
     expect(() =>
-      hydrateSafetyScoreV9ShockCoverageExtension(
-        { assets: [{ assetId: "lusd-liquity", archetype: "cdp", cdpStressCoverage: fabricated }] },
+      hydrateSafetyScoreV9ShockCoverageAsset(
+        { assetId: "lusd-liquity", archetype: "cdp", cdpStressCoverage: fabricated },
         CAPTURE_9_CLOCK_SEC,
       ),
     ).toThrow(/not in the committed registry/i);
@@ -231,9 +226,10 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
   it("rejects altered stress metrics under a valid journal identity", () => {
     const pinned = structuredClone(requireMeasurement("bold-liquity", CAPTURE_9_CLOCK_SEC));
     pinned.stressLiquidationCoverageRatio = 0.75;
-    expect(() => hydrateSafetyScoreV9ShockCoverageExtension({
-      assets: [{ assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned }],
-    }, CAPTURE_9_CLOCK_SEC)).toThrow(/differs from its committed journal projection/);
+    expect(() => hydrateSafetyScoreV9ShockCoverageAsset(
+      { assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned },
+      CAPTURE_9_CLOCK_SEC,
+    )).toThrow(/differs from its committed journal projection/);
   });
 
   it("admits a journal exactly at its block clock and rejects future pins", () => {
@@ -241,18 +237,19 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
     const pinned = requireMeasurement("bold-liquity", blockClock);
     expect(requireMeasurement("bold-liquity", blockClock - 1).source?.block.number).toBe(25_546_976);
     expect(pinned.source?.block.number).toBe(25_551_407);
-    expect(() => hydrateSafetyScoreV9ShockCoverageExtension({
-      assets: [{ assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned }],
-    }, blockClock - 1)).toThrow(/chronology-valid journal provenance/);
+    expect(() => hydrateSafetyScoreV9ShockCoverageAsset(
+      { assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned },
+      blockClock - 1,
+    )).toThrow(/chronology-valid journal provenance/);
   });
 
   it("preserves an older valid pin after a newer journal becomes eligible", () => {
     const pinned = requireMeasurement("bold-liquity", CAPTURE_9_CLOCK_SEC);
-    const input = { assets: [{ assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned }] };
-    const hydrated = hydrateSafetyScoreV9ShockCoverageExtension(input, POST_JULY_17_CLOCK_SEC) as typeof input;
+    const input = { assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned };
+    const hydrated = hydrateSafetyScoreV9ShockCoverageAsset(input, POST_JULY_17_CLOCK_SEC) as typeof input;
     expect(requireMeasurement("bold-liquity", POST_JULY_17_CLOCK_SEC).source?.block.number).toBe(25_551_407);
-    expect(hydrated.assets[0]!.cdpStressCoverage).toEqual(pinned);
-    expect(hydrated.assets[0]!.cdpStressCoverage.source?.block.number).toBe(25_546_976);
+    expect(hydrated.cdpStressCoverage).toEqual(pinned);
+    expect(hydrated.cdpStressCoverage.source?.block.number).toBe(25_546_976);
   });
 
   it("selects the later LUSD and BOLD journals after the July 17 measurement clock", () => {

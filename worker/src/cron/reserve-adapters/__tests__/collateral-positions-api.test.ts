@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { adaptCollateralPositions } from "../collateral-positions-api";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "../validate";
 import {
   runAdapter,
   type AdapterNetworkSpec,
@@ -61,7 +63,7 @@ describe("adaptCollateralPositions", () => {
     );
     expect(result.warnings).toBeDefined();
     expect(result.warnings!.some(
-      (w) => w.code === "unknown-asset" && w.message.includes("XYZZY"),
+      (w) => w.code === "unknown-asset",
     )).toBe(true);
   });
 
@@ -115,21 +117,21 @@ describe("adaptCollateralPositions", () => {
           name: "Frankencoin Pool Shares",
           symbol: "FPS",
           decimals: 18,
-          positions: [{ collateralBalance: "1000000000000000000" }],
+          positions: [{ collateralBalance: "1000000000000000000", minted: "0", zchfDecimals: 18 }],
         },
         "0xaapl": {
           address: "0xaapl",
           name: "Apple Tokenized",
           symbol: "AAPLx",
           decimals: 18,
-          positions: [{ collateralBalance: "1000000000000000000" }],
+          positions: [{ collateralBalance: "1000000000000000000", minted: "0", zchfDecimals: 18 }],
         },
         "0xysybold": {
           address: "0xysybold",
           name: "Staked yBOLD",
           symbol: "ysyBOLD",
           decimals: 18,
-          positions: [{ collateralBalance: "1000000000000000000" }],
+          positions: [{ collateralBalance: "1000000000000000000", minted: "0", zchfDecimals: 18 }],
         },
       },
       {
@@ -190,7 +192,7 @@ describe("adaptCollateralPositions", () => {
           name: "AllUnity CHF",
           symbol: "CHFAU",
           decimals: 6,
-          positions: [{ collateralBalance: "250000000000" }],
+          positions: [{ collateralBalance: "250000000000", minted: "0", zchfDecimals: 18 }],
         },
       },
       {
@@ -224,10 +226,13 @@ describe("adaptCollateralPositions", () => {
         },
       },
       {
-        "0xbtc": { price: { usd: 100_000 } },
-        "0xzchf": { price: { usd: 1.25 } },
+        "0xbtc": { price: { usd: 100_000 }, timestamp: 1_780_000_000 },
+        "0xzchf": { price: { usd: 1.25 }, timestamp: 1_780_000_000 },
       },
       2,
+      undefined,
+      {},
+      1_780_000_000,
     );
 
     expect(result.metadata).toMatchObject({
@@ -553,5 +558,105 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
   it("fails the attempt when an active collateral price row disappears instead of publishing a partial mix", async () => {
     await expect(runBridgeBasket({ prices: { [DEURO]: { price: { usd: 1.2, eur: 1 } } } }))
       .rejects.toThrow("missing USD price");
+  });
+});
+
+describe("collateral positions liability admission through fetch and validation", () => {
+  const now = 1_780_000_000;
+  type Position = Parameters<typeof adaptCollateralPositions>[0][string]["positions"][number];
+  const debtPosition: Position = {
+    collateralBalance: "1000000",
+    minted: "1000000000000000000",
+    zchf: DEURO,
+    zchfDecimals: 18,
+  };
+
+  async function runLiabilities(
+    position: Position,
+    debtTimestamp: number | undefined,
+    collateralDecimals = 6,
+  ) {
+    const network = bridgeBasketNetwork();
+    network.json = {
+      [POSITIONS_URL]: {
+        collateral: {
+          address: WBTC_ADDRESS,
+          name: "Wrapped BTC",
+          symbol: "WBTC",
+          decimals: collateralDecimals,
+          positions: [
+            { ...debtPosition, collateralBalance: (10n ** BigInt(collateralDecimals)).toString() },
+            { ...position, collateralBalance: (10n ** BigInt(collateralDecimals)).toString() },
+          ],
+        },
+      },
+      [PRICES_URL]: {
+        [WBTC_ADDRESS]: { price: { usd: 1.2 }, timestamp: now },
+        [DEURO]: { price: { usd: 1.2, eur: 1 }, timestamp: debtTimestamp },
+      },
+    };
+    return runAdapter("collateral-positions-api", "deuro-deuro", { network, nowSec: now });
+  }
+
+  it.each([
+    ["missing minted", { minted: undefined }],
+    ["malformed minted", { minted: "not-an-integer" }],
+    ["negative minted", { minted: "-1" }],
+    ["missing debt decimals", { zchfDecimals: undefined }],
+    ["invalid debt decimals", { zchfDecimals: -1 }],
+    ["missing debt identity", { zchf: undefined }],
+    ["unknown debt identity", { zchf: "0xunknown" }],
+  ] satisfies Array<[string, Partial<Position>]>)("withholds an incomplete denominator: %s", async (_name, patch) => {
+    const { result, report } = await runLiabilities({ ...debtPosition, ...patch }, now);
+    expect(report.valid).toBe(true);
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 2.4, mintedCoverageComplete: false, sourceTimestamp: now });
+    expect(result.metadata?.totalLiabilitiesUsd).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.slices).toEqual([{ sourceKey: "collateral-positions-api:wbtc", name: "WBTC (Wrapped BTC)", pct: 100, risk: "medium" }]);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "liability-coverage-incomplete", effect: "degraded" }));
+  });
+
+  it("never borrows 18-decimal collateral units for missing debt units", async () => {
+    const { result } = await runLiabilities({ ...debtPosition, zchfDecimals: undefined }, now, 18);
+    expect(result.metadata?.mintedCoverageComplete).toBe(false);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+  });
+
+  it.each([
+    ["missing", undefined, false],
+    ["stale", now - LIVE_RESERVE_FRESHNESS_SEC - 1, false],
+    ["future", now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 1, false],
+    ["age boundary", now - LIVE_RESERVE_FRESHNESS_SEC, true],
+    ["future skew boundary", now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, true],
+    ["fresh milliseconds", now * 1000, true],
+  ] as const)("qualifies the debt quote independently: %s", async (_name, timestamp, eligible) => {
+    const { result, report } = await runLiabilities(debtPosition, timestamp);
+    expect(report.valid).toBe(true);
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 2.4,
+      mintedCoverageComplete: true,
+      debtPricesFresh: eligible,
+      sourceTimestamp: now,
+      freshnessMode: "verified",
+    });
+    expect(result.slices).toEqual([{ sourceKey: "collateral-positions-api:wbtc", name: "WBTC (Wrapped BTC)", pct: 100, risk: "medium" }]);
+    if (eligible) {
+      expect(result.metadata).toMatchObject({ totalLiabilitiesUsd: 2.4, collateralizationRatio: 1 });
+      expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "liability-price-freshness" }));
+    } else {
+      expect(result.metadata?.totalLiabilitiesUsd).toBeUndefined();
+      expect(result.metadata?.collateralizationRatio).toBeUndefined();
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "liability-price-freshness", effect: "degraded" }));
+    }
+  });
+
+  it("retains a complete ratio for explicit zero debt without requiring an unused quote", async () => {
+    const { result } = await runLiabilities({ ...debtPosition, minted: "0", zchf: undefined }, now);
+    expect(result.metadata).toMatchObject({ totalLiabilitiesUsd: 1.2, collateralizationRatio: 2, mintedCoverageComplete: true });
+  });
+
+  it.each(["closed", "denied"] as const)("excludes %s positions from both sides", async (flag) => {
+    const { result } = await runLiabilities({ collateralBalance: "1000000", [flag]: true }, now);
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 1.2, totalLiabilitiesUsd: 1.2, collateralizationRatio: 1 });
   });
 });

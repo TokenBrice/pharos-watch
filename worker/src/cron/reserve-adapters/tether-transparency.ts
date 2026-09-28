@@ -7,7 +7,7 @@ import {
   parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   reserveInfoWarning,
-  slicesFromPercentages,
+  assertFiniteNonNegativeReserveRows,
   verifiedFreshnessMetadata,
 } from "./helpers";
 
@@ -33,10 +33,19 @@ export interface TetherTransparencyResponse {
   data_formatted?: TetherDataFormattedEntry[];
 }
 
+type ChainAmountReason = "missing" | "malformed" | "negative";
+
 interface TetherChainDetail {
-  name: string;
-  issued: number;
-  quarantined: number;
+  name: string | null;
+  nameReason: "missing" | "malformed" | null;
+  totalAuthorized: number | null;
+  totalAuthorizedReason: ChainAmountReason | null;
+  notIssued: number | null;
+  notIssuedReason: ChainAmountReason | null;
+  issued: number | null;
+  issuedReason: "authorization-unavailable" | "not-issued-unavailable" | "not-issued-exceeds-authorized" | null;
+  quarantined: number | null;
+  quarantinedReason: ChainAmountReason | null;
 }
 
 function parseAmount(value: unknown): number {
@@ -54,37 +63,59 @@ function findEntry(
   return entries.find((entry) => typeof entry.iso === "string" && entry.iso.trim().toLowerCase() === currencyIso);
 }
 
-function buildChainDetails(blockChains: unknown): { chains: TetherChainDetail[]; totalQuarantined: number } {
-  const chains: TetherChainDetail[] = [];
-  let totalQuarantined = 0;
+function parseChainAmount(value: unknown): { value: number | null; reason: ChainAmountReason | null } {
+  if (value == null) return { value: null, reason: "missing" };
+  const amount = parseAmount(value);
+  if (!Number.isFinite(amount)) return { value: null, reason: "malformed" };
+  if (amount < 0) return { value: null, reason: "negative" };
+  return { value: amount, reason: null };
+}
+
+function buildChainDetails(blockChains: unknown): {
+  chains: TetherChainDetail[] | null;
+  chainsReason: "missing" | "malformed" | null;
+} {
   if (!Array.isArray(blockChains)) {
-    return { chains, totalQuarantined };
+    return { chains: null, chainsReason: blockChains == null ? "missing" : "malformed" };
   }
 
-  for (const raw of blockChains as TetherBlockChainEntry[]) {
-    const name = typeof raw.name === "string" ? raw.name.trim() : "";
-    const totalAuthorized = parseAmount(raw.totalAuthorized);
-    if (!name || !Number.isFinite(totalAuthorized) || totalAuthorized <= 0) continue;
-
-    const notIssued = parseAmount(raw.notIssued);
-    const quarantined = parseAmount(raw.quarantined);
-    const safeNotIssued = Number.isFinite(notIssued) ? notIssued : 0;
-    const safeQuarantined = Number.isFinite(quarantined) ? quarantined : 0;
+  const chains: TetherChainDetail[] = [];
+  for (const raw of blockChains) {
+    const row: TetherBlockChainEntry =
+      raw != null && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+    const name = typeof row.name === "string" ? row.name.trim() : "";
+    const totalAuthorized = parseChainAmount(row.totalAuthorized);
+    const notIssued = parseChainAmount(row.notIssued);
+    const quarantined = parseChainAmount(row.quarantined);
+    const issuedReason = totalAuthorized.value == null
+      ? "authorization-unavailable"
+      : notIssued.value == null
+        ? "not-issued-unavailable"
+        : notIssued.value > totalAuthorized.value
+          ? "not-issued-exceeds-authorized"
+          : null;
 
     chains.push({
-      name,
-      issued: Math.max(0, totalAuthorized - safeNotIssued),
-      quarantined: safeQuarantined,
+      name: name || null,
+      nameReason: name ? null : row.name == null ? "missing" : "malformed",
+      totalAuthorized: totalAuthorized.value,
+      totalAuthorizedReason: totalAuthorized.reason,
+      notIssued: notIssued.value,
+      notIssuedReason: notIssued.reason,
+      issued: issuedReason == null ? totalAuthorized.value! - notIssued.value! : null,
+      issuedReason,
+      quarantined: quarantined.value,
+      quarantinedReason: quarantined.reason,
     });
-    totalQuarantined += safeQuarantined;
   }
 
-  return { chains, totalQuarantined };
+  return { chains, chainsReason: null };
 }
 
 export interface TetherTransparencyParams {
   currencyIso: "usdt" | "xaut";
   slices: ReserveSlice[];
+  compositionAsOf?: string;
 }
 
 export function adaptTetherTransparency(
@@ -112,27 +143,31 @@ export function adaptTetherTransparency(
     throw new Error(`${ADAPTER_NAME} entry "${params.currencyIso}" has an unreadable id timestamp`);
   }
 
-  const { chains, totalQuarantined } = buildChainDetails(entry.blockChains);
+  const chainDetails = buildChainDetails(entry.blockChains);
   const shareholderEquityUsd = parseAmount(entry.shareholder_eq);
 
   const warnings: LiveReserveWarning[] = [];
-  if (totalQuarantined > 0) {
-    const quarantinedChains = chains.filter((chain) => chain.quarantined > 0).map((chain) => chain.name);
+  const quarantinedChains = chainDetails.chains?.filter((chain) => chain.quarantined != null && chain.quarantined > 0) ?? [];
+  if (quarantinedChains.length > 0) {
     warnings.push(
       reserveInfoWarning(
         "quarantined-balance",
-        `Tether reports a nonzero quarantined ${params.currencyIso.toUpperCase()} balance on ${quarantinedChains.join(", ")}`,
+        `Tether reports a nonzero quarantined ${params.currencyIso.toUpperCase()} balance on ${quarantinedChains.map((chain) => chain.name ?? "unknown chain").join(", ")}`,
       ),
     );
   }
+  assertFiniteNonNegativeReserveRows(params.slices, (slice) => slice.pct, `${ADAPTER_NAME} configured reserve composition`);
+  const compositionTotal = params.slices.reduce((sum, slice) => sum + slice.pct, 0);
+  if (compositionTotal <= 0 || Math.abs(compositionTotal - 100) > 1.5) {
+    throw new Error(`${ADAPTER_NAME} configured reserve composition must sum to 100% ± 1.5%`);
+  }
 
   return {
-    slices: slicesFromPercentages(params.slices, {
-      context: `${ADAPTER_NAME} configured reserve composition`,
-    }),
+    // Keep positive sub-display-precision categories without allocating a rounding residual.
+    slices: params.slices.filter((slice) => slice.pct > 0),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      diag: { rawSumDeviation: Math.abs(params.slices.reduce((sum, slice) => sum + slice.pct, 0) - 100) },
+      diag: { rawSumDeviation: Math.abs(compositionTotal - 100) },
       ...verifiedFreshnessMetadata(sourceTimestamp),
       collateralizationRatio: totalAssets / totalLiabilities,
       ...(params.currencyIso === "usdt"
@@ -142,7 +177,11 @@ export function adaptTetherTransparency(
             ...(Number.isFinite(shareholderEquityUsd) ? { shareholderEquityUsd } : {}),
           }
         : {}),
-      details: { chains },
+      details: {
+        ...chainDetails,
+        compositionSource: "reviewed-config",
+        ...(params.compositionAsOf ? { compositionAsOf: params.compositionAsOf } : {}),
+      },
     },
   };
 }

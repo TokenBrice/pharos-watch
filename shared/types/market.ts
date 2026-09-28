@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
+import { FreshnessAssessmentSchema } from "./api-meta";
 import {
   DepegPrimaryTrustSchema,
   MethodologyEnvelopeSchema,
+  NominalPriceReferenceSchema,
   PEG_CURRENCY_VALUES,
   PriceConfidenceSchema,
   PriceObservedAtModeSchema,
@@ -73,16 +75,51 @@ export const StablecoinDetailResponseSchema = z.object({
 }).passthrough();
 export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
 
+/**
+ * Published aggregate peg buckets: finite nonnegative USD per bucket. `{}` stays absence (read it with
+ * the `*OrNull` supply helpers); an explicit `0` is an observed zero (CR-13 / D01-2).
+ */
+const SupplyBucketsSchema = z.record(z.string(), z.number().finite().nonnegative());
+
+/**
+ * Per-chain supply scalars. `null` = the chain row exists but that observation was unavailable (empty or
+ * invalid provider bucket); it is never a zero. RELEASE A: in-run consumers retain `null`, while canonical
+ * storage and public wires project to legacy `0` (`projectLegacyChainCirculatingWire`) for rollback safety.
+ * Release B activates nullable storage and wire output. Readers must already tolerate `null`.
+ */
+const ChainSupplyValueSchema = z.number().finite().nonnegative().nullable();
+
 const ChainCirculatingSchema = z.record(
   z.string(),
   z.object({
     chainId: z.string().optional(),
-    current: z.number().finite().nonnegative(),
-    circulatingPrevDay: z.number().finite().nonnegative().optional(),
-    circulatingPrevWeek: z.number().finite().nonnegative().optional(),
-    circulatingPrevMonth: z.number().finite().nonnegative().optional(),
+    current: ChainSupplyValueSchema,
+    circulatingPrevDay: ChainSupplyValueSchema.optional(),
+    circulatingPrevWeek: ChainSupplyValueSchema.optional(),
+    circulatingPrevMonth: ChainSupplyValueSchema.optional(),
   }),
 );
+
+/**
+ * DEC-01 provenance on a row whose aggregate supply was raised by the bounded CoinGecko gap-fill. The
+ * canonical DefiLlama total stays visible beside the supplemental CoinGecko value and the admitted ratio.
+ */
+export const SupplyGapFillProvenanceSchema = z.object({
+  method: z.literal("coingecko-single-missing-chain"),
+  /** `entered` = admitted inside the entry band; `retained` = kept by the hysteresis band. */
+  admission: z.enum(["entered", "retained"]),
+  missingChainId: z.string(),
+  canonicalSource: z.literal("defillama"),
+  canonicalCurrentUsd: z.number().finite().positive(),
+  supplementalSource: z.literal("coingecko"),
+  supplementalCurrentUsd: z.number().finite().positive(),
+  ratio: z.number().finite().positive(),
+  maxRatio: z.number().finite().positive(),
+  observedAt: z.number().int().nonnegative(),
+  /** Consecutive no-decision publications; fresh reconciliation resets this bounded carry. */
+  carryForwardRuns: z.number().int().nonnegative().optional(),
+});
+export type SupplyGapFillProvenance = z.infer<typeof SupplyGapFillProvenanceSchema>;
 
 const StablecoinDataRawSchema = z.object({
   id: z.string(),
@@ -98,6 +135,7 @@ const StablecoinDataRawSchema = z.object({
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
+  nominalPriceReference: NominalPriceReferenceSchema.optional(),
   priceSyncedAt: z.number().nullable().optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
@@ -105,10 +143,11 @@ const StablecoinDataRawSchema = z.object({
   supplySource: z.string().optional(),
   supplyObservedAt: z.number().nullable().optional(),
   supplyRestored: z.boolean().optional(),
-  circulating: PegBucketsSchema,
-  circulatingPrevDay: PegBucketsSchema.nullish(),
-  circulatingPrevWeek: PegBucketsSchema.nullish(),
-  circulatingPrevMonth: PegBucketsSchema.nullish(),
+  supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
+  circulating: SupplyBucketsSchema,
+  circulatingPrevDay: SupplyBucketsSchema.nullish(),
+  circulatingPrevWeek: SupplyBucketsSchema.nullish(),
+  circulatingPrevMonth: SupplyBucketsSchema.nullish(),
   chainCirculating: ChainCirculatingSchema,
   chains: z.array(z.string()),
   contracts: z.array(ContractDeploymentSchema).optional(),
@@ -129,6 +168,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   priceUpdatedAt: asset.priceUpdatedAt ?? null,
   priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
   priceObservedAtMode: asset.priceObservedAtMode ?? null,
+  ...(asset.nominalPriceReference != null ? { nominalPriceReference: asset.nominalPriceReference } : {}),
   priceSyncedAt: asset.priceSyncedAt ?? null,
   consensusSources: asset.consensusSources ?? [],
   agreeSources: asset.agreeSources ?? [],
@@ -138,6 +178,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   supplySource: asset.supplySource,
   ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
   ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
+  ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),
   circulating: asset.circulating,
   circulatingPrevDay: asset.circulatingPrevDay ?? {},
   circulatingPrevWeek: asset.circulatingPrevWeek ?? {},
@@ -314,13 +355,95 @@ export const DexExecutionCapabilityGateSchema = z.object({
 });
 export type DexExecutionCapabilityGate = z.infer<typeof DexExecutionCapabilityGateSchema>;
 
+/**
+ * Eligibility of one pool's provider volume reading for the current window:
+ * `measured` = an in-budget observation is present (zero is a valid measurement);
+ * `stale` = an observation exists but is older than the freshness budget;
+ * `missing` = no usable value, or no observation clock proving its window.
+ */
+const DexPoolVolumeStatusSchema = z.enum(["measured", "missing", "stale"]);
+export type DexPoolVolumeStatus = z.infer<typeof DexPoolVolumeStatusSchema>;
+
+/**
+ * Aggregate completeness of one volume window over every retained contributing
+ * pool (DEC-19). `complete` = every pool measured (a genuine measured zero stays
+ * complete); `partial` = some measured, some missing/stale; `missing` = none
+ * measured and at least one pool lacks an observation; `stale` = none measured
+ * and every observation is past its budget; `unknown` = completeness cannot be
+ * established (legacy row without a record, or an unreadable record).
+ */
+const DexVolumeCompletenessSchema = z.enum(["complete", "partial", "missing", "stale", "unknown"]);
+export type DexVolumeCompleteness = z.infer<typeof DexVolumeCompletenessSchema>;
+
+const DexVolumeAvailabilityReasonSchema = z.enum([
+  "pool-observations-missing",
+  "pool-observations-stale",
+  "pool-observations-missing-and-stale",
+  "legacy-completeness-unrecorded",
+  "availability-record-unreadable",
+]);
+export type DexVolumeAvailabilityReason = z.infer<typeof DexVolumeAvailabilityReasonSchema>;
+
+const nullableCount = z.number().int().nonnegative().nullable();
+const nullableEpochSec = z.number().int().nonnegative().nullable();
+
+/**
+ * Availability record for one measured-volume window. The advertised measured
+ * total (`totalVolume24hUsd` / `totalVolume7dUsd`, history `volume24h`) is a
+ * number only when `completeness === "complete"`; otherwise it is null and
+ * `partialGrossUsd` separately labels the sum of the in-budget observations
+ * that were present (a lower bound, never the measured statistic). Clock fields
+ * name the observation window and freshness budget that produced the verdict.
+ */
+const DexVolumeAvailabilitySchema = z
+  .object({
+    completeness: DexVolumeCompletenessSchema,
+    reason: DexVolumeAvailabilityReasonSchema.nullable(),
+    partialGrossUsd: z.number().finite().nonnegative().nullable(),
+    measuredPoolCount: nullableCount,
+    missingPoolCount: nullableCount,
+    stalePoolCount: nullableCount,
+    windowSec: z.number().int().positive(),
+    asOfSec: nullableEpochSec,
+    maxObservationAgeSec: z.number().int().positive().nullable(),
+    oldestObservedAtSec: nullableEpochSec,
+    newestObservedAtSec: nullableEpochSec,
+  })
+  .superRefine((availability, ctx) => {
+    if ((availability.completeness === "complete") !== (availability.reason === null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "complete volume windows carry no reason; every other completeness carries one",
+      });
+    }
+  });
+export type DexVolumeAvailability = z.infer<typeof DexVolumeAvailabilitySchema>;
+
+/** Stored `volume_availability_json` record: one availability per persisted window. */
+export const DexVolumeAvailabilityRecordSchema = z.object({
+  "24h": DexVolumeAvailabilitySchema,
+  "7d": DexVolumeAvailabilitySchema.optional(),
+});
+export type DexVolumeAvailabilityRecord = z.infer<typeof DexVolumeAvailabilityRecordSchema>;
+/** Measured DEX volume windows published by the liquidity pipeline (the record's window keys). */
+export type DexVolumeWindow = keyof DexVolumeAvailabilityRecord;
+
+export const DexPoolVolumeObservationSchema = z.object({
+  status: DexPoolVolumeStatusSchema,
+  observedAtSec: nullableEpochSec,
+});
+
 const DexLiquidityPoolSchema = z.object({
   project: z.string(),
   chain: z.string(),
   tvlUsd: z.number(),
   symbol: z.string(),
-  volumeUsd1d: z.number(),
+  // Null when the pool has no in-budget 24h observation (DEC-19 producers).
+  volumeUsd1d: z.number().nullable(),
   volumeUsd7d: z.number().nullable().optional(),
+  // Absent on legacy rows: the reading's eligibility was not recorded.
+  volumeObservation: DexPoolVolumeObservationSchema.optional(),
   poolType: z.string(),
   source: LiquidityPoolSourceFamilySchema.optional(),
   price: z.number().optional(),
@@ -413,8 +536,12 @@ const DexLiquidityDataSchema = z
   .object({
     warning: z.string().nullable().optional(),
     totalTvlUsd: z.number(),
-    totalVolume24hUsd: z.number(),
+    // Full-window measured sums: null unless the matching availability is complete.
+    totalVolume24hUsd: z.number().nullable(),
     totalVolume7dUsd: z.number().nullable(),
+    // Absent on legacy rows (completeness unrecorded; interpret as `unknown`).
+    volume24hAvailability: DexVolumeAvailabilitySchema.optional(),
+    volume7dAvailability: DexVolumeAvailabilitySchema.optional(),
     poolCount: z.number(),
     pairCount: z.number(),
     chainCount: z.number(),
@@ -448,7 +575,8 @@ const DexLiquidityDataSchema = z
     scoreComponents: z
       .object({
         tvlDepth: z.number(),
-        volumeActivity: z.number(),
+        // Null when DEC-19 marks required 24h activity unavailable (composite is NR).
+        volumeActivity: z.number().nullable(),
         poolQuality: z.number(),
         durability: z.number(),
         pairDiversity: z.number(),
@@ -465,7 +593,9 @@ export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
 export const DexLiquidityHistoryPointSchema = z
   .object({
     tvl: z.number(),
-    volume24h: z.number(),
+    // Null unless the snapshot's 24h window was complete; legacy rows keep their number.
+    volume24h: z.number().nullable(),
+    volume24hAvailability: DexVolumeAvailabilitySchema.optional(),
     score: z.number().nullable(),
     date: z.number(),
     coverageClass: LiquidityCoverageClassSchema,
@@ -491,11 +621,11 @@ export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);
 
 const NonUsdSharePointSchema = z.object({
   date: z.number(),
-  // Aggregate/share fields are nullable; `total` is emitted only when positive.
-  commodityShare: z.number().nullable(),
-  fiatNonUsdShare: z.number().nullable(),
-  commodity: z.number().nullable(),
-  fiatNonUsd: z.number().nullable(),
+  // SQL cohort aggregates are complete numbers; unavailable history is not a zero point.
+  commodityShare: z.number(),
+  fiatNonUsdShare: z.number(),
+  commodity: z.number(),
+  fiatNonUsd: z.number(),
   total: z.number(),
 });
 export type NonUsdSharePoint = z.infer<typeof NonUsdSharePointSchema>;
@@ -683,6 +813,12 @@ export const PegSummaryCoinSchema = z.object({
    * deviation as "at peg".
    */
   currentPriceUnavailable: z.boolean().optional(),
+  /**
+   * True when the coin's current circulating supply is unavailable (asset absent or buckets
+   * absent/empty/invalid), so the live-event supply floor cannot be assessed. The deviation is
+   * withheld, but this is not a below-floor claim: `depegEventCoverageLimited` stays false.
+   */
+  currentSupplyUnavailable: z.boolean().optional(),
   depegEventCoverageLimited: z.boolean().optional(),
   pegScore: z.number().nullable(),
   priceSource: z.string().optional(),
@@ -690,6 +826,7 @@ export const PegSummaryCoinSchema = z.object({
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
+  nominalPriceReference: NominalPriceReferenceSchema.optional(),
   priceSyncedAt: z.number().nullable().optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
@@ -985,6 +1122,8 @@ const BlacklistFreezeLedgerMetaSchema = z.object({
 const BlacklistDataQualitySchema = z.object({
   status: z.enum(["ok", "degraded", "stale"]),
   warnings: z.array(z.string()),
+  ambiguousOrderCount: z.number().int().nonnegative().optional(),
+  ambiguousOrderReason: z.literal("tron-cross-transaction-order").nullable().optional(),
   amountGaps: z.object({
     totalEvents: z.number(),
     recoverable: z.number(),
@@ -1046,7 +1185,7 @@ export const StressSignalDataReasonSchema = z.enum([
 ]);
 export type StressSignalDataReason = z.infer<typeof StressSignalDataReasonSchema>;
 
-export const StressSignalEntrySchema = z.object({
+export const StressSignalEntrySchema = FreshnessAssessmentSchema.partial().extend({
   score: z.number(),
   band: z.string(),
   signals: z.record(z.string(), SignalDetailSchema),
@@ -1054,6 +1193,8 @@ export const StressSignalEntrySchema = z.object({
   computedAt: z.number(),
   methodologyVersion: z.string(),
   ageClassification: StressSignalAgeClassificationSchema.optional(),
+  // Null in single-coin mode, where no cross-coin generation comparison is made.
+  newestReturnedComputedAt: z.number().nullable().optional(),
 });
 
 export type StressSignalEntry = z.infer<typeof StressSignalEntrySchema>;

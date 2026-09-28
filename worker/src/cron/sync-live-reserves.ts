@@ -652,6 +652,9 @@ async function runReserveCoinQueue(args: {
 
     if (result.status === "synced") {
       counts.synced++;
+      if (result.publishedAt != null) {
+        counts.latestPublishedAt = Math.max(counts.latestPublishedAt ?? 0, result.publishedAt);
+      }
     } else if (result.status === "skipped") {
       counts.skipped++;
       counts.circuitSkipped++;

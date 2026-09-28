@@ -100,6 +100,7 @@ The lighthouse metaphor is useful only when it communicates data. Decorative nov
 ## Color And State
 
 - Use semantic tokens and shared classification/status helpers. Classification labels and colors belong in `shared/lib/classification.ts`.
+- Freeze-event badges, overview seismograph, and per-asset charts share the event descriptor in `shared/lib/classification/badges.ts`, exposed through the classification facade: Freeze/red, Release/emerald, Wipe/amber. Legends and tooltips use `EVENT_LABELS`; chart fills use `EVENT_CHART_COLORS` in both themes. API event keys and chart stacking order are not display labels.
 - Frost blue is the brand accent and a selective point of emphasis, not the default color for every metric.
 - Health, warning, error, freshness, and score colors must represent state consistently in both themes.
 - Never rely on color alone. Pair it with text, position, shape, iconography, or another redundant channel.

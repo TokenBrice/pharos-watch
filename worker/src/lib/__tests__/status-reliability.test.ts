@@ -17,6 +17,7 @@ import {
 import {
   STATUS_DEGRADED_TO_STALE_THRESHOLD,
   type StatusLevel,
+  type StatusPersistenceIssue,
 } from "../status-reliability-shared";
 import { decideNextStatus } from "../status-reliability-decision";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -378,6 +379,14 @@ describe("status-reliability", () => {
 
     const failed = await getStatusStateSnapshot(makeFailingDb(), 2_100);
     expect(failed).toEqual({ state: null, staleness: null });
+  });
+
+  it("rejects future status-state clocks but admits the skew boundary", async () => {
+    const { db } = makeStatefulDb({ seed: { last_evaluated_at: 1060 } });
+    expect((await getStatusStateSnapshot(db, 1000)).staleness).toMatchObject({ ageSeconds: 0, isStale: false });
+    const issues: StatusPersistenceIssue[] = [];
+    expect(await getStatusStateSnapshot(db, 999, (issue) => issues.push(issue))).toEqual({ state: null, staleness: null });
+    expect(issues).toEqual([expect.objectContaining({ code: "status_state_invalid_timestamp" })]);
   });
 
   it("does not seed status state after a transient read failure", async () => {

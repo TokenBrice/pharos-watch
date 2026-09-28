@@ -34,8 +34,7 @@
     "reserveDisclosureUrl": "https://www.audd.digital/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-05-31",
-    "notes": "AUDD is a foreign non-USD payment stablecoin with some US presence (Coinbase Wallet custody; not tradable on Coinbase for US-based users). No GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception registration found. Foreign exception framework still under proposed rulemaking (Treasury NPRM FR 2026-06489). Monthly William Buck attestations confirmed through May 2026.",
+    "notes": "Evidence as of 2026-06-18 review: AUDD is a foreign non-USD payment stablecoin with some US presence (Coinbase Wallet custody; not tradable on Coinbase for US-based users). No GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception registration found. Foreign exception framework still under proposed rulemaking (Treasury NPRM FR 2026-06489). Monthly William Buck attestations confirmed through May 2026. Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

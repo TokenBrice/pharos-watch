@@ -122,11 +122,6 @@ describe("classifyChangedFiles", () => {
       name: "the yield cron to the shared cron contract",
       files: ["worker/src/cron/yield-coverage-audit.ts"],
       mappings: ["worker-cron"],
-      docsHead: [
-        "docs/process/cron-trigger-policy.md",
-        "docs/worker-infrastructure.md#module-initialization",
-        "docs/process/agent-start-here.md",
-      ],
       scopedContextHead: ["worker/src/cron/AGENTS.md", "worker/AGENTS.md"],
       checks: ["npm run check:cron-sync"],
     },
@@ -149,7 +144,6 @@ describe("classifyChangedFiles", () => {
       files: ["src/app/page.tsx"],
       mappings: ["frontend-routes"],
       docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
-      maxDocs: 3,
       checks: ["npm run typecheck"],
     },
     {
@@ -199,7 +193,7 @@ describe("classifyChangedFiles", () => {
       name: "repo-local agent config changes to agent process guidance",
       files: [".codex/config.toml", ".claude/settings.json", "scripts/ci/pharos-change-contract.ts"],
       mappings: ["agent-hooks-process"],
-      docs: ["docs/process/agent-artifacts.md"],
+      docs: ["docs/process/agent-artifacts.md#harness-configuration", "docs/process/agent-artifacts.md#agent-skills"],
       absentDocs: ["CLAUDE.md"],
       checks: ["npm run check:generated-artifacts -- --only=agents-doc"],
     },
@@ -208,7 +202,6 @@ describe("classifyChangedFiles", () => {
     files: string[];
     mappings: string[];
     docs?: string[];
-    docsHead?: string[];
     absentDocs?: string[];
     maxDocs?: number;
     checks?: string[];
@@ -227,7 +220,6 @@ describe("classifyChangedFiles", () => {
     for (const doc of routing.background ?? []) {
       expect(contract.background.map((entry) => entry.path)).toContain(doc);
     }
-    if (routing.docsHead) expect(docKeys(contract).slice(0, routing.docsHead.length)).toEqual(routing.docsHead);
     if (routing.maxDocs !== undefined) expect(docKeys(contract).length).toBeLessThanOrEqual(routing.maxDocs);
     if (routing.scopedContext) expect(contract.scopedContext).toEqual(routing.scopedContext);
     if (routing.scopedContextHead) {
@@ -260,6 +252,49 @@ describe("classifyChangedFiles", () => {
 
     expect(explicit).not.toContain("Next: npm run agent:route -- --file <path> for planned files");
     expect(workingTree).toMatch(/Next: npm run agent:route -- --file <path> for planned files$/);
+  });
+  it.each([
+    ["worker/src/cron/reserve-adapters/3jane-usd3.ts", "docs/live-reserves.md"],
+    ["shared/types/live-reserve-adapter-declarations.ts", "docs/live-reserves.md"],
+    ["worker/src/api/stablecoin-reserves.ts", "docs/live-reserves.md"],
+    ["worker/src/lib/live-reserves/store-read.ts", "docs/live-reserves.md"],
+    ["worker/src/cron/sync-yield-data.ts", "docs/yield-intelligence.md"],
+    ["worker/src/api/yield-rankings.ts", "docs/yield-intelligence.md"],
+    ["src/app/page.tsx", "docs/homepage.md"],
+    ["src/components/about/about-page-content.tsx", "docs/about-page.md"],
+    ["src/app/coverage/client.tsx", "docs/coverage-page.md"],
+    ["src/app/start/page.tsx", "docs/start-page.md"],
+    ["worker/src/api/feedback.ts", "docs/feedback-pipeline.md"],
+    ["shared/data/stablecoins/domains/compliance/usdc-circle.json", "docs/compliance-page.md"],
+    [".omp/config.yml", "docs/process/agent-artifacts.md"],
+    ["scripts/maintenance/sync-agent-skills.mjs", "docs/process/agent-artifacts.md"],
+  ])("retains the domain owner in bounded Read first for %s", (file, owner) => {
+    const contract = classifyChangedFiles([file]);
+    expect(contract.docs.map((doc) => doc.path)).toContain(owner);
+    expect(contract.docs.length).toBeLessThanOrEqual(6);
+  });
+
+  it("warns for each missing owner even alongside an owned path", () => {
+    const contract = classifyChangedFiles(["planned-domain/new-source.ts", "src/app/page.tsx"]);
+    expect(contract.warnings.some((warning) => warning.includes("planned-domain/new-source.ts"))).toBe(true);
+    expect(classifyChangedFiles(["src/app/page.tsx"]).warnings).toEqual([]);
+  });
+
+  it.each(["worker/src/routes/admin-routes.ts", "worker/src/api/backfill-depegs.ts", "functions/admin-api/[[path]].ts"])(
+    "keeps admin guidance primary for %s without imposing it on public bindings", (file) => {
+      expect(classifyChangedFiles([file]).docs.map((doc) => doc.path)).toContain("docs/api-reference-admin.md");
+      expect(classifyChangedFiles(["worker/src/routes/public-routes.ts"]).docs.map((doc) => doc.path)).not.toContain("docs/api-reference-admin.md");
+    },
+  );
+
+  it("retains incident observation and remote inspection guidance for scheduler edits", () => {
+    const contract = classifyChangedFiles(["worker/src/handlers/scheduled.ts"]);
+    expect(docKeys(contract)).toContain("docs/process/cron-trigger-policy.md");
+    expect(docKeys({ docs: contract.background })).toEqual(expect.arrayContaining([
+      "docs/README.md#stale-output-diagnosis",
+      "docs/deployment-process.md#monitoring-without-model-polling",
+      "docs/worker-infrastructure.md#remote-d1-inspection",
+    ]));
   });
 });
 
@@ -503,15 +538,14 @@ describe("Codex hook outputs", () => {
   it("emits bounded read and scoped-context lines for a routed file", () => {
     const context = buildSessionStartContext(classifyChangedFiles(["src/app/page.tsx"]));
 
-    expect(context.split("\n")).toEqual([
-      "Pharos change contract — explicit files (1 files) — deploy: pages=y, worker=n",
-      "Read first: docs/architecture.md#frontend-runtime-and-seo-surface, docs/process/agent-start-here.md",
-      "Scoped context: src/app/AGENTS.md, src/AGENTS.md",
-      "Focused checks: npm run lint:changed, npm run typecheck, npx vitest run src",
-      "Route a planned path: npm run agent:route -- --file <path>",
-    ]);
-    expect(context).not.toContain("Hints:");
-    expect(context).not.toContain("Core rules:");
+    const readFirst = context.split("\n").find((line) => line.startsWith("Read first: "))!
+      .slice("Read first: ".length).split(", ");
+    expect(readFirst).toContain("docs/homepage.md#top-fold-contract");
+    expect(readFirst.length).toBeLessThanOrEqual(4);
+    const scopedContext = context.split("\n").find((line) => line.startsWith("Scoped context: "))!
+      .slice("Scoped context: ".length).split(", ");
+    expect(scopedContext).toContain("src/app/AGENTS.md");
+    expect(scopedContext).toContain("src/AGENTS.md");
   });
 
   it("keeps the cron contract ahead of its runtime fallback", () => {
@@ -519,12 +553,13 @@ describe("Codex hook outputs", () => {
       classifyChangedFiles(["worker/src/cron/yield-coverage-audit.ts"]),
     );
 
-    expect(context).toContain(
-      "Read first: docs/process/cron-trigger-policy.md, docs/worker-infrastructure.md#module-initialization, docs/process/agent-start-here.md",
-    );
-    expect(context).toContain(
-      "Focused checks: npm run lint:changed, npm run typecheck:worker, npm run check:cron-sync, npm run check:cron-connections",
-    );
+    const readFirst = context.split("\n").find((line) => line.startsWith("Read first: "))!
+      .slice("Read first: ".length).split(", ");
+    expect(readFirst).toContain("docs/yield-intelligence.md#engineering-contract");
+    const cronIndex = readFirst.indexOf("docs/process/cron-trigger-policy.md");
+    const runtimeIndex = readFirst.indexOf("docs/worker-infrastructure.md#module-initialization");
+    expect(cronIndex).toBeGreaterThanOrEqual(0);
+    expect(runtimeIndex).toBeGreaterThan(cronIndex);
   });
 
   it("emits no decision for an allowed PermissionRequest", () => {

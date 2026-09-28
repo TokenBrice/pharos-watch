@@ -1,4 +1,5 @@
 import type { SupplyHistoryPoint } from "@shared/types";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { deriveSupplyFromMarketCap } from "@/lib/stablecoin-detail-derive";
@@ -107,13 +108,14 @@ export function buildDetailMarketSnapshot(
   nowMs: number,
 ): DetailMarketSnapshot {
   const mcap = getCirculatingRaw(coinData);
+  const observedPrice = isObservedPrice(coinData) ? coinData.price : null;
   return {
     mcap,
-    supply: deriveSupplyFromMarketCap(mcap, coinData.price),
+    supply: deriveSupplyFromMarketCap(mcap, observedPrice),
     prevDay: getPrevDayRawOrNull(coinData),
     prevWeek: getPrevWeekRawOrNull(coinData),
     prevMonth: getPrevMonthRawOrNull(coinData),
-    performanceVsUsd1y: computePerformanceVsUsd1y(coin, coinData.price, supplyHistory, nowMs),
+    performanceVsUsd1y: computePerformanceVsUsd1y(coin, observedPrice, supplyHistory, nowMs),
     earliestTrackingDate: supplyHistory.length > 0 ? supplyHistory[0].date : null,
   };
 }

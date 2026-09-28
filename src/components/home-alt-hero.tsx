@@ -25,7 +25,7 @@ export function HomeAltHero({
   const stablecoinsQuery = useStablecoins();
   const liveSnapshot = useMemo(
     () => stablecoinsQuery.data
-      ? buildLiveHomepageHeroSnapshot(stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt)
+      ? buildLiveHomepageHeroSnapshot(stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt ?? undefined)
       : null,
     [stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt],
   );
@@ -91,6 +91,11 @@ export function HomeAltHero({
                     : "Live stablecoin data"
                   : "Live market data unavailable"}
             </p>
+            {visibleSnapshot && visibleSnapshot.supplyUnavailableCount > 0 ? (
+              <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                {`Partial · excludes ${visibleSnapshot.supplyUnavailableCount} ${visibleSnapshot.supplyUnavailableCount === 1 ? "asset" : "assets"} without supply data`}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -148,10 +153,10 @@ function CohortRow({
 }: {
   color: string;
   label: string;
-  value: number;
+  value: number | null;
   total: number;
 }): React.JSX.Element {
-  const share = total > 0 ? (value / total) * 100 : 0;
+  const share = value != null && total > 0 ? (value / total) * 100 : null;
   return (
     <li className="flex items-baseline justify-between gap-3 pharos-numeric">
       <span className="flex items-center gap-2 text-muted-foreground">
@@ -159,9 +164,15 @@ function CohortRow({
         <span className="uppercase tracking-tight">{label}</span>
       </span>
       <span className="flex items-baseline gap-1.5 pharos-numeric text-muted-foreground">
-        <span className="text-foreground">{formatCurrency(value, 1)}</span>
-        <span aria-hidden="true">·</span>
-        <span>{share.toFixed(1)}%</span>
+        {value != null ? (
+          <>
+            <span className="text-foreground">{formatCurrency(value, 1)}</span>
+            <span aria-hidden="true">·</span>
+            <span>{share != null ? `${share.toFixed(1)}%` : "—"}</span>
+          </>
+        ) : (
+          <span title="Supply unavailable">—</span>
+        )}
       </span>
     </li>
   );

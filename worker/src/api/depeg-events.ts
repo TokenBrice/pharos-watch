@@ -233,10 +233,10 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       freshness: {
         producerJob: "sync-stablecoins",
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,
-        fallbackTimestamp: (events) => (events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000)),
       },
       cacheControl: CACHE_PROFILES.producerBacked,
-      buildExtraBody: async (_events, _total, latestEventTs) => {
+      buildExtraBody: async (events) => {
+        const latestEventTs = events[0]?.startedAt ?? Math.floor(Date.now() / 1000);
         const methodologyVersion = getMethodologyVersionAt("depeg-dews", latestEventTs);
         return {
           ...(includePending ? { pending: await loadPendingIncidents(db, stablecoinId) } : {}),

@@ -24,11 +24,11 @@ or resent.
 
 | State | Meaning | Automatic action |
 |---|---|---|
-| `pending` | The next chunk is known not to have been accepted yet | Retried by the `*/5` digest-trigger slot after `next_attempt_at` |
+| `pending` | The next photo or text effect is known not to have been accepted yet | Retried by the `*/5` digest-trigger slot after `next_attempt_at` |
 | `sending` | An owner/generation has crossed the external-effect boundary | Never taken over while its claim is live |
-| `sent` | Every chunk and the post-send appendix actions committed | None; rows are retained for 90 days |
-| `execution_unknown` | Telegram may have accepted the chunk, or acceptance could not be durably recorded | None; operator proof is required |
-| `failed_permanent` | Telegram rejected the chunk, or the authored Safety Score identity is stale/legacy-unbound | None; correct the cause or generate a current edition |
+| `sent` | Any photo, every text chunk, and the post-send appendix actions committed | None; rows are retained for 90 days |
+| `execution_unknown` | Telegram may have accepted a photo or text chunk, or acceptance could not be durably recorded | None; exact-effect operator proof is required |
+| `failed_permanent` | Telegram rejected the effect, or the authored Safety Score identity is stale/legacy-unbound | None; correct the cause or generate a current edition |
 
 An expired `sending` claim becomes `execution_unknown`. It is never returned to `pending` automatically.
 
@@ -41,55 +41,76 @@ List unresolved editions:
 ```bash
 cd worker
 npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-  "SELECT edition_key, digest_kind, state, next_chunk_index, json_array_length(payload_chunks_json) AS chunk_count, json_extract(safety_context_json, '\$.status') AS safety_status, json_extract(safety_context_json, '\$.expectedModel') AS safety_model, json_extract(safety_context_json, '\$.identity.publicationGenerationId') AS safety_generation, attempts, last_error_class, last_status_code, updated_at FROM telegram_digest_outbox WHERE state IN ('sending','execution_unknown','failed_permanent') ORDER BY updated_at DESC;"
+  "SELECT edition_key, digest_kind, target_chat_id, state, media_state, map_image_url, map_date, next_chunk_index, json_array_length(payload_chunks_json) AS chunk_count, delivery_generation, delivery_owner, updated_at, json_extract(safety_context_json, '\$.status') AS safety_status, json_extract(safety_context_json, '\$.identity.publicationGenerationId') AS safety_generation, attempts, last_error_class, last_status_code FROM telegram_digest_outbox WHERE state IN ('sending','execution_unknown','failed_permanent') ORDER BY updated_at DESC;"
 ```
 
-Inspect the uncertain chunk without editing it:
+Inspect and capture the exact uncertain effect and reconciliation fence without editing it:
 
 ```bash
 npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-  "SELECT edition_key, next_chunk_index, json_extract(payload_chunks_json, '\$[' || next_chunk_index || ']') AS uncertain_chunk FROM telegram_digest_outbox WHERE edition_key = 'daily:YYYY-MM-DD';"
+  "SELECT edition_key, target_chat_id, state, media_state, map_image_url, map_date, next_chunk_index, delivery_generation, delivery_owner, updated_at, payload_chunks_json, success_actions_json, safety_context_json, json_extract(payload_chunks_json, '\$[' || next_chunk_index || ']') AS next_text_chunk FROM telegram_digest_outbox WHERE edition_key = 'daily:YYYY-MM-DD';"
 ```
 
-Compare that exact chunk with the configured Telegram channel. `next_chunk_index` points to the first chunk whose acceptance is not durably confirmed.
+`next_chunk_index` is a **text-only** cursor. When `media_state = 'pending'`, the photo at `map_image_url` with caption `<b>Safety Score map · {map_date}</b>` precedes text; the candidate uncertain effect is that photo, not chunk zero. Require cursor zero and non-null map identity. When media is `none` or `sent`, inspect the text at the cursor. Establish which request actually crossed the send boundary using the captured attempt and exact target/payload evidence; the cursor alone is not proof that a request was attempted.
 
 ## Reconcile Ambiguity
 
-Create a D1 Time Travel bookmark before any manual state change.
+Create a D1 Time Travel bookmark and retain the inspected row, operator identity, incident reason, and exact-effect proof before any manual state change. The SQL below is a parameterized reconciliation recipe, not an installed operator endpoint or CLI. Execute only through a separately reviewed, authorized binding of the captured values; never substitute guessed state or use a broad reset.
 
-If the uncertain chunk is proven **not accepted**, preserve the cursor and release the edition:
+Resolve the photo and text cases independently:
 
-```sql
-UPDATE telegram_digest_outbox
-   SET state = 'pending',
-       next_attempt_at = unixepoch(),
-       delivery_owner = NULL,
-       delivery_claim_expires_at = NULL,
-       last_error_class = 'operator-confirmed-not-delivered',
-       updated_at = unixepoch()
- WHERE edition_key = 'daily:YYYY-MM-DD'
-   AND state = 'execution_unknown';
-```
+| Proven uncertain effect | Proven outcome | Required current media/cursor | Mutation and next poll |
+|---|---|---|---|
+| Photo identified by exact target, URL, map date/caption and attempt | Accepted | `pending`, cursor `0` | Mark media `sent`; leave cursor `0`. Next poll starts text chunk zero without resending the photo. |
+| Same photo | Not accepted | `pending`, cursor `0` | Keep media `pending` and cursor `0`. Next poll retries the photo before any text. |
+| Exact text chunk at the captured index in the exact target | Accepted | `none` or `sent`, cursor inside array | Advance exactly one text chunk; preserve media. Next poll sends only the remaining text. |
+| Same text chunk | Not accepted | `none` or `sent`, cursor inside array | Preserve cursor and media. Next poll retries that text chunk, never a resolved photo. |
 
-If the uncertain chunk is proven **accepted**, advance exactly one chunk and release the remainder:
+Positive evidence must establish acceptance or non-acceptance of **that effect**. A missing text chunk does not prove the earlier photo was not accepted; a timeout, incomplete channel inspection, or absence of a durable checkpoint does not prove non-acceptance. If the effect or outcome remains uncertain, leave the row unchanged. A cursor at array length has no text effect to reconcile; do not advance it. Resolve finalization-only ambiguity separately.
+
+Bind `:effect` to `photo` or `text` and `:outcome` to `accepted` or `not_accepted` only after that proof. Every `:expected_*` parameter is the corresponding value from the captured row (including exact serialized JSON and nulls); `:now` is the reconciliation Unix timestamp:
 
 ```sql
 UPDATE telegram_digest_outbox
    SET state = 'pending',
-       next_chunk_index = next_chunk_index + 1,
-       next_attempt_at = unixepoch(),
+       media_state = CASE
+         WHEN :effect = 'photo' AND :outcome = 'accepted' THEN 'sent'
+         ELSE media_state END,
+       next_chunk_index = next_chunk_index + CASE
+         WHEN :effect = 'text' AND :outcome = 'accepted' THEN 1
+         ELSE 0 END,
+       next_attempt_at = :now,
        delivery_owner = NULL,
        delivery_claim_expires_at = NULL,
-       last_error_class = 'operator-confirmed-delivered',
-       updated_at = unixepoch()
- WHERE edition_key = 'daily:YYYY-MM-DD'
+       last_error_class = 'operator-confirmed-' || :effect || '-' || :outcome,
+       updated_at = :now
+ WHERE edition_key = :expected_edition_key
    AND state = 'execution_unknown'
-   AND next_chunk_index < json_array_length(payload_chunks_json);
+   AND delivery_generation = :expected_delivery_generation
+   AND delivery_owner IS :expected_delivery_owner
+   AND updated_at = :expected_updated_at
+   AND media_state = :expected_media_state
+   AND next_chunk_index = :expected_next_chunk_index
+   AND target_chat_id = :expected_target_chat_id
+   AND map_image_url IS :expected_map_image_url
+   AND map_date IS :expected_map_date
+   AND payload_chunks_json = :expected_payload_chunks_json
+   AND success_actions_json = :expected_success_actions_json
+   AND safety_context_json = :expected_safety_context_json
+   AND :outcome IN ('accepted', 'not_accepted')
+   AND (
+     (:effect = 'photo' AND media_state = 'pending'
+       AND next_chunk_index = 0 AND map_image_url IS NOT NULL AND map_date IS NOT NULL)
+     OR
+     (:effect = 'text' AND media_state IN ('none', 'sent')
+       AND next_chunk_index >= 0
+       AND next_chunk_index < json_array_length(payload_chunks_json))
+   );
 ```
 
-The next poll sends only the remaining chunks. When the cursor already equals the array length, it performs no Bot API call and atomically commits the stored appendix actions with `sent`.
+Require exactly one changed row and authoritative post-write readback matching the selected matrix row; retain both in the incident record. Zero changes means stale state or an invalid effect/outcome, not success: stop and re-inspect/re-prove rather than weakening the fence. Do not execute both outcomes. Repeating a reconciliation with the old capture is a no-op.
 
-If acceptance remains uncertain, leave the row unchanged. Do not reset it merely to clear status.
+After the final accepted text chunk, the next poll makes no Bot API call and commits the stored appendix actions with `sent`, subject to the normal publication-identity and delivery controls. Never set `sent` manually to bypass those actions.
 
 ## Reconcile Permanent Failure
 

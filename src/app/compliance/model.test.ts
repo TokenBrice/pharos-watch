@@ -42,6 +42,7 @@ const fixtures = vi.hoisted(() => {
     {
       id: "dollar-intent",
       mica: { status: "out-of-scope" },
+      proofOfReserves: { latestReport: { periodEnd: "2026-06-30", publishedAt: "2026-07-29" } },
       genius: {
         authorizationStatus: "issuer-announced-intent",
         applicability: "in-scope",
@@ -52,7 +53,6 @@ const fixtures = vi.hoisted(() => {
         stateRegulator: "Nebraska Department of Banking",
         monthlyAttestationPresent: true,
         reserveDisclosurePresent: true,
-        latestReportDate: "2026-04-30",
       },
     },
     {
@@ -204,13 +204,15 @@ describe("Compliance model", () => {
     }
 
     expect(intent.primaryFederalRegulator).toBe("OCC");
-    expect(intent.latestReportDate).toBe("2026-04-30");
+    expect(intent.reserveReportNote).toContain("period end 2026-06-30");
+    expect(intent.reserveReportNote).toContain("published 2026-07-29");
     expect(intent.monthlyAttestationPresent).toBe(true);
     expect(intent.hasAnyDisclosure).toBe(true);
     expect(intent.negativeEvidenceSourcesChecked).toEqual([]);
 
     // No disclosure evidence at all must not read as "has disclosure".
     expect(review.hasAnyDisclosure).toBe(false);
+    expect(review.reserveReportNote).toBeUndefined();
     expect(review.monthlyAttestationPresent).toBe(false);
     expect(review.foreignExceptionStatus).toBe("unknown");
     expect(review.negativeEvidenceSummary).toContain("Review Labs");

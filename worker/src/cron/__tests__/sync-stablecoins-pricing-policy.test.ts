@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { applyConsensusResults, createValidationContextResolver } from "../sync-stablecoins/pricing";
+import { applyConsensusResults, createValidationContextResolver, prevalidatePrices } from "../sync-stablecoins/pricing";
+import { restoreMissingTrackedAssets } from "../sync-stablecoins/shared";
+import { carryForwardSupplyGapFill } from "../sync-stablecoins/supply-gap-reconciliation";
 import { enrichMissingPrices, type PeggedAsset, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
@@ -74,5 +76,76 @@ describe("pricing application policy", () => {
     expect(assets[0].price).toBe(0.9994);
     expect(assets[0].priceSource).toBe("defillama-contract");
     expect(assets[0].priceConfidence).toBe("single-source");
+  });
+
+  it("publishes a current composite with a 20-minute-old DEX member and drops only the restored stale quote", () => {
+    const nowSec = 1_790_541_043;
+    const usdt: PeggedAsset = {
+      id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD",
+      price: 1.0001, circulating: { peggedUSD: 185_000_000_000 },
+    };
+    const members = ["bitstamp", "coingecko", "kraken", "uniswap-v3-dex"];
+    const candidate: PrimaryPriceResult = {
+      price: 1.0002,
+      source: members.join("+"),
+      confidence: "high",
+      dlPrice: 1.0001,
+      cgPrice: 1.0002,
+      candidateSources: members,
+      agreeSources: members,
+      allPrices: { bitstamp: 1.0002, coingecko: 1.0002, kraken: 1.0001, "uniswap-v3-dex": 1.0003 },
+      // The consensus stamps the oldest agreeing member: the hourly DEX quote.
+      observedAt: nowSec - 1_200,
+      observedAtMode: "local_fetch",
+      observedAtBySource: { bitstamp: nowSec - 40, coingecko: nowSec - 60, kraken: nowSec - 35, "uniswap-v3-dex": nowSec - 1_200 },
+    };
+    // Previous-generation MXNE row: an ordinary CoinGecko quote ~40h old at restore time.
+    const previousMxne: PeggedAsset = {
+      id: "mxne-real-mxn", name: "MXNe", symbol: "MXNE", pegType: "peggedMXN",
+      price: 0.0567, priceSource: "coingecko", priceConfidence: "single-source",
+      priceObservedAt: nowSec - 144_443, priceObservedAtMode: "upstream", priceSyncedAt: nowSec - 900,
+      agreeSources: ["coingecko"], supplyObservedAt: nowSec - 900, circulating: { peggedMXN: 21_000_000 },
+    };
+    const restored = restoreMissingTrackedAssets([usdt], new Map([[previousMxne.id, previousMxne]]), nowSec).assets;
+    const assets = [usdt, ...restored];
+    const validationContexts = createValidationContextResolver();
+    const primaryPriceResults = new Map([[usdt.id, candidate]]);
+
+    applyConsensusResults({ assets, primaryPriceResults, validationContexts, syncStartSec: nowSec, reason: "primary" });
+    prevalidatePrices({ assets, primaryPriceResults, validationContexts, logLabel: "test" });
+
+    expect(usdt).toMatchObject({ price: 1.0002, priceSource: candidate.source, priceConfidence: "high", priceObservedAt: nowSec - 1_200 });
+    const mxne = assets.find((asset) => asset.id === previousMxne.id);
+    expect(mxne).toMatchObject({ price: null, supplyRestored: true, circulating: previousMxne.circulating });
+  });
+
+  it("keeps a current undated DefiLlama quote on a carried gap-fill supply row", () => {
+    const nowSec = 1_790_541_043;
+    const previous: PeggedAsset = {
+      id: "reusd-re-protocol", name: "reUSD", symbol: "reUSD", pegType: "peggedUSD", navToken: true,
+      price: 1.1031, priceSource: "defillama", supplySource: "coingecko-gap-fill", supplyObservedAt: nowSec - 900,
+      circulating: { peggedUSD: 130_000_000 },
+      supplyGapFill: {
+        method: "coingecko-single-missing-chain", admission: "retained", missingChainId: "Arbitrum",
+        canonicalSource: "defillama", canonicalCurrentUsd: 123_800_000,
+        supplementalSource: "coingecko", supplementalCurrentUsd: 130_000_000,
+        ratio: 1.0504, maxRatio: 1.5, observedAt: nowSec - 900,
+      },
+    };
+    // This run's DefiLlama list row: fresh price, no upstream timestamp, supply awaiting reconciliation.
+    const current: PeggedAsset = {
+      id: previous.id, name: "reUSD", symbol: "reUSD", pegType: "peggedUSD", navToken: true,
+      price: 1.1036, priceSource: "defillama", circulating: { peggedUSD: 123_800_000 },
+    };
+    expect(carryForwardSupplyGapFill(current, previous)).toBe(true);
+    const validationContexts = createValidationContextResolver();
+
+    applyConsensusResults({ assets: [current], primaryPriceResults: new Map(), validationContexts, syncStartSec: nowSec, reason: "primary" });
+    prevalidatePrices({ assets: [current], validationContexts, logLabel: "test" });
+
+    expect(current).toMatchObject({
+      price: 1.1036, priceSource: "defillama", priceObservedAt: null, priceSyncedAt: nowSec,
+      supplyRestored: true, circulating: previous.circulating,
+    });
   });
 });

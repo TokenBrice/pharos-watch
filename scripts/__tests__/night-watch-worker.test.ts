@@ -254,6 +254,20 @@ describe("night-watch-worker", () => {
     expect(markdown).toContain("digest-trigger-poll");
   });
 
+  it("keeps completed capacity findings visible even when metadata previews are truncated", () => {
+    const qualityEvidence = evidence();
+    Object.assign(qualityEvidence.snapshots[0]!.recentRuns[0]!, {
+      job: "cron-sentinel-daily",
+      quality: JSON.stringify({
+        sources: { "mint-burn-growth-watchdog": { reason: "row-count-threshold" } },
+      }),
+      metadata_preview: '{"truncated":',
+    });
+    const markdown = renderNightWatchMarkdown(qualityEvidence);
+    expect(markdown).toContain("cron runs reported quality warnings");
+    expect(markdown).toContain("mint-burn-growth-watchdog:row-count-threshold");
+  });
+
   it("escapes Markdown table pipes without letting existing backslashes change the table shape", () => {
     const tableEvidence = evidence();
     tableEvidence.scheduleMatrix.cronJobs[0]!.job = String.raw`sync\job|tenant`;

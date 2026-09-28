@@ -165,9 +165,16 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   const bySymbol = new Map<string, number>();
   for (const asset of assets) {
     if (!asset.category?.startsWith("asset:")) continue;
-    const usd = Number(asset.totalValueUsd);
-    if (!Number.isFinite(usd) || usd <= 0) continue;
+    const usd = asset.totalValueUsd;
+    if (typeof usd !== "number" || !Number.isFinite(usd) || !asset.tokenSymbol?.trim()) {
+      throw new Error("Frax balance-sheet asset amount or identity is unavailable");
+    }
     bySymbol.set(asset.tokenSymbol, (bySymbol.get(asset.tokenSymbol) ?? 0) + usd);
+  }
+  // Contra entries offset their own asset, never an unrelated reserve bucket.
+  for (const [symbol, usd] of bySymbol) {
+    if (usd < 0) throw new Error(`Frax balance-sheet net asset is negative: ${symbol}`);
+    if (usd === 0) bySymbol.delete(symbol);
   }
 
   const categorizedAssetTotal = [...bySymbol.values()].reduce((a, b) => a + b, 0);
@@ -176,11 +183,19 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   if (!Number.isFinite(sourceTotal) || sourceTotal <= 0) {
     throw new Error("Frax balance-sheet totalAssets is invalid or zero");
   }
-  const total = Math.max(categorizedAssetTotal, sourceTotal);
+  const total = sourceTotal;
+  const reconciliationGapPct = ((sourceTotal - categorizedAssetTotal) / sourceTotal) * 100;
+  if (reconciliationGapPct < -SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
+    throw new Error("Frax balance-sheet asset rows exceed totalAssets");
+  }
   const stableRedeemableUsd = ["USDC", "USDS", "PYUSD", "DAI", "FRAX"].reduce(
     (sum, symbol) => sum + (bySymbol.get(symbol) ?? 0),
     0,
   );
+  if (stableRedeemableUsd > total) {
+    warnings.push(reserveDegradedWarning("redeemable-capacity-exceeds-total",
+      "Frax redeemable asset rows exceed totalAssets; capacity is unavailable"));
+  }
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.asOfTimestamp);
 
   const slices: ReserveSlice[] = [];
@@ -221,7 +236,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   }
 
   const sourceTotalGapUsd = sourceTotal - categorizedAssetTotal;
-  const sourceTotalGapPct = sourceTotalGapUsd > 0 ? (sourceTotalGapUsd / total) * 100 : 0;
+  const sourceTotalGapPct = (sourceTotalGapUsd / total) * 100;
   if (sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     slices.push({
       sourceKey: "frax-balance-sheet:source-total-gap",
@@ -254,7 +269,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
         "Frax balance-sheet response did not include asOfTimestamp",
       ),
       ...buildRedemptionSnapshotMetadata({
-        capacityUsd: stableRedeemableUsd,
+        ...(stableRedeemableUsd <= total ? { capacityUsd: stableRedeemableUsd } : {}),
         capacityKind: "live-proxy-validated",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
@@ -267,8 +282,8 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
 
 /* ---------- v2 FPI collateral adapter ---------- */
 
-function positiveUsd(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
+function nonnegativeUsd(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
 function isFpiSelfHolding(row: FraxFpiCollateralRow): boolean {
@@ -306,10 +321,17 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
   const unknownLabels = new Set<string>();
   let unknownUsd = 0;
   let selfHeldFpiUsd = 0;
+  const unavailableAssetLabels: string[] = [];
+  let selfHoldingsComplete = true;
 
   for (const asset of assets) {
-    const usd = positiveUsd(asset.valueUsd);
-    if (usd <= 0) continue;
+    const usd = nonnegativeUsd(asset.valueUsd);
+    if (usd == null) {
+      unavailableAssetLabels.push(describeFpiCollateralRow(asset));
+      if (isFpiSelfHolding(asset)) selfHoldingsComplete = false;
+      continue;
+    }
+    if (usd === 0) continue;
     if (isFpiSelfHolding(asset)) {
       selfHeldFpiUsd += usd;
       continue;
@@ -331,13 +353,27 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
     throw new Error("Frax FPI collateral response has no positive non-FPI collateral assets");
   }
 
-  const totalLiabilitiesUsd = (payload.liabilities ?? []).reduce(
-    (sum, liability) => sum + positiveUsd(liability.valueUsd),
-    0,
-  );
-  const netExternalLiabilitiesUsd = Math.max(totalLiabilitiesUsd - selfHeldFpiUsd, 0);
-  const collateralizationRatio =
-    netExternalLiabilitiesUsd > 0 ? totalCollateralUsd / netExternalLiabilitiesUsd : undefined;
+  const liabilities = payload.liabilities;
+  const unavailableLiabilityCount = liabilities?.filter((row) => nonnegativeUsd(row.valueUsd) == null).length ?? 0;
+  const liabilityCoverageComplete = Array.isArray(liabilities) && liabilities.length > 0 && unavailableLiabilityCount === 0;
+  const compositionComplete = unavailableAssetLabels.length === 0;
+  const totalLiabilitiesUsd = liabilityCoverageComplete
+    ? liabilities.reduce((sum, liability) => sum + liability.valueUsd!, 0)
+    : undefined;
+  const netExternalLiabilitiesUsd = compositionComplete && totalLiabilitiesUsd != null
+    ? totalLiabilitiesUsd - selfHeldFpiUsd
+    : undefined;
+  const collateralizationRatio = netExternalLiabilitiesUsd != null && netExternalLiabilitiesUsd > 0
+    ? totalCollateralUsd / netExternalLiabilitiesUsd
+    : undefined;
+  if (!compositionComplete) {
+    warnings.push(reserveDegradedWarning("asset-coverage-incomplete",
+      `Frax FPI asset values unavailable: ${unavailableAssetLabels.join(", ")}`));
+  }
+  if (!liabilityCoverageComplete || (netExternalLiabilitiesUsd != null && netExternalLiabilitiesUsd < 0)) {
+    warnings.push(reserveDegradedWarning("liability-coverage-incomplete",
+      "Frax FPI liabilities are unavailable or inconsistent with self holdings"));
+  }
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.updatedAtTimestampSec);
   const stableRedeemableUsd = ["FRAX", "sFRAX", "sfrxUSD"].reduce(
     (sum, symbol) => sum + (bySymbol.get(symbol) ?? 0),
@@ -388,12 +424,17 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
     slices: normalizeSlices(slices),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      totalCollateralUsd,
+      ...(compositionComplete ? { totalCollateralUsd } : { knownCollateralUsd: totalCollateralUsd }),
+      compositionComplete,
+      unavailableAssetCount: unavailableAssetLabels.length,
+      unavailableAssetLabels,
+      liabilityCoverageComplete,
+      unavailableLiabilityCount,
       mappedCollateralUsd,
       unknownCollateralUsd: unknownUsd,
-      selfHeldFpiUsd,
-      totalLiabilitiesUsd,
-      netExternalLiabilitiesUsd,
+      ...(selfHoldingsComplete ? { selfHeldFpiUsd } : { knownSelfHeldFpiUsd: selfHeldFpiUsd }),
+      ...(totalLiabilitiesUsd != null ? { totalLiabilitiesUsd } : {}),
+      ...(netExternalLiabilitiesUsd != null && netExternalLiabilitiesUsd >= 0 ? { netExternalLiabilitiesUsd } : {}),
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       assetCount: assets.length,
       liabilityCount: payload.liabilities?.length ?? 0,
@@ -404,7 +445,7 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
         "Frax FPI collateral response did not include updatedAtTimestampSec",
       ),
       ...buildRedemptionSnapshotMetadata({
-        capacityUsd: stableRedeemableUsd,
+        ...(compositionComplete ? { capacityUsd: stableRedeemableUsd } : {}),
         capacityKind: "live-proxy-validated",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),

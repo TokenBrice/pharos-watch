@@ -7,6 +7,7 @@ import { normalizeStablecoinsPayload } from "../shared";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache, getPriceCache } from "../../../lib/db-cache";
 import { makePeggedAsset } from "./_fixtures";
+import type { PeggedAsset } from "../enrich-prices";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -189,6 +190,37 @@ describe("validateAndWriteStablecoinsCache", () => {
       cacheKey: "stablecoins",
       responseReadyCacheError: "Error",
     });
+  });
+
+  it("quarantines a post-enrichment schema-invalid row per asset and publishes the healthy cohort", async () => {
+    const { db, sqlite } = fixtures.open();
+    const syncStartSec = 1_777_000_000;
+    const publishable = (id: string, overrides: Partial<PeggedAsset> = {}) => makePeggedAsset({
+      id, name: id, symbol: id.toUpperCase(), pegMechanism: "fiat-backed", price: 1, priceSource: "defillama",
+      circulating: { peggedUSD: 1000 }, chainCirculating: {}, chains: [], ...overrides,
+    });
+    const healthy = Array.from({ length: 50 }, (_, index) => publishable(`healthy-${index}`));
+    healthy[0]!.chainCirculating = { Ethereum: { current: 5, circulatingPrevDay: null } };
+    const invalid = publishable("negative-history", { circulatingPrevDay: { peggedUSD: -1 } });
+    const assets = [...healthy, invalid];
+
+    const result = await validateAndWriteStablecoinsCache({
+      assets, db, syncStartSec, validationContext: "main",
+      returnIfAborted: () => null,
+      abortResult: () => ({ aborted: true, metadata: "aborted" }),
+    }, () => ({ metadata: "blocked" }));
+
+    expect(result).toMatchObject({ written: true, quarantinedAssets: [expect.objectContaining({ id: "negative-history" })] });
+    // Later stages (depeg, coverage) see only the published cohort.
+    expect(assets.map((asset) => asset.id)).toEqual(healthy.map((asset) => asset.id));
+    const canonical = JSON.parse((await getCache(db, "stablecoins"))!.value) as { peggedAssets: Array<{ id: string; chainCirculating: unknown }> };
+    expect(canonical.peggedAssets.map((asset) => asset.id)).toEqual(healthy.map((asset) => asset.id));
+    expect(canonical.peggedAssets[0]?.chainCirculating).toEqual({ Ethereum: { current: 5, circulatingPrevDay: 0 } });
+    expect(assets[0]?.chainCirculating).toEqual({ Ethereum: { current: 5, circulatingPrevDay: null } });
+    const companion = JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
+    expect((JSON.parse(companion.body) as typeof canonical).peggedAssets[0]?.chainCirculating)
+      .toEqual({ Ethereum: { current: 5, circulatingPrevDay: 0 } });
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").all("stablecoins:invalid-last")).toHaveLength(1);
   });
   it("strips upstream frozen fields from non-registry assets before publishing", async () => {
     const syncStartSec = 1_777_000_000;

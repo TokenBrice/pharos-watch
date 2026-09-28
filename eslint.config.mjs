@@ -134,14 +134,14 @@ const pharosBoundaryPlugin = {
   },
 };
 
-// Cached StablecoinData current-supply reads in route/component/API code go
-// through `getCirculatingRaw()`; `sumPegBuckets` is the raw bucket adder and
-// belongs to the ingestion/normalization layer that builds those objects.
+// Absence-sensitive cached StablecoinData reads use `getCirculatingRawOrNull()`.
+// Raw helpers remain permitted after explicit availability proof; `sumPegBuckets`
+// belongs to ingestion/normalization of bucket records, not cached asset reads.
 const supplyHelperRestrictedImportPaths = [
   {
     name: "@shared/lib/supply",
     importNames: ["sumPegBuckets"],
-    message: "Route/component/API StablecoinData current supply should use getCirculatingRaw(), not sumPegBuckets().",
+    message: "Use getCirculatingRawOrNull() for absence-sensitive StablecoinData supply and preserve null + reason; getCirculatingRaw() is allowed only after explicit availability proof, not sumPegBuckets().",
   },
 ];
 

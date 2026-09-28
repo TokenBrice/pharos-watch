@@ -222,11 +222,11 @@ export async function buildNativeSafetyScoreV9Capture(
     chainCirculatingById: Object.fromEntries(
       peggedAssets.map((asset) => [
         asset.id,
+        // An unavailable chain observation (`current: null`) is absent from the V9 input, never a zero row.
         Object.fromEntries(
-          Object.entries(asset.chainCirculating ?? {}).map(([chain, bucket]) => [
-            chain,
-            { current: bucket.current },
-          ]),
+          Object.entries(asset.chainCirculating ?? {}).flatMap(([chain, bucket]): [string, { current: number }][] =>
+            bucket.current == null ? [] : [[chain, { current: bucket.current }]],
+          ),
         ),
       ]),
     ),

@@ -7,12 +7,15 @@ import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { isRecord } from "@shared/lib/type-guards";
 import type { PeggedAsset } from "./enrich-prices";
 import {
+  admitPeggedAssetRows,
   applyTrackedAssetOverrides,
   type CanonicalDeduplicationResult,
   dedupeCanonicalAssets,
   filterStructurallyValidAssets,
+  type IntakeQuarantinedRow,
   normalizeChainCirculating,
 } from "./phase-helpers";
 import {
@@ -68,13 +71,36 @@ const DL_PARSE_RETRY_BASE_DELAY_MS = 500;
 // case, against the ADR-4 per-run request budget. Capped at 3 + 1 + 1 = 5.
 const DL_TRANSPORT_RETRIES_FIRST_ATTEMPT = 2;
 
-type DefillamaStablecoinsPayload = {
-  peggedAssets: PeggedAsset[];
-  fxFallbackRates?: Record<string, number>;
-};
+/** Parsed-but-unvalidated DefiLlama body; `validateDefillamaEnvelope` proves its shape. */
+type DefillamaStablecoinsPayload = unknown;
+
+/** Maximum quarantined-row details carried in one structured log event. */
+const MAX_LOGGED_QUARANTINE_ROWS = 25;
+
+type DefillamaEnvelopeValidation =
+  | { ok: true; rows: unknown[]; fxFallbackRates?: Record<string, number> }
+  | { ok: false; reason: "payload-not-object" | "pegged-assets-not-array" };
+
+/**
+ * Global-schema check for the DefiLlama list body (DEC-03: the only whole-list failure at intake besides the
+ * minimum-count floor). Non-finite FX fallback entries are dropped; a non-record FX map is ignored.
+ */
+function validateDefillamaEnvelope(payload: DefillamaStablecoinsPayload): DefillamaEnvelopeValidation {
+  if (!isRecord(payload)) return { ok: false, reason: "payload-not-object" };
+  if (!Array.isArray(payload.peggedAssets)) return { ok: false, reason: "pegged-assets-not-array" };
+  const rawRates = payload.fxFallbackRates;
+  const fxFallbackRates = isRecord(rawRates)
+    ? Object.fromEntries(
+        Object.entries(rawRates).filter((entry): entry is [string, number] =>
+          typeof entry[1] === "number" && Number.isFinite(entry[1])),
+      )
+    : undefined;
+  return { ok: true, rows: payload.peggedAssets, ...(fxFallbackRates ? { fxFallbackRates } : {}) };
+}
 
 interface DefillamaFetchResult {
-  payload: DefillamaStablecoinsPayload | null;
+  /** `null` only when no body parsed; a parsed JSON `null` still arrives as `{ body: null }`. */
+  payload: { body: DefillamaStablecoinsPayload } | null;
   attempts: number;
   lastError: "fetch-failed" | "parse-failed" | null;
   lastHttpStatus: number | null;
@@ -101,9 +127,9 @@ async function fetchDefillamaStablecoinsPayload(
       break;
     }
     try {
-      const payload = JSON.parse(result.body) as DefillamaStablecoinsPayload;
+      const body: DefillamaStablecoinsPayload = JSON.parse(result.body);
       return {
-        payload,
+        payload: { body },
         attempts,
         lastError: null,
         lastHttpStatus: result.response.status,
@@ -251,44 +277,57 @@ export async function loadStablecoinsIntake(
     };
   }
 
-  // Capture only the two consumed payload fields so the parsed payload wrapper
-  // (and its raw unfiltered asset array) can be collected once the intake
-  // pipeline replaces `assets` below, instead of staying pinned until return.
-  const { peggedAssets: rawPeggedAssets, fxFallbackRates: dlFxFallbackRates } = dlFetchResult.payload;
-  const rawAssetCount = rawPeggedAssets?.length ?? 0;
-
-  if (rawPeggedAssets === undefined) {
+  const envelope = validateDefillamaEnvelope(dlFetchResult.payload.body);
+  if (!envelope.ok) {
+    // A malformed envelope is a global schema failure: record the DL circuit outcome and take the
+    // whole-list fallback instead of dereferencing an unknown shape (D01-5).
     logWorkerEvent({
       scope: "lib",
       job: "sync-stablecoins",
-      level: "warn",
-      event: "defillama-pegged-assets-missing",
-      message: "DefiLlama response missing peggedAssets field; possible API contract change",
-    });
-  }
-  if (!rawPeggedAssets || rawPeggedAssets.length < MIN_VALID_ASSET_COUNT) {
-    logWorkerEvent({
-      scope: "lib",
-      job: "sync-stablecoins",
-      event: "unexpected-asset-count",
-      message: "Unexpected asset count; skipping cache write",
-      metadata: { assetCount: rawPeggedAssets?.length, minimumAssetCount: MIN_VALID_ASSET_COUNT },
+      event: "defillama-envelope-invalid",
+      message: "DefiLlama response envelope is structurally invalid; possible API contract change",
+      metadata: { reason: envelope.reason },
     });
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
       kind: "fallback",
       result: await input.fallbackToCoingecko(cgData),
-      errorMessage: `DefiLlama payload was structurally invalid (asset count=${rawPeggedAssets?.length ?? 0}) and fallback failed`,
+      errorMessage: `DefiLlama payload envelope was invalid (${envelope.reason}) and fallback failed`,
     };
   }
 
-  // Run the transformation pipeline on a local variable. `rawPeggedAssets` is
-  // guaranteed defined and valid by the guards above; the steps below reassign
-  // `assets` rather than mutating the raw array, and nothing references the raw
-  // array (or the payload wrapper) past this point, so both become collectible
-  // as soon as validation/dedupe produce replacement arrays.
-  let assets = mergeFrozenSnapshots(rawPeggedAssets, FROZEN_SNAPSHOTS);
-  const injectedFrozenSnapshots = assets.length - rawAssetCount;
+  // Capture only the two consumed payload fields so the parsed payload wrapper
+  // (and its raw unfiltered asset array) can be collected once the intake
+  // pipeline replaces `assets` below, instead of staying pinned until return.
+  const { rows: rawPeggedAssets, fxFallbackRates: dlFxFallbackRates } = envelope;
+  const rawAssetCount = rawPeggedAssets.length;
+
+  if (rawAssetCount < MIN_VALID_ASSET_COUNT) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      event: "unexpected-asset-count",
+      message: "Unexpected asset count; skipping cache write",
+      metadata: { assetCount: rawAssetCount, minimumAssetCount: MIN_VALID_ASSET_COUNT },
+    });
+    await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
+    return {
+      kind: "fallback",
+      result: await input.fallbackToCoingecko(cgData),
+      errorMessage: `DefiLlama payload was structurally invalid (asset count=${rawAssetCount}) and fallback failed`,
+    };
+  }
+
+  // Admit only object rows before the frozen merge (which reads `id`) and every later transform, so a null
+  // or primitive provider row is quarantined per asset instead of crashing the whole run (DEC-03).
+  const rowAdmission = admitPeggedAssetRows(rawPeggedAssets);
+
+  // Run the transformation pipeline on a local variable. The steps below
+  // reassign `assets` rather than mutating the raw array, and nothing
+  // references the raw array (or the payload wrapper) past this point, so both
+  // become collectible as soon as validation/dedupe produce replacement arrays.
+  let assets = mergeFrozenSnapshots(rowAdmission.rows, FROZEN_SNAPSHOTS);
+  const injectedFrozenSnapshots = assets.length - rowAdmission.rows.length;
   if (injectedFrozenSnapshots > 0) {
     logWorkerEvent({
       scope: "lib",
@@ -300,7 +339,10 @@ export async function loadStablecoinsIntake(
     });
   }
 
-  const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(assets);
+  const structural = filterStructurallyValidAssets(assets);
+  const { validAssets } = structural;
+  const quarantinedRows: IntakeQuarantinedRow[] = [...rowAdmission.quarantined, ...structural.quarantined];
+  const droppedMalformedAssets = quarantinedRows.length;
   if (validAssets.length < MIN_VALID_ASSET_COUNT) {
     logWorkerEvent({
       scope: "lib",
@@ -316,17 +358,21 @@ export async function loadStablecoinsIntake(
       errorMessage: `DefiLlama payload had too many malformed assets (valid=${validAssets.length}) and fallback failed`,
     };
   }
-  if (validAssets.length < assets.length) {
+  if (quarantinedRows.length > 0 || structural.invalidHistoryIds.length > 0) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-stablecoins",
       level: "warn",
       event: "malformed-assets-dropped",
-      message: "Dropped malformed assets",
-      metadata: { droppedAssetCount: assets.length - validAssets.length },
+      message: "Quarantined malformed upstream rows; publishing valid peers",
+      metadata: {
+        droppedAssetCount: droppedMalformedAssets,
+        quarantined: quarantinedRows.slice(0, MAX_LOGGED_QUARANTINE_ROWS),
+        invalidHistoryIds: structural.invalidHistoryIds.slice(0, MAX_LOGGED_QUARANTINE_ROWS),
+      },
     });
-    assets = validAssets;
   }
+  assets = validAssets;
 
   hydrateGeckoIdAliases(assets);
   normalizeChainCirculating(assets);
@@ -452,7 +498,18 @@ export async function loadStablecoinsIntake(
     input.coingeckoApiKey,
     input.chainRpcs,
     input.fxFallbackRates,
+    previousAssetsById,
   );
+  if (supplyGapReconciliation.gapFillRejections.length > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "coingecko-gap-fill-rejected",
+      message: "CoinGecko supply gap-fill failed DEC-01 limits; canonical DefiLlama supply kept",
+      metadata: { rejections: supplyGapReconciliation.gapFillRejections },
+    });
+  }
   if (supplyGapReconciliation.totalReconciled > 0) {
     logWorkerEvent({
       scope: "lib",

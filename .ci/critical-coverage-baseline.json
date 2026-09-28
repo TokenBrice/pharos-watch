@@ -14,6 +14,7 @@
     "functions/selector-snapshot/[[path]].ts": 96.7,
     "shared/lib/api-freshness.ts": 100,
     "shared/lib/blacklist-active-records.ts": 98.4,
+    "shared/lib/bluechip-freshness.ts": 100,
     "shared/lib/liquidity-score-weights.ts": 100,
     "shared/lib/peg-score.ts": 92.1,
     "shared/lib/psi-eligible.ts": 100,

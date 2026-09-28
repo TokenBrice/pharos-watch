@@ -77,6 +77,7 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
         status: "degraded" as const,
         itemCount: 0,
         metadata: {
+          reason: "yield-writer-paused",
           writerPaused: true,
           pauseReason: writerPause.reason,
           pauseOperator: writerPause.operator,

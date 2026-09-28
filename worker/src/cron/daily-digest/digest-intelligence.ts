@@ -9,6 +9,7 @@ import { buildChangeSummary } from "./digest-change-summary";
 import { buildForwardLookOutcomes, buildNextTriggers } from "./digest-next-triggers";
 import { buildRiskTape } from "./digest-risk-tape";
 import { normalizeStringArray, unique } from "./digest-intelligence-utils";
+import type { DigestEvidence } from "./digest-evidence";
 
 interface DigestMetaLike {
   leadSignalId?: unknown;
@@ -33,14 +34,15 @@ export function parseStoredDigestInput(value: string | null | undefined): Digest
 export function buildDigestIntelligence(
   data: DigestInputData,
   previousData: DigestInputData | null,
+  evidence?: DigestEvidence,
 ): Pick<
   DigestInputData,
   "changeSummary" | "nextTriggers" | "forwardLookOutcomes" | "riskTape" | "calmNarrativeFrame"
 > {
   return {
-    changeSummary: buildChangeSummary(data, previousData),
-    nextTriggers: buildNextTriggers(data, previousData),
-    forwardLookOutcomes: buildForwardLookOutcomes(data, previousData),
+    changeSummary: buildChangeSummary(data, previousData, evidence),
+    nextTriggers: buildNextTriggers(data, previousData, evidence),
+    forwardLookOutcomes: buildForwardLookOutcomes(data, previousData, evidence),
     riskTape: buildRiskTape(data),
     calmNarrativeFrame: buildCalmNarrativeFrame(data),
   };

@@ -6,6 +6,8 @@
  */
 
 import { clamp } from "@shared/lib/math";
+import { mintBurnSignedNetRange } from "@shared/lib/mint-burn-valuation";
+import type { MintBurnValuation } from "@shared/types/mint-burn";
 
 // ---------------------------------------------------------------------------
 // Flow Intensity Score (FIS)
@@ -159,4 +161,55 @@ export function detectFlightToQuality(
     (Math.abs(input.riskyNet24h) / FLIGHT_TO_QUALITY_FULL_INTENSITY_USD) * 100,
   );
   return { active: true, intensity };
+}
+
+export interface ValuedNetFlow24h {
+  /** Known-valuation 24h net; `null` when unpublished (treated as fully unbounded). */
+  knownNetUsd: number | null;
+  valuation: Pick<MintBurnValuation, "mintCompleteness" | "burnCompleteness">;
+}
+
+/**
+ * Flight-to-quality over per-coin nets that may lack valuation. Exact when every
+ * classified coin's 24h valuation is complete. Otherwise only a proven-inactive
+ * decision survives: the proven net ranges already rule activation out. Any other
+ * case returns `null` (unavailable) because missing valuation can alter it.
+ * The returned nets are known-valuation sums; they are exact only when `exact`.
+ */
+export function detectFlightToQualityFromValuedNets(input: {
+  safe: readonly ValuedNetFlow24h[];
+  risky: readonly ValuedNetFlow24h[];
+}): (FlightToQualityResult & { safeNet24h: number; riskyNet24h: number; exact: boolean }) | null {
+  const sum = (coins: readonly ValuedNetFlow24h[]) => {
+    let knownUsd = 0;
+    let lowerUsd = 0;
+    let upperUsd = 0;
+    for (const coin of coins) {
+      if (coin.knownNetUsd === null) {
+        lowerUsd = Number.NEGATIVE_INFINITY;
+        upperUsd = Number.POSITIVE_INFINITY;
+        continue;
+      }
+      const range = mintBurnSignedNetRange(coin.knownNetUsd, coin.valuation);
+      knownUsd += coin.knownNetUsd;
+      lowerUsd += range.lowerUsd;
+      upperUsd += range.upperUsd;
+    }
+    return { knownUsd, lowerUsd, upperUsd, exact: lowerUsd === upperUsd };
+  };
+  const safe = sum(input.safe);
+  const risky = sum(input.risky);
+  if (safe.exact && risky.exact) {
+    return {
+      ...detectFlightToQuality({ safeNet24h: safe.knownUsd, riskyNet24h: risky.knownUsd }),
+      safeNet24h: safe.knownUsd,
+      riskyNet24h: risky.knownUsd,
+      exact: true,
+    };
+  }
+  const provenInactive = risky.lowerUsd >= -FLIGHT_TO_QUALITY_FLOW_THRESHOLD_USD
+    || safe.upperUsd <= FLIGHT_TO_QUALITY_FLOW_THRESHOLD_USD;
+  return provenInactive
+    ? { active: false, intensity: 0, safeNet24h: safe.knownUsd, riskyNet24h: risky.knownUsd, exact: false }
+    : null;
 }

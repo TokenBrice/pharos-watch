@@ -101,6 +101,8 @@ Preview is a 24-hour signed-session read and reports exact adds, removals, alrea
 
 After a confirmed edit, the UI offers a five-second one-tap undo. The server accepts undo only against the exact post-edit preference generation and direct-state fingerprint. Removed rows are restored with all six family flags, explicit override markers, tuning, and their prior per-coin snooze; rows added by the edit are removed. Any intervening preference change makes the undo stale instead of overwriting newer intent.
 
+Single-coin removal uses the same bounded direct-row patch and undo contract. Its confirmed snapshot carries a server-derived `undo` payload with the complete removed row (including snooze-only and explicit-off rows), the post-edit preference generation, and the direct-state fingerprint. The client keeps that payload only for its five-second undo toast and submits `undo-bulk-watchlist` with one restored row; it never reconstructs a `set-coin` patch from the displayed coin. Invalid or stale undo is rejected without changing preferences, and neither removal nor undo is automatically retried.
+
 For an already-followed preset, the Presets panel allows DEWS, depeg, and safety-family edits but keeps at least one family enabled. When only one remains, its toggle is disabled and the panel directs the user to **Unfollow** to stop the preset entirely. This keeps the client from offering an all-disabled preset state that the mutation schema rejects.
 
 Per-coin `set-coin` patches treat a non-null `depegStepBps` as an enabling operation unless the same patch explicitly disables `alertTypes.depeg`. The Mini App frontend normally sends `alertTypes.depeg=true` with a step when the visible toggle is off, but the worker owns the semantic guarantee so direct mutation callers cannot store an inactive depeg step.
@@ -125,7 +127,7 @@ The Mini App seam does not receive Telegram webhook updates and does not call th
 
 ## Contract And Catalog Versioning
 
-`shared/lib/telegram-mini-app-contract.ts` is the single runtime-neutral contract for operation schemas, request and response DTO schemas, error codes, the contract version, the catalog version, and the opaque state revision. Contract version `4` includes the `set-recap` operation and the subscriber `recap` state projection. Worker handlers and the static client both import it directly; there is no Worker/frontend literal mirror to keep synchronized.
+`shared/lib/telegram-mini-app-contract.ts` is the single runtime-neutral contract for operation schemas, request and response DTO schemas, error codes, the contract version, the catalog version, and the opaque state revision. Contract version `5` adds the optional server-derived `undo` snapshot field for exact single-coin removal, reusing the bulk undo payload. Worker handlers and the static client both import it directly; there is no Worker/frontend literal mirror to keep synchronized.
 
 The searchable coin catalog is projected by `scripts/build-data/build-client-registry.mjs` into `shared/data/stablecoins/coins.telegram-mini-app.generated.json`. `shared/lib/telegram-mini-app-catalog.ts` combines that slim asset with the shared preset definitions and derives a content version. The slim catalog is bundled into the fingerprinted static Mini App JavaScript, so it is cached with the Pages asset instead of being returned by every signed API call. The repository does not currently define a fixed byte budget for this registry-sized artifact.
 

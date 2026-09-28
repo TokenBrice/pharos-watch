@@ -106,6 +106,23 @@ describe("site-data proxy", () => {
     expect(observed).toEqual(expected);
   });
 
+  it("preserves unavailable producer evidence without caching the response", async () => {
+    siteApi.json("/api/blacklist", { events: [], total: 0 }, 200, {
+      "Cache-Control": "no-store",
+      "X-Data-Age": "unavailable",
+      "X-Data-Freshness": "unknown",
+      "X-Data-Freshness-Reason": "freshness-lookup-failed",
+    });
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/blacklist", {
+      headers: { Origin: "https://pharos.watch" },
+    })));
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(response.headers.get("X-Data-Freshness")).toBe("unknown");
+    expect(response.headers.get("X-Data-Freshness-Reason")).toBe("freshness-lookup-failed");
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
   it("rejects requests without Origin or Referer", async () => {
     const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins")));
 

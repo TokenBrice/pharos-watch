@@ -1,4 +1,4 @@
-import { normalizePegType } from "@shared/lib/peg-rates";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import type { PegAssetBase } from "@shared/types/core";
 import type { DepegRow } from "../../lib/depeg-helpers";
 import {
@@ -25,11 +25,6 @@ interface NativeQuotePolicyContext {
   nativePegCurrency: string | undefined;
 }
 
-export function isNativePegEvent(event: DepegRow): boolean {
-  return event.source === "live" &&
-    event.peg_reference === 1 &&
-    normalizePegType(event.peg_type) !== "peggedUSD";
-}
 
 export function recoveryPriceForEvent(event: DepegRow, price: number): number | null {
   return isNativePegEvent(event) ? null : price;

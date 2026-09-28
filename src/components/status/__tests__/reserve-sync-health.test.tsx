@@ -7,8 +7,8 @@ import type { StatusResponse } from "@shared/types/status";
 import { ReserveSyncHealthCard } from "../reserve-sync-health";
 
 function makeReserveHealth(
-  overrides: Partial<StatusResponse["reserveComposition"]> = {},
-): StatusResponse["reserveComposition"] {
+  overrides: Partial<Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>> = {},
+): Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }> {
   return makeReserveComposition({
     status: "healthy",
     configuredCoins: 100,
@@ -24,6 +24,15 @@ function makeReserveHealth(
 }
 
 describe("ReserveSyncHealthCard", () => {
+  it("does not turn a failed read into zero coverage or healthy sync", () => {
+    const { container } = render(
+      <ReserveSyncHealthCard health={makeReserveComposition({ status: "unavailable" })} nowSeconds={1_712_600_120} />,
+    );
+    expect(screen.getByText("Unavailable")).toBeTruthy();
+    expect(container.textContent).not.toContain("0.0%");
+    expect(screen.queryByText("healthy")).toBeNull();
+    expect(screen.queryByText("Configured")).toBeNull();
+  });
 
   it("explains conservative report-card inputs when reserve evidence is degraded", () => {
     render(

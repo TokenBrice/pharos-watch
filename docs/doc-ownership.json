@@ -107,6 +107,92 @@
       "hints": ["Structured methodology history lives under shared/data/methodology-changelogs/pricing-pipeline/."]
     },
     {
+      "id": "live-reserves",
+      "label": "Live reserve evidence and consumers",
+      "risk": "high",
+      "sources": ["worker/src/cron/reserve-adapters/**", "worker/src/cron/sync-live-reserves*", "worker/src/cron/reserve-post-sync-watchdog.ts", "shared/types/live-reserve*.ts", "shared/lib/live-reserve*.ts", "worker/src/lib/live-reserves/**", "worker/src/lib/safety-score-v9/extension-reserves.ts", "worker/src/api/stablecoin-reserves.ts", "src/hooks/use-stablecoin-reserves.ts", "src/lib/*reserve*.ts", "src/components/*reserve*.tsx", "src/components/stablecoin-detail/reserve*", "src/components/status/reserve-sync-health.tsx", "src/app/stablecoin/*/detail-shared-modules.tsx", "src/components/collateralization-card.tsx"],
+      "docs": [
+        { "path": "docs/live-reserves.md", "anchor": "adding-a-new-adapter" },
+        { "path": "docs/live-reserves.md", "anchor": "registry-defined-adapter-classes" },
+        { "path": "docs/live-reserves.md", "anchor": "snapshot-admission-gates" }
+      ],
+      "background": [
+        { "path": "docs/live-reserves.md", "anchor": "api-contract" },
+        { "path": "docs/live-reserves.md", "anchor": "frontend-consumers" }
+      ],
+      "rules": ["Reserve provenance describes evidence actually read, not merely the configured feed; preserve snapshot admission and retained-attempt distinctions."]
+    },
+    {
+      "id": "yield-intelligence",
+      "label": "Domain yield producers and consumers",
+      "risk": "high",
+      "sources": ["worker/src/cron/sync-yield-data*", "worker/src/cron/yield-*", "worker/src/cron/yield-sync/**", "worker/src/lib/yield*", "worker/src/lib/yield-config/**", "worker/src/api/yield*", "shared/lib/yield*.ts", "shared/types/yield*.ts", "src/app/yield/**", "src/components/yield*", "src/components/yield/**", "src/hooks/use-yield*.ts", "src/lib/yield*.ts"],
+      "docs": [{ "path": "docs/yield-intelligence.md", "anchor": "engineering-contract" }],
+      "background": [{ "path": "docs/yield-intelligence.md", "anchor": "methodology-versioning" }],
+      "rules": ["Keep source observation, publication, and read-time freshness distinct; missing yield evidence is not a measured zero."]
+    },
+    {
+      "id": "homepage",
+      "label": "Homepage contract",
+      "risk": "medium",
+      "sources": ["src/app/page.tsx", "src/components/home-*", "src/components/homepage-*", "src/lib/homepage-*"],
+      "docs": [{ "path": "docs/homepage.md", "anchor": "top-fold-contract" }, { "path": "docs/homepage.md", "anchor": "query-and-state-model" }],
+      "rules": ["Preserve the homepage cohort, availability, and server-to-live handoff contracts."]
+    },
+    {
+      "id": "about-page",
+      "label": "About page contract",
+      "risk": "medium",
+      "sources": ["src/app/about/**", "src/components/about/**"],
+      "docs": [{ "path": "docs/about-page.md", "anchor": "section-contract" }],
+      "rules": ["Keep public data-source descriptions aligned with the implemented sources."]
+    },
+    {
+      "id": "coverage-page",
+      "label": "Coverage page contract",
+      "risk": "medium",
+      "sources": ["src/app/coverage/**", "src/components/coverage*", "src/components/coverage/**", "src/hooks/use-coverage-page-model.ts", "src/lib/coverage/**", "src/lib/coverage-matrix*"],
+      "docs": [{ "path": "docs/coverage-page.md", "anchor": "source-of-truth-per-column" }, { "path": "docs/coverage-page.md", "anchor": "unavailable-versus-uncovered" }],
+      "rules": ["Unavailable data is neither covered nor uncovered and must not enter coverage denominators."]
+    },
+    {
+      "id": "start-page",
+      "label": "Start page contract",
+      "risk": "medium",
+      "sources": ["src/app/start/**", "src/components/start-here*", "src/lib/start-here*"],
+      "docs": [{ "path": "docs/start-page.md", "anchor": "content-registry-contract" }],
+      "rules": ["Preserve shared onboarding-retirement state and the internal route registry boundary."]
+    },
+    {
+      "id": "feedback-pipeline",
+      "label": "Feedback pipeline contract",
+      "risk": "high",
+      "sources": ["src/components/feedback*", "src/components/mobile-utility-dock.tsx", "worker/src/api/feedback.ts", "worker/src/api/feedback/**", "shared/lib/feedback*"],
+      "docs": [{ "path": "docs/feedback-pipeline.md", "anchor": "api-endpoint" }],
+      "background": [{ "path": "docs/feedback-pipeline.md", "anchor": "frontend-components" }],
+      "rules": ["Preserve idempotency and unknown execution outcomes; do not retry ambiguous GitHub submissions as new issues."]
+    },
+    {
+      "id": "compliance",
+      "label": "Compliance evidence and workbench",
+      "risk": "high",
+      "sources": ["src/app/compliance/**", "src/components/compliance/**", "shared/data/stablecoins/domains/compliance/**", "shared/lib/compliance*.ts", "shared/lib/mica.ts", "shared/lib/genius.ts", "shared/types/stablecoin-meta-compliance-schemas.ts"],
+      "docs": [
+        { "path": "docs/compliance-page.md", "anchor": "data-projection" },
+        { "path": "docs/mica-tracker.md", "anchor": "status-criteria" },
+        { "path": "docs/genius-tracker.md", "anchor": "sourcing--source-kinds" }
+      ],
+      "rules": ["Compliance is sourced editorial evidence, not pipeline inference; official authorization claims require issuer-specific regulator evidence."]
+    },
+    {
+      "id": "worker-admin-api",
+      "label": "Admin API bindings and handlers",
+      "risk": "high",
+      "sources": ["worker/src/routes/admin-routes.ts", "worker/src/routes/ops-routes.ts", "worker/src/routes/dynamic-routes.ts", "worker/src/routes/shared.ts", "worker/src/router.ts", "shared/lib/api-endpoints/**", "worker/src/lib/auth.ts", "worker/src/lib/idempotency.ts", "worker/src/lib/route-wrappers.ts", "worker/src/handlers/http/**", "worker/src/handlers/scheduled/yield-coverage-audit-manual.ts", "worker/src/api/admin*", "worker/src/api/backfill-*", "worker/src/api/audit-depeg-history*", "worker/src/api/reclassify-atomic-roundtrips*", "worker/src/api/remediate-blacklist-amount-gaps*", "worker/src/api/rpc-provider-trial*", "worker/src/api/status*", "worker/src/api/reserve-attempt-history*", "worker/src/api/request-source-stats*", "worker/src/api/api-keys*", "worker/src/api/api-key-audit-log*", "worker/src/api/api-key-requests*", "functions/admin/**", "functions/admin-api/**"],
+      "docs": [{ "path": "docs/api-reference-admin.md", "anchor": "admin-auth-and-idempotency" }],
+      "rules": ["Admin endpoints retain Access authentication, no-store responses, and mutation idempotency; locate the endpoint-specific contract in the admin reference."]
+    },
+    {
       "id": "worker-api-auth",
       "label": "Worker API and authentication",
       "risk": "high",
@@ -132,8 +218,7 @@
         { "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling" },
         "docs/security-governance.md",
         { "path": "docs/operator-origin-access.md", "anchor": "repo-side-changes" },
-        { "path": "docs/api-reference.md", "anchor": "public-endpoints" },
-        { "path": "docs/api-reference-admin.md", "anchor": "admin-endpoints" }
+        { "path": "docs/api-reference.md", "anchor": "public-endpoints" }
       ],
       "background": [{ "path": "docs/data-flow-map.md", "anchor": "core-flows" }],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run test:critical-contracts", "npm run check:site-csp-sync", "npm run check:frozen-invariants"],
@@ -162,13 +247,17 @@
       "background": [
         { "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" },
         { "path": "docs/data-flow-map.md", "anchor": "core-flows" },
-        { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" }
+        { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" },
+        { "path": "docs/README.md", "anchor": "stale-output-diagnosis" },
+        { "path": "docs/deployment-process.md", "anchor": "monitoring-without-model-polling" },
+        { "path": "docs/worker-infrastructure.md", "anchor": "remote-d1-inspection" }
       ],
       "alsoRead": ["worker/AGENTS.md"],
       "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:cron-sync", "npm run check:cron-connections", "npx vitest run worker/src/cron worker/src/handlers/scheduled", "npx vitest run worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/cron-leases-scheduled-slot.test.ts worker/src/lib/__tests__/scheduled-slot-reconciliation-sqlite.test.ts worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/v9-slot-window.test.ts"],
       "rules": [
         "Pick the trigger slot before adding fetch-heavy work.",
-        "Cron jobs use Pharos's conservative six-connection trigger budget; consume response bodies before opening more fetches."
+        "Cron jobs use Pharos's conservative six-connection trigger budget; consume response bodies before opening more fetches.",
+        "Remote D1 inspection uses SELECT via --command, never --file (the import API locks writes)."
       ]
     },
     {
@@ -299,7 +388,7 @@
       ],
       "background": [
         "docs/tape-page.md",
-        "docs/process/safety-score-equivalence-harness.md",
+        { "path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it" },
         "docs/process/safety-score-curation-expiry-sweep.md"
       ],
       "checks": ["npm run check:doc-sync", "npm run audit:mint-authority-review", "npx vitest run shared/lib/safety-score-v9 worker/src/lib"],
@@ -424,6 +513,7 @@
         ".agents/**",
         ".claude/**",
         ".codex/**",
+        ".omp/config.yml",
         "AGENTS.md",
         "CLAUDE.md",
         "docs/process/agent-start-here.md",
@@ -431,9 +521,11 @@
         "scripts/ci/pharos-change-contract.ts",
         "scripts/lib/doc-ownership-registry.mts",
         "scripts/maintenance/generate-agents-doc.ts",
-        "scripts/maintenance/setup-agent-hooks.ts"
+        "scripts/maintenance/setup-agent-hooks.ts",
+        "scripts/maintenance/sync-agent-skills.mjs",
+        "docs/doc-ownership.json"
       ],
-      "docs": ["docs/process/agent-start-here.md", "docs/process/agent-artifacts.md"],
+      "docs": ["docs/process/agent-start-here.md", { "path": "docs/process/agent-artifacts.md", "anchor": "harness-configuration" }, { "path": "docs/process/agent-artifacts.md", "anchor": "agent-skills" }],
       "checks": ["npm run check:generated-artifacts -- --only=agents-doc", "npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts"],
       "rules": [
         "Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync; an already-loaded AGENTS.md supplies the root rules, and CLAUDE.md is the edit target only for root guidance changes.",

@@ -3,6 +3,7 @@ import { normalizeLegacyPegType } from "./peg-price-bounds";
 import { PEG_TAXONOMY } from "./peg-taxonomy";
 import { median } from "./stats";
 import { getCirculatingRaw } from "./supply";
+import { isObservedPrice } from "./pricing-source-policy";
 
 /**
  * Coins excluded from the commodity peer-median reference.
@@ -73,6 +74,7 @@ export function derivePegRates(
   const groups = new Map<string, number[]>();
 
   for (const a of assets) {
+    if (!isObservedPrice(a)) continue;
     const peg = normalizePegType(a.pegType);
     let price = a.price;
     if (!peg || price == null || typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;

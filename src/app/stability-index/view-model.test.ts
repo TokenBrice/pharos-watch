@@ -24,6 +24,34 @@ describe("stability index view-model", () => {
     ]);
   });
 
+  it("preserves unavailable daily components and missing days as chart gaps rather than zero", () => {
+    const result = buildPsiComponentData(
+      [
+        { date: 3, components: { severity: null, breadth: 0, trend: null } },
+        { date: 2, components: null },
+        { date: 1, components: { severity: 4, breadth: 2, stressBreadth: 1, trend: 0 } },
+      ],
+      { computedAt: 4, components: { severity: 2, breadth: 0, stressBreadth: 0, trend: 1 } },
+    );
+
+    expect(result[1]).toEqual({ ts: 2000, severity: null, breadth: null, stressBreadth: null, trend: null });
+    expect(result[2]).toEqual({ ts: 3000, severity: null, breadth: 0, stressBreadth: null, trend: null });
+    const lanes = buildPsiBeamDimmers(result);
+    expect(lanes.find((lane) => lane.key === "severity")?.delta).toBeNull();
+    expect(lanes.find((lane) => lane.key === "breadth")).toMatchObject({ value: 0, delta: 0, pressurePct: 0 });
+  });
+
+  it("does not display unavailable fallback components as calm pressure or improving momentum", () => {
+    const lanes = buildPsiBeamDimmers([
+      { severity: 4, breadth: 2, stressBreadth: 1, trend: -2 },
+      { severity: null, breadth: null, stressBreadth: null, trend: null },
+    ]);
+
+    for (const lane of lanes) {
+      expect(lane).toMatchObject({ value: null, delta: null, pressurePct: null, role: "unavailable" });
+    }
+  });
+
   it("builds formatted history stats and ranks contributors by total impact", () => {
     const stats = buildPsiHistoryStats([
       { date: 1_700_000_000, score: 84, band: "STEADY" },

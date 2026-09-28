@@ -9,6 +9,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type {
   LiveReserveSnapshotMetadata,
   ReserveDisplayBadgeView,
+  ReserveFreshnessView,
   ReserveProvenanceView,
   ReserveSyncStateView,
 } from "@shared/types/live-reserves";
@@ -22,8 +23,8 @@ import {
   type SnapshotIntegrityIssue,
 } from "./store-shared";
 import {
+  assessReserveFetchFreshness,
   hasConsistentSnapshotState,
-  isReserveSnapshotStale,
   evaluateLiveReserveAdmission,
   type LiveReserveAdmissionResult,
 } from "./store-snapshot-state";
@@ -38,6 +39,7 @@ function buildReserveProvenanceView(
     sourceModel: record.adapterSourceModel,
     ...(freshnessMode ? { freshnessMode } : {}),
     scoringEligible: admission.eligible,
+    scoringRejectionReasons: admission.reasons,
   };
 }
 
@@ -73,7 +75,7 @@ function extractReserveEvidenceUrls(
 
 function buildSyncView(
   syncState: ReserveSyncStateRecord | null,
-  stale: boolean,
+  freshness: ReserveFreshnessView,
   overrides: {
     enabled: boolean;
     defaultStatus: ReserveSyncStatus;
@@ -95,7 +97,7 @@ function buildSyncView(
   return {
     enabled: overrides.enabled,
     status: overrides.statusOverride ?? syncState?.lastStatus ?? overrides.defaultStatus,
-    stale,
+    stale: freshness.stale,
     bootstrap: overrides.bootstrap,
     ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
     ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
@@ -103,6 +105,7 @@ function buildSyncView(
     ...(lastError ? { lastError: lastError.slice(0, 200) } : {}),
     ...(failureCategory ? { failureCategory } : {}),
     ...(uncertainWrite ? { uncertainWrite: true } : {}),
+    freshness,
   };
 }
 
@@ -140,25 +143,27 @@ export async function resolveReserveResult(
 
   const displayUrl = meta.liveReservesConfig?.display?.url;
   const staticFallback = getReserves(meta);
-  const consistentSnapshot = compositionRow && hasConsistentSnapshotState(syncState, {
+  const consistentRow = compositionRow && hasConsistentSnapshotState(syncState, {
     fetchedAt: compositionRow.fetched_at,
     attemptId: compositionRow.attempt_id ?? null,
   })
-    ? parseReserveCompositionRow(compositionRow, syncState)
+    ? compositionRow
+    : null;
+  const consistentSnapshot = consistentRow
+    ? parseReserveCompositionRow(consistentRow, syncState)
     : { record: null, issue: null };
   const admission = evaluateLiveReserveAdmission(consistentSnapshot.record, syncState, meta, now, freshnessSec);
   const liveSnapshot = admission.reasons.includes("config-mismatch") ? null : consistentSnapshot.record;
-  const liveAtCandidate = liveSnapshot?.fetchedAt
-    ?? (
-      compositionRow && hasConsistentSnapshotState(syncState, {
-        fetchedAt: compositionRow.fetched_at,
-        attemptId: compositionRow.attempt_id ?? null,
-      })
-        ? compositionRow.fetched_at
-        : syncState?.lastSuccessAt ?? null
-    );
-  const stale = (liveAtCandidate != null && now - liveAtCandidate > freshnessSec)
-    || (liveSnapshot != null && isReserveSnapshotStale(liveSnapshot, meta, now, freshnessSec));
+  // The served live snapshot is judged by admission's own assessment (same
+  // record, clock, and budgets); every other path judges the newest known
+  // generation by fetch age alone.
+  const freshness = (liveSnapshot && admission.freshness) ?? assessReserveFetchFreshness(
+    consistentRow
+      ? { fetchedAt: consistentRow.fetched_at, attemptId: consistentRow.attempt_id ?? null }
+      : { fetchedAt: syncState?.lastSuccessAt ?? null, attemptId: syncState?.lastSuccessAttemptId ?? null },
+    now,
+    freshnessSec,
+  );
 
   // Prior live detail deliberately stays visible when the *current* sync attempt
   // failed: the earlier snapshot was validly observed, and scoring judges it on
@@ -176,7 +181,7 @@ export async function resolveReserveResult(
     return {
       reserves: liveSnapshot.slices,
       estimated: false,
-      mode: stale ? "live-stale" : "live",
+      mode: freshness.stale ? "live-stale" : "live",
       liveAt: liveSnapshot.fetchedAt,
       source: liveSnapshot.source,
       displayUrl,
@@ -184,7 +189,7 @@ export async function resolveReserveResult(
       displayBadge,
       metadata: publicMetadata,
       provenance,
-      sync: buildSyncView(syncState, stale, {
+      sync: buildSyncView(syncState, freshness, {
         enabled: !!meta.liveReservesConfig,
         defaultStatus: "ok",
         bootstrap: false,
@@ -205,7 +210,7 @@ export async function resolveReserveResult(
       ...staticFallback,
       displayUrl,
       sync: meta.liveReservesConfig
-        ? buildSyncView(syncState, stale, {
+        ? buildSyncView(syncState, freshness, {
             enabled: true,
             defaultStatus: "skipped",
             bootstrap: !syncState?.lastSuccessAt,
@@ -223,7 +228,7 @@ export async function resolveReserveResult(
         estimated: false,
         mode: "unavailable",
         displayUrl,
-        sync: buildSyncView(syncState, stale, {
+        sync: buildSyncView(syncState, freshness, {
           enabled: true,
           defaultStatus: "skipped",
           bootstrap: !syncState?.lastSuccessAt,

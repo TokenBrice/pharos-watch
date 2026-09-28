@@ -40,6 +40,12 @@ describe("deriveMintSurge", () => {
     { date: startedAt - 7 * DAY, usd: 1_000_000 },
     { date: startedAt, usd: 1_000_000 },
   ];
+  const complete = { unpricedMintEventCount: 0, unpricedBurnEventCount: 0, unknownMintHours: 0, unknownBurnHours: 0 };
+  const hour = (hourTs: number, netFlowUsd: number, valuation: Partial<typeof complete> = {}) => ({
+    hourTs,
+    netFlowUsd,
+    valuation: { ...complete, ...valuation },
+  });
 
   it("uses event-time hourly net issuance when mint-burn coverage exists", () => {
     expect(
@@ -48,9 +54,9 @@ describe("deriveMintSurge", () => {
         startedAt,
         0,
         [
-          { hourTs: startedAt - 2 * DAY, netFlowUsd: 150_000 },
-          { hourTs: startedAt - DAY, netFlowUsd: 60_001 },
-          { hourTs: startedAt + 3600, netFlowUsd: 900_000 },
+          hour(startedAt - 2 * DAY, 150_000),
+          hour(startedAt - DAY, 60_001),
+          hour(startedAt + 3600, 900_000),
         ],
         true,
       ),
@@ -61,10 +67,37 @@ describe("deriveMintSurge", () => {
         snapshots,
         startedAt,
         90,
-        [{ hourTs: startedAt - DAY, netFlowUsd: 200_000 }],
+        [hour(startedAt - DAY, 200_000)],
         true,
       ),
     ).toEqual({ mintSurge: false, mintSurgeCoverage: "mint-burn-hourly" });
+  });
+
+  it("never reads an unpriced mint as zero: a priced burn cannot prove no surge", () => {
+    // Mixed: unknown-value mint plus a priced $1M burn. The true net is only
+    // bounded below, so the mint-burn evidence cannot decide; the proxy does.
+    const mixed = [hour(startedAt - DAY, -1_000_000, { unpricedMintEventCount: 1 })];
+    expect(deriveMintSurge(snapshots, startedAt, 5, mixed, true))
+      .toEqual({ mintSurge: false, mintSurgeCoverage: "supply-history-proxy" });
+    expect(deriveMintSurge(snapshots, startedAt, null, mixed, true))
+      .toEqual({ mintSurge: null, mintSurgeCoverage: "unavailable" });
+  });
+
+  it("keeps conclusions the missing side cannot alter", () => {
+    // Unpriced mints only raise the net: a proven surge stands.
+    expect(deriveMintSurge(snapshots, startedAt, null, [hour(startedAt - DAY, 250_000, { unpricedMintEventCount: 2 })], true))
+      .toEqual({ mintSurge: true, mintSurgeCoverage: "mint-burn-hourly" });
+    // Unpriced burns only lower it: a proven non-surge stands, exactly at the threshold too.
+    expect(deriveMintSurge(snapshots, startedAt, null, [hour(startedAt - DAY, 200_000, { unpricedBurnEventCount: 1 })], true))
+      .toEqual({ mintSurge: false, mintSurgeCoverage: "mint-burn-hourly" });
+    // Unpriced burns under a would-be surge leave it undecided.
+    expect(deriveMintSurge(snapshots, startedAt, null, [hour(startedAt - DAY, 250_000, { unpricedBurnEventCount: 1 })], true))
+      .toEqual({ mintSurge: null, mintSurgeCoverage: "unavailable" });
+  });
+
+  it("treats legacy buckets with unrecorded coverage as undecided, not complete", () => {
+    expect(deriveMintSurge(snapshots, startedAt, 25, [hour(startedAt - DAY, 0, { unknownMintHours: 1, unknownBurnHours: 1 })], true))
+      .toEqual({ mintSurge: true, mintSurgeCoverage: "supply-history-proxy" });
   });
 
   it("marks mint-burn coverage unavailable when event-time onset supply is invalid", () => {
@@ -76,7 +109,7 @@ describe("deriveMintSurge", () => {
         ],
         startedAt,
         90,
-        [{ hourTs: startedAt - DAY, netFlowUsd: 200_000 }],
+        [hour(startedAt - DAY, 200_000)],
         true,
       ),
     ).toEqual({ mintSurge: null, mintSurgeCoverage: "unavailable" });
@@ -92,7 +125,7 @@ describe("deriveMintSurge", () => {
         snapshots,
         startedAt,
         90,
-        [{ hourTs: startedAt - DAY, netFlowUsd: Number.NaN }],
+        [hour(startedAt - DAY, Number.NaN)],
         true,
       ),
     ).toEqual({
@@ -406,7 +439,10 @@ describe("loadDdrContext", () => {
       },
       {
         match: "FROM mint_burn_hourly",
-        rows: [{ stablecoin_id: "usdc-circle", hour_ts: row.started_at - DAY, net_flow_usd: 123_456 }],
+        rows: [{
+          stablecoin_id: "usdc-circle", hour_ts: row.started_at - DAY, net_flow_usd: 123_456,
+          mint_count: 2, burn_count: 1, mint_unpriced_event_count: 1, burn_unpriced_event_count: null,
+        }],
       },
       {
         match: "FROM dex_liquidity_history",
@@ -476,7 +512,12 @@ describe("loadDdrContext", () => {
     if (result.kind !== "ok") return;
     expect(result.context.dewsByCoin.get("usdc-circle")?.signals_json).toBe(signalsJson);
     expect(result.context.mintBurnHourlyByCoin.get("usdc-circle")).toEqual([
-      { hourTs: row.started_at - DAY, netFlowUsd: 123_456 },
+      {
+        hourTs: row.started_at - DAY,
+        netFlowUsd: 123_456,
+        // One recorded unpriced mint; the burn side is a legacy bucket with counted burns (unknown).
+        valuation: { unpricedMintEventCount: 1, unpricedBurnEventCount: 0, unknownMintHours: 0, unknownBurnHours: 1 },
+      },
     ]);
     expect(result.context.liqByCoin.get("usdc-circle")?.total_tvl_usd).toBe(40);
     expect(result.context.liqTvlChange7dByCoin.get("usdc-circle")).toBeCloseTo(-60);

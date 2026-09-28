@@ -39,8 +39,7 @@
     "reserveDisclosureUrl": "https://www.circle.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "Circle received conditional OCC approval on Dec 12 2025 for First National Digital Currency Bank, N.A.: a federal-qualified-nonbank trust charter pathway consistent with the GENIUS Act framework. This is a conditional charter under existing OCC authority, not a PPSI approval; GENIUS Act rulemaking remains in proposed-rules phase with no approvals granted. Pharos found no token-specific public GENIUS PPSI approval as of review.",
+    "notes": "Evidence as of 2026-06-18 review: Circle received conditional OCC approval on Dec 12 2025 for First National Digital Currency Bank, N.A.: a federal-qualified-nonbank trust charter pathway consistent with the GENIUS Act framework. This is a conditional charter under existing OCC authority, not a PPSI approval; GENIUS Act rulemaking remains in proposed-rules phase with no approvals granted. Pharos found no token-specific public GENIUS PPSI approval as of review. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

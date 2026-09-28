@@ -9,6 +9,7 @@ import { syncStablecoinCharts } from "../sync-stablecoin-charts";
 import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/stablecoin-charts-reconciliation";
 
 const DEFAULT_CHART_D1_TABLES: MockTableConfig[] = [
+  { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   { match: "INSERT OR IGNORE INTO cache", rows: [], runMeta: { changes: 1 } },
   { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
@@ -21,6 +22,18 @@ const DEFAULT_CHART_D1_TABLES: MockTableConfig[] = [
 ];
 
 const mockD1 = createMockD1Preset(DEFAULT_CHART_D1_TABLES);
+
+/** The FX reader loads the rates/meta pair in one statement. */
+function fxPairRead(updatedAt: number, rates: Record<string, number>, meta?: Record<string, unknown>): MockTableConfig {
+  return {
+    match: "SELECT key, value, updated_at FROM cache WHERE key IN",
+    matchBinds: ["fx-rates", "fx-rates-meta"],
+    rows: [
+      { key: "fx-rates", value: JSON.stringify(rates), updated_at: updatedAt },
+      ...(meta ? [{ key: "fx-rates-meta", value: JSON.stringify(meta), updated_at: updatedAt }] : []),
+    ],
+  };
+}
 
 function makeRawChartPoints(
   count: number,
@@ -89,15 +102,7 @@ describe("syncStablecoinCharts", () => {
     ]);
 
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedUSD: 1 }),
-          updated_at: nowSec,
-        },
-      },
+      fxPairRead(nowSec, { peggedUSD: 1 }),
     ]);
 
     const result = await syncStablecoinCharts(db);
@@ -135,15 +140,7 @@ describe("syncStablecoinCharts", () => {
     ]);
 
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedUSD: 1 }),
-          updated_at: nowSec,
-        },
-      },
+      fxPairRead(nowSec, { peggedUSD: 1 }),
     ]);
 
     const result = await syncStablecoinCharts(db);
@@ -168,15 +165,7 @@ describe("syncStablecoinCharts", () => {
     ]);
 
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedUSD: 1 }),
-          updated_at: nowSec,
-        },
-      },
+      fxPairRead(nowSec, { peggedUSD: 1 }),
       {
         match: "FROM supply_history",
         rows: [
@@ -312,15 +301,7 @@ describe("syncStablecoinCharts", () => {
     ]);
 
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedUSD: 1 }),
-          updated_at: nowSec,
-        },
-      },
+      fxPairRead(nowSec, { peggedUSD: 1 }),
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["stablecoin-charts"],
@@ -363,15 +344,7 @@ describe("syncStablecoinCharts", () => {
     ]);
 
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedUSD: 1 }),
-          updated_at: nowSec,
-        },
-      },
+      fxPairRead(nowSec, { peggedUSD: 1 }),
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["stablecoin-charts"],
@@ -417,31 +390,14 @@ describe("syncStablecoinCharts", () => {
     ]);
 
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedEUR: 1.08 }),
-          updated_at: nowSec - 60,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: nowSec - 60,
-            mode: "cached-fallback",
-            sourceUpdatedAtByPeg: { peggedEUR: nowSec - 9 * 3600 },
-            sourceModeByPeg: { peggedEUR: "cached" },
-            sourceCadenceByPeg: { peggedEUR: "intraday" },
-            consecutiveFallbackRuns: 2,
-          }),
-          updated_at: nowSec - 60,
-        },
-      },
+      fxPairRead(nowSec - 60, { peggedEUR: 1.08 }, {
+        usableSyncAt: nowSec - 60,
+        mode: "cached-fallback",
+        sourceUpdatedAtByPeg: { peggedEUR: nowSec - 9 * 3600 },
+        sourceModeByPeg: { peggedEUR: "cached" },
+        sourceCadenceByPeg: { peggedEUR: "intraday" },
+        consecutiveFallbackRuns: 2,
+      }),
     ]);
 
     const result = await syncStablecoinCharts(db);
@@ -468,31 +424,14 @@ describe("syncStablecoinCharts", () => {
     ]);
 
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedEUR: 1.08 }),
-          updated_at: nowSec,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: nowSec,
-            mode: "live",
-            sourceUpdatedAtByPeg: { peggedEUR: nowSec },
-            sourceModeByPeg: { peggedEUR: "live" },
-            sourceCadenceByPeg: { peggedEUR: "intraday" },
-            consecutiveFallbackRuns: 0,
-          }),
-          updated_at: nowSec,
-        },
-      },
+      fxPairRead(nowSec, { peggedEUR: 1.08 }, {
+        usableSyncAt: nowSec,
+        mode: "live",
+        sourceUpdatedAtByPeg: { peggedEUR: nowSec },
+        sourceModeByPeg: { peggedEUR: "live" },
+        sourceCadenceByPeg: { peggedEUR: "intraday" },
+        consecutiveFallbackRuns: 0,
+      }),
     ]);
 
     const result = await syncStablecoinCharts(db);

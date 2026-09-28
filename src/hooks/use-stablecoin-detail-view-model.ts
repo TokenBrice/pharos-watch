@@ -101,6 +101,7 @@ function projectLiveSummary(
     priceObservedAt: summary.priceObservedAt,
     priceObservedAtMode: summary.priceObservedAtMode ?? null,
     priceSyncedAt: summary.priceSyncedAt ?? null,
+    ...(summary.nominalPriceReference ? { nominalPriceReference: summary.nominalPriceReference } : {}),
     consensusSources: summary.consensusSources ?? [],
     agreeSources: summary.agreeSources ?? [],
     supplySource: "stablecoin-detail",

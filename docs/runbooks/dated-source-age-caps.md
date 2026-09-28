@@ -16,7 +16,7 @@ Escalate a missing report at the end of its window. A discovered newer independe
 
 | Product | Expected publication window | Owner |
 | --- | --- | --- |
-| AUDD | Monthly; by 47 days after period end | Reserve evidence maintainer |
+| AUDD | Monthly; by 4,000,000 seconds (46 days 07:06:40) after period end, the exact shared late-monthly runtime ceiling | Reserve evidence maintainer |
 | AUDM | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | AUDX | Monthly; by 70 days after period end | Reserve evidence maintainer |
 | AUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
@@ -24,7 +24,7 @@ Escalate a missing report at the end of its window. A discovered newer independe
 | BRLV | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | CADD | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | EUROP | Quarterly; by 100 days after period end | Reserve evidence maintainer |
-| FDUSD | Monthly; by 47 days after period end | Reserve evidence maintainer |
+| FDUSD | Monthly; by 4,000,000 seconds (46 days 07:06:40) after period end, the exact shared late-monthly runtime ceiling | Reserve evidence maintainer |
 | FIDD | Monthly; by 70 days after period end | Reserve evidence maintainer |
 | GUSD | Monthly; by 75 days after period end | Reserve evidence maintainer |
 | PAXG | Monthly; by 70 days after period end | Reserve evidence maintainer |

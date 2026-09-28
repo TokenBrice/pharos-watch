@@ -14,10 +14,20 @@ import { MintingPressureArcGauge } from "@/components/minting-pressure-gauge";
 import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
+import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import { buildFlowSummaryNarrative, getFlowDirectionUi, getFlowPressureUi } from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
-import { resolveNetDirection, resolvePressureScore, resolvePressureState } from "@/lib/mint-burn-coin-helpers";
+import {
+  resolveBaselineDailyNetUsd,
+  resolveCoinNetFlow,
+  resolveNetDirection,
+  resolvePressureScore,
+  resolvePressureState,
+  resolvePressureUnavailableNote,
+} from "@/lib/mint-burn-coin-helpers";
+import { describeUnpricedEvents, type MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
@@ -102,9 +112,19 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const netDirection = resolveNetDirection(coin);
   const pressureScore = resolvePressureScore(coin);
   const pressureState = resolvePressureState(coin);
+  const pressureUnavailableNote = resolvePressureUnavailableNote(coin);
   const pressureDisplay = pressureScore != null ? getPressureShiftDisplay(pressureScore) : null;
   const netSignal = getFlowDirectionUi(netDirection, "summary");
   const pressureSignal = getFlowPressureUi(pressureState, "summary");
+  const baselineDailyNetUsd = resolveBaselineDailyNetUsd(coin);
+  const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
+  // Volumes are known-valuation subtotals: with unpriced events the dial weighs
+  // lower bounds, so the caption says so instead of implying a measured balance.
+  const volumeCaption = window24h.completeness === "complete"
+    ? "The gauge uses raw 24h mint and burn volume balance"
+    : window24h.completeness === "partial"
+      ? `Lower-bound volumes: ${describeUnpricedEvents(window24h)}`
+      : "Lower-bound volumes: valuation coverage unknown";
   // A dial with a needle asserts a measurement. When no 24h volume was counted
   // there is nothing to weigh, so the quadrant takes the same empty-state
   // treatment the flow-history feed two modules below already uses.
@@ -119,11 +139,11 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   // Daily Net] — no nested cards.
   // Cell labels are the bare windows ("24H", "7D", …) — the quadrant header
   // already says "Net" (Figma coin template).
-  const netCells: { label: string; value: number; hasWindow?: boolean }[] = [
-    { label: "24h", value: coin.netFlow24hUsd },
-    { label: "7d", value: coin.netFlow7dUsd },
-    { label: "30d", value: coin.netFlow30dUsd, hasWindow: coin.coverage?.has30dWindow },
-    { label: "90d", value: coin.netFlow90dUsd, hasWindow: coin.coverage?.has90dWindow },
+  const netCells: { label: string; net: MintBurnSignedNetView; hasWindow?: boolean }[] = [
+    { label: "24h", net: resolveCoinNetFlow(coin, "24h") },
+    { label: "7d", net: resolveCoinNetFlow(coin, "7d") },
+    { label: "30d", net: resolveCoinNetFlow(coin, "30d"), hasWindow: coin.coverage?.has30dWindow },
+    { label: "90d", net: resolveCoinNetFlow(coin, "90d"), hasWindow: coin.coverage?.has90dWindow },
   ];
 
   return (
@@ -182,14 +202,18 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                   burnVolume24hUsd={coin.burnVolume24hUsd}
                 />
                 <p className="mt-3 text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
-                  The gauge uses raw 24h mint and burn volume balance
+                  {volumeCaption}
                 </p>
               </>
             ) : (
               <EmptyStateIllustration
                 kind="no-data"
-                title="No 24h mint or burn volume"
-                description="There is nothing to weigh, so no minting-pressure reading is published."
+                title={window24h.completeness === "partial" ? "No priced 24h mint or burn volume" : "No 24h mint or burn volume"}
+                description={
+                  window24h.completeness === "partial"
+                    ? `${describeUnpricedEvents(window24h)}, so no minting-pressure reading is published.`
+                    : "There is nothing to weigh, so no minting-pressure reading is published."
+                }
                 className="py-2"
               />
             )}
@@ -204,7 +228,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
           </div>
           <div className="grid flex-1 grid-cols-2">
             {netCells.map((cell, index) => {
-              const isPartial = cell.hasWindow === false;
+              const isPartial = cell.hasWindow === false && cell.net.valueUsd != null;
               return (
                 <div
                   key={cell.label}
@@ -226,11 +250,15 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                   <p
                     className={cn(
                       "mt-1.5 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
-                      getNetColor(cell.value),
                       isPartial && "opacity-60",
                     )}
                   >
-                    {formatSignedCurrency(cell.value)}
+                    <FlowSignedNetValue
+                      net={cell.net}
+                      format={formatSignedCurrency}
+                      colorClassName={getNetColor}
+                      className={cell.net.valueUsd == null ? "font-normal" : undefined}
+                    />
                   </p>
                 </div>
               );
@@ -269,7 +297,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
             <UnreportedStat />
           )}
           <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
-            {pressureSignal.helper}
+            {pressureUnavailableNote ?? pressureSignal.helper}
           </p>
         </div>
 
@@ -278,14 +306,14 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
           <p className="text-sm font-medium text-foreground">
             Average Daily Net <span className="text-muted-foreground">· 30d</span>
           </p>
-          {coin.baselineDailyNetUsd != null ? (
+          {baselineDailyNetUsd != null ? (
             <p
               className={cn(
                 "mt-2 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
-                getNetColor(coin.baselineDailyNetUsd),
+                getNetColor(baselineDailyNetUsd),
               )}
             >
-              {formatSignedCurrency(coin.baselineDailyNetUsd)}
+              {formatSignedCurrency(baselineDailyNetUsd)}
             </p>
           ) : (
             <UnreportedStat />

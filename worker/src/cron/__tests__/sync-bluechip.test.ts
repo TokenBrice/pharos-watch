@@ -12,6 +12,8 @@ import { parseBluechipRatingsCache } from "../../lib/bluechip-cache";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { bluechipResponse } from "./sync-bluechip.test-support";
+import { BLUECHIP_OBSERVATION_MAX_AGE_SEC, isBluechipRatingCurrent } from "@shared/lib/bluechip-freshness";
+import { handleBluechipRatings } from "../../api/cache-handlers";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -87,7 +89,7 @@ describe("syncBluechip", () => {
     const db = mockD1();
     const result = await syncBluechip(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       ratingsFetched: number;
@@ -121,7 +123,7 @@ describe("syncBluechip", () => {
     const db = mockD1();
     const result = await syncBluechip(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     const insert = getCacheInsert(db as MockD1Database);
     const cached = JSON.parse(String(insert?.binds[1])) as Record<string, Record<string, unknown>>;
     expect(cached["usdt-tether"]).toMatchObject({
@@ -141,7 +143,7 @@ describe("syncBluechip", () => {
     const db = mockD1();
     const result = await syncBluechip(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     const insert = getCacheInsert(db as MockD1Database);
     const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string }>;
     expect(cached["usdt-tether"]?.grade).toBe("B");
@@ -168,7 +170,7 @@ describe("syncBluechip", () => {
     const db = mockD1();
     const result = await syncBluechip(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
 
     const insert = getCacheInsert(db as MockD1Database);
@@ -196,7 +198,7 @@ describe("syncBluechip", () => {
     const db = mockD1();
     const result = await syncBluechip(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
 
     const insert = getCacheInsert(db as MockD1Database);
@@ -276,7 +278,8 @@ describe("syncBluechip", () => {
 
     const result = await syncBluechip(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").quality).toEqual({ reason: "partial-cache-merge" });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       ratingsFetched: number;
       ratingsPublished: number;
@@ -326,7 +329,8 @@ describe("syncBluechip", () => {
 
     const result = await syncBluechip(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").quality).toEqual({ reason: "partial-cache-merge" });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       ratingsFetched: number;
       ratingsPublished: number;
@@ -389,7 +393,8 @@ describe("syncBluechip", () => {
 
     const result = await syncBluechip(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").quality).toEqual({ reason: "partial-cache-merge" });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       invalidPayloads: number;
       failedSlugs: { slug: string; reason: string }[];
@@ -400,7 +405,7 @@ describe("syncBluechip", () => {
   });
 
   it("returns degraded on invalid response shape", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetch([
       {
         match: "/coin-data/tether",
@@ -423,10 +428,9 @@ describe("syncBluechip", () => {
     };
     expect(metadata.reason).toBe("upstream-no-ratings");
     expect(metadata.failedSlugs).toEqual([
-      { slug: "tether", reason: "invalid-payload" },
+      { slug: "tether", reason: "no-grade" },
       { slug: "usdc", reason: "empty-data" },
     ]);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[bluechip] No ratings fetched, preserving cache"));
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 
@@ -476,9 +480,73 @@ describe("syncBluechip", () => {
     } }]);
     const result = await syncBluechip(db);
     expect(result.itemCount).toBe(0);
+    expect(result.status).toBe("skipped_neutral");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "cache-write-skipped-newer", cacheWriteMode: "skipped-newer" });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ ratingsFetched: 2, ratingsPublished: 0, casSkipped: true });
     expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'bluechip-ratings'").get()).toEqual({
       value: '{"winner":true}', updated_at: newerAt,
+    });
+  });
+  it("bounds consecutive failed observations without borrowing a successful sibling's clock", async () => {
+    const { db, sqlite } = fixtures.open();
+    const start = Math.floor(Date.now() / 1000);
+    const readRatings = () => parseBluechipRatingsCache(
+      String(sqlite.prepare("SELECT value FROM cache WHERE key = 'bluechip-ratings'").get()?.value),
+      "test",
+    );
+    mockFetch([{ match: () => true, body: bluechipResponse() }]);
+    await syncBluechip(db);
+    expect(readRatings()["usdc-circle"].lastObservedAt).toBe(start);
+
+    for (const [offset, status, body, reason] of [
+      [86400, 500, {}, "http-500"],
+      [BLUECHIP_OBSERVATION_MAX_AGE_SEC, 404, {}, "http-404"],
+      [BLUECHIP_OBSERVATION_MAX_AGE_SEC + 86400, 200, { data: [{}] }, "no-grade"],
+    ] as const) {
+      vi.setSystemTime((start + offset) * 1000);
+      mockFetch([
+        { match: "/coin-data/tether", body: bluechipResponse() },
+        { match: "/coin-data/usdc", status, body },
+      ]);
+      expect((await syncBluechip(db)).status).toBe("ok");
+      const ratings = readRatings();
+      expect(ratings["usdt-tether"].lastObservedAt).toBe(start + offset);
+      expect(ratings["usdc-circle"]).toMatchObject({
+        lastObservedAt: start, observationReason: reason,
+        observationState: offset > BLUECHIP_OBSERVATION_MAX_AGE_SEC ? "stale" : "retained",
+      });
+      expect(isBluechipRatingCurrent(ratings["usdc-circle"], start + offset)).toBe(status === 500);
+    }
+
+    vi.setSystemTime((start + 4 * 86400) * 1000);
+    mockFetch([{ match: () => true, body: bluechipResponse({ grade: "B" }) }]);
+    await syncBluechip(db);
+    expect(readRatings()["usdc-circle"]).toMatchObject({
+      grade: "B", lastObservedAt: start + 4 * 86400, observationState: "current", observationReason: null,
+    });
+
+    vi.setSystemTime((start + 7 * 86400) * 1000);
+    const response = await handleBluechipRatings(db);
+    const payload = await response.json() as Record<string, unknown>;
+    expect(payload["usdc-circle"]).toMatchObject({
+      lastObservedAt: start + 4 * 86400, observationState: "stale",
+    });
+  });
+
+  it("records all-failed unresolved attempts without advancing the publication clock", async () => {
+    const { db, sqlite } = fixtures.open();
+    const observedAt = Math.floor(Date.now() / 1000) - 86400;
+    const rating = { ...makeUnreportedBluechipRating(), slug: "usdc", lastObservedAt: observedAt,
+      observationState: "current", observationReason: null };
+    sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)").run(
+      "bluechip-ratings", JSON.stringify({ "usdc-circle": rating }), observedAt,
+    );
+    mockFetch([{ match: () => true, status: 404, body: {} }]);
+    expect((await syncBluechip(db)).status).toBe("degraded");
+    const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'bluechip-ratings'").get();
+    expect(row?.updated_at).toBe(observedAt);
+    expect(JSON.parse(String(row?.value))["usdc-circle"]).toMatchObject({
+      lastObservedAt: observedAt, observationState: "retained", observationReason: "http-404",
     });
   });
 

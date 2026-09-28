@@ -28,7 +28,7 @@ import {
 import {
   fetchErc20TotalSupply,
   fetchIcrcLedgerTotalSupply,
-  fetchMovementFungibleAssetSupply,
+  fetchMoveFungibleAssetSupply,
   fetchOnchainUint256,
   fetchSolanaTokenSupply,
   fetchStarknetTotalSupply,
@@ -141,7 +141,7 @@ async function readContractSupplyRaw(input: {
     if (input.meta.id !== MOVEMENT_USDCX_ID || !input.rpcUrl) {
       throw new Error("Movement supply probe is not configured for this asset");
     }
-    const observation = await fetchMovementFungibleAssetSupply(
+    const observation = await fetchMoveFungibleAssetSupply(
       supplyContract.address,
       input.signal,
       input.rpcUrl,

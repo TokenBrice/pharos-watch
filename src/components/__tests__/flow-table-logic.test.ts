@@ -9,29 +9,10 @@ import {
 import type { MintBurnCoinFlow } from "@shared/types";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import type { FlowTableSortKey } from "@/components/flow-table-logic";
+import { makeInactiveMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 function makeFlow(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {
-  return {
-    stablecoinId: "usdc",
-    symbol: "USDC",
-    pressureShiftScore: null,
-    pressureShiftState: "stable",
-    netFlowDirection24h: "inactive",
-    has24hActivity: false,
-    baselineDailyNetUsd: null,
-    baselineDailyAbsUsd: null,
-    baselineDataDays: null,
-    netFlow24hUsd: 0,
-    mintVolume24hUsd: 0,
-    burnVolume24hUsd: 0,
-    mintCount24h: 0,
-    burnCount24h: 0,
-    netFlow7dUsd: 0,
-    netFlow30dUsd: 0,
-    netFlow90dUsd: 0,
-    largestEvent24h: null,
-    ...overrides,
-  } as MintBurnCoinFlow;
+  return makeInactiveMintBurnFlowCoin({ stablecoinId: "usdc", pressureShiftState: "stable", ...overrides });
 }
 
 const sort = (key: FlowTableSortKey, direction: "asc" | "desc" = "desc"): TableSortState<FlowTableSortKey> => ({
@@ -143,6 +124,29 @@ describe("compareFlowRows — numeric sort keys", () => {
     expect(result).toBeGreaterThan(0); // the mint ranks first
   });
 
+  it.each(["asc", "desc"] as const)("sorts null and partial-valuation nets last (%s), never as zero", (direction) => {
+    const smallBurn = makeFlow({ netFlow24hUsd: -1 });
+    const nullNet = makeFlow({ netFlow24hUsd: null });
+    const partialNet = makeFlow({
+      netFlow24hUsd: 5_000_000,
+      valuation: {
+        window24h: {
+          completeness: "partial",
+          mintCompleteness: "complete",
+          burnCompleteness: "partial",
+          unpricedMintEventCount: 0,
+          unpricedBurnEventCount: 1,
+        },
+        baseline: "complete",
+        netFlow7d: "complete",
+        netFlow30d: "complete",
+        netFlow90d: "complete",
+      },
+    });
+    expect(compareFlowRows(nullNet, smallBurn, sort("net24h", direction))).toBeGreaterThan(0);
+    expect(compareFlowRows(partialNet, smallBurn, sort("net24h", direction))).toBeGreaterThan(0);
+  });
+
   it("sorts mint24h descending", () => {
     const high = makeFlow({ mintVolume24hUsd: 8_000_000 });
     const low = makeFlow({ mintVolume24hUsd: 1_000_000 });
@@ -213,6 +217,29 @@ describe("compareFlowRows — pressure sort key", () => {
     const low = makeFlow({ pressureShiftScore: 20 });
     const result = compareFlowRows(high, low, sort("pressure", "desc"));
     expect(result).toBeLessThan(0); // high ranks first
+  });
+
+  it("sorts a partial-baseline pressure score last as unavailable", () => {
+    const partialBaseline = makeFlow({
+      pressureShiftScore: 90,
+      valuation: {
+        window24h: {
+          completeness: "complete",
+          mintCompleteness: "complete",
+          burnCompleteness: "complete",
+          unpricedMintEventCount: 0,
+          unpricedBurnEventCount: 0,
+        },
+        baseline: "partial",
+        netFlow7d: "complete",
+        netFlow30d: "complete",
+        netFlow90d: "complete",
+      },
+    });
+    const scored = makeFlow({ pressureShiftScore: -20 });
+    expect(getPressureScore(partialBaseline)).toBeNull();
+    expect(getPressureState(partialBaseline)).toBe("nr");
+    expect(compareFlowRows(partialBaseline, scored, sort("pressure", "desc"))).toBeGreaterThan(0);
   });
 });
 

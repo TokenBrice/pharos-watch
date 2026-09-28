@@ -100,7 +100,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       },
     ], ["priced", "missing"], { priceGapReviews: [] });
 
-    expect(coverage).toEqual({
+    expect(coverage).toMatchObject({
       complete: false,
       expectedActiveCount: 2,
       presentActiveCount: 2,
@@ -202,6 +202,34 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
   });
 
+  it("retains unknown compact continuity and still honors review expiry", async () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    const first = evaluateStablecoinActivePriceCoverage(
+      [{ id: review.stablecoinId, price: null }], [review.stablecoinId],
+      {
+        previousCoverage: { missingActiveIds: [], missingActiveAssets: [], unavailableReason: "previous-coverage-read-failed" },
+        nowSec: review.expiresAt - 1,
+      },
+    );
+    const compact = compactStablecoinActivePriceCoverage(first, 0);
+    expect(compact.missingActiveState[0][1]).toBeNull();
+    expect(parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec: review.expiresAt - 1 }))
+      .toMatchObject({ consecutiveMissingGenerations: null, alertEligible: false, streakUnavailableReason: "previous-coverage-read-failed" });
+    expect(parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec: review.expiresAt }))
+      .toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true, acknowledgedGap: null });
+    const prior = await loadPreviousStablecoinActivePriceCoverage(mockD1([{
+      match: "activePriceCoverage", rows: [],
+      first: { metadata: JSON.stringify({ activePriceCoverage: compact }) },
+    }]), review.expiresAt);
+    expect(prior.status).toBe("ok");
+    if (prior.status !== "ok") throw new Error("Expected readable compact continuity");
+    const next = evaluateStablecoinActivePriceCoverage(
+      [{ id: review.stablecoinId, price: null }], [review.stablecoinId],
+      { previousCoverage: prior.coverage, nowSec: review.expiresAt },
+    );
+    expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
+  });
+
   it("keeps acknowledged long gaps missing, re-alerts at expiry, and ignores reviews for priced assets", () => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
     const ids = [review.stablecoinId, "usdt-tether"];
@@ -286,7 +314,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       acknowledgedGapIds: ids,
       acknowledgedGapCount: 2,
     });
-    expect(saturday.missingActiveAssets.every((asset) => asset.consecutiveMissingGenerations >= 2 && !asset.alertEligible)).toBe(true);
+    expect(saturday.missingActiveAssets.every((asset) => asset.consecutiveMissingGenerations != null && asset.consecutiveMissingGenerations >= 2 && !asset.alertEligible)).toBe(true);
 
     const mondayReopen = evaluateStablecoinActivePriceCoverage(
       ids.map((id) => ({ id, price: 1.2 })),
@@ -357,6 +385,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       first: {
         metadata: JSON.stringify({
           activePriceCoverage: {
+            ...evaluateStablecoinActivePriceCoverage([{ id: "missing", price: null }], ["missing"]),
             missingActiveIds: ["missing"],
             missingActiveAssets: [],
             missingActiveState: [[
@@ -373,14 +402,17 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     }], { requireMatch: true });
 
     await expect(loadPreviousStablecoinActivePriceCoverage(db, 1_700_000_000)).resolves.toMatchObject({
-      missingActiveIds: ["missing"],
-      missingActiveAssets: [{
-        stablecoinId: "missing",
-        consecutiveMissingGenerations: 3,
-        lastAcceptedPrice: 1.001,
-        lastAcceptedSource: "redstone",
-        alertEligible: true,
-      }],
+      status: "ok",
+      coverage: {
+        missingActiveIds: ["missing"],
+        missingActiveAssets: [{
+          stablecoinId: "missing",
+          consecutiveMissingGenerations: 3,
+          lastAcceptedPrice: 1.001,
+          lastAcceptedSource: "redstone",
+          alertEligible: true,
+        }],
+      },
     });
   });
 });

@@ -15,6 +15,9 @@ import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-curre
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { throwIfAborted } from "../lib/abort";
+import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
+
+type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string };
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 const DEWS_STRESS_MAX_AGE_SEC = CRON_INTERVALS["compute-dews"] * 2;
@@ -27,6 +30,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       status: "degraded",
       itemCount: 0,
       metadata: {
+        reason: "stablecoins-cache-unavailable",
         fallbackMode: "stablecoins-cache-unavailable",
         stablecoinsCacheReason: stablecoinsCache.reason,
         dewsUnavailable: true,
@@ -61,11 +65,14 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   throwIfAborted(signal);
 
   // Active depegs — use current price to compute live deviation
-  let activeDepegs: D1Result<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
+  let activeDepegs: D1Result<PsiActiveDepegRow>;
   try {
     activeDepegs = await db
-      .prepare("SELECT stablecoin_id, peg_reference, started_at FROM depeg_events WHERE ended_at IS NULL")
-      .all<{ stablecoin_id: string; peg_reference: number; started_at: number }>();
+      .prepare(`SELECT e.stablecoin_id, e.peg_reference, e.started_at, e.peg_type, e.source,
+                       e.start_price, e.ended_at, e.recovery_price, p.quote_mode
+                FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+                WHERE e.ended_at IS NULL`)
+      .all<PsiActiveDepegRow>();
   } catch (err) {
     logWorkerEventArgs("handler", "warn", "[stability-index] depeg query failed:", err);
     const depegEventsFailureReason = String(err);
@@ -73,6 +80,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       status: "degraded",
       itemCount: 0,
       metadata: {
+        reason: "depeg-events-unavailable",
         fallbackMode: "depeg-events-unavailable",
         depegEventsUnavailable: true,
         depegEventsFailureReason,
@@ -157,6 +165,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       status: "degraded",
       itemCount: 0,
       metadata: {
+        reason: "dews-unavailable",
         fallbackMode: "dews-unavailable",
         dewsUnavailable,
         dewsFailureReason,
@@ -171,7 +180,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }
 
   // Deduplicate by stablecoin_id: group events, pick worst deviation, earliest start
-  type DepegRow = { stablecoin_id: string; peg_reference: number; started_at: number };
+  type DepegRow = PsiActiveDepegRow;
   const grouped = new Map<string, DepegRow[]>();
   for (const r of activeDepegs.results ?? []) {
     const canonicalId = canonicalizePsiStablecoinId(r.stablecoin_id);
@@ -196,23 +205,25 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   for (const [coinId, events] of grouped) {
     const currentPrice = priceById.get(coinId);
     const replayPrice = replayPriceById.get(coinId);
-    const price = currentPrice ?? replayPrice;
-    if (!price) {
-      openDepegsWithoutPrice++;
-      continue;
-    }
-    if (currentPrice == null && replayPrice != null) {
+    const usdPrice = currentPrice ?? replayPrice;
+    if (currentPrice == null && replayPrice != null && events.some((event) => !isNativePegEvent(event))) {
       replayPriceFallbackCount++;
     }
 
     let worstBps = 0;
     let earliestStart = Infinity;
+    let missingPrice = false;
     for (const e of events) {
-      const depegSignal = deriveDepegSignal(price, e.peg_reference);
-      if (!depegSignal) continue;
+      const price = isNativePegEvent(e) ? getNativeEventPrice(e, now) : usdPrice;
+      const depegSignal = price != null ? deriveDepegSignal(price, e.peg_reference) : null;
+      if (!depegSignal) {
+        missingPrice = true;
+        continue;
+      }
       if (depegSignal.absBps > Math.abs(worstBps)) worstBps = depegSignal.bps;
       if (e.started_at < earliestStart) earliestStart = e.started_at;
     }
+    if (missingPrice) openDepegsWithoutPrice++;
 
     if (earliestStart === Infinity) continue;
     const mcapUsd = mcapById.get(coinId) ?? 0;
@@ -244,6 +255,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       status: "degraded",
       itemCount: 0,
       metadata: {
+        reason: "insufficient-market-cap",
         fallbackMode: "insufficient-market-cap",
         totalMcapUsd,
         depegCount: depegs.length,
@@ -318,7 +330,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       ],
     },
     metadata: {
-      ...(openDepegsWithoutPrice > 0 ? { reason: "open-depeg-no-price" } : {}),
+      reason: openDepegsWithoutPrice > 0 ? "open-depeg-no-price" : "psi-sample-published",
       aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
       score: result.score,
       band: result.band,

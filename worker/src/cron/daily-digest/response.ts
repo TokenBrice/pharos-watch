@@ -606,29 +606,68 @@ function sentenceMentionsSymbol(sentence: string, symbol: string): boolean {
 }
 
 /**
- * Price/bps consistency lint. A candidate-model trial repeatedly paired prices
- * with bps values from different fields. Any sentence that quotes a coin's
- * dollar price AND a bps figure must have the two agree. This stays soft at the
- * measured tolerance because making routine rounding mismatches hard would add
- * a corrective LLM call; the prompt carries the preventative constraint.
+ * Bind one coin, one explicitly quoted price and one peg deviation before
+ * blocking. Multiple coins or competing numeric claims remain advisory: the
+ * first dollar amount in prose may be supply, not the quoted unit price.
  */
 function lintPriceBpsConsistency(
   copy: string,
   facts: readonly DigestDepegFact[],
 ): DigestValidationIssue[] {
   const issues: DigestValidationIssue[] = [];
-  const sentences = copy.split(/(?<=[.!?])\s+/);
+  const sentences = copy.split(/(?<=[.!?])\s+|\n+/);
   for (const sentence of sentences) {
-    const priceMatch = sentence.match(/\$([\d.]+)/);
-    const bpsMatch = sentence.match(/([0-9][\d,]*) ?(?:bps|basis points)/i);
-    if (!priceMatch || !bpsMatch) continue;
-    const fact = facts.find(
-      (entry) =>
-        entry.currentPriceUsd != null && entry.currentBps != null && sentenceMentionsSymbol(sentence, entry.symbol),
-    );
-    if (!fact || fact.currentPriceUsd == null || fact.currentBps == null) continue;
-    const quotedPrice = Number(priceMatch[1]);
-    const quotedBps = Number(bpsMatch[1].replaceAll(",", ""));
+    const namedFacts = facts.filter((entry) => sentenceMentionsSymbol(sentence, entry.symbol));
+    if (namedFacts.length === 0) continue;
+    // Match numeric tokens once, then inspect their adjacent unit/context.
+    // Separating the suffix checks avoids nested optional/repeated regex groups.
+    const numbers = [...sentence.matchAll(/[0-9][\d,]*\.\d+|[0-9][\d,]*/g)];
+    const dollarMatches = numbers
+      .filter((match) => sentence[match.index - 1] === "$")
+      .map((match) => ({
+        value: match[0],
+        index: match.index - 1,
+        end: match.index + match[0].length,
+        scaled: /^(?:trillion|billion|million|thousand|[tbmk])\b/i
+          .test(sentence.slice(match.index + match[0].length).trimStart()),
+      }));
+    const bpsMatches = numbers.flatMap((match) => {
+      const unit = /^\s*(?:bps|basis points)\b/i.exec(sentence.slice(match.index + match[0].length));
+      return unit ? [{ value: match[0], end: match.index + match[0].length + unit[0].length }] : [];
+    });
+    if (dollarMatches.length === 0 || bpsMatches.length === 0) continue;
+    const priceMatches = dollarMatches.filter((match) => {
+      if (match.scaled) return false;
+      const before = sentence.slice(0, match.index);
+      const after = sentence.slice(match.end).trimStart().replace(/\s+/g, " ");
+      // Even unscaled dollar amounts can be monetary stock/flow context.
+      const clauses = before.split(/[,;:$]/);
+      const clauseBefore = clauses[clauses.length - 1] ?? "";
+      if (/\b(?:supply|cap|capitalization|flow|flows|inflow|inflows|outflow|outflows|minted|burned|tvl)\b/i.test(clauseBefore)
+        || /^(?:in )?(?:supply|market cap|flow|flows|tvl)\b/i.test(after)) return false;
+      const normalizedBefore = before.trimEnd().replace(/\s+/g, " ");
+      return /\b(?:at|price|price is|price of|price was|quote|quote reads|quote is|quote was)$/i.test(normalizedBefore);
+    });
+    const fact = namedFacts.length === 1 ? namedFacts[0] : undefined;
+    // A second ticker may have no depeg fact at all. Do not silently assign its
+    // numbers to the only available fact; uncertain acronyms are advisory too.
+    const otherTicker = [...sentence.matchAll(/\b[A-Z][A-Z0-9]{1,11}\b/g)]
+      .some((match) => match[0] !== fact?.symbol.toUpperCase() && !["USD", "BPS"].includes(match[0]));
+    const bpsMatch = bpsMatches[0];
+    const afterBps = sentence.slice(bpsMatch.end).trimStart().replace(/\s+/g, " ");
+    const boundDeviation = /^(?:below|above|under|over|off) (?:its |the )?peg\b/i.test(afterBps);
+    if (!fact || otherTicker || priceMatches.length !== 1 || bpsMatches.length !== 1 || !boundDeviation) {
+      issues.push({
+        code: "price-bps-ambiguous",
+        severity: "soft",
+        message: "Price/bps claims cannot be bound to one coin and one explicit price/deviation pair; verify the monetary context.",
+      });
+      continue;
+    }
+    if (fact.currentPriceUsd == null || fact.currentBps == null
+      || !Number.isFinite(fact.currentPriceUsd) || !Number.isFinite(fact.currentBps)) continue;
+    const quotedPrice = Number(priceMatches[0].value.replaceAll(",", ""));
+    const quotedBps = Number(bpsMatch.value.replaceAll(",", ""));
     if (!Number.isFinite(quotedPrice) || !Number.isFinite(quotedBps) || quotedPrice <= 0) continue;
     // Recover the peg reference from the fact so non-USD pegs stay lintable.
     const pegReference = fact.currentPriceUsd / (1 + fact.currentBps / 10_000);
@@ -639,7 +678,7 @@ function lintPriceBpsConsistency(
     if (Math.abs(impliedBps - quotedBps) > LINT_PRICE_BPS_TOLERANCE) {
       issues.push({
         code: "price-bps-mismatch",
-        severity: "soft",
+        severity: "hard",
         message: `${fact.symbol}: quoted price $${quotedPrice} implies ~${Math.round(impliedBps)} bps but the copy claims ${quotedBps} bps.`,
       });
     }
@@ -667,8 +706,8 @@ function lintMovementClaims(
       const namedFacts = prevFacts.filter((fact) => sentenceMentionsSymbol(sentence, fact.symbol));
       const namedSymbols = new Set(namedFacts.map((fact) => fact.symbol.toUpperCase()));
       const supported = namedSymbols.size === 1 && namedFacts
-        .flatMap((fact) => [fact.currentBps, fact.bps, fact.peakBps])
-        .filter((value): value is number => typeof value === "number")
+        .map((fact) => fact.currentBps)
+        .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
         .some((value) => Math.abs(Math.abs(value) - claimedOrigin) <= LINT_PRICE_BPS_TOLERANCE);
       if (!supported) {
         issues.push({

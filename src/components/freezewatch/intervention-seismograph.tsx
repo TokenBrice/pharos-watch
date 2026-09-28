@@ -2,7 +2,7 @@
 
 import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EVENT_LABELS } from "@shared/lib/classification";
+import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 import { formatCompactCount } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
@@ -38,12 +38,6 @@ const NOTABLE_QUAKES: ReadonlyArray<{ quarter: string; label: string }> = [
   { quarter: "Q1 '23", label: "Silvergate" },
   { quarter: "Q4 '23", label: "OFAC Hamas" },
 ];
-
-const EVENT_COLORS = {
-  destroy: "#ef4444",
-  blacklist: "#f97316",
-  unblacklist: "oklch(0.78 0.16 240)",
-} as const;
 
 const VIEWBOX_WIDTH = 1000;
 const VIEWBOX_HEIGHT = 220;
@@ -162,9 +156,9 @@ export function InterventionSeismograph({ stats, chart, isLoading }: Interventio
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-        <LegendSwatch color={EVENT_COLORS.blacklist} label={EVENT_LABELS.blacklist} />
-        <LegendSwatch color={EVENT_COLORS.destroy} label={EVENT_LABELS.destroy} />
-        <LegendSwatch color={EVENT_COLORS.unblacklist} label={EVENT_LABELS.unblacklist} />
+        <LegendSwatch color={EVENT_CHART_COLORS.blacklist} label={EVENT_LABELS.blacklist} />
+        <LegendSwatch color={EVENT_CHART_COLORS.destroy} label={EVENT_LABELS.destroy} />
+        <LegendSwatch color={EVENT_CHART_COLORS.unblacklist} label={EVENT_LABELS.unblacklist} />
         <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
           height = quarterly event count
         </span>
@@ -233,7 +227,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
 
         {points.map((point, index) => {
           const x = index * slotWidth + slotPad;
-          const layers: Array<{ key: keyof typeof EVENT_COLORS; count: number }> = [
+          const layers: Array<{ key: keyof typeof EVENT_CHART_COLORS; count: number }> = [
             { key: "destroy", count: point.destroy },
             { key: "blacklist", count: point.blacklist },
             { key: "unblacklist", count: point.unblacklist },
@@ -252,7 +246,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
                 y={yTop}
                 width={barWidth}
                 height={height}
-                fill={EVENT_COLORS[layer.key]}
+                fill={EVENT_CHART_COLORS[layer.key]}
                 opacity={0.88}
               >
                 <title>{`${point.quarter} · ${EVENT_LABELS[layer.key]}: ${formatCompactCount(layer.count)}`}</title>

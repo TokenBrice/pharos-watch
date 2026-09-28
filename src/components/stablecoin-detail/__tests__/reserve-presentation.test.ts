@@ -14,6 +14,7 @@ import {
   buildReserveCompositionNote,
   buildReserveProvenanceNotice,
   buildReserveSyncNotice,
+  formatReserveSnapshotLabel,
 } from "../reserve-presentation";
 
 // Reserve notices carry the shared severity tones (WS8.4); the provenance
@@ -198,6 +199,16 @@ describe("buildReserveFootnoteModel", () => {
 });
 
 describe("buildReserveCompositionNote", () => {
+  it("discloses only explicitly scoped live evidence, never retained unmarked or curated fallback evidence", () => {
+    const metadata = {
+      balanceSheetScope: "shared-sky-maker" as const,
+      sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
+    };
+    expect(buildReserveCompositionNote(makeReserves({ mode: "live-stale", metadata }))).toMatch(/shared Sky\/Maker/);
+    expect(buildReserveCompositionNote(makeReserves({ mode: "live-stale", metadata: {} }))).toBeNull();
+    expect(buildReserveCompositionNote(makeReserves({ mode: "curated-fallback", metadata }))).toBeNull();
+  });
+
   it("returns null when not a live mode", () => {
     expect(
       buildReserveCompositionNote(makeReserves({ mode: "curated-fallback", metadata: { yieldBasisCollateralPct: 25 } })),
@@ -358,6 +369,74 @@ describe("buildReserveSyncNotice", () => {
 
 
 describe("dated reserve disclosures", () => {
+  it.each(["live", "live-stale"] as const)("keeps reviewed composition separate from totals and source-age clocks in %s mode", (mode) => {
+    const reserves = makeReserves({
+      mode,
+      liveAt: Date.parse("2026-09-27T12:14:32Z") / 1000,
+      metadata: {
+        sourceTimestamp: Date.parse("2026-09-26T00:00:00Z") / 1000,
+        details: { compositionSource: "reviewed-config", compositionAsOf: "2026-06-30" },
+      },
+      sync: {
+        enabled: true, status: "degraded", stale: true, bootstrap: false,
+        warnings: ["Upstream reserve source timestamp is 700000s old for static-validated (max 604800s)"],
+      },
+    });
+    const stale = mode === "live-stale" ? " · Stale" : "";
+    const composition = buildReserveFootnoteModel(reserves, true, "rwa backed")?.text;
+    expect(composition).toContain(`Composition as of 2026-06-30${stale} · Checked Sep 27`);
+    expect(composition).not.toContain("Sep 26");
+    const totals = formatReserveSnapshotLabel(reserves);
+    expect(totals).toContain(`Source as of Sep 26, 2026${stale} · Checked Sep 27`);
+    expect(totals).not.toContain("2026-06-30");
+    const ageNotice = buildReserveSyncNotice(reserves);
+    expect(ageNotice?.rows).toContain(totals);
+    expect(ageNotice?.rows.join(" ")).not.toContain("2026-06-30");
+  });
+
+  it.each(["live", "live-stale"] as const)("withholds an undated XAUT reviewed-config composition clock in %s mode", (mode) => {
+    const reserves = makeReserves({
+      mode,
+      liveAt: Date.parse("2026-09-27T12:14:32Z") / 1000,
+      metadata: {
+        sourceTimestamp: Date.parse("2026-09-26T00:00:00Z") / 1000,
+        details: { compositionSource: "reviewed-config" },
+      },
+    });
+    const stale = mode === "live-stale" ? " · Stale" : "";
+    expect(buildReserveFootnoteModel(reserves, true, "commodity backed")?.text)
+      .toContain(`Composition date unavailable${stale} · Checked Sep 27`);
+    expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of Sep 26, 2026");
+  });
+
+  it.each(["live", "live-stale"] as const)("withholds retained legacy Tether composition dates without new metadata in %s mode", (mode) => {
+    const reserves = makeReserves({
+      mode,
+      source: "tether-transparency",
+      liveAt: Date.parse("2026-09-27T12:14:32Z") / 1000,
+      metadata: { sourceTimestamp: Date.parse("2026-09-26T00:00:00Z") / 1000 },
+    });
+    const stale = mode === "live-stale" ? " · Stale" : "";
+    expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
+      .toContain(`Composition date unavailable${stale} · Checked Sep 27`);
+    expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of Sep 26, 2026");
+  });
+
+  it.each(["2026-02-30", "2026-13-01", "2026-6-30", "2026-06-30T00:00:00Z", "", 20260630])(
+    "rejects invalid reviewed composition date %s without borrowing the totals clock",
+    (compositionAsOf) => {
+      const reserves = makeReserves({
+        mode: "live",
+        metadata: {
+          sourceTimestamp: Date.parse("2026-09-26T00:00:00Z") / 1000,
+          details: { compositionSource: "reviewed-config", compositionAsOf },
+        },
+      });
+      expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
+        .toContain("Composition date unavailable · Checked");
+    },
+  );
+
   it("separates old report evidence from successful collection", () => {
     const reserves = makeReserves({
       mode: "live-stale", liveAt: Date.parse("2026-09-05T12:14:32Z") / 1000,

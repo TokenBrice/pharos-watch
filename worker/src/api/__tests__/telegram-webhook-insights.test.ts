@@ -346,7 +346,8 @@ describe("buildTopMessage", () => {
 
     expect(chainsMessage).toContain("Top chains by stablecoin supply");
     expect(chainsMessage).toContain("Ethereum");
-    expect(chainsMessage).toContain("health NR (null)");
+    expect(chainsMessage).toContain("health NR");
+    expect(chainsMessage).not.toContain("null");
     expect(chainsMessage).toContain(
       "Chain health unavailable; expected model V9, v9 snapshot unavailable.",
     );
@@ -453,7 +454,8 @@ describe("buildCoverageMessage", () => {
       priceUsd: 1,
       priceUpdatedAt: null,
       supplyUsd: null,
-      stablecoinsUpdatedAt: null,
+      supplyObservedAt: null,
+      supplyCurrent: false,
       dews: null,
       safety: null,
       safetyUnavailableReason: null,

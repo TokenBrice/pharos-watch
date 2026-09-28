@@ -553,7 +553,7 @@ describe("handleYieldHistory", () => {
   });
 
   it.each([
-    [7200, "fresh"], [7201, "degraded"], [14400, "degraded"], [14401, "stale"],
+    [7199, "fresh"], [7200, "fresh"], [7201, "degraded"], [14400, "degraded"], [14401, "stale"],
   ] as const)("aligns history body and HTTP freshness at age %s", async (age, status) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
@@ -568,10 +568,14 @@ describe("handleYieldHistory", () => {
     expect(response.headers.get("X-Data-Age")).toBe(String(age));
     if (status === "fresh") {
       expect(response.headers.get("Warning")).toBeNull();
-      expect(response.headers.get("Cache-Control")).not.toBe("no-store");
     } else {
       expect(response.headers.get("Warning")).toMatch(/^110 /);
+    }
+    // The verdict is inclusive, but at its boundary no cache runway remains.
+    if (age >= 7200) {
       expect(response.headers.get("Cache-Control")).toBe("no-store");
+    } else {
+      expect(response.headers.get("Cache-Control")).toContain("s-maxage=1");
     }
   });
 

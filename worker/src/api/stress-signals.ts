@@ -4,7 +4,7 @@ import { errorResponse, jsonResponse } from "../lib/api-response";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import {
   loadStressSignalCurrentRowForCoin,
@@ -37,7 +37,7 @@ interface AggregateCoverage {
 }
 
 const STRESS_SIGNALS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stressSignals;
-const STRESS_SIGNALS_LATEST_FALLBACK_AGE_SEC = STRESS_SIGNALS_MAX_AGE_SEC * 8;
+const STRESS_SIGNALS_LATEST_FALLBACK_AGE_SEC = STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC;
 
 function classifyStressSignalAge(
   computedAt: number,
@@ -54,7 +54,7 @@ function classifyStressSignalAge(
 
   const ageSec = Math.max(0, nowSec - computedAt);
   if (ageSec <= STRESS_SIGNALS_MAX_AGE_SEC) return "fresh";
-  if (ageSec <= STRESS_SIGNALS_MAX_AGE_SEC * 8) return "lagging";
+  if (ageSec <= STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC) return "lagging";
   return "stale";
 }
 
@@ -201,6 +201,10 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
               computedAt: latest.computed_at,
               methodologyVersion: getMethodologyVersionAt("depeg-dews", latest.computed_at),
               ageClassification: classifyStressSignalAge(latest.computed_at, nowSec),
+              assessedAt: nowSec,
+              freshBudgetSec: STRESS_SIGNALS_MAX_AGE_SEC,
+              degradedBudgetSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
+              newestReturnedComputedAt: null,
             }
           : null,
         history: historyRows,
@@ -277,6 +281,10 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
         computedAt: row.computedAt,
         methodologyVersion: row.methodologyVersion,
         ageClassification: classifyStressSignalAge(row.computedAt, nowSec, updatedAt),
+        assessedAt: nowSec,
+        freshBudgetSec: STRESS_SIGNALS_MAX_AGE_SEC,
+        degradedBudgetSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
+        newestReturnedComputedAt: updatedAt,
       };
     }
 

@@ -203,6 +203,7 @@ import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 
 const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "blacklist:decode-retry:", rows: [] },
   { match: "INSERT OR REPLACE INTO cache", rows: [] },
   { match: "FROM blacklist_current_balances", rows: [] },
   { match: "INSERT INTO blacklist_current_balances", rows: [] },
@@ -306,7 +307,7 @@ describe("syncBlacklist", () => {
           data: "0x",
           blockNumber: "0x1312d00", // 20,000,000
           timeStamp: "0x6670a780", // 1718650752
-          transactionHash: "0xabc123",
+          transactionHash: "0x" + "ab".repeat(32),
           logIndex: "0x0",
         },
       ]),
@@ -335,7 +336,7 @@ describe("syncBlacklist", () => {
   });
 
   it("skips enrichment and cache work for rows already present in blacklist_events", async () => {
-    const duplicateId = "ethereum-0xdup123-0x0";
+    const duplicateId = `ethereum-0x${"de".repeat(32)}-0x0`;
     const db = mockD1([
       { match: "blacklist_sync_state", rows: [] },
       { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicateId }] },
@@ -353,7 +354,7 @@ describe("syncBlacklist", () => {
           data: "0x",
           blockNumber: "0x1312d00",
           timeStamp: "0x6670a780",
-          transactionHash: "0xdup123",
+          transactionHash: "0x" + "de".repeat(32),
           logIndex: "0x0",
         },
       ]),
@@ -442,10 +443,10 @@ describe("syncBlacklist", () => {
               {
                 block_number: 50000000,
                 block_timestamp: 1718650752000,
-                transaction_id: "tx-tron-1",
+                transaction_id: "ab".repeat(32),
                 event_index: 0,
                 event_name: "AddedBlackList",
-                result: { _user: "0xdeadbeef" },
+                result: { _user: "0x" + "de".repeat(20) },
               },
             ],
             meta: {},
@@ -488,9 +489,11 @@ describe("syncBlacklist", () => {
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
+        matchBinds: ["circuit:etherscan"],
         rows: [
           {
             key: "circuit:etherscan",
+            updated_at: openedAt,
             value: JSON.stringify({
               state: "open",
               consecutiveFailures: 3,
@@ -515,7 +518,7 @@ describe("syncBlacklist", () => {
               {
                 block_number: 50000000,
                 block_timestamp: 1718650752000,
-                transaction_id: "tx-tron-circuit",
+                transaction_id: "cd".repeat(32),
                 event_index: 0,
                 event_name: "AddedBlackList",
                 result: { _user: "0x00000000000000000000000000000000000000cd" },
@@ -547,9 +550,11 @@ describe("syncBlacklist", () => {
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
+        matchBinds: ["circuit:trongrid"],
         rows: [
           {
             key: "circuit:trongrid",
+            updated_at: openedAt,
             value: JSON.stringify({
               state: "open",
               consecutiveFailures: 3,
@@ -603,7 +608,7 @@ describe("syncBlacklist", () => {
               {
                 block_number: 50000000,
                 block_timestamp: 1718650752000,
-                transaction_id: "tx-tron-ledger-1",
+                transaction_id: "ef".repeat(32),
                 event_index: 0,
                 event_name: "AddedBlackList",
                 result: { _user: "0x00000000000000000000000000000000000000ab" },
@@ -639,7 +644,7 @@ describe("syncBlacklist", () => {
 
     const refreshIndex = history.findIndex((sql) => sql.includes("INSERT INTO blacklist_current_balances"));
     expect(refreshIndex).toBeGreaterThanOrEqual(0);
-    expect(sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_source, amount_status FROM blacklist_events WHERE tx_hash = 'tx-tron-ledger-1'").all()).toEqual([{
+    expect(sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_source, amount_status FROM blacklist_events WHERE tx_hash = ?").all("ef".repeat(32))).toEqual([{
       amount_native: null,
       amount_usd_at_event: null,
       amount_source: "unavailable",
@@ -649,6 +654,25 @@ describe("syncBlacklist", () => {
       amount_native: 1,
       amount_usd: 1,
     }]);
+  });
+
+  it("reports retained decode retries per config without counting unrelated cache rows", async () => {
+    const { sqlite } = sqliteFixtures.open();
+    const db = createSqliteD1(sqlite);
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    const evmKey = CONTRACT_CONFIGS[0].configKey;
+    const tronKey = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "tron")!.configKey;
+    for (const key of [
+      `blacklist:decode-retry:${evmKey}:10:tx:0`,
+      `blacklist:decode-retry:${evmKey}:11:tx:1`,
+      `blacklist:decode-retry:${tronKey}:20:tx:0`,
+      "blacklist:other-cache",
+    ]) insert.run(key, "{}", 100);
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      headers: { "Content-Type": "application/json" },
+    }));
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    expect(JSON.parse(result.metadata).decodeRetryCounts).toEqual({ [evmKey]: 2, [tronKey]: 1 });
   });
 
   it("returns zero events when all APIs return empty", async () => {
@@ -863,7 +887,7 @@ describe("syncBlacklist", () => {
           ],
           data: "0x",
           blockNumber: "0x1312d00",
-          transactionHash: "0xbase123",
+          transactionHash: "0x" + "ba".repeat(32),
           transactionIndex: "0x0",
           blockHash: "0xblockhash",
           logIndex: "0x0",
@@ -903,7 +927,7 @@ describe("syncBlacklist", () => {
           ],
           data: "0x",
           blockNumber: "0x1312d00",
-          transactionHash: "0xbase123",
+          transactionHash: "0x" + "ba".repeat(32),
           transactionIndex: "0x0",
           blockHash: "0xblockhash",
           logIndex: "0x0",
@@ -1035,7 +1059,7 @@ describe("syncBlacklist", () => {
             data: "0x",
             blockNumber: "0xc8",
             timeStamp: "0x6670a780",
-            transactionHash: "0xpartial-topic",
+            transactionHash: "0x" + "fa".repeat(32),
             logIndex: "0x0",
           },
         ]),

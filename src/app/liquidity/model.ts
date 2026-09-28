@@ -48,7 +48,8 @@ function computeLiquidityStats(
 ): LiquidityStatsData {
   const globalData = liquidityMap[DEX_GLOBAL_KEY];
   const totalTvl = globalData?.totalTvlUsd ?? 0;
-  const totalVol = globalData?.totalVolume24hUsd ?? 0;
+  // Unavailable global volume stays null; it is never rendered as zero activity.
+  const totalVol = globalData?.totalVolume24hUsd ?? null;
   let scoreSum = 0;
   let scoreCount = 0;
   let withLiquidity = 0;
@@ -91,6 +92,7 @@ function computeLiquidityStats(
   return {
     totalTvl,
     totalVol,
+    ...(globalData?.volume24hAvailability ? { totalVolAvailability: globalData.volume24hAvailability } : {}),
     avgScore: scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 0,
     withLiquidity,
     highConfidenceCoverage,

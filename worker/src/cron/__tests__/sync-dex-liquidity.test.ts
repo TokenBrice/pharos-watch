@@ -265,6 +265,7 @@ import {
   stageDexLiquidityScoring,
 } from "../dex-liquidity/orchestrator";
 import {
+  MissingDexLiquidityScoringStageError,
   loadDexLiquidityScoringStage,
   markDexLiquidityScoringStageConsumed,
   persistDexLiquidityScoringStage,
@@ -294,6 +295,8 @@ import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import { fetchMajorStablecoinOrderbookDepthSummary } from "../../lib/cex-orderbooks";
+import * as registryPersistence from "../dex-discovery/persistence";
+import { readDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 
 const db = makeNoopD1({
   prepare: () => ({
@@ -361,6 +364,55 @@ describe("dex liquidity scoring stage cycle", () => {
     vi.mocked(extractPriceObservations).mockReturnValue(new Map());
     vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(null);
   });
+
+  it.each(["registry", "stage", "after-stage"] as const)(
+    "leaves a fetched tail retryable after %s failure and acknowledges its replay",
+    async (failure) => {
+      const fixture = createLatestSchemaSqlite();
+      const database = {
+        ...db,
+        prepare: (sql: string) => sql.includes("dex_source_pagination_state")
+          ? fixture.db.prepare(sql) : db.prepare(sql),
+      } as D1Database;
+      const controller = new AbortController();
+      const failureError = new Error(`injected ${failure} failure`);
+      const persistedStage = vi.mocked(persistDexLiquidityScoringStage).getMockImplementation()!;
+      const fetchTail = async () => {
+        vi.mocked(fetchOrcaPools).mockResolvedValueOnce({
+          pools: [], ok: true, degraded: false, errors: [],
+          pendingPaginationUpdates: [{
+            sourceKey: "orca:solana", cursor: "page9", cycleStartedAt: 100, nowSec: 100,
+            completed: false, pagesFetched: 4, diagnostics: [],
+            expectedRevision: (await readDexSourcePaginationState(database, "orca:solana")).revision!,
+            generation: crypto.randomUUID(),
+          }],
+        });
+      };
+      try {
+        await fetchTail();
+        if (failure === "registry") {
+          vi.spyOn(registryPersistence, "upsertStagedPools").mockRejectedValueOnce(failureError);
+        } else if (failure === "stage") {
+          vi.mocked(persistDexLiquidityScoringStage).mockRejectedValueOnce(failureError);
+        } else {
+          vi.mocked(persistDexLiquidityScoringStage).mockImplementationOnce(async (...args) => {
+            const result = await persistedStage(...args);
+            controller.abort(failureError);
+            return result;
+          });
+        }
+        const first = stageDexLiquidityScoring(database, "graph-key", controller.signal);
+        if (failure === "registry") await first;
+        else await expect(first).rejects.toBe(failureError);
+        expect(await readDexSourcePaginationState(database, "orca:solana")).toMatchObject({ cursor: null });
+        await fetchTail();
+        await stageDexLiquidityScoring(database, "graph-key");
+        expect(await readDexSourcePaginationState(database, "orca:solana")).toMatchObject({ cursor: "page9" });
+      } finally {
+        fixture.sqlite.close();
+      }
+    },
+  );
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
     phaseFixtures.reset({ primary: null });
@@ -1605,7 +1657,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     await expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
       stageReadyDeadlineMs: scheduledAtMs - 1,
       stageRecovery: { graphApiKey: "graph-key" },
-    })).rejects.toThrow(`DEX liquidity scoring stage is missing for source slot ${sourceSlot}`);
+    })).rejects.toBeInstanceOf(MissingDexLiquidityScoringStageError);
     expect(
       harness.sqlite
         .prepare(`SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages`)

@@ -141,6 +141,7 @@ export async function syncKinesisSupply(
   let invalidPayloads = 0;
   let fetchFailures = 0;
   let persistenceFailures = 0;
+  let outputPublishedAt: number | null = null;
   const chainResults: Array<{ chain: string; status: string; circulation?: number; reason?: string }> = [];
 
   for (const config of KINESIS_CHAINS) {
@@ -211,6 +212,7 @@ export async function syncKinesisSupply(
         3,
         signal,
       );
+      outputPublishedAt = nowSec;
     } catch (err) {
       if (signal.aborted) throw err instanceof Error ? err : new Error(String(err));
       persistenceFailures++;
@@ -245,11 +247,13 @@ export async function syncKinesisSupply(
   return createCronResult({
     itemCount: synced,
     status,
+    productivity: { productive: synced > 0 },
     metadata: {
+      ...(outputPublishedAt != null ? { outputPublishedAt } : {}),
       synced,
       failed,
       skipped,
-      ...(reason ? { reason } : {}),
+      reason: reason ?? "supply-synced",
       chains: chainResults,
     },
   });

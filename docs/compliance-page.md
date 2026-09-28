@@ -49,7 +49,7 @@ Absent `regime` selects Overview unless a legacy deep link can infer a regime fr
 
 ## Data Projection
 
-The global client registry carries compact compliance fields used across the site. `/compliance/` additionally consumes the GENIUS-only generated projection for the public posture, regulator, disclosure, review, notes, negative-evidence, and reference fields shown in its table.
+The global client registry carries compact compliance fields used across the site. `/compliance/` additionally consumes the generated compliance projection for the public posture, regulator, disclosure, review, notes, negative-evidence, and reference fields shown in its table. That projection carries `proofOfReserves.latestReport` from the base catalog as the single report-date authority: period end and publication are labelled separately, and uncertain legacy dates remain dated review references.
 
 Source links combine top-level and nested references and de-duplicate them before presentation. Schema and projection changes must keep the generated client artifacts aligned.
 

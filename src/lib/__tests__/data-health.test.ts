@@ -29,6 +29,22 @@ function meta(overrides: Partial<ApiMeta> = {}): ApiMeta {
 }
 
 describe("deriveDataHealth", () => {
+  it.each([
+    ["stale", "stale"],
+    ["unknown", "unavailable"],
+  ] as const)("keeps %s producer authority distinct from a recent successful request", (status, state) => {
+    const health = deriveDataHealth({
+      label: "Events",
+      dataUpdatedAt: NOW,
+      staleTime: STALE_TIME,
+      hasData: true,
+      meta: { updatedAt: null, ageSeconds: null, status, reason: "producer-unavailable", warning: "Unavailable" },
+    }, NOW);
+    expect(health.state).toBe(state);
+    expect(health.ageMs).toBeNull();
+    expect(health.dataUpdatedAt).toBe(0);
+  });
+
   it("uses exact fresh, degraded, and stale threshold boundaries", () => {
     const stateAtAge = (ageMs: number) =>
       deriveDataHealth(

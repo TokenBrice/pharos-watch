@@ -19,7 +19,6 @@ import type { TelegramWebAppSdk } from "./telegram-sdk";
 import type {
   FollowedPreset,
   SubscribedCoin,
-  TelegramAlertType,
   TelegramMiniAppOperation,
   TelegramMiniAppBulkWatchlistOperation,
   TelegramMiniAppBulkWatchlistResponse,
@@ -213,6 +212,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const [message, setMessage] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [pendingUndo, setPendingUndo] = useState<SubscribedCoin | null>(null);
+  const undoTokenRef = useRef<TelegramMiniAppClientSnapshot["undo"]>(undefined);
   const [homeScreenStatus, setHomeScreenStatus] = useState<string | null>(null);
   const [forgottenView, setForgottenView] = useState(false);
   const [pendingOperation, setPendingOperation] = useState<TelegramMiniAppOperation | null>(null);
@@ -397,39 +397,32 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       undoTimerRef.current = null;
     }
     setPendingUndo(null);
+    undoTokenRef.current = undefined;
   }, []);
 
   const remove = useCallback((coin: SubscribedCoin) => {
     const fire = () => void (async () => {
       const next = await performMutation({ kind: "remove-coin", stablecoinId: coin.stablecoinId });
       if (!next) return;
-      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      clearUndoToast();
+      if (!next.undo) return;
+      undoTokenRef.current = next.undo;
       setPendingUndo(coin);
       undoTimerRef.current = setTimeout(() => {
         setPendingUndo(null);
+        undoTokenRef.current = undefined;
         undoTimerRef.current = null;
       }, UNDO_WINDOW_MS);
     })();
     confirmThenFire(showConfirm, `Remove ${coin.symbol} from your watchlist?`, fire);
-  }, [performMutation, showConfirm]);
+  }, [clearUndoToast, performMutation, showConfirm]);
 
   const undoRemove = useCallback(() => {
-    const captured = pendingUndo;
+    const captured = undoTokenRef.current;
     if (!captured) return;
     clearUndoToast();
-    const restoredAlertTypes = Object.fromEntries(
-      (Object.keys(captured.alertTypes) as TelegramAlertType[])
-        .filter((type) => captured.alertTypes[type] || captured.alertOverrides?.[type])
-        .map((type) => [type, captured.alertTypes[type]]),
-    ) as Partial<Record<TelegramAlertType, boolean>>;
-    const patch: { alertTypes: Partial<Record<TelegramAlertType, boolean>>; dewsMinBand?: typeof captured.dewsMinBand; depegStepBps?: typeof captured.depegStepBps; safetyMode?: typeof captured.safetyMode } = {
-      alertTypes: restoredAlertTypes,
-    };
-    if (captured.dewsMinBand !== null) patch.dewsMinBand = captured.dewsMinBand;
-    if (captured.depegStepBps !== null) patch.depegStepBps = captured.depegStepBps;
-    if (captured.safetyMode !== null) patch.safetyMode = captured.safetyMode;
-    void performMutation({ kind: "set-coin", stablecoinId: captured.stablecoinId, patch });
-  }, [clearUndoToast, pendingUndo, performMutation]);
+    void performMutation({ kind: "undo-bulk-watchlist", ...captured });
+  }, [clearUndoToast, performMutation]);
 
   const unfollowPreset = useCallback((preset: FollowedPreset) => {
     // Presets aren't joined to subscribed coins in the current state payload, so we

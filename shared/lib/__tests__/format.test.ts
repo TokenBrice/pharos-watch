@@ -7,6 +7,7 @@ import {
   formatChartPercent,
   formatDecimal,
   formatPercent,
+  formatPegOccupancy,
   formatPercentFromRatio,
   formatPrice,
   formatSignedCurrency,
@@ -76,6 +77,30 @@ describe("formatPercent", () => {
   it("returns dash for non-finite values", () => {
     expect(formatPercent(Infinity)).toBe("-");
     expect(formatPercent(NaN)).toBe("-");
+  });
+});
+
+describe("formatPegOccupancy", () => {
+  it.each([
+    [100, 1, "100.0%"],
+    [100, 2, "100.00%"],
+    [99.996, 1, "<100%"],
+    [99.996, 2, "<100%"],
+    [99.99, 1, "<100%"],
+    [99.99, 2, "99.99%"],
+    [99.96, 1, "<100%"],
+    [99.96, 2, "99.96%"],
+    [99.9, 1, "99.9%"],
+    [0, 1, "0.0%"],
+    [0, 2, "0.00%"],
+    [0.001, 1, "0.0%"],
+    [0.01, 2, "0.01%"],
+  ])("formats occupancy %s with precision %s as %s", (value, decimals, expected) => {
+    expect(formatPegOccupancy(value, decimals)).toBe(expected);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])("preserves unavailable occupancy %s", (value) => {
+    expect(formatPegOccupancy(value)).toBe("-");
   });
 });
 

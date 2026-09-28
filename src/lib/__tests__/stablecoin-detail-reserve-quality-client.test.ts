@@ -46,6 +46,18 @@ describe("formatReserveQualityPct", () => {
 });
 
 describe("projectReserveQualityClientSummary", () => {
+  it("preserves a positive sub-display-precision asset instead of publishing zero exposure", () => {
+    const summary = projectReserveQualityClientSummary(coinWith([
+      { ...USDC_LIKE_SLICES[0], pct: 99.99536 },
+      { name: "Corporate bonds", pct: 0.00464, risk: "high", assetClass: "public-credit", liquidityHorizon: "unknown" },
+    ], USDC_LIKE_REVIEW));
+    const bonds = summary?.slices.find((slice) => slice.name === "Corporate bonds");
+    expect(bonds?.pct).toBe(0.00464);
+    expect(formatReserveQualityPct(bonds!.pct)).toBe("<0.1%");
+    expect(formatReserveQualityPct(0)).toBe("0%");
+    expect(summary?.asOf).toBe("2026-06-30");
+  });
+
   it("returns null without reserves", () => {
     expect(projectReserveQualityClientSummary(coinWith(undefined))).toBeNull();
     expect(projectReserveQualityClientSummary(coinWith([]))).toBeNull();

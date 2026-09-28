@@ -44,6 +44,17 @@ function build(overrides: Partial<Parameters<typeof buildRedemptionExitRouteObse
 }
 
 describe("redemption same-notional route observations", () => {
+  it("withholds live-direct scoring when its producing evidence time is missing", () => {
+    const observation = build({
+      sourceMode: "dynamic",
+      capacityConfidence: "live-direct",
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain",
+    });
+    expect(observation?.scoreEligible).toBe(false);
+    expect(observation?.observedAt).toBe(0);
+  });
+
   it("keeps physical metal non-fiat and non-score-eligible even on an atomic-shaped route", () => {
     const observation = build({
       config: {
@@ -154,7 +165,7 @@ describe("redemption same-notional route observations", () => {
       capacityConfidence: "live-direct",
       capacityKind: "live-direct-bounded",
       freshnessKind: "same-run-onchain",
-      sourceTimestamp: observedAt,
+      evidenceObservedAt: observedAt,
       now: observedAt + 60,
     });
     expect(observation).toMatchObject({
@@ -184,7 +195,7 @@ describe("redemption same-notional route observations", () => {
       capacityConfidence: "documented-bound",
       capacityKind: "documented-bound",
       freshnessKind: "same-run-onchain",
-      sourceTimestamp: chainReadAt,
+      evidenceObservedAt: chainReadAt,
       now: chainReadAt + 60,
     });
     expect(observation).toMatchObject({
@@ -206,7 +217,7 @@ describe("redemption same-notional route observations", () => {
       capacityConfidence: "live-direct",
       capacityKind: "live-direct-bounded",
       freshnessKind: "same-run-onchain",
-      sourceTimestamp: observedAt,
+      evidenceObservedAt: observedAt,
       resolvedFeeBps: 0,
       outputValuation: {
         sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
@@ -295,7 +306,7 @@ describe("redemption same-notional route observations", () => {
       capacityConfidence: "live-direct",
       capacityKind: "live-direct-bounded",
       freshnessKind: "verified-source-timestamp",
-      sourceTimestamp: observedAt + 0.75,
+      evidenceObservedAt: observedAt + 0.75,
       now: observedAt + 61.25,
     });
     expect(observation).toMatchObject({
@@ -719,7 +730,7 @@ describe("reserve-sync observations with tiny live capacity", () => {
       capacityConfidence: "live-direct",
       capacityKind: "live-direct",
       freshnessKind: "same-run-onchain",
-      sourceTimestamp: Date.UTC(2026, 6, 13, 10) / 1_000,
+      evidenceObservedAt: Date.UTC(2026, 6, 13, 10) / 1_000,
       resolvedFeeBps: 0,
     });
 

@@ -113,7 +113,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "re-metrics",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "reusd-re-protocol",
     "display": {

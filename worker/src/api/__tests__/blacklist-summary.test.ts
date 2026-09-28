@@ -103,6 +103,24 @@ describe("handleBlacklistSummary", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(false);
   });
 
+  it.each(["missing", "lookup_failed"] as const)("preserves %s authority in retained summary snapshots", async (freshnessStatus) => {
+    const now = Math.floor(Date.now() / 1000);
+    const payload = makeValidSummaryPayload();
+    const db = mockD1([{
+      match: "blacklist-summary-snapshot-read",
+      rows: [{
+        key: "blacklist:summary:producer:v2",
+        value: JSON.stringify({ version: 2, materializedAt: now, freshnessTs: null, freshnessStatus, payload }),
+        updated_at: now,
+      }],
+    }], { requireMatch: true });
+    const response = await handleBlacklistSummary(db);
+    expect(await response.json()).toEqual(payload);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(response.headers.get("X-Data-Freshness")).toBe(freshnessStatus === "missing" ? "stale" : "unknown");
+  });
+
   it("falls back from invalid producer snapshot shapes", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -728,30 +746,6 @@ describe("handleBlacklistSummary", () => {
     expect(json.dataQuality.amountGaps.recoverable).toBe(2);
   });
 
-  it("falls back to latest event timestamp when sync-blacklist has no successful cron row", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const latestEventTs = now - 7200;
-    const db = mockD1([
-      { match: "GROUP BY stablecoin, event_type", rows: [] },
-      { match: "latest_event_type", rows: [] },
-      {
-        match: "COUNT(*) AS total",
-        rows: [],
-        first: { total: 1, max_ts: latestEventTs, recent_30d: 0, recent_24h: 0 },
-      },
-      { match: "FROM blacklist_current_balances", rows: [] },
-      { match: "quarter_sort_key", rows: [] },
-      { match: "cron_runs", rows: [], first: { started_at: null } },
-      ...makeBlacklistSummaryFallbackTables(),
-    ]);
-
-    const res = await handleBlacklistSummary(db);
-    const age = Number(res.headers.get("X-Data-Age"));
-    const body = await res.json() as { methodology: { asOf: number } };
-    expect(age).toBeGreaterThanOrEqual(7200);
-    expect(age).toBeLessThan(7300);
-    expect(body.methodology.asOf).toBe(latestEventTs);
-  });
 
   it("does not mark data quality stale from historical bootstrap rows alone", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -987,7 +981,7 @@ describe("handleBlacklistSummary", () => {
     expect(json.stats.frozenAddresses).toBe(1);
   });
 
-  it("uses timestamp and id tie-breaks when deriving latest active identities", async () => {
+  it("derives latest active identities from time and numeric execution position, not hash order", async () => {
     const db = mockD1([
       {
         match: "GROUP BY stablecoin, event_type",
@@ -1000,7 +994,8 @@ describe("handleBlacklistSummary", () => {
         match: "latest_event_type",
         rows: [
           makeBlacklistRow({
-            id: "z-blacklist",
+            id: `ethereum-0x${"11".repeat(32)}-0x10`,
+            tx_hash: `0x${"11".repeat(32)}`,
             stablecoin: "USDC",
             chain_id: "ethereum",
             chain_name: "Ethereum",
@@ -1009,7 +1004,8 @@ describe("handleBlacklistSummary", () => {
             timestamp: 1_700_100_000,
           }),
           makeBlacklistRow({
-            id: "a-unblacklist",
+            id: `ethereum-0x${"ff".repeat(32)}-0xf`,
+            tx_hash: `0x${"ff".repeat(32)}`,
             stablecoin: "USDC",
             chain_id: "ethereum",
             chain_name: "Ethereum",
@@ -1018,7 +1014,8 @@ describe("handleBlacklistSummary", () => {
             timestamp: 1_700_100_000,
           }),
           makeBlacklistRow({
-            id: "a-blacklist",
+            id: `ethereum-0x${"ff".repeat(32)}-0xf`,
+            tx_hash: `0x${"ff".repeat(32)}`,
             stablecoin: "USDC",
             chain_id: "ethereum",
             chain_name: "Ethereum",
@@ -1027,7 +1024,8 @@ describe("handleBlacklistSummary", () => {
             timestamp: 1_700_200_000,
           }),
           makeBlacklistRow({
-            id: "z-unblacklist",
+            id: `ethereum-0x${"11".repeat(32)}-0x10`,
+            tx_hash: `0x${"11".repeat(32)}`,
             stablecoin: "USDC",
             chain_id: "ethereum",
             chain_name: "Ethereum",
@@ -1036,7 +1034,8 @@ describe("handleBlacklistSummary", () => {
             timestamp: 1_700_200_000,
           }),
           makeBlacklistRow({
-            id: "z-older-blacklist",
+            id: `ethereum-0x${"ff".repeat(32)}-0x11`,
+            tx_hash: `0x${"ff".repeat(32)}`,
             stablecoin: "USDC",
             chain_id: "ethereum",
             chain_name: "Ethereum",
@@ -1045,7 +1044,8 @@ describe("handleBlacklistSummary", () => {
             timestamp: 1_700_050_000,
           }),
           makeBlacklistRow({
-            id: "a-newer-blacklist",
+            id: `ethereum-0x${"11".repeat(32)}-0x1`,
+            tx_hash: `0x${"11".repeat(32)}`,
             stablecoin: "USDC",
             chain_id: "ethereum",
             chain_name: "Ethereum",

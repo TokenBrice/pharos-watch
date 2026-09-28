@@ -2,14 +2,14 @@ import { CHAIN_META, getChainResilienceTier } from "./index";
 import { canonicalizeChainCirculating } from "./circulating";
 import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
-import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull } from "../supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull } from "../supply";
 import { relativeChangeRatio } from "../stats";
 import { ZERO_RATIO, type Ratio } from "../../types/ratio";
 import {
   ACTIVE_BACKING_DIVERSITY_TYPES,
+  assessPegStability,
   computeConcentrationScore,
   computeBackingDiversityScore,
-  computePegStabilityScore,
   computeQualityScore,
   computeChainEnvironmentAssessment,
   computeHealthScore,
@@ -34,7 +34,13 @@ export interface ChainAggregatorAsset {
   circulatingPrevDay?: Record<string, number>;
   circulatingPrevWeek?: Record<string, number>;
   circulatingPrevMonth?: Record<string, number> | null;
-  chainCirculating?: Record<string, { chainId?: string; current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>;
+  chainCirculating?: Record<string, {
+    chainId?: string;
+    current?: number | null;
+    circulatingPrevDay?: number | null;
+    circulatingPrevWeek?: number | null;
+    circulatingPrevMonth?: number | null;
+  }>;
 }
 
 export interface ChainAggregatorInput {
@@ -97,35 +103,49 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   let hasAggregate7dHistory = false;
   let hasAggregate30dHistory = false;
   let hasAggregateSupply = false;
+  let aggregateUnavailableAssetCount = 0;
+  const unavailableObservationsByChain = new Map<string, number>();
 
   for (const asset of peggedAssets) {
-    if (asset.circulating) {
+    // Absent/empty/invalid aggregate buckets are unavailable, not a zero total (ADR-28); an explicit
+    // observed zero still counts and still pairs into deltas as a real redemption.
+    const aggregateCurrent = getCirculatingRawOrNull(asset);
+    if (aggregateCurrent != null) {
       hasAggregateSupply = true;
-      aggregateTotalUsd += getCirculatingRaw(asset);
+      aggregateTotalUsd += aggregateCurrent;
       const prevDay = getPrevDayRawOrNull(asset);
       if (prevDay != null) {
-        aggregatePairedCurrent24hUsd += getCirculatingRaw(asset);
+        aggregatePairedCurrent24hUsd += aggregateCurrent;
         aggregatePrevDayUsd += prevDay;
         hasAggregate24hHistory = true;
       }
       const prevWeek = getPrevWeekRawOrNull(asset);
       if (prevWeek != null) {
-        aggregatePairedCurrent7dUsd += getCirculatingRaw(asset);
+        aggregatePairedCurrent7dUsd += aggregateCurrent;
         aggregatePrevWeekUsd += prevWeek;
         hasAggregate7dHistory = true;
       }
       const prevMonth = getPrevMonthRawOrNull(asset);
       if (prevMonth != null) {
-        aggregatePairedCurrent30dUsd += getCirculatingRaw(asset);
+        aggregatePairedCurrent30dUsd += aggregateCurrent;
         aggregatePrevMonthUsd += prevMonth;
         hasAggregate30dHistory = true;
       }
+    } else {
+      aggregateUnavailableAssetCount += 1;
     }
 
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
 
     for (const [chainId, data] of canonicalChainCirculating) {
       const current = data.current;
+      // An unobserved chain current contributes neither supply nor a paired delta; a missing
+      // historical key only drops that window's pair. Neither is manufactured into a mint/redemption.
+      // The exclusion is counted so the response discloses partial chain coverage.
+      if (current == null) {
+        unavailableObservationsByChain.set(chainId, (unavailableObservationsByChain.get(chainId) ?? 0) + 1);
+        continue;
+      }
 
       let acc = accumulators.get(chainId);
       if (!acc) {
@@ -202,11 +222,6 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   const hasGlobal7dHistory = useAggregateSupply ? hasAggregate7dHistory : hasChain7dHistory;
   const hasGlobal30dHistory = useAggregateSupply ? hasAggregate30dHistory : hasChain30dHistory;
   const globalPairedCurrent30dUsd = useAggregateSupply ? aggregatePairedCurrent30dUsd : chainPairedCurrent30dUsd;
-  const chainAttributedTotalUsd = Math.min(rawChainAttributedTotalUsd, globalTotalUsd);
-  const chainAttributionScale = rawChainAttributedTotalUsd > globalTotalUsd
-    ? globalTotalUsd / rawChainAttributedTotalUsd
-    : 1;
-  const unattributedTotalUsd = globalTotalUsd - chainAttributedTotalUsd;
   const chains: ChainSummary[] = [];
 
   for (const [chainId, acc] of accumulators) {
@@ -243,12 +258,13 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       }
     }
 
-    // Peg stability
-    const pegCoins = acc.coins.flatMap((c) => {
-      const coinMeta = TRACKED_META_BY_ID.get(c.id);
-      const pegRef = getPegReference(c.pegType, pegRates, coinMeta?.commodityOunces);
-      return pegRef == null ? [] : [{ price: c.price, pegRef, supplyUsd: c.supplyUsd }];
-    });
+    // Peg stability: every positive-supply coin enters the coverage denominator; coins without a peg
+    // reference stay unobserved rather than disappearing from the factor's universe.
+    const pegAssessment = assessPegStability(acc.coins.map((c) => ({
+      price: c.price,
+      pegRef: getPegReference(c.pegType, pegRates, TRACKED_META_BY_ID.get(c.id)?.commodityOunces),
+      supplyUsd: c.supplyUsd,
+    })));
 
     // Quality
     const qualityCoins = acc.coins.map((c) => ({
@@ -263,7 +279,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     const healthFactors: ChainHealthFactors = {
       concentration: computeConcentrationScore(shares),
       quality: computeQualityScore(qualityCoins),
-      pegStability: computePegStabilityScore(pegCoins),
+      pegStability: pegAssessment.score,
       backingDiversity: computeBackingDiversityScore(backingTotals),
       chainEnvironment: chainEnvironmentEvidence.score,
     };
@@ -290,15 +306,26 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         share: dominant.supplyUsd / acc.totalUsd,
       },
       topStablecoins,
-      dominanceShare: globalTotalUsd > 0 ? (acc.totalUsd * chainAttributionScale) / globalTotalUsd : 0,
+      // Global-denominator share, never rescaled: over-attributed chain rows surface in
+      // `attributionDiscrepancyUsd` instead of silently shrinking every chain's share.
+      dominanceShare: globalTotalUsd > 0 ? acc.totalUsd / globalTotalUsd : 0,
       healthScore,
       healthBand,
       healthFactors,
+      pegStabilityCoverage: pegAssessment.coverage,
+      unavailableSupplyObservationCount: unavailableObservationsByChain.get(chainId) ?? 0,
       chainEnvironmentEvidence,
     });
   }
 
   chains.sort((a, b) => b.totalUsd - a.totalUsd);
+
+  // Raw attribution over exactly the published row universe; the canonical global total stays its own
+  // authority, and the signed discrepancy discloses over-attribution instead of capping it away.
+  const chainAttributedTotalUsd = chains.reduce((sum, chain) => sum + chain.totalUsd, 0);
+  const attributionDiscrepancyUsd = chainAttributedTotalUsd - globalTotalUsd;
+  let chainUnavailableObservationCount = 0;
+  for (const count of unavailableObservationsByChain.values()) chainUnavailableObservationCount += count;
 
   const detailAcc = input.detailChainId != null ? accumulators.get(input.detailChainId) : undefined;
   const chainDetail = detailAcc && detailAcc.totalUsd > 0 && CHAIN_META[input.detailChainId!]
@@ -331,7 +358,15 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     chains,
     globalTotalUsd,
     chainAttributedTotalUsd,
-    unattributedTotalUsd,
+    unattributedTotalUsd: Math.max(0, -attributionDiscrepancyUsd),
+    attributionDiscrepancyUsd,
+    // Bar geometry only: every segment (chains + positive residual) fits this denominator unclamped.
+    dominanceGeometryTotalUsd: Math.max(globalTotalUsd, chainAttributedTotalUsd),
+    supplyCoverage: {
+      aggregateUnavailableAssetCount,
+      chainUnavailableObservationCount,
+      chainIdsWithUnavailableObservations: [...unavailableObservationsByChain.keys()].sort(),
+    },
     globalChange24hPct: hasGlobal24hHistory
       ? (relativeChangeRatio(globalPairedCurrent24hUsd, globalPrevDayUsd) ?? ZERO_RATIO) : null,
     globalChange7dPct: hasGlobal7dHistory

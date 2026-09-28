@@ -117,7 +117,9 @@ export function ChainHealthMethodologySection() {
               <TableCell className="whitespace-normal px-4 py-2">20%</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">
                 Supply-weighted average of per-coin peg proximity: 100&nbsp;&minus;&nbsp;deviationBps/5. Coins without a
-                price get a neutral 50.
+                price get a neutral 50. Each chain also publishes its peg-observation coverage against its full supply
+                (including coins without a peg reference) and the supply scored at that neutral 50, and chain pages label
+                that placeholder rather than presenting it as a measurement.
               </TableCell>
             </TableRow>
             <TableRow className="align-top">

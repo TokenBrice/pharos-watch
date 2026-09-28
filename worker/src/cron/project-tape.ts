@@ -76,6 +76,7 @@ export async function projectTape(
   return createCronResult({
     status: hasFailure ? "degraded" : "ok",
     itemCount: total,
-    metadata: { perClass, watermarkAdvanced: advancedAny },
+    productivity: { productive: total > 0 },
+    metadata: { reason: hasFailure ? "tape-projector-failed" : "tape-projection-completed", perClass, watermarkAdvanced: advancedAny },
   });
 }

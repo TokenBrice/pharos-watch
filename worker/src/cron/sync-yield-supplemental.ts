@@ -328,7 +328,11 @@ export async function syncYieldSupplemental(
     },
   });
 
+  const familyPublished = Object.values(familyCacheResults).some(
+    (status) => status === "published" || status === "empty-published",
+  );
   const metadata = JSON.stringify({
+    ...(familyPublished ? { outputPublishedAt: startSec } : {}),
     rowsRead: rawCandidateCount,
     rowsWritten: supplementalCandidatesWritten,
     rowsDropped: droppedCount,
@@ -352,7 +356,10 @@ export async function syncYieldSupplemental(
     syncStartSec: startSec,
   });
 
-  return emptySnapshot || degradedFamilies.length > 0
-    ? { status: "degraded", itemCount: supplementalCandidatesWritten, metadata }
-    : { itemCount: supplementalCandidatesWritten, metadata };
+  return {
+    ...(emptySnapshot || degradedFamilies.length > 0 ? { status: "degraded" as const } : {}),
+    itemCount: supplementalCandidatesWritten,
+    productivity: { productive: familyPublished },
+    metadata,
+  };
 }

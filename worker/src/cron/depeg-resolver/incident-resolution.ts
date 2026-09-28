@@ -14,7 +14,13 @@ import {
   DAY,
   REDEMPTION_BACKSTOP_MAX_AGE_SEC,
 } from "./constants";
-import type { DdrLoadedContext } from "./context";
+import type { DdrLoadedContext, DdrMintBurnHourlyRow } from "./context";
+import {
+  addMintBurnValuationTally,
+  emptyMintBurnValuationTally,
+  mintBurnSignedNetRange,
+  summarizeMintBurnValuation,
+} from "@shared/lib/mint-burn-valuation";
 import { MINT_BURN_COVERED_COIN_IDS } from "./mint-burn-coverage";
 import { fallbackStructural, toStructural } from "./utils";
 
@@ -22,8 +28,6 @@ const DDR_BANK_RUN_SUPPLY_SIGNAL_THRESHOLD = 65;
 const DDR_BLACKLIST_SURGE_SIGNAL_THRESHOLD = 55;
 const MINT_SURGE_NET_INFLOW_PCT = 20;
 const MINT_SURGE_WINDOW_SEC = 7 * DAY;
-
-type MintBurnHourlyRow = { hourTs: number; netFlowUsd: number };
 
 function supplyAt(snapshots: { date: number; usd: number }[], ts: number): number | null {
   let val: number | null = null;
@@ -34,11 +38,18 @@ function supplyAt(snapshots: { date: number; usd: number }[], ts: number): numbe
   return val;
 }
 
+/**
+ * Mint surge from measured hourly net inflow. Missing USD valuation can move
+ * the true net only one way per side (unpriced mints raise it, unpriced burns
+ * lower it), so a surge is taken from mint/burn evidence only when the proven
+ * net range decides the threshold on both ends. Otherwise, as for uncovered
+ * coins, the supply-history proxy decides.
+ */
 export function deriveMintSurge(
   snapshots: { date: number; usd: number }[],
   startedAt: number,
   change7dPct: number | null,
-  hourlyRows: MintBurnHourlyRow[],
+  hourlyRows: DdrMintBurnHourlyRow[],
   hasMintBurnCoverage: boolean,
 ): Pick<DdrSupplyContext, "mintSurge" | "mintSurgeCoverage"> {
   if (hasMintBurnCoverage) {
@@ -52,11 +63,19 @@ export function deriveMintSurge(
     if (windowedRows.length === 0 || windowedRows.some((row) => !Number.isFinite(row.netFlowUsd))) {
       return { mintSurge: null, mintSurgeCoverage: "unavailable" };
     }
-    const netInflowUsd = windowedRows.reduce((sum, row) => sum + row.netFlowUsd, 0);
-    return {
-      mintSurge: (netInflowUsd / onset) * 100 > MINT_SURGE_NET_INFLOW_PCT,
-      mintSurgeCoverage: "mint-burn-hourly",
-    };
+    const valuation = emptyMintBurnValuationTally();
+    let knownNetInflowUsd = 0;
+    for (const row of windowedRows) {
+      knownNetInflowUsd += row.netFlowUsd;
+      addMintBurnValuationTally(valuation, row.valuation);
+    }
+    const { lowerUsd, upperUsd } = mintBurnSignedNetRange(knownNetInflowUsd, summarizeMintBurnValuation(valuation));
+    if ((lowerUsd / onset) * 100 > MINT_SURGE_NET_INFLOW_PCT) {
+      return { mintSurge: true, mintSurgeCoverage: "mint-burn-hourly" };
+    }
+    if ((upperUsd / onset) * 100 <= MINT_SURGE_NET_INFLOW_PCT) {
+      return { mintSurge: false, mintSurgeCoverage: "mint-burn-hourly" };
+    }
   }
 
   if (change7dPct == null || !Number.isFinite(change7dPct)) {
@@ -77,7 +96,7 @@ export function buildSupplyContext(
   snapshots: { date: number; usd: number }[],
   startedAt: number,
   evaluatedAt: number,
-  mintBurnHourly: MintBurnHourlyRow[],
+  mintBurnHourly: DdrMintBurnHourlyRow[],
   hasMintBurnCoverage: boolean,
 ) {
   if (snapshots.length < 2) {

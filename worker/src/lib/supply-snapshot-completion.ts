@@ -80,6 +80,8 @@ export interface CompletedSupplySnapshot {
   updatedAt: number;
   exactCoverageVerified: boolean;
   ownedRowIds: string[] | null;
+  chainObservationAdmissionVerified: boolean;
+  chainObservationProgressVerified: boolean;
 }
 
 export interface SupplySnapshotPreflightOptions<Context> {
@@ -186,7 +188,7 @@ export async function preflightSupplySnapshot<Context>(
   if (options.maxCacheAgeSec != null && cacheAgeSec > options.maxCacheAgeSec) {
     return { kind: "cache-stale", cache, cacheAgeSec, nowSec };
   }
-  const snapshotDate = startOfUtcDaySec(new Date());
+  const snapshotDate = startOfUtcDaySec(new Date(nowSec * 1000));
   const requiredActiveIds = [...new Set(options.requiredActiveIds)].sort();
   const { accountedIds, context } = options.deriveCoverage(cache.payload, requiredActiveIds, snapshotDate);
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
@@ -241,6 +243,8 @@ export async function getCompletedSupplySnapshot(
       coverageDigest?: unknown;
       ownedRowIds?: unknown;
       writtenRows?: unknown;
+      chainObservationAdmissionVersion?: unknown;
+      chainObservationProgressVersion?: unknown;
     };
     const ownedRowIds = parseCanonicalOwnedRowIds(parsed.ownedRowIds);
     const structurallyExact = parsed.coverageVersion === SUPPLY_SNAPSHOT_COVERAGE_VERSION
@@ -262,6 +266,8 @@ export async function getCompletedSupplySnapshot(
           updatedAt: cached.updatedAt,
           exactCoverageVerified: structurallyExact && matchesExpectedCoverage,
           ownedRowIds: structurallyExact ? ownedRowIds : null,
+          chainObservationAdmissionVerified: parsed.chainObservationAdmissionVersion === 1,
+          chainObservationProgressVerified: parsed.chainObservationProgressVersion === 1,
         }
       : null;
   } catch {

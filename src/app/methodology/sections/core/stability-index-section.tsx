@@ -216,9 +216,20 @@ export function StabilityIndexMethodologySection() {
               coin; each coin contributes once using the worst current deviation.
             </li>
             <li>
+              <span className="text-foreground font-medium">Native quote domains:</span> non-USD native events never
+              divide a USD price by a native reference. Live and historical inputs use timestamped native start or
+              recovery evidence retained in D1, strictly as-of and younger than six hours. Continuous native quotes
+              are not retained; other windows disclose unavailable price evidence rather than inventing a deviation.
+            </li>
+            <li>
+              <span className="text-foreground font-medium">Daily provenance:</span> daily scores average all samples,
+              including methodology transitions, with the version breakdown and component sample counts disclosed.
+              Missing component values display as unavailable chart gaps, not measured zero.
+            </li>
+            <li>
               <span className="text-foreground font-medium">Historical rebuild parity:</span> completed-day backfills
               score any depeg overlapping the UTC day, canonicalize legacy depeg IDs into the current PSI universe,
-              replay same-day deviation from `supply_history.price` when possible, never exceed the event&apos;s
+              replay USD-domain deviation from `supply_history.price` when possible, never exceed the event&apos;s
               recorded `peak_deviation_bps`, and keep `peak_deviation_bps` as a start-day floor only when the event
               remained active through the UTC close and a daily snapshot misses the move. Replay days whose restored
               daily price is back inside the configured threshold drop out entirely, and restore jobs also repair

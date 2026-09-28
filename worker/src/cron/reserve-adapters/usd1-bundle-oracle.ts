@@ -1,18 +1,17 @@
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { decodeAbiParameters, decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  aggregateMultichainErc20Supply,
+  aggregateScopedLiabilitySupply,
   decimalNumberFromBigInt,
-  fetchErc20TotalSupply,
+  evaluateLiabilityCoverage,
   makeOnchainCallers,
+  pinnedEvmTokenReader,
   requireOnchainInput,
-  reserveDegradedWarning,
-  reserveInfoWarning,
   verifiedFreshnessMetadata,
-  type MultichainSupplyAggregate,
+  type ScopedLiabilitySupply,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { pinnedBlockPlan } from "./evm-observation-plan";
@@ -39,13 +38,17 @@ const BUNDLE_DECIMALS_SELECTOR = encodeFunctionData({
   functionName: "bundleDecimals",
 });
 
-export type Usd1SupplyAggregate = MultichainSupplyAggregate;
+// The oracle's `description()` is "USD1 BitGo Reported Reserves": BitGo's
+// USD1 redemption assets, which equal KPMG's examined USD1 redemption assets
+// to the dollar (docs/live-reserves.md "Reviewed liability scopes").
+const USD1_RESERVE_SCOPE =
+  "BitGo-reported USD1 redemption assets (oracle description 'USD1 BitGo Reported Reserves'), measured against USD1 supply on the reviewed issuer-native chains";
 
 export function adaptUsd1BundleOracle(input: {
   bundle: `0x${string}`;
   latestBundleTimestamp: bigint;
   bundleDecimals: readonly number[];
-  supply: Usd1SupplyAggregate;
+  supply: ScopedLiabilitySupply;
 }): AdapterResult {
   const [bundleTimestampRaw, totalReserveRaw] = decodeAbiParameters(
     [{ type: "uint256" }, { type: "uint256" }],
@@ -79,32 +82,9 @@ export function adaptUsd1BundleOracle(input: {
     throw new Error("usd1-bundle-oracle observed zero USD1 supply");
   }
 
-  const warnings: LiveReserveWarning[] = [];
-  if (input.supply.omittedNonEvmChains.length > 0) {
-    warnings.push(
-      reserveInfoWarning(
-        "por-supply-chain-omitted",
-        `Supply aggregation omits non-EVM chains: ${input.supply.omittedNonEvmChains.join(", ")}`,
-      ),
-    );
-  }
-  if (input.supply.omittedNoRpcChains.length > 0) {
-    warnings.push(
-      reserveInfoWarning(
-        "por-supply-chain-omitted",
-        `Supply aggregation omits chains with no RPC configured: ${input.supply.omittedNoRpcChains.join(", ")}`,
-      ),
-    );
-  }
-  if (input.supply.omittedReadFailureChains.length > 0) {
-    warnings.push(
-      reserveDegradedWarning(
-        "partial-supply-read-failure",
-        `Supply aggregation omits chains whose totalSupply() read failed: ${input.supply.omittedReadFailureChains.join(", ")}`,
-      ),
-    );
-  }
-
+  // Reserves and supply stay published as independent facts; only the ratio
+  // needs the reviewed perimeter, complete included reads and time identity.
+  const coverage = evaluateLiabilityCoverage({ supply: input.supply, reserveObservedAt: bundleTimestamp });
   const primaryContribution = input.supply.contributions[0];
 
   return {
@@ -122,11 +102,11 @@ export function adaptUsd1BundleOracle(input: {
         proofKind: "usd1-chainlink-bundle-oracle",
         reserveSourceLabel: USD1_RESERVE_LABEL,
         oracleAddress: USD1_BUNDLE_ORACLE,
-        fundScope: "WLFI aggregate fund reserves; denominator is USD1 supply only",
+        reserveScope: USD1_RESERVE_SCOPE,
       },
       totalReserveUsd,
       supplyUsd,
-      fundBackingTotalRatio: totalReserveUsd / supplyUsd,
+      ...(coverage.ratioUnavailableReason == null ? { collateralizationRatio: totalReserveUsd / supplyUsd } : {}),
       totalReservesRaw: totalReserveRaw.toString(),
       reserveDecimals,
       supplyContributions: input.supply.contributions.map((contribution) => ({
@@ -134,8 +114,9 @@ export function adaptUsd1BundleOracle(input: {
         tokenAddress: contribution.tokenAddress,
         supplyRaw: contribution.raw.toString(),
         decimals: contribution.decimals,
+        ...(contribution.observedAt != null ? { observedAt: contribution.observedAt } : {}),
       })),
-      supplyReadComplete: input.supply.omittedReadFailureChains.length === 0,
+      ...coverage.metadata,
       ...(primaryContribution
         ? {
             supplyRaw: primaryContribution.raw.toString(),
@@ -145,7 +126,7 @@ export function adaptUsd1BundleOracle(input: {
         : {}),
       redemption: buildDocumentedRedemptionTelemetry(bundleTimestamp, { holderEligibility: "verified-customer" }),
     },
-    ...(warnings.length > 0 ? { warnings } : {}),
+    ...(coverage.warnings.length > 0 ? { warnings: coverage.warnings } : {}),
   };
 }
 
@@ -191,31 +172,26 @@ export async function fetchUsd1BundleOracleReserves(
     data: rawBundleDecimals as `0x${string}`,
   });
 
-  // Aggregate totalSupply across every registry-typed EVM + Tron chain in
-  // coin.contracts, mirroring chainlink-por's multichain liability scope.
-  // Non-EVM chains (Solana, Aptos, …) are omitted from the gross-supply
-  // denominator and surfaced as an info warning.
-  const chainPlans = new Map([[input.chain, Promise.resolve(plan)]]);
-  const supply = await aggregateMultichainErc20Supply({
+  // Liabilities are USD1 supply over the reviewed issuer-native perimeter
+  // (params.liabilityScope): each included chain is read with its declared
+  // reader and on-chain decimals; CCIP lock-mint representations are excluded
+  // because their supply is already locked inside Ethereum totalSupply.
+  const supply = await aggregateScopedLiabilitySupply({
     coin,
+    scope: params.liabilityScope,
     adapterKey: "usd1-bundle-oracle",
     signal,
+    nowSec: ctx.nowSec ?? Math.floor(Date.now() / 1000),
     ctx,
     tronCtx: baseCtx,
-    readEvmSupply: async (contract) => {
-      let chainPlan = chainPlans.get(contract.chain);
-      if (!chainPlan) {
-        // Primary RPC overrides and any inherited pin belong to Ethereum.
-        chainPlan = pinnedBlockPlan({ chain: contract.chain, signal, ctx: { ...baseCtx, observedBlock: undefined } });
-        chainPlans.set(contract.chain, chainPlan);
-      }
-      const pinned = await chainPlan;
-      return fetchErc20TotalSupply(
-        { ...input, chain: contract.chain }, contract.address, signal, pinned.ctx,
-        contract.chain === input.chain ? params.rpcUrl : undefined,
-        contract.chain === input.chain ? params.fallbackRpcUrl : undefined,
-      );
-    },
+    readEvmToken: pinnedEvmTokenReader({
+      input,
+      signal,
+      ctx: baseCtx,
+      primaryPlan: Promise.resolve(plan),
+      rpcUrl: params.rpcUrl,
+      fallbackRpcUrl: params.fallbackRpcUrl,
+    }),
   });
 
   const result = adaptUsd1BundleOracle({

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fetchMovementFungibleAssetSupply } from "../token-supply";
+import { fetchMoveFungibleAssetSupply } from "../token-supply";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
 const MOVEMENT_BASE = "https://mainnet.movementnetwork.xyz/v1";
@@ -9,7 +9,7 @@ const LEDGER_VERSION = "199722477";
 const SUPPLY_URL = `${MOVEMENT_BASE}/accounts/${METADATA_ADDRESS}/resource/0x1::fungible_asset::ConcurrentSupply?ledger_version=${LEDGER_VERSION}`;
 const METADATA_URL = `${MOVEMENT_BASE}/accounts/${METADATA_ADDRESS}/resource/0x1::fungible_asset::Metadata?ledger_version=${LEDGER_VERSION}`;
 
-describe("fetchMovementFungibleAssetSupply", () => {
+describe("fetchMoveFungibleAssetSupply", () => {
   it("pins supply and coin-resource decimals to the same ledger", async () => {
     const network = installAdapterNetwork({
       json: {
@@ -25,9 +25,10 @@ describe("fetchMovementFungibleAssetSupply", () => {
       },
     });
 
-    await expect(fetchMovementFungibleAssetSupply(
+    await expect(fetchMoveFungibleAssetSupply(
       METADATA_ADDRESS,
       new AbortController().signal,
+      MOVEMENT_BASE,
     )).resolves.toEqual({
       rawSupply: 1_739_632_096_715n,
       decimals: 6,
@@ -42,9 +43,10 @@ describe("fetchMovementFungibleAssetSupply", () => {
   it("returns unresolved when the provider omits its ledger", async () => {
     installAdapterNetwork({ json: { [MOVEMENT_BASE]: {} } });
 
-    await expect(fetchMovementFungibleAssetSupply(
+    await expect(fetchMoveFungibleAssetSupply(
       METADATA_ADDRESS,
       new AbortController().signal,
+      MOVEMENT_BASE,
     )).resolves.toBeNull();
   });
 
@@ -63,9 +65,10 @@ describe("fetchMovementFungibleAssetSupply", () => {
       },
     });
 
-    await expect(fetchMovementFungibleAssetSupply(
+    await expect(fetchMoveFungibleAssetSupply(
       METADATA_ADDRESS,
       new AbortController().signal,
+      MOVEMENT_BASE,
     )).resolves.toBeNull();
   });
 });

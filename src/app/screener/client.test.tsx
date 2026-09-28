@@ -240,29 +240,61 @@ describe("ScreenerClient freshness notices", () => {
     }));
   });
 
-  it("keeps unavailable supply empty in exports and stamps the source update time", () => {
+  it("keeps missing, empty and invalid supply unavailable through rows, filters and exports while keeping explicit zero", () => {
     const sourceUpdatedAt = Date.parse("2026-05-16T06:00:00.000Z");
     mocks.useStablecoins.mockReturnValue({
-      data: { peggedAssets: [makeStablecoin()] },
+      data: {
+        peggedAssets: [
+          makeStablecoin({ id: "usdc-circle", circulating: { peggedUSD: 0 } }),
+          makeStablecoin({ id: "usdt-tether", circulating: {} }),
+          makeStablecoin({ id: "dai-makerdao", circulating: { peggedUSD: Number.NaN } }),
+          makeStablecoin({ id: "usds-sky", circulating: { peggedUSD: 500 } }),
+        ],
+      },
       isLoading: false,
       error: null,
       dataUpdatedAt: sourceUpdatedAt,
       meta: null,
       refetch,
     });
+    mocks.useUrlFilters.mockReturnValue({
+      searchParams: new URLSearchParams("supplyMax=1000"),
+      replaceParams: vi.fn(),
+    });
 
     render(<ScreenerClient />);
 
-    const props = mocks.TableExportMenu.mock.calls[0]?.[0] as {
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as {
       data: ScreenerRow[];
       columns: CsvColumn<ScreenerRow>[];
       asOfISO: string;
     };
-    const unavailableRow = props.data.find((row) => row.supplyUsd === 0);
+    const supplyColumn = props.columns.find((column) => column.header === "supply_usd");
+    const exported = Object.fromEntries(props.data.map((row) => [row.id, supplyColumn?.accessor(row, 0)]));
+
+    // Max-only supply filter: explicit zero and in-range supply pass; unknown supply (empty,
+    // invalid-only, or an asset absent from the list such as a pre-launch row) never matches.
+    expect(exported).toEqual({ "usdc-circle": 0, "usds-sky": 500 });
+    expect(props.asOfISO).toBe("2026-05-16T06:00:00.000Z");
+  });
+
+  it("exports unknown supply as an empty cell when no supply filter is active", () => {
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin({ id: "usdt-tether", circulating: {} })] },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+
+    render(<ScreenerClient />);
+
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as { data: ScreenerRow[]; columns: CsvColumn<ScreenerRow>[] };
+    const row = props.data.find((candidate) => candidate.id === "usdt-tether");
     const supplyColumn = props.columns.find((column) => column.header === "supply_usd");
 
-    expect(unavailableRow).toBeDefined();
-    expect(supplyColumn?.accessor(unavailableRow!, 0)).toBe("");
-    expect(props.asOfISO).toBe("2026-05-16T06:00:00.000Z");
+    expect(row?.supplyUsd).toBeNull();
+    expect(supplyColumn?.accessor(row!, 0)).toBe("");
   });
 });

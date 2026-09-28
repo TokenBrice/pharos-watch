@@ -247,8 +247,12 @@ export interface ScreenerRow {
   type: GovernanceType;
   /** Peg currency from `StablecoinClientMeta.flags`. */
   peg: PegCurrency;
-  /** USD circulating supply summed from peg buckets (0 if unavailable). */
-  supplyUsd: number;
+  /**
+   * USD circulating supply summed from peg buckets. `null` when the asset is absent from the
+   * stablecoin list or its buckets are absent/empty/wholly invalid (e.g. pre-launch rows); `0` only
+   * for an explicit observed zero. An active supply range never matches `null`.
+   */
+  supplyUsd: number | null;
   /** PegScore from peg-summary (0–100). null = unrated. */
   pegScore: number | null;
   /** DEWS stress score (0–100). null = unrated. */

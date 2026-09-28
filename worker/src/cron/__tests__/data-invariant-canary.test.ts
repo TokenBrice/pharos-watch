@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { runDataInvariantCanary } from "../data-invariant-canary";
+import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
 
 const runAndPersistCanaryChecks = vi.hoisted(() => vi.fn());
 
@@ -93,11 +94,46 @@ describe("runDataInvariantCanary", () => {
     });
   });
 
+  it("does not accept same-count duplicate IDs as a complete canary cohort", async () => {
+    for (const [mode, status] of [["status", "degraded"], ["alert", "error"]] as const) {
+      runAndPersistCanaryChecks.mockResolvedValueOnce({
+        observedAt: 1_775_900_000, totalChecks: ACTIVE_CANARY_CHECK_IDS.length,
+        okCount: ACTIVE_CANARY_CHECK_IDS.length, degradedCount: 0, errorCount: 0,
+        skippedCount: 0, worstStatus: "ok", worstSeverity: "info",
+        results: ACTIVE_CANARY_CHECK_IDS.map(() => ({
+          checkId: ACTIVE_CANARY_CHECK_IDS[0], status: "ok", severity: "info", durationMs: 1,
+        })),
+      });
+      const result = await runDataInvariantCanary(mockD1(), { mode });
+      expect(result.status).toBe(status);
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        reason: "canary-cohort-incomplete", missingCheckIds: ACTIVE_CANARY_CHECK_IDS.slice(1),
+      });
+    }
+  });
+
+  it("accepts a complete clean cohort", async () => {
+    runAndPersistCanaryChecks.mockResolvedValueOnce({
+      observedAt: 1_775_900_000, totalChecks: ACTIVE_CANARY_CHECK_IDS.length,
+      okCount: ACTIVE_CANARY_CHECK_IDS.length, degradedCount: 0, errorCount: 0,
+      skippedCount: 0, worstStatus: "ok", worstSeverity: "info",
+      results: ACTIVE_CANARY_CHECK_IDS.map((checkId) => ({
+        checkId, status: "ok", severity: "info", durationMs: 1,
+      })),
+    });
+    const result = await runDataInvariantCanary(mockD1(), { mode: "status" });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ observedStatus: "ok", missingCheckIds: [] });
+  });
   it("applies mode precedence to the same error summary", async () => {
     for (const [mode, status] of [["shadow", "ok"], ["status", "degraded"], ["alert", "error"]] as const) {
       runAndPersistCanaryChecks.mockResolvedValueOnce({
-        observedAt: 1_775_900_000, totalChecks: 1, okCount: 0, degradedCount: 0,
-        errorCount: 1, skippedCount: 0, worstStatus: "error", worstSeverity: "warning", results: [],
+        observedAt: 1_775_900_000, totalChecks: ACTIVE_CANARY_CHECK_IDS.length,
+        okCount: ACTIVE_CANARY_CHECK_IDS.length - 1, degradedCount: 0,
+        errorCount: 1, skippedCount: 0, worstStatus: "error", worstSeverity: "warning",
+        results: ACTIVE_CANARY_CHECK_IDS.map((checkId, index) => ({
+          checkId, status: index === 0 ? "error" : "ok", severity: "warning", durationMs: 1,
+        })),
       });
       expect((await runDataInvariantCanary(mockD1(), { mode })).status).toBe(status);
     }
@@ -105,8 +141,12 @@ describe("runDataInvariantCanary", () => {
 
   it("escalates critical severity even without an error count", async () => {
     runAndPersistCanaryChecks.mockResolvedValueOnce({
-      observedAt: 1_775_900_000, totalChecks: 1, okCount: 0, degradedCount: 1,
-      errorCount: 0, skippedCount: 0, worstStatus: "degraded", worstSeverity: "critical", results: [],
+      observedAt: 1_775_900_000, totalChecks: ACTIVE_CANARY_CHECK_IDS.length,
+      okCount: ACTIVE_CANARY_CHECK_IDS.length - 1, degradedCount: 1,
+      errorCount: 0, skippedCount: 0, worstStatus: "degraded", worstSeverity: "critical",
+      results: ACTIVE_CANARY_CHECK_IDS.map((checkId, index) => ({
+        checkId, status: index === 0 ? "degraded" : "ok", severity: index === 0 ? "critical" : "info", durationMs: 1,
+      })),
     });
     expect((await runDataInvariantCanary(mockD1(), { mode: "alert" })).status).toBe("error");
   });

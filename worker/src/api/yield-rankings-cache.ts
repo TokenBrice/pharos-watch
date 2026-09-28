@@ -33,11 +33,11 @@ import {
 } from "../lib/yield-rank-attribution";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
-import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
+import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 
@@ -318,7 +318,7 @@ function hydrateYieldRankingsWithLiveSafety(
   preservePublishedSafety = false,
 ): { payload: YieldRankingsResponse; degradationReasons: string[] } {
   // Reference (USD) risk-free rate the re-based effective yield anchors on (yield v8.43).
-  const { freshness: referenceBenchmarkFreshness, usdBenchmarkRate } = resolvePublishedReferenceBenchmark(payload);
+  const { usdBenchmarkRate } = resolvePublishedReferenceBenchmark(payload);
   const hydratedRows = payload.rankings
     .map((row) => {
       const safety = preservePublishedSafety
@@ -337,9 +337,6 @@ function hydrateYieldRankingsWithLiveSafety(
         usedDefaultSafety: row.provenance?.usedDefaultSafety ?? true,
       } : resolvedSafety;
       const safetyInputScore = hydratedSafety.score;
-      const productBenchmarkStale = row.dataSource === "rate-derived" &&
-        (referenceBenchmarkFreshness === "stale" || payload.benchmarks?.USD?.source === "hardcoded-fallback");
-      const sourceFreshness = productBenchmarkStale ? "stale" : resolveHydratedSourceFreshness(row);
       const benchmarkFreshness = resolveHydratedBenchmarkFreshness(row, payload);
       const evidenceClass = resolveHydratedEvidenceClass(row);
       const opportunityEvidenceComplete = hydratedSafety.opportunityEvidenceComplete;
@@ -349,10 +346,15 @@ function hydrateYieldRankingsWithLiveSafety(
         row.provenance?.benchmarkCurrency ??
         (row.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[row.benchmarkKey] : null) ??
         null;
-      // Rate-derived rows also consume USD as their product input even when
-      // the comparison hurdle is USD EFFR.
-      const rowReferenceBenchmarkFreshness =
-        benchmarkCurrency === "USD" && row.dataSource !== "rate-derived" ? "healthy" : referenceBenchmarkFreshness;
+      const benchmarkDependencies = resolveYieldBenchmarkDependencies({
+        stablecoinId: row.id,
+        dataSource: row.dataSource,
+        benchmarks: payload.benchmarks ?? {},
+        benchmarkCurrency,
+      });
+      const sourceFreshness = benchmarkDependencies.productFreshness === "stale"
+        ? "stale" : resolveHydratedSourceFreshness(row);
+      const rowReferenceBenchmarkFreshness = benchmarkDependencies.referenceFreshness;
       const referenceBenchmarkDegraded = rowReferenceBenchmarkFreshness !== "healthy";
       const evidenceAssessment = assessYieldEvidence({
         evidenceClass,
@@ -719,9 +721,6 @@ function buildYieldRankingsResponse(
   warningReasons: string[],
 ): Response {
   const freshness = buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC, "yield-data");
-  const bands = getCacheRatioThresholds("yield-data");
-  const freshBudgetSec = YIELD_RANKINGS_MAX_AGE_SEC * bands.degraded;
-  const degradedBudgetSec = YIELD_RANKINGS_MAX_AGE_SEC * bands.stale;
   const warning =
     warningReasons.length > 0 ? `199 - "Yield safety hydration degraded: ${warningReasons.join(",")}"` : null;
   const headers = addFreshnessHeaders(
@@ -732,9 +731,10 @@ function buildYieldRankingsResponse(
     },
     cached.updatedAt,
     YIELD_RANKINGS_MAX_AGE_SEC,
+    freshness,
   );
   if (freshness.status !== "fresh") {
-    headers.Warning = `110 - "Yield publication ${freshness.status} (${freshness.ageSeconds}s old, fresh budget ${freshBudgetSec}s)"`;
+    headers.Warning = `110 - "Yield publication ${freshness.status} (${freshness.ageSeconds}s old, fresh budget ${freshness.freshBudgetSec}s)"`;
     headers["Cache-Control"] = "no-store";
   }
   if (warning && headers.Warning && !headers.Warning.includes(warning)) {
@@ -745,9 +745,6 @@ function buildYieldRankingsResponse(
       ...payload,
       _meta: {
         ...freshness,
-        assessedAt: Math.floor(Date.now() / 1000),
-        freshBudgetSec,
-        degradedBudgetSec,
         reason: freshness.status !== "fresh" ? "yield-publication-age"
           : warningReasons.length > 0 ? warningReasons.join(",") : null,
       },

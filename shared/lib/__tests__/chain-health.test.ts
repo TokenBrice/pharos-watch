@@ -249,6 +249,16 @@ describe("computeHealthScore", () => {
     })).toBeNull();
   });
 
+  it("returns null when the peg factor is not rated rather than imputing it", () => {
+    expect(computeHealthScore({
+      quality: 80,
+      chainEnvironment: 60,
+      concentration: 60,
+      pegStability: null,
+      backingDiversity: 40,
+    })).toBeNull();
+  });
+
   it("tier 1 chains score higher than tier 3", () => {
     const base = { quality: 70, concentration: 50, pegStability: 90, backingDiversity: 30 };
     const tier1Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[1] })!;

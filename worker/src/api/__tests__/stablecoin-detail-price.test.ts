@@ -54,6 +54,15 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("missing detail price enrichment", () => {
+  it("forwards a nominal reference without inventing an observed price", async () => {
+    const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" };
+    const result = await enrichMissingDetailPrice(makeDb({
+      price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+      nominalPriceReference,
+    }), "usdt-tether", makeResponse());
+    expect(await result.json()).toEqual({ tokens, providerField: "preserved", nominalPriceReference });
+  });
+
   it.each([undefined, null, 0, -1, "1"])("fills absent/invalid price %s without changing history or supply", async (price) => {
     const response = makeResponse(JSON.stringify({ tokens, price }));
     const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", response);
@@ -68,12 +77,11 @@ describe("missing detail price enrichment", () => {
     });
   });
 
-  it("preserves a valid provider price and skips the canonical read", async () => {
-    const db = mockD1([]);
+  it("preserves a valid provider discount while forwarding the separate nominal reference", async () => {
+    const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" };
     const response = makeResponse(JSON.stringify({ tokens, price: 0.98 }));
-    expect(await enrichMissingDetailPrice(db, "usdt-tether", response)).toBe(response);
-    expect(db.getHistory()).toEqual([]);
-    expect(response.bodyUsed).toBe(false);
+    const result = await enrichMissingDetailPrice(makeDb({ nominalPriceReference }), "usdt-tether", response);
+    expect(await result.json()).toEqual({ tokens, price: 0.98, nominalPriceReference });
   });
 
   it.each([

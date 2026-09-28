@@ -18,7 +18,7 @@ function formatLastSuccess(lastSuccessAt: number | null, nowSeconds: number): st
 }
 
 function formatPersistentStaleIndependentFeeds(
-  coins: StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"],
+  coins: NonNullable<StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"]>,
 ): string {
   const examples = coins
     .slice(0, 3)
@@ -33,6 +33,20 @@ function formatRatioPct(value: number): string {
 }
 
 export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthCardProps) {
+  if (health.status === "unavailable") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle as="h3" className="text-base">Live Reserve Sync</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="font-medium text-muted-foreground">Unavailable</div>
+          <p>Reserve composition could not be read. Cohort size, coverage, and sync health are unknown.</p>
+          <div className="font-mono text-xs text-muted-foreground">{health.reason}</div>
+        </CardContent>
+      </Card>
+    );
+  }
   // One definition of the healthy/degraded/stale badge palette: this used to be
   // a byte-identical re-implementation of `STATUS_TONE[...].badgeClassName`.
   const statusTone = getStatusTone(health.status).badgeClassName;

@@ -73,7 +73,8 @@ interface ForecastItem {
 function rowSeverity(row: DdrV2ResponseRow): number {
   const now = getLiveCurrentDeviationBps(row);
   if (now != null) return Math.abs(now);
-  return Math.abs(getPeakDeviationBps(row));
+  const peak = getPeakDeviationBps(row);
+  return peak == null ? -1 : Math.abs(peak);
 }
 
 function toForecastItem(row: DdrV2ResponseRow): ForecastItem {

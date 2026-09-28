@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { NonUsdShareResponseSchema } from "@shared/types/market";
 import { buildAltPegLinkHubGroups, buildAltPegSnapshot, buildAltPegTrendStats } from "@/lib/alt-peg-market";
 
 function makeCoin(id: string, marketCap: number) {
@@ -91,13 +92,13 @@ describe("alt-peg-market", () => {
     ])).toMatchObject({ yearlyShareDeltaPctPoints: null, yearlyMarketCapChangePct: null });
   });
 
-  it("treats null components as zero without dividing by zero reference capital", () => {
+  it("preserves measured zero without dividing by zero reference capital", () => {
     expect(buildAltPegTrendStats([
-      { date: 1, commodityShare: null, fiatNonUsdShare: 1, commodity: 0, fiatNonUsd: null, total: 100 },
-      { date: 1 + 365 * 86400, commodityShare: 2, fiatNonUsdShare: null, commodity: null, fiatNonUsd: 20, total: 100 },
+      { date: 1, commodityShare: 0, fiatNonUsdShare: 0, commodity: 0, fiatNonUsd: 0, total: 100 },
+      { date: 1 + 365 * 86400, commodityShare: 2, fiatNonUsdShare: 0, commodity: 0, fiatNonUsd: 20, total: 100 },
     ])).toEqual({
       latestSharePct: 2, latestAltMarketCap: 20,
-      yearlyShareDeltaPctPoints: 1, yearlyMarketCapChangePct: null,
+      yearlyShareDeltaPctPoints: 2, yearlyMarketCapChangePct: null,
     });
   });
 
@@ -105,6 +106,17 @@ describe("alt-peg-market", () => {
     expect(buildAltPegTrendStats()).toBeNull();
     expect(buildAltPegTrendStats([])).toBeNull();
   });
+
+  it.each(["commodityShare", "fiatNonUsdShare", "commodity", "fiatNonUsd"])(
+    "rejects unavailable %s rather than accepting it as a zero cohort",
+    (field) => {
+      const point = { date: 1, commodityShare: 0, fiatNonUsdShare: 0, commodity: 0, fiatNonUsd: 0, total: 100 };
+      expect(NonUsdShareResponseSchema.parse([point])).toEqual([point]);
+      for (const missing of [null, undefined, Number.NaN, Infinity]) {
+        expect(NonUsdShareResponseSchema.safeParse([{ ...point, [field]: missing }]).success).toBe(false);
+      }
+    },
+  );
 
   it("builds taxonomy-backed non-USD link hub groups", () => {
     const groups = buildAltPegLinkHubGroups();

@@ -80,6 +80,84 @@ function runCheckerCli(
 }
 
 
+describe("check-unused-code precise import consumption", () => {
+  const scaffold = { "vitest.config.ts": SCAFFOLD["vitest.config.ts"] };
+  const scan = (consumer: string, test = "") => runChecker({
+    "shared/value.ts": "export const live = 1; export const retired = 2; export default 3;",
+    "src/app/page.tsx": consumer,
+    "src/lib/__tests__/value.test.ts": test,
+  }, ["--skip-allowlist-audit"], scaffold);
+
+  it.each(["ns.live", 'ns["live"]', "ns[`live`]", 'vi.spyOn(ns, "live")', 'jest.spyOn(ns, "live")'])(
+    "credits only the static namespace member in %s",
+    (use) => {
+      const { output } = scan('import "../../shared/value";',
+        `import * as ns from "../../../shared/value"; ${use};`);
+      expect(output).toContain("shared/value.ts :: retired");
+      expect(output).not.toContain("shared/value.ts :: live");
+      expect(output).not.toContain("Conservative namespace audit:");
+    },
+  );
+
+  it.each(["ns[key]", "consume(ns)", 'vi.spyOn(ns, key)'])(
+    "audits conservative namespace consumption in %s",
+    (use) => {
+      const { status, output } = scan(`import * as ns from "../../shared/value"; ${use};`);
+      expect(status).toBe(0);
+      expect(output).toContain("Conservative namespace audit:");
+      expect(output).toContain("computed or escaping namespace");
+      expect(output).not.toContain("shared/value.ts :: retired");
+    },
+  );
+
+  it("does not credit a shadowed namespace binding", () => {
+    const { output } = scan('import * as ns from "../../shared/value"; ns.live; function f(ns) { return ns.retired; }');
+    expect(output).toContain("shared/value.ts :: retired");
+    expect(output).not.toContain("shared/value.ts :: live");
+  });
+
+  it("a default import does not consume named siblings", () => {
+    const { output } = scan('import value from "../../shared/value"; console.log(value);');
+    expect(output).toContain("shared/value.ts :: retired");
+    expect(output).toContain("shared/value.ts :: live");
+  });
+
+  it.each(["function Component() {}", "class Component {}"])(
+    "does not mistake a named default declaration for a named export: %s",
+    (declaration) => {
+      const { output } = runChecker({
+        "shared/default.ts": `export default ${declaration}; export const retired = 1;`,
+        "src/app/page.tsx": 'import Component from "../../shared/default"; console.log(Component);',
+      }, ["--skip-allowlist-audit"], scaffold);
+      expect(output).toContain("shared/default.ts :: retired");
+      expect(output).not.toContain("shared/default.ts :: Component");
+    },
+  );
+
+  it("propagates default consumption through a named re-export", () => {
+    const { output } = runChecker({
+      "shared/value.ts": "export const live = 1; export const retired = 2;",
+      "shared/default.ts": 'export { live as default } from "./value";',
+      "src/app/page.tsx": 'import value from "../../shared/default"; console.log(value);',
+    }, ["--skip-allowlist-audit"], scaffold);
+    expect(output).toContain("shared/value.ts :: retired");
+    expect(output).not.toContain("shared/value.ts :: live");
+  });
+
+  it("a side-effect import preserves reachability without consuming exports", () => {
+    const { output } = scan('import "../../shared/value";');
+    expect(output).not.toContain("Dead internal modules:");
+    expect(output).toContain("shared/value.ts :: retired");
+    expect(output).toContain("shared/value.ts :: live");
+  });
+
+  it("keeps dynamic import results conservative rather than treating them as side effects", () => {
+    const { status, output } = scan('import("../../shared/value").then(ns => consume(ns));');
+    expect(status).toBe(0);
+    expect(output).toContain("dynamic import result");
+  });
+});
+
 describe("check-unused-code export resolution", () => {
   it("credits a named use that reaches the declaring module through a wildcard re-export", () => {
     // `used` is imported from the barrel, never from its declaring module. The

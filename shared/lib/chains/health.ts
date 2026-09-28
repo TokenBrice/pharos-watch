@@ -1,5 +1,11 @@
 import type { ChainResilienceTier } from "./index";
-import type { ChainEnvironmentEvidence, ChainHealthFactors, HealthBand } from "../../types/chains";
+import type {
+  ChainEnvironmentEvidence,
+  ChainHealthFactors,
+  ChainPegStabilityCoverage,
+  HealthBand,
+} from "../../types/chains";
+import type { Ratio } from "../../types/ratio";
 import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
 import { bandFromThresholds, hhiToDiversityScore } from "../math";
 import { deriveDepegSignal } from "../depeg-signals";
@@ -61,25 +67,95 @@ interface PegStabilityCoin {
   supplyUsd: number;
 }
 
-/** Peg stability: supply-weighted average of per-coin peg proximity. */
+const NEUTRAL_PEG_STABILITY_SCORE = 50;
+
+function pegProximityScore(price: number | null, pegRef: number): number | null {
+  const signal = price == null ? null : deriveDepegSignal(price, pegRef);
+  // `absRawBps` is the unrounded deviation, matching the previous inline formula.
+  return signal == null ? null : Math.max(0, 100 - (signal.absRawBps ?? signal.absBps) / PEG_DEVIATION_SCORE_DIVISOR_BPS);
+}
+
+/**
+ * Peg stability as currently published: supply-weighted average of per-coin peg proximity, with a neutral
+ * 50 for no-price / unusable-reference coins and for an empty weighted set. DEC-04 retires this imputation
+ * at the Release B activation; `assessPegStability` already reports the observed evidence beside it.
+ */
 export function computePegStabilityScore(coins: PegStabilityCoin[]): number {
   let totalWeight = 0;
   let weightedSum = 0;
   for (const coin of coins) {
     if (coin.supplyUsd <= 0) continue;
-    let coinScore: number;
-    const signal = coin.price == null ? null : deriveDepegSignal(coin.price, coin.pegRef);
-    if (signal == null) {
-      coinScore = 50; // neutral for no-price / unusable peg reference
-    } else {
-      // `absRawBps` is the unrounded deviation, matching the previous inline formula.
-      coinScore = Math.max(0, 100 - (signal.absRawBps ?? signal.absBps) / PEG_DEVIATION_SCORE_DIVISOR_BPS);
-    }
+    const coinScore = pegProximityScore(coin.price, coin.pegRef) ?? NEUTRAL_PEG_STABILITY_SCORE;
     weightedSum += coinScore * coin.supplyUsd;
     totalWeight += coin.supplyUsd;
   }
-  if (totalWeight === 0) return 50;
+  if (totalWeight === 0) return NEUTRAL_PEG_STABILITY_SCORE;
   return Math.round(weightedSum / totalWeight);
+}
+
+export interface PegStabilityCandidate {
+  price: number | null;
+  /** `null` when the coin's peg has no reference rate; the coin still counts in the coverage denominator. */
+  pegRef: number | null;
+  supplyUsd: number;
+}
+
+export interface PegStabilityAssessment {
+  /** The published `healthFactors.pegStability` (legacy neutral-50 imputation, unchanged until Release B). */
+  score: number;
+  coverage: ChainPegStabilityCoverage;
+}
+
+/**
+ * Peg stability plus its observation coverage against the chain's full positive supply. A coin is observed
+ * only when it has a usable price and a usable (finite, positive) peg reference; coins lacking a reference
+ * stay in the denominator so missing-reference supply cannot inflate coverage.
+ */
+export function assessPegStability(coins: readonly PegStabilityCandidate[]): PegStabilityAssessment {
+  const referenced: PegStabilityCoin[] = [];
+  let eligibleSupplyUsd = 0;
+  let observedSupplyUsd = 0;
+  let noUsablePriceSupplyUsd = 0;
+  let noPegReferenceSupplyUsd = 0;
+  // Supply the published factor scores as neutral 50: listed with a reference that yields no observation.
+  let referencedUnobservedSupplyUsd = 0;
+  let observedWeightedSum = 0;
+  let observedCount = 0;
+  let unobservedCount = 0;
+  for (const coin of coins) {
+    if (!(coin.supplyUsd > 0)) continue;
+    eligibleSupplyUsd += coin.supplyUsd;
+    if (coin.pegRef != null) referenced.push({ price: coin.price, pegRef: coin.pegRef, supplyUsd: coin.supplyUsd });
+    const coinScore = coin.pegRef == null ? null : pegProximityScore(coin.price, coin.pegRef);
+    if (coinScore != null) {
+      observedCount += 1;
+      observedSupplyUsd += coin.supplyUsd;
+      observedWeightedSum += coinScore * coin.supplyUsd;
+      continue;
+    }
+    unobservedCount += 1;
+    if (coin.pegRef != null) referencedUnobservedSupplyUsd += coin.supplyUsd;
+    if (coin.pegRef == null || !Number.isFinite(coin.pegRef) || coin.pegRef <= 0) {
+      noPegReferenceSupplyUsd += coin.supplyUsd;
+    } else {
+      noUsablePriceSupplyUsd += coin.supplyUsd;
+    }
+  }
+
+  return {
+    score: computePegStabilityScore(referenced),
+    coverage: {
+      status: observedCount === 0 ? "unavailable" : unobservedCount > 0 ? "partial" : "complete",
+      observedSupplyUsd,
+      eligibleSupplyUsd,
+      coverage: (eligibleSupplyUsd > 0 ? observedSupplyUsd / eligibleSupplyUsd : 0) as Ratio,
+      noUsablePriceSupplyUsd,
+      noPegReferenceSupplyUsd,
+      // With no observation at all the published factor is entirely the neutral fallback.
+      neutralImputedSupplyUsd: observedCount === 0 ? eligibleSupplyUsd : referencedUnobservedSupplyUsd,
+      observedScore: observedCount === 0 ? null : Math.round(observedWeightedSum / observedSupplyUsd),
+    },
+  };
 }
 
 interface QualityCoin {
@@ -150,8 +226,12 @@ export function computeChainEnvironmentAssessment(
 
 // --- Composite ---
 
+/**
+ * Composite Chain Health. Not rated (`null`) when quality is below its coverage gate or when the peg factor
+ * itself is unavailable; the partial-peg-coverage composite gate (DEC-04) lands with the Release B producer.
+ */
 export function computeHealthScore(factors: ChainHealthFactors): number | null {
-  if (factors.quality == null) return null;
+  if (factors.quality == null || factors.pegStability == null) return null;
   const raw =
     QUALITY_WEIGHT * factors.quality +
     CHAIN_ENVIRONMENT_WEIGHT * factors.chainEnvironment +

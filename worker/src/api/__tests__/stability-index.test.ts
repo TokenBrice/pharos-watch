@@ -1,7 +1,15 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleStabilityIndex } from "../stability-index";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { StabilityIndexResponseSchema } from "@shared/types/stability";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  fixtures.closeAll();
+  vi.useRealTimers();
+});
 
 describe("handleStabilityIndex contract tests", () => {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -74,33 +82,6 @@ describe("handleStabilityIndex contract tests", () => {
     await expect(res.json()).resolves.toEqual({ error: "Invalid detail: must be true or false" });
   });
 
-  it("serves full history: detail query is unbounded and omits the per-row input_snapshot blob", async () => {
-    // Regression guard: a LIMIT here truncates the chart's date range and drops the
-    // historical event annotations (events go back to 2018); input_snapshot is a heavy
-    // per-row blob that must not be read across the full history. See psi-replay backfill.
-    const guardDb = mockD1([
-      { match: "stability_index_samples", rows: [sampleRow], first: sampleRow },
-      { match: "stability_index", rows: [historyRow] },
-    ]);
-    await handleStabilityIndex(guardDb, new URL("https://x/api/stability-index?detail=true"));
-
-    const bulkHistoryQuery = guardDb
-      .getHistory()
-      .find(
-        (q) =>
-          /FROM stability_index\b/.test(q.sql) &&
-          !/stability_index_samples/.test(q.sql) &&
-          /computed_at, score/.test(q.sql),
-      );
-    expect(bulkHistoryQuery).toBeDefined();
-    expect(bulkHistoryQuery!.sql).not.toMatch(/\bLIMIT\b/i);
-    expect(bulkHistoryQuery!.sql).not.toMatch(/input_snapshot/);
-    expect(
-      guardDb
-        .getHistory()
-        .some((q) => /^SELECT input_snapshot FROM stability_index\b/i.test(q.sql)),
-    ).toBe(false);
-  });
 
   it("lazily fetches the latest history input snapshot only when no live sample exists", async () => {
     const fallbackSnapshot = {
@@ -348,5 +329,71 @@ describe("handleStabilityIndex contract tests", () => {
       openDepegNoPrice: true,
       openDepegsWithoutPrice: 2,
     });
+  });
+});
+
+describe("daily PSI stored provenance compatibility", () => {
+  it("serves mixed all-day provenance and nullable components from stored rows in summary, detail, and current fallback", async () => {
+    const { sqlite, db } = fixtures.open();
+    const day = 1_772_755_200;
+    vi.useFakeTimers();
+    vi.setSystemTime((day + 86400) * 1000);
+    const provenance = {
+      aggregation: "all-day",
+      sampleCount: 3,
+      componentSampleCounts: { severity: 0, breadth: 3, stressBreadth: 1, trend: 2 },
+      methodologyBreakdown: { "3.0": 2, "2.1": 1 },
+    };
+    const components = { severity: null, breadth: 0, stressBreadth: 4, trend: null };
+    const insert = sqlite.prepare(`INSERT INTO stability_index
+      (computed_at, score, band, components, input_snapshot, methodology_version)
+      VALUES (?, ?, ?, ?, ?, ?)`);
+    insert.run(day, 80, "STEADY", JSON.stringify(components), JSON.stringify({
+      source: "daily-avg", ...provenance,
+    }), "3.0");
+    // Old snapshots retain their real version breakdown, but cannot invent component counts.
+    insert.run(day - 86400, 90, "STEADY", JSON.stringify({ severity: 0, breadth: 0, trend: 0 }), JSON.stringify({
+      source: "daily-avg", sampleCount: 2, methodologyBreakdown: { "2.1": 1, "3.0": 1 },
+    }), "3.0");
+
+    for (const detail of [false, true]) {
+      const response = await handleStabilityIndex(db, new URL(`https://x/api/stability-index?detail=${detail}`));
+      expect(response.status).toBe(200);
+      const body = StabilityIndexResponseSchema.parse(await response.json());
+      expect(body.current?.components).toEqual(components);
+      expect(body.current?.componentsUnavailable).toEqual(["severity", "trend"]);
+      expect(body.history[0].componentsUnavailable).toEqual(detail ? ["severity", "trend"] : ["severity"]);
+      expect(body.current?.dailyProvenance).toEqual(provenance);
+      expect(body.history[0].dailyProvenance).toEqual(provenance);
+      expect(body.history[0].components).toEqual(detail ? components : undefined);
+      expect(body.history[1].dailyProvenance).toEqual({
+        aggregation: "all-day", sampleCount: 2, componentSampleCounts: null,
+        methodologyBreakdown: { "2.1": 1, "3.0": 1 },
+      });
+    }
+  });
+
+  it("retains unbounded detail history but withholds provenance before the 91-day boundary", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = 1_800_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(now * 1000);
+    const cutoff = now - 91 * 86400;
+    const insert = sqlite.prepare(`INSERT INTO stability_index
+      (computed_at, score, band, components, input_snapshot, methodology_version)
+      VALUES (?, 90, 'STEADY', ?, ?, '3.0')`);
+    const snapshot = JSON.stringify({
+      source: "daily-avg", sampleCount: 24, methodologyBreakdown: { "3.0": 24 },
+      replay: "x".repeat(100_000),
+    });
+    for (const day of [now - 86400, cutoff, cutoff - 1]) {
+      insert.run(day, JSON.stringify({ severity: 0, breadth: 0, stressBreadth: 0, trend: 0 }), snapshot);
+    }
+    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index?detail=true"));
+    const body = StabilityIndexResponseSchema.parse(await response.json());
+    expect(body.history.map((row) => row.date)).toEqual([now - 86400, cutoff, cutoff - 1]);
+    expect(body.history[1].dailyProvenance?.sampleCount).toBe(24);
+    expect(body.history[2].dailyProvenance).toBeUndefined();
+    expect(body.history[2].score).toBe(90);
   });
 });

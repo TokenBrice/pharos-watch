@@ -4,10 +4,8 @@ import { buildDewsScoringResult } from "../../../lib/dews/scoring";
 import { loadDewsSourceState } from "../../../lib/dews/source-state";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import {
-  DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
-  DEWS_STALE_DEX_LIQUIDITY_SEC,
-} from "../../../lib/dews/source-state/hydration";
+import { DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC } from "../../../lib/dews/source-state/hydration";
+import { DEWS_STALE_DEX_LIQUIDITY_SEC } from "../../../lib/dews/source-state/budgets";
 
 describe("DEWS hydration freshness bounds", () => {
   it("keeps both hydration freshness windows positive", () => {

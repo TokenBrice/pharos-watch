@@ -21,6 +21,7 @@ function getDeltaClass(delta: number): string {
 export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificationWarnings }: ScoreImpactPanelProps) {
   const driftRows = [...(reserveDrift ?? [])].sort((a, b) => b.delta - a.delta).slice(0, 6);
   const reserveInputHold = hasReserveScoreInputHold(reserveComposition);
+  const reserveUnavailable = reserveComposition.status === "unavailable";
 
   return (
     <section className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
@@ -35,7 +36,7 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
         <div className="flex flex-wrap gap-2">
           <SummaryBadge
             label="Reserve input"
-            value={reserveInputHold ? "conservative" : "clean"}
+            value={reserveUnavailable ? "unavailable" : reserveInputHold ? "conservative" : "clean"}
             className={
               reserveInputHold
                 ? SEVERITY_TONE_CLASS.watch.pill
@@ -44,7 +45,7 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
           />
           <SummaryBadge
             label="Score-grade"
-            value={formatPercentFromRatio(reserveComposition.authoritativeFreshCoverageRatio, 1)}
+            value={reserveComposition.authoritativeFreshCoverageRatio == null ? "Unknown" : formatPercentFromRatio(reserveComposition.authoritativeFreshCoverageRatio, 1)}
           />
           <SummaryBadge label="Drift rows" value={reserveDrift ? String(reserveDrift.length) : "Unknown"} />
         </div>
@@ -91,7 +92,9 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
           <div>
             <div className="text-sm font-medium text-foreground">Operator read</div>
             <p className="mt-1 leading-relaxed text-muted-foreground">
-              {reserveInputHold
+              {reserveUnavailable
+                ? "Reserve evidence could not be read; score-input health and coverage are unknown."
+                : reserveInputHold
                 ? "Safety Scores may look lower where score-grade reserve evidence is missing, deferred, or downgraded."
                 : "Reserve evidence is score-grade; broad score downgrades are more likely from coin-specific inputs."}
             </p>
@@ -100,16 +103,16 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
             <div>
               <div className="text-muted-foreground">Fresh</div>
               <div className="font-mono text-sm text-foreground">
-                {formatPercentFromRatio(reserveComposition.freshCoverageRatio, 1)}
+                {reserveComposition.freshCoverageRatio == null ? "Unknown" : formatPercentFromRatio(reserveComposition.freshCoverageRatio, 1)}
               </div>
             </div>
             <div>
               <div className="text-muted-foreground">Deferred</div>
-              <div className="font-mono text-sm text-foreground">{reserveComposition.deferredCoins}</div>
+              <div className="font-mono text-sm text-foreground">{reserveComposition.deferredCoins ?? "Unknown"}</div>
             </div>
             <div>
               <div className="text-muted-foreground">Degraded feeds</div>
-              <div className="font-mono text-sm text-foreground">{reserveComposition.degradedCoins}</div>
+              <div className="font-mono text-sm text-foreground">{reserveComposition.degradedCoins ?? "Unknown"}</div>
             </div>
             <div>
               <div className="text-muted-foreground">Classification warnings</div>

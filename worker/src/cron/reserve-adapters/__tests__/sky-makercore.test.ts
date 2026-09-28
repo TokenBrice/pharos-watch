@@ -303,6 +303,42 @@ describe("resolveSkyTimestampSummary", () => {
 });
 
 describe("fetchSkyMakercoreReserves PSM attribution", () => {
+  it.each(["", "invalid"])("withholds verified freshness for 90%% undated debt (%s)", async (datetime) => {
+    const { result } = await runSky([
+      { group: "stablecoins", group_name: "Stablecoins", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
+      { group: "spark", group_name: "Spark", debt: "900", collateral: "900", datetime },
+    ]);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.snapshotDate).toBeUndefined();
+    expectWarningEffect(result, "source-timestamp-coverage-incomplete", "degraded");
+    expect(result.slices.find((slice) => slice.pct === 90)?.pct).toBe(90);
+  });
+
+  it("ignores an undated zero-debt row for contributing timestamp coverage", async () => {
+    const { result } = await runSky([
+      { group: "stablecoins", group_name: "Stablecoins", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
+      { group: "spark", group_name: "Spark", debt: "0", collateral: "0", datetime: "" },
+    ]);
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata?.sourceTimestampCount).toBe(1);
+    expect(result.warnings?.some((warning) => warning.code === "source-timestamp-coverage-incomplete") ?? false).toBe(false);
+  });
+
+  it("publishes one shared system book for both DAI and USDS without allocation", async () => {
+    for (const coinId of ["dai-makerdao", "usds-sky"]) {
+      const { result } = await runAdapter("sky-makercore", coinId, {
+        network: installAdapterNetwork(skyNetwork(SAMPLE_GROUPS)),
+        nowSec: SKY_NOW,
+      });
+      expect(result.metadata).toMatchObject({
+        balanceSheetScope: "shared-sky-maker",
+        sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
+        totalLiabilitiesUsd: Math.round(SAMPLE_GROUPS.reduce((sum, row) => sum + Number(row.debt), 0)),
+      });
+    }
+  });
+
   it("PSM slice carries no coinId attribution and metadata surfaces the multi-stable note", async () => {
     const groups: SkyGroupResult[] = [
       {

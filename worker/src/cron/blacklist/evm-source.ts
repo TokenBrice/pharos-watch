@@ -1,3 +1,4 @@
+import { BlacklistDecodeError, quarantineBlacklistDecodeFailure } from "../../lib/blacklist/decode-quarantine";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { decodeAbiParameters } from "viem/utils";
 import {
@@ -131,23 +132,26 @@ function decodeAddressArrayData(data: string): string[] {
   try {
     const [addresses] = decodeAbiParameters([{ type: "address[]" }], data as `0x${string}`);
     return [...addresses].map((address) => address.toLowerCase());
-  } catch (error) {
-    logWorkerEventArgs("handler", "warn", "[blacklist] Failed to decode address[] event data:", error);
-    return [];
+  } catch {
+    throw new BlacklistDecodeError("invalid-address-array");
   }
 }
 
-function decodeAddressAtDataSlot(data: string, slotIndex: number): string | null {
-  return decodeAddressWord(readDataWord(data, slotIndex));
+function decodeRequiredAddressWord(word: string | null | undefined): string | null {
+  return typeof word === "string" && /^(0x)?0{24}[0-9a-f]{40}$/i.test(word) ? decodeAddressWord(word) : null;
 }
 
-/** Reads a uint256/bool slot from event data and resolves a blacklist/unblacklist
- *  direction. Returns `undefined` if the slot is missing/short so callers fall
- *  back to the event definition's default eventType. */
-function resolveEventTypeFromDataBool(data: string, slotIndex: number): BlacklistEventType | undefined {
+function decodeAddressAtDataSlot(data: string, slotIndex: number): string | null {
+  return decodeRequiredAddressWord(readDataWord(data, slotIndex));
+}
+
+/** Direction is required evidence; ABI bool accepts only zero or one. */
+function resolveEventTypeFromDataBool(data: string, slotIndex: number): BlacklistEventType {
   const word = readDataWord(data, slotIndex);
-  if (word == null) return undefined;
-  return BigInt(word) !== 0n ? "blacklist" : "unblacklist";
+  if (word == null || !/^0x[0-9a-f]{64}$/i.test(word) || (BigInt(word) !== 0n && BigInt(word) !== 1n)) {
+    throw new BlacklistDecodeError("invalid-direction-bool");
+  }
+  return BigInt(word) === 1n ? "blacklist" : "unblacklist";
 }
 
 function buildEvmBlacklistRow(
@@ -204,6 +208,7 @@ function decodeEvmLogAmount(
 type ParsedEvmLogs = {
   rows: BlacklistRow[];
   coverageCeiling: number | null;
+  failures: { log: EvmLogLike; reason: BlacklistDecodeError["reason"] }[];
 };
 
 export function parseEvmLogsWithCoverage(
@@ -212,11 +217,20 @@ export function parseEvmLogsWithCoverage(
   blockTimestamps?: Map<number, number>,
 ): ParsedEvmLogs {
   const rows: BlacklistRow[] = [];
+  const failures: ParsedEvmLogs["failures"] = [];
   let droppedForTimestamp = 0;
   let coverageCeiling: number | null = null;
   for (const log of logs) {
     const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
     if (!eventDef) continue;
+    try {
+    if (!/^0x[0-9a-f]{64}$/i.test(log.transactionHash)
+      || !/^(0x[0-9a-f]+|[0-9]+)$/i.test(log.logIndex)
+      || !Number.isSafeInteger(Number(log.logIndex))
+      || !/^0x[0-9a-f]+$/i.test(log.blockNumber)
+      || !Number.isSafeInteger(Number(log.blockNumber))) {
+      throw new BlacklistDecodeError("invalid-log-identity");
+    }
     const blockNumber = parseInt(log.blockNumber, 16);
     const timestamp = log.timeStamp ? parseInt(log.timeStamp, 16) : (blockTimestamps?.get(blockNumber) ?? Number.NaN);
     if (isNaN(blockNumber) || isNaN(timestamp)) {
@@ -254,11 +268,14 @@ export function parseEvmLogsWithCoverage(
       typeof eventDef.addressDataIndex === "number"
         ? decodeAddressAtDataSlot(log.data, eventDef.addressDataIndex)
         : null;
+    if (typeof eventDef.addressDataIndex === "number" && forcedDataAddress == null) {
+      throw new BlacklistDecodeError("invalid-address");
+    }
     const addressFromTopic = forcedDataAddress == null && log.topics.length > topicIdx;
     const affectedAddress =
       forcedDataAddress ??
-      (addressFromTopic ? decodeAddressWord(log.topics[topicIdx]) : decodeAddressWord(readDataWord(log.data, 0)));
-    if (!affectedAddress) continue;
+      (addressFromTopic ? decodeRequiredAddressWord(log.topics[topicIdx]) : decodeRequiredAddressWord(readDataWord(log.data, 0)));
+    if (!affectedAddress) throw new BlacklistDecodeError("invalid-address");
     const amount = decodeEvmLogAmount(eventDef, log, config.decimals, addressFromTopic);
 
     const row = buildEvmBlacklistRow(
@@ -272,13 +289,41 @@ export function parseEvmLogsWithCoverage(
       eventTypeOverride,
     );
     if (row) rows.push(row);
+    } catch (error) {
+      if (!(error instanceof BlacklistDecodeError)) throw error;
+      failures.push({ log, reason: error.reason });
+      const block = Number(log.blockNumber);
+      const ceiling = Number.isSafeInteger(block) ? block - 1 : -1;
+      coverageCeiling = coverageCeiling == null ? ceiling : Math.min(coverageCeiling, ceiling);
+    }
   }
   if (droppedForTimestamp > 0) {
     logWorkerEventArgs("handler", "warn",
       `[blacklist] parseEvmLogs for ${config.configKey}: dropped ${droppedForTimestamp} log(s) due to missing block/timestamp`,
     );
   }
-  return { rows, coverageCeiling };
+  return { rows, coverageCeiling, failures };
+}
+
+async function parseEvmLogsWithRetry(
+  db: D1Database,
+  config: ContractEventConfig,
+  logs: EvmLogLike[],
+  observation: number,
+  blockTimestamps?: Map<number, number>,
+): Promise<ParsedEvmLogs> {
+  const parsed = parseEvmLogsWithCoverage(config, logs, blockTimestamps);
+  if (parsed.failures.length === 0) return parsed;
+  const quarantined = new Set<EvmLogLike>();
+  for (const failure of parsed.failures) {
+    const log = failure.log;
+    if (await quarantineBlacklistDecodeFailure(db, config.configKey,
+      `${log.blockNumber}:${log.transactionHash}:${log.logIndex}`, failure.reason, log, observation)) {
+      quarantined.add(log);
+    }
+  }
+  return quarantined.size === 0 ? parsed
+    : parseEvmLogsWithCoverage(config, logs.filter((log) => !quarantined.has(log)), blockTimestamps);
 }
 
 async function resolveRpcLogTarget(
@@ -449,9 +494,9 @@ export async function fetchEvmEventsIncremental(
         if (providerScannedToBlock >= fromBlock) {
           const contiguousLogs = fetchedLogs.logs.filter((log) => {
             const block = parseInt(log.blockNumber, 16);
-            return Number.isFinite(block) && block <= providerScannedToBlock;
+            return !Number.isFinite(block) || block <= providerScannedToBlock;
           });
-          const parsed = parseEvmLogsWithCoverage(config, contiguousLogs);
+          const parsed = await parseEvmLogsWithRetry(db, config, contiguousLogs, runBudget.deadlineMs);
           rows = parsed.rows;
           fetched = true;
           topicScannedToBlock =
@@ -548,7 +593,7 @@ export async function fetchEvmEventsIncremental(
           }
           topicScannedToBlock = eventScannedToBlock;
 
-          const parsed = parseEvmLogsWithCoverage(config, fetchedLogs.logs as Array<AlchemyLogEntry>, blockTimestamps);
+          const parsed = await parseEvmLogsWithRetry(db, config, fetchedLogs.logs as Array<AlchemyLogEntry>, runBudget.deadlineMs, blockTimestamps);
           if (parsed.coverageCeiling != null) {
             eventScannedToBlock = Math.min(eventScannedToBlock, Math.max(fromBlock - 1, parsed.coverageCeiling));
             topicScannedToBlock = eventScannedToBlock;

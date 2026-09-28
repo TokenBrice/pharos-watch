@@ -35,8 +35,7 @@
     "reserveDisclosureUrl": "https://www.anchorage.com/platform/usat-reserve-attestations",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "Anchorage Digital Bank is an uninsured OCC-chartered national trust bank (the first federally chartered crypto bank, chartered January 2021). Under the GENIUS Act, this corresponds to the federal qualified payment stablecoin issuer (FQPSI) pathway supervised by the OCC. Anchorage has submitted a comment letter on the OCC NPRM and publicly states it expects to become a PPSI once the GENIUS Act framework takes effect (rules still in proposed-rulemaking stage as of 2026-06-18). No PPSI approval has been granted to any issuer. The OCC's proposed rule raises a potential 'one issuer, one brand' restriction that could affect Anchorage's white-label model (it currently issues USAT, USDtb/Ethena, USDGO/OSL, and a forthcoming USDPT/Western Union).",
+    "notes": "Evidence as of 2026-06-18 review: Anchorage Digital Bank is an uninsured OCC-chartered national trust bank (the first federally chartered crypto bank, chartered January 2021). Under the GENIUS Act, this corresponds to the federal qualified payment stablecoin issuer (FQPSI) pathway supervised by the OCC. Anchorage has submitted a comment letter on the OCC NPRM and publicly states it expects to become a PPSI once the GENIUS Act framework takes effect (rules still in proposed-rulemaking stage as of 2026-06-18). No PPSI approval has been granted to any issuer. The OCC's proposed rule raises a potential 'one issuer, one brand' restriction that could affect Anchorage's white-label model (it currently issues USAT, USDtb/Ethena, USDGO/OSL, and a forthcoming USDPT/Western Union). Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC: Anchorage national trust bank charter (January 2021)",

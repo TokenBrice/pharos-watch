@@ -96,6 +96,7 @@ export interface LiveReserveDeferredTailOutcome {
 
 export interface LiveReserveQueueCounts {
   synced: number;
+  latestPublishedAt?: number;
   failed: number;
   skipped: number;
   circuitSkipped: number;

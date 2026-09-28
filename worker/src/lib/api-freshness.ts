@@ -4,7 +4,6 @@ import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "./dex-liquidity";
 import {
   STATUS_CACHE_RATIO_OVERRIDES,
   STATUS_CACHE_RATIO_THRESHOLDS,
-  classifyFreshnessRatio,
   getCacheHealthyMaxRatio,
   getCacheRatioThresholds,
   type FreshnessStatus,
@@ -31,6 +30,7 @@ import {
   API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
   measureFreshnessAge,
 } from "./api-freshness-age";
+import { addFreshnessHeaders } from "./api-freshness-headers";
 
 export { addFreshnessHeaders } from "./api-freshness-headers";
 
@@ -65,7 +65,9 @@ export interface CacheQualityVerdict {
   streakDegradedRuns: number | null;
 }
 
-export type FreshnessMeta = Pick<ApiMeta, "updatedAt" | "ageSeconds" | "status">;
+export type FreshnessMeta = Required<Pick<ApiMeta,
+  "updatedAt" | "ageSeconds" | "status" | "assessedAt" | "freshBudgetSec" | "degradedBudgetSec"
+>>;
 
 export type CronTimestampLookupStatus = "ok" | "missing" | "lookup_failed";
 
@@ -110,22 +112,31 @@ const TABLE_FRESHNESS_FALLBACK_QUERIES: Partial<Record<FreshnessSentinelBackedCa
   "yield-data": "SELECT (? - MAX(updated_at)) as age FROM yield_data WHERE is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')",
 };
 
-export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number, cacheKey?: string): FreshnessMeta {
+export function buildFreshnessMeta(
+  updatedAt: number,
+  maxAgeSec: number,
+  cacheKey?: string,
+  options: { assessedAt?: number; freshBudgetSec?: number; degradedBudgetSec?: number } = {},
+): FreshnessMeta {
+  const assessedAt = options.assessedAt ?? Math.floor(Date.now() / 1000);
   const { ageSeconds, futureSkewSeconds } = measureFreshnessAge(
-    Date.now() / 1000,
+    assessedAt,
     updatedAt,
     API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
   );
-  const bands = cacheKey ? getCacheRatioThresholds(cacheKey) : null;
+  const bands = cacheKey ? getCacheRatioThresholds(cacheKey) : STATUS_CACHE_RATIO_THRESHOLDS;
+  const freshBudgetSec = options.freshBudgetSec ?? maxAgeSec * bands.degraded;
+  const degradedBudgetSec = options.degradedBudgetSec ?? maxAgeSec * bands.stale;
   return {
     updatedAt,
     ageSeconds,
+    assessedAt,
+    freshBudgetSec,
+    degradedBudgetSec,
     status: futureSkewSeconds > API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC
       ? "degraded"
-      : bands
-        ? ageSeconds <= maxAgeSec * bands.degraded ? "fresh"
-          : ageSeconds <= maxAgeSec * bands.stale ? "degraded" : "stale"
-        : classifyFreshnessRatio(ageSeconds / maxAgeSec),
+      : ageSeconds <= freshBudgetSec ? "fresh"
+        : ageSeconds <= degradedBudgetSec ? "degraded" : "stale",
   };
 }
 
@@ -565,13 +576,40 @@ export async function buildCacheStatuses(
   return { caches, worstRatio, failures, diagnostics, statusFloor, warnings };
 }
 
-export async function getLatestSuccessfulCronTimestamp(
-  db: D1Database,
-  job: string,
-  fallback: number,
-): Promise<number> {
-  const result = await getLatestSuccessfulCronTimestampResult(db, job);
-  return result.timestamp ?? fallback;
+export function buildCronFreshnessMeta(result: CronTimestampLookupResult, maxAgeSec: number) {
+  if (result.status === "ok" && result.timestamp != null) {
+    return buildFreshnessMeta(result.timestamp, maxAgeSec);
+  }
+  return {
+    assessedAt: Math.floor(Date.now() / 1000),
+    freshBudgetSec: maxAgeSec * STATUS_CACHE_RATIO_THRESHOLDS.degraded,
+    degradedBudgetSec: maxAgeSec * STATUS_CACHE_RATIO_THRESHOLDS.stale,
+    updatedAt: null,
+    ageSeconds: null,
+    status: result.status === "lookup_failed" ? "unknown" as const : "stale" as const,
+    reason: result.status === "lookup_failed" ? "freshness-lookup-failed" : "producer-history-missing",
+  };
+}
+
+export function buildCronFreshnessHeaders(
+  result: CronTimestampLookupResult,
+  maxAgeSec: number,
+  cacheControl: string,
+): Record<string, string> {
+  if (result.status === "ok" && result.timestamp != null) {
+    return addFreshnessHeaders({ "Cache-Control": cacheControl }, result.timestamp, maxAgeSec);
+  }
+  const meta = buildCronFreshnessMeta(result, maxAgeSec);
+  return {
+    "Cache-Control": "no-store",
+    "X-Data-Age": "unavailable",
+    "X-Data-Freshness": meta.status,
+    "X-Data-Freshness-Reason": result.status === "lookup_failed"
+      ? "freshness-lookup-failed" : "producer-history-missing",
+    Warning: result.status === "lookup_failed"
+      ? '199 - "Producer freshness lookup failed"'
+      : '199 - "No authoritative successful producer run in retained history"',
+  };
 }
 
 export async function getLatestSuccessfulCronTimestampResult(

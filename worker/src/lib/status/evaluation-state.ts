@@ -18,7 +18,7 @@ export function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
 }
 
 export function deriveReserveCompositionStatus(
-  reserveComposition: StatusResponse["reserveComposition"],
+  reserveComposition: Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>,
 ): ReserveCompositionAssessment {
   return evaluateReserveCompositionStatus(reserveComposition);
 }

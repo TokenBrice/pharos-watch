@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
+import { blacklistEventOrderSql } from "@shared/lib/blacklist-event-order";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/db";
@@ -97,14 +98,19 @@ async function fetchLatestKnownRepairRows(
     seenKeys.add(key);
     statements.push(
       db.prepare(`
-        SELECT * FROM blacklist_events
+        WITH matching AS (SELECT * FROM blacklist_events
         WHERE stablecoin = ?
           AND chain_id = ?
           AND config_key = ?
           AND lower(contract_address) = lower(?)
           AND lower(address) = lower(?)
-        ORDER BY timestamp DESC, id DESC
-        LIMIT 1
+        )
+        SELECT * FROM matching
+        ${row.chain_id === "tron"
+          ? "WHERE block_number = (SELECT MAX(block_number) FROM matching)"
+          : ""}
+        ORDER BY ${blacklistEventOrderSql("DESC")}
+        ${row.chain_id === "tron" ? "" : "LIMIT 1"}
       `).bind(
         row.stablecoin,
         row.chain_id,
@@ -115,18 +121,18 @@ async function fetchLatestKnownRepairRows(
     );
   }
 
-  const results: D1Result[] = [];
+  const results: D1Result<BlacklistRow>[] = [];
   for (let i = 0; i < statements.length; i += D1_BATCH_SIZE) {
     throwIfAborted(signal);
     results.push(...await runWithOverloadRetry(
-      () => db.batch(statements.slice(i, i + D1_BATCH_SIZE)),
+      () => db.batch<BlacklistRow>(statements.slice(i, i + D1_BATCH_SIZE)),
       3,
       signal,
     ));
     throwIfAborted(signal);
   }
   return results
-    .map((result) => (result as { results?: BlacklistRow[] }).results?.[0])
+    .flatMap((result) => result.results ?? [])
     .filter((row): row is BlacklistRow => row != null && row.suppression_reason == null);
 }
 

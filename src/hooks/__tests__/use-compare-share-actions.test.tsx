@@ -103,6 +103,29 @@ describe("useCompareShareActions", () => {
     expect(clearTimeoutSpy).toHaveBeenCalled();
   });
 
+  it("renders unavailable supply as a dash, never $0 or a -100% weekly change", async () => {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    vi.stubGlobal("URL", { ...URL, createObjectURL: () => "blob:pharos-compare", revokeObjectURL: vi.fn() });
+    const missing = makeCoin("usdc-circle", "USDC");
+    missing.data = { ...missing.data, circulating: {} };
+    const zero = makeCoin("usdt-tether", "USDT");
+    zero.data = { ...zero.data, circulating: { peggedUSD: 0 } };
+    const { result } = renderHook(() => useCompareShareActions({
+      comparisonCoins: [missing, zero],
+      logos: {},
+      pegRates: {},
+      radarCards: [],
+      axisOrder: [],
+      axisLabels: {},
+    }));
+
+    await act(async () => result.current.handleDownload());
+
+    const [coins] = shareImageMocks.renderCompareShareImage.mock.calls.at(-1) as [Array<{ symbol: string; marketCap: string; weeklyChange: string }>];
+    expect(coins.find((coin) => coin.symbol === "USDC")).toMatchObject({ marketCap: "—", weeklyChange: "—" });
+    expect(coins.find((coin) => coin.symbol === "USDT")).toMatchObject({ marketCap: "$0.00", weeklyChange: "-100.00%" });
+  });
+
   it("surfaces an error toast when the share image fails to render", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     shareImageMocks.renderCompareShareImage.mockImplementation(() => {

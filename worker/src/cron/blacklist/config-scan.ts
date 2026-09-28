@@ -178,6 +178,7 @@ async function scanBlacklistConfig(args: {
       args.runBudget,
       args.tronLimiter,
       args.signal,
+      args.db,
     );
     return buildTronScanResult(result, args.lastBlock);
   }

@@ -7,7 +7,7 @@ import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "./telegram-recap-pol
 
 export type { TelegramAlertType };
 
-export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "4";
+export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "5";
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
 export const TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM = "mini_app_catalog";
 export { TELEGRAM_MINI_APP_CATALOG_VERSION };
@@ -141,6 +141,13 @@ const BulkDirectRowSchema = z.object({
   safetyMode: TelegramSafetyModeSchema.nullable(),
   depegWorseningBpsStep: NullableDepegStepSchema,
   snoozeUntilTs: z.number().int().nullable().optional(),
+}).strict();
+
+const BulkWatchlistUndoSchema = z.object({
+  expectedPreferenceGeneration: z.number().int().nonnegative(),
+  expectedFingerprint: z.string().regex(/^preview-v1-[0-9]+-[0-9a-f]{8}$/),
+  restoreDirectRows: z.array(BulkDirectRowSchema),
+  removeStablecoinIds: z.array(z.string()),
 }).strict();
 
 export const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
@@ -442,6 +449,7 @@ export const TelegramMiniAppSnapshotSchema = z
     catalogVersion: z.string(),
     stateRevision: z.string(),
     state: TelegramMiniAppMutableStateSchema,
+    undo: BulkWatchlistUndoSchema.optional(),
   })
   .strict();
 
@@ -496,12 +504,7 @@ export const TelegramMiniAppBulkWatchlistResponseSchema = z.object({
     removes: z.array(z.string()),
     unchanged: z.array(z.string()),
     sourceImpact: z.array(TelegramMiniAppBulkSourceImpactSchema),
-    undo: z.object({
-      expectedPreferenceGeneration: z.number().int().nonnegative(),
-      expectedFingerprint: z.string().regex(/^preview-v1-[0-9]+-[0-9a-f]{8}$/),
-      restoreDirectRows: z.array(BulkDirectRowSchema),
-      removeStablecoinIds: z.array(z.string()),
-    }).strict(),
+    undo: BulkWatchlistUndoSchema,
   }).strict(),
 }).strict();
 

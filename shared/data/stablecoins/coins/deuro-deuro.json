@@ -63,7 +63,7 @@
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "collateral-positions-api",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "scoring": {
       "maxSourceAgeSec": 4000000

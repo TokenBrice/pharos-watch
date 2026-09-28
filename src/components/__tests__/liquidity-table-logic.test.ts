@@ -36,7 +36,6 @@ describe("compareLiquidityRows", () => {
   it.each([
     ["score", "liquidityScore"],
     ["tvlTrend", "tvlChange7d"],
-    ["volume7d", "totalVolume7dUsd"],
     ["balance", "weightedBalanceRatio"],
     ["organic", "organicFraction"],
     ["durability", "durabilityScore"],
@@ -47,6 +46,16 @@ describe("compareLiquidityRows", () => {
     expect(compareLiquidityRows(missing, zero, { key, direction: "desc" })).toBe(0);
     expect(compareLiquidityRows(positive, missing, { key, direction: "desc" })).toBeLessThan(0);
   });
+
+  it.each(["volume", "volume7d", "vtRatio"] as const)(
+    "sorts unavailable %s after a measured zero in both directions",
+    (key) => {
+      const unavailable = makeRow({ totalTvlUsd: 1_000, totalVolume24hUsd: null, totalVolume7dUsd: null });
+      const measuredZero = makeRow({ totalTvlUsd: 1_000, totalVolume24hUsd: 0, totalVolume7dUsd: 0 });
+      expect(compareLiquidityRows(unavailable, measuredZero, { key, direction: "desc" })).toBeGreaterThan(0);
+      expect(compareLiquidityRows(unavailable, measuredZero, { key, direction: "asc" })).toBeGreaterThan(0);
+    },
+  );
 
   it("sorts volume/TVL ratios rather than absolute volume", () => {
     const highRatio = makeRow({ totalVolume24hUsd: 100, totalTvlUsd: 200 });

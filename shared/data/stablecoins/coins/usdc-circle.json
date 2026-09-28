@@ -318,6 +318,11 @@
       "decimals": 6
     },
     {
+      "chain": "xlayer",
+      "address": "0xb6ceceab302e2e4948951ee7843fc24e92933061",
+      "decimals": 6
+    },
+    {
       "chain": "kava",
       "address": "0xfa9343c3897324496a05fc75abed6bac29f8a40f",
       "decimals": 6
@@ -492,7 +497,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "circle-transparency",
-    "version": 1,
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "circle-usdc-reserves",
     "display": {

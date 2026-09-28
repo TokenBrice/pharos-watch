@@ -80,7 +80,7 @@ vi.mock("../persistence", () => ({
   readDiscoveryTargetCursors: vi.fn(async () => new Map()),
   recordDiscoveryAttemptFence: vi.fn(async () => {}),
   updateDiscoveryMeta: vi.fn(async () => {}),
-  upsertStagedPools: vi.fn(async () => {}),
+  upsertStagedPools: vi.fn(async (_db: D1Database, pools: unknown[]) => pools.length),
   writeDiscoveryTargetCursors: vi.fn(async () => {}),
 }));
 
@@ -179,7 +179,7 @@ describe("syncDexDiscovery", () => {
     vi.mocked(incrementRunSeq).mockResolvedValue(2);
     vi.mocked(recordDiscoveryAttemptFence).mockResolvedValue();
     vi.mocked(updateDiscoveryMeta).mockResolvedValue();
-    vi.mocked(upsertStagedPools).mockResolvedValue();
+    vi.mocked(upsertStagedPools).mockImplementation(async (_db, pools) => pools.length);
     vi.mocked(crawlCoin).mockResolvedValue({
       pools: [
         makeStagedPool("ethereum:0xpool1"),

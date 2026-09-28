@@ -1,4 +1,5 @@
 import { getStablecoinTableRowRiskLevel, getSupplyChangePercent } from "@/components/stablecoin-table-logic";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-table-row-types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
@@ -34,7 +35,7 @@ export function buildStablecoinTableRowModel({
   const pegScore = pegSummary?.pegScore ?? null;
   const liquidityScore = dexLiquidity?.[coin.id]?.liquidityScore ?? null;
   const pegRef = pegSummary?.pegReference?.valueUsd ?? null;
-  const currentDeviationBps = pegSummary?.pegReferenceUnavailable === true
+  const currentDeviationBps = !isObservedPrice(coin) || pegSummary?.pegReferenceUnavailable === true
     ? null
     : pegSummary?.currentDeviationBps ?? null;
   const absPegDeviationBps = currentDeviationBps == null ? null : Math.abs(currentDeviationBps);
@@ -71,7 +72,7 @@ export function buildStablecoinTableRowModel({
     pegRef,
     pegDeviationBps: currentDeviationBps,
     absPegDeviationBps,
-    priceCell: pegRef == null ? "—" : formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef),
+    priceCell: pegRef == null || !isObservedPrice(coin) ? "—" : formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef),
     pegDeviationColorClass: absPegDeviationBps === null
       ? "text-muted-foreground"
       : deviationColorClass(absPegDeviationBps),

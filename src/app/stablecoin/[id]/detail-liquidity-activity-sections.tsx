@@ -53,7 +53,7 @@ export function DetailLiquidityActivitySections({
   frozenNote,
   viewModel,
 }: DetailLiquidityActivitySectionsProps) {
-  const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
+  const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.coinData.nominalPriceReference) || Boolean(viewModel.dexPriceCheck);
   const showPegChart =
     viewModel.coin.flags.pegCurrency === "USD"
     && !viewModel.isNavToken

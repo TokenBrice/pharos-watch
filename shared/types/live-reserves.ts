@@ -253,6 +253,42 @@ export const LiveReserveRedemptionTelemetrySchema = z
   .passthrough();
 export type LiveReserveRedemptionTelemetry = z.output<typeof LiveReserveRedemptionTelemetrySchema>;
 
+/** Why a supply-comparing adapter withheld its reserve/liability ratio. */
+const LIABILITY_RATIO_UNAVAILABLE_REASON_VALUES = [
+  "liability-scope-unclassified-chain",
+  "included-supply-read-failed",
+  "reserve-supply-time-skew",
+  "not-comparable",
+] as const;
+export type LiabilityRatioUnavailableReason = (typeof LIABILITY_RATIO_UNAVAILABLE_REASON_VALUES)[number];
+
+/** Published projection of a reviewed liability perimeter (config `liabilityScope`). */
+const LiveReserveLiabilityScopeMetadataSchema = z.discriminatedUnion("basis", [
+  z.object({
+    basis: z.literal("issuer-native-supply"),
+    reviewedAt: z.string(),
+    evidenceRef: z.string(),
+    includedChains: z.array(z.string()),
+    excludedChains: z.array(z.object({
+      chain: z.string(),
+      relation: z.string(),
+      backedBy: z.string().optional(),
+      reason: z.string(),
+    }).passthrough()),
+    /** Catalog chains the reviewed scope does not classify; any entry withholds the ratio. */
+    unclassifiedChains: z.array(z.string()),
+    /** Included chains whose supply read failed, with the failure reason. */
+    failedChains: z.array(z.object({ chain: z.string(), reason: z.string() }).passthrough()),
+    maxReserveSupplySkewSec: z.number().finite(),
+  }).passthrough(),
+  z.object({
+    basis: z.literal("not-comparable"),
+    canonicalChain: z.string(),
+    reason: z.string(),
+  }).passthrough(),
+]);
+export type LiveReserveLiabilityScopeMetadata = z.output<typeof LiveReserveLiabilityScopeMetadataSchema>;
+
 export const LiveReserveSnapshotMetadataSchema = z
   .object({
     sourceTimestamp: z.number().finite().optional(),
@@ -270,6 +306,21 @@ export const LiveReserveSnapshotMetadataSchema = z
     totalLiabilitiesUsd: z.number().finite().optional(),
     shareholderEquityUsd: z.number().finite().optional(),
     collateralizationRatio: z.number().finite().optional(),
+    /** Every liability-scope chain was classified and every included supply read succeeded. */
+    supplyCoverageComplete: z.boolean().optional(),
+    liabilityScope: LiveReserveLiabilityScopeMetadataSchema.optional(),
+    /** Liability-coverage or time-identity reason a supply-comparing adapter withheld `collateralizationRatio`
+     *  (issuer-circulation probe failures carry their own warnings instead). */
+    ratioUnavailableReason: z.enum(LIABILITY_RATIO_UNAVAILABLE_REASON_VALUES).optional(),
+    /** Unix seconds of the reserve observation the ratio numerator describes. */
+    reserveObservedAt: z.number().finite().optional(),
+    /** Earliest and latest unix-second observation times of the included supply reads. */
+    supplyObservedAt: z.object({ min: z.number().finite(), max: z.number().finite() }).optional(),
+    /** Largest absolute gap between `reserveObservedAt` and any included supply read. */
+    ratioSkewSec: z.number().finite().nonnegative().optional(),
+    /** Absent on retained legacy snapshots: unknown, not coin-exclusive. */
+    balanceSheetScope: z.literal("shared-sky-maker").optional(),
+    sharedBookAssetIds: z.array(z.string().min(1)).optional(),
     liquidationCapacityRatio: z.number().finite().nonnegative().optional(),
     /**
      * Legacy flat redemption-telemetry fields, superseded by the nested
@@ -293,12 +344,53 @@ export const LiveReserveSnapshotMetadataSchema = z
   .passthrough();
 export type LiveReserveSnapshotMetadata = z.output<typeof LiveReserveSnapshotMetadataSchema>;
 
+/** Snapshot admission rejection codes, published as `provenance.scoringRejectionReasons`. */
+const LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES = [
+  "unconfigured", "suspended", "missing-snapshot", "inconsistent-snapshot",
+  "config-mismatch", "non-independent", "stale", "invalid-freshness",
+  "degraded-snapshot", "insufficient-slices",
+] as const;
+export type LiveReserveAdmissionRejectionCode = (typeof LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES)[number];
+
+/** Which cap set the effective source-age budget: reviewed coin scoring cap (wins ties), adapter validation cap, or the fetch budget when neither declares one. */
+const LIVE_RESERVE_SOURCE_AGE_BUDGET_CAP_VALUES = ["scoring", "adapter", "fetch-budget"] as const;
+const LIVE_RESERVE_STALE_REASON_VALUES = ["fetch-age", "source-age"] as const;
+
+/**
+ * ADR-30: the reserve freshness verdict together with the budgets, assessment
+ * clock, and generation it used. Every value is the evaluator's own output
+ * (`assessReserveSnapshotFreshness`), never re-derived by the view. Source
+ * fields are `null` when source age did not take part in the verdict
+ * (non-`verified` freshness, no finite source timestamp, or no stored
+ * snapshot); `attemptId` is `null` for legacy rows written before attempt IDs.
+ */
+export const ReserveFreshnessViewSchema = z
+  .object({
+    stale: z.boolean(),
+    staleReasons: z.array(z.enum(LIVE_RESERVE_STALE_REASON_VALUES)),
+    /** Unix seconds: the evaluation clock the verdict used. */
+    assessedAt: z.number().finite(),
+    /** Generation described: the Worker fetch time and attempt of the judged snapshot. */
+    fetchedAt: z.number().finite().nullable(),
+    attemptId: z.string().nullable(),
+    fetchAgeSec: z.number().finite().nullable(),
+    fetchBudgetSec: NonNegativeFiniteSecondsSchema,
+    sourceTimestamp: z.number().finite().nullable(),
+    sourceAgeSec: z.number().finite().nullable(),
+    sourceAgeBudgetSec: NonNegativeFiniteSecondsSchema.nullable(),
+    sourceAgeBudgetCap: z.enum(LIVE_RESERVE_SOURCE_AGE_BUDGET_CAP_VALUES).nullable(),
+  })
+  .strict();
+export type ReserveFreshnessView = z.output<typeof ReserveFreshnessViewSchema>;
+
 export const ReserveProvenanceViewSchema = z
   .object({
     evidenceClass: z.enum(LIVE_RESERVE_EVIDENCE_CLASS_VALUES),
     sourceModel: z.enum(LIVE_RESERVE_SOURCE_MODEL_VALUES),
     freshnessMode: z.enum(LIVE_RESERVE_FRESHNESS_MODE_VALUES).optional(),
     scoringEligible: z.boolean(),
+    /** Admission reasons behind `scoringEligible` (empty when eligible); `stale` is explained by `sync.freshness`. */
+    scoringRejectionReasons: z.array(z.enum(LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES)).optional(),
   })
   .strict();
 export type ReserveProvenanceView = z.output<typeof ReserveProvenanceViewSchema>;
@@ -323,6 +415,8 @@ export const ReserveSyncStateViewSchema = z
     lastError: z.string().optional(),
     failureCategory: z.string().optional(),
     uncertainWrite: z.boolean().optional(),
+    /** Budgets, clock, and generation behind `stale`; absent only from producers predating ADR-30 publication. */
+    freshness: ReserveFreshnessViewSchema.optional(),
   })
   .strict();
 export type ReserveSyncStateView = z.output<typeof ReserveSyncStateViewSchema>;

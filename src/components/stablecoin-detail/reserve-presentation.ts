@@ -125,6 +125,23 @@ export function formatReserveSnapshotLabel(reserves: ReserveResult): string {
   return `${asOf}${stale} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
 }
 
+function formatReserveCompositionLabel(reserves: ReserveResult): string {
+  const details = reserves.metadata?.details;
+  const compositionAsOf = details?.compositionAsOf;
+  const hasCompositionDate = typeof compositionAsOf === "string"
+    && /^\d{4}-\d{2}-\d{2}$/.test(compositionAsOf)
+    && Number.isFinite(Date.parse(compositionAsOf))
+    && new Date(compositionAsOf).toISOString().slice(0, 10) === compositionAsOf;
+  if (!hasCompositionDate && details?.compositionSource !== "reviewed-config" && reserves.source !== "tether-transparency") {
+    return formatReserveSnapshotLabel(reserves);
+  }
+
+  // A totals observation cannot date a separately reviewed reserve mix.
+  const asOf = hasCompositionDate ? `Composition as of ${compositionAsOf}` : "Composition date unavailable";
+  const stale = reserves.mode === "live-stale" ? " · Stale" : "";
+  return `${asOf}${stale} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
+}
+
 function reserveReferenceLinks(reserves: ReserveResult): ReserveReferenceLink[] {
   return [
     ...(reserves.displayUrl ? [{ label: "Source", url: reserves.displayUrl }] : []),
@@ -145,12 +162,12 @@ export function buildReserveFootnoteModel(
   switch (reserves.mode) {
     case "live":
       return {
-        text: formatReserveSnapshotLabel(reserves),
+        text: formatReserveCompositionLabel(reserves),
         references,
       };
     case "live-stale":
       return {
-        text: formatReserveSnapshotLabel(reserves),
+        text: formatReserveCompositionLabel(reserves),
         references,
       };
     case "curated-fallback":
@@ -178,6 +195,11 @@ export function buildReserveCompositionNote(reserves: ReserveResult | null): str
   }
 
   const notes: string[] = [];
+  if (reserves.metadata?.balanceSheetScope === "shared-sky-maker"
+    && reserves.metadata.sharedBookAssetIds?.includes("dai-makerdao")
+    && reserves.metadata.sharedBookAssetIds.includes("usds-sky")) {
+    notes.push("Composition covers the shared Sky/Maker balance sheet backing DAI and USDS; shared totals are not additive across these assets.");
+  }
   const referenceNavUsd = reserves.metadata?.referenceNavUsd;
   if (typeof referenceNavUsd === "number" && Number.isFinite(referenceNavUsd) && referenceNavUsd > 0) {
     const formattedNav = new Intl.NumberFormat("en-US", {

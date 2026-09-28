@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { StatusHealthValue } from "./core";
-import { StablecoinPublicationHealthSchema, StatusHealthValueSchema } from "./core";
+import { ActivePriceCoverageHealthSchema, StablecoinPublicationHealthSchema, StatusHealthValueSchema } from "./core";
 import { AlertBrokerHealthSummarySchema } from "./operational";
 import { CacheStatusSchema } from "./schema-primitives";
 import {
@@ -104,46 +104,7 @@ export const HealthResponseSchema = z.object({
   }),
   circuits: z.record(z.string(), CircuitRecordSchema),
   stablecoinPublication: StablecoinPublicationHealthSchema.optional(),
-  activePriceCoverage: z.object({
-    status: z.enum(["complete", "incomplete", "unknown"]),
-    expectedActiveCount: z.number(),
-    presentActiveCount: z.number(),
-    pricedActiveCount: z.number(),
-    missingPriceCount: z.number(),
-    pricedActiveIds: z.array(z.string()),
-    missingActiveIds: z.array(z.string()),
-    affectedMarketCapUsd: z.number(),
-    missingActiveAssets: z.array(z.object({
-      stablecoinId: z.string(),
-      symbol: z.string().default("unknown"),
-      marketCapUsd: z.number().nullable(),
-      currentPrice: z.number().nullable(),
-      currentSource: z.string().nullable(),
-      currentObservedAt: z.number().nullable(),
-      currentConfidence: z.string().nullable(),
-      consecutiveMissingGenerations: z.number().default(1),
-      lastAcceptedPrice: z.number().nullable().default(null),
-      lastAcceptedSource: z.string().nullable().default(null),
-      lastAcceptedObservedAt: z.number().nullable().default(null),
-      rejectionReason: z.string().default("no-accepted-price"),
-      alertEligible: z.boolean().default(false),
-      acknowledgedGap: z.object({
-        owner: z.string(),
-        reason: z.string(),
-        sources: z.array(z.string()),
-        reviewedAt: z.number(),
-        expiresAt: z.number(),
-      }).nullable().default(null).optional(),
-    })),
-    alertEligibleCount: z.number().default(0),
-    alertEligibleIds: z.array(z.string()).default([]),
-    acknowledgedGapIds: z.array(z.string()).default([]).optional(),
-    acknowledgedGapCount: z.number().default(0).optional(),
-    expiredGapReviewIds: z.array(z.string()).default([]).optional(),
-    invalidGapReviewIds: z.array(z.string()).default([]).optional(),
-    maxConsecutiveMissingGenerations: z.number().default(0),
-    observedAt: z.number().nullable(),
-  }).optional(),
+  activePriceCoverage: ActivePriceCoverageHealthSchema.optional(),
   alertBroker: AlertBrokerHealthSummarySchema.optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
 });

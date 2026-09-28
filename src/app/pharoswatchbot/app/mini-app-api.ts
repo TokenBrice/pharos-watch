@@ -27,6 +27,7 @@ export const TelegramMiniAppStateSchema = SharedTelegramMiniAppStateSchema;
 export interface TelegramMiniAppClientSnapshot {
   state: TelegramMiniAppState;
   stateRevision: string;
+  undo?: TelegramMiniAppBulkWatchlistResponse["result"]["undo"];
 }
 
 function parseRetryAfterSec(value: unknown): number | null {
@@ -65,11 +66,14 @@ function assertMiniAppVersions(response: VersionedMiniAppResponse): void {
 }
 
 export async function postMiniAppJson<T>(path: string, body: unknown, schema: ZodType<T>): Promise<T> {
-  const response = await apiRequest(path, {
+  return apiRequest(path, (response) => readMiniAppResponse(path, response, schema), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+async function readMiniAppResponse<T>(path: string, response: Response, schema: ZodType<T>): Promise<T> {
   if (!response.ok) {
     let code: MiniAppErrorCode | null = null;
     let retryAfterSec: number | null = null;
@@ -126,6 +130,7 @@ function hydrateMiniAppResponse(response: TelegramMiniAppResponse): TelegramMini
       catalog: TELEGRAM_MINI_APP_CATALOG as unknown as TelegramMiniAppState["catalog"],
     },
     stateRevision: snapshot.stateRevision,
+    ...(snapshot.undo ? { undo: snapshot.undo } : {}),
   };
 }
 

@@ -1,5 +1,7 @@
 # Safety Score V9 Equivalence Harness
 
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: When to use it · Why the replay is a fair test · Prerequisites · (a) Export a production capture · (b) Replay a capture at a given commit · (c) Diff a baseline replay against a candidate replay · (d) Pre-activation sweep · (e) Post-deploy first-cycle check · Triaging a non-empty diff · Artifact hygiene · Worked example · Related.
+
 Operational procedure for proving that a code change either leaves published Safety Score V9 output unchanged or moves only a reviewed, declared set of grades.
 
 The harness freezes one production compiler input, replays it through the V9 pipeline at two commits, and diffs the two replay artifacts. A refactor that is genuinely score-neutral produces an empty diff; anything else names the asset and the field that moved.
@@ -129,6 +131,8 @@ npm run safety-score-v9:replay -- \
 Name every artifact `replay-<commit>-<capture stamp>.json`. The commit is what the diff attributes drift to; a replay whose provenance is unclear is not evidence.
 
 The replay writes canonical byte-stable JSON. The published response lives at `pipeline.candidate`; its `cards` array carries one card per asset.
+
+Asset-local extension or fact failures do not abort a replay: the asset is quarantined to producer-failed NR, exactly as the producer would publish it, and named in `pipeline.quarantines` with its code and `<field path>: <reason>` message; its dependents appear in `pipeline.quarantineAffectedAssetIds`. Check both before diffing. A quarantine in a replay of an older capture against newer curation — for example a review dated after the capture clock — is a replay artifact, not a regression, and must be read like the future-dated reserve reviews that the replay CLI refuses without `--allow-future-reviews`.
 
 ### Capture-time registry replay
 

@@ -50,6 +50,18 @@ function extractAttrValue(html: string, attr: string): number | null {
   return Number.isFinite(val) && val >= 0 ? val : null;
 }
 
+function extractReserveCanvas(html: string, coinType: string): string {
+  // Both identities are captured independently on Circle's transparency page.
+  const canvasId = coinType === "eurc" ? "eurocoin_chartjs_canvas" : "usdc_chartjs_canvas";
+  // eslint-disable-next-line security/detect-non-literal-regexp -- canvasId is adapter-owned and escaped.
+  const re = new RegExp(`<[^>]*\\sid\\s*=\\s*["']${escapeRegExp(canvasId)}["'][^>]*>`, "gi");
+  const tags = html.match(re);
+  if (tags?.length !== 1 || !/^<canvas\b/i.test(tags[0])) {
+    throw htmlLayoutChangedError("circle-transparency", `missing or ambiguous reserve canvas for ${coinType}`);
+  }
+  return tags[0];
+}
+
 function extractDisplayAmount(html: string, coinType: string): number | null {
   const displayId = coinType === "eurc" ? "euro-in-circulation" : "usdc-in-circulation";
   const tag = extractTagById(html, displayId);
@@ -57,15 +69,12 @@ function extractDisplayAmount(html: string, coinType: string): number | null {
 }
 
 function extractReserveSectionHtml(html: string, coinType: string): string | null {
-  const canvasId = coinType === "eurc" ? "euro-in-circulation" : "usdc-in-circulation";
-  const escapedId = escapeRegExp(canvasId);
-  // Capture the HTML window immediately surrounding the reserve canvas element
-  // (id=<canvasId>) so the "As of" lookup matches the disclosure date attached
-  // to the reserve block, not some other page-level "As of" banner. Circle's
-  // reserve disclosure places the date adjacent to the chart; a ±1500-char
-  // window is more than enough without reaching unrelated site chrome.
-  // eslint-disable-next-line security/detect-non-literal-regexp -- canvasId is escaped before interpolation.
-  const anchorRe = new RegExp(`id\\s*=\\s*["']${escapedId}["']`, "i");
+  const displayId = coinType === "eurc" ? "euro-in-circulation" : "usdc-in-circulation";
+  const escapedId = escapeRegExp(displayId);
+  // Circle places the disclosure near the circulation total, not on the
+  // composition canvas. Keep the reviewed ±1500-character date window.
+  // eslint-disable-next-line security/detect-non-literal-regexp -- displayId is escaped before interpolation.
+  const anchorRe = new RegExp(`\\sid\\s*=\\s*["']${escapedId}["']`, "i");
   return extractAnchorWindow(html, anchorRe, 1_500);
 }
 
@@ -74,35 +83,37 @@ function extractDisclosureTimestamp(
   coinType: string,
   warnings: LiveReserveWarning[],
 ): number | null {
-  const section = extractReserveSectionHtml(html, coinType) ?? html;
-  const match = section.match(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/i);
-  const sectionTimestamp = parseTimestampLikeToUnixSeconds(match?.[1]);
-  if (sectionTimestamp != null) return sectionTimestamp;
-
-  const globalMatches = [...html.matchAll(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/gi)]
-    .map((globalMatch) => parseTimestampLikeToUnixSeconds(globalMatch[1]))
-    .filter((timestamp): timestamp is number => timestamp != null);
-  const uniqueTimestamps = new Set(globalMatches);
-  if (uniqueTimestamps.size === 1) return globalMatches[0];
-  if (uniqueTimestamps.size >= 2) {
-    warnings.push(reserveInfoWarning(
-      "circle-disclosure-timestamp-ambiguous",
-      `Circle ${coinType.toUpperCase()} reserve page exposes ${uniqueTimestamps.size} distinct "As of" dates ` +
-        "outside the disclosure window; freshness downgraded to unverified until the layout is reviewed.",
-    ));
+  const section = extractReserveSectionHtml(html, coinType);
+  // A missing anchor must not turn the first page-wide date into a local date.
+  for (const candidate of section == null ? [html] : [section, html]) {
+    const timestamps = [...candidate.matchAll(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/gi)]
+      .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
+      .filter((timestamp): timestamp is number => timestamp != null);
+    const uniqueTimestamps = new Set(timestamps);
+    if (uniqueTimestamps.size === 1) return timestamps[0];
+    if (uniqueTimestamps.size >= 2) {
+      warnings.push(reserveInfoWarning(
+        "circle-disclosure-timestamp-ambiguous",
+        `Circle ${coinType.toUpperCase()} reserve page exposes ${uniqueTimestamps.size} distinct "As of" dates ` +
+          `${candidate === section ? "inside the disclosure window" : "at page level"}; ` +
+          "freshness downgraded to unverified until the layout is reviewed.",
+      ));
+      return null;
+    }
   }
   return null;
 }
 
 export function adaptCircleTransparency(html: string, coinType: string): AdapterResult {
   const sliceConfigs = coinType === "eurc" ? EURC_SLICES : USDC_SLICES;
+  const canvas = extractReserveCanvas(html, coinType);
   const missingAttrs: string[] = [];
   const warnings: LiveReserveWarning[] = [];
 
   const entries: Array<{ sourceKey: string; name: string; value: number; risk: "very-low" }> = [];
 
   for (const cfg of sliceConfigs) {
-    const val = extractAttrValue(html, cfg.attr);
+    const val = extractAttrValue(canvas, cfg.attr);
     if (val == null) {
       missingAttrs.push(cfg.attr);
       continue;

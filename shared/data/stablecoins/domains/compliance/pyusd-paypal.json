@@ -36,8 +36,7 @@
     "reserveDisclosureUrl": "https://www.paxos.com/pyusd-transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2026-04-30",
-    "notes": "On December 12, 2025, the OCC granted Paxos Trust Company conditional approval to convert from its NYDFS limited purpose trust charter to a national trust bank charter (OCC NR-2025-125). This is a conditional trust-charter conversion, not a PPSI approval under the GENIUS Act (whose application framework remains in proposed-rules rulemaking). Paxos publicly announced PYUSD will align with GENIUS Act requirements as rules are finalized. The authorizationStatus remains issuer-announced-intent because no PPSI approval framework or application process yet exists. The OCC rulemaking (Bulletin 2026-3) is also scrutinizing PayPal's 4% PYUSD reward program as a potential indirect interest payment prohibited under GENIUS.",
+    "notes": "Evidence as of 2026-06-18 review: On December 12, 2025, the OCC granted Paxos Trust Company conditional approval to convert from its NYDFS limited purpose trust charter to a national trust bank charter (OCC NR-2025-125). This is a conditional trust-charter conversion, not a PPSI approval under the GENIUS Act (whose application framework remains in proposed-rules rulemaking). Paxos publicly announced PYUSD will align with GENIUS Act requirements as rules are finalized. The authorizationStatus remains issuer-announced-intent because no PPSI approval framework or application process yet exists. The OCC rulemaking (Bulletin 2026-3) is also scrutinizing PayPal's 4% PYUSD reward program as a potential indirect interest payment prohibited under GENIUS. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
     "references": [
       {
         "label": "OCC NR-2025-125: Conditional approval for Paxos Trust Company, N.A. national trust charter",

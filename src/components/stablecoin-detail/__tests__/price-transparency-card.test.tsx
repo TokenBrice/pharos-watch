@@ -55,6 +55,46 @@ describe("resolveSourceStatus", () => {
 });
 
 describe("PriceTransparencyCard", () => {
+  it.each([false, true])("separates nominal par from observations in compact=%s", (compact) => {
+    render(
+      <PriceTransparencyCard
+        coinData={{
+          ...makeCoinData("protocol-par"),
+          priceObservedAtMode: "nominal_reference",
+          nominalPriceReference: { price: 1, source: "protocol-par", mode: "nominal_reference" },
+        }}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+        compact={compact}
+      />,
+    );
+    expect(screen.getByText("N/A")).toBeTruthy();
+    expect(screen.getByText(/Nominal par reference:.*1\.0000/)).toBeTruthy();
+    expect(screen.queryByText(/^high$/i)).toBeNull();
+    expect(screen.queryByText(/Updated|1m|1 min/)).toBeNull();
+    expect(screen.queryByText("Protocol Redemption")).toBeNull();
+    expect(screen.queryByText("Used")).toBeNull();
+  });
+
+  it("retains an observed discount alongside the separate nominal reference", () => {
+    render(
+      <PriceTransparencyCard
+        coinData={{
+          ...makeCoinData("coingecko"),
+          price: 0.95,
+          nominalPriceReference: { price: 1, source: "protocol-par", mode: "nominal_reference" },
+        }}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+      />,
+    );
+    expect(screen.getByText("$0.9500")).toBeTruthy();
+    expect(screen.getByText("high")).toBeTruthy();
+    expect(screen.getByText(/Nominal par reference:.*1\.0000/)).toBeTruthy();
+  });
+
   it("surfaces Kraken, Bitstamp, and Jupiter with display labels and statuses", () => {
     render(
       <PriceTransparencyCard

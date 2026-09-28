@@ -1,23 +1,27 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import type { LiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/lib/chains";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
-import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AdapterContext, AdapterResult } from "./types";
 import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
+  aggregateMultichainErc20Supply,
+  aggregateScopedLiabilitySupply,
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
+  evaluateLiabilityCoverage,
   fetchErc20TotalSupply,
   fetchJsonPostWithRetry,
   fetchOnchainMulticall3,
-  fetchTronErc20TotalSupply,
+  pinnedEvmTokenReader,
   requireOnchainInput,
   reserveDegradedWarning,
-  reserveInfoWarning,
+  type MultichainSupplyAggregate,
+  type ScopedLiabilitySupply,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
@@ -56,16 +60,6 @@ export interface ChainlinkPorIssuerCirculationProbe {
   reserveSymbol: string;
 }
 
-/** Declared when the readable registry deployments are not the coin's
- *  canonical supply (Kinesis KAU: the feed covers the whole native-chain
- *  program while `totalSupply()` aggregates only the Ethereum representation
- *  wrapper). The aggregate is then a subset of the feed's reserve scope, so the
- *  snapshot publishes quantities and the gap instead of a coverage verdict. */
-export interface ChainlinkPorIncompleteSupplyScope {
-  chain: string;
-  reason: string;
-}
-
 export interface ChainlinkPorParams {
   porFeedAddress: string;
   assetLabel: string;
@@ -75,7 +69,9 @@ export interface ChainlinkPorParams {
   fallbackRpcUrl?: string;
   maxOracleAgeSec?: number;
   issuerCirculationProbe?: ChainlinkPorIssuerCirculationProbe;
-  incompleteSupplyScope?: ChainlinkPorIncompleteSupplyScope;
+  /** Reviewed liability perimeter: an issuer-native chain classification, or
+   *  a declared not-comparable basis (Kinesis KAU) that withholds the ratio. */
+  liabilityScope?: LiabilityScope;
 }
 
 interface ChainlinkPorData {
@@ -85,18 +81,7 @@ interface ChainlinkPorData {
   updatedAt: number;
 }
 
-export interface ChainlinkPorSupplyContribution {
-  chain: string;
-  tokenAddress: string;
-  raw: bigint;
-  decimals: number;
-}
-
-export interface ChainlinkPorSupplyAggregate {
-  contributions: ChainlinkPorSupplyContribution[];
-  omittedNonEvmChains: string[];
-  omittedReadFailureChains: string[];
-}
+export type ChainlinkPorSupplyAggregate = MultichainSupplyAggregate | ScopedLiabilitySupply;
 
 export interface ChainlinkPorCirculationContribution {
   chain: string;
@@ -122,14 +107,6 @@ export interface ChainlinkPorCirculationProbeFailure {
 export type ChainlinkPorCirculationOutcome =
   | { aggregate: ChainlinkPorCirculationAggregate; failure?: undefined }
   | { aggregate?: undefined; failure: ChainlinkPorCirculationProbeFailure };
-
-function isEvmContract(contract: ContractDeployment): boolean {
-  return CHAIN_META[contract.chain]?.type === "evm";
-}
-
-function isTronContract(contract: ContractDeployment): boolean {
-  return CHAIN_META[contract.chain]?.type === "tron";
-}
 
 function inferReserveUnit(coin: StablecoinMeta, params: ChainlinkPorParams): ChainlinkPorReserveUnit {
   if (params.reserveUnit) return params.reserveUnit;
@@ -315,11 +292,11 @@ async function fetchVerifiedBackedCirculation(
   probe: ChainlinkPorIssuerCirculationProbe,
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<{ supply: ChainlinkPorSupplyAggregate; circulation: ChainlinkPorCirculationOutcome }> {
+): Promise<{ supply: MultichainSupplyAggregate; circulation: ChainlinkPorCirculationOutcome }> {
   const policy = BACKED_POLICIES[coin.id];
   const contracts = coin.contracts ?? [];
-  let supply: ChainlinkPorSupplyAggregate = {
-    contributions: [], omittedNonEvmChains: [], omittedReadFailureChains: BACKED_CHAINS,
+  let supply: MultichainSupplyAggregate = {
+    contributions: [], omittedNonEvmChains: [], omittedNoRpcChains: [], omittedReadFailureChains: BACKED_CHAINS,
   };
   try {
     if (!policy || params.reserveUnit !== "SHARES" || params.porFeedAddress.toLowerCase() !== policy.feed
@@ -359,7 +336,7 @@ async function fetchVerifiedBackedCirculation(
       return result.value;
     });
     supply = { contributions: reads.map((read) => ({ chain: read.contract.chain, tokenAddress: read.contract.address,
-      raw: read.gross, decimals: 18 })), omittedNonEvmChains: [], omittedReadFailureChains: [] };
+      raw: read.gross, decimals: 18 })), omittedNonEvmChains: [], omittedNoRpcChains: [], omittedReadFailureChains: [] };
     const payload = await fetchJsonPostWithRetry<BackedAssetReservesResponse>(probe.url,
       { query: BACKED_CIRCULATION_QUERY }, signal, 10_000, ctx);
     const assets = payload.data?.assetReserves?.filter((row) => row.symbol === policy.reserveSymbol);
@@ -415,7 +392,6 @@ export function adaptChainlinkPorResponse(
   const reserveUnit = params.reserveUnit ?? "USD";
   const reserveValue = decimalNumberFromBigInt(data.reserves, data.decimals);
   const comparesSupply = SUPPLY_COMPARABLE_RESERVE_UNITS[reserveUnit];
-  const supplyScope = params.incompleteSupplyScope;
   const supplyTokens =
     comparesSupply && supply && supply.contributions.length > 0
       ? supply.contributions.reduce(
@@ -423,6 +399,17 @@ export function adaptChainlinkPorResponse(
           0,
         )
       : undefined;
+  // One admission result for every liability basis: the reviewed scope (or,
+  // without one, the full registry roster) must be covered and read, and a
+  // scoped reserve/supply pair must sit inside the scope's skew bound. A
+  // declared not-comparable basis always withholds the ratio.
+  const coverage = comparesSupply && supply
+    ? evaluateLiabilityCoverage({
+        supply,
+        ...(params.liabilityScope?.basis === "not-comparable" ? { notComparable: params.liabilityScope } : {}),
+        reserveObservedAt: data.updatedAt,
+      })
+    : undefined;
   const probeActive = params.issuerCirculationProbe != null && comparesSupply;
   const circulatingTokens = probeActive ? circulation?.aggregate?.circulatingTokens : undefined;
   // Issuer-published circulation must stay inside the on-chain gross supply
@@ -432,18 +419,13 @@ export function adaptChainlinkPorResponse(
     circulatingTokens != null && (supplyTokens == null || circulatingTokens <= supplyTokens * 1.001);
   // When a probe is configured, gross totalSupply is proven non-authoritative
   // (it includes unsold issuer pre-mint inventory), so a failed or implausible
-  // probe publishes NO coverage ratio rather than a misleading gross one. A
-  // declared incomplete supply scope works the same way: the readable
-  // deployments are only part of the liability the feed covers, so neither
-  // basis applies and the ratio stays withheld.
-  // A partial gross supply aggregate is also withheld rather than used for a
-  // coverage verdict.
+  // probe publishes NO coverage ratio rather than a misleading gross one.
   // A timestamp-less endpoint stays diagnostic unless the reviewed inventory
   // policy has independently reproduced every deployment at current blocks.
   const verifiedCirculation = circulationPlausible && circulation?.aggregate?.verifiedAt != null
-    && supply != null && supply.omittedNonEvmChains.length === 0 && supply.omittedReadFailureChains.length === 0;
-  const supplyReadComplete = supply != null && supply.omittedReadFailureChains.length === 0;
-  const liabilityBasis = supplyScope != null ? undefined : !probeActive && supplyReadComplete ? "onchain-total-supply"
+    && coverage?.supplyCoverageComplete === true;
+  const liabilityBasis = coverage?.ratioUnavailableReason === "not-comparable" ? undefined
+    : !probeActive && coverage != null && coverage.ratioUnavailableReason == null ? "onchain-total-supply"
     : verifiedCirculation ? "onchain-verified-issuer-circulation" : undefined;
   const liabilityTokens = liabilityBasis === "onchain-verified-issuer-circulation" ? circulatingTokens
     : liabilityBasis === "onchain-total-supply" ? supplyTokens : undefined;
@@ -483,30 +465,7 @@ export function adaptChainlinkPorResponse(
       ),
     );
   }
-  if (supply && supply.omittedNonEvmChains.length > 0) {
-    warnings.push(
-      reserveInfoWarning(
-        "por-supply-chain-omitted",
-        `Supply aggregation omits non-EVM chains: ${supply.omittedNonEvmChains.join(", ")}`,
-      ),
-    );
-  }
-  if (supply && supply.omittedReadFailureChains.length > 0) {
-    warnings.push(
-      reserveDegradedWarning(
-        "partial-supply-read-failure",
-        `Supply aggregation omits chains whose totalSupply() read failed: ${supply.omittedReadFailureChains.join(", ")}`,
-      ),
-    );
-  }
-  if (supplyScope != null) {
-    warnings.push(
-      reserveInfoWarning(
-        "por-supply-scope-incomplete",
-        `On-chain supply covers only registry deployments, while the canonical ${supplyScope.chain} supply is not readable by this adapter; no coverage ratio is published (${supplyScope.reason})`,
-      ),
-    );
-  }
+  warnings.push(...(coverage?.warnings ?? []));
 
   const primaryContribution = supply?.contributions[0];
 
@@ -539,21 +498,9 @@ export function adaptChainlinkPorResponse(
               tokenAddress: contribution.tokenAddress,
               supplyRaw: contribution.raw.toString(),
               decimals: contribution.decimals,
+              ...(contribution.observedAt != null ? { observedAt: contribution.observedAt } : {}),
             })),
-            supplyReadComplete: supply!.omittedReadFailureChains.length === 0,
-            // Coverage completeness is distinct from read success: a non-EVM
-            // registry deployment (Solana, NEAR, …) is omitted by design and
-            // degrades coverage here while still surfacing as the
-            // `por-supply-chain-omitted` info warning, not a read failure. A
-            // configured incomplete supply scope keeps coverage incomplete
-            // regardless of which deployments were read.
-            supplyCoverageComplete:
-              supplyScope == null &&
-              supply!.omittedNonEvmChains.length === 0 &&
-              supply!.omittedReadFailureChains.length === 0,
-            ...(supplyScope != null
-              ? { supplyScopeIncomplete: { chain: supplyScope.chain, reason: supplyScope.reason } }
-              : {}),
+            ...coverage!.metadata,
             ...(primaryContribution
               ? {
                   supplyRaw: primaryContribution.raw.toString(),
@@ -657,64 +604,42 @@ export async function fetchChainlinkPorReserves(
       verified.supply, verified.circulation);
   }
 
-  // 3. Aggregate totalSupply across every registry-typed EVM + Tron chain in
-  //    coin.contracts. Non-EVM chains (Solana, NEAR, …) are omitted from the
-  //    gross-supply diagnostic and surfaced as an info warning.
   const allContracts = coin.contracts ?? [];
-  const evmContracts = allContracts.filter(isEvmContract);
-  const tronContracts = allContracts.filter(isTronContract);
-  const omittedNonEvmChains = allContracts
-    .filter((c) => !isEvmContract(c) && !isTronContract(c))
-    .map((c) => c.chain);
-  const readableContracts = [...evmContracts, ...tronContracts];
-
-  if (readableContracts.length === 0) {
-    throw new Error(`chainlink-por: no EVM or Tron contracts available for ${coin.id}`);
-  }
-
-  const supplyReads = await Promise.all(
-    readableContracts.map(async (contract) => {
-      if (contract.decimals == null) {
-        logWorkerEventArgs("handler", "warn",
-          `[chainlink-por] ${contract.chain} supply probe skipped for ${coin.symbol}: contract decimals are missing`,
-        );
-        return { contract, raw: null };
-      }
-      const raw = isTronContract(contract)
-        ? await fetchTronErc20TotalSupply(contract.address, signal, ctx)
-        : await fetchErc20TotalSupply(
-            { ...input, chain: contract.chain },
-            contract.address,
-            signal,
-            ctx,
-            params.rpcUrl,
-            params.fallbackRpcUrl,
-          );
-      return { contract, raw };
-    }),
-  );
-
-  const successful = supplyReads.filter(
-    (entry): entry is { contract: ContractDeployment; raw: bigint } => entry.raw != null && entry.raw > 0n,
-  );
-  // A null read is an RPC/read failure; a zero read is a valid empty deployment
-  // (for example a chain whose supply was fully burned or never minted).
-  const failed = supplyReads.filter((entry) => entry.raw == null);
-
-  if (successful.length === 0) {
-    throw new Error(`chainlink-por: totalSupply() calls failed on all EVM/Tron chains for ${coin.id}`);
-  }
-
-  const supplyAggregate: ChainlinkPorSupplyAggregate = {
-    contributions: successful.map((entry) => ({
-      chain: entry.contract.chain,
-      tokenAddress: entry.contract.address,
-      raw: entry.raw,
-      decimals: entry.contract.decimals,
-    })),
-    omittedNonEvmChains,
-    omittedReadFailureChains: failed.map((entry) => entry.contract.chain),
-  };
+  const liabilityScope = params.liabilityScope;
+  // A reviewed issuer-native scope reads exactly its included chains, each at
+  // a pinned block with on-chain decimals. Without one, totalSupply is
+  // aggregated over every registry-typed EVM + Tron deployment, and any chain
+  // the roster cannot read withholds the ratio.
+  const supplyAggregate: ChainlinkPorSupplyAggregate = liabilityScope?.basis === "issuer-native-supply"
+    ? await aggregateScopedLiabilitySupply({
+        coin,
+        scope: liabilityScope,
+        adapterKey: "chainlink-por",
+        signal,
+        nowSec: now,
+        ctx,
+        readEvmToken: pinnedEvmTokenReader({
+          input,
+          signal,
+          ctx,
+          rpcUrl: params.rpcUrl,
+          fallbackRpcUrl: params.fallbackRpcUrl,
+        }),
+      })
+    : await aggregateMultichainErc20Supply({
+        coin,
+        adapterKey: "chainlink-por",
+        signal,
+        ctx,
+        readEvmSupply: (contract) => fetchErc20TotalSupply(
+          { ...input, chain: contract.chain },
+          contract.address,
+          signal,
+          ctx,
+          contract.chain === input.chain ? params.rpcUrl : undefined,
+          contract.chain === input.chain ? params.fallbackRpcUrl : undefined,
+        ),
+      });
 
   const circulation = params.issuerCirculationProbe
     ? await fetchIssuerCirculation(params.issuerCirculationProbe, allContracts, signal, ctx)

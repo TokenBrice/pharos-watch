@@ -69,7 +69,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
-    "version": 1,
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "kau-kinesis",
     "display": {
@@ -88,8 +88,9 @@
       "assetLabel": "Physical gold reserves (grams)",
       "assetRisk": "very-low",
       "reserveUnit": "XAU_G",
-      "incompleteSupplyScope": {
-        "chain": "kinesis",
+      "liabilityScope": {
+        "basis": "not-comparable",
+        "canonicalChain": "kinesis",
         "reason": "the feed covers the whole Kinesis Cayman gold balance, and the audited liability basis is Kinesis-native KAU circulation (2,565,133.465 at the 2026-04-20 audit ledger); the registry's Ethereum ERC-20 is a KMS Labs representation backed by native KAU held in reserve, so its totalSupply() is only a subset of the program supply"
       }
     }

@@ -6,7 +6,7 @@ import {
   SafetyScoreHistoryV2ResponseSchema,
   type SafetyScoreHistoryV2Point,
 } from "@shared/types/safety-score-history";
-import { safetyScoreHistoryFreshness } from "./safety-score-history";
+import { safetyScoreHistoryHeaders } from "./safety-score-history";
 import {
   fetchSafetyScoreHistoryV2Rows,
   safetyScoreHistoryIdentityFromV2Row,
@@ -57,10 +57,7 @@ export const handleSafetyScoreHistoryV2 = async (db: D1Database, url: URL): Prom
           malformedRows: history.length - validHistory.length,
         });
       },
-      freshness: ({ db: database, history }) => safetyScoreHistoryFreshness({
-        db: database,
-        history: history.filter((row): row is SafetyScoreHistoryV2Point => row !== null),
-      }),
+      buildHeaders: safetyScoreHistoryHeaders,
     });
   } catch (error) {
     if (error instanceof AllSafetyScoreHistoryRowsMalformedError) {

@@ -19,7 +19,6 @@ import {
   isEligibleDirectApiPool,
   makeDexApiFetchResult,
   normalizeDexApiPoolsForMerge,
-  type DexApiFetchResult,
   type DexApiPool,
 } from "../../../lib/dex-api-common";
 import { resolveStablecoinIdForDexApiToken } from "../../../lib/dex-api-token-pricing";
@@ -52,6 +51,7 @@ import {
   type DirectApiExecutionTargetContext,
 } from "../process-pool-execution-capability";
 
+import type { PaginatedDexApiFetchResult } from "../source-pagination-state";
 /**
  * Whether a provider's response is an exhaustive census of its protocol on the
  * chains it declares, or only a bounded sample of it. Only an exhaustive census
@@ -78,7 +78,7 @@ export interface DexPoolSourceAdapter {
   supportedChains: string[];
   /** Defaults to "exhaustive"; declare "bounded-sample" to withhold veto authority. */
   censusScope?: DirectApiCensusScope;
-  fn: (signal?: AbortSignal) => Promise<DexApiFetchResult>;
+  fn: (signal?: AbortSignal) => Promise<PaginatedDexApiFetchResult>;
 }
 export type DirectApiFetcher = DexPoolSourceAdapter;
 
@@ -123,7 +123,7 @@ export interface DirectApiFetchPhaseEntry {
   normalizedProtocol: string;
   supportedChains: string[];
   censusScope?: DirectApiCensusScope;
-  result: DexApiFetchResult;
+  result: PaginatedDexApiFetchResult;
   /** Exact raw-source identities retained without keeping discarded pool objects alive. */
   authoritativeExactPoolKeys?: Set<string>;
   poolCompaction?: DirectApiProviderPoolCompaction;
@@ -190,7 +190,7 @@ async function executeDirectApiProvider(
   db: D1Database,
   fetcher: Pick<DirectApiFetcher, "name" | "circuitKey" | "fn">,
   parentSignal?: AbortSignal,
-): Promise<{ value: DexApiFetchResult; circuitOutcome: CircuitOutcomeRecord | null }> {
+): Promise<{ value: PaginatedDexApiFetchResult; circuitOutcome: CircuitOutcomeRecord | null }> {
   const { name, circuitKey, fn } = fetcher;
   const providerId = `dex-direct-api:${name.toLowerCase().replaceAll(/\s+/g, "-")}`;
   if (!(await shouldAttemptFetch(db, circuitKey))) {
@@ -563,7 +563,7 @@ export async function runDirectApiFetchPhase(
           circuitKey,
           normalizedProtocol,
           supportedChains,
-          ...(censusScope ? { censusScope } : {}),
+          censusScope: result.censusScope ?? censusScope ?? "exhaustive",
           result,
         };
         return {

@@ -1,5 +1,5 @@
 import { parseEnumParam, parseQueryParams } from "../lib/api-params";
-import { jsonResponse } from "../lib/api-response";
+import { errorResponse, jsonResponse } from "../lib/api-response";
 import { listRecentStatusTransitions } from "../lib/status-reliability";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { assessPublicHealth } from "../lib/public-health-assessment";
@@ -71,15 +71,22 @@ export const handlePublicStatusHistory = async (db: D1Database, request: Request
     if (window instanceof Response) return window;
 
     const from = now - WINDOW_TO_SECONDS[window];
+    let transitionQueryFailed = false;
 
     // Two parallel loads:
     //   1. the full transition list in the window (will be filtered below)
     //   2. the public health assessment — same function /api/health uses,
     //      so the hero badge and this endpoint stay in sync
     const [allTransitions, publicHealth] = await Promise.all([
-      listRecentStatusTransitions(db, parsed.limit, { from }),
+      listRecentStatusTransitions(db, parsed.limit, { from }, () => {
+        transitionQueryFailed = true;
+      }),
       assessPublicHealth(db, now, { logPrefix: "public-status-history" }),
     ]);
+
+    if (transitionQueryFailed) {
+      return errorResponse(503, "Public status history unavailable", { noStore: true });
+    }
 
     // Filter transitions to public-impact incidents, while preserving the
     // recovery rows needed to keep the returned state-machine stream coherent.

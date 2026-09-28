@@ -8,6 +8,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { buildPancakePageSkips, fetchPancakeSwapPools } from "../fetch-pancakeswap";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { acknowledgeDexSourcePagination } from "../source-pagination-state";
 
 describe("fetchPancakeSwapPools", () => {
   it("refreshes the head and rotates a persisted bounded tail", () => {
@@ -244,24 +245,24 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.errors[0]).toContain("GET,HEAD");
   });
 
-  it("degrades successful chain reads when their cursors are not durable", async () => {
+  it("defers cursor writes until acknowledgement and reports storage failure there", async () => {
     vi.mocked(fetchTextWithRetry).mockImplementation(async () =>
       textResult(response({ data: { pools: [] } })));
+    const run = vi.fn(async () => { throw new Error("pagination state write failed"); });
     const db = makeNoopD1({
       prepare: vi.fn(() => ({
         bind: vi.fn(() => ({
           first: vi.fn(async () => null),
-          run: vi.fn(async () => {
-            throw new Error("pagination state write failed");
-          }),
+          run,
         })),
       })),
     });
 
     const result = await fetchPancakeSwapPools("graph-key", undefined, db);
 
-    expect(result).toMatchObject({ ok: true, degraded: true });
-    expect(result.pagination?.cursorPersistence).toEqual({
+    expect(result).toMatchObject({ ok: true, degraded: false });
+    expect(run).not.toHaveBeenCalled();
+    expect(await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? [])).toEqual({
       attempts: 2,
       written: 0,
       failures: [
@@ -269,8 +270,5 @@ describe("fetchPancakeSwapPools", () => {
         { sourceKey: "pancakeswap-v3:base", errorClass: "write-failed" },
       ],
     });
-    expect(result.warnings).toContain(
-      "ethereum: pagination cursor persistence failed (write-failed); stored cursor remains retryable",
-    );
   });
 });

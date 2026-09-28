@@ -47,6 +47,19 @@ function coin(symbol: string, netFlow24hUsd: number): MintBurnCoinFlow {
       isPartial: false,
       status: "full",
     },
+    valuation: {
+      window24h: {
+        completeness: "complete",
+        mintCompleteness: "complete",
+        burnCompleteness: "complete",
+        unpricedMintEventCount: 0,
+        unpricedBurnEventCount: 0,
+      },
+      baseline: "complete",
+      netFlow7d: "complete",
+      netFlow30d: "complete",
+      netFlow90d: "complete",
+    },
   };
 }
 
@@ -131,5 +144,31 @@ describe("FlowReceiptBand", () => {
     }));
 
     expect(screen.getByText("-$5.00M").className).toContain("text-red-700");
+  });
+
+  it("renders a partial-valuation net as NR with its reason and marks the volume a lower bound", () => {
+    const partial = coin("DAI", -9_000_000);
+    partial.valuation = {
+      ...partial.valuation!,
+      window24h: {
+        completeness: "partial",
+        mintCompleteness: "partial",
+        burnCompleteness: "complete",
+        unpricedMintEventCount: 2,
+        unpricedBurnEventCount: 0,
+      },
+    };
+    render(createElement(FlowReceiptBand, {
+      gauge,
+      coins: [coin("USDC", 25_000_000), partial],
+      weeklyHourly: [],
+      scopeLabel: "Configured issuance chains",
+      syncWarning: null,
+      variant: "compact",
+    }));
+
+    expect(screen.queryByText("+$16.00M")).toBeNull();
+    expect(screen.getAllByText(/summed signed net unavailable/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("≥ $25.00M", { exact: false })).toBeTruthy();
   });
 });

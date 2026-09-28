@@ -1,8 +1,8 @@
 import { YieldTypeSchema } from "@shared/types/core";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { parseStablecoinHistoryQuery } from "../lib/api-history";
-import { jsonFreshResponse, errorResponse } from "../lib/api-response";
-import { buildFreshnessMeta, getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
+import { jsonResponseWithHeaders, errorResponse } from "../lib/api-response";
+import { addFreshnessHeaders, buildFreshnessMeta, getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getCache } from "../lib/db-cache";
 import { buildOnChainSourceKey, isOnChainBootstrapYieldSeed, parseYieldWarningSignals } from "../lib/yield-utils";
@@ -12,7 +12,6 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { parseJson } from "../lib/json-parse";
 import { isSuppressedYieldHistoryRow } from "../lib/yield-history-ownership-handoffs";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { isRecord } from "@shared/lib/type-guards";
 import { YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
@@ -409,23 +408,16 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
         : publishedCutoff;
 
     const current = history.length > 0 ? (history[history.length - 1] ?? null) : null;
-    const assessedAt = Math.floor(Date.now() / 1000);
     const interval = CRON_INTERVALS["sync-yield-data"];
-    const bands = getCacheRatioThresholds("yield-data");
-    const freshBudgetSec = interval * bands.degraded;
-    const degradedBudgetSec = interval * bands.stale;
     const freshness = buildFreshnessMeta(publishedCutoff, interval, "yield-data");
     const freshnessMeta = {
       ...freshness,
-      assessedAt,
-      freshBudgetSec,
-      degradedBudgetSec,
       status: authorityUnavailable ? "stale" as const : freshness.status,
       reason: authorityUnavailable ? "publication-cutoff-unavailable"
         : freshness.status !== "fresh" ? "yield-publication-age" : null,
     };
 
-    return jsonFreshResponse(
+    return jsonResponseWithHeaders(
       {
         current,
         history,
@@ -441,14 +433,11 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
           asOf: latestHistoryTimestamp,
         }),
       },
-      {
-        cacheControl: freshnessMeta.status !== "fresh" ? "no-store" : CACHE_PROFILES.slow,
-        headers: {
-          "X-Data-Age": String(freshnessMeta.ageSeconds),
-          ...(freshnessMeta.status !== "fresh" ? {
-            Warning: `110 - "Yield publication ${freshnessMeta.status} (${freshnessMeta.reason})"`,
-          } : {}),
-        },
-      },
+      addFreshnessHeaders({
+        "Cache-Control": freshnessMeta.status !== "fresh" ? "no-store" : CACHE_PROFILES.slow,
+        ...(freshnessMeta.status !== "fresh" ? {
+          Warning: `110 - "Yield publication ${freshnessMeta.status} (${freshnessMeta.reason})"`,
+        } : {}),
+      }, publishedCutoff, interval, freshness),
     );
   };

@@ -4,6 +4,7 @@ import { fetchCoinGeckoMarketHistory } from "../../lib/coingecko-market-history"
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import {
+  buildNativeSupplyBuckets,
   buildPriceMapByDate,
   buildTokenRowsFromMarketCaps,
   type DetailResponseHelpers,
@@ -77,7 +78,7 @@ export async function fetchCommodityTokens(
   // Merge TVL history with price data to produce chart-compatible tokens array.
   let tokens: Record<string, unknown>[] = [];
 
-  if (tvlHistory.length > 0 && prices.length > 0) {
+  if (tvlHistory.length > 0) {
     const sortedPrices = [...prices].sort(
       (a, b) => a.timestamp - b.timestamp,
     );
@@ -87,9 +88,7 @@ export async function fetchCommodityTokens(
       return {
         date: point.date,
         totalCirculatingUSD: { [config.pegType]: marketCap },
-        totalCirculating: {
-          [config.pegType]: price > 0 ? marketCap / price : 0,
-        },
+        totalCirculating: buildNativeSupplyBuckets(config.pegType, marketCap, price),
       };
     });
   }
@@ -115,7 +114,7 @@ export async function fetchCommodityTokens(
       marketHistory.marketCaps,
       config.pegType,
       priceMap,
-      (mcap, price) => (price > 0 ? resolveMarketCap(mcap, marketHistory.circulatingSupply, price) : mcap),
+      (mcap, price) => (price !== null ? resolveMarketCap(mcap, marketHistory.circulatingSupply, price) : mcap),
     );
   }
 

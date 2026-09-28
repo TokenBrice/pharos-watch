@@ -7,6 +7,7 @@ import type {
 } from "../scoring-stage-contract";
 import { initMetrics } from "../pool-helpers";
 import {
+  MissingDexLiquidityScoringStageError,
   DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
   decodeDexLiquidityScoringStageChunks,
   encodeDexLiquidityScoringStageChunks,
@@ -467,7 +468,7 @@ describe("DEX liquidity scoring stage", () => {
     await expect(loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 6 * 60,
       expectedSourceSlotStartedAt: sourceSlotStartedAt,
-    })).rejects.toThrow(`missing for source slot ${sourceSlotStartedAt}`);
+    })).rejects.toBeInstanceOf(MissingDexLiquidityScoringStageError);
     expect(previous.generationId).not.toBe(stored.generationId);
   });
 
@@ -525,8 +526,24 @@ describe("DEX liquidity scoring stage", () => {
       readyDeadlineMs: deadlineMs,
       nowMs: () => deadlineMs,
       wait,
-    })).rejects.toThrow(`missing for source slot ${sourceSlotStartedAt}`);
+    })).rejects.toBeInstanceOf(MissingDexLiquidityScoringStageError);
     expect(wait).not.toHaveBeenCalled();
+  });
+
+  it("recognizes a missing stage independently of its diagnostic wording", async () => {
+    const error = new MissingDexLiquidityScoringStageError(15_000);
+    error.message = "Source generation has not arrived";
+    const db = makeNoopD1({
+      prepare: () => ({ bind: () => ({ first: async () => { throw error; } }) }),
+    });
+    const onMissing = vi.fn(() => "stop" as const);
+    await expect(loadDexLiquidityScoringStageWhenReady(db, {
+      expectedSourceSlotStartedAt: 15_000,
+      readyDeadlineMs: 16_000_000,
+      nowMs: () => 15_000_000,
+      onMissing,
+    })).rejects.toBe(error);
+    expect(onMissing).toHaveBeenCalledOnce();
   });
 
   it("lets a caller stop waiting on a missing stage instead of burning the deadline", async () => {
@@ -543,7 +560,7 @@ describe("DEX liquidity scoring stage", () => {
       nowMs: () => deadlineMs - 30_000,
       wait,
       onMissing,
-    })).rejects.toThrow(`missing for source slot ${sourceSlotStartedAt}`);
+    })).rejects.toBeInstanceOf(MissingDexLiquidityScoringStageError);
     expect(onMissing).toHaveBeenCalledOnce();
     expect(wait).not.toHaveBeenCalled();
   });

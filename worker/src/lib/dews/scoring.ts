@@ -5,19 +5,23 @@ import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeDEWS } from "../dews";
 import type { DEWSInput, DEWSResult, PoolEntry } from "../dews";
+import type { TopPoolsUnavailableReason } from "./types";
 import { isAuthoritativeDepegPegReference } from "../depeg-trust-policy";
 import type { ContagionAmplifiers, DewsScoringResult, DewsScoringState, PersistedJsonDecodeReason } from "./contracts";
 import { decodeJsonString } from "../cache-json";
 import { CONTAGION_BUMP_DANGER, CONTAGION_BUMP_WARNING, CONTAGION_AMPLIFIER_CAP } from "../constants";
 import { CONTRACT_CONFIGS } from "../blacklist-contracts";
+import { numberValue } from "@shared/lib/type-guards";
 
+// Missing `extra`/`balanceRatio` means "no balance measurement" (null), never perfect balance; a missing
+// or invalid TVL, or a non-numeric ratio, makes the entry unreadable.
 const RawPoolDataSchema = z.object({
-  tvlUsd: z.number().default(0),
+  tvlUsd: z.number().finite().nonnegative(),
   extra: z
     .object({
-      balanceRatio: z.number(),
+      balanceRatio: z.number().finite().nullish(),
     })
-    .optional(),
+    .nullish(),
 });
 
 const BLACKLIST_TRACKED_ID_SET = new Set(CONTRACT_CONFIGS.map((config) => config.stablecoinId));
@@ -33,13 +37,29 @@ interface BuildDewsScoringResultOptions extends DewsScoringState {
   }) => void;
 }
 
-function buildTopPools(
+type TopPoolsRead =
+  | { pools: PoolEntry[]; unavailableReason: null }
+  | { pools: null; unavailableReason: TopPoolsUnavailableReason };
+
+const TOP_POOLS_DECODE_UNAVAILABLE_REASON: Record<PersistedJsonDecodeReason, TopPoolsUnavailableReason> = {
+  missing: "top-pools-missing",
+  "json-parse-failed": "top-pools-json-parse-failed",
+  "invalid-shape": "top-pools-invalid-shape",
+};
+
+/**
+ * Reads the worst-pool evidence for one asset. A readable `[]` is an observed empty set; a missing,
+ * unparseable or non-array list, or any unreadable entry, makes the list unavailable for this asset only.
+ * Decode failures are recorded as per-asset diagnostics (`degradesRun: false`): the asset's pool signal
+ * degrades through its unavailable worst-pool component, never through a whole-cohort hold.
+ */
+function readTopPools(
   stablecoinId: string,
   topPoolsJson: string | null,
   updatedAt: number | null,
   registerMalformedPersistedInput: BuildDewsScoringResultOptions["registerMalformedPersistedInput"],
-): PoolEntry[] | null {
-  if (!topPoolsJson) return null;
+): TopPoolsRead {
+  if (!topPoolsJson) return { pools: null, unavailableReason: "top-pools-missing" };
 
   const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(topPoolsJson, {
     updatedAt,
@@ -58,16 +78,26 @@ function buildTopPools(
       reason: decoded.reason,
       degradesRun: false,
     });
-    return null;
+    return { pools: null, unavailableReason: TOP_POOLS_DECODE_UNAVAILABLE_REASON[decoded.reason] };
   }
 
-  return decoded.payload.map((rawPool) => {
+  const pools: PoolEntry[] = [];
+  for (const rawPool of decoded.payload) {
     const parsedPool = RawPoolDataSchema.safeParse(rawPool);
-    return {
-      tvlUsd: parsedPool.success ? parsedPool.data.tvlUsd : 0,
-      balanceRatio: parsedPool.success ? (parsedPool.data.extra?.balanceRatio ?? 1.0) : 1.0,
-    };
-  });
+    if (!parsedPool.success) {
+      registerMalformedPersistedInput({
+        source: "dex_liquidity",
+        context: "dex_liquidity.top_pools_json[entry]",
+        stablecoinId,
+        updatedAt,
+        reason: "invalid-shape",
+        degradesRun: false,
+      });
+      return { pools: null, unavailableReason: "top-pools-entry-malformed" };
+    }
+    pools.push({ tvlUsd: parsedPool.data.tvlUsd, balanceRatio: parsedPool.data.extra?.balanceRatio ?? null });
+  }
+  return { pools, unavailableReason: null };
 }
 
 export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): DewsScoringResult {
@@ -119,7 +149,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const hasBlacklistTracking = BLACKLIST_TRACKED_ID_SET.has(meta.id);
     const blacklistCounts = hasBlacklistTracking ? sourceState.blacklistCounts.get(meta.id) : undefined;
 
-    const topPools = buildTopPools(
+    const topPools = readTopPools(
       meta.id,
       dexLiq?.top_pools_json ?? null,
       dexLiq?.updated_at ?? null,
@@ -155,7 +185,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       circulatingPrevWeekAvailable: hasPrevWeekAnchor,
       weightedBalanceRatio: dexLiq?.weighted_balance_ratio ?? null,
       avgPoolStress: dexLiq?.avg_pool_stress ?? null,
-      topPools,
+      topPools: topPools.pools,
+      topPoolsUnavailableReason: topPools.unavailableReason,
       liquidityScore: dexLiq?.liquidity_score ?? null,
       liquidityScore7dAgo: liqHist?.score ?? null,
       tvlCurrent: dexLiq?.total_tvl_usd ?? null,
@@ -178,12 +209,15 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,
       flowDataAgeDays: mintBurnAgeSec == null ? 9999 : mintBurnAgeSec / DAY_SECONDS,
       flowBaselineDays: mintBurn?.baselineDays ?? null,
+      flowValuation24h: mintBurn?.valuation24h ?? null,
+      flowBurnBaselineValuation: mintBurn?.burnBaselineValuation ?? null,
       yieldWarnings: sourceState.yieldWarnings.get(meta.id) ?? [],
       yieldSourceRisk: sourceState.yieldSourceRisk.get(meta.id) ?? null,
       yieldRankChangeAttribution: sourceState.yieldRankChangeAttribution.get(meta.id) ?? null,
       psiScore: sourceState.latestPsiScore,
       prevPoolValue: prev?.pool?.value,
       prevPoolAvailable: prev?.pool?.available === true,
+      prevPoolComponentCoverage: numberValue((prev?.pool as { componentCoverage?: unknown } | undefined)?.componentCoverage),
       prevDivergValue: prev?.diverg?.value,
       prevDivergAvailable: prev?.diverg?.available === true,
       contagionAmplifier: 1,

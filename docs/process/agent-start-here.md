@@ -30,6 +30,8 @@ The `agent:route` alias invokes `scripts/ci/pharos-change-contract.ts`. Its `--f
 
 Routing rejects unknown options, missing values, invalid hook modes, and failed Git selections instead of reporting an empty successful contract. Git-based selection retains deletions and both sides of renames; commands that require existing files filter those paths only when executing. Ordinary text and JSON output include every required doc, check, and rule; SessionStart remains a bounded hint and explicitly reports unavailable Git evidence.
 
+Single-path `Read first` is capped at six entries; overflow remains in `Also relevant`. Domain mappings for reserves, yield, route contracts, and compliance add ownership and rules without adding broad test trees. The reviewed mapping cap is 29 (DEC-14); maintain the one registry rather than introducing another source inventory. Newly routed primary sections must remain at most 25 KB, measured from their heading through the next heading of the same or higher level.
+
 Use `--staged` when the intended change is staged but not committed. The command reports:
 
 - matched ownership mappings and risk;
@@ -47,6 +49,8 @@ Then:
 4. Update the nearest owning doc only when behavior, API contracts, methodology, operations, or data-source policy changed.
 
 ### When Routing Misses
+
+A path with no matching mapping emits a `Missing documentation owner` warning, including planned paths passed with `--new-file`; that flag suppresses only the filesystem-existence warning. A generic runtime match is context, not proof that every domain contract was found. For stale producer output, use the [symptom selector](../README.md#stale-output-diagnosis) and the routed observation background rather than treating scheduling guidance as an incident runbook.
 
 Search by source path or product term:
 

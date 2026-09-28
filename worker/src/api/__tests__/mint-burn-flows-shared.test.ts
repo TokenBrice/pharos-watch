@@ -4,6 +4,7 @@ import {
   buildBaselineMap,
   buildCoinCoverageMap,
   cachedFlowFallbackResponse,
+  finalizeMintBurnFlowResponse,
   ETHEREUM_CHAIN_ID,
   readCachedFlow,
   readMintBurnCronSnapshot,
@@ -49,6 +50,37 @@ describe("cachedFlowFallbackResponse", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Data-Age")).toBe("90");
     expect(response.headers.get("Warning")).toBeNull();
+  });
+
+  it.each([null, undefined])("does not replace an absent cached sync timestamp (%s) with response generation time", async (lastSuccessfulSyncAt) => {
+    const now = Math.floor(Date.now() / 1000);
+    const body = {
+      updatedAt: now,
+      sync: { lastSuccessfulSyncAt, warning: "Mint/burn sync unavailable" },
+    };
+    const response = cachedFlowFallbackResponse({ updatedAt: now, value: JSON.stringify(body) });
+
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(response.headers.get("Warning")).toMatch(/^199 /);
+    await expect(response.json()).resolves.toMatchObject({ sync: { warning: body.sync.warning } });
+  });
+
+  it("marks a fresh response with no sync timestamp unavailable while preserving its sync warning", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const body = { sync: { lastSuccessfulSyncAt: null, warning: "Mint/burn sync unavailable" } };
+    const response = await finalizeMintBurnFlowResponse(
+      mockD1([{ match: "INSERT INTO cache (key, value, updated_at)", rows: [], runMeta: { changes: 1 } }]),
+      "mint-burn-flows:v3:aggregate:24",
+      now,
+      body,
+      null,
+    );
+
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(response.headers.get("Warning")).toMatch(/^199 /);
+    await expect(response.json()).resolves.toEqual(body);
   });
 
   it("returns 503 when the cached body is malformed JSON", async () => {
@@ -227,13 +259,33 @@ describe("readMintBurnCronSnapshot", () => {
 });
 
 describe("buildBaselineMap", () => {
+  const day = (
+    stablecoin_id: string,
+    chain_id: string,
+    dayIndex: number,
+    daily_net: number,
+    daily_abs: number,
+    tally: Partial<Record<"unpriced_mint_event_count" | "unpriced_burn_event_count" | "unknown_mint_hours" | "unknown_burn_hours", number>> = {},
+  ) => ({
+    stablecoin_id,
+    chain_id,
+    day_ts: dayIndex * DAY_SECONDS,
+    daily_net,
+    daily_abs,
+    unpriced_mint_event_count: 0,
+    unpriced_burn_event_count: 0,
+    unknown_mint_hours: 0,
+    unknown_burn_hours: 0,
+    ...tally,
+  });
+
   it("averages across tracked days, including days with no activity", () => {
     const nowSec = 4 * DAY_SECONDS + 1;
     const baseline = buildBaselineMap(
       nowSec,
       [
-        { stablecoin_id: "usdt-tether", chain_id: ETHEREUM_CHAIN_ID, day_ts: 1 * DAY_SECONDS, daily_net: 30, daily_abs: 50 },
-        { stablecoin_id: "usdt-tether", chain_id: ETHEREUM_CHAIN_ID, day_ts: 2 * DAY_SECONDS, daily_net: -15, daily_abs: 25 },
+        day("usdt-tether", ETHEREUM_CHAIN_ID, 1, 30, 50),
+        day("usdt-tether", ETHEREUM_CHAIN_ID, 2, -15, 25),
       ],
       [
         { stablecoin_id: "usdt-tether", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 1 * DAY_SECONDS + 3600 },
@@ -244,6 +296,7 @@ describe("buildBaselineMap", () => {
       avgNet: 5,
       avgAbs: 25,
       dataDays: 3,
+      valuation: "complete",
     });
   });
 
@@ -255,9 +308,9 @@ describe("buildBaselineMap", () => {
     const baseline = buildBaselineMap(
       nowSec,
       [
-        { stablecoin_id: "usdc-circle", chain_id: "ethereum", day_ts: 1 * DAY_SECONDS, daily_net: 100, daily_abs: 200 },
-        { stablecoin_id: "usdc-circle", chain_id: "arbitrum", day_ts: 1 * DAY_SECONDS, daily_net: -40, daily_abs: 60 },
-        { stablecoin_id: "usdc-circle", chain_id: "ethereum", day_ts: 2 * DAY_SECONDS, daily_net: 20, daily_abs: 30 },
+        day("usdc-circle", "ethereum", 1, 100, 200),
+        day("usdc-circle", "arbitrum", 1, -40, 60),
+        day("usdc-circle", "ethereum", 2, 20, 30),
       ],
       [
         { stablecoin_id: "usdc-circle", chain_id: "ethereum", first_hour_ts: 1 * DAY_SECONDS },
@@ -270,7 +323,27 @@ describe("buildBaselineMap", () => {
       avgNet: 40,
       avgAbs: 145,
       dataDays: 2,
+      valuation: "complete",
     });
+  });
+
+  it("qualifies the baseline with the valuation of its own days only", () => {
+    // nowSec in day 4 → baseline days 1..3; day 4 (today) is outside the baseline.
+    const nowSec = 4 * DAY_SECONDS + 1;
+    const firstSeen = (id: string) => [{ stablecoin_id: id, chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 1 * DAY_SECONDS }];
+    const partial = buildBaselineMap(nowSec, [
+      day("partial-coin", ETHEREUM_CHAIN_ID, 2, -10, 10, { unpriced_burn_event_count: 1, unknown_mint_hours: 3 }),
+    ], firstSeen("partial-coin"));
+    const unknown = buildBaselineMap(nowSec, [
+      day("legacy-coin", ETHEREUM_CHAIN_ID, 2, 10, 10, { unknown_mint_hours: 1 }),
+    ], firstSeen("legacy-coin"));
+    const todayOnly = buildBaselineMap(nowSec, [
+      day("today-coin", ETHEREUM_CHAIN_ID, 4, 10, 10, { unpriced_mint_event_count: 2 }),
+    ], firstSeen("today-coin"));
+
+    expect(partial.get("partial-coin")?.valuation).toBe("partial");
+    expect(unknown.get("legacy-coin")?.valuation).toBe("unknown");
+    expect(todayOnly.get("today-coin")).toEqual({ avgNet: 0, avgAbs: 0, dataDays: 3, valuation: "complete" });
   });
 
   it("produces no entry when coin is first seen today (firstDayTs > baselineEndDayTs)", () => {
@@ -280,7 +353,7 @@ describe("buildBaselineMap", () => {
     const baseline = buildBaselineMap(
       nowSec,
       [
-        { stablecoin_id: "new-coin", chain_id: ETHEREUM_CHAIN_ID, day_ts: 5 * DAY_SECONDS, daily_net: 10, daily_abs: 10 },
+        day("new-coin", ETHEREUM_CHAIN_ID, 5, 10, 10),
       ],
       [
         { stablecoin_id: "new-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 5 * DAY_SECONDS + 50 },
@@ -296,7 +369,7 @@ describe("buildBaselineMap", () => {
     const baseline = buildBaselineMap(
       nowSec,
       [
-        { stablecoin_id: "old-coin", chain_id: ETHEREUM_CHAIN_ID, day_ts: 1 * DAY_SECONDS, daily_net: 300, daily_abs: 300 },
+        day("old-coin", ETHEREUM_CHAIN_ID, 1, 300, 300),
       ],
       [
         { stablecoin_id: "old-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 1 * DAY_SECONDS },
@@ -307,6 +380,7 @@ describe("buildBaselineMap", () => {
       avgNet: 10,
       avgAbs: 10,
       dataDays: 30,
+      valuation: "complete",
     });
   });
 
@@ -316,7 +390,7 @@ describe("buildBaselineMap", () => {
     const baseline = buildBaselineMap(
       nowSec,
       [
-        { stablecoin_id: "young-coin", chain_id: ETHEREUM_CHAIN_ID, day_ts: 15 * DAY_SECONDS, daily_net: 55, daily_abs: 55 },
+        day("young-coin", ETHEREUM_CHAIN_ID, 15, 55, 55),
       ],
       [
         { stablecoin_id: "young-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 10 * DAY_SECONDS },
@@ -327,6 +401,7 @@ describe("buildBaselineMap", () => {
       avgNet: 5,
       avgAbs: 5,
       dataDays: 11,
+      valuation: "complete",
     });
   });
 });

@@ -14,6 +14,9 @@ import {
 } from "./helpers";
 
 const ADAPTER_KEY = "ethena-whitelabel";
+// Custody amounts have sub-cent rounding differences; the wire ratio has six decimals.
+const BACKING_ROUNDING_TOLERANCE_USD = 0.01;
+const RATIO_ROUNDING_TOLERANCE = 0.0000005 + Number.EPSILON;
 
 interface EthenaWhitelabelCustodian {
   custodian?: string;
@@ -27,6 +30,7 @@ interface EthenaWhitelabelStablecoin {
   stablecoin?: string;
   totalBacking?: number | string;
   totalSupply?: number | string;
+  collateralizationRatio?: number | string;
   lastUpdated?: number | string;
   custodians?: EthenaWhitelabelCustodian[];
 }
@@ -87,6 +91,11 @@ export function adaptEthenaWhitelabel(
   if (!(supplyUsd > 0)) {
     throw new Error("ethena-whitelabel payload has invalid totalSupply");
   }
+  const sourceTotalBackingUsd = parseStrictAmount(entry.totalBacking, "totalBacking");
+  const sourceCollateralizationRatio = parseStrictAmount(entry.collateralizationRatio, "collateralizationRatio");
+  if (sourceTotalBackingUsd < 0 || sourceCollateralizationRatio < 0) {
+    throw new Error("ethena-whitelabel payload has negative backing or collateralizationRatio");
+  }
 
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(entry.lastUpdated);
   if (sourceTimestamp == null) {
@@ -104,15 +113,27 @@ export function adaptEthenaWhitelabel(
   let unmappedUsd = 0;
   let offChainUsd = 0;
   const offChainCustodians = new Set<string>();
+  const custodyIdentities = new Set<string>();
 
   for (const [index, custodian] of custodians.entries()) {
     const amount = parseStrictAmount(custodian?.amount, `custodian ${index} amount`);
     if (amount < 0) {
       throw new Error(`ethena-whitelabel custodian ${index} has a negative amount`);
     }
-    if (amount === 0) continue;
-
     const network = typeof custodian?.network === "string" ? custodian.network.trim().toLowerCase() : "";
+    const asset = typeof custodian?.asset === "string" ? custodian.asset.trim().toUpperCase() : "";
+    const address = typeof custodian?.address === "string" ? custodian.address.trim() : "";
+    const custodyName = typeof custodian?.custodian === "string" ? custodian.custodian.trim() : "";
+    const location = address || (OFF_CHAIN_NETWORKS[network] ? custodyName : "");
+    if (!network || !asset || !location) {
+      throw new Error(`ethena-whitelabel custodian ${index} has an incomplete custody identity`);
+    }
+    const identity = JSON.stringify([network, location.startsWith("0x") ? location.toLowerCase() : location, asset]);
+    if (custodyIdentities.has(identity)) {
+      throw new Error(`ethena-whitelabel custodian ${index} duplicates a custody identity`);
+    }
+    custodyIdentities.add(identity);
+    if (amount === 0) continue;
     if (OFF_CHAIN_NETWORKS[network]) {
       offChainUsd += amount;
       if (typeof custodian?.custodian === "string" && custodian.custodian.trim() !== "") {
@@ -121,7 +142,6 @@ export function adaptEthenaWhitelabel(
       continue;
     }
 
-    const asset = typeof custodian?.asset === "string" ? custodian.asset.trim().toUpperCase() : "";
     if (!asset || !ON_CHAIN_ASSET_CONFIG[asset]) {
       unmappedAssets.add(asset || "unknown");
       unmappedUsd += amount;
@@ -165,6 +185,21 @@ export function adaptEthenaWhitelabel(
   }
 
   const totalReserveUsd = sliceInputs.reduce((sum, slice) => sum + slice.value, 0);
+  if (!Number.isFinite(totalReserveUsd)
+    || Math.abs(totalReserveUsd - sourceTotalBackingUsd) > BACKING_ROUNDING_TOLERANCE_USD) {
+    throw new Error("ethena-whitelabel custodian sum does not reconcile with totalBacking");
+  }
+  const collateralizationRatio = totalReserveUsd / supplyUsd;
+  if (!Number.isFinite(collateralizationRatio)
+    || Math.abs(sourceCollateralizationRatio - sourceTotalBackingUsd / supplyUsd) > RATIO_ROUNDING_TOLERANCE) {
+    throw new Error("ethena-whitelabel collateralizationRatio does not reconcile with backing and supply");
+  }
+  if (collateralizationRatio < 1) {
+    warnings.push(reserveDegradedWarning(
+      "reserve-undercollateralized",
+      "Ethena whitelabel custodian backing is below the reported supply",
+    ));
+  }
   const unknownExposurePct = totalReserveUsd > 0 ? (unmappedUsd / totalReserveUsd) * 100 : 0;
 
   return {
@@ -174,9 +209,9 @@ export function adaptEthenaWhitelabel(
       ...verifiedFreshnessMetadata(sourceTimestamp),
       totalReserveUsd,
       supplyUsd,
-      collateralizationRatio: totalReserveUsd / supplyUsd,
+      collateralizationRatio,
       ...(unmappedUsd > 0 ? { unknownExposurePct } : {}),
-      details: { lastUpdated: entry.lastUpdated },
+      details: { lastUpdated: entry.lastUpdated, sourceTotalBackingUsd, sourceCollateralizationRatio },
     },
   };
 }

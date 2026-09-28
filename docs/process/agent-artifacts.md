@@ -89,6 +89,8 @@ Canonical shared skill bodies must use repo-relative paths such as `.codex/skill
 
 Skill bodies must not hard-code snapshots of current repo state (counts, methodology versions, enum lists, skill rosters). State the rule and point at the owning source file instead; when an enumeration is embedded for reading convenience, mark it with "the source file wins" so agents re-verify before relying on it.
 
+Skill parity is structural proof, not evidence that embedded source paths, commands, or policy claims are current. Before following or changing an instruction, verify its literal path and current owner in source; methodology version ownership follows ADR-3 in `docs/architecture.md`. Fix canonical bodies only, preserving the symlink facade rather than creating duplicate physical copies. Durable contracts must link to owning source or verified docs, never rely on an expired scratch task ID.
+
 Release and CI skills summarize the operating path, but `docs/deployment-process.md`, `docs/testing.md`, the workflow YAML, and the automation registries remain authoritative. Keep protected-main authorization wording, validation targets, generated-artifact staging behavior, and deployment-versus-operational proof aligned across both skills instead of allowing separate agent-specific release procedures.
 
 Symlinks pointing outside this repository are unsupported. `check:agent-skills` also validates nested canonical companions and rejects broken or external symlink targets.

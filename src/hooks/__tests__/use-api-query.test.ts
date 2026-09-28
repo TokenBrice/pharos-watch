@@ -5,9 +5,15 @@
 // the schema validation and contractMode paths in apiFetch are exercised for real.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { QueryClient, QueryObserver } from "@tanstack/react-query";
+import { QueryClient, QueryObserver, type FetchQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { jsonResponse as makeJsonResponse } from "@shared/test-utils/mock-fetch";
+import { createRegisteredApiPollingQueryOptions } from "../api-hooks";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { deriveDataHealth } from "@/lib/data-health";
+import { type ApiMeta } from "@/lib/api";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { type NonUsdSharePoint } from "@shared/types/market";
 
 // Stub modules that are not relevant to what we're testing here.
 vi.mock("@shared/lib/site-data-lane", () => ({
@@ -48,6 +54,32 @@ async function withAbortSignalAnyAbsent<T>(run: () => Promise<T>): Promise<T> {
 describe("use-api-query", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("carries a stalled non-USD producer clock through a successful registered query", async () => {
+    const now = Date.now();
+    const ageSeconds = 20 * API_FRESHNESS_MAX_AGE_SEC.nonUsdShare;
+    const point = {
+      date: Math.floor(now / 1000) - ageSeconds,
+      commodityShare: 0, fiatNonUsdShare: 1, commodity: 0, fiatNonUsd: 10, total: 1000,
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify([point]), {
+      headers: { "Content-Type": "application/json", "X-Data-Age": String(ageSeconds), Date: new Date(now).toUTCString() },
+    }));
+    const client = new QueryClient();
+    try {
+      const options = createRegisteredApiPollingQueryOptions(FRONTEND_API_QUERY_DESCRIPTORS.nonUsdShare, { retry: false });
+      const result = await client.fetchQuery(options as FetchQueryOptions<{ data: NonUsdSharePoint[]; meta: ApiMeta | null }>);
+      expect(result.data).toEqual([point]);
+      const health = deriveDataHealth({
+        label: "Non-USD Share", dataUpdatedAt: now, hasData: true,
+        staleTime: API_FRESHNESS_MAX_AGE_SEC.nonUsdShare * 1000, meta: result.meta,
+      }, now);
+      expect(health.state).toBe("stale");
+      expect(health.dataUpdatedAt).toBe(point.date * 1000);
+    } finally {
+      client.clear();
+    }
   });
 
   // ------------------------------------------------------------------

@@ -115,22 +115,66 @@ describe("snapshotPsiDaily", () => {
       seedSample(sqlite, computedAt + index * 600, 92, "psi-v4");
     }
     for (let index = 60; index < 96; index++) {
-      seedSample(sqlite, computedAt + index * 600, 92, "psi-v3");
+      seedSample(sqlite, computedAt + index * 600, 72, "psi-v3");
     }
 
     await snapshotPsiDaily(db);
 
     const stored = sqlite.prepare(
-      "SELECT methodology_version, input_snapshot FROM stability_index WHERE computed_at = ?",
-    ).get(computedAt) as { methodology_version: string; input_snapshot: string };
+      "SELECT score, methodology_version, input_snapshot FROM stability_index WHERE computed_at = ?",
+    ).get(computedAt) as { score: number; methodology_version: string; input_snapshot: string };
     expect(stored.methodology_version).toBe("psi-v4");
+    expect(stored.score).toBe(84.5);
     expect(JSON.parse(stored.input_snapshot)).toMatchObject({
+      aggregation: "all-day",
+      sampleCount: 96,
+      componentSampleCounts: { severity: 96, breadth: 96, stressBreadth: 96, trend: 96 },
       methodologyVersion: "psi-v4",
       methodologyBreakdown: {
         "psi-v4": 60,
         "psi-v3": 36,
       },
     });
+  });
+
+  it("records all-null, observed-zero, and partial component counts without changing release-A numeric output", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const computedAt = yesterdayMidnightFrom(Date.now());
+    seedSample(sqlite, computedAt + 900, 80);
+    seedSample(sqlite, computedAt + 1800, 90);
+    sqlite.prepare("UPDATE stability_index_samples SET components = ? WHERE stored_at = ?")
+      .run(JSON.stringify({ severity: null, breadth: 0, trend: 2 }), computedAt + 900);
+    sqlite.prepare("UPDATE stability_index_samples SET components = ? WHERE stored_at = ?")
+      .run(JSON.stringify({ breadth: 0, stressBreadth: 4, trend: 4 }), computedAt + 1800);
+
+    await snapshotPsiDaily(db);
+    const row = sqlite.prepare("SELECT score, components, input_snapshot FROM stability_index WHERE computed_at = ?")
+      .get(computedAt) as { score: number; components: string; input_snapshot: string };
+    expect(row.score).toBe(85);
+    expect(JSON.parse(row.components)).toEqual({ severity: 0, breadth: 0, stressBreadth: 4, trend: 3 });
+    expect(JSON.parse(row.input_snapshot)).toMatchObject({
+      sampleCount: 2,
+      componentSampleCounts: { severity: 0, breadth: 2, stressBreadth: 1, trend: 2 },
+    });
+  });
+
+  it("preserves the existing daily row when a source read fails", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const computedAt = yesterdayMidnightFrom(Date.now());
+    seedSample(sqlite, computedAt + 900, 80);
+    await snapshotPsiDaily(db);
+    const before = sqlite.prepare("SELECT * FROM stability_index WHERE computed_at = ?").get(computedAt);
+    seedSample(sqlite, computedAt + 1800, 20);
+    const prepare = db.prepare.bind(db);
+    vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      if (sql.includes("GROUP BY methodology_version")) throw new Error("injected source read failure");
+      return prepare(sql);
+    });
+
+    const result = await snapshotPsiDaily(db);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("db_query_failed");
+    expect(sqlite.prepare("SELECT * FROM stability_index WHERE computed_at = ?").all(computedAt)).toEqual([before]);
   });
 });
 

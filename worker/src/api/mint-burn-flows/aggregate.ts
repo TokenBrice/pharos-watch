@@ -4,6 +4,13 @@ import {
   getNetFlowDirection24h,
   getPressureShiftState,
 } from "@shared/lib/mint-burn-signals";
+import {
+  addMintBurnValuationTally,
+  emptyMintBurnValuationTally,
+  summarizeMintBurnValuation,
+  type MintBurnValuationTally,
+} from "@shared/lib/mint-burn-valuation";
+import type { MintBurnValuation, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import { getLatestSuccessfulCronTimestampResult } from "../../lib/api-freshness";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {
@@ -17,6 +24,12 @@ import {
 import { readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-state";
 import { computeFlowIntensity } from "../../lib/mint-burn-scoring";
 import { buildMintBurnFirstHourSeekStatements } from "../../lib/mint-burn-hourly-queries";
+import {
+  MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL,
+  MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
+  type MintBurnValuationTallyRow,
+  readMintBurnValuationTallyRow,
+} from "../../lib/mint-burn-hourly-valuation";
 import {
   aggregateHourlyRowsByStablecoin,
   BASELINE_WINDOW_DAYS,
@@ -77,6 +90,22 @@ export interface CoinFlowSummary {
     status: "full" | "partial-history" | "lagging" | "bootstrapping" | "unknown" | "disabled";
     unavailableReason?: "cron-snapshot-unavailable" | null;
   };
+  valuation: CoinFlowValuation;
+}
+
+/** Mirrors the public per-coin `valuation` block (see `shared/types/mint-burn.ts`). */
+export interface CoinFlowValuation {
+  window24h: MintBurnValuation;
+  baseline: MintBurnValuationCompleteness;
+  netFlow7d: MintBurnValuationCompleteness;
+  netFlow30d: MintBurnValuationCompleteness;
+  netFlow90d: MintBurnValuationCompleteness;
+}
+
+/** Known-valuation window net with its valuation tally. */
+interface WindowNetFlow {
+  netUsd: number;
+  valuation: MintBurnValuationTally;
 }
 
 export interface AggregateQueryParams {
@@ -93,9 +122,9 @@ export interface AggregateQueryParams {
 export interface AggregateData {
   hourlyRows: HourlyRow[];
   hourly24hRows: HourlyRow[];
-  net7dMap: Map<string, number>;
-  net30dMap: Map<string, number>;
-  net90dMap: Map<string, number>;
+  net7dMap: Map<string, WindowNetFlow>;
+  net30dMap: Map<string, WindowNetFlow>;
+  net90dMap: Map<string, WindowNetFlow>;
   baselineMap: ReturnType<typeof buildBaselineMap>;
   largestEventMap: ReturnType<typeof selectLargestEvents>;
   coverageMap: ReturnType<typeof buildCoinCoverageMap>;
@@ -104,7 +133,7 @@ export interface AggregateData {
   freshnessLookupWarning: string | null;
 }
 
-interface GroupedNetFlowRow {
+interface GroupedNetFlowRow extends MintBurnValuationTallyRow {
   stablecoin_id: string;
   chain_id: string;
   net_flow_usd: number;
@@ -126,11 +155,17 @@ function filterRowsToTrackedPairs<T extends { stablecoin_id: string; chain_id: s
 function buildGroupedNetFlowMap(
   rows: GroupedNetFlowRow[],
   trackedPairs: Set<string>,
-): Map<string, number> {
-  const netMap = new Map<string, number>();
+): Map<string, WindowNetFlow> {
+  const netMap = new Map<string, WindowNetFlow>();
   for (const row of rows) {
     if (!trackedPairs.has(mintBurnPairKey(row.stablecoin_id, row.chain_id))) continue;
-    netMap.set(row.stablecoin_id, (netMap.get(row.stablecoin_id) ?? 0) + row.net_flow_usd);
+    let entry = netMap.get(row.stablecoin_id);
+    if (!entry) {
+      entry = { netUsd: 0, valuation: emptyMintBurnValuationTally() };
+      netMap.set(row.stablecoin_id, entry);
+    }
+    entry.netUsd += row.net_flow_usd;
+    addMintBurnValuationTally(entry.valuation, readMintBurnValuationTallyRow(row));
   }
   return netMap;
 }
@@ -188,9 +223,9 @@ export async function fetchAggregateData(
     db.batch([
       db
         .prepare(
-           `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+           `SELECT stablecoin_id, chain_id, hour_ts,
                    /* pharos:mint-burn-flows:window-rows */
-                   mint_volume_usd, burn_volume_usd, net_flow_usd
+                   ${MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL}
             FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
              AND hour_ts >= ?
@@ -201,7 +236,8 @@ export async function fetchAggregateData(
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-7d */
-                  SUM(net_flow_usd) as net_flow_usd
+                  SUM(net_flow_usd) as net_flow_usd,
+                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
              AND hour_ts >= ?
@@ -212,7 +248,8 @@ export async function fetchAggregateData(
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-30d */
-                  SUM(net_flow_usd) as net_flow_usd
+                  SUM(net_flow_usd) as net_flow_usd,
+                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
              AND hour_ts >= ?
@@ -223,7 +260,8 @@ export async function fetchAggregateData(
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-90d */
-                  SUM(net_flow_usd) as net_flow_usd
+                  SUM(net_flow_usd) as net_flow_usd,
+                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
              AND hour_ts >= ?
@@ -236,7 +274,8 @@ export async function fetchAggregateData(
                   /* pharos:mint-burn-flows:baseline-days */
                   (hour_ts / 86400) * 86400 as day_ts,
                   SUM(net_flow_usd) as daily_net,
-                  SUM(mint_volume_usd + burn_volume_usd) as daily_abs
+                  SUM(mint_volume_usd + burn_volume_usd) as daily_abs,
+                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
              AND hour_ts >= ? AND hour_ts < ?
@@ -319,17 +358,38 @@ export async function fetchAggregateData(
   };
 }
 
+/**
+ * `mcapById` carries only observed tracked-chain weights. A tracked coin absent
+ * from it has an unavailable weight: it is excluded from the gauge inputs and
+ * from `trackedMcapUsd` (never counted as a measured `0`) and is counted in
+ * `mcapUnavailableCoins`. Its flow row is still published.
+ *
+ * Release A of valuation completeness: every coin carries its `valuation`
+ * block, and `partialValuationInputs` counts weighted coins whose non-null
+ * pressure input has partial valuation. Published nets, direction, pressure and
+ * FTQ keep their known-valuation values until the producer gates them.
+ */
 export function buildCoinSummaries(
   data: AggregateData,
   mcapById: Map<string, number>,
   gradeClassification: FlightToQualityClassification | null,
-): { coins: CoinFlowSummary[]; gaugeInputs: Array<{ intensity: number | null; mcap: number }>; safeNet24h: number; riskyNet24h: number; trackedMcapUsd: number } {
+): {
+  coins: CoinFlowSummary[];
+  gaugeInputs: Array<{ intensity: number | null; mcap: number }>;
+  safeNet24h: number;
+  riskyNet24h: number;
+  trackedMcapUsd: number;
+  mcapUnavailableCoins: number;
+  partialValuationInputs: number;
+} {
   const coinAgg = aggregateHourlyRowsByStablecoin(data.hourly24hRows);
   const coins: CoinFlowSummary[] = [];
   const gaugeInputs: Array<{ intensity: number | null; mcap: number }> = [];
   let safeNet24h = 0;
   let riskyNet24h = 0;
   let trackedMcapUsd = 0;
+  let mcapUnavailableCoins = 0;
+  let partialValuationInputs = 0;
 
   const seenCoinIds = new Set<string>();
   for (const config of ACTIVE_MINT_BURN_CONFIGS) {
@@ -338,8 +398,12 @@ export function buildCoinSummaries(
     seenCoinIds.add(id);
     const agg = coinAgg.get(id);
     const baseline = data.baselineMap.get(id);
-    const mcap = mcapById.get(id) ?? 0;
-    trackedMcapUsd += mcap;
+    const mcap = mcapById.get(id) ?? null;
+    if (mcap === null) {
+      mcapUnavailableCoins += 1;
+    } else {
+      trackedMcapUsd += mcap;
+    }
 
     const netFlow24h = agg?.netFlow ?? 0;
     const has24hActivity = (agg?.mintCount ?? 0) > 0
@@ -356,7 +420,15 @@ export function buildCoinSummaries(
         })
       : null;
 
-    gaugeInputs.push({ intensity: pressureShiftScore, mcap });
+    const valuation24h = summarizeMintBurnValuation(agg?.valuation ?? emptyMintBurnValuationTally());
+    // No baseline means no pressure input from it: vacuously complete.
+    const baselineValuation = baseline?.valuation ?? "complete";
+    if (mcap !== null) {
+      gaugeInputs.push({ intensity: pressureShiftScore, mcap });
+      if (pressureShiftScore !== null && (valuation24h.completeness === "partial" || baselineValuation === "partial")) {
+        partialValuationInputs += 1;
+      }
+    }
 
     if (gradeClassification) {
       if (gradeClassification.safeIds.has(id)) {
@@ -393,17 +465,25 @@ export function buildCoinSummaries(
       burnVolume24hUsd: agg?.burnVolume ?? 0,
       mintCount24h: agg?.mintCount ?? 0,
       burnCount24h: agg?.burnCount ?? 0,
-      netFlow7dUsd: data.net7dMap.get(id) ?? 0,
-      netFlow30dUsd: data.net30dMap.get(id) ?? 0,
-      netFlow90dUsd: data.net90dMap.get(id) ?? 0,
+      netFlow7dUsd: data.net7dMap.get(id)?.netUsd ?? 0,
+      netFlow30dUsd: data.net30dMap.get(id)?.netUsd ?? 0,
+      netFlow90dUsd: data.net90dMap.get(id)?.netUsd ?? 0,
       largestEvent24h: largest && largest.amount_usd != null
         ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp }
         : null,
       coverage,
+      // A window without buckets is genuinely empty, hence complete.
+      valuation: {
+        window24h: valuation24h,
+        baseline: baselineValuation,
+        netFlow7d: summarizeMintBurnValuation(data.net7dMap.get(id)?.valuation ?? emptyMintBurnValuationTally()).completeness,
+        netFlow30d: summarizeMintBurnValuation(data.net30dMap.get(id)?.valuation ?? emptyMintBurnValuationTally()).completeness,
+        netFlow90d: summarizeMintBurnValuation(data.net90dMap.get(id)?.valuation ?? emptyMintBurnValuationTally()).completeness,
+      },
     });
   }
 
-  return { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd };
+  return { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd, mcapUnavailableCoins, partialValuationInputs };
 }
 
 export function buildAggregateScope() {

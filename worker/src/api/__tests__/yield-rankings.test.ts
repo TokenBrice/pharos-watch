@@ -236,7 +236,7 @@ describe("handleYieldRankings", () => {
       coveredCount: 1,
       trackedCount: 1,
       coverageRatio: 1,
-      scores: new Map([["rated-coin", { score: 66, grade: "B-" }]]),
+      scores: new Map(["rated-coin", "usdgo-osl", "ustbl-spiko", "eutbl-spiko"].map((id) => [id, { score: 66, grade: "B-" }])),
       source: "safety-score-v9-publication",
       safetyScoreIdentity: currentSafetyIdentity,
       publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
@@ -1613,7 +1613,7 @@ describe("handleYieldRankings", () => {
           USD_EFFR: { ...v748RankingsPayload.benchmarks.USD, key: "USD_EFFR", fetchedAt: publishedAt },
         },
         rankings: [makeYieldRanking({
-          id: "rated-coin",
+          id: "ustbl-spiko",
           dataSource: "rate-derived",
           yieldType: "nav-appreciation",
           benchmarkKey: "USD_EFFR",
@@ -1636,6 +1636,42 @@ describe("handleYieldRankings", () => {
       } else {
         expect(row.pharosYieldScore).not.toBeNull();
         expect(row.warningSignals.includes("reference-benchmark-degraded")).toBe(state === "retained");
+      }
+    }
+  });
+
+  it.each(["live", "publish-time"] as const)("keeps configured dependencies separate with %s safety", async (branch) => {
+    const publishedAt = Math.floor(Date.now() / 1000);
+    if (branch === "publish-time") computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    for (const id of ["usdgo-osl", "ustbl-spiko", "eutbl-spiko"]) {
+      for (const expired of [null, "USD", "USD_EFFR", "EUR"] as const) {
+        const benchmarks = {
+          USD: { ...v748RankingsPayload.benchmarks.USD, fetchedAt: publishedAt },
+          USD_EFFR: { ...v748RankingsPayload.benchmarks.USD, key: "USD_EFFR" as const, fetchedAt: publishedAt },
+          EUR: { ...v748RankingsPayload.benchmarks.USD, key: "EUR" as const, currency: "EUR", fetchedAt: publishedAt },
+        };
+        if (expired) benchmarks[expired].recordDate = "2026-01-01";
+        const benchmarkKey = id === "eutbl-spiko" ? "EUR" : "USD_EFFR";
+        const benchmarkCurrency = id === "eutbl-spiko" ? "EUR" : "USD";
+        const payload: YieldRankingsResponse = {
+          ...v748RankingsPayload, benchmarks,
+          rankings: [makeYieldRanking({
+            id, dataSource: "rate-derived", yieldType: "nav-appreciation", benchmarkKey, benchmarkCurrency,
+            safetyScore: 66, safetyGrade: "B-",
+            provenance: makeYieldProvenance({
+              sourceKey: "rate-derived", sourceObservedAt: publishedAt, sourceAgeSeconds: 0,
+              sourceFreshness: "fresh", benchmarkKey, benchmarkCurrency,
+            }),
+          })],
+        };
+        const row = (await readJsonResponse(await handleYieldRankings(makeCacheDb(payload, publishedAt)), 200) as YieldRankingsResponse).rankings[0];
+        const productKey = id === "usdgo-osl" ? "USD_EFFR" : id === "ustbl-spiko" ? "USD" : "EUR";
+        const reason = expired === productKey ? "source-stale"
+          : expired === benchmarkKey || (id === "eutbl-spiko" && expired === "USD") ? "benchmark-stale" : null;
+        expect(row.pysNullReason, `${id}/${expired}`).toBe(reason);
+        expect(row.provenance?.sourceFreshness).toBe(reason === "source-stale" ? "stale" : "fresh");
+        if (reason) expect(row.pharosYieldScore).toBeNull();
+        else expect(row.pharosYieldScore).toBeTypeOf("number");
       }
     }
   });

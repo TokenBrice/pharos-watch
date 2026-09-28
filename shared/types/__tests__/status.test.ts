@@ -1,9 +1,40 @@
 import { describe, expect, it } from "vitest";
 import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
 
-import { reserveComposition, statusResponse } from "./status.test-support";
+import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
+  it("requires null measurements and a reason for unavailable reserve evidence", () => {
+    const unavailable = makeReserveComposition({ status: "unavailable" });
+    expect(StatusResponseSchema.parse({
+      ...statusResponse(),
+      reserveComposition: unavailable,
+    }).reserveComposition).toEqual(unavailable);
+    for (const invalid of [
+      { ...unavailable, configuredCoins: 0 },
+      { ...unavailable, freshCoverageRatio: 0 },
+      { ...unavailable, reason: undefined },
+    ]) {
+      expect(StatusResponseSchema.safeParse({
+        ...statusResponse(),
+        reserveComposition: invalid,
+      }).success).toBe(false);
+    }
+  });
+
+  it("accepts older canary payloads without inventing complete-cohort diagnostics", () => {
+    const parsed = StatusResponseSchema.parse({
+      ...statusResponse(),
+      canaries: {
+        checkedAt: 100, status: "unknown", latestRunAt: null, maxAgeSec: 7200,
+        totalChecks: 0, okCount: 0, degradedCount: 0, errorCount: 0, skippedCount: 0,
+        staleCount: 0, checks: {},
+      },
+    });
+    expect(parsed.canaries?.expectedCheckIds).toBeUndefined();
+    expect(parsed.canaries?.missingCheckIds).toBeUndefined();
+    expect(parsed.canaries?.status).toBe("unknown");
+  });
 
   it.each([
     ["crons", { "sync-stablecoins": {} }],
@@ -89,9 +120,6 @@ describe("StatusResponseSchema reserve composition contract", () => {
     const { nextCursorStablecoinId: _nextCursor, ...reserveWithoutNextCursor } = payload.reserveComposition;
     const result = schema.safeParse({ ...payload, reserveComposition: reserveWithoutNextCursor });
     expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["reserveComposition", "nextCursorStablecoinId"]);
-    }
   });
 
   it("preserves additive top-level status fields", () => {

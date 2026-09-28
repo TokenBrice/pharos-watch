@@ -108,6 +108,12 @@ function shouldPreserveDailyOverlayProvenance(
     : null;
 }
 
+/**
+ * Records an intraday overlay (OXR, Chainlink) as the peg's live source.
+ * `updatedAt` must be the upstream observation time of the overlaid quote; the
+ * run clock (`syncStartSec`) only evaluates whether a daily incumbent's
+ * cadence/date provenance is still fresh enough to preserve.
+ */
 export function applyRealtimeOverlaySourceMetadata(
   pegKey: string,
   updatedAt: number,

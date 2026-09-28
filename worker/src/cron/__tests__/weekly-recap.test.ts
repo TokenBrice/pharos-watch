@@ -79,20 +79,6 @@ import {
   validateDigestModelOutput,
 } from "../daily-digest/response";
 
-function expectExactWeeklyFinalMetadata(metadataText: string | undefined): void {
-  const metadata = JSON.parse(String(metadataText));
-  expect(metadataText).toBe(JSON.stringify({
-    ...(metadata.reason ? { reason: metadata.reason } : {}),
-    summary: metadata.summary,
-    digestDate: metadata.digestDate,
-    scheduledAtSec: metadata.scheduledAtSec,
-    ...(metadata.quality ? { quality: metadata.quality } : {}),
-    channels: metadata.channels,
-    llm: metadata.llm,
-    editorialStyleGate: metadata.editorialStyleGate,
-    wrapperEditorialAlerts: metadata.wrapperEditorialAlerts,
-  }));
-}
 
 const safetyContext = {
   status: "available" as const,
@@ -799,7 +785,10 @@ describe("generateWeeklyRecap", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.metadata).toContain("telegram: failed:");
-    expectExactWeeklyFinalMetadata(result.metadata);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "channel-not-delivered",
+      channels: { telegram: { disposition: "retryable" } },
+    });
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
 

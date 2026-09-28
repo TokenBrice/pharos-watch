@@ -22,6 +22,7 @@ import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
 } from "../../lib/pricing-provider-diagnostics";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 
 const MAX_AUTHORITATIVE_PUBLICATION_ASSET_ATTEMPTS = 512;
 
@@ -140,6 +141,18 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, DlListQuot
 
 function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): void {
   const source = asset.priceSource || "defillama";
+  // Carried-forward prices already needed an original timestamp in the restore
+  // helpers; `supplyRestored` marks carried supply, so an undated current-run
+  // list quote on a carried-supply row keeps its registry semantics here.
+  if (!validateCompositePricingSourceFreshness({
+    source,
+    observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
+    observedAtMode: asset.priceObservedAtMode,
+    nowSec: syncStartSec,
+  }).accepted) {
+    clearPriceMetadata(asset);
+    return;
+  }
   stampPriceMetadata(
     asset,
     source,
@@ -369,8 +382,8 @@ export function prevalidatePrices(input: {
 /**
  * Applies primary consensus results to assets.
  *
- * Full primary pass: stamps existing valid prices when there is no candidate or when
- * validation rejects, and defaults `supplySource` to `"defillama"` after processing.
+ * Full primary pass: retains existing prices only within their source freshness
+ * budget using the original observation, and defaults `supplySource` to `"defillama"`.
  */
 export function applyConsensusResults(input: {
   assets: PeggedAsset[];

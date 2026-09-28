@@ -1,4 +1,4 @@
-import type { DigestInputData, DigestSafetyContext } from "@shared/types/digest";
+import type { DigestForwardLookOutcome, DigestInputData, DigestSafetyContext } from "@shared/types/digest";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 export type WeeklyRiskKind = "depeg" | "dews" | "mint-burn" | "blacklist" | "grade" | "yield" | "liquidity" | "supply";
@@ -87,7 +87,7 @@ export interface WeeklyInputData {
     topLiquidityShifts: { symbol: string; scoreDelta: number; mcapUsd: number; date: string }[];
   };
   /** Aggregate forward-look accountability across the week's daily editions. */
-  forwardLookScoreboard: { hit: number; missed: number; pending: number; expired: number } | null;
+  forwardLookScoreboard: Record<DigestForwardLookOutcome["status"], number> | null;
   weekOverWeekDeltas: {
     mcap: { current: number; prior: number; deltaPct: number | null };
     psi: { current: number; prior: number; delta: number };

@@ -220,34 +220,55 @@ in `CacheStatusSchema` (`shared/types/status/schema-primitives.ts`): `healthyMax
 the band, `degraded` / `degradedReason` / `streakDegradedRuns` for the generation's input quality. The
 per-field behaviour is specified under Cron health model, Cron error escalation, and Synthetic self-check below.
 
+### Timestamp admission
+
+`api-freshness-age.ts` owns timestamp assessment independently of each consumer's age budget.
+Status readers reject missing/non-finite clocks and timestamps more than the existing 60-second
+allowance ahead of their read clock; the inclusive allowance still yields age zero. The producer
+oracle returns a null age and `timestampReason` (`missing-timestamp`, `invalid-timestamp`, or
+`future-timestamp`) instead of classifying invalid evidence as fresh. Consumers retain their
+existing freshness bands. Captured-run consumers can supply a separate read clock or explicit
+allowance: DEWS uses wall time during hydration so an overlapping producer published after run
+start is not falsely rejected.
+
+Raw status snapshots validate both cache and payload generation clocks, returning `unreadable`
+with a timestamp reason on invalid evidence. Persisted status-state reads return unavailable
+state/staleness and report `status_state_invalid_timestamp`. Invalid probes cannot establish
+divergence: discrepancy diagnostics expose `probe-invalid-timestamp` and a null age. These are
+timestamp-admission corrections, not changes to cadence, hysteresis, age budgets or alert policy.
+
+Canary PSI/DEWS checks use the named `CANARY_INCIDENT_MAX_AGE_SEC` four-hour incident
+policy, distinct from endpoint freshness and Telegram flow tolerated-context budgets.
+
 ### Cron health model
 
-**Terminal status separates "did the work happen" from "were the inputs perfect" (R4).** `degraded` is
-reserved for work that did not happen; an editorial or input-quality finding beside completed work returns
-`ok` and publishes the finding under `metadata.quality`. `snapshot-supply` (restored-only tail),
-`daily-digest` (editorial quality flags on a delivered edition), `sync-redemption-backstops` (capacity
-coverage floor) and `data-invariant-canary` (soft check rows) follow that rule;
-`snapshot-safety-grade-history` stays non-`ok` because it genuinely suppresses published history.
-Every non-`ok` result carries a machine-readable `metadata.reason`, which `logCronRun`
-(`worker/src/lib/cron-logger.ts`) projects into the `cron_runs.degraded_reason` column so operator
-aggregates and `scripts/maintenance/night-watch-worker.mjs` paging need no per-job JSON paths. A non-`ok`
-result with no resolvable reason is persisted as `unspecified-<status>` and warns in the Worker log.
+**Terminal status and publication evidence are separate (R4).** `degraded` means required work was incomplete;
+it does not prove either publication or absence of publication. A completed job with only input-quality findings
+returns `ok` with `metadata.quality` (including growth capacity warnings and Bluechip partial-cache merges).
+Mixed producers can publish usable output while another required stage fails; their confirmed output clock
+advances independently of their degraded attempt. Held cohorts, failed writes, no-row attempts, retained reserve
+fallbacks and lost CAS writes cannot advance that clock. A deliberately published empty snapshot is real output.
+`createCronResult` requires `metadata.reason: string` at compile time for every non-`ok` status, including skips.
+Direct `CronResult` producers retain the logger's runtime defense: unresolved degraded/error reasons become
+`unspecified-<status>` and warn in the Worker log. `cron_runs.degraded_reason` remains the terminal reason;
+successful-run quality reasons remain visible in status diagnostics and operator night-watch findings.
 
-`CRON_INTERVALS` defines expected cadence per job (seconds). Freshness comparisons route through
-`worker/src/lib/status/freshness-oracle.ts`: one fact loader returns each producer's latest run,
-latest successful/degraded run, status, and expected interval, while each consumer supplies its
-existing policy (for example status `2x`, watchdog `2x`/`3x`, canary `4h`/`48h`, or DEWS `2h`).
-The producer freshness portion of an evaluation uses one batched `cron_runs` statement for every
-requested producer, and consumers classify the returned facts in memory.
-Canonical job rows mark control-plane jobs with `freshnessSurface: "none"`; there is no separate
-exclusion list. A cron is healthy when:
+`CRON_INTERVALS` owns producer cadence. The staleness watchdog's one-statement fact loader in
+`worker/src/lib/status/freshness-oracle.ts` preserves latest attempt/status separately from the latest
+confirmed output clock (`lastSuccessAt`). `cron-output.ts` owns the shared evidence boundary used by the
+logger, cron health and cron-backed dataset freshness. New rows persist `metadata.outputPublishedAt`
+(the actual generation clock where available, otherwise confirmed completion) or explicit `null`; metadata
+compaction preserves this clock and quality reasons. Legacy rows require affirmative publication metadata
+or an `ok` result with a positive output count; an unannotated degraded attempt is not success.
+Canary and DEWS budgets remain separate named policies; they do not call this producer fact loader.
+Status uses a `2x` window; the staleness watchdog retains its `2x`/`3x` policy.
+Canonical control-plane jobs with `freshnessSurface: "none"` require a completed observation rather than a
+consumer publication. Subject to a successful history read, cron availability is healthy when:
 
-- A fresh non-stale `crons[*].inFlight` heartbeat exists for the job, or
-- Last run exists within `2 * expectedIntervalSec`
-- Last run status is `ok`, or
-- Last run status is `degraded` (warning-only fallback mode), or
-- Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run is a fresh
-  `ok` or `degraded`, or
+- A fresh non-stale `crons[*].inFlight` heartbeat exists (without advancing the output clock), or
+- The latest attempt is fresh and has confirmed output within `2 * expectedIntervalSec`, regardless of a
+  quality-degraded attempt status; control-plane jobs instead accept a fresh `ok`/`degraded` observation, or
+- A fresh `skipped_neutral` attempt inherits such evidence from the latest required run, or
 - Last run status is `skipped_neutral` whose `metadata.reason` is in `PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS`
   (`shared/lib/cron-jobs.ts`: `same_day_snapshot_exists`, `weekly-recap-exists`) — the skip was recorded only after a
   successful precheck read found the period's write-once artifact, so it is fresh positive evidence the period's
@@ -255,15 +276,15 @@ exclusion list. A cron is healthy when:
   (the error row and its machine-readable reason stay in history; one transient precheck read failure must not keep
   a write-once daily artifact's producer red until the next day's real run). An inherited `degraded` run stays a
   warning: the artifact existing proves availability, not that the producing run's inputs were clean, or
-- Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window, or
+- Last run status is `skipped_locked` **and** there is a fresh `ok` run with confirmed output in the same window, or
 - The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
 
 The display retains the latest ten runs. When all ten entries in that window are neutral skips, the loader performs a bounded per-job lookup for the latest non-neutral run so admission skips cannot evict valid producer evidence. Jobs whose display window already contains a required attempt need no extra lookup. This does not extend freshness budgets or treat skipped work as successful. That appended required attempt is also served as an eleventh `recentRuns` entry, so a job counted in `summary.degradedCrons` (or `summary.cronErrors`) through inheritance is always attributable from the served records instead of warning with an all-neutral visible history.
 
 Otherwise the job is unhealthy, including stale history, non-fresh errors, or a generic neutral skip (no
-proven-satisfied reason) whose latest required run errored. A required degraded run remains counted in degraded
-diagnostics even though later neutral skips inherit its availability.
+proven-satisfied reason) whose latest required run errored or lacks confirmed output. A required degraded run
+remains counted in diagnostics behind neutral skips; fresh `ok` runs with quality findings also count as warnings.
 
 Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
 
@@ -323,6 +344,8 @@ Each cron definition now carries `statusImpact: "critical" | "watch"` in `shared
 
 FX source freshness is also cadence-aware now. `/api/health` and `/api/status` still expose `fx-rates.sourceStatus`, but intraday sources use age windows while ECB/secondary daily sources compare their published source date against the next expected business-day or calendar-day rollover. Business-daily ECB references now use the TARGET closing-day calendar as part of that rollover check, so Good Friday, Easter Monday, New Year's Day, Labour Day, Christmas Day, and Boxing Day do not produce false lag warnings. Realtime OXR / Chainlink overlays no longer erase a fresh daily fiat source date when they are only refining the current daily reference stack, and commodity pegs can now refresh from the fresh `stablecoins` cache when `gold-api.com` is unavailable from Workers, so the status surface does not fall into false intraday staleness during later provider outages. One-step daily lag stays operator-visible as `degraded`, while only `stale` FX sources are excluded from downstream price validation.
 
+Unknown FX provenance is never healthy. A present non-USD rate whose metadata generation cannot be verified, whose source mode is absent, or whose intraday source has no (or a future) source time makes `fx-rates` at least `degraded` with `healthy: false`, `degraded: true`, and a machine-readable `degradedReason` (`fx-metadata-<identity>` or `fx-source-provenance-unknown:<peg>=<reason>,…`); public health then reports it under `cache-quality-degraded`. The same per-peg assessment drives pricing, so health and price validation cannot disagree about an unknown source. See [Pricing Pipeline](./pricing-pipeline.md) for the generation and admission contract.
+
 ### Data quality status
 
 Computed from missing prices + blacklist gaps + on-chain supply monitor, with best-effort query failures treated as diagnostics instead of automatic degradation:
@@ -368,8 +391,11 @@ The `missing_prices_elevated` info cause exists to preserve operator observabili
 | ---- | --------------------------------------- | -------------------------------------------------- | --------------------- |
 | elevated | ≥ 96 — one day at the current `sync-stablecoins` cadence | `degraded` | `active-price-coverage-incomplete:<ids>` |
 | critical | ≥ 672 — one week | `degraded` (never `stale`) | additionally `active-price-coverage-critical-duration:<ids>` |
+| unknown continuity | prior coverage read failed or was malformed; streak is null with `streakUnavailableReason` | `degraded` for material unacknowledged gaps | `active-price-coverage-incomplete:<ids>`; no invented critical duration |
 
 All three thresholds live in `STATUS_MISSING_PRICE_THRESHOLDS` (`generationsElevated`, `generationsCritical`, `durationMaterialMarketCapUsd`), and the shared verdict helper `assessActivePriceGapDuration` (`shared/lib/status-thresholds.ts`) derives both the public-health impact status and the evaluator's cause from the same evidence. The ratio bands above are unchanged and still drive the `missing_prices_*` causes. The duration dimension is a data-quality verdict, not an availability one. The public surface is still served with one price missing, so a material gap degrades `/api/health` and names the asset, but never reports the surface stale. The 2026-09-22 release briefly did, and seven long-unpriced minor assets turned the whole status page, the browser probes and every deploy acceptance stale. Since 2026-09-23, a long-running gap on a sub-$100M asset is a named warning only: one thin asset without a price must not degrade the whole application. When a material gap does degrade public health, the state machine records it under the dedicated public-impacting `active_price_coverage_duration_degraded` cause (`worker/src/lib/status/evaluation-rules.ts`), so the incident and its recovery stay in `/api/public-status-history`; the ordinary `active_price_coverage_incomplete` warning stays admin-only. A gap past the critical band is a catalog decision — re-source the price, add a reviewed price-gap acknowledgement, or retire the asset — rather than a fetch gap to wait out. See [Adding a Stablecoin](./process/adding-a-stablecoin.md).
+
+`ActivePriceCoverageHealthSchema` in `shared/types/status/core.ts` is the single coverage wire authority. Unreadable current coverage has `status: "unknown"`, null counts/affected market cap/maximum streak and `unavailableReason` (`coverage-missing`, `coverage-read-failed`, or `coverage-malformed`). Data-quality ratios use independently readable cache rows rather than coercing those unknown counts to zero; cause metrics omit unknown values. A failed previous-generation read does not erase current measured gaps or restart their streak at one. Compact metadata retains null continuity and its reason, and reviewed acknowledgements are recomputed before warnings or provider escalation.
 
 `dataQuality.sourceFailures` still records failed data-quality subqueries, but those failures now emit info-level causes and increment `summary.diagnosticIssueCount` instead of degrading `dataQualityStatus` on their own. Only the stablecoins cache remains a hard dependency in this path.
 
@@ -430,11 +456,14 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - Multiple critical crons simultaneously unhealthy (`summary.availabilityImpactingUnhealthyCrons >= 2`) also escalate to `stale`.
 - Cache-age stale (any cache whose override-aware impact status is `stale`, per `getCacheImpactStatus` / `getCacheRatioThresholds`) and the `publicAvailabilityFloor` (circuit outages, mint/burn sync stale, D1 capacity pressure) paths remain unchanged.
 - `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `persistentlyStaleIndependentCoins`, `writeTimeoutUncertain`, `deferredCoins`, `runBudgetTruncated`, `deferredAt`, `nextCursorStablecoinId`, `cursorRecordedAt`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`). Any persistent stale independent feed keeps the reserve composition status at least `degraded` even if aggregate fresh coverage remains high.
+  Failed overview reads instead return `status: "unavailable"`, `reason: "reserve_composition_query_failed"`, and null observations (including counts, ratios, arrays, queue flags and clocks). `reserve_sync_query_failed` is a warning that degrades data quality; neither an empty healthy cohort nor a retained generation is invented. A successfully read empty cohort retains genuine zero observations.
+  Status evaluation preserves that unavailable branch without running numeric coverage or stale-feed array rules, so a failed reserve read still returns the degraded status response rather than aborting the endpoint.
+  The `shared/lib/status-reserve-composition.ts` factory owns this unavailable shape for Worker evaluation and status contract fixtures.
 - `liquidityHealth`: admin-only DEX liquidity coverage summary derived from the newest `sync-dex-liquidity` run that actually carries `metadata.sourceCoverage`, within that cron's `2 * expectedIntervalSec` freshness budget. The half-hourly cadence only remeasures once per hour, so the cadence-reuse `skipped_neutral` partner run persists `sourceCoverage: null`; the supplement falls back to the previous `ok` run's measurement instead of publishing `null` beside a populated cron entry. `sourceRunStartedAt` names the run the numbers came from, and a sync stalled beyond the budget publishes `null` — no stale coverage presented as current.
 - `yieldHealth`: admin-only yield health summary sourced from existing cache rows and cron metadata (`yield-rankings`, `yield:supplemental-sources:v1:*`, `yield-coverage-audit`, and `sync-yield-data`). It reports ranking count/update age, previous-vs-current ranking-count delta, live-safety hydration coverage, per-family supplemental cache age, per-key benchmark registry health, coverage-audit age, source-risk field coverage, comparison-anchor freshness, latest cron status, a field-level status, status-impact class, and the yield runbook link. The retired legacy USD-only `benchmark` projection is no longer published.
 - `publicationHealth`: admin-only read-only publication generation summary for `dex-liquidity`, `yield-rankings`, `stablecoins`, `dews`, `psi`, and `safety-score-v9`. The V9 surface is derived from the canonical `report-cards:v9` publication and matching publication-health row; it does not consult the retired V8 compact cache.
 - `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. Cache-backed signals use the same override-aware availability ratio bands as public cache health, so `maxAge` remains a baseline rather than an immediate stale cutoff; producer-source degradation remains independently visible. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
-- `canaries`: admin-only latest structural canary results from the current authoritative `status` or `alert` rows in `worker_canary_runs`. In `off` or `shadow`, the field retains its empty/unknown compatibility shape and does not read older authoritative rows. The summary is constrained to the active canary registry, so retained rows for retired check IDs do not keep the current status stale. The checks cover DEX publication/current-row invariants, blacklist identity completeness, stablecoins-cache active coverage, PSI/DEWS latest samples, report-card cache generation/methodology freshness, and GBP benchmark currency/freshness without changing producer behavior.
+- `canaries`: admin-only latest structural results from authoritative `status`/`alert` rows in `worker_canary_runs`. `expectedCheckIds`, `presentCheckIds`, and `missingCheckIds` compare the returned cohort with `ACTIVE_CANARY_CHECK_IDS` (currently nine); `totalChecks` is the present count, never the expected population. Missing active IDs cannot be healthy, and retired IDs are excluded. Only a complete, fresh, usable cohort is healthy; per-check `observedAt` and section `maxAgeSec` disclose age. `off`/`shadow` retain an empty/unknown section without consulting prior authoritative rows. Checks cover DEX publication and actual generation-bound `__global__` identity, blacklist identity completeness, stablecoin active coverage, PSI/DEWS samples, canonical V9 freshness, and USD/GBP benchmark evidence.
 - `worker_canary_runs` retention is 14 days; the current status reads only active check IDs and does not depend on older retained rows.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from a freshness-qualified CoinGecko spot quote
 - `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) plus additive `capacity` and cached `tableGrowth` assessments. `tableGrowth` contains the once-daily bounded per-table row counts, previous-snapshot deltas, oldest/newest allowlisted timestamps, top growers, and `failedTables` when an individual table measurement could not be read. Status serves this cache only for 50 hours; one failed table no longer discards the remaining snapshot.
@@ -497,6 +526,7 @@ Behavior:
   - `status: "healthy"` otherwise
 - low raw counts of degraded/missing reserve feeds no longer degrade `dataQualityStatus` on their own if coverage remains above those thresholds
 - the page renders a dedicated `Live Reserve Sync` card in the pipeline lane
+- an unavailable reserve overview renders **Unavailable / Unknown** in Live Reserve Sync, Score impact, triage and pipeline readiness; it never renders 0% coverage or a clear recovery queue
 - the card also breaks fresh clean snapshots into evidence-quality cohorts: `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, and `weakProbeFresh`
 - `persistentlyStaleIndependentCoins` lists independent feeds older than the persistent-stale threshold and keeps the reserve sync card/action cause degraded until the source recovers
 - `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning ops should treat the authoritative state as ambiguous until the next clean run
@@ -602,6 +632,13 @@ verdict into its own `status` and names it in `warnings` as
 `cache-quality-degraded: <key>:<reason>` for degraded evidence or
 `cache-quality-unknown: <key>:<reason>` for unreadable evidence;
 `/api/status` availability keeps measuring freshness alone.
+
+Cron sentinel sources are a distinct control-plane aggregate. Every source stays visible in `sourceStatuses`
+and `sources`: expired observations expose `status: "expired"`, `lastStatus`, `observedAt`, `intervalSec`,
+and `maxAgeSec`; never-observed and explicitly disabled sources are distinguished as `missing` and `disabled`.
+At exactly two producer intervals (capped at 48h), evidence still contributes; beyond that budget it has
+**no automatic aggregate status or quality impact**. Another mode cannot erase current findings, and a neutral
+or locked skip does not renew a source clock. Source intervals derive from `CRON_SCHEDULE_CADENCES`.
 
 `GET /api/status` returns the latest persisted aggregate in `probe`. New rows include optional `probe.internal`, `probe.external`, and `probe.internalExternalDiscrepancy` fields read from `status_probe_runs.details_json`; legacy rows omit those optional fields.
 

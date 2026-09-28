@@ -155,6 +155,8 @@ Rendered on-request by `worker/src/api/og.tsx` using satori + resvg WASM, cached
 
 Stablecoin and depeg cards read DEWS through `stress-signals-current-rows.ts`, the same publication owner as `/api/stress-signals`. They honor completed-generation coverage rather than selecting raw maximum timestamps, so superseded or staged rows cannot override the published generation. Both use the API's eight-times-freshness fallback threshold for materialized rows and retain the owner's last-valid/history fallback (including an older single-coin result); unavailable authority yields no DEWS row. Existing rendering and response-cache limits are unchanged.
 
+Stablecoin cards preserve unavailable price, DEWS, liquidity, market cap, metadata, and seven-day flow as `—`; unavailable readings do not imply par, calm, zero liquidity, or a backing/governance classification. A numeric zero remains an observed zero. Seven-day measured flow is labelled **7D NET MINT/BURN**; when absent, a **7D SUPPLY DELTA** is shown only if both current and prior-week USD supply are available. Supply change is not measured mint/burn. With fewer than two price-history points the chart is replaced by **Price history unavailable**, never a synthetic flat line. Flow valuation-completeness admission is a separate producer cutover; these cards currently preserve the existing hourly flow fields.
+
 | Route | Source |
 | --- | --- |
 | `/api/og/stablecoin/:id` | per-stablecoin card (referenced from `src/lib/page-metadata.ts → buildStablecoinDetailMetadata`) |

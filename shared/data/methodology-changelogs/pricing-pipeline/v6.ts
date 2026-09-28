@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.37",
+    title: "Bounded CoinGecko supply gap-fill and per-asset supply admission",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "The CoinGecko aggregate gap-fill for a DefiLlama-backed asset with one missing deployment is kept but bounded: it admits CoinGecko/DefiLlama ratios only inside a reviewed band with hysteresis, takes every published bucket from one CoinGecko series, and records `supplyGapFill` provenance. Malformed or supply-invalid rows are quarantined per asset instead of stalling or crashing the whole list. Empty chain buckets stay unavailable in memory during the run, but public surfaces still read the legacy zero in Release A; the public null arrives in Release B.",
+    impact: [
+      "`COINGECKO_GAP_FILL_POLICY` in `worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts`: entry needs 1.05 < ratio <= 1.45, a row gap-filled in the previous publication is retained while 1.02 < ratio <= 1.50, and 1.50 is a hard ceiling at current and at every compared 1d/7d/30d bucket DefiLlama also observed. The per-bucket `max(DL, CG)` splice is gone. Availability failures, candidate-cap deferrals and DefiLlama fallback runs carry the prior coherent value and provenance for at most two consecutive publications, marked restored; they cannot admit a new fill",
+      "Observed first-run impact (2026-09-27): feUSD $74.9M → $9.79M (7.65x), USDXL $3.19M → $0.113M (28.3x), scUSD $1.91M → $0.641M (2.99x), BtcUSD $8.48M → $5.12M (1.66x), and wCOP $196K → $185K (history-ratio-above-bound) are rejected; reUSD is retained (1.0504x). USDXL and scUSD fall below the $1M live-depeg floor and lose live detection; any open event closes as coverage-lost-supply. These one-time history steps are methodology changes, not redemptions. The bound still requires recorded owner approval",
+      "Intake validates the DefiLlama envelope (`peggedAssets` must be an array; otherwise the DefiLlama circuit records a failure and the CoinGecko fallback runs) and quarantines null/primitive rows before the frozen-snapshot merge, then rows with absent, non-finite, negative or overflowing current aggregate buckets; an explicit zero is still admitted. Publication validates each row against the published schema and quarantines invalid rows, holding the whole list only for an invalid envelope, duplicate ids, or a cohort below the 50-row floor",
+      "Chain normalization preserves unavailable observations as null in memory. Release A projects canonical stablecoins storage, the response-ready companion, and immutable public datasets to the legacy 0 wire for rollback safety; Release B removes these projections",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.36",
     title: "Hard CEX ticker coverage for MXNB and AUDD",
     date: "2026-09-27",

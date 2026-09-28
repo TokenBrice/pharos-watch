@@ -19,6 +19,8 @@ export interface DexLiquidityRow {
   total_volume_24h_usd: number;
   total_volume_7d_usd: number;
   total_volume_7d_measured?: number | null;
+  /** Migration 0249 `volume_availability_json`; NULL marks a legacy (pre-DEC-19) row. */
+  volume_availability_json?: string | null;
   pool_count: number;
   pair_count: number;
   chain_count: number;

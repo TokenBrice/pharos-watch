@@ -40,7 +40,7 @@ interface BuildRedemptionExitRouteObservationInput {
   capacityConfidence: RedemptionBackstopEntry["capacityConfidence"];
   capacityKind?: RedemptionLiveCapacityKind;
   freshnessKind?: RedemptionLiveFreshnessKind;
-  sourceTimestamp?: number;
+  evidenceObservedAt?: number;
   settlementDelaySec?: number;
   settlementBoundUnproven?: true;
   resolvedFeeBps: number | null;
@@ -74,8 +74,8 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
     return {
       evidenceKind: input.freshnessKind === "same-run-onchain" ? "onchain-contract-state" : "live-reserve-state",
       confidence: "high",
-      observedAt: floorTimestampSec(input.sourceTimestamp) ?? floorTimestampSec(input.now) ?? 0,
-      supportsScoring: true,
+      observedAt: floorTimestampSec(input.evidenceObservedAt) ?? 0,
+      supportsScoring: floorTimestampSec(input.evidenceObservedAt) != null,
     };
   }
 
@@ -88,7 +88,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
       // The observation time is when the evidence was read, not when the
       // terms were reviewed: a same-run direct read carries its own
       // timestamp, and only evidence without one falls back to the review.
-      observedAt: (directFreshness ? floorTimestampSec(input.sourceTimestamp) : null)
+      observedAt: (directFreshness ? floorTimestampSec(input.evidenceObservedAt) : null)
         ?? reviewTimestamp,
       supportsScoring: true,
     };
@@ -97,7 +97,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
   return {
     evidenceKind: hasReviewedTerms ? "documented-terms" : "manual-review",
     confidence: input.capacityConfidence === "heuristic" ? "low" : "unknown",
-    observedAt: reviewTimestamp ?? floorTimestampSec(input.sourceTimestamp) ?? floorTimestampSec(input.now) ?? 0,
+    observedAt: reviewTimestamp ?? floorTimestampSec(input.evidenceObservedAt) ?? 0,
     supportsScoring: false,
   };
 }

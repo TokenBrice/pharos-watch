@@ -6,6 +6,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 const refetchMock = vi.fn();
 
@@ -158,6 +159,37 @@ describe("AltPegsClient", () => {
       error: null,
       dataUpdatedAt: 2,
     });
+  });
+
+  it.each([
+    { ageBudgets: 0, error: null, hasData: true, notice: null },
+    { ageBudgets: 20, error: null, hasData: true, notice: "Showing an older snapshot" },
+    { ageBudgets: 0, error: new Error("Offline"), hasData: true, notice: "Refresh failed; showing saved data" },
+    { ageBudgets: 0, error: new Error("Offline"), hasData: false, notice: "Refresh failed" },
+  ])("surfaces share health for $ageBudgets snapshot budgets and hasData=$hasData", ({ ageBudgets, error, hasData, notice }) => {
+    const now = Date.now();
+    useStablecoinsMock.mockReturnValue({ ...useStablecoinsMock(), dataUpdatedAt: now });
+    const saved = useNonUsdShareMock();
+    useNonUsdShareMock.mockReturnValue({
+      ...saved,
+      data: hasData ? saved.data : undefined,
+      dataUpdatedAt: now,
+      error,
+      meta: {
+        updatedAt: Math.floor(now / 1000) - ageBudgets * API_FRESHNESS_MAX_AGE_SEC.nonUsdShare,
+        ageSeconds: ageBudgets * API_FRESHNESS_MAX_AGE_SEC.nonUsdShare,
+        status: "fresh",
+      },
+    });
+    render(<AltPegsClient />);
+    if (notice) {
+      expect(screen.getByText(notice)).toBeTruthy();
+      expect(screen.getByText(/Non-USD Share/)).toBeTruthy();
+    } else {
+      expect(screen.queryByText("Showing an older snapshot")).toBeNull();
+      expect(screen.queryByText(/Refresh failed/)).toBeNull();
+    }
+    expect(screen.getByTestId("non-usd-share-chart")).toBeTruthy();
   });
 
   it("renders the core current-state sections and history block", () => {

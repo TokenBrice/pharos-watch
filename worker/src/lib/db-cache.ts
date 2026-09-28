@@ -9,6 +9,7 @@ import {
 } from "./freshness-sentinels";
 import { parseJsonStringArray } from "./json-parse";
 import { logWorkerEvent } from "./structured-log";
+import { assessFreshnessTimestamp, type FreshnessTimestampReason } from "./api-freshness-age";
 
 export type CacheStaleSemantics = "accept" | "fallback-only" | "reject";
 export type CacheInvalidationSemantics = "retain" | "delete";
@@ -29,7 +30,7 @@ export interface CachePolicy<T> extends CacheRetentionPolicy {
 }
 
 export type PolicyCacheRead<T> =
-  | { state: "missing" | "invalid"; value: null; updatedAt: number | null; usable: false }
+  | { state: "missing" | "invalid"; value: null; updatedAt: number | null; usable: false; reason?: FreshnessTimestampReason }
   | { state: "fresh" | "stale"; value: T; updatedAt: number; usable: boolean };
 
 export async function getCache(
@@ -52,6 +53,13 @@ export async function getCache(
   return { value: row.value, updatedAt: row.updated_at };
 }
 
+/**
+ * Reads up to 100 unique keys (D1's bound-parameter limit) in ONE query, so the
+ * returned rows are a single consistent snapshot. Duplicate keys are collapsed;
+ * larger key sets throw instead of silently splitting into several snapshots.
+ * Callers with larger sets must chunk explicitly and must not treat the merged
+ * result as one generation.
+ */
 export async function getCaches(
   db: D1Database,
   keys: readonly string[],
@@ -169,6 +177,11 @@ export async function readCacheWithPolicy<T>(
   if (policy.storage !== "d1-kv") throw new Error(`cache policy ${policy.schemaId} is not backed by D1 key/value cache`);
   const cached = await getCache(db, policy.key, signal);
   if (!cached) return { state: "missing", value: null, updatedAt: null, usable: false };
+  const timestamp = assessFreshnessTimestamp(nowSec, cached.updatedAt);
+  if (timestamp.reason != null) {
+    if (policy.invalid === "delete") await deleteCache(db, policy.key);
+    return { state: "invalid", value: null, updatedAt: cached.updatedAt, usable: false, reason: timestamp.reason };
+  }
   let value: T | null;
   try {
     value = policy.decode(cached.value);
@@ -179,7 +192,7 @@ export async function readCacheWithPolicy<T>(
     if (policy.invalid === "delete") await deleteCache(db, policy.key);
     return { state: "invalid", value: null, updatedAt: cached.updatedAt, usable: false };
   }
-  const fresh = policy.ttlSec == null || nowSec - cached.updatedAt <= policy.ttlSec;
+  const fresh = policy.ttlSec == null || timestamp.ageSeconds <= policy.ttlSec;
   if (fresh) return { state: "fresh", value, updatedAt: cached.updatedAt, usable: true };
   return {
     state: "stale",
@@ -213,8 +226,12 @@ export interface CacheWriteResult {
 }
 
 /**
- * Compare-and-swap cache write: only updates if the existing row is older than `syncStartSec`.
- * Prevents a slow cron run from overwriting a newer run's data.
+ * Compare-and-swap cache write: writes when the existing row's timestamp is not
+ * newer than `syncStartSec` (`updated_at <= syncStartSec`). Equal-timestamp
+ * replacement is intentional (a same-clock retry or re-publication lands); only
+ * an older clock is rejected, so a slow cron run cannot overwrite a newer run's
+ * data. The timestamp is not a unique generation identity: two writers sharing
+ * one clock replace each other.
  */
 export async function setCacheIfNewer(
   db: D1Database,

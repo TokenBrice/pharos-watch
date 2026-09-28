@@ -111,6 +111,26 @@ function parentDepegPeg(fixedInput: ReturnType<typeof twoAssetInput>, peakBps: n
 }
 
 describe("Safety Score V9 peg-reference inheritance", () => {
+  it.each([
+    { priceSource: "protocol-par" },
+    { priceSource: "pyth", priceObservedAtMode: "nominal_reference" as const },
+  ])("withholds a nominal current peg fact despite a scored summary: %j", (provenance) => {
+    const template = parentDepegPeg(twoAssetInput(), 700);
+    const fixed = reseal(template, {
+      pegDataById: {
+        ...template.pegDataById,
+        [PARENT_ID]: { ...template.pegDataById[PARENT_ID]!, ...provenance },
+      },
+    });
+    const parent = compileSafetyScoreV9FactSetFromFixedInput(
+      fixed,
+      buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() }),
+    ).assets.find((asset) => asset.assetId === PARENT_ID)!.peg;
+    expect(parent.pegScore).toBeNull();
+    expect(parent.currentDeviationBps).toBeNull();
+    expect(parent.activeDepegBps).toBeNull();
+  });
+
   it("passes apyUSD's tracked parent active-depeg peak into the child peg fact", () => {
     const fixed = parentDepegPeg(twoAssetInput(), 2_500);
     const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() });
@@ -193,14 +213,20 @@ describe("Safety Score V9 peg-reference inheritance", () => {
     expect(peg.activeDepegBps).toBeNull();
   });
 
-  it("rejects a variantOf / pegReferenceId mismatch with an explicit data error", () => {
+  it("quarantines a variantOf / pegReferenceId mismatch without discarding the valid parent", () => {
     const fixed = twoAssetInput();
-    expect(() =>
-      buildSafetyScoreV9BaselineExtension(fixed, {
-        metaById: metadata({
-          [CHILD_ID]: { variantOf: PARENT_ID, pegReferenceId: "different-parent" },
-        }),
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: metadata({
+        [CHILD_ID]: { variantOf: PARENT_ID, pegReferenceId: "different-parent" },
       }),
-    ).toThrow(/peg reference data error.*variantOf.*pegReferenceId/);
+    });
+    expect(extension.assets.find((asset) => asset.assetId === CHILD_ID)?.admissionQuarantine).toMatchObject({
+      code: "fact-build-failed",
+      message: expect.stringMatching(/peg reference data error.*variantOf.*pegReferenceId/),
+    });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() });
+    expect(extension.assets.find((asset) => asset.assetId === PARENT_ID)).toEqual(
+      baseline.assets.find((asset) => asset.assetId === PARENT_ID),
+    );
   });
 });

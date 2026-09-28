@@ -551,6 +551,7 @@ describe("buildRedemptionBackstopEntry", () => {
           capacityKind: "live-direct",
           freshnessKind: "verified-source-timestamp",
           sourceTimestamp: now - 120,
+          evidenceObservedAt: now - 120,
           sourceUrls: ["https://example.com/redemption.json"],
           settlementDelaySec: null,
           queueDepthUsd: null,

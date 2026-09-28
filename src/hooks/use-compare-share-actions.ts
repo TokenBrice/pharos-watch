@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { trackEvent } from "@/lib/analytics";
 import { canvasToBlob, loadImage, renderCompareShareImage } from "@/lib/compare-share-image";
 import { copyText } from "@/lib/clipboard";
 import { triggerBlobDownload } from "@/lib/exports/download";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
-import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { getSupplyChangePercent } from "@/components/stablecoin-table-logic";
@@ -86,16 +87,17 @@ export function useCompareShareActions({
     );
 
     const shareCoins: ShareCoinData[] = comparisonCoins.map((coin, index) => {
-      const cap = getCirculatingRaw(coin.data);
-      const prev = getPrevWeekRaw(coin.data);
-      const weeklyPct = getSupplyChangePercent(cap, prev);
+      const cap = getCirculatingRawOrNull(coin.data);
+      const prev = getPrevWeekRawOrNull(coin.data);
+      // Both operands must be observed; an unavailable side renders "—", never $0 or -100%.
+      const weeklyPct = cap != null && prev != null ? getSupplyChangePercent(cap, prev) : null;
       const pegRef = getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
 
       return {
         symbol: coin.symbol,
         name: coin.name,
-        price: formatNativePrice(coin.data.price, coin.meta.flags.pegCurrency, pegRef),
-        marketCap: formatCurrency(cap),
+        price: formatNativePrice(isObservedPrice(coin.data) ? coin.data.price : null, coin.meta.flags.pegCurrency, pegRef),
+        marketCap: cap != null ? formatCurrency(cap) : "—",
         pegScore: coin.pegDetails?.pegScore != null ? `${coin.pegDetails.pegScore.toFixed(1)}` : "—",
         weeklyChange: weeklyPct != null ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%` : "—",
         liquidityScore: coin.liquidity?.liquidityScore != null ? `${coin.liquidity.liquidityScore.toFixed(1)}` : "—",

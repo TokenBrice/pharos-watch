@@ -284,7 +284,7 @@ describe("StablecoinMeta schema — GENIUS profile", () => {
   };
 
   it("accepts a source-backed issuer-announced GENIUS watch profile", () => {
-    expect(() => parseStablecoinMetaAssets([
+    const parsed = parseStablecoinMetaAssets([
       makeCoin({
         id: "fixture-genius-intent",
         genius: {
@@ -302,13 +302,13 @@ describe("StablecoinMeta schema — GENIUS profile", () => {
           reserveDisclosureUrl: "https://example.com/reserves",
           redemptionPolicyPresent: true,
           monthlyAttestationPresent: true,
-          latestReportDate: "2026-05-01",
           references: [issuerDisclosure],
           reviewer: "Fixture Reviewer",
           reviewedAt: "2026-05-27",
         },
       }),
-    ], "fixture")).not.toThrow();
+    ], "fixture");
+    expect(parsed[0]?.genius?.authorizationStatus).toBe("issuer-announced-intent");
   });
 
   it("rejects official GENIUS authorization claims without a regulator reference", () => {

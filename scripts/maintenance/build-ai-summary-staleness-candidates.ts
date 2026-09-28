@@ -36,6 +36,7 @@ import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
 } from "@shared/types/report-cards-v9";
+import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import {
   PegSummaryResponseSchema,
   StablecoinListResponseSchema,
@@ -130,16 +131,17 @@ interface SummaryEntry {
 
 // --- grade vocabulary -------------------------------------------------------
 
-const GRADES = ["A+", "A-", "A", "B+", "B-", "B", "C+", "C-", "C", "D+", "D-", "D", "F"];
-// alternation ordered so multi-char grades (A+, A-) win over the bare letter
-const GRADE_ALT = GRADES.map((g) => g.replace("+", "\\+")).join("|");
-// A grade token is bounded by non-alphanumerics, not \b — \b breaks on the
-// trailing +/- of "A-"/"B+" and silently falls back to the bare letter.
-const GRADE_TOKEN = `(?<![A-Za-z0-9])(${GRADE_ALT})(?![A-Za-z0-9])`;
+const GRADES = ReportCardGradeSchema.options;
+// Longest first so modifiers win over the bare letter.
+const gradeAlternation = (grades: readonly string[]): string =>
+  [...grades].sort((a, b) => b.length - a.length).map((g) => g.replace("+", "\\+")).join("|");
+const GRADE_ALT = gradeAlternation(GRADES);
+// A modifier cannot terminate a grade: unsupported D+/D- must not match D.
+const GRADE_TOKEN = `(?<![A-Za-z0-9+-])(${GRADE_ALT})(?![A-Za-z0-9+-])`;
 // Letter grades are always uppercase on the dashboard; prose articles ("a",
 // "an") are not. Reject any captured grade that is not an exact uppercase grade
 // so the indefinite article never reads as an "A".
-const isGrade = (s: string): boolean => GRADES.includes(s);
+const isGrade = (s: string): boolean => ReportCardGradeSchema.safeParse(s).success;
 const DEWS_BANDS = ["calm", "watch", "alert", "warning", "danger"];
 const NUMBER_WORDS: Record<string, number> = {
   zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5,
@@ -424,7 +426,7 @@ export function extractFindings(text: string, cur: Current): Finding[] {
 
   // 2. Bare grade-at-score with a multi-char grade: "the A- at 82" (number 0-100).
   const bareGradeScoreRe = new RegExp(
-    `(?<![A-Za-z0-9])(A\\+|A-|B\\+|B-|C\\+|C-|D\\+|D-)\\s+at\\s+(\\d{1,3})\\b`,
+    `(?<![A-Za-z0-9+-])(${gradeAlternation(GRADES.filter((grade) => grade.length > 1))})(?![A-Za-z0-9+-])\\s+at\\s+(\\d{1,3})\\b`,
     "g",
   );
   for (const m of t.matchAll(bareGradeScoreRe)) {
