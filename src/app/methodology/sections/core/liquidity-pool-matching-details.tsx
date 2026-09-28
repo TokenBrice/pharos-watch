@@ -132,7 +132,7 @@ export function LiquidityPoolMatchingDetails() {
           published volume record states the {VOLUME_ADMISSION_HOURS}h window and the oldest and newest observation
           times. Older readings contribute nothing, even though the remembered discovery row keeps its decaying TVL. A
           source field that is absent or unparseable is stored as unmeasured, never as zero; an explicit provider zero
-          (for CoinGecko onchain, only alongside zero reported trades) stays a measured zero. Registry zeros recorded before the v6.9 producer (before 2026-09-28 12:00 UTC) could
+          (for CoinGecko onchain, only alongside zero reported trades) stays a measured zero. Registry zeros recorded before the v6.9 producer (before its 2026-09-28 07:29 UTC activation) could
           be coerced missing values, so they count as unmeasured while positive readings from that period stay usable.
           A 24h or 7d total is published only when every retained pool is
           admitted; otherwise the total is unavailable and the record shows the observed volume of the admitted pools
