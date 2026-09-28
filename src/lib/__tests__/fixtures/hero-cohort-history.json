@@ -1,0 +1,339 @@
+{
+  "chartPoints": [
+    {
+      "date": 1511913600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 110105,
+        "peggedREAL": 0,
+        "peggedEUR": 0,
+        "peggedGBP": 0,
+        "peggedCNH": 0,
+        "peggedIDR": 0,
+        "peggedKGS": 0,
+        "peggedGOLD": 0,
+        "peggedSILVER": 0,
+        "peggedAUD": 0,
+        "peggedCHF": 0,
+        "peggedZAR": 0,
+        "peggedNGN": 0,
+        "peggedMXN": 0,
+        "peggedMYR": 0,
+        "peggedKRW": 0,
+        "peggedJPY": 0,
+        "peggedTRY": 0
+      },
+      "aggregateUniverse": "legacy-provider-all-stablecoins-v1"
+    },
+    {
+      "date": 1537833600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 38337242,
+        "peggedREAL": 0,
+        "peggedEUR": 0,
+        "peggedGBP": 0,
+        "peggedCNH": 0,
+        "peggedIDR": 0,
+        "peggedKGS": 0,
+        "peggedGOLD": 0,
+        "peggedSILVER": 0,
+        "peggedAUD": 0,
+        "peggedCHF": 0,
+        "peggedZAR": 0,
+        "peggedNGN": 0,
+        "peggedMXN": 0,
+        "peggedMYR": 0,
+        "peggedKRW": 0,
+        "peggedJPY": 0,
+        "peggedTRY": 0
+      },
+      "aggregateUniverse": "legacy-provider-all-stablecoins-v1"
+    },
+    {
+      "date": 1571529600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 3148064516,
+        "peggedREAL": 0,
+        "peggedEUR": 0,
+        "peggedGBP": 0,
+        "peggedCNH": 0,
+        "peggedIDR": 0,
+        "peggedKGS": 0,
+        "peggedGOLD": 0,
+        "peggedSILVER": 0,
+        "peggedAUD": 0,
+        "peggedCHF": 0,
+        "peggedZAR": 0,
+        "peggedNGN": 0,
+        "peggedMXN": 0,
+        "peggedMYR": 0,
+        "peggedKRW": 0,
+        "peggedJPY": 0,
+        "peggedTRY": 0
+      },
+      "aggregateUniverse": "legacy-provider-all-stablecoins-v1"
+    },
+    {
+      "date": 1724457600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 170558123026.22665,
+        "peggedVAR": 102071038,
+        "peggedEUR": 308022845.96186244,
+        "peggedJPY": 11057004,
+        "peggedCNY": 17077,
+        "peggedUAH": 9668,
+        "peggedARS": 3281454,
+        "peggedGBP": 630939.312987414,
+        "peggedCAD": 1375980,
+        "peggedCHF": 8467300,
+        "peggedAUD": 1194498,
+        "peggedREAL": 620763,
+        "peggedCNH": 0,
+        "peggedIDR": 12391240.022816,
+        "peggedKGS": 0,
+        "peggedGOLD": 2899040624.8539,
+        "peggedSILVER": 112667107.57488613,
+        "peggedZAR": 0,
+        "peggedNGN": 0,
+        "peggedMXN": 0,
+        "peggedMYR": 1198466.8610386911,
+        "peggedKRW": 0,
+        "peggedTRY": 0
+      },
+      "aggregateUniverse": "legacy-provider-all-stablecoins-v1"
+    },
+    {
+      "date": 1727049600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 173361864277.66388,
+        "peggedVAR": 102939685,
+        "peggedEUR": 316467274.73677236,
+        "peggedJPY": 11728337,
+        "peggedCNY": 17249,
+        "peggedUAH": 9672,
+        "peggedARS": 3220376,
+        "peggedGBP": 645341.4602677585,
+        "peggedCAD": 1187178,
+        "peggedCHF": 8278987,
+        "peggedAUD": 1863578,
+        "peggedREAL": 626897,
+        "peggedCNH": 0,
+        "peggedIDR": 12674341.639005834,
+        "peggedKGS": 0,
+        "peggedGOLD": 3022495581.8817496,
+        "peggedSILVER": 116881502.86205763,
+        "peggedZAR": 0,
+        "peggedNGN": 0,
+        "peggedMXN": 0,
+        "peggedMYR": 1259986.204520511,
+        "peggedKRW": 0,
+        "peggedTRY": 0
+      },
+      "aggregateUniverse": "legacy-provider-all-stablecoins-v1"
+    },
+    {
+      "date": 1790553600,
+      "totalCirculatingUSD": {
+        "peggedUSD": 313475977798.1456,
+        "peggedVAR": 12206052.91,
+        "peggedEUR": 3078006267.984417,
+        "peggedJPY": 157720722.07957965,
+        "peggedCNY": 3057779.24,
+        "peggedUAH": 3126.81,
+        "peggedARS": 8305312.01,
+        "peggedGBP": 44233951.43928623,
+        "peggedCAD": 3857248.89,
+        "peggedCHF": 95038051.06225614,
+        "peggedAUD": 18060472.719455402,
+        "peggedREAL": 156317591.69920132,
+        "peggedRUB": 466584592.51,
+        "peggedMXN": 4388720.181866455,
+        "peggedSGD": 12916200.42,
+        "peggedPHP": 3633063.37,
+        "peggedTRY": 14991973.96626725,
+        "peggedCOP": 208039.06,
+        "peggedKES": 79194.46,
+        "peggedZAR": 4411152.660663263,
+        "peggedNGN": 2821645.419234997,
+        "peggedXOF": 9241.96,
+        "peggedGHS": 23606.83,
+        "peggedCLP": 71665.15,
+        "peggedPEN": 40166.18,
+        "peggedMYR": 1413896.6635043537,
+        "peggedKRW": 1413237.2409199,
+        "peggedHKD": 128364.43,
+        "peggedCNH": 5794185.828726149,
+        "peggedIDR": 10562533.587014673,
+        "peggedKGS": 8870985.217849927,
+        "peggedGOLD": 5341911638.906526,
+        "peggedSILVER": 238495736.55303153
+      },
+      "aggregateUniverse": "legacy-provider-all-stablecoins-v1"
+    }
+  ],
+  "histories": {
+    "usdtHistory": [
+      {
+        "date": 1424822400,
+        "circulatingUsd": 304476,
+        "price": 1.21016
+      },
+      {
+        "date": 1511913600,
+        "circulatingUsd": 109970,
+        "price": 1.01913
+      },
+      {
+        "date": 1537833600,
+        "circulatingUsd": 25109502,
+        "price": 1.0005418764812126
+      },
+      {
+        "date": 1571529600,
+        "circulatingUsd": 2231765704,
+        "price": 1.000810608249557
+      },
+      {
+        "date": 1724457600,
+        "circulatingUsd": 117713064005,
+        "price": 1.0015577204672534
+      },
+      {
+        "date": 1727049600,
+        "circulatingUsd": 119157360693,
+        "price": 1.000259784128336
+      },
+      {
+        "date": 1790553600,
+        "circulatingUsd": 183744868831.00757,
+        "price": 0.9997932426422709
+      }
+    ],
+    "usdcHistory": [
+      {
+        "date": 1536624000,
+        "circulatingUsd": 2,
+        "price": null
+      },
+      {
+        "date": 1537833600,
+        "circulatingUsd": 8,
+        "price": null
+      },
+      {
+        "date": 1571529600,
+        "circulatingUsd": 474269373,
+        "price": 1.0005324781418508
+      },
+      {
+        "date": 1724457600,
+        "circulatingUsd": 34466304100,
+        "price": 1.0003802095397256
+      },
+      {
+        "date": 1727049600,
+        "circulatingUsd": 35651896571,
+        "price": 1.0001009661280085
+      },
+      {
+        "date": 1790553600,
+        "circulatingUsd": 75234974568.1666,
+        "price": 0.9998549880000001
+      }
+    ],
+    "usdsHistory": [
+      {
+        "date": 1726617600,
+        "circulatingUsd": 98507054,
+        "price": null
+      },
+      {
+        "date": 1727049600,
+        "circulatingUsd": 455788979,
+        "price": null
+      },
+      {
+        "date": 1790553600,
+        "circulatingUsd": 6584735436.158903,
+        "price": 0.9999
+      }
+    ],
+    "daiHistory": [
+      {
+        "date": 1574121600,
+        "circulatingUsd": 1827422,
+        "price": 1.000650588888066
+      },
+      {
+        "date": 1724457600,
+        "circulatingUsd": 5064294429,
+        "price": 1.0011538016948196
+      },
+      {
+        "date": 1727049600,
+        "circulatingUsd": 5060304115,
+        "price": 1.0005533867474452
+      },
+      {
+        "date": 1790553600,
+        "circulatingUsd": 4810184631.177499,
+        "price": 0.9998449089469836
+      }
+    ]
+  },
+  "expected": [
+    {
+      "ts": 1511913600000,
+      "usdt": 109970,
+      "usdc": 0,
+      "sky": 0,
+      "others": 135,
+      "nonUsd": 0,
+      "total": 110105
+    },
+    {
+      "ts": 1537833600000,
+      "usdt": 25109502,
+      "usdc": 8,
+      "sky": 0,
+      "others": 13227732,
+      "nonUsd": 0,
+      "total": 38337242
+    },
+    {
+      "ts": 1571529600000,
+      "usdt": 2231765704,
+      "usdc": 474269373,
+      "sky": 0,
+      "others": 442029439,
+      "nonUsd": 0,
+      "total": 3148064516
+    },
+    {
+      "ts": 1724457600000,
+      "usdt": 117713064005,
+      "usdc": 34466304100,
+      "sky": 5064294429,
+      "others": 16776506498.814178,
+      "nonUsd": 3462046006.5874906,
+      "total": 174020169032.81418
+    },
+    {
+      "ts": 1727049600000,
+      "usdt": 119157360693,
+      "usdc": 35651896571,
+      "sky": 5516093094,
+      "others": 16636809907.448273,
+      "nonUsd": 3600295987.7843738,
+      "total": 176962160265.44827
+    },
+    {
+      "ts": 1790553600000,
+      "usdt": 183744868831.00757,
+      "usdc": 75234974568.1666,
+      "sky": 11394920067.336403,
+      "others": 52796790749.075005,
+      "nonUsd": 9695576417.4398,
+      "total": 323171554215.5856
+    }
+  ]
+}

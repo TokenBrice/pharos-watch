@@ -1,7 +1,34 @@
 import { describe, expect, it } from "vitest";
 import { buildTotalMcapChartRows } from "../total-mcap-chart";
+import productionFixtureJson from "./fixtures/hero-cohort-history.json";
+
+// JSON imports widen literal unions such as `aggregateUniverse`; the fixture is production-shaped.
+const productionFixture = productionFixtureJson as unknown as {
+  chartPoints: Parameters<typeof buildTotalMcapChartRows>[0];
+  histories: Parameters<typeof buildTotalMcapChartRows>[1];
+  expected: ReturnType<typeof buildTotalMcapChartRows>;
+};
 
 describe("buildTotalMcapChartRows", () => {
+  it("matches pre-release cohort values across production history, with no unavailable series", () => {
+    // Reduced from the homepage's five production endpoints on 2026-09-28.
+    const rows = buildTotalMcapChartRows(productionFixture.chartPoints, productionFixture.histories);
+    expect(rows).toEqual(productionFixture.expected);
+    expect(rows.some((row) =>
+      row.usdt === null || row.usdc === null || row.sky === null || row.others === null,
+    )).toBe(false);
+  });
+
+  it.each([null, []])("does not fold failed or empty USDC history into Others (%j)", (usdcHistory) => {
+    const rows = buildTotalMcapChartRows(productionFixture.chartPoints, {
+      ...productionFixture.histories,
+      usdcHistory,
+    });
+    expect(rows).toEqual(productionFixture.expected.map((row) => ({
+      ...row, usdc: null, others: null,
+    })));
+  });
+
   it("aligns per-coin history to the latest snapshot at or before each downsampled chart point", () => {
     const rows = buildTotalMcapChartRows(
       [
@@ -52,12 +79,12 @@ describe("buildTotalMcapChartRows", () => {
     );
 
     expect(rows).toEqual([
-      { ts: 100000, usdt: null, usdc: null, sky: null, others: null, nonUsd: 0, total: 50 },
+      { ts: 100000, usdt: 0, usdc: null, sky: null, others: null, nonUsd: 0, total: 50 },
       { ts: 200000, usdt: 20, usdc: null, sky: null, others: null, nonUsd: 0, total: 75 },
     ]);
   });
 
-  it("retains observed long-range cohorts without inventing pre-observation coverage", () => {
+  it("includes DAI before the later-starting USDS history without marking either cohort unavailable", () => {
     const rows = buildTotalMcapChartRows(
       [
         { date: 1_580_000_000, totalCirculatingUSD: { peggedUSD: 10_000 } },
@@ -83,7 +110,7 @@ describe("buildTotalMcapChartRows", () => {
     );
 
     expect(rows).toEqual([
-      { ts: 1_580_000_000_000, usdt: 4_000, usdc: 2_000, sky: null, others: null, nonUsd: 0, total: 10_000 },
+      { ts: 1_580_000_000_000, usdt: 4_000, usdc: 2_000, sky: 1_000, others: 3_000, nonUsd: 0, total: 10_000 },
       { ts: 1_620_000_000_000, usdt: 8_000, usdc: 4_000, sky: 2_500, others: 5_500, nonUsd: 0, total: 20_000 },
     ]);
   });
