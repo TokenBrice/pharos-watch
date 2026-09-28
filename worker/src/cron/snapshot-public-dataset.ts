@@ -93,6 +93,7 @@ interface DexLiquidityRow {
   liquidity_score: number | null;
   durability_score: number | null;
   coverage_class: string | null;
+  methodology_version: string | null;
   updated_at: number;
 }
 
@@ -130,11 +131,28 @@ async function gzipBytes(input: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
-function buildMethodologyVersions(reportCardVersion: string): StableMethodologyVersions {
+/**
+ * The liquidity methodology label is the newest version persisted on the exported
+ * rows (ADR-3 versions compare numerically), not the deployed constant: between a
+ * deploy and the first publication under it, every row still carries the previous
+ * version. Each row also exports its own version, because retained rows of coins
+ * no longer scored keep older ones. The deployed constant labels an export with
+ * no row carrying a parseable version (including an empty export).
+ */
+function latestPersistedLiquidityMethodology(rows: readonly DexLiquidityRow[]): string {
+  let latest: string | null = null;
+  for (const { methodology_version: version } of rows) {
+    if (!version || !Number.isFinite(Number(version))) continue;
+    if (latest == null || Number(version) > Number(latest)) latest = version;
+  }
+  return latest ?? LIQUIDITY_METHODOLOGY_VERSION;
+}
+
+function buildMethodologyVersions(reportCardVersion: string, liquidityScoreVersion: string): StableMethodologyVersions {
   return {
     pegScore: SAFETY_SCORE_METHODOLOGY_VERSION,
     dews: DEPEG_DEWS_METHODOLOGY_VERSION,
-    liquidityScore: LIQUIDITY_METHODOLOGY_VERSION,
+    liquidityScore: liquidityScoreVersion,
     psi: PSI_METHODOLOGY_VERSION,
     reportCard: reportCardVersion,
     chainHealth: CHAIN_HEALTH_METHODOLOGY_VERSION,
@@ -371,7 +389,7 @@ export async function snapshotPublicDataset(
     const result = await db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, volume_availability_json, pool_count, liquidity_score,
-                durability_score, coverage_class, updated_at
+                durability_score, coverage_class, methodology_version, updated_at
          FROM dex_liquidity
          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          ORDER BY liquidity_score DESC`,
@@ -398,7 +416,10 @@ export async function snapshotPublicDataset(
     };
   }
 
-  const methodologyVersions = buildMethodologyVersions(safetyScoreIdentity.methodologyVersion);
+  const methodologyVersions = buildMethodologyVersions(
+    safetyScoreIdentity.methodologyVersion,
+    latestPersistedLiquidityMethodology(dexRows),
+  );
   const snapshotMetadata = {
     ...methodologyVersions,
     safetyScoreIdentity,
@@ -448,6 +469,7 @@ export async function snapshotPublicDataset(
       liquidityScore: row.liquidity_score,
       durabilityScore: row.durability_score,
       coverageClass: row.coverage_class,
+      methodologyVersion: row.methodology_version,
       updatedAt: row.updated_at,
     })),
   } satisfies PublicSnapshotEnvelopeV2;

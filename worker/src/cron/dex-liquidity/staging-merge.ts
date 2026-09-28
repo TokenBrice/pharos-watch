@@ -22,7 +22,16 @@ import type { CgTickerOrderbookMetadata } from "./coingecko-tickers-shared";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
 import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import type { CgNewPool, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, DexPriceObs, LiquidityPoolSourceFamily } from "./types";
+import type {
+  CgNewPool,
+  DexPoolVolumeReading,
+  DexPriceObs,
+  GtNewPool,
+  LiquidityFallbackCounters,
+  LiquidityMetrics,
+  LiquidityPoolSourceFamily,
+  PoolEntry,
+} from "./types";
 import {
   buildDexPriceObservationIdentity,
   buildPoolIdentity,
@@ -34,6 +43,10 @@ import {
 } from "./pool-identity";
 import { attachEvmV2CandidateToRetainedPool, buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 import { resolveRegistryPools, type RegistryPoolView } from "./registry-resolver";
+import { DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES } from "./constants";
+import { isDeadPool } from "./scoring-helpers";
+import { buildChainAddressKey } from "./token-resolution";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC, classifyDexPoolVolumeObservation } from "@shared/lib/dex-volume-availability";
 
 export interface StagedPoolRow {
   pool_id: string;
@@ -193,10 +206,20 @@ function getStablecoinIdentityIndex(
 
 type StagedPoolIdentity = ReturnType<typeof buildPoolIdentity>;
 
+function retainedPoolKey(stablecoinId: string, exactPoolKey: string): string {
+  return `${stablecoinId}\u0000${exactPoolKey}`;
+}
+
+/**
+ * Register every live-lane pool's exact identity for its coin and return the
+ * pools that carry no volume reading, keyed by (stablecoin, exact pool key), so
+ * a dedup-skipped registry view of the same pool can hand them its reading.
+ */
 function registerRetainedPoolExactStablecoins(
   knownPoolIndex: KnownPoolIdentityIndex,
   metrics: Map<string, LiquidityMetrics>,
-): void {
+): Map<string, PoolEntry> {
+  const unreadLivePools = new Map<string, PoolEntry>();
   for (const [stablecoinId, metric] of metrics) {
     for (const pool of metric.topPools ?? []) {
       const identity = buildPoolIdentity({
@@ -207,8 +230,82 @@ function registerRetainedPoolExactStablecoins(
       });
       if (identity.exactPoolKey) knownPoolIndex.exactKeys.add(identity.exactPoolKey);
       registerKnownPoolExactStablecoin(knownPoolIndex, identity, stablecoinId);
+      const reading = pool.volumeReading;
+      if (identity.exactPoolKey && reading?.volume24hUsd == null && reading?.volume7dUsd == null) {
+        const key = retainedPoolKey(stablecoinId, identity.exactPoolKey);
+        if (!unreadLivePools.has(key)) unreadLivePools.set(key, pool);
+      }
     }
   }
+  return unreadLivePools;
+}
+
+/**
+ * Chains on which CoinGecko Onchain demonstrably indexes trades: at least one
+ * registry row from a DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES source on the chain
+ * carries a positive 24h volume observed inside the admission window. CoinGecko
+ * also publishes explicit zero volume with zero buys and sells for networks it
+ * lists but does not index (Hydration on 2026-09-28: 15 of 15 rows zero while
+ * DeFiLlama reported $3.3M of weekly volume), and such a zero is not evidence of
+ * a pool that did not trade.
+ */
+/**
+ * Views that carry the dead-pool signature and clear the dead-pool floor but sit
+ * on a chain where CoinGecko Onchain shows no traded pool (so they are kept),
+ * by canonical chain: pool count and decayed TVL. Run metadata only.
+ */
+export type DeadPoolUnindexedChainSkips = Record<string, { poolCount: number; tvlUsd: number }>;
+
+function collectTradeIndexedChains(rows: readonly StagedPool[], nowSec: number): Set<string> {
+  const chains = new Set<string>();
+  for (const row of rows) {
+    if (
+      DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES[row.source] === true &&
+      row.volume24h != null && row.volume24h > 0 &&
+      row.refreshedAt <= nowSec && nowSec - row.refreshedAt <= DEX_VOLUME_OBSERVATION_MAX_AGE_SEC
+    ) {
+      chains.add(canonicalExitRouteChain(row.chain));
+    }
+  }
+  return chains;
+}
+
+/**
+ * Liquidity v6.92 dead-pool signature of a resolved view, before the chain gate:
+ * its 24h reading row (a usable reading, per the resolver) is a zero from a
+ * DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES source, the view's own coin owns one leg,
+ * and no other leg is a tracked stablecoin deployment on the chain
+ * (`trackedDeployments` is the pipeline's chain-address → stablecoin index).
+ * Missing token identity or an unmapped own leg proves nothing, so the signature
+ * is withheld. The caller signs only on chains in collectTradeIndexedChains.
+ */
+function hasDeadPoolSignature(view: RegistryPoolView, trackedDeployments: ReadonlyMap<string, string>): boolean {
+  const row = view.volume;
+  if (row?.volume24h !== 0 || DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES[row.source] !== true) return false;
+  const { chain, baseToken, quoteToken } = view.metadata;
+  if (!baseToken || !quoteToken) return false;
+  const legIds = [baseToken, quoteToken].map((token) => trackedDeployments.get(buildChainAddressKey(chain, token)));
+  const ownLeg = legIds.indexOf(view.stablecoinId);
+  return ownLeg >= 0 && legIds.every((id, index) => index === ownLeg || id === undefined);
+}
+
+/** The resolver's volume row as a raw DEC-19 reading, never scaled by TVL decay. */
+function buildRegistryVolumeReading(view: RegistryPoolView, deadPoolSignature: boolean): DexPoolVolumeReading {
+  return {
+    volume24hUsd: view.volume?.volume24h ?? null,
+    volume7dUsd: null,
+    observedAtSec: view.volume?.refreshedAt ?? null,
+    ...(deadPoolSignature ? { deadPoolSignature: true } : {}),
+  };
+}
+
+/** The dead-pool predicate evaluated at the merge clock, as scoring will evaluate it. */
+function isDeadRegistryPool(reading: DexPoolVolumeReading, tvlUsd: number, nowSec: number): boolean {
+  const status = classifyDexPoolVolumeObservation(
+    { volumeUsd: reading.volume24hUsd, observedAtSec: reading.observedAtSec },
+    { asOfSec: nowSec, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
+  );
+  return isDeadPool({ tvlUsd, volumeUsd1d: status === "measured" ? reading.volume24hUsd : null, volumeReading: reading });
 }
 
 interface StagedPoolEntry {
@@ -439,12 +536,21 @@ const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], LiquidityPoolSourceFami
  * STAGED_POOL_PRICE_MAX_AGE_HOURS, and volume carries its raw reading plus
  * observation clock so scoring counts it only inside
  * DEX_VOLUME_OBSERVATION_MAX_AGE_SEC (decay applies to TVL, never to flow).
+ *
+ * Liquidity v6.92: a view carrying the dead-pool signature stages no price
+ * observation when its decayed TVL clears the dead-pool floor, and a live-lane
+ * pool with no volume reading adopts the reading of the registry view it
+ * dedup-skips (same coin, same exact pool id). `trackedDeployments` is the
+ * chain-address → stablecoin index that decides whether a counter-token is a
+ * tracked deployment. Only chains on which CoinGecko Onchain indexes trades
+ * (collectTradeIndexedChains over the rows read here) can carry a signature.
  */
 export async function mergeStagedPools(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
   knownPoolIndex: KnownPoolIdentityIndex,
   nowSec: number,
+  trackedDeployments: ReadonlyMap<string, string>,
   references?: PriceValidationReferences,
   authoritativeConfirmation?: AuthoritativeStagedPoolConfirmationIndex,
   fallbackCounters?: LiquidityFallbackCounters,
@@ -461,8 +567,9 @@ export async function mergeStagedPools(
   registryRowsRead: number;
   registryMultiSourcePools: number;
   registryFamilyBySource: Record<string, number>;
+  deadPoolUnindexedChainSkips: DeadPoolUnindexedChainSkips;
 }> {
-  registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
+  const unreadLivePools = registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
   const result = await runWithOverloadRetry(
     () =>
       db
@@ -522,10 +629,12 @@ export async function mergeStagedPools(
     observations.push(stagedPool);
   }
   rows.length = 0;
+  const tradeIndexedChains = collectTradeIndexedChains(observations, nowSec);
   const views: Array<RegistryPoolView | undefined> = resolveRegistryPools(observations, nowSec);
   observations.length = 0;
   let registryMultiSourcePools = 0;
   const registryFamilyBySource: Record<string, number> = {};
+  const deadPoolUnindexedChainSkips: DeadPoolUnindexedChainSkips = {};
   for (const view of views) {
     if (!view) continue;
     if (view.sources.length >= 2) registryMultiSourcePools++;
@@ -630,12 +739,35 @@ export async function mergeStagedPools(
       }
     }
 
+    // DEC-19: the volume reading is the resolver's volume row as observed —
+    // never scaled by the TVL confidence decay. Its refresh clock decides at
+    // scoring whether it is in-window (measured) or aged (stale, never counted).
+    const signatureBeforeChainGate = hasDeadPoolSignature(view, trackedDeployments);
+    const viewChain = canonicalExitRouteChain(stagedPool.chain);
+    const chainTradeIndexed = tradeIndexedChains.has(viewChain);
+    const registryReading = buildRegistryVolumeReading(view, signatureBeforeChainGate && chainTradeIndexed);
+    const deadPool = isDeadRegistryPool(registryReading, adjustedTvl, nowSec);
+    if (
+      signatureBeforeChainGate && !chainTradeIndexed &&
+      isDeadRegistryPool(buildRegistryVolumeReading(view, true), adjustedTvl, nowSec)
+    ) {
+      // Would be dead but CoinGecko shows no traded pool on the chain: kept, and
+      // counted so an indexing regression on a major chain stays visible.
+      const skipped = deadPoolUnindexedChainSkips[viewChain] ?? { poolCount: 0, tvlUsd: 0 };
+      skipped.poolCount++;
+      skipped.tvlUsd += adjustedTvl;
+      deadPoolUnindexedChainSkips[viewChain] = skipped;
+    }
+
     // Extract price observations BEFORE dedup check.
     // DL yields pools provide pool metrics but never prices; CG/GT staged pools
     // carry priceUsd. These observations still feed diagnostics and later retained-
     // pool price eligibility, but dex_prices is now rebuilt only from the final
-    // retained pool set after dedupe and filtering.
-    if (
+    // retained pool set after dedupe and filtering. A dead pool (v6.92) stages
+    // no observation: its reserve-seeded price carries no traded evidence.
+    if (deadPool && priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0) {
+      if (fallbackCounters) fallbackCounters.stagedDeadPoolPriceObservationExcluded++;
+    } else if (
       priceEligible &&
       stagedPool.priceUsd != null &&
       stagedPool.priceUsd > 0 &&
@@ -682,6 +814,20 @@ export async function mergeStagedPools(
     );
     const dedupReason = knownDedupReason ?? stagedDedupReason;
     if (dedupReason) {
+      // The live lane already retained this exact pool for this coin. When it
+      // observed no volume (Sugar Slipstream publishes none), the resolver's
+      // measured reading is the pool's reading: dropping it would hide a
+      // trade-verified zero behind a missing value.
+      const unreadKey = knownDedupReason === "exact" && identity.exactPoolKey
+        ? retainedPoolKey(stagedPool.stablecoinId, identity.exactPoolKey)
+        : null;
+      const unreadLivePool = unreadKey ? unreadLivePools.get(unreadKey) : undefined;
+      if (unreadKey && unreadLivePool && view.volume) {
+        unreadLivePool.volumeReading = registryReading;
+        unreadLivePool.volumeUsd1d = registryReading.volume24hUsd;
+        unreadLivePools.delete(unreadKey);
+        if (fallbackCounters) fallbackCounters.stagedLiveVolumeBackfill++;
+      }
       if (evmV2ExecutionCandidate) {
         attachEvmV2CandidateToRetainedPool({
           metrics,
@@ -721,13 +867,10 @@ export async function mergeStagedPools(
       });
     }
 
-    // DEC-19: the volume reading is the resolver's volume row as observed —
-    // never scaled by the TVL confidence decay. Its refresh clock decides at
-    // scoring whether it is in-window (measured) or aged (stale, never counted).
-    const volumeReadingRow = view.volume;
     const volumeReading = {
-      volume24hUsd: volumeReadingRow?.volume24h ?? null,
-      volumeObservedAtSec: volumeReadingRow?.refreshedAt ?? null,
+      volume24hUsd: registryReading.volume24hUsd,
+      volumeObservedAtSec: registryReading.observedAtSec,
+      ...(registryReading.deadPoolSignature ? { volumeDeadPoolSignature: true as const } : {}),
     };
     const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
     const orderbookMetadata =
@@ -756,7 +899,7 @@ export async function mergeStagedPools(
         feePercentage: stagedPool.feeTier ? stagedPool.feeTier / 100 : null,
         measurement: {
           tvlMeasured: true,
-          volumeMeasured: volumeReadingRow != null,
+          volumeMeasured: view.volume != null,
           balanceMeasured: stagedPool.balanceRatio != null,
           maturityMeasured: false,
           priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
@@ -791,7 +934,7 @@ export async function mergeStagedPools(
             ...(orderbookMetadata ?? {}),
             measurement: {
               tvlMeasured: orderbookMetadata?.orderbookDepthUsd != null,
-              volumeMeasured: volumeReadingRow != null,
+              volumeMeasured: view.volume != null,
               balanceMeasured: false,
               maturityMeasured: false,
               priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
@@ -802,7 +945,7 @@ export async function mergeStagedPools(
         : {
             measurement: {
               tvlMeasured: true,
-              volumeMeasured: volumeReadingRow != null,
+              volumeMeasured: view.volume != null,
               balanceMeasured: stagedPool.balanceRatio != null,
               maturityMeasured: false,
               priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
@@ -866,5 +1009,11 @@ export async function mergeStagedPools(
     registryRowsRead,
     registryMultiSourcePools,
     registryFamilyBySource,
+    deadPoolUnindexedChainSkips: Object.fromEntries(
+      Object.entries(deadPoolUnindexedChainSkips).map(([chain, { poolCount, tvlUsd }]) => [
+        chain,
+        { poolCount, tvlUsd: Math.round(tvlUsd) },
+      ]),
+    ),
   };
 }

@@ -30,6 +30,14 @@ function metadataParams(): Parameters<typeof buildDexLiquidityCronMetadata>[0] {
     failedSources: [],
     fallbackSignals: [],
     fallbackCounters: initLiquidityFallbackCounters(),
+    deadPoolExclusions: {
+      reason: "dead-pool-zero-trade-untracked-counter",
+      thresholdTvlUsd: 1_000_000,
+      poolCount: 0,
+      tvlUsd: 0,
+      topStablecoins: [],
+    },
+    deadPoolUnindexedChainSkips: {},
     persistence: {
       placeholderCount: 0,
       inactiveMetricRowsSkipped: 0,

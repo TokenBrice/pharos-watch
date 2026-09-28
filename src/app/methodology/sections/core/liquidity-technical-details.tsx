@@ -1,4 +1,8 @@
-import { DEX_VOLUME_COVERAGE_MIN, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import {
+  DEX_DEAD_POOL_TVL_MIN_USD,
+  DEX_VOLUME_COVERAGE_MIN,
+  DEX_VOLUME_OBSERVATION_MAX_AGE_SEC,
+} from "@shared/lib/dex-volume-availability";
 import { LIQUIDITY_SCORE_WEIGHTS, type LiquidityScoreComponentKey } from "@shared/lib/liquidity-score-weights";
 import {
   TableBody,
@@ -130,6 +134,15 @@ export function LiquidityTechnicalDetails() {
           <li>
             <span className="text-foreground">Metapool dedup</span> &mdash; uses TVL excluding base pool to prevent
             double-counting across Curve metapools
+          </li>
+          <li>
+            <span className="text-foreground">Dead-pool floor</span> &mdash; a pool with at least $
+            {(DEX_DEAD_POOL_TVL_MIN_USD / 1_000_000).toFixed(0)}M of TVL is dropped from the score and from
+            DEX-implied prices when its 24h reading shows zero trades (CoinGecko Onchain reported no buys and no
+            sells, on a network where CoinGecko records trades) and its other token is not a tracked stablecoin.
+            These are single-sided pools: a few dollars of the stablecoin seed a ~$1 price, and the provider values
+            large amounts of an unlisted token at that price. Missing or unverified volume never triggers the floor,
+            and a pool counts again as soon as CoinGecko reports a trade in it
           </li>
           <li>
             <span className="text-foreground">Retained-pool recomputation</span> &mdash; HHI, depth, volume, and

@@ -59,6 +59,8 @@ export function initLiquidityFallbackCounters(): LiquidityFallbackCounters {
     retainedExclusionBlockedDex: 0,
     retainedExclusionVolTvlRatio: 0,
     retainedExclusionLargePoolLowVolume: 0,
+    stagedLiveVolumeBackfill: 0,
+    stagedDeadPoolPriceObservationExcluded: 0,
   };
 }
 

@@ -12,7 +12,11 @@ import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { clamp } from "@shared/lib/math";
 import { median, weightedMedian } from "@shared/lib/stats";
-import { classifyDexPoolVolumeObservation, summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import {
+  DEX_DEAD_POOL_TVL_MIN_USD,
+  classifyDexPoolVolumeObservation,
+  summarizeDexVolumeWindow,
+} from "@shared/lib/dex-volume-availability";
 import { normalizeProtocol } from "./pool-helpers";
 import { logWorkerEvent } from "../../lib/structured-log";
 
@@ -259,9 +263,30 @@ export function rebuildMetricsFromPools(
   };
 }
 
+/**
+ * Liquidity v6.92 dead-pool floor. A pool is dead when its scoring TVL is at
+ * least DEX_DEAD_POOL_TVL_MIN_USD, its admitted (in-window) 24h reading is zero,
+ * and the staged merge stamped that reading with the dead-pool signature (a
+ * trade-verified zero on a pool whose counter-tokens are not tracked stablecoin
+ * deployments). `volumeUsd1d` must be the in-window value: the DEC-19 eligibility
+ * pass output at scoring, or the same classification at merge time.
+ */
+export function isDeadPool(pool: Pick<PoolEntry, "tvlUsd" | "volumeUsd1d" | "volumeReading">): boolean {
+  return pool.volumeReading?.deadPoolSignature === true &&
+    pool.volumeUsd1d === 0 &&
+    pool.tvlUsd >= DEX_DEAD_POOL_TVL_MIN_USD;
+}
+
+/** Pools and scoring TVL removed by the dead-pool floor. */
+export interface DeadPoolExclusionTally {
+  poolCount: number;
+  tvlUsd: number;
+}
+
 export function filterRetainedPools(
   pools: LiquidityMetrics["topPools"],
   fallbackCounters?: LiquidityFallbackCounters,
+  deadPoolTally?: DeadPoolExclusionTally,
 ): LiquidityMetrics["topPools"] {
   return pools.filter((pool) => {
     if (isBlockedDexId(pool.project)) {
@@ -278,6 +303,13 @@ export function filterRetainedPools(
     }
     if (pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && !(vol != null && vol >= LARGE_POOL_MIN_VOLUME_USD)) {
       if (fallbackCounters) fallbackCounters.retainedExclusionLargePoolLowVolume++;
+      return false;
+    }
+    if (isDeadPool(pool)) {
+      if (deadPoolTally) {
+        deadPoolTally.poolCount++;
+        deadPoolTally.tvlUsd += pool.tvlUsd;
+      }
       return false;
     }
     return true;

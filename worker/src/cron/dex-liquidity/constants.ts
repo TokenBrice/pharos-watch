@@ -45,6 +45,19 @@ export const DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC = 1_790_580_554;
  * under the explicit zero-trades rule, so any rare legacy absent value is short-lived.
  */
 export const DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES: Readonly<Record<string, true>> = { cg_onchain: true };
+/**
+ * Registry sources whose usable stored 24h zero is trade-verified (liquidity v6.92
+ * dead-pool floor). The CoinGecko onchain intake (`cgPoolVolume24hReading`, used
+ * by the token-pool crawl and the stale-pool refresh) stores 0 only when the
+ * provider publishes an explicit zero volume and zero 24h buys and sells.
+ * Pre-cutover CoinGecko onchain zeros carry the same trust through
+ * DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES (187 of 188 sampled were explicit
+ * zeros with zero trades); the resolver has already discarded every zero that is
+ * not a usable reading. The GeckoTerminal parser stores any explicit "0" without a
+ * trade-count check, and DeFiLlama and direct APIs publish 0 for venues they
+ * under-index, so their zeros are measured but not trade-verified.
+ */
+export const DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES: Readonly<Record<string, true>> = { cg_onchain: true };
 
 // Uniswap V3 subgraph IDs per chain. Chain expansion is measured-execution
 // coupled: adding a chain here only turns that chain's DeFiLlama `uniswap-v3`

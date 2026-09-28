@@ -5,7 +5,7 @@ import type {
   DirectApiIntegrationResult,
 } from "./orchestrator-phases/direct-api";
 import type { FallbackCrawlerPhaseResult } from "./orchestrator-phases/fallback";
-import type { StagedPoolSkipDimension } from "./staging-merge";
+import type { DeadPoolUnindexedChainSkips, StagedPoolSkipDimension } from "./staging-merge";
 import type { DataSources, DexPriceObs, LiquidityMetrics } from "./types";
 import type { PoolProcessingRejection } from "./process-pool-types";
 
@@ -63,5 +63,7 @@ export interface DexLiquidityPoolState {
   registryRowsRead?: number;
   registryMultiSourcePools?: number;
   registryFamilyBySource?: Record<string, number>;
+  /** v6.92 dead-pool candidates kept because their chain is not trade-indexed; optional for older headers. */
+  deadPoolUnindexedChainSkips?: DeadPoolUnindexedChainSkips;
   directApiIntegration: DirectApiIntegrationResult;
 }

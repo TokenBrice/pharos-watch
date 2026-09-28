@@ -1,6 +1,7 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { parseDexVolumeAvailabilityRecord, readStoredDexTurnover24h } from "@shared/lib/dex-volume-availability";
+import { liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { runCappedPruneFamily } from "../shared/capped-delete";
@@ -189,7 +190,45 @@ export function computeSeriesStability(values: number[]): number | null {
   return Math.round((1 - Math.min(1, cv)) * 10000) / 10000;
 }
 
-/** @internal Exported for testing only. */
+interface BasisSample {
+  epoch: number;
+  value: number;
+}
+
+/**
+ * The samples of the latest TVL-measurement epoch holding at least
+ * MIN_STABILITY_SAMPLES finite values, never a mix of epochs: a methodology
+ * step that re-measures retained TVL is not volatility. Null when no epoch
+ * qualifies.
+ */
+function selectBasisHomogeneousSeries(samples: readonly BasisSample[]): number[] | null {
+  const byEpoch = new Map<number, number[]>();
+  for (const { epoch, value } of samples) {
+    if (!Number.isFinite(value)) continue;
+    const series = byEpoch.get(epoch);
+    if (series) series.push(value);
+    else byEpoch.set(epoch, [value]);
+  }
+  for (const epoch of [...byEpoch.keys()].sort((a, b) => b - a)) {
+    const series = byEpoch.get(epoch)!;
+    if (series.length >= MIN_STABILITY_SAMPLES) return series;
+  }
+  return null;
+}
+
+function pushSample(byCoin: Map<string, BasisSample[]>, stablecoinId: string, sample: BasisSample): void {
+  const samples = byCoin.get(stablecoinId);
+  if (samples) samples.push(sample);
+  else byCoin.set(stablecoinId, [sample]);
+}
+
+/**
+ * 30-day TVL and turnover stability over confident history rows. Each series is
+ * basis-homogeneous: it holds only the rows of one TVL-measurement epoch
+ * (`liquidityTvlBasisEpoch` over the persisted methodology version), the latest
+ * with enough samples.
+ * @internal Exported for testing only.
+ */
 export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   tvlStabilityMap: Map<string, number>;
   volumeStabilityMap: Map<string, number>;
@@ -199,8 +238,8 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   const tvlStabilityMap = new Map<string, number>();
   const volumeStabilityMap = new Map<string, number>();
 
-  const tvlByCoin = new Map<string, number[]>();
-  const volumeByCoin = new Map<string, number[]>();
+  const tvlByCoin = new Map<string, BasisSample[]>();
+  const volumeByCoin = new Map<string, BasisSample[]>();
   let cursorStablecoinId = "";
   let cursorSnapshotDate = -1;
 
@@ -208,7 +247,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
     const historyResult = await db
       .prepare(
         `SELECT stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_confidence,
-                volume_availability_json
+                volume_availability_json, methodology_version
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
            AND (stablecoin_id > ? OR (stablecoin_id = ? AND snapshot_date > ?))
@@ -229,6 +268,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
         total_volume_24h_usd: number;
         coverage_confidence: number | null;
         volume_availability_json?: string | null;
+        methodology_version?: string | null;
       }>();
     const rows: Array<
       | {
@@ -238,6 +278,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
           total_volume_24h_usd: number;
           coverage_confidence: number | null;
           volume_availability_json?: string | null;
+          methodology_version?: string | null;
         }
       | undefined
     > = historyResult.results ?? [];
@@ -254,9 +295,8 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
       const confidence = row.coverage_confidence ?? 0;
       if (confidence < HISTORY_CONFIDENCE_MIN) continue;
 
-      const tvlSeries = tvlByCoin.get(row.stablecoin_id) ?? [];
-      tvlSeries.push(row.total_tvl_usd);
-      tvlByCoin.set(row.stablecoin_id, tvlSeries);
+      const epoch = liquidityTvlBasisEpoch(row.methodology_version);
+      pushSample(tvlByCoin, row.stablecoin_id, { epoch, value: row.total_tvl_usd });
 
       // Volume consistency (liquidity v6.9) is the stability of daily 24h
       // turnover. A recorded day counts when complete or when its admitted
@@ -268,27 +308,21 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
         row.total_tvl_usd,
         parseDexVolumeAvailabilityRecord(row.volume_availability_json),
       );
-      if (turnover != null) {
-        const volumeSeries = volumeByCoin.get(row.stablecoin_id) ?? [];
-        volumeSeries.push(turnover);
-        volumeByCoin.set(row.stablecoin_id, volumeSeries);
-      }
+      if (turnover != null) pushSample(volumeByCoin, row.stablecoin_id, { epoch, value: turnover });
     }
     rows.length = 0;
     if (rowCount < HISTORY_STABILITY_BATCH_SIZE) break;
   }
 
-  for (const [coinId, tvls] of tvlByCoin) {
-    const stability = computeSeriesStability(tvls);
-    if (stability != null) {
-      tvlStabilityMap.set(coinId, stability);
-    }
+  for (const [coinId, samples] of tvlByCoin) {
+    const series = selectBasisHomogeneousSeries(samples);
+    const stability = series ? computeSeriesStability(series) : null;
+    if (stability != null) tvlStabilityMap.set(coinId, stability);
   }
-  for (const [coinId, volumes] of volumeByCoin) {
-    const stability = computeSeriesStability(volumes);
-    if (stability != null) {
-      volumeStabilityMap.set(coinId, stability);
-    }
+  for (const [coinId, samples] of volumeByCoin) {
+    const series = selectBasisHomogeneousSeries(samples);
+    const stability = series ? computeSeriesStability(series) : null;
+    if (stability != null) volumeStabilityMap.set(coinId, stability);
   }
 
   return { tvlStabilityMap, volumeStabilityMap };
