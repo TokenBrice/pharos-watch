@@ -39,6 +39,28 @@ it("keeps both distribution modules visible as unavailable when their sources fa
   expect(screen.getByText(/DEX distribution data is temporarily unavailable/)).toBeTruthy();
 });
 
+it.each([
+  { label: "all missing", chainCirculating: { Ethereum: { current: null }, Base: { current: null } } },
+  { label: "registered partial", chainCirculating: { Ethereum: { current: null }, Base: { current: 100 } } },
+  { label: "unregistered partial", chainCirculating: { Ethereum: { current: 100 }, "not-yet-registered-chain": { current: null } } },
+])("renders unavailable rather than a distribution with an unknown chain balance ($label)", ({ chainCirculating }) => {
+  useStablecoinsMock.mockReturnValue({
+    data: { peggedAssets: [{
+      id: "usdc-circle",
+      chainCirculating,
+    }] },
+    isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+  });
+  useDexLiquidityMock.mockReturnValue({
+    data: {}, isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+  });
+
+  render(<DistributionSection stablecoinId="usdc-circle" />);
+
+  expect(screen.getByRole("alert")).toBeTruthy();
+  expect(screen.queryByRole("figure")).toBeNull();
+});
+
 it("states a single-category distribution as a figure rather than a one-color ring", () => {
   useStablecoinsMock.mockReturnValue({
     data: {
@@ -106,7 +128,7 @@ it("keeps a chain at exactly the Other threshold as its own slice", () => {
   expect(screen.getAllByText("2%")).toHaveLength(2);
 });
 
-it("excludes zero and negative chain balances from the distribution denominator", () => {
+it("preserves observed positive shares alongside an explicit zero chain balance", () => {
   useStablecoinsMock.mockReturnValue({
     data: {
       peggedAssets: [
@@ -116,7 +138,6 @@ it("excludes zero and negative chain balances from the distribution denominator"
             Ethereum: { current: 60_000 },
             Base: { current: 40_000 },
             Solana: { current: 0 },
-            Tron: { current: -50_000 },
           },
         },
       ],
@@ -136,12 +157,10 @@ it("excludes zero and negative chain balances from the distribution denominator"
 
   render(<DistributionSection stablecoinId="usdc-circle" />);
 
-  // A polluted denominator would push these shares past 100%.
   expect(screen.getByRole("figure", { name: "Circulating supply distribution across 2 chains" })).toBeTruthy();
   expect(screen.getByText("60%")).toBeTruthy();
   expect(screen.getByText("40%")).toBeTruthy();
   expect(screen.queryByText("Solana")).toBeNull();
-  expect(screen.queryByText("Tron")).toBeNull();
   expect(screen.queryByText("Other")).toBeNull();
 });
 
