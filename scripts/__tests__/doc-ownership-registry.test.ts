@@ -125,7 +125,7 @@ describe("doc-ownership registry integrity", () => {
       "docs/telegram-mini-app.md": 44_446,
       "docs/worker-infrastructure.md#shared-database-helpers": 25_871,
       "docs/report-cards.md#v9-model": 43_771,
-      "docs/digest-pipeline.md#generation": 41_846,
+      "docs/digest-pipeline.md#generation": 43_892,
       "docs/worker-infrastructure.md#env-interface": 26_930,
       "docs/scripts.md": 26_143,
       "docs/status-dashboard.md#backend-contract-get-apistatus": 65_996,
