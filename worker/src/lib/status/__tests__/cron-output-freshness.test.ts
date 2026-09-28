@@ -74,7 +74,8 @@ describe("confirmed output versus attempted work", () => {
   it("does not let compaction lose a no-publication marker or reset an actual generation clock", () => {
     for (const outputPublishedAt of [null, NOW - 120]) {
       const metadata = compactCronMetadataForPersistence(JSON.stringify({
-        outputPublishedAt, padding: "x".repeat(80_000), quality: { reason: "row-count-threshold" },
+        // Array padding forces compaction without a single huge string (string redaction cost grows superlinearly).
+        outputPublishedAt, padding: Array.from({ length: 20_000 }, () => "xxxx"), quality: { reason: "row-count-threshold" },
       }));
       const parsed = JSON.parse(metadata.metadata!);
       expect(parsed.outputPublishedAt).toBe(outputPublishedAt);
