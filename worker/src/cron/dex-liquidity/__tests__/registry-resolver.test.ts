@@ -77,6 +77,12 @@ describe("resolveRegistryPools", () => {
     expect(resolveRegistryPools([cutoverZero, legacyPositive], now)[0].volume).toBe(cutoverZero);
   });
 
+  it("trusts a pre-cutover CoinGecko onchain zero as measured", () => {
+    const now = DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC + 3600;
+    const cgZero = row({ source: "cg_onchain", volume24h: 0, refreshedAt: DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC - 1 });
+    expect(resolveRegistryPools([cgZero], now)[0].volume).toBe(cgZero);
+  });
+
   it("borrows the token tuple from one complete witness, not opposite partial orientations", () => {
     const view = resolveRegistryPools([
       row({ baseToken: "A", quoteSymbol: "WRONG" }),
