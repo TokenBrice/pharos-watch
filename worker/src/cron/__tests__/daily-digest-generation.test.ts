@@ -66,7 +66,7 @@ describe("generateDailyDigest publication contract", () => {
     expect(result).toMatchObject({ itemCount: 1 }); expect(result.metadata).toContain("tweet: ok"); expect(result.metadata).toContain("telegram: ok");
     expect(input).toMatchObject({ aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 160_000_000, activeDepegCount: 1, safetyMap: { manifest: { date: "2026-03-06" } } });
     expect(input.editorialAudit).toMatchObject({ leadCandidateId: "depeg:usdt-tether:active", usedCandidateIds: ["depeg:usdt-tether:active"] });
-    expect(meta).toMatchObject({ styleGateMode: "shadow", editorialStyleGate: { mode: "shadow", firstPassWouldBlock: false }, llm: { model: "claude-opus-5", maxTokens: 16000, attempts: [{ attemptNumber: 1, inputTokens: 1000, outputTokens: 500, httpStatus: 200 }] } });
+    expect(meta).toMatchObject({ styleGateMode: "shadow", editorialStyleGate: { mode: "shadow", firstPassWouldBlock: false }, llm: { model: DIGEST_MODEL, maxTokens: 16000, attempts: [{ attemptNumber: 1, inputTokens: 1000, outputTokens: 500, httpStatus: 200 }] } });
     expect(body.messages[0].content).toContain("Safety Map census (current; depicts 2026-03-06 UTC)");
     expect(postDigestTweet).toHaveBeenCalledTimes(1); expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1); expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(runTelegramDigestDeliveryWithPermit).toHaveBeenCalledWith(expect.objectContaining({ owner: "daily-digest", editionKey: "daily:2026-03-06" }));
@@ -76,7 +76,7 @@ describe("generateDailyDigest publication contract", () => {
   it("sends the canonical streaming prompt contract without an attachment", async () => {
     await invoke(scenario.db, false, null, null);
     const body = firstRequestBody();
-    expect(body).toMatchObject({ model: DIGEST_MODEL, thinking: { type: "adaptive" }, output_config: { effort: "xhigh" }, max_tokens: 16000, fallbacks: "default", stream: true });
+    expect(body).toMatchObject({ model: DIGEST_MODEL, thinking: { type: "adaptive" }, output_config: { effort: "high" }, max_tokens: 16000, fallbacks: "default", stream: true });
     expect(body.messages[0].content).toEqual(expect.stringContaining("Editorial Candidates"));
     expect(body.messages[0].content).toEqual(expect.stringContaining("Risk Tape"));
     expect(body.system.startsWith(buildEditorialPrompt("daily"))).toBe(true); expect(body.system).toContain(`Allowed tones: ${ALLOWED_TONES.join(", ")}.`); expect(body.system).toContain("CALM-DAY STORYTELLING");
@@ -134,6 +134,27 @@ describe("generateDailyDigest publication contract", () => {
     expect((await invoke()).itemCount).toBe(1); expect(fetchWithRetry).toHaveBeenCalledTimes(2); expect(bindJson(scenario.db as MockD1Database, 5).llm.attempts).toHaveLength(2);
     vi.mocked(fetchWithRetry).mockReset().mockImplementationOnce(async () => { vi.setSystemTime(new Date(Date.now() + ANTHROPIC_TIMEOUT_MS * 0.5 + 30_000)); return makeStreamResponse(malformed); });
     await invoke(); expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("bounds both legs by one LLM deadline so a slow corrective leg cannot outlive the lease", async () => {
+    const malformed = '```json\n{"title":"Broken", "text":\n```';
+    vi.mocked(fetchWithRetry).mockReset()
+      // First pass spends just under the corrective-retry time gate.
+      .mockImplementationOnce(async () => { vi.advanceTimersByTime(ANTHROPIC_TIMEOUT_MS * 0.5 - 30_000); return makeStreamResponse(malformed); })
+      // The corrective leg stalls until its signal aborts. (Worker lib is
+      // ES2021, so Promise.withResolvers is unavailable here.)
+      .mockImplementationOnce(((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      })) as never);
+    const started = Date.now();
+    let settledAfterMs: number | null = null;
+    void invoke().catch(() => undefined).finally(() => { settledAfterMs = Date.now() - started; });
+    await vi.advanceTimersByTimeAsync(ANTHROPIC_TIMEOUT_MS);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    // A per-leg budget would let the corrective leg run to 17.5 minutes, past
+    // the 14-minute cron lease; the shared deadline stops both legs at 12.
+    expect(settledAfterMs).not.toBeNull();
+    expect(settledAfterMs!).toBeLessThanOrEqual(ANTHROPIC_TIMEOUT_MS);
   });
 
   it("retries bounded HTTP failures and records the circuit outcome", async () => {

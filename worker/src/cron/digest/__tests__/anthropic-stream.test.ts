@@ -166,6 +166,7 @@ describe("accumulateAnthropicStream", () => {
     expect((failure as AnthropicStreamFailure).result).toEqual({
       text: "", servedModel: "claude-opus-5", inputTokens: 100, cacheWriteTokens: 20,
       cacheReadTokens: 30, outputTokens: 7, stopReason: "end_turn", refusalCategory: null,
+      fallbacks: [], iterations: null,
     });
   });
 
@@ -308,6 +309,64 @@ describe("accumulateAnthropicStream", () => {
   it("throws when the response has no body", async () => {
     const bodiless = new Response(null, { status: 200 });
     await expect(accumulateAnthropicStream(bodiless)).rejects.toThrow(/body/i);
+  });
+
+  it("fails a stream that ends before message_stop instead of returning its fragment", async () => {
+    // A dropped connection mid-generation: text arrived, but neither the final
+    // message_delta (stop_reason, usage) nor message_stop ever did.
+    const response = sseResponse([
+      { event: "message_start", data: { type: "message_start", message: { model: "claude-opus-5-5", usage: { input_tokens: 14667 } } } },
+      { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } } },
+      { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: '{"title":"Cut' } } },
+    ]);
+    const err = await accumulateAnthropicStream(response).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AnthropicStreamFailure);
+    expect((err as AnthropicStreamFailure).kind).toBe("incomplete");
+    expect((err as AnthropicStreamFailure).result).toMatchObject({ inputTokens: 14667, outputTokens: null, stopReason: null });
+  });
+
+  it("attributes a mid-output server-side fallback to the model that finished the message", async () => {
+    // After a mid-output decline, message_start still names the requested
+    // model; the handoff block and usage.iterations name the serving model.
+    const response = sseResponse([
+      { event: "message_start", data: { type: "message_start", message: { model: "claude-opus-5-5", usage: { input_tokens: 900 } } } },
+      { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } } },
+      { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "Partial " } } },
+      { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
+      {
+        event: "content_block_start",
+        data: { type: "content_block_start", index: 1, content_block: { type: "fallback", from: { model: "claude-opus-5-5" }, to: { model: "claude-opus-4-8" } } },
+      },
+      { event: "content_block_stop", data: { type: "content_block_stop", index: 1 } },
+      { event: "content_block_start", data: { type: "content_block_start", index: 2, content_block: { type: "text", text: "" } } },
+      { event: "content_block_delta", data: { type: "content_block_delta", index: 2, delta: { type: "text_delta", text: "continuation" } } },
+      { event: "content_block_stop", data: { type: "content_block_stop", index: 2 } },
+      {
+        event: "message_delta",
+        data: {
+          type: "message_delta",
+          delta: { stop_reason: "end_turn" },
+          usage: {
+            output_tokens: 60,
+            iterations: [
+              { type: "message", model: "claude-opus-5-5", input_tokens: 900, output_tokens: 3000, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+              { type: "fallback_message", model: "claude-opus-4-8", input_tokens: 910, output_tokens: 60, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+            ],
+          },
+        },
+      },
+      { event: "message_stop", data: { type: "message_stop" } },
+    ]);
+
+    const result = await accumulateAnthropicStream(response);
+
+    expect(result.text).toBe("Partial continuation");
+    expect(result.servedModel).toBe("claude-opus-4-8");
+    expect(result.fallbacks).toEqual([{ from: "claude-opus-5-5", to: "claude-opus-4-8" }]);
+    expect(result.iterations).toEqual([
+      { type: "message", model: "claude-opus-5-5", inputTokens: 900, cacheWriteTokens: 0, cacheReadTokens: 0, outputTokens: 3000 },
+      { type: "fallback_message", model: "claude-opus-4-8", inputTokens: 910, cacheWriteTokens: 0, cacheReadTokens: 0, outputTokens: 60 },
+    ]);
   });
 });
 

@@ -12,6 +12,8 @@ import {
   ANTHROPIC_TIMEOUT_MS,
   CIRCUIT_SOURCE,
   DIGEST_EFFORT_LEVELS,
+  DIGEST_MAX_EDITION_OUTPUT_TOKENS,
+  DIGEST_MAX_TOKENS,
   type DigestLlmConfig,
 } from "../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
@@ -53,8 +55,9 @@ interface RequestDigestCopyOptions {
 const CORRECTIVE_RETRY_BUDGET_FRACTION = 0.5;
 
 /**
- * Per-attempt fetch timeout for the digest call, shorter than ANTHROPIC_TIMEOUT_MS
- * so a single stalled attempt cannot consume the whole outer budget.
+ * Time allowed for one digest request to return response headers.
+ * `fetchWithRetry` clears this timer once headers arrive, so it does not bound
+ * reading the stream; the edition-wide ANTHROPIC_TIMEOUT_MS deadline does.
  */
 const DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS = 11 * 60_000;
 
@@ -66,24 +69,7 @@ const DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS = 11 * 60_000;
 const DIGEST_FETCH_MAX_RETRIES = 2;
 const DIGEST_ERROR_BODY_TIMEOUT_MS = 15_000;
 const DIGEST_ERROR_BODY_MAX_BYTES = 2_000;
-const DIGEST_MAX_CONFIGURED_TOKENS = 16_000;
-/**
- * Aggregate output-token budget for one edition, summed across EVERY billable
- * attempt: the original leg, the corrective retry, and any HTTP retry of
- * either.
- *
- * `max_tokens` alone does not bound spend. It caps a single generation, but a
- * fetch-level timeout after Anthropic has already produced output is billed and
- * still retried (see the `!response` branch below), so one edition can bill up
- * to `DIGEST_FETCH_MAX_RETRIES + 1` generations per leg across two legs — six
- * at the ceiling, roughly 3x the single-retry figure.
- *
- * 24,000 keeps the blended daily+weekly worst case at about $1.10/day at Opus 5
- * pricing even when all six attempts bill, while still leaving room for the
- * largest generation ever measured (10,857 tokens) plus a full corrective retry.
- */
-const DIGEST_MAX_EDITION_OUTPUT_TOKENS = 24_000;
-const SUPPORTED_DIGEST_MODELS = ["claude-opus-5", "claude-sonnet-5", "claude-fable-5"] as const;
+const SUPPORTED_DIGEST_MODELS = ["claude-opus-5-5", "claude-opus-5", "claude-sonnet-5", "claude-fable-5"] as const;
 
 interface DigestLlmConfigOverrides {
   model?: unknown;
@@ -107,7 +93,7 @@ export function resolveDigestLlmConfig(
   const maxTokens = typeof parsedMaxTokens === "number"
     && Number.isSafeInteger(parsedMaxTokens)
     && parsedMaxTokens >= 1_000
-    && parsedMaxTokens <= DIGEST_MAX_CONFIGURED_TOKENS
+    && parsedMaxTokens <= DIGEST_MAX_TOKENS
     ? parsedMaxTokens
     : fallback.maxTokens;
   return { model, effort, maxTokens };
@@ -121,6 +107,10 @@ interface ModelTokenPrices {
 }
 
 function getModelTokenPrices(model: string): ModelTokenPrices | null {
+  // Before the Opus 5 prefix, which `claude-opus-5-5` also matches.
+  if (model.startsWith("claude-opus-5-5")) {
+    return { input: 4, cacheWrite: 5, cacheRead: 0.2, output: 20 };
+  }
   if (model.startsWith("claude-opus-5") || model.startsWith("claude-opus-4-8")) {
     return { input: 5, cacheWrite: 6.25, cacheRead: 0.5, output: 25 };
   }
@@ -133,15 +123,50 @@ function getModelTokenPrices(model: string): ModelTokenPrices | null {
   return null;
 }
 
-function computeAttemptCostUsd(result: AnthropicStreamResult): number | null {
-  if (result.inputTokens == null || result.outputTokens == null) return null;
-  const prices = result.servedModel ? getModelTokenPrices(result.servedModel) : null;
-  if (!prices) return null;
-  const cost = result.inputTokens * prices.input
-    + (result.cacheWriteTokens ?? 0) * prices.cacheWrite
-    + (result.cacheReadTokens ?? 0) * prices.cacheRead
-    + result.outputTokens * prices.output;
+/**
+ * Price every billed model attempt. With server-side fallback the top-level
+ * usage covers only the serving attempt, so `usage.iterations` is priced per
+ * model. The API reports one `message` iteration on every stream, with a null
+ * `model` when no fallback ran; a null-model iteration is priced as the
+ * requested model, or as the served model when it is the fallback that served
+ * the turn. A pre-output decline is billed only for some refusal categories,
+ * so a fallback cost is an upper bound.
+ */
+function computeAttemptCostUsd(result: AnthropicStreamResult, requestedModel: string): number | null {
+  const parts = result.iterations?.length
+    ? result.iterations.map((iteration) => ({
+        ...iteration,
+        model: iteration.model ?? (iteration.type === "fallback_message" ? result.servedModel : requestedModel),
+      }))
+    : [{
+        model: result.servedModel,
+        inputTokens: result.inputTokens,
+        cacheWriteTokens: result.cacheWriteTokens,
+        cacheReadTokens: result.cacheReadTokens,
+        outputTokens: result.outputTokens,
+      }];
+  let cost = 0;
+  for (const part of parts) {
+    if (part.inputTokens == null || part.outputTokens == null) return null;
+    const prices = part.model ? getModelTokenPrices(part.model) : null;
+    if (!prices) return null;
+    cost += part.inputTokens * prices.input
+      + (part.cacheWriteTokens ?? 0) * prices.cacheWrite
+      + (part.cacheReadTokens ?? 0) * prices.cacheRead
+      + part.outputTokens * prices.output;
+  }
   return Number((cost / 1_000_000).toFixed(6));
+}
+
+/** Output tokens billed across every model attempt of one request, or null when unknown. */
+function billedOutputTokens(result: AnthropicStreamResult): number | null {
+  if (!result.iterations?.length) return result.outputTokens;
+  let total = 0;
+  for (const iteration of result.iterations) {
+    if (iteration.outputTokens == null) return null;
+    total += iteration.outputTokens;
+  }
+  return total;
 }
 
 function isRetryableDigestStatus(status: number): boolean {
@@ -227,6 +252,25 @@ export async function requestDigestCopy(
     };
   }
 
+  // One LLM deadline for the whole edition: both legs, every HTTP retry, and
+  // every backoff sleep share it, so a corrective leg cannot restart the clock
+  // and run into the cron lease that still has to persist and deliver.
+  const editionDeadline = createTimeoutSignal({
+    timeoutMs: ANTHROPIC_TIMEOUT_MS,
+    timeoutReason: new DOMException(`digest LLM budget of ${ANTHROPIC_TIMEOUT_MS}ms exhausted`, "TimeoutError"),
+    parentSignal: options.signal,
+  });
+  try {
+    return await requestDigestCopyWithinDeadline(options, editionDeadline.signal);
+  } finally {
+    editionDeadline.dispose();
+  }
+}
+
+async function requestDigestCopyWithinDeadline(
+  options: RequestDigestCopyOptions,
+  editionSignal: AbortSignal,
+): Promise<RequestDigestCopyResult> {
   const started = Date.now();
   const llmAttempts: DigestLlmAttemptTelemetry[] = [];
   let nextAttemptNumber = 1;
@@ -252,8 +296,10 @@ export async function requestDigestCopy(
       outputTokens: streamResult?.outputTokens ?? null,
       stopReason: streamResult?.stopReason ?? null,
       refusalCategory: streamResult?.refusalCategory ?? null,
+      fallbacks: streamResult?.fallbacks ?? [],
+      iterations: streamResult?.iterations ?? null,
       latencyMs: Date.now() - attemptStarted,
-      costUsd: streamResult ? computeAttemptCostUsd(streamResult) : null,
+      costUsd: streamResult ? computeAttemptCostUsd(streamResult, options.llmConfig.model) : null,
       httpStatus: response?.status ?? null,
     });
     chargeAttempt(streamResult, response);
@@ -266,23 +312,27 @@ export async function requestDigestCopy(
    * Two deliberate conservatisms, because the goal is a bound and not an
    * estimate:
    *
-   * - A post-submit failure with no usage (a fetch-level timeout, where the
-   *   request reached Anthropic but the response never completed) is charged
-   *   the full `max_tokens`. Its real cost is unknown and may be a complete
-   *   generation, so counting it as zero would blind the budget to exactly the
-   *   spend it exists to bound.
+   * - A request that reached Anthropic but never reported usage is charged the
+   *   full `max_tokens`: a fetch-level failure (null response) or a 200 stream
+   *   that ended before its final usage. Its real cost is unknown and may be a
+   *   complete generation, so counting it as zero would blind the budget to
+   *   exactly the spend it exists to bound.
    * - A server rejection that carries an HTTP status (429/529/5xx) is charged
    *   nothing: Anthropic rejects before generating, so no output was billed.
    *   Charging those would disable legitimate overload retries after one 529.
+   *
+   * Known usage is charged across every model attempt, including a declined
+   * attempt before a server-side fallback handoff.
    */
   let committedOutputTokens = 0;
 
   const chargeAttempt = (streamResult: AnthropicStreamResult | undefined, response: Response | null): void => {
-    if (streamResult?.outputTokens != null) {
-      committedOutputTokens += streamResult.outputTokens;
+    const billed = streamResult ? billedOutputTokens(streamResult) : null;
+    if (billed != null) {
+      committedOutputTokens += billed;
       return;
     }
-    if (response === null) committedOutputTokens += options.llmConfig.maxTokens;
+    if (response === null || response.ok) committedOutputTokens += options.llmConfig.maxTokens;
   };
 
   /**
@@ -297,9 +347,6 @@ export async function requestDigestCopy(
     userPrompt: string,
     requestKind: "original" | "corrective",
   ): Promise<{ kind: "ok"; rawText: string } | { kind: "refusal"; category: AnthropicRefusalCategory | null }> => {
-    const outerSignal = options.signal
-      ? AbortSignal.any([options.signal, AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)])
-      : AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS);
     let lastErrorText = "no response after retries";
 
     for (let httpAttempt = 1; httpAttempt <= DIGEST_FETCH_MAX_RETRIES + 1; httpAttempt++) {
@@ -320,9 +367,8 @@ export async function requestDigestCopy(
             fallbacks: "default",
             max_tokens: options.llmConfig.maxTokens,
             thinking: { type: "adaptive" },
-            // Retain xhigh: measured Opus 5 high runs omitted the mandated
-            // forward-look line in both sampled dailies. The 16k ceiling,
-            // rather than lower effort, provides the hard cost bound.
+            // Effort is per-job configuration; DAILY_DIGEST_LLM_CONFIG records
+            // the measurement behind the level. max_tokens bounds one request.
             output_config: { effort: options.llmConfig.effort },
             system: options.systemPrompt,
             messages: [{ role: "user", content: userPrompt }],
@@ -330,7 +376,7 @@ export async function requestDigestCopy(
             // can run for minutes before non-streaming response bytes arrive.
             stream: true,
           }),
-          signal: outerSignal,
+          signal: editionSignal,
         },
         0,
         { timeoutMs: DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS, returnFinalResponse: true },
@@ -341,7 +387,7 @@ export async function requestDigestCopy(
         // accounting below: cancel it and substitute a bounded diagnostic so
         // the provider error still reports exactly one attempt and one outcome.
         lastErrorText = response
-          ? await readDigestErrorText(response, outerSignal).catch(async (error: unknown) => {
+          ? await readDigestErrorText(response, editionSignal).catch(async (error: unknown) => {
               await cancelUnsuccessfulResponseBodyQuietly(response);
               return `error body read failed (${error instanceof Error ? error.name : "unknown"})`;
             })
@@ -355,7 +401,7 @@ export async function requestDigestCopy(
           && (!response || isRetryableDigestStatus(response.status))
           && canAffordAnotherRequest()
         ) {
-          await sleepWithSignal(digestRetryDelayMs(response, httpAttempt), outerSignal);
+          await sleepWithSignal(digestRetryDelayMs(response, httpAttempt), editionSignal);
           continue;
         }
         await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
@@ -368,10 +414,22 @@ export async function requestDigestCopy(
       try {
         streamResult = await accumulateAnthropicStream(response);
       } catch (streamErr) {
-        const failedResult = streamErr instanceof AnthropicStreamFailure
-          ? streamErr.result
-          : undefined;
-        await recordAttempt(requestKind, httpAttempt, attemptStarted, response, failedResult);
+        const failure = streamErr instanceof AnthropicStreamFailure ? streamErr : null;
+        await recordAttempt(requestKind, httpAttempt, attemptStarted, response, failure?.result);
+        // A stream that ended before message_stop is a dropped connection, not
+        // a model outcome. Retry it like a fetch-level failure while the
+        // edition budget still covers a full request; its unknown usage has
+        // already been charged the full ceiling.
+        if (
+          failure?.kind === "incomplete"
+          && httpAttempt <= DIGEST_FETCH_MAX_RETRIES
+          && canAffordAnotherRequest()
+        ) {
+          lastErrorText = failure.message;
+          logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] ${failure.message}; retrying the request`);
+          await sleepWithSignal(digestRetryDelayMs(null, httpAttempt), editionSignal);
+          continue;
+        }
         await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
         throw streamErr;
       }
