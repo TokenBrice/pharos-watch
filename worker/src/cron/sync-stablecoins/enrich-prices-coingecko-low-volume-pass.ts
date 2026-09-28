@@ -31,6 +31,9 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   "copm-mento",
   "chfm-mento",
   "hchf-hedera-swiss-franc",
+  // 2026-09-28 missing-price audit: DefiLlama dropped MONEY's list price and
+  // coins entries (second episode in two days) and it has no DEX, CMC or CEX lane.
+  "money-defi-money",
 ]);
 
 export async function runCoingeckoLowVolumePass(
