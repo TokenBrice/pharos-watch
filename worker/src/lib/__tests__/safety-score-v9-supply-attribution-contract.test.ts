@@ -6,6 +6,7 @@ import {
   corruptXautObservation,
   makeWmDeploymentObservations,
   makeXautObservation,
+  patchXautObservation,
 } from "../../test-helpers/v9-fixed-input";
 import {
   buildReviewedDeploymentRouteInventory,
@@ -22,6 +23,7 @@ import {
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   xautRepresentationGroupAttributionValidationError,
   type XautLockMintObservation,
+  type XautRepresentationGroupSupplyAttributionV2,
 } from "../safety-score-v9/xaut-supply-attribution-contract";
 
 const AGGREGATE_SUPPLY_USD = 87_020_618.58982982;
@@ -512,5 +514,49 @@ describe("XAUT representation-group supply attribution contract", () => {
       scoringClockSec: CLOCK_SEC,
       observation: corruptXautObservation(xautObservation(), field, value),
     })).toBeNull();
+  });
+
+  it("reconciles the disclosed circulating liability instead of the unissued treasury inventory", () => {
+    const derive = (observation: XautLockMintObservation) =>
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        observation,
+      });
+    const validationError = (
+      attribution: XautRepresentationGroupSupplyAttributionV2,
+    ) =>
+      xautRepresentationGroupAttributionValidationError({
+        attribution,
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        clockSec: CLOCK_SEC,
+      });
+    const baseline = derive(xautObservation())!;
+    // Tether's 2026-09-28 treasury mint after its daily disclosure snapshot.
+    const treasuryMintRaw = 119_670_541_000n;
+    const minted = derive(
+      patchXautObservation(xautObservation(), {
+        canonicalTotalSupplyRaw: (707_747_089_000n + treasuryMintRaw).toString(),
+        treasuryBalanceRaw: (94_923_429_468n + treasuryMintRaw).toString(),
+      }),
+    );
+    expect(minted).not.toBeNull();
+    expect(validationError(minted!)).toBeNull();
+    expect(minted!.canonical.currentSupplyUsd).toBe(
+      baseline.canonical.currentSupplyUsd,
+    );
+    expect(minted!.representationGroup.currentSupplyUsd).toBe(
+      baseline.representationGroup.currentSupplyUsd,
+    );
+
+    const circulatingDrift = patchXautObservation(xautObservation(), {
+      canonicalTotalSupplyRaw: (707_747_089_000n + treasuryMintRaw).toString(),
+    });
+    expect(derive(circulatingDrift)).toBeNull();
+    expect(
+      validationError({ ...baseline, observation: circulatingDrift }),
+    ).toContain("does not reconcile");
   });
 });

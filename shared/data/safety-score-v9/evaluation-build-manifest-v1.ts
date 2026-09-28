@@ -18,7 +18,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "62d1da6e463efbfb1e53279896d0ccc5d0d0061dc1a10c3714b6462c8cc07ad0"
+      "sha256": "8d290cf1f20190778940f2125fa86d3ea01625eca0825063730cb917a4649419"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -86,7 +86,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "b41ab6f7bf050337b80621c9bb4cd55ae9e401f0d0527087708c1d6f66836c7c"
+      "sha256": "85783dac623ed27413c2b990ce371407fa56f329453b6690be907767fcd3d48a"
     },
     {
       "path": "shared/lib/p4-exit-route-amm-simulation.ts",
@@ -618,11 +618,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/xaut-supply-attribution-contract.ts",
-      "sha256": "d69fa839b1263b25e1c7e8552a54bdc3396ecfbf4d9a7df706f6d0900e032bcf"
+      "sha256": "557bb25bd8a7d366a53cc73a21a027cccab066f4f141caf1bcedcd182879bf20"
     },
     {
       "path": "worker/src/lib/safety-score-v9/xaut-supply-observer.ts",
-      "sha256": "9d3058f6845b1711520de3abb04698cf7cf4260f0aea09d8cf8ff6682c5927b8"
+      "sha256": "a65b6d1ee1e5d7f8b7e24659455dee60188a2580be265d44db9a50e1d3264d1f"
     }
   ],
   "captures": [
@@ -639,7 +639,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-09-27-block-26067825-shock-coverage.json.gz"
     }
   ],
-  "digest": "0e46011ea1bc128f1294548b1f57821be80a0207977d9afbbcc69eaf94ad56f6"
+  "digest": "db3539c7cccbbdff0c0b4a70e74d5ba9c8d94e0a755ba9b3352b2984f60a150d"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

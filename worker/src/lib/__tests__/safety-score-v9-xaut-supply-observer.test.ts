@@ -55,7 +55,12 @@ function transparencyBody(input: {
 }
 
 
-function observerDependencies() {
+interface OnchainSupplyOverrides {
+  totalSupplyRaw?: bigint;
+  treasuryBalanceRaw?: bigint;
+}
+
+function observerDependencies(onchain: OnchainSupplyOverrides = {}) {
   const fetchEvmBlockHeader = vi.fn().mockResolvedValue({
     number: BLOCK_NUMBER,
     timestamp: BLOCK_TIME_SEC,
@@ -68,9 +73,9 @@ function observerDependencies() {
     const token = "0x68749665ff8d2d112fa859aa293f07a622782f38";
     const adapter = "0xb9c2321bb7d0db468f570d10a424d1cc8efd696c";
     const values: Record<string, `0x${string}`> = {
-      [`${token}:0x18160ddd`]: uint256(TOTAL_SUPPLY_RAW),
+      [`${token}:0x18160ddd`]: uint256(onchain.totalSupplyRaw ?? TOTAL_SUPPLY_RAW),
       [`${token}:0x313ce567`]: uint256(6n),
-      [`${token}:0x70a082310000000000000000000000005754284f345afc66a98fbb0a0afe71e0f007b949`]: uint256(TREASURY_BALANCE_RAW),
+      [`${token}:0x70a082310000000000000000000000005754284f345afc66a98fbb0a0afe71e0f007b949`]: uint256(onchain.treasuryBalanceRaw ?? TREASURY_BALANCE_RAW),
       [`${token}:0x70a08231000000000000000000000000b9c2321bb7d0db468f570d10a424d1cc8efd696c`]: uint256(LOCKED_SUPPLY_RAW),
       [`${adapter}:0xfc0c546a`]: addressWord(token),
       [`${adapter}:0x5e280f11`]: addressWord("0x1a44076050125825900e736c501f859c50fe728c"),
@@ -317,6 +322,45 @@ describe("XAUT representation-group supply observer", () => {
       });
     },
   );
+
+  it("reconciles a treasury-only mint after the daily disclosure on the circulating liability", async () => {
+    const observe = (onchain: OnchainSupplyOverrides = {}) =>
+      observeXautRepresentationGroupSupplyAttributionAttempt(
+        {
+          aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+          registryFingerprint: "a".repeat(64),
+          scoringClockSec: BLOCK_TIME_SEC + 100,
+          chainRpcs: chainRpcs(),
+        },
+        observerDependencies(onchain),
+      );
+    // Tether's 2026-09-28 treasury mint after its daily disclosure snapshot.
+    const treasuryMintRaw = 119_670_541_000n;
+    const baseline = await observe();
+    const minted = await observe({
+      totalSupplyRaw: TOTAL_SUPPLY_RAW + treasuryMintRaw,
+      treasuryBalanceRaw: TREASURY_BALANCE_RAW + treasuryMintRaw,
+    });
+    if (baseline.status !== "accepted" || minted.status !== "accepted") {
+      throw new Error("expected both XAUT observations to be accepted");
+    }
+    expect(minted.attribution.observation).toMatchObject({
+      canonicalTotalSupplyRaw: (TOTAL_SUPPLY_RAW + treasuryMintRaw).toString(),
+      treasuryBalanceRaw: (TREASURY_BALANCE_RAW + treasuryMintRaw).toString(),
+      disclosure: baseline.attribution.observation.disclosure,
+    });
+    expect(minted.attribution.canonical).toEqual(baseline.attribution.canonical);
+    expect(minted.attribution.representationGroup).toEqual(
+      baseline.attribution.representationGroup,
+    );
+
+    await expect(
+      observe({ totalSupplyRaw: TOTAL_SUPPLY_RAW + treasuryMintRaw }),
+    ).resolves.toMatchObject({
+      status: "rejected",
+      rejectionCode: "transparency-onchain-mismatch",
+    });
+  });
 
   it("rejects adapter identity drift", async () => {
     const dependencies = observerDependencies();

@@ -335,6 +335,22 @@ export function buildXautRepresentationGroupInventory():
   };
 }
 
+// Unissued treasury inventory is not a liability: a treasury-only mint or burn
+// after Tether's daily disclosure moves total supply and treasury equally and
+// leaves the circulating liability unchanged, so only that difference must match.
+export function xautCirculatingLiabilityReconciles(input: {
+  canonicalTotalSupplyRaw: bigint;
+  treasuryBalanceRaw: bigint;
+  disclosedTotalAuthorizedRaw: bigint;
+  disclosedNotIssuedRaw: bigint;
+}): boolean {
+  return (
+    input.treasuryBalanceRaw <= input.canonicalTotalSupplyRaw &&
+    input.canonicalTotalSupplyRaw - input.treasuryBalanceRaw ===
+      input.disclosedTotalAuthorizedRaw - input.disclosedNotIssuedRaw
+  );
+}
+
 export function xautLockMintIdentityValidationError(
   observation: XautLockMintObservation,
 ): string | null {
@@ -404,8 +420,12 @@ export function xautLockMintIdentityValidationError(
     observation.disclosure.quarantinedRaw,
   );
   if (
-    totalRaw !== disclosedTotalRaw ||
-    treasuryRaw !== disclosedNotIssuedRaw
+    !xautCirculatingLiabilityReconciles({
+      canonicalTotalSupplyRaw: totalRaw,
+      treasuryBalanceRaw: treasuryRaw,
+      disclosedTotalAuthorizedRaw: disclosedTotalRaw,
+      disclosedNotIssuedRaw,
+    })
   ) {
     return "XAUT transparency disclosure does not reconcile to finalized on-chain state";
   }
