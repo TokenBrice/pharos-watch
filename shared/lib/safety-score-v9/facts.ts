@@ -35,6 +35,14 @@ export function isV9UncanonicalizedChainPoolRoute(deploymentRouteKey: string): b
 }
 
 /**
+ * Producer contract for the per-chain route key that carries exact supply on
+ * one canonical chain where several profile routes compete for the same chain
+ * row, so the within-chain split is unmeasured. The row share is an upper
+ * bound on every candidate deployment's share on that chain.
+ */
+export const V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX = "ambiguous-chain:";
+
+/**
  * Exact supply held behind one reviewed lock/mint representation whose
  * destination distribution is not observed. The row carries one bounded
  * group share and must never be expanded into inferred per-destination shares.

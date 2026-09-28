@@ -1,6 +1,7 @@
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9Severity } from "../../types/safety-score-v9";
-import { isV9UncanonicalizedChainPoolRoute } from "./facts";
+import { resolveChainId } from "../chains";
+import { isV9UncanonicalizedChainPoolRoute, V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX } from "./facts";
 import { uniqueSorted } from "./primitives";
 import {
   controlCanRepresent,
@@ -48,8 +49,9 @@ function reconciledSupplyPartition(
 }
 
 // Upper bound for a null-share deployment control's supply share, proven by a
-// reconciled partition: the sum of that deployment's measured rows, or zero
-// when a complete partition holds no row for it.
+// reconciled partition: the sum of that deployment's measured rows plus its
+// chain's unsplit ambiguous row (which bounds every candidate deployment on
+// that chain), or zero when a complete partition holds no such row.
 export function provenNullShareDeploymentBound(
   facts: V9EconomicControlAssetFacts,
   control: V9DeploymentControlFactV2,
@@ -57,8 +59,15 @@ export function provenNullShareDeploymentBound(
   if (control.economicLossScope !== "deployment" || control.materialSupplyShare !== null) return null;
   const rows = reconciledSupplyPartition(facts);
   if (rows === null) return null;
+  const separator = control.deploymentKey.indexOf(":");
+  const chain = separator > 0 ? resolveChainId(control.deploymentKey.slice(0, separator)) : null;
+  const ambiguousChainKey = chain === null ? null : `${V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX}${facts.assetId}:${chain}`;
   return rows.reduce(
-    (sum, route) => sum + (route.deploymentRouteKey === control.deploymentKey ? route.supplyShare : 0),
+    (sum, route) =>
+      sum +
+      (route.deploymentRouteKey === control.deploymentKey || route.deploymentRouteKey === ambiguousChainKey
+        ? route.supplyShare
+        : 0),
     0,
   );
 }

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.93",
+    title: "Sub-threshold ambiguous chain rows with reviewed candidate routes are bounded supply evidence",
+    date: "2026-09-28",
+    effectiveAt: 1790617614,
+    summary:
+      "A per-chain supply row that several profile routes compete for (`ambiguous-chain:<asset>:<chain>`) no longer blocks the bridge review by itself. When the row is below the deployment and common-mode materiality thresholds and every candidate route on that chain is reviewed, it is accepted as bounded supply evidence: the chain row is an upper bound on each candidate deployment's share, so it cannot hide a material deployment.",
+    impact: [
+      "Trigger: USDC's reviewed native X Layer deployment was added beside the reviewed third-party X Layer representation, so the single X Layer chain row (about 0.02% of supply) could no longer join one route. The bridge-inventory proof rejected every ambiguous row regardless of size, which left the bridge review bounded-unknown, raised `runtime-bridge-materiality-unavailable`, capped USDC at 55, and capped every USDC wrapper through the parent cap.",
+      "An ambiguous chain row is accepted only when its share is below both the deployment-material and common-mode thresholds and the chain carries at least two candidate routes, all reviewed: identity is known and only the within-chain split is unmeasured. A material ambiguous row, or one with any unreviewed candidate route, still fails closed. Shares are still not summed across rows.",
+      "The evaluator's null-share deployment bound now includes the unsplit ambiguous row for the control's chain instead of reading an unavailable within-chain share as zero, so a null-share deployment on a material ambiguous chain stays fail-closed.",
+      "On replay of the production capture from generation `report-cards:9.92:1790617549` at clock `1790617614`, 16 assets move, all USDC or USDC dependents, and every one returns to its pre-incident replay score: `usdc-circle` C 55 -> A- 80; `gtusdc-gauntlet`, `gtusdcp-gauntlet`, and `usd3-3jane` D 45 -> B 70; `yousd-yield-optimizer` D 43 -> B- 68; `steakusdc-steakhouse` D 45 and `susdc-spark` D 46 -> C+ 64; `dusd-dialectic` F 39 -> C+ 61; `bbqusdc-steakhouse`, `syrupusdc-maple`, `usdcx-movement`, and `yvusdc-yearn` D 45 -> C 55; `aa-falconx-mev-capital` D 43 -> C- 53; `eearn-ember` and `stusd-stoneyield` D 45 -> C- 52; and `autousd-auto-finance` 43 -> 44 inside D. `buidl-blackrock`, whose ambiguous Ethereum row carries about 20% of supply, stays capped.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.92",
     title: "Aggregate-only supply publishes and gapless route reasons attribute to Pharos",
     date: "2026-09-23",

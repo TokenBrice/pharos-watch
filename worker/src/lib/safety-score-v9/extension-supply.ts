@@ -2,6 +2,7 @@ import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v9-transfer-overlays";
 import { resolveChainId } from "@shared/lib/chains";
 import {
+  V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
   V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
   V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "@shared/lib/safety-score-v9/facts";
@@ -158,8 +159,8 @@ function routeChain(routeId: string): string | null {
 }
 
 export const V9_UNMATCHED_CHAIN_ROUTE_PREFIX = "unmatched-chain:";
-export const V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX = "ambiguous-chain:";
 export {
+  V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
   V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
   V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 };

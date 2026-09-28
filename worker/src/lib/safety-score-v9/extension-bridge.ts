@@ -512,7 +512,27 @@ function hasCompleteSubthresholdBridgeInventory(
     supplyReview.unreviewedRouteSupplyShare +
     supplyReview.unknownRouteSupplyShare;
   if (Math.abs(totalRowShare - 1) > 0.000001 || Math.abs(aggregateShare - 1) > 0.000001) return false;
-  if (rows.some((row) => row.deploymentRouteKey.startsWith(V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX))) return false;
+  for (const row of rows) {
+    if (!row.deploymentRouteKey.startsWith(V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX)) continue;
+    // The chain row is an upper bound on every candidate deployment's share on
+    // that chain, so a sub-threshold ambiguous row cannot hide a material
+    // deployment. It is accepted only when every candidate route is reviewed:
+    // identity is known and only the within-chain split is unmeasured. Shares
+    // are still not summed across rows.
+    const scopedKey = row.deploymentRouteKey.slice(V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX.length);
+    const separator = scopedKey.indexOf(":");
+    if (separator <= 0) return false;
+    const chain = scopedKey.slice(separator + 1);
+    const candidateRoutes = profileRoutes.filter((route) => canonicalRouteChain(route.id) === chain);
+    if (
+      row.supplyShare >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD ||
+      row.supplyShare >= COMMON_MODE_MATERIAL_SHARE_THRESHOLD ||
+      candidateRoutes.length < 2 ||
+      candidateRoutes.some((route) => route.reviewDisposition !== "reviewed")
+    ) {
+      return false;
+    }
+  }
 
   const controlsByDeployment = new Map<string, ControlOverlay[]>();
   for (const control of controls) {
