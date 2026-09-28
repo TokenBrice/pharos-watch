@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const CHAIN_HEALTH_V1: readonly MethodologyChangelogEntry[] = [
   {
+    version: "1.7",
+    title: "Composite published at 95% peg coverage",
+    date: "2026-09-28",
+    effectiveAt: 1790575200,
+    summary:
+      "Chain Health publishes the composite when peg evidence covers at least 95% of positive chain supply, instead of requiring every holding to carry an observed peg price; below 95% the composite stays NR.",
+    impact: [
+      "The composite requires non-null quality and peg factors plus peg coverage that is complete, or partial with coverage ≥ 0.95; unavailable coverage or partial coverage below 0.95 keeps health score and band null",
+      "Bound: peg weight is 0.20, so an unobserved share of at most 5% can move the observed-only peg factor by at most 5 points and the composite by at most 1 point",
+      "No imputation and no neutral 50: the peg factor stays observed-only and the unobserved share remains published in pegStabilityCoverage beside the composite",
+      "Ethereum, Tron, Base, Polygon, Monad, Sonic, Celo, Scroll, and Plume, withheld under v1.6 by small unpriced holdings (Ethereum: $5.9M of $148.7B), regain a composite; Hemi at 15.9% peg coverage stays NR",
+      "Peg factor math, the 50% rated-supply quality gate, factor weights, and bands are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "1.6",
     title: "Observed-only peg factors and complete-coverage health",
     date: "2026-09-28",

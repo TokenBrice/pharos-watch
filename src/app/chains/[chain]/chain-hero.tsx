@@ -8,6 +8,7 @@ import {
   BACKING_DIVERSITY_WEIGHT,
   CHAIN_ENVIRONMENT_WEIGHT,
   CONCENTRATION_WEIGHT,
+  PEG_COVERAGE_COMPOSITE_MIN,
   PEG_STABILITY_WEIGHT,
   QUALITY_WEIGHT,
   getHealthBand,
@@ -82,13 +83,18 @@ function formatSupplyShare(share: number): string {
   return `${Math.round(share * 100)}%`;
 }
 
+/** Floors peg coverage so a partial share never reads as 100% and a sub-minimum share never rounds up to it. */
+function formatPegCoverageShare(share: number): string {
+  return `${Math.floor(share * 100 + 1e-9)}%`;
+}
+
 function buildHealthUnavailableMessage(meta: ApiMeta | null, chain: ChainSummary): string {
   const reportCards = meta?.dependencies?.reportCards;
   if (chain.healthFactors.quality != null) {
-    // Quality cleared its gate, so the composite is withheld for peg evidence (DEC-04).
+    // Quality cleared its gate, so the composite is withheld for insufficient peg evidence (DEC-04).
     const coverage = chain.pegStabilityCoverage;
-    const observed = coverage ? ` Peg prices are observed for ${formatSupplyShare(coverage.coverage)} of chain supply.` : "";
-    return `Chain Health is not rated because peg-stability coverage is incomplete.${observed} Sub-factors are shown below.`;
+    const observed = coverage ? ` Peg prices are observed for ${formatPegCoverageShare(coverage.coverage)} of chain supply.` : "";
+    return `Chain Health is not rated because peg-stability coverage is below the ${formatSupplyShare(PEG_COVERAGE_COMPOSITE_MIN)} minimum.${observed} Sub-factors are shown below.`;
   }
   if (!reportCards || reportCards.status === "fresh") {
     return "Insufficient safety score coverage for a composite Chain Health score. Sub-factors are shown below.";
@@ -110,9 +116,9 @@ function formatPegStabilityContext(
   if (!coverage || coverage.status === "complete") return null;
   if (score == null) return "Not rated: no usable peg price was observed for this chain's supply.";
   if (coverage.status === "unavailable") {
-    return "No usable peg price was observed; the value shown is a neutral 50 placeholder, not a measurement.";
+    return "No usable peg price was observed, so peg stability is not rated.";
   }
-  const parts = [`Peg observed on ${formatSupplyShare(coverage.coverage)} of chain supply`];
+  const parts = [`Peg observed on ${formatPegCoverageShare(coverage.coverage)} of chain supply`];
   const eligible = coverage.eligibleSupplyUsd;
   if (eligible > 0 && coverage.neutralImputedSupplyUsd > 0) {
     parts.push(`${formatSupplyShare(coverage.neutralImputedSupplyUsd / eligible)} without a usable price is scored neutral 50`);

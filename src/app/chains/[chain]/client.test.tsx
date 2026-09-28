@@ -171,7 +171,7 @@ describe("ChainProfileClient", () => {
     render(<ChainProfileClient chainId="ethereum" />);
     const health = within(screen.getByRole("region", { name: "Chain Health" }));
 
-    expect(health.getByText(/not rated because peg-stability coverage is incomplete/i).textContent)
+    expect(health.getByText(/not rated because peg-stability coverage is below the 95% minimum/i).textContent)
       .toContain("observed for 0% of chain supply");
     expect(health.queryByText(/Insufficient safety score coverage/i)).toBeNull();
     expect(health.getByText("Not rated: no usable peg price was observed for this chain's supply.")).toBeTruthy();
@@ -205,6 +205,33 @@ describe("ChainProfileClient", () => {
     )).toBeTruthy();
     expect(health.getByText("70")).toBeTruthy();
     expect(health.queryByText("NR")).toBeNull();
+  });
+
+  it("keeps the partial-coverage disclosure beside a published composite without rounding coverage up to 100%", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: makeChain({
+        healthScore: 84,
+        healthBand: "robust",
+        healthFactors: { quality: 82, chainEnvironment: 80, concentration: 78, pegStability: 99, backingDiversity: 76 },
+        pegStabilityCoverage: {
+          status: "partial",
+          observedSupplyUsd: 148_694_100_000,
+          eligibleSupplyUsd: 148_700_000_000,
+          coverage: RatioSchema.parse(148_694_100_000 / 148_700_000_000),
+          noUsablePriceSupplyUsd: 5_900_000,
+          noPegReferenceSupplyUsd: 0,
+          neutralImputedSupplyUsd: 0,
+          observedScore: 99,
+        },
+      }),
+    }));
+
+    render(<ChainProfileClient chainId="ethereum" />);
+    const health = within(screen.getByRole("region", { name: "Chain Health" }));
+
+    expect(health.getByText("robust")).toBeTruthy();
+    expect(health.getByText("Peg observed on 99% of chain supply.")).toBeTruthy();
+    expect(health.queryByText(/not rated because/i)).toBeNull();
   });
 
   it("filters the stablecoin table by backing and restores all rows when cleared", () => {
