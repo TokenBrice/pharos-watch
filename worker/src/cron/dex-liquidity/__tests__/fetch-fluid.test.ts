@@ -56,11 +56,88 @@ describe("fetchFluidPools", () => {
     const counters = initLiquidityFallbackCounters();
     const result = await fetchFluidPools(undefined, new Map(), counters);
     expect(result.pools).toHaveLength(1);
-    // base_volume is non-finite → coerced to 0 in tokenVolumes24h.
+    // base_volume is non-finite, so the side-volume reading is unmeasured
+    // (null tokenVolumes24h); the small pool is still enriched because the
+    // large-pool volume guard does not apply below $100M TVL.
     expect(counters.fluidVolumeUnmeasured).toBe(1);
     // No RPC enrichment succeeded, so feeRate/balances retain their neutral null defaults.
     expect(counters.fluidFeeRateUnmeasured).toBe(1);
     expect(counters.fluidBalancesUnmeasured).toBe(1);
+  });
+
+  it("skips resolver enrichment for a large pool with unmeasured side volumes", async () => {
+    const tickerRow = {
+      pool_id: "0xabc0000000000000000000000000000000000000",
+      base_currency: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      target_currency: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      base_volume: "not-a-number",
+      target_volume: "200",
+      liquidity_in_usd: "150000000",
+      last_price: "1.0001",
+    };
+    mockFetch([
+      { match: "/v2/1/dexes/stats/tickers", body: [tickerRow] },
+      { match: "api.fluid.instadapp.io", body: [] },
+    ], { requireMatch: true });
+
+    const counters = initLiquidityFallbackCounters();
+    const result = await fetchFluidPools(undefined, new Map(), counters);
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]!.tokenVolumes24h).toBeNull();
+    // An absent side-volume reading is unmeasured, not a zero: it cannot clear
+    // the large-pool guard, so no resolver enrichment is attempted.
+    expect(counters.fluidVolumeUnmeasured).toBe(1);
+    expect(counters.fluidFeeRateUnmeasured).toBe(0);
+    expect(counters.fluidBalancesUnmeasured).toBe(0);
+  });
+
+  it("enriches a large pool whose measured side volumes clear the guard", async () => {
+    const tickerRow = {
+      pool_id: "0xabc0000000000000000000000000000000000000",
+      base_currency: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      target_currency: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      base_volume: "90000000",
+      target_volume: "80000000",
+      liquidity_in_usd: "150000000",
+      last_price: "1.0001",
+    };
+    mockFetch([
+      { match: "/v2/1/dexes/stats/tickers", body: [tickerRow] },
+      { match: "api.fluid.instadapp.io", body: [] },
+    ], { requireMatch: true });
+
+    const counters = initLiquidityFallbackCounters();
+    const result = await fetchFluidPools(undefined, new Map(), counters);
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]!.tokenVolumes24h).toEqual([90000000, 80000000]);
+    // Enrichment was attempted (no RPC configured, so neutral defaults survive).
+    expect(counters.fluidVolumeUnmeasured).toBe(0);
+    expect(counters.fluidFeeRateUnmeasured).toBe(1);
+    expect(counters.fluidBalancesUnmeasured).toBe(1);
+  });
+
+  it("skips resolver enrichment for a large pool whose measured side volumes are below the guard", async () => {
+    const tickerRow = {
+      pool_id: "0xabc0000000000000000000000000000000000000",
+      base_currency: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      target_currency: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      base_volume: "100",
+      target_volume: "200",
+      liquidity_in_usd: "150000000",
+      last_price: "1.0001",
+    };
+    mockFetch([
+      { match: "/v2/1/dexes/stats/tickers", body: [tickerRow] },
+      { match: "api.fluid.instadapp.io", body: [] },
+    ], { requireMatch: true });
+
+    const counters = initLiquidityFallbackCounters();
+    const result = await fetchFluidPools(undefined, new Map(), counters);
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]!.tokenVolumes24h).toEqual([100, 200]);
+    expect(counters.fluidVolumeUnmeasured).toBe(0);
+    expect(counters.fluidFeeRateUnmeasured).toBe(0);
+    expect(counters.fluidBalancesUnmeasured).toBe(0);
   });
 
   it("keeps fluid counters at zero when parsing yields finite volumes and no pools are retained", async () => {
