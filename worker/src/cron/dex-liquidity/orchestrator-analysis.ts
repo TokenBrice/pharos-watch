@@ -803,6 +803,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       },
       qualityDriftFlags: driftSummary.qualityDriftFlags,
       qualityDriftCandidates: driftSummary.qualityDriftCandidates,
+      qualityDriftRebaselined: driftSummary.qualityDriftRebaselined,
       qualityDriftSeverity: driftSummary.qualityDriftSeverity,
       qualityDriftMetrics: driftSummary.qualityDriftMetrics,
       topAssetCoverageDeltas: driftSummary.topAssetCoverageDeltas,

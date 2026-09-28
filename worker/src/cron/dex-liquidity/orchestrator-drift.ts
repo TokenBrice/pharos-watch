@@ -10,9 +10,22 @@ export const DRIFT_WATCHLIST = ["usdc-circle", "usdt-tether", "dai-makerdao", "u
  * flag. A single-generation diff both fires and self-silences on one noisy
  * hour, because the collapsed value becomes the next baseline as soon as it
  * publishes. Confirmation removes every one-hour blip and, in exchange, keeps
- * a real loss visible until the value recovers.
+ * a real loss visible until the value recovers or is accepted as the new level.
  */
 const DRIFT_CONFIRMATION_RUNS = 2;
+
+/**
+ * A confirmed condition is reported on runs `DRIFT_CONFIRMATION_RUNS` through
+ * `DRIFT_REBASELINE_RUNS` (~5 hourly publications). If it still holds on the
+ * next run it is a lasting step change rather than a transient hole, so it is
+ * accepted as the new level: the candidate is dropped, the flag stops, and the
+ * acceptance is recorded in `qualityDriftRebaselined`. Without this an
+ * explained step (a venue delisting, a de-duplicated protocol) kept the
+ * pre-event baseline forever and warned indefinitely. Because the candidate is
+ * gone, the following run measures against the accepted value, so a further
+ * step is detected and confirmed from scratch.
+ */
+export const DRIFT_REBASELINE_RUNS = 6;
 
 export type PreviousDexLiquiditySummary = {
   stagedPoolsMerged: number;
@@ -34,6 +47,17 @@ export interface DexLiquidityDriftCandidate {
   consecutiveRuns: number;
   baselineValue: number;
   observedValue: number;
+}
+
+/**
+ * A confirmed condition accepted as the new level. `runs` counts every
+ * consecutive run the condition held, including the accepting run.
+ */
+export interface DexLiquidityDriftRebaseline {
+  flag: string;
+  baselineValue: number;
+  acceptedValue: number;
+  runs: number;
 }
 
 
@@ -97,6 +121,7 @@ export interface DexLiquidityMajorTvlCliff {
 export interface DexLiquidityDriftSummary {
   qualityDriftFlags: string[];
   qualityDriftCandidates: DexLiquidityDriftCandidate[];
+  qualityDriftRebaselined: DexLiquidityDriftRebaseline[];
   qualityDriftSeverity: "none" | "medium" | "high";
   qualityDriftMetrics: {
     previousPriceObservationCoins: number | null;
@@ -123,7 +148,8 @@ export interface DexLiquidityDriftSummary {
  * Advances one pending condition by a run. The pre-event baseline from a
  * previous candidate wins over this run's own previous value; a condition that
  * no longer holds against that baseline clears the candidate, which is how a
- * confirmed flag ends.
+ * recovered flag ends. The caller rebaselines a condition that outlives
+ * `DRIFT_REBASELINE_RUNS`.
  */
 function advanceDriftCandidate(
   previous: DexLiquidityDriftCandidate | undefined,
@@ -163,6 +189,7 @@ export function computeDexLiquidityDriftSummary(params: {
   const previousCandidatesByFlag = new Map(params.previousCandidates.map((candidate) => [candidate.flag, candidate]));
   const candidates: DexLiquidityDriftCandidate[] = [];
   const qualityDriftFlags: string[] = [];
+  const qualityDriftRebaselined: DexLiquidityDriftRebaseline[] = [];
 
   const confirmCondition = (
     flag: string,
@@ -172,6 +199,15 @@ export function computeDexLiquidityDriftSummary(params: {
   ): DexLiquidityDriftCandidate | null => {
     const advanced = advanceDriftCandidate(previousCandidatesByFlag.get(flag), naturalBaseline, conditionHolds);
     if (!advanced) return null;
+    if (advanced.consecutiveRuns > DRIFT_REBASELINE_RUNS) {
+      qualityDriftRebaselined.push({
+        flag,
+        baselineValue: advanced.baselineValue,
+        acceptedValue: observedValue,
+        runs: advanced.consecutiveRuns,
+      });
+      return null;
+    }
     const candidate: DexLiquidityDriftCandidate = { flag, ...advanced, observedValue };
     candidates.push(candidate);
     if (advanced.consecutiveRuns >= DRIFT_CONFIRMATION_RUNS) qualityDriftFlags.push(flag);
@@ -309,6 +345,7 @@ export function computeDexLiquidityDriftSummary(params: {
   return {
     qualityDriftFlags,
     qualityDriftCandidates: candidates,
+    qualityDriftRebaselined,
     qualityDriftSeverity,
     qualityDriftMetrics: {
       previousPriceObservationCoins: params.previousSummary?.priceObservationCoins ?? null,
