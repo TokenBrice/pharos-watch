@@ -535,4 +535,32 @@ describe("runDigestTriggerPollSlot", () => {
     ]);
   });
 
+  it.each([
+    [2, 1],
+    [3, 0],
+  ])("caps Monday weekly generations per edition day (%i prior runs -> %i resumes)", async (priorRuns, expectedResumes) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-31T09:00:00Z"));
+    vi.mocked(getCache).mockResolvedValueOnce(null);
+    vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ itemCount: 1, metadata: "weekly ok" });
+    // No non-blocked weekly row exists (a failed or blocked weekly), and the
+    // cron history already holds `priorRuns` weekly generations for the day.
+    const db = makeNoopD1({
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn(() => ({ first: vi.fn(async () => (sql.includes("FROM cron_runs") ? { runs: priorRuns } : null)) })),
+      })),
+    });
+    runLeasedCron.mockImplementation(async (_job, fn) => {
+      await fn(new AbortController().signal, async () => {});
+      return { itemCount: 1, metadata: "weekly ok" } as CronResult;
+    });
+    const runtime = buildRuntime();
+    runtime.db = db;
+    runtime.slotStartedAt = Math.floor(Date.parse("2026-08-31T09:00:00Z") / 1000);
+
+    await runDigestTriggerPollSlot(runtime);
+
+    expect(runLeasedCron).toHaveBeenCalledTimes(expectedResumes);
+  });
+
 });

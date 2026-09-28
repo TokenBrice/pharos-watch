@@ -17,7 +17,7 @@ import { reportCronProgress } from "../../lib/cron-progress";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { findUnboundDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
-import type { AnthropicRefusalCategory } from "./anthropic-stream";
+import type { AnthropicFallbackHandoff, AnthropicRefusalCategory, AnthropicUsageIteration } from "./anthropic-stream";
 import { tryParseJson } from "../../lib/json-parse";
 import type { DigestCredentialDiagnostics, DigestPublicationOutcome } from "./publish";
 
@@ -35,6 +35,10 @@ export interface DigestLlmAttemptTelemetry {
   outputTokens: number | null;
   stopReason: string | null;
   refusalCategory: AnthropicRefusalCategory | null;
+  /** Server-side fallback handoffs on this attempt; `servedModel` is the last `to`. */
+  fallbacks: AnthropicFallbackHandoff[];
+  /** Per-model billed usage from `usage.iterations` (one null-model entry when no fallback ran). */
+  iterations: AnthropicUsageIteration[] | null;
   latencyMs: number;
   costUsd: number | null;
   httpStatus: number | null;

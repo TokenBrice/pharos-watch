@@ -53,6 +53,13 @@ export const DIGEST_TRIGGER_POLL_INTERVAL_SECONDS = 5 * 60;
  * `attempts` untouched, so without a deadline every poll restarts the run.
  */
 const DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC = 15 * 60;
+/**
+ * Weekly recap generations per edition day, counting the 08:10 slot. A failed
+ * weekly (refusal, truncation, blocked quality gate) leaves no non-blocked row,
+ * so without a cap every five-minute poll would regenerate and re-bill it for
+ * the rest of Monday. Matches the three-attempt bound on forced daily runs.
+ */
+const WEEKLY_RECAP_MAX_RUNS_PER_EDITION = MAX_ATTEMPTS;
 
 async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): Promise<void> {
   const startedMs = Date.now();
@@ -290,6 +297,20 @@ async function runWeeklyResumeIfDue(
     .bind(dayStart, dayStart + 86_400)
     .first<{ present: number }>();
   if (existing) return null;
+  // Window on the scheduled slot, not wall-clock start: a delayed Monday poll
+  // executed after midnight still generates Monday's edition and must count.
+  const priorRuns = await runtime.db
+    .prepare(
+      `SELECT COUNT(*) AS runs
+         FROM cron_runs
+        WHERE job = 'weekly-recap'
+          AND COALESCE(slot_started_at, started_at) >= ?
+          AND COALESCE(slot_started_at, started_at) < ?
+          AND status NOT IN ('skipped_neutral', 'skipped_locked')`,
+    )
+    .bind(dayStart, dayStart + 86_400)
+    .first<{ runs: number }>();
+  if ((priorRuns?.runs ?? 0) >= WEEKLY_RECAP_MAX_RUNS_PER_EDITION) return null;
 
   let result: CronResult | null = null;
   let caught: unknown = null;

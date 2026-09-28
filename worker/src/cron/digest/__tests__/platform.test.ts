@@ -28,7 +28,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
-import { CIRCUIT_SOURCE, WEEKLY_RECAP_LLM_CONFIG } from "../../../lib/constants";
+import { CIRCUIT_SOURCE, DIGEST_MAX_EDITION_OUTPUT_TOKENS, WEEKLY_RECAP_LLM_CONFIG } from "../../../lib/constants";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -40,6 +40,29 @@ function anthropicSseResponse(events: Array<{ event: string; data: unknown }>): 
     .map((event) => `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`)
     .join("");
   return new Response(encoded, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
+function droppedStreamResponse(): Response {
+  // Connection lost mid-generation: no final message_delta, no message_stop.
+  return anthropicSseResponse([
+    { event: "message_start", data: { type: "message_start", message: { model: "claude-opus-5-5", usage: { input_tokens: 100 } } } },
+    { event: "content_block_delta", data: { type: "content_block_delta", delta: { type: "text_delta", text: "{\"title\":\"Cut" } } },
+  ]);
+}
+
+function completedStreamResponse(usage: Record<string, unknown>, model = "claude-opus-5-5"): Response {
+  return anthropicSseResponse([
+    { event: "message_start", data: { type: "message_start", message: { model, usage: { input_tokens: 100 } } } },
+    {
+      event: "content_block_delta",
+      data: {
+        type: "content_block_delta",
+        delta: { type: "text_delta", text: JSON.stringify({ title: "Title", text: "Text", extended: "Extended", meta: {} }) },
+      },
+    },
+    { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn" }, usage } },
+    { event: "message_stop", data: { type: "message_stop" } },
+  ]);
 }
 
 describe("digest LLM configuration", () => {
@@ -208,11 +231,12 @@ describe("requestDigestCopy refusals", () => {
       await vi.runAllTimersAsync();
       await rejects;
 
-      // Each request reserves its full 16k `max_tokens` against the 24k edition
-      // budget. The first attempt fits; charging its unknown outcome the full
-      // ceiling leaves 8k, which cannot cover another 16k reservation, so no
-      // retry happens at all even though DIGEST_FETCH_MAX_RETRIES allows two.
-      expect(vi.mocked(fetchWithRetry)).toHaveBeenCalledTimes(1);
+      // Each request reserves its full `max_tokens` against the edition budget
+      // of two full requests. Charging each unknown outcome the full ceiling
+      // stops the loop after two attempts even though DIGEST_FETCH_MAX_RETRIES
+      // would allow a third.
+      expect(DIGEST_MAX_EDITION_OUTPUT_TOKENS / WEEKLY_RECAP_LLM_CONFIG.maxTokens).toBe(2);
+      expect(vi.mocked(fetchWithRetry)).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
     }
@@ -280,6 +304,119 @@ describe("requestDigestCopy refusals", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("retries a dropped stream and keeps the completed retry", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      vi.mocked(fetchWithRetry)
+        .mockResolvedValueOnce(droppedStreamResponse())
+        .mockResolvedValueOnce(completedStreamResponse({ output_tokens: 50 }));
+
+      const pending = requestDigestCopy({
+        db,
+        anthropicApiKey: "key",
+        systemPrompt: "system",
+        userPrompt: "user",
+        llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+        logPrefix: "test",
+      });
+      await vi.advanceTimersByTimeAsync(10_000);
+      const result = await pending;
+
+      expect(result).toMatchObject({ kind: "ok", digestText: "Text" });
+      expect(result.llmAttempts).toMatchObject([
+        { httpAttempt: 1, httpStatus: 200, outputTokens: null, stopReason: null, costUsd: null },
+        { httpAttempt: 2, httpStatus: 200, outputTokens: 50, stopReason: "end_turn" },
+      ]);
+      expect(recordOutcomeSafe).toHaveBeenCalledTimes(1);
+      expect(recordOutcomeSafe).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.ANTHROPIC, true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("charges a dropped stream the full ceiling, so repeated drops stop at the edition budget", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      // A dropped 200 stream never reports usage and may have been billed for
+      // a complete generation. Charging it nothing would let every HTTP retry
+      // run; charging the full max_tokens stops once the budget is spent.
+      vi.mocked(fetchWithRetry).mockImplementation(async () => droppedStreamResponse());
+
+      const pending = requestDigestCopy({
+        db,
+        anthropicApiKey: "key",
+        systemPrompt: "system",
+        userPrompt: "user",
+        llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+        logPrefix: "test",
+      });
+      const rejects = expect(pending).rejects.toThrow(/ended before message_stop/);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await rejects;
+
+      // Two full-ceiling charges spend the two-request edition budget, so the
+      // third HTTP attempt DIGEST_FETCH_MAX_RETRIES allows never starts.
+      expect(vi.mocked(fetchWithRetry)).toHaveBeenCalledTimes(2);
+      expect(recordOutcomeSafe).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.ANTHROPIC, false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("prices and attributes a server-side fallback across every billed model attempt", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(completedStreamResponse({
+      output_tokens: 50,
+      iterations: [
+        { type: "message", model: "claude-opus-5-5", input_tokens: 100, output_tokens: 1000 },
+        { type: "fallback_message", model: "claude-opus-4-8", input_tokens: 120, output_tokens: 50 },
+      ],
+    }));
+
+    const result = await requestDigestCopy({
+      db,
+      anthropicApiKey: "key",
+      systemPrompt: "system",
+      userPrompt: "user",
+      llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+      logPrefix: "test",
+    });
+
+    // Opus 5.5 declined after 1,000 billed output tokens (4/20 per MTok);
+    // Opus 4.8 served the message (5/25 per MTok). The top-level usage alone
+    // (50 output tokens) would miss the declined attempt entirely.
+    expect(result.llmAttempts).toMatchObject([{
+      requestedModel: WEEKLY_RECAP_LLM_CONFIG.model,
+      servedModel: "claude-opus-4-8",
+      outputTokens: 50,
+      costUsd: (100 * 4 + 1000 * 20 + 120 * 5 + 50 * 25) / 1_000_000,
+    }]);
+  });
+
+  it("prices an Opus 5.5 attempt at Opus 5.5 rates from the usage shape the API returns", async () => {
+    // Every stream carries one `message` iteration whose model is null when no
+    // fallback ran, and `claude-opus-5-5` also matches the Opus 5 price prefix.
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(completedStreamResponse({
+      output_tokens: 3000,
+      iterations: [{ type: "message", model: null, input_tokens: 100, output_tokens: 3000 }],
+    }));
+
+    const result = await requestDigestCopy({
+      db,
+      anthropicApiKey: "key",
+      systemPrompt: "system",
+      userPrompt: "user",
+      llmConfig: { ...WEEKLY_RECAP_LLM_CONFIG, model: "claude-opus-5-5" },
+      logPrefix: "test",
+    });
+
+    expect(result.llmAttempts).toMatchObject([{
+      servedModel: "claude-opus-5-5",
+      costUsd: (100 * 4 + 3000 * 20) / 1_000_000,
+    }]);
   });
 });
 

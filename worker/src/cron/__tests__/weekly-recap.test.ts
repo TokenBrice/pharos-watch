@@ -310,14 +310,14 @@ describe("generateWeeklyRecap", () => {
       telegramDelivered: false,
       telegramDeliveryStatus: "pending",
       llm: {
-        model: "claude-opus-5",
-        effort: "xhigh",
+        model: DIGEST_MODEL,
+        effort: "high",
         maxTokens: 16000,
         attempts: [{
           attemptNumber: 1,
           requestKind: "original",
           httpAttempt: 1,
-          requestedModel: "claude-opus-5",
+          requestedModel: DIGEST_MODEL,
           servedModel: "claude-opus-5",
           inputTokens: 800,
           cacheReadTokens: 0,
@@ -356,7 +356,7 @@ describe("generateWeeklyRecap", () => {
     };
     expect(weeklyBody.model).toBe(DIGEST_MODEL);
     expect(weeklyBody.thinking).toEqual({ type: "adaptive" });
-    expect(weeklyBody.output_config).toEqual({ effort: "xhigh" });
+    expect(weeklyBody.output_config).toEqual({ effort: "high" });
     expect(weeklyBody.max_tokens).toBe(16000);
     expect(weeklyBody.fallbacks).toBe("default");
 

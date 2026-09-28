@@ -1,17 +1,23 @@
 // Accumulate the text content from an Anthropic Messages API streaming
 // response (server-sent events). Anthropic returns one SSE event per protocol
-// step; we only care about `content_block_delta` events of type `text_delta`.
-// Streaming is required on Cloudflare Workers because non-streaming Opus 4.7
+// step; the text comes from `content_block_delta` events of type `text_delta`.
+// Streaming is required on Cloudflare Workers because non-streaming Opus
 // requests hold the subrequest open with no bytes for minutes while the model
 // thinks, which trips CF's ~130s subrequest idle timeout. Streaming flushes
 // headers + ping events early so the subrequest stays alive.
 //
 // This helper is intentionally tolerant of event types it does not recognize
-// (ping, message_start, etc.) and surfaces `error` events as thrown exceptions
-// so the caller can route to the circuit breaker. When the stream finishes
-// without producing any text, the error message includes stop_reason plus a
-// histogram of seen events and delta types so the failure is diagnosable
-// without wiring a second tail-log probe.
+// (ping, etc.) and surfaces `error` events as thrown exceptions so the caller
+// can route to the circuit breaker. When the stream finishes without producing
+// any text, the error message includes stop_reason plus a histogram of seen
+// events and delta types so the failure is diagnosable without wiring a second
+// tail-log probe.
+//
+// Server-side fallback (`fallbacks: "default"`) can hand a request to another
+// model on the same stream. After a mid-output handoff `message_start` still
+// names the requested model, so the serving model is read from the `fallback`
+// content block and the `usage.iterations` list, which is also the only place
+// the declined attempt's billed tokens appear.
 
 interface AnthropicStreamErrorPayload {
   error?: { type?: string; message?: string };
@@ -21,13 +27,30 @@ interface AnthropicContentBlockDelta {
   delta?: { type?: string; text?: string };
 }
 
+interface AnthropicContentBlockStart {
+  content_block?: {
+    type?: string;
+    from?: { model?: string } | null;
+    to?: { model?: string } | null;
+  };
+}
+
+interface AnthropicUsageIterationPayload {
+  type?: string;
+  model?: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+}
+
 interface AnthropicMessageDelta {
   delta?: {
     stop_reason?: string | null;
     stop_sequence?: string | null;
     stop_details?: AnthropicStopDetails | null;
   };
-  usage?: { output_tokens?: number };
+  usage?: { output_tokens?: number; iterations?: AnthropicUsageIterationPayload[] };
 }
 
 interface AnthropicMessageStart {
@@ -53,8 +76,29 @@ interface AnthropicStopDetails {
   category?: AnthropicRefusalCategory | null;
 }
 
+/** A server-side fallback handoff, marked on the stream by a `fallback` content block. */
+export interface AnthropicFallbackHandoff {
+  from: string | null;
+  to: string;
+}
+
+/**
+ * One model attempt from `usage.iterations`. With server-side fallback the
+ * top-level usage describes only the attempt that produced the returned
+ * message; each attempt that ran is billed separately at its own model's rates.
+ */
+export interface AnthropicUsageIteration {
+  type: string | null;
+  model: string | null;
+  inputTokens: number | null;
+  cacheWriteTokens: number | null;
+  cacheReadTokens: number | null;
+  outputTokens: number | null;
+}
+
 export interface AnthropicStreamResult {
   text: string;
+  /** Model that produced the returned message, after any fallback handoff. */
   servedModel: string | null;
   inputTokens: number | null;
   cacheWriteTokens: number | null;
@@ -62,10 +106,26 @@ export interface AnthropicStreamResult {
   outputTokens: number | null;
   stopReason: string | null;
   refusalCategory: AnthropicRefusalCategory | null;
+  fallbacks: AnthropicFallbackHandoff[];
+  /** Per-attempt usage when the API reports it; null when absent. */
+  iterations: AnthropicUsageIteration[] | null;
 }
 
+/**
+ * - `stream-error`: an SSE `error` event.
+ * - `max-tokens`: generation stopped at `max_tokens`.
+ * - `incomplete`: the stream ended before `message_stop`, so the text and
+ *   usage are partial or missing.
+ * - `empty`: the message completed without any text.
+ */
+export type AnthropicStreamFailureKind = "stream-error" | "max-tokens" | "incomplete" | "empty";
+
 export class AnthropicStreamFailure extends Error {
-  constructor(message: string, readonly result: AnthropicStreamResult) {
+  constructor(
+    message: string,
+    readonly result: AnthropicStreamResult,
+    readonly kind: AnthropicStreamFailureKind,
+  ) {
     super(message);
     this.name = "AnthropicStreamFailure";
   }
@@ -109,6 +169,8 @@ export async function accumulateAnthropicStream(response: Response): Promise<Ant
   let stopReason: string | null = null;
   let refusalCategory: AnthropicRefusalCategory | null = null;
   let outputTokens: number | null = null;
+  const fallbacks: AnthropicFallbackHandoff[] = [];
+  let iterations: AnthropicUsageIteration[] | null = null;
   const eventCounts: Record<string, number> = {};
   const deltaTypeCounts: Record<string, number> = {};
 
@@ -136,6 +198,11 @@ export async function accumulateAnthropicStream(response: Response): Promise<Ant
         if (result.cacheReadTokens != null) cacheReadTokens = result.cacheReadTokens;
         if (result.outputTokens != null) outputTokens = result.outputTokens;
         if (result.refusalCategory !== undefined) refusalCategory = result.refusalCategory;
+        if (result.fallback) {
+          fallbacks.push(result.fallback);
+          servedModel = result.fallback.to;
+        }
+        if (result.iterations) iterations = result.iterations;
         if (result.error) {
           streamError = result.error;
           break;
@@ -156,6 +223,11 @@ export async function accumulateAnthropicStream(response: Response): Promise<Ant
     }
   }
 
+  // The iteration that served the turn is the authoritative serving model; it
+  // agrees with the last `fallback` block when both are present.
+  const servingIteration = iterations ? [...iterations].reverse().find((iteration) => iteration.type === "fallback_message") : undefined;
+  if (servingIteration?.model) servedModel = servingIteration.model;
+
   const result: AnthropicStreamResult = {
     text: accumulated,
     servedModel,
@@ -165,9 +237,11 @@ export async function accumulateAnthropicStream(response: Response): Promise<Ant
     outputTokens,
     stopReason,
     refusalCategory,
+    fallbacks,
+    iterations,
   };
 
-  if (streamError) throw new AnthropicStreamFailure(streamError.message, result);
+  if (streamError) throw new AnthropicStreamFailure(streamError.message, result, "stream-error");
 
   // Anthropic documents stop_details on the streamed message_delta alongside
   // stop_reason. A refusal can arrive before output or after partial output;
@@ -182,6 +256,18 @@ export async function accumulateAnthropicStream(response: Response): Promise<Ant
     throw new AnthropicStreamFailure(
       `Anthropic stream: response truncated at max_tokens (outputTokens=${outputTokens ?? "null"}, accumulatedChars=${accumulated.length})`,
       result,
+      "max-tokens",
+    );
+  }
+
+  // EOF before both the final message_delta and message_stop: the connection
+  // ended mid-generation. The text is a fragment and the billed usage is
+  // unknown, so it must neither be parsed nor treated as a free attempt.
+  if (stopReason === null && eventCounts.message_stop === undefined) {
+    throw new AnthropicStreamFailure(
+      `Anthropic stream: ended before message_stop (accumulatedChars=${accumulated.length}, events=${JSON.stringify(eventCounts)})`,
+      result,
+      "incomplete",
     );
   }
 
@@ -192,7 +278,7 @@ export async function accumulateAnthropicStream(response: Response): Promise<Ant
       `events=${JSON.stringify(eventCounts)}`,
       `deltaTypes=${JSON.stringify(deltaTypeCounts)}`,
     ].join(", ");
-    throw new AnthropicStreamFailure(`Anthropic stream: empty text content after message_stop (${detail})`, result);
+    throw new AnthropicStreamFailure(`Anthropic stream: empty text content after message_stop (${detail})`, result, "empty");
   }
   return result;
 }
@@ -209,6 +295,8 @@ interface FrameResult {
   cacheReadTokens?: number;
   outputTokens?: number;
   refusalCategory?: AnthropicRefusalCategory | null;
+  fallback?: AnthropicFallbackHandoff;
+  iterations?: AnthropicUsageIteration[];
 }
 
 function handleFrame(frame: string): FrameResult {
@@ -260,6 +348,23 @@ function handleFrame(frame: string): FrameResult {
     return out;
   }
 
+  if (eventType === "content_block_start") {
+    let parsed: AnthropicContentBlockStart;
+    try {
+      parsed = JSON.parse(dataStr) as AnthropicContentBlockStart;
+    } catch {
+      return out;
+    }
+    const block = parsed.content_block;
+    if (block?.type === "fallback" && typeof block.to?.model === "string") {
+      out.fallback = {
+        from: typeof block.from?.model === "string" ? block.from.model : null,
+        to: block.to.model,
+      };
+    }
+    return out;
+  }
+
   if (eventType === "message_delta") {
     let parsed: AnthropicMessageDelta;
     try {
@@ -272,6 +377,16 @@ function handleFrame(frame: string): FrameResult {
       out.refusalCategory = parsed.delta.stop_details.category ?? null;
     }
     if (typeof parsed.usage?.output_tokens === "number") out.outputTokens = parsed.usage.output_tokens;
+    if (Array.isArray(parsed.usage?.iterations)) {
+      out.iterations = parsed.usage.iterations.map((iteration) => ({
+        type: typeof iteration.type === "string" ? iteration.type : null,
+        model: typeof iteration.model === "string" ? iteration.model : null,
+        inputTokens: typeof iteration.input_tokens === "number" ? iteration.input_tokens : null,
+        cacheWriteTokens: typeof iteration.cache_creation_input_tokens === "number" ? iteration.cache_creation_input_tokens : null,
+        cacheReadTokens: typeof iteration.cache_read_input_tokens === "number" ? iteration.cache_read_input_tokens : null,
+        outputTokens: typeof iteration.output_tokens === "number" ? iteration.output_tokens : null,
+      }));
+    }
     return out;
   }
 

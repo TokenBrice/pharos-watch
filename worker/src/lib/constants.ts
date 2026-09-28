@@ -219,20 +219,52 @@ export interface DigestLlmConfig {
 }
 
 /**
- * Opus 5 adds streaming safety classifiers that can refuse a request. The
+ * Opus 5.5 runs streaming safety classifiers that can refuse a request. The
  * digest request path handles that policy outcome separately from provider
  * failures so it cannot poison the Anthropic circuit breaker.
  */
-export const DIGEST_MODEL = "claude-opus-5";
+export const DIGEST_MODEL = "claude-opus-5-5";
 
+/**
+ * Per-request output ceiling (thinking + visible text) for both digest jobs,
+ * and the upper bound for runtime `maxTokens` overrides. A `max_tokens` stop
+ * loses the edition, so this sits about 2.5x above the largest Opus 5.5 `high`
+ * generation measured on production prompts (6,455 tokens, weekly 2026-09-07).
+ */
+export const DIGEST_MAX_TOKENS = 16_000;
+
+/**
+ * Output tokens one edition may bill across every attempt: the original leg,
+ * the corrective retry, and any HTTP retry of either. A request starts only
+ * when its full `max_tokens` still fits. Two full requests means a corrective
+ * retry always fits after a completed first pass, and one retry fits after a
+ * request whose usage never came back (charged the full ceiling).
+ *
+ * `max_tokens` alone does not bound spend: up to `DIGEST_FETCH_MAX_RETRIES + 1`
+ * generations per leg across two legs can bill. With six billed input charges
+ * at the largest observed prompts, 32,000 output tokens puts one invocation per
+ * edition at about $1.12/day (daily plus weekly/7) at Opus 5.5 prices, under
+ * the $1.15 ceiling. Extra invocations (manual force-runs, Monday weekly
+ * resumes) each carry their own budget, and a mid-output server-side fallback
+ * can bill one extra partial generation inside a request before it is charged.
+ */
+export const DIGEST_MAX_EDITION_OUTPUT_TOKENS = 2 * DIGEST_MAX_TOKENS;
+
+/**
+ * `high`, not `xhigh`: on the same production prompts Opus 5.5 at `xhigh`
+ * emitted 11-12k output tokens per daily and 19,996 on the heaviest weekly
+ * (up to 2.8x Opus 5 at `xhigh`), which no ceiling inside the cost envelope
+ * can hold. At `high` it emitted 3.5-6.5k, and kept the forward-look line on
+ * two of three sampled dailies where Opus 5 at `xhigh` kept it on none.
+ */
 export const DAILY_DIGEST_LLM_CONFIG: DigestLlmConfig = {
   model: DIGEST_MODEL,
-  effort: "xhigh",
-  maxTokens: 16_000,
+  effort: "high",
+  maxTokens: DIGEST_MAX_TOKENS,
 };
 
 export const WEEKLY_RECAP_LLM_CONFIG: DigestLlmConfig = {
   model: DIGEST_MODEL,
-  effort: "xhigh",
-  maxTokens: 16_000,
+  effort: "high",
+  maxTokens: DIGEST_MAX_TOKENS,
 };
