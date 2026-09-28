@@ -2,7 +2,7 @@
 
 Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`, and `/chains/[chain]/` to summarize the quality and concentration of stablecoin supply on each supported chain.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-chain-health -->`v1.6`<!-- GENERATED-END: methodology-version-chain-health -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-chain-health -->`v1.7`<!-- GENERATED-END: methodology-version-chain-health -->
 - **Runtime source:** `shared/lib/chains/health.ts` (the canonical implementation; no compatibility shim is retained)
 - **Version source:** `shared/lib/methodology-versions/registry.ts` (shared constants: `shared/lib/methodology-versions/constants.ts`)
 - **API source:** `worker/src/api/chains.ts`
@@ -22,7 +22,7 @@ The frontend chain profile coordinates `GET /api/chains` with `GET /api/stableco
 
 ## Formula
 
-Current `v1.6` composite:
+Current `v1.7` composite:
 
 ```text
 0.30 * quality
@@ -32,7 +32,7 @@ Current `v1.6` composite:
 + 0.10 * backingDiversity
 ```
 
-The composite requires complete peg-observation coverage and non-null `quality` and `pegStability` factors; only then is the weighted total rounded to the nearest integer. Partial peg coverage may publish a numeric observed-only peg factor, but its composite remains `null`. Nominal par references are not observed prices: their supply remains in the peg coverage denominator without entering its observed numerator.
+The composite requires non-null `quality` and `pegStability` factors and peg-observation coverage that is `complete`, or `partial` with `coverage >= 0.95` (`PEG_COVERAGE_COMPOSITE_MIN` in `shared/lib/chains/health.ts`); only then is the weighted total rounded to the nearest integer. Partial coverage below 0.95, or `unavailable` coverage, keeps the composite `null`. Peg weight is 0.20, so an unobserved share of at most 5% can move the observed-only peg factor by at most 5 points and the composite by at most 1 point; the unobserved share stays published in `pegStabilityCoverage` and is never imputed. Nominal par references are not observed prices: their supply remains in the peg coverage denominator without entering its observed numerator.
 
 ## Factors
 
@@ -41,12 +41,12 @@ The composite requires complete peg-observation coverage and non-null `quality` 
 | `quality`          |    30% | report-card cache                                                        | Supply-weighted Safety Score average over rated supply only. Not-rated supply is excluded from both the numerator and the denominator; the factor returns `null` when rated supply is below 50% of chain supply.                                                        |
 | `chainEnvironment` |    20% | L2BEAT snapshot first, then `shared/lib/chains/index.ts` resilience tier | Matched L2BEAT scaling projects use `40%` stage score plus `60%` average risk sentiment across Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure. Unmatched chains fall back to tier `1 -> 100`, tier `2 -> 60`, tier `3 -> 20`. |
 | `concentration`    |    20% | chain supply shares                                                      | `100 * (1 - HHI)`. A single dominant coin scores `0`; an even N-way split approaches `100 * (1 - 1/N)`.                                                                                                                                                                  |
-| `pegStability`     |    20% | cached prices + peg rates | Observed-supply-weighted peg proximity from shared `deriveDepegSignal(...)`. Missing prices/references receive no imputed score. Zero observed supply is `null`; partial observation publishes the observed-only factor and full-positive-supply coverage, but withholds the composite (see [Peg Coverage](#peg-coverage)). |
+| `pegStability`     |    20% | cached prices + peg rates | Observed-supply-weighted peg proximity from shared `deriveDepegSignal(...)`. Missing prices/references receive no imputed score. Zero observed supply is `null`; partial observation publishes the observed-only factor and full-positive-supply coverage; the composite is withheld below 95% coverage (see [Peg Coverage](#peg-coverage)). |
 | `backingDiversity` |    10% | active stablecoin backing flags                                          | Normalized Shannon entropy across the two active backing cohorts: `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded.                                                                                                                         |
 
 ## Not-Rated Policy
 
-Chain Health has two not-rated (NR) gates: the 50% rated-supply coverage gate on `quality`, and complete peg-observation coverage for the composite (see [Peg Coverage](#peg-coverage)).
+Chain Health has two not-rated (NR) gates: the 50% rated-supply coverage gate on `quality`, and the 95% peg-observation coverage gate for the composite (see [Peg Coverage](#peg-coverage)).
 
 Supply whose stablecoin has no published Safety Score is excluded from the `quality` average — it contributes to neither the numerator nor the denominator. Pharos does not impute a score for unrated supply, because any imputed number is a risk judgement that has not been made. Below 50% rated supply the factor is `null`, which nulls the whole composite (`healthScore` and `healthBand` are `null`) rather than publishing a number derived from a minority of the chain's supply.
 
@@ -64,12 +64,12 @@ Every chain row carries `pegStabilityCoverage`, computed by `assessPegStability(
 | `coverage`                | `observedSupplyUsd / eligibleSupplyUsd`                                                                  |
 | `noUsablePriceSupplyUsd`  | Supply with a usable reference but no usable price                                                       |
 | `noPegReferenceSupplyUsd` | Supply without a usable peg reference                                                                    |
-| `neutralImputedSupplyUsd` | Always `0` for v1.6 producers; retained to interpret pre-v1.6 cached payloads that used neutral `50` |
+| `neutralImputedSupplyUsd` | Always `0` for v1.6+ producers; retained to interpret pre-v1.6 cached payloads that used neutral `50` |
 | `observedScore`           | Supply-weighted peg proximity over observed supply only; `null` when nothing was observed                |
 
-**Active policy since v1.6 (DEC-04):** zero observed peg coverage makes `healthFactors.pegStability` `null` (NR) and therefore the composite NR. Partial coverage publishes `observedScore` as the factor together with full-positive-supply coverage, but keeps `healthScore` and `healthBand` null until an owner selects a partial-coverage threshold; quality's 50% gate is not reused. Complete coverage retains the existing formula and quality gate. No producer imputes neutral 50. Activation requires observed Release A Worker/Pages readiness; supported rollback is the nullable-compatible A pair. Pre-v1.6 cached payloads remain labelled with their original methodology, not restamped as observed-only results.
+**Active policy since v1.7 (DEC-04; owner threshold 2026-09-28):** zero observed peg coverage makes `healthFactors.pegStability` `null` (NR) and therefore the composite NR. Partial coverage publishes `observedScore` as the factor together with full-positive-supply coverage; the composite (`healthScore`/`healthBand`) is published when `coverage >= 0.95` (`PEG_COVERAGE_COMPOSITE_MIN`) and stays null below it. The bound: with peg weight 0.20, an unobserved share of at most 5% moves the observed-only peg factor by at most 5 points and the composite by at most 1 point. Quality's 50% gate is not reused. Complete coverage retains the existing formula and quality gate. At adoption, chains such as Ethereum (coverage 0.999961; $5.9M unpriced of $148.7B), Tron, Base, Polygon, and Scroll (0.98749) regain a composite, while Hemi (0.159) stays NR. v1.6 required complete coverage for any composite. No producer imputes neutral 50. Activation requires observed Release A Worker/Pages readiness; supported rollback is the nullable-compatible A pair. Pre-v1.6 cached payloads remain labelled with their original methodology, not restamped as observed-only results.
 
-Cutover observation: `/api/chains` uses `producerBacked` caching (edge 300 seconds; browser 60 seconds plus 300 seconds stale-while-revalidate). Allow those existing windows to expire and refetch/revalidate before claiming full cutover; confirm `healthMethodologyVersion: "1.6"`, coverage, factor, and composite together. Error/degraded responses remain `no-store`; deployment must not renew source observation clocks.
+Cutover observation: `/api/chains` uses `producerBacked` caching (edge 300 seconds; browser 60 seconds plus 300 seconds stale-while-revalidate). Allow those existing windows to expire and refetch/revalidate before claiming full cutover; confirm `healthMethodologyVersion: "1.7"`, coverage, factor, and composite together. Error/degraded responses remain `no-store`; deployment must not renew source observation clocks.
 
 ## Bands
 

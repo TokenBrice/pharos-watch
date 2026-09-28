@@ -236,6 +236,9 @@ describe("computeL2BeatChainEnvironmentScore", () => {
 });
 
 describe("computeHealthScore", () => {
+  const complete = { status: "complete", coverage: 1 } as const;
+  const allHundred = { quality: 100, chainEnvironment: 100, concentration: 100, pegStability: 100, backingDiversity: 100 };
+
   it("computes weighted composite", () => {
     const score = computeHealthScore({
       quality: 80,
@@ -243,7 +246,7 @@ describe("computeHealthScore", () => {
       concentration: 60,
       pegStability: 90,
       backingDiversity: 40,
-    }, "complete");
+    }, complete);
     // 0.30*80 + 0.20*60 + 0.20*60 + 0.20*90 + 0.10*40 = 24+12+12+18+4 = 70
     expect(score).toBe(70);
   });
@@ -255,7 +258,7 @@ describe("computeHealthScore", () => {
       concentration: 60,
       pegStability: 90,
       backingDiversity: 40,
-    }, "complete")).toBeNull();
+    }, complete)).toBeNull();
   });
 
   it("returns null when the peg factor is not rated rather than imputing it", () => {
@@ -265,19 +268,27 @@ describe("computeHealthScore", () => {
       concentration: 60,
       pegStability: null,
       backingDiversity: 40,
-    }, "unavailable")).toBeNull();
+    }, { status: "unavailable", coverage: 0 })).toBeNull();
   });
 
-  it("withholds the composite even for almost-complete peg coverage", () => {
-    expect(computeHealthScore({
-      quality: 100, chainEnvironment: 100, concentration: 100, pegStability: 100, backingDiversity: 100,
-    }, "partial")).toBeNull();
+  // DEC-04 owner threshold (2026-09-28): partial coverage publishes the composite at >= 95% observed supply.
+  it.each([
+    ["exactly the minimum", 0.95, 100],
+    ["Ethereum-shaped near-complete coverage", 0.999961, 100],
+    ["just below the minimum", 0.9499, null],
+    ["Hemi-shaped thin coverage", 0.159, null],
+  ] as const)("partial coverage %s (%s) -> %s", (_label, coverage, expected) => {
+    expect(computeHealthScore(allHundred, { status: "partial", coverage })).toBe(expected);
+  });
+
+  it("withholds the composite for unavailable coverage even with a numeric peg factor", () => {
+    expect(computeHealthScore(allHundred, { status: "unavailable", coverage: 0 })).toBeNull();
   });
 
   it("tier 1 chains score higher than tier 3", () => {
     const base = { quality: 70, concentration: 50, pegStability: 90, backingDiversity: 30 };
-    const tier1Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[1] }, "complete")!;
-    const tier3Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[3] }, "complete")!;
+    const tier1Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[1] }, complete)!;
+    const tier3Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[3] }, complete)!;
     expect(tier1Score).toBeGreaterThan(tier3Score);
     // 20% weight * (100 - 20) = 16 point difference
     expect(tier1Score - tier3Score).toBe(16);

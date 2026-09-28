@@ -2,6 +2,7 @@ import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
+import { PEG_COVERAGE_COMPOSITE_MIN, PEG_STABILITY_WEIGHT } from "@shared/lib/chains/health";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import {
   METHODOLOGY_LINK_CLASS,
@@ -11,6 +12,11 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { CHAIN_HEALTH_SECTION_CONTENT } from "@/lib/methodology-content";
+
+const PEG_COVERAGE_COMPOSITE_MIN_PCT = Math.round(PEG_COVERAGE_COMPOSITE_MIN * 100);
+/** Most the composite can move if the unobserved share (at most 1 − minimum coverage) were fully off peg. */
+const MAX_UNOBSERVED_COMPOSITE_SHIFT = Math.round((1 - PEG_COVERAGE_COMPOSITE_MIN) * PEG_STABILITY_WEIGHT * 100);
+
 export function ChainHealthMethodologySection() {
   return (
     <MethodologySectionShell
@@ -41,7 +47,10 @@ export function ChainHealthMethodologySection() {
 
       <MethodologyFacts
         facts={[
-          { label: "Score range", value: "0–100 (NR when safety-score coverage < 50% or peg coverage is incomplete)" },
+          {
+            label: "Score range",
+            value: `0–100 (NR when safety-score coverage < 50% or peg coverage < ${PEG_COVERAGE_COMPOSITE_MIN_PCT}%)`,
+          },
           {
             label: "Refresh cadence",
             value: "15-minute stablecoins cache cadence; `/api/chains` freshness budget is 1800 seconds",
@@ -118,8 +127,10 @@ export function ChainHealthMethodologySection() {
               <TableCell className="whitespace-normal px-4 py-2">
                 Supply-weighted average of observed per-coin peg proximity: max(0, 100&nbsp;&minus;&nbsp;deviationBps/5).
                 Missing prices or peg references receive no imputed score. Zero observed supply makes this factor NR;
-                partial coverage shows the observed-only factor and full-positive-supply coverage, but keeps the
-                composite NR. Complete peg coverage retains the formula and existing safety-score coverage gate.
+                partial coverage shows the observed-only factor and full-positive-supply coverage. The composite is
+                published when peg coverage is complete or at least {PEG_COVERAGE_COMPOSITE_MIN_PCT}% of chain supply,
+                and stays NR below that share; an unobserved share that small can move the composite by at most{" "}
+                {MAX_UNOBSERVED_COMPOSITE_SHIFT} point, and it remains disclosed beside the score.
               </TableCell>
             </TableRow>
             <TableRow className="align-top">

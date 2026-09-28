@@ -497,6 +497,31 @@ describe("aggregateChains", () => {
     expect(mixed.healthBand).toBeNull();
   });
 
+  it("publishes the composite at 95%+ partial peg coverage and withholds it below (DEC-04 owner threshold)", () => {
+    const withUnpriced = (observedUsd: number, unpricedUsd: number) => aggregateChains(makeInput({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1, pegType: "peggedUSD", chainCirculating: { ethereum: { current: observedUsd } } },
+        { id: "tiny-unpriced", symbol: "TINY", price: null, pegType: "peggedUSD", chainCirculating: { ethereum: { current: unpricedUsd } } },
+      ],
+      safetyScores: { "usdt-tether": 75, "tiny-unpriced": 60 },
+    })).chains.find((chain) => chain.id === "ethereum")!;
+
+    // Production Ethereum shape: $5.9M unpriced of $148.7B.
+    const ethereumShaped = withUnpriced(148_694_100_000, 5_900_000);
+    expect(ethereumShaped.pegStabilityCoverage).toMatchObject({ status: "partial", noUsablePriceSupplyUsd: 5_900_000 });
+    expect(ethereumShaped.pegStabilityCoverage!.coverage).toBeCloseTo(0.99996, 5);
+    expect(ethereumShaped.healthScore).toEqual(expect.any(Number));
+    expect(ethereumShaped.healthBand).not.toBeNull();
+
+    // Hemi shape: 15.9% observed; quality clears its gate, so only peg coverage withholds the composite.
+    const hemiShaped = withUnpriced(159, 841);
+    expect(hemiShaped.healthFactors.quality).not.toBeNull();
+    expect(hemiShaped.healthFactors.pegStability).toBe(100);
+    expect(hemiShaped.pegStabilityCoverage).toMatchObject({ status: "partial", coverage: 0.159 });
+    expect(hemiShaped.healthScore).toBeNull();
+    expect(hemiShaped.healthBand).toBeNull();
+  });
+
   it("publishes NR factor and composite when every price is missing", () => {
     const input = makeInput();
     for (const coin of input.peggedAssets) coin.price = null;

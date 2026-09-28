@@ -31,7 +31,9 @@ function alignHistoryAtOrBeforeDate(
   const sortedHistory = history ? [...history].sort((a, b) => a.date - b.date) : [];
   const aligned: (number | null)[] = [];
   let historyIndex = 0;
-  let lastValue: number | null = null;
+  // A successful full-history read starts at zero before the coin existed.
+  // Failed/missing (including empty) reads remain unknown at every date.
+  let lastValue: number | null = sortedHistory.length > 0 ? 0 : null;
 
   for (const point of chartPoints) {
     const chartDate = Number(point.date);

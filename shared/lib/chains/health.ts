@@ -19,6 +19,13 @@ export const PEG_STABILITY_WEIGHT = 0.20;
 export const BACKING_DIVERSITY_WEIGHT = 0.10;
 
 const QUALITY_COVERAGE_THRESHOLD = 0.5;
+/**
+ * Minimum observed peg coverage (share of positive supply with an observed peg price) at which a `partial`
+ * peg factor still publishes the composite. Peg weight is 0.20, so an unobserved share ≤5% can move the
+ * observed-only peg factor by at most 5 points and the composite by at most 1 point. The unobserved share
+ * stays published via `pegStabilityCoverage`; nothing is imputed.
+ */
+export const PEG_COVERAGE_COMPOSITE_MIN = 0.95;
 const PEG_DEVIATION_SCORE_DIVISOR_BPS = 5;
 const ROBUST_HEALTH_BAND_MIN = 80;
 const HEALTHY_HEALTH_BAND_MIN = 60;
@@ -197,14 +204,19 @@ export function computeChainEnvironmentAssessment(
 // --- Composite ---
 
 /**
- * Composite Chain Health requires sufficient rated supply and complete peg coverage.
- * Partial peg factors remain visible, but no partial-coverage composite threshold is approved.
+ * Composite Chain Health requires sufficient rated supply (quality non-null), a rated peg factor, and peg
+ * coverage that is `complete` or `partial` with `coverage >= PEG_COVERAGE_COMPOSITE_MIN`. Below that share
+ * (or when coverage is `unavailable`) the composite is withheld (NR) rather than imputing missing evidence.
  */
 export function computeHealthScore(
   factors: ChainHealthFactors,
-  pegCoverageStatus: ChainPegStabilityCoverage["status"],
+  pegCoverage: { status: ChainPegStabilityCoverage["status"]; coverage: number },
 ): number | null {
-  if (factors.quality == null || factors.pegStability == null || pegCoverageStatus !== "complete") return null;
+  if (factors.quality == null || factors.pegStability == null) return null;
+  const pegCoverageSufficient =
+    pegCoverage.status === "complete" ||
+    (pegCoverage.status === "partial" && pegCoverage.coverage >= PEG_COVERAGE_COMPOSITE_MIN);
+  if (!pegCoverageSufficient) return null;
   const raw =
     QUALITY_WEIGHT * factors.quality +
     CHAIN_ENVIRONMENT_WEIGHT * factors.chainEnvironment +

@@ -14,9 +14,8 @@ export const ChainsFreshnessMetaSchema = ApiMetaSchema.extend({
 export type ChainsFreshnessMeta = z.infer<typeof ChainsFreshnessMetaSchema>;
 
 /**
- * `pegStability` is nullable: under DEC-04 a chain with no observed peg evidence is not rated (NR). The
- * current producer still publishes the neutral-50 imputation until the Release B activation, so consumers
- * MUST already render `null` as NR and read `pegStabilityCoverage` for the evidence behind the number.
+ * `pegStability` is nullable: under DEC-04 a chain with no observed peg evidence is not rated (NR); consumers
+ * MUST render `null` as NR and read `pegStabilityCoverage` for the evidence behind the number.
  */
 export const ChainHealthFactorsSchema = z.object({
   concentration: z.number(),
@@ -34,7 +33,7 @@ export type ChainPegStabilityCoverageStatus = z.infer<typeof ChainPegStabilityCo
 /**
  * Peg-observation coverage against the chain's full positive supply (every coin on the chain, including
  * coins without a peg reference). `observedScore` is the supply-weighted peg proximity over observed supply
- * only. `neutralImputedSupplyUsd` is zero for v1.6 producers; nonzero values describe neutral-50
+ * only. `neutralImputedSupplyUsd` is zero for v1.6+ producers; nonzero values describe neutral-50
  * imputation only in retained pre-v1.6 payloads and must not be interpreted as observed evidence.
  */
 export const ChainPegStabilityCoverageSchema = z.object({
