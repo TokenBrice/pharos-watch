@@ -12,7 +12,7 @@ export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
       "An all-null component remains null; an observed zero remains numeric zero",
       "Partially observed components average only their observations and disclose their sample count",
       "All-day averaging and mixed-version provenance are unchanged; historical rows are not rewritten",
-      "Live open-depeg inputs reject nominal par as an observed price; absent replay-safe evidence is disclosed as open-depeg-no-price",
+      "Live open-depeg inputs reject nominal par and legacy protocol-redeem cache rows on protocol-par routes as observed prices; absent replay-safe evidence is disclosed as open-depeg-no-price",
     ],
     commits: [],
     reconstructed: false,

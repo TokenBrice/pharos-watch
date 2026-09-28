@@ -376,10 +376,10 @@ describe("parseMintBurnLogs — price resolution", () => {
     ["-24h", -86_400],
     ["exact", 0],
     ["+24h (next day's snapshot)", 86_400],
-  ])("prefers a snapshot observed at %s from the event, stamped with its observation clock", (_label, offset) => {
+  ])("admits a snapshot observed at %s from the event, stamped with its observation clock", (_label, offset) => {
     const observedAt = EVENT_TS + offset;
     const snapshotDate = Math.floor(observedAt / 86400) * 86400;
-    const row = parseOne(context({}, [{ snapshotDate, price: 1.0002, observedAt }]));
+    const row = parseOne(context(null, [{ snapshotDate, price: 1.0002, observedAt }]));
 
     expect(row.price_used).toBe(1.0002);
     expect(row.price_source).toBe("supply-history-daily");
@@ -418,6 +418,26 @@ describe("parseMintBurnLogs — price resolution", () => {
     expect(parseOne(context(null, history))).toMatchObject({
       price_used: 1.0003,
       price_timestamp: EVENT_TS + 7_000,
+      price_source: "supply-history-daily",
+    });
+  });
+
+  it("chooses the observation closest to the event across snapshot and cache, keeping the snapshot on a tie", () => {
+    const snapshot = { snapshotDate: EVENT_DAY, price: 1.0002, observedAt: EVENT_TS - 22 * 3600 };
+
+    // A 5-minute-old cached quote beats a 22-hour-old snapshot.
+    expect(parseOne(context({ observedAt: EVENT_TS - 300 }, [snapshot]))).toMatchObject({
+      price_used: 0.9998,
+      price_timestamp: EVENT_TS - 300,
+      price_source: "price-cache-event-window",
+    });
+    // A snapshot closer than the cached quote wins.
+    expect(parseOne(context({ observedAt: EVENT_TS + 23 * 3600 }, [snapshot]))).toMatchObject({
+      price_used: 1.0002,
+      price_source: "supply-history-daily",
+    });
+    // Equal distance keeps the persisted snapshot.
+    expect(parseOne(context({ observedAt: EVENT_TS + 22 * 3600 }, [snapshot]))).toMatchObject({
       price_source: "supply-history-daily",
     });
   });

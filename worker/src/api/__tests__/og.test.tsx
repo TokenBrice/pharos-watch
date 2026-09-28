@@ -150,7 +150,7 @@ describe("stablecoin OG card data", () => {
     expect(renderToStaticMarkup(<StablecoinCard data={legacy} />)).toContain("7D NET (UNVERIFIED)");
   });
 
-  it("draws no price line from legacy supply-history par rows for a nominal-reference coin", () => {
+  it("labels nominal par and draws no price line from legacy supply-history par rows", () => {
     const input = {
       coin: {
         name: "Par", symbol: "PAR", price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
@@ -161,11 +161,20 @@ describe("stablecoin OG card data", () => {
       hasActiveDepeg: false, mintBurn7d: null, pegScore: null, backing: null,
       governance: null, redemptionScore: null, change24h: null,
     };
-    expect(deriveStablecoinOgCardData(input).sparklineData).toBeNull();
-    expect(deriveStablecoinOgCardData({
+    const nominal = deriveStablecoinOgCardData(input);
+    expect(nominal).toMatchObject({ pegPrice: 1, pegPriceIsNominal: true, sparklineData: null });
+    const nominalMarkup = renderToStaticMarkup(<StablecoinCard data={nominal} />);
+    expect(nominalMarkup).toContain("NOMINAL PAR");
+    expect(nominalMarkup).not.toContain(">PRICE<");
+
+    const observed = deriveStablecoinOgCardData({
       ...input,
       coin: { ...input.coin, priceSource: "binance", priceObservedAtMode: "upstream" },
-    }).sparklineData).toEqual([1, 1, 1]);
+    });
+    expect(observed).toMatchObject({ pegPriceIsNominal: false, sparklineData: [1, 1, 1] });
+    const observedMarkup = renderToStaticMarkup(<StablecoinCard data={observed} />);
+    expect(observedMarkup).toContain(">PRICE<");
+    expect(observedMarkup).not.toContain("NOMINAL PAR");
   });
 
   describe("peg-analytics cache hits", () => {

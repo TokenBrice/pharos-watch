@@ -4,6 +4,8 @@ import { chunkArray } from "../collections";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../d1-primitives";
 import { buildPriceValidationContext, validatePriceCandidate } from "../price-validation";
 import { isObservedPrice, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
+import { protocolParProvider } from "../authoritative-price-sources/protocol-par";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
@@ -81,13 +83,14 @@ export interface MintBurnEventPriceResolution {
 }
 
 /**
- * Shared parse/heal event-time valuation. Prefers a daily `supply_history`
- * snapshot price whose actual observation clock is within the event window,
- * then a `price_cache` observation that is replay-safe, an actual observation
- * (not a nominal reference), peg-plausible and observed within the event
- * window. Invalid, missing and future clocks were already dropped by the
- * loaders. `null` leaves the event unpriced, which hourly valuation
- * completeness then marks `partial`.
+ * Shared parse/heal event-time valuation. Candidates are a daily
+ * `supply_history` snapshot price admitted through its actual observation clock
+ * and a `price_cache` observation that is replay-safe, an actual observation
+ * (not a nominal reference, including a legacy par row), and peg-plausible;
+ * each must be observed within the event window. The candidate observed closest
+ * to the event wins (a tie keeps the snapshot). Invalid, missing and future
+ * clocks were already dropped by the loaders. `null` leaves the event unpriced,
+ * which hourly valuation completeness then marks `partial`.
  */
 export function resolveMintBurnEventPrice(
   stablecoinId: string,
@@ -95,22 +98,37 @@ export function resolveMintBurnEventPrice(
   context: MintBurnPriceContext,
 ): MintBurnEventPriceResolution | null {
   const historical = findMintBurnHistoricalPrice(context.priceHistory, stablecoinId, eventTimestamp);
-  if (historical) {
-    return { price: historical.price, priceTimestamp: historical.observedAt, evidence: "supply-history" };
-  }
   const observation = context.priceObservations.get(stablecoinId);
-  if (
-    observation
+  const cached = observation
     && isUsableCacheObservation(stablecoinId, observation)
     && isWithinMintBurnPriceEventWindow(observation.observedAt, eventTimestamp)
+    ? observation
+    : null;
+  if (
+    cached
+    && (!historical || Math.abs(cached.observedAt - eventTimestamp) < Math.abs(historical.observedAt - eventTimestamp))
   ) {
-    return { price: observation.price, priceTimestamp: observation.observedAt, evidence: "price-cache" };
+    return { price: cached.price, priceTimestamp: cached.observedAt, evidence: "price-cache" };
+  }
+  if (historical) {
+    return { price: historical.price, priceTimestamp: historical.observedAt, evidence: "supply-history" };
   }
   return null;
 }
 
-/** Clock-independent `price_cache` admission: replay-safe source, actual observation, plausible value. */
+/**
+ * Clock-independent `price_cache` admission: replay-safe source, actual
+ * observation, plausible value. Nominal-par routes wrote par under the
+ * observed `protocol-redeem` source before their cutover; such legacy rows are
+ * not observations, so they are rejected for those route IDs.
+ */
 function isUsableCacheObservation(stablecoinId: string, observation: MintBurnPriceObservation): boolean {
+  if (
+    protocolParProvider.matches(stablecoinId)
+    && normalizePricingSourceKeys(observation.source).includes("protocol-redeem")
+  ) {
+    return false;
+  }
   return isReplaySafePriceSource(observation.source)
     && isObservedPrice({ priceSource: observation.source, priceObservedAtMode: observation.observedAtMode })
     && isPlausibleEventPrice(stablecoinId, observation.price);

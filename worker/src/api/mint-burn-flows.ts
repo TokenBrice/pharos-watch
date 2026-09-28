@@ -159,6 +159,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     mcapUnavailableCoins,
     partialValuationInputs,
     partialValuationMcapUsd,
+    scoredMcapUsd,
   } = buildCoinSummaries(
     data,
     mcapById,
@@ -199,6 +200,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       mcapUnavailableCoins,
       partialValuationInputs,
       partialValuationMcapUsd,
+      scoredMcapUsd,
     },
     coins,
     chains,

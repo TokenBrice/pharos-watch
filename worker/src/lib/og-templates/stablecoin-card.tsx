@@ -8,6 +8,8 @@ export interface StablecoinCardData {
   symbol: string;
   grade: string;
   pegPrice: number | null;
+  /** `pegPrice` is a nominal par reference (pricing v6.38), not an observed market price. */
+  pegPriceIsNominal?: boolean;
   dewsBand: string | null;
   liquidityScore: number | null;
   mcap: number | null;
@@ -149,7 +151,11 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
       color: gradeColor,
       size: "large" as const,
     },
-    { label: "PRICE", value: data.pegPrice != null ? `$${data.pegPrice.toFixed(4)}` : "—", color: TEXT_SECONDARY },
+    {
+      label: data.pegPriceIsNominal ? "NOMINAL PAR" : "PRICE",
+      value: data.pegPrice != null ? `$${data.pegPrice.toFixed(4)}` : "—",
+      color: TEXT_SECONDARY,
+    },
     { label: "PEG SCORE", value: data.pegScore != null ? data.pegScore.toFixed(1) : "—", color: TEXT_SECONDARY },
     { label: "DEWS", value: data.dewsBand ?? "—", color: dewsColor },
     { label: "LIQUIDITY", value: data.liquidityScore != null ? data.liquidityScore.toFixed(0) : "—", color: TEXT_SECONDARY },

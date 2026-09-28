@@ -17,6 +17,7 @@ import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggr
 import { throwIfAborted } from "../lib/abort";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { protocolParProvider } from "../lib/authoritative-price-sources/protocol-par";
 
 type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string };
 
@@ -106,6 +107,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   try {
     const replayPriceCache = await getPriceCache(db);
     for (const [assetId, cached] of replayPriceCache) {
+      // Pre-cutover nominal routes wrote par under the observed redemption source.
+      if (cached.source === "protocol-redeem" && protocolParProvider.matches(assetId)) continue;
       if (
         cached.price != null &&
         Number.isFinite(cached.price) &&

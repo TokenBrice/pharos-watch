@@ -240,6 +240,24 @@ describe("healNullPrices", () => {
         .toEqual({ price_timestamp: NOW - 120, price_source: "supply-history-heal" });
     });
 
+    it("never treats a legacy protocol-redeem par row of a nominal-par route as an observation", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(NOW * 1000);
+      const { db, sqlite } = fixtures.open();
+      const insertParRow = sqlite.prepare(`INSERT OR REPLACE INTO price_cache
+        (asset_id, price, updated_at, source, observed_at, observed_at_mode, synced_at)
+        VALUES (?, 1, ?, 'protocol-redeem', ?, 'local_fetch', ?)`);
+      // usbd-bima is a protocol-par route; its in-window legacy row is par, not an observation.
+      insertParRow.run("usbd-bima", NOW - 60, NOW - 60, NOW - 60);
+      insertEvent(sqlite, "usbd", "usbd-bima", NOW - 120);
+      expect((await healNullPrices(db, NOW)).healed).toBe(0);
+
+      // A real observation of the same route is still admissible.
+      sqlite.prepare("DELETE FROM price_cache WHERE asset_id = 'usbd-bima'").run();
+      insertCache(sqlite, "usbd-bima", NOW - 60);
+      expect((await healNullPrices(db, NOW)).healed).toBe(1);
+    });
+
     it("skips coins without admissible evidence so their rows cannot starve healable coins", async () => {
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(NOW * 1000);

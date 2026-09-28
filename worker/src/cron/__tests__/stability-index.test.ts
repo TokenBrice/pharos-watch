@@ -620,6 +620,35 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(snapshot.contributors).toEqual([]);
   });
 
+  it.each([
+    ["usbd-bima", "protocol-redeem", false],
+    ["usbd-bima", "coingecko", true],
+    ["usdf-falcon", "protocol-redeem", true],
+  ] as const)("admits replay price for %s from %s only when it is observed", async (id, source, observed) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: { peggedAssets: [makeStabilityAsset({ id, price: null })] },
+      updatedAt: nowSec,
+    });
+    const db = makeDb({
+      depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: nowSec - 3600 }],
+      priceCacheRows: [{ asset_id: id, price: 0.98, updated_at: nowSec - 60 }],
+    });
+    db.sqlite.prepare("UPDATE price_cache SET source = ? WHERE asset_id = ?").run(source, id);
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db);
+    if (observed) {
+      expect(snapshot.contributors).toEqual([expect.objectContaining({ id, bps: -200 })]);
+      expect(snapshot.replayPriceFallbackCount).toBe(1);
+    } else {
+      expect(result.status).toBe("degraded");
+      expect(snapshot.contributors).toEqual([]);
+      expect(snapshot.openDepegsWithoutPrice).toBe(1);
+      expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
+    }
+  });
+
   it("publishes with an explicit degraded component when an open depeg has no usable price", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({

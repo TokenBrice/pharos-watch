@@ -115,6 +115,8 @@ A missing, blank or unrecognised `priceConfidence` is unvalidated evidence, not 
 
 Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
 
+The primary price must pass `isObservedPrice(...)`. Nominal par references are not observations and enter DEWS as `null`; with no observed primary or DEX price, divergence is unavailable rather than a measured calm zero. Independent observed DEX evidence remains eligible under the existing divergence rules.
+
 - DEX input comes only from `dex_prices` rows refreshed within the live depeg trust window (`DEX_FRESHNESS_SEC = 4500`, currently 75 minutes) **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`

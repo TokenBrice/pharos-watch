@@ -31,7 +31,8 @@ const FLOW_INTENSITY_DENOMINATOR_SCALE = 0.3;
 const FLOW_INTENSITY_DENOMINATOR_FLOOR_USD = 1_000_000;
 // Calibrated so z ≈ 2 (a ~2σ flow move) maps to the ±100 score bound.
 const FLOW_INTENSITY_Z_MULTIPLIER = 50;
-const FLOW_INTENSITY_MIN_DATA_DAYS = 7;
+/** Minimum baseline history for a pressure score; a shorter baseline is NR regardless of valuation. */
+export const FLOW_INTENSITY_MIN_DATA_DAYS = 7;
 const FLOW_INTENSITY_MIN = -100;
 const FLOW_INTENSITY_MAX = 100;
 const MIN_ACTIVITY_USD = 50_000;
@@ -119,6 +120,31 @@ export function computeGaugeScore(
 
   if (totalMcap === 0) return null;
   return weightedSum / totalMcap;
+}
+
+/**
+ * Whether the published gauge band is independent of weight withheld from it.
+ * `computeGaugeScore` re-weights over the scored weight `W`; a withheld coin
+ * of weight `w` has an unknown true intensity `x` in [-100, 100] (or none),
+ * so the full-cohort score lies in [(W·S − 100w)/(W+w), (W·S + 100w)/(W+w)].
+ * The band is robust only when both ends fall in the band of `S` (bands are
+ * contiguous, so the whole interval does). The implied shift is at most
+ * w/(W+w)·(100 + |S|).
+ */
+export function isGaugeBandRobustToWithheldWeight(input: {
+  score: number;
+  scoredMcapUsd: number;
+  withheldMcapUsd: number;
+}): boolean {
+  const { score, scoredMcapUsd, withheldMcapUsd } = input;
+  if (withheldMcapUsd <= 0) return true;
+  if (!(scoredMcapUsd > 0)) return false;
+  const total = scoredMcapUsd + withheldMcapUsd;
+  // Clamp away floating-point overshoot past the score range (getGaugeBand's out-of-range sentinel).
+  const lower = clamp((scoredMcapUsd * score + FLOW_INTENSITY_MIN * withheldMcapUsd) / total, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX);
+  const upper = clamp((scoredMcapUsd * score + FLOW_INTENSITY_MAX * withheldMcapUsd) / total, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX);
+  const band = getGaugeBand(score);
+  return getGaugeBand(lower) === band && getGaugeBand(upper) === band;
 }
 
 // ---------------------------------------------------------------------------

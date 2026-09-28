@@ -290,6 +290,7 @@ export function deriveStablecoinOgCardData({
     symbol: coin.symbol,
     grade: grade ?? "NR",
     pegPrice,
+    pegPriceIsNominal: pegPrice != null && coin.priceObservedAtMode === "nominal_reference",
     dewsBand: dewsBand ?? null,
     liquidityScore: dexLiquidityScore,
     mcap,

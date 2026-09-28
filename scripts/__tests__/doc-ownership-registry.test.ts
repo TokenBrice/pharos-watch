@@ -120,7 +120,7 @@ describe("doc-ownership registry integrity", () => {
       "docs/supply-snapshot.md#supply-pipeline": 38_122,
       // Release B adds nullable flow/supply/PSI, nominal-price, and audit-verdict
       // wire contracts to this existing generated catalogue; retain its ratchet.
-      "docs/api-reference.md#public-endpoints": 46_462,
+      "docs/api-reference.md#public-endpoints": 46_840,
       "docs/telegram-alerts.md#commands": 33_389,
       "docs/telegram-mini-app.md": 44_446,
       "docs/worker-infrastructure.md#shared-database-helpers": 25_871,

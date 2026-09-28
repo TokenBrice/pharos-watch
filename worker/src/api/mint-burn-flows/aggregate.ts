@@ -23,6 +23,7 @@ import { readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-st
 import {
   computeFlowIntensity,
   detectFlightToQuality,
+  FLOW_INTENSITY_MIN_DATA_DAYS,
   detectFlightToQualityFromValuedNets,
   type FlightToQualityResult,
   type ValuedNetFlow24h,
@@ -373,10 +374,13 @@ export async function fetchAggregateData(
  * keep their known-valuation net, labelled through `valuation`. Direction and
  * flight-to-quality are published only when missing valuation cannot alter
  * them. Pressure needs a complete 24h window and a baseline that is not
- * partial. A weighted coin whose pressure is withheld for that reason leaves the
- * gauge, which then re-weights over the remaining coins; it is disclosed in
- * `partialValuationInputs` with its weight in `partialValuationMcapUsd`, so
- * consumers never read the re-weighted score as the full-cohort composite.
+ * partial. A weighted coin whose pressure is withheld for that reason (and
+ * could otherwise score: 24h activity and at least the minimum baseline
+ * history) leaves the gauge, which then re-weights over the scored coins. It is
+ * disclosed in `partialValuationInputs` with its weight in
+ * `partialValuationMcapUsd`, beside the weight actually scored
+ * (`scoredMcapUsd`), so consumers can bound what the withheld weight could do
+ * to the score.
  */
 export function buildCoinSummaries(
   data: AggregateData,
@@ -389,10 +393,12 @@ export function buildCoinSummaries(
   flightToQuality: FlightToQualityResult | null;
   trackedMcapUsd: number;
   mcapUnavailableCoins: number;
-  /** Weighted coins with 24h activity and a baseline whose pressure was withheld for incomplete valuation. */
+  /** Weighted coins that could score but whose pressure was withheld for incomplete valuation. */
   partialValuationInputs: number;
   /** Sum of those coins' observed weights. */
   partialValuationMcapUsd: number;
+  /** Sum of the weights of coins whose pressure entered the gauge score. */
+  scoredMcapUsd: number;
 } {
   const coinAgg = aggregateHourlyRowsByStablecoin(data.hourly24hRows);
   const coins: CoinFlowSummary[] = [];
@@ -403,6 +409,7 @@ export function buildCoinSummaries(
   let mcapUnavailableCoins = 0;
   let partialValuationInputs = 0;
   let partialValuationMcapUsd = 0;
+  let scoredMcapUsd = 0;
 
   const seenCoinIds = new Set<string>();
   for (const config of ACTIVE_MINT_BURN_CONFIGS) {
@@ -439,7 +446,9 @@ export function buildCoinSummaries(
 
     if (mcap !== null) {
       gaugeInputs.push({ intensity: pressureShiftScore, mcap });
-      if (has24hActivity && baseline && !valuationAdmitsPressure) {
+      if (pressureShiftScore !== null) scoredMcapUsd += mcap;
+      // A baseline shorter than the minimum history is NR whatever the valuation.
+      if (has24hActivity && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !valuationAdmitsPressure) {
         partialValuationInputs += 1;
         partialValuationMcapUsd += mcap;
       }
@@ -521,6 +530,7 @@ export function buildCoinSummaries(
     mcapUnavailableCoins,
     partialValuationInputs,
     partialValuationMcapUsd,
+    scoredMcapUsd,
   };
 }
 

@@ -11,6 +11,7 @@ export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
       "The five known verdicts share one schema and separate PegScore/DDR eligibility policies",
       "PegScore still excludes false_positive and disputed, includes no_data, and retains legacy null-verdict evidence",
       "Unknown verdicts are excluded from direct scoring and SQL recomputation; strict archived parsing rejects them without coercion to null",
+      "DEWS excludes nominal par references from price inputs; absent observed primary and DEX prices leave divergence unavailable rather than measured calm",
       "No detection threshold, DEWS formula, known-verdict weight, or stored historical row changes",
     ],
     commits: [],

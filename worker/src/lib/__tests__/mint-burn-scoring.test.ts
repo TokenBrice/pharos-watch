@@ -5,6 +5,7 @@ import {
   detectFlightToQuality,
   detectFlightToQualityFromValuedNets,
   getGaugeBand,
+  isGaugeBandRobustToWithheldWeight,
 } from "../mint-burn-scoring";
 
 describe("computeFlowIntensity", () => {
@@ -227,6 +228,26 @@ describe("computeGaugeScore", () => {
 
   it("returns null for eligible intensities with zero total market cap", () => {
     expect(computeGaugeScore([{ intensity: 40, mcap: 0 }])).toBeNull();
+  });
+});
+
+describe("isGaugeBandRobustToWithheldWeight", () => {
+  // Score 37.5 (HEALTHY, [10, 40)): withheld weight w beside scored weight W can lift the
+  // full-cohort score to (37.5W + 100w)/(W + w), which reaches the 40 edge exactly at w = W/24.
+  it.each([
+    ["just below the band edge", 25, 1, true],
+    ["exactly at the band edge", 24, 1, false],
+    ["no withheld weight", 1, 0, true],
+    ["nothing scored", 0, 1, false],
+  ])("%s", (_label, scoredMcapUsd, withheldMcapUsd, robust) => {
+    expect(isGaugeBandRobustToWithheldWeight({ score: 37.5, scoredMcapUsd, withheldMcapUsd })).toBe(robust);
+  });
+
+  it("checks the downward edge and stays in range at the score bounds", () => {
+    // Down: (12W − 100w)/(W + w) reaches 10 at w = 2W/110.
+    expect(isGaugeBandRobustToWithheldWeight({ score: 12, scoredMcapUsd: 110, withheldMcapUsd: 1.9 })).toBe(true);
+    expect(isGaugeBandRobustToWithheldWeight({ score: 12, scoredMcapUsd: 110, withheldMcapUsd: 2.1 })).toBe(false);
+    expect(isGaugeBandRobustToWithheldWeight({ score: -100, scoredMcapUsd: 3e11, withheldMcapUsd: 1 })).toBe(true);
   });
 });
 

@@ -74,6 +74,12 @@ export interface PublishedMintBurnGauge {
    * `null` on publications that predate valuation completeness (unknown).
    */
   partialValuationInputs: number | null;
+  /**
+   * Weight withheld from `score` and weight scored (v6.23 publications); `null`
+   * when the publication does not carry them, so the withheld weight is unbounded.
+   */
+  partialValuationMcapUsd: number | null;
+  scoredMcapUsd: number | null;
   coins: PublishedGaugeCoin[];
   /** Per-chain 24 h net flow, sorted by absolute net flow (descending). */
   chains: PublishedGaugeChain[];
@@ -88,6 +94,13 @@ export type PublishedMintBurnGaugeResult =
 
 function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** Optional non-negative weight: absent is `null`; present but invalid is a contract break (`false`). */
+function parseOptionalWeight(value: unknown): number | null | false {
+  if (value === undefined) return null;
+  const weight = finiteNumber(value);
+  return weight === null || weight < 0 ? false : weight;
 }
 
 /** Required nullable net: `null` is a gated value; absent or non-finite is a contract break. */
@@ -173,11 +186,14 @@ export function parsePublishedMintBurnGauge(
   const rawPartialInputs = payload.gauge.partialValuationInputs;
   const partialValuationInputs = rawPartialInputs === undefined ? null : finiteNumber(rawPartialInputs);
   if (rawPartialInputs !== undefined && (partialValuationInputs === null || partialValuationInputs < 0)) return null;
+  const partialValuationMcapUsd = parseOptionalWeight(payload.gauge.partialValuationMcapUsd);
+  const scoredMcapUsd = parseOptionalWeight(payload.gauge.scoredMcapUsd);
+  if (partialValuationMcapUsd === false || scoredMcapUsd === false) return null;
   const coins = parseCoins(payload.coins);
   if (!coins) return null;
   const chains = parseChains(payload.chains);
   if (!chains) return null;
-  return { score, partialValuationInputs, coins, chains, publishedAt, stale };
+  return { score, partialValuationInputs, partialValuationMcapUsd, scoredMcapUsd, coins, chains, publishedAt, stale };
 }
 
 /** Read the single published gauge. Fails closed rather than recomputing. */

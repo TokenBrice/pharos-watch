@@ -74,13 +74,16 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     const { db, sqlite } = fixtures.open();
     const emptyCoin = MINT_BURN_CONFIGS.find((config) =>
       !["usdt-tether", "usdc-circle", "usdai-usd-ai"].includes(config.stablecoinId))!.stablecoinId;
-    // Complete, fully valued history ten days back gives both coins a pressure baseline.
+    // Complete, fully valued history ten days back gives USDT and USDai a pressure baseline;
+    // USDC's three-day history is below the seven-day minimum, so it is NR whatever the valuation.
     const baselineHour = Math.floor((NOW - 10 * 24 * HOUR) / HOUR) * HOUR;
+    const shortBaselineHour = Math.floor((NOW - 3 * 24 * HOUR) / HOUR) * HOUR;
     sqlite.exec(`
       INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
         mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
       VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000),
-             ('usdai-usd-ai', 'arbitrum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000);
+             ('usdai-usd-ai', 'arbitrum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000),
+             ('usdc-circle', 'ethereum', ${shortBaselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000);
     `);
     await produce(db, [
       // Mixed: unpriced USDT mint plus a priced $1M effective burn.
@@ -95,7 +98,7 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
     const summaries = buildCoinSummaries(
       data,
-      new Map([["usdt-tether", 100_000_000_000], ["usdai-usd-ai", 1_000_000_000]]),
+      new Map([["usdt-tether", 100_000_000_000], ["usdai-usd-ai", 1_000_000_000], ["usdc-circle", 50_000_000_000]]),
       null,
     );
     const { coins, gaugeInputs } = summaries;
@@ -131,9 +134,14 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     expect(usdai.pressureShiftScore).toEqual(expect.any(Number));
 
     // USDT's pressure is withheld, so the score re-weights over the complete coin alone; the
-    // withheld hundredfold weight is disclosed so the score is never read as the full cohort.
+    // withheld hundredfold weight is disclosed beside the scored weight. USDC is not counted:
+    // its short baseline leaves it NR even with complete valuation.
     expect(computeGaugeScore(gaugeInputs)).toBeCloseTo(usdai.pressureShiftScore!, 9);
-    expect(summaries).toMatchObject({ partialValuationInputs: 1, partialValuationMcapUsd: 100_000_000_000 });
+    expect(summaries).toMatchObject({
+      partialValuationInputs: 1,
+      partialValuationMcapUsd: 100_000_000_000,
+      scoredMcapUsd: 1_000_000_000,
+    });
 
     const empty = byId.get(emptyCoin)!;
     expect(empty.valuation).toEqual({

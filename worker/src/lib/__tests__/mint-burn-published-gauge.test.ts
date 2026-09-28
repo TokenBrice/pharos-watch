@@ -51,6 +51,8 @@ describe("parsePublishedMintBurnGauge", () => {
     expect(gauge).toEqual({
       score: -12.5,
       partialValuationInputs: null,
+      partialValuationMcapUsd: null,
+      scoredMcapUsd: null,
       coins: [
         {
           id: "usdt-tether", symbol: "USDT", intensity: -20, net24hUsd: -5_000_000,
@@ -69,7 +71,7 @@ describe("parsePublishedMintBurnGauge", () => {
 
   it("reads valuation blocks and valuation-gated null nets", () => {
     const gauge = parsePublishedMintBurnGauge(payload({
-      gauge: { score: -12.5, partialValuationInputs: 1 },
+      gauge: { score: -12.5, partialValuationInputs: 1, partialValuationMcapUsd: 5e6, scoredMcapUsd: 2e9 },
       coins: [{
         stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, netFlow24hUsd: null,
         valuation: {
@@ -81,6 +83,8 @@ describe("parsePublishedMintBurnGauge", () => {
     }), NOW_SEC, false);
     expect(gauge).toMatchObject({
       partialValuationInputs: 1,
+      partialValuationMcapUsd: 5e6,
+      scoredMcapUsd: 2e9,
       coins: [{ id: "usdt-tether", net24hUsd: null, valuation24h: PARTIAL_MINT_VALUATION, baselineValuation: "complete" }],
       chains: [{ chainId: "ethereum", net24hUsd: null, valuation: "partial" }],
     });
@@ -100,6 +104,8 @@ describe("parsePublishedMintBurnGauge", () => {
     ["no gauge object", { coins: [] }],
     ["non-numeric score", payload({ gauge: { score: "12" } })],
     ["non-numeric partial valuation input count", payload({ gauge: { score: 1, partialValuationInputs: "1" } })],
+    ["negative withheld weight", payload({ gauge: { score: 1, partialValuationInputs: 1, partialValuationMcapUsd: -1 } })],
+    ["non-numeric scored weight", payload({ gauge: { score: 1, scoredMcapUsd: "1" } })],
     ["non-array coins", payload({ coins: {} })],
     ["coin without a net flow", payload({ coins: [{ stablecoinId: "a", symbol: "A" }] })],
     ["coin with an unparseable intensity", payload({
