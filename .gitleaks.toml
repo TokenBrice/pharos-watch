@@ -260,6 +260,14 @@ regexTarget = "match"
 regexes = ['''^key: "uniswap-v4-exact"$''']
 paths = ['''(?:^|/)shared/lib/pricing-source-registry-dex-search\.ts$''']
 
+[[allowlists]]
+description = "Uniswap V3 BSC shadow circuit-source registry key is not a credential"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^key: "uniswap-v3-bsc-shadow"$''']
+paths = ['''(?:^|/)shared/lib/circuit-sources\.ts$''']
+
 # Reviewed public on-chain identities only; other values in these files stay scanned.
 [[allowlists]]
 description = "Reviewed public Tron USDT contract in the bounded blacklist repair and its test"
