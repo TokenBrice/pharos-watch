@@ -1503,13 +1503,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     provenance: fixedInput.liveReserveProvenanceMap,
   });
   const chainSupplyGenerationId = safetyScoreV9ChainSupplySourceGenerationId(fixedInput);
-  const chainSupplyObservedAtSec = maximumObservedAt(
-    Object.values(fixedInput.safetyScoreV9SupplyAttributionById).map(
-      (attribution) => attribution.observedAtSec,
-    ),
-    fixedInput.updatedAt,
-    clockSec,
-  );
+  // Attribution packets carry their own per-asset observation time and window
+  // (safetyScoreV9ChainSupplyObservedAtSec / safetyScoreV9ChainSupplyMaxAgeSec),
+  // so the shared source keeps the fixed input's observation time.
+  const chainSupplyObservedAtSec = boundedObservedAt(fixedInput.updatedAt, clockSec);
   const pegGenerationDigest = domainDigest("safety-score-v9.peg.v1", {
     pegDataById: fixedInput.pegDataById,
     navPriceById: fixedInput.navPriceById ?? {},
