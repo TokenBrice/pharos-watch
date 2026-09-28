@@ -7,6 +7,7 @@ import {
 import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { computePriceConsensus } from "../../lib/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import {
   buildPrimarySourceCandidates,
   type DlListQuote,
@@ -31,6 +32,20 @@ function isPrimaryPublicationDexAggregateEligible(
 ): boolean {
   const trustTier = assetId === VUSD_PRIMARY_DEX_AGGREGATE_ID ? "ui" : "depeg";
   return isTrustedDexPriceRow(row, nowSec, trustTier);
+}
+
+/**
+ * Consensus stamps a cluster with its oldest agreeing leg's clock. The DEX
+ * aggregate is published hourly and stays eligible for 75 minutes, so as an
+ * extra leg it would pin fresh CEX/oracle agreement to the previous DEX run
+ * and age the composite past the 30-minute primary budget. That stale clock
+ * made the next DEX run reject its own quote legs (USDC, USDT, ...), drop their
+ * DEX rows, and flip back an hour later. Beside other legs it therefore joins
+ * only while it fits the primary budget; as the sole leg it keeps its own
+ * freshness window and publishes as single-source.
+ */
+function isDexAggregateWithinPrimaryBudget(row: DexPriceRow, nowSec: number): boolean {
+  return nowSec - row.updated_at <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC;
 }
 
 export function buildPrimaryConsensusResults(params: {
@@ -85,19 +100,22 @@ export function buildPrimaryConsensusResults(params: {
       curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
       navQuote: params.quoteMaps.navPrices.get(asset.id),
       protocolSources: params.dexPriceSources.get(asset.id),
-      dexAggregateQuote: (() => {
-        const dexRow = params.dexRows.get(asset.id);
-        return dexRow && isPrimaryPublicationDexAggregateEligible(asset.id, dexRow, params.nowSec)
-          ? dexRow
-          : undefined;
-      })(),
+      dexAggregateQuote: undefined,
     };
+    const dexRow = params.dexRows.get(asset.id);
+    const eligibleDexAggregate =
+      dexRow && isPrimaryPublicationDexAggregateEligible(asset.id, dexRow, params.nowSec) ? dexRow : undefined;
+    if (eligibleDexAggregate && isDexAggregateWithinPrimaryBudget(eligibleDexAggregate, params.nowSec)) {
+      collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
+    }
 
-    const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
-      buildPrimarySourceCandidates(asset, collectedQuotes, {
-        divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
-        nowSec: params.nowSec,
-      });
+    const sourceBuildOptions = { divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS, nowSec: params.nowSec };
+    let sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
+    if (sourceBuild.sources.length === 0 && eligibleDexAggregate && !collectedQuotes.dexAggregateQuote) {
+      collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
+      sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
+    }
+    const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } = sourceBuild;
 
     logDexCandidateTelemetry(dexCandidateTelemetry);
 

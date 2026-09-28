@@ -241,6 +241,21 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 8, 27) / 1000,
     expiresAt: Date.UTC(2026, 9, 25) / 1000,
   },
+  {
+    stablecoinId: "jpym-mento",
+    owner: "ops",
+    reason:
+      "Mento's weekend FX closure empties the only executable JPYm lane (pricing 6.39 moved JPYm off nominal par onto mento-fpmm): the JPYm/USDm FPMM 0x9861f6d2…2b2b41 getAmountOut reverts FXMarketClosed (selector 0xa407143a) through the same OracleAdapter gate as CHFm, verified at 2026-09-26 12:00 UTC (block 78523242) and 2026-09-27 12:00 UTC, and quotes again on weekdays (0.00635164772 USDm per JPYm at 2026-09-28 12:00 UTC). The mento-fpmm lane re-prices JPYm automatically after the Sunday 23:00 UTC reopen. No admissible alternative lane exists: CoinGecko celo-japanese-yen is stale since 2026-08-19 and has no other tracked venue. Renew while Mento keeps the weekly FX closure; a weekday gap is a real lane failure.",
+    sources: [
+      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/breakers/MarketHoursBreaker.sol",
+      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
+      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/FPMM.sol",
+      "https://docs.mento.org/mento-v3/build/deployments/addresses",
+      "https://www.coingecko.com/en/coins/celo-japanese-yen",
+    ],
+    reviewedAt: Date.UTC(2026, 8, 28) / 1000,
+    expiresAt: Date.UTC(2026, 9, 25) / 1000,
+  },
 ];
 
 export interface ResolvedStablecoinPriceGapReviews {

@@ -89,7 +89,7 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
-          When AUDm, CHFm, CADm or COPm has no usable market price, Pharos can use its verified Mento pool or Broker sell quote
+          When AUDm, CHFm, CADm, COPm or JPYm has no usable market price, Pharos can use its verified Mento pool or Broker sell quote
           multiplied by a fresh USDm price. Contract identity, fees, available capacity and trading limits must support the exit. This remains a
           short-lived fallback price, subject to the same depeg and weak-source safeguards as other soft sources.
           BD can similarly recover a missing price from its reviewed Aerodrome BD/USDC stable pool, multiplied by a

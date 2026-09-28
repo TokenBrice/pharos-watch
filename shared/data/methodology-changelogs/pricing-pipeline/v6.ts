@@ -2,6 +2,38 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.40",
+    title: "DEX aggregate leg bounded by the primary freshness budget",
+    date: "2026-09-28",
+    effectiveAt: 1790553600,
+    summary:
+      "The hourly DEX aggregate (`dex-promoted`) joins a primary consensus beside other legs only while its row is at most `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` (30 minutes) old. Consensus stamps a cluster with its oldest agreeing leg, so a DEX row inside its own 75-minute window but older than 30 minutes had been ageing fresh CEX and oracle agreement past the primary budget. As the sole admissible leg it keeps its 75-minute window and publishes as single-source.",
+    impact: [
+      "`worker/src/cron/sync-stablecoins/enrich-prices-primary-consensus.ts`: an eligible DEX aggregate row older than 1,800 s is left out when any other primary leg survives source building. The row's own eligibility is unchanged: `isTrustedDexPriceRow` depeg tier, 75-minute age, $1M TVL (VUSD keeps the UI tier). Promoted per-protocol DEX legs are unchanged",
+      "Why: the DEX liquidity stage runs at xx:10. It admits a tracked price as a pool quote leg only when `classifyPrimaryDepegTrust` rates it `authoritative` or it has fresh multi-source agreement, both within 30 minutes. For 28 assets (USDC, USDT, DAI, USDe, PYUSD, GHO, …) the xx:01 cache carried the previous DEX run's aggregate as an agreeing leg, stamped exactly one run (3,600 s) before the next stage. That stage then rejected those quote legs: at 2026-09-28 21:10 UTC only 36 of 567 prices survived and Aerodrome Sugar retained 20 pools instead of 364. The DEX price publication from that run dropped the USDC and USDT rows (20 rows remained). The following syncs therefore had no DEX leg, the next stage trusted the majors again, and the rows came back. The result was a self-sustaining two-hour cycle. The measured-execution target inventory alternated between 761–766 and 648–651 targets (Aerodrome 120 ↔ 9), and SBC's only comparable exit route, an Aerodrome measured quote, alternated with it (Safety Score 65 B- ↔ 51 C-)",
+      "Effect: on the hourly cadence the xx:01 cache that the DEX stage reads never carries a DEX leg older than 30 minutes, so the majors' primary clock comes from their fresh CEX, oracle and CoinGecko legs. Every stage admits them as quote legs, and the DEX price publication keeps their rows. Assets whose cluster was CoinGecko or Curve plus the DEX aggregate publish from their remaining legs once the DEX leg passes 30 minutes. With no other leg, the DEX aggregate still publishes alone as single-source",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.39",
+    title: "Observed prices replace nominal par for CHFAU, CADD and JPYm",
+    date: "2026-09-28",
+    effectiveAt: 1790553600,
+    summary:
+      "Three assets leave the nominal-par scope because each now has observed price evidence. CHFAU and CADD publish their ordinary primary consensus: fresh CoinGecko quotes backed by live DEX venues. JPYm moves to the guarded Mento FPMM lane, an executable on-chain sell quote into USDm. `protocol-par` remains only for usbd-bima, usdq-quill, zarm-mento and xofm-mento; sofid-sofi is configured but quarantined.",
+    impact: [
+      "Through 6.37 the par override replaced any market price for these three assets. Under 6.38 par still displaced every quote the depeg detector does not rate `authoritative`, so their observed evidence was never published. CHFAU (`allunity-chf`) and CADD (`cad-digital`) had fresh CoinGecko quotes at review: 1.2039 USD, +14 bps against CHF FX, and 0.7061 USD, +2 bps against CAD FX. CoinGecko's tickers for both trade on DEX pools of the tracked contracts: CHFAU/USDC on Raydium, Uniswap v3 and Aerodrome (about $104K to $108K each), and CADD on Curve (CADD/frxUSD about $222K), Aerodrome and Hydrex. These rows now publish their primary consensus under the unchanged guards, pool challenge and weights. With no admissible quote the row is missing, with no nominal fallback",
+      "`worker/src/lib/authoritative-price-sources/mento-fpmm.ts` becomes a reviewed route table. CHFm is unchanged. JPYm uses FPMM `0x9861f6d2fe392b934c86ec89d2886ceb772b2b41`, with the same pinned pool and StableTokenV3 implementations, 30 bps fees, a JPY-scaled 20,000-JPYm impact quote and a 200,000-JPYm inventory floor (CHFm's USD scale). The quote on 2026-09-28 was 0.006334 USDm per JPYm. CoinGecko `celo-japanese-yen` has been stale since 2026-08-19",
+      "XOFm stays on nominal par because its only observed quote (Mento Broker, 200 bps spread) publishes about −225 bps against the XOF reference, beyond the 150 bps non-USD depeg threshold, which would present a spread as an off-peg reading",
+      "The Mento FPMM lane keeps its existing policy: missing-price-only, fallback confidence, not replay-safe, not depeg-authoritative, with a five-minute lifetime and a fresh trusted USDm parent. Mento's weekend FX closure makes the JPYm quote revert with `FXMarketClosed` (verified at 2026-09-26 and 2026-09-27 12:00 UTC). JPYm therefore publishes as missing on weekends, not as nominal par. A dated price-gap review acknowledges this gap, as for CHFm and COPm",
+      "Downstream: on weekdays the three rows count as observed in price coverage, so `nominalReferenceIds` shrinks from seven to four (usdq-quill, usbd-bima, zarm-mento, xofm-mento). Historical replay for the three no longer resolves to an empty `protocol-par` series. It uses the default market-history path, like other market-priced assets. Safety Score inputs change without a Safety Score methodology change: the peg rows lose nominal provenance, so `missing-peg-input` stops binding on CADD and JPYm, and the ZCHF→CHFAU StablecoinBridge route regains its CHFAU output valuation. Replaying the 2026-09-28 20:30 UTC capture with the new peg rows gives cadd-cad-digital 60 → 65, jpym-mento 60 → 70 and zchf-frankencoin 80 → 81 (exit 90.67 → 94.95). A weekend variant with JPYm unpriced gives the same scores",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.38",
     title: "Nominal par references and trusted-market precedence",
     date: "2026-09-28",

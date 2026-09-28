@@ -14,19 +14,16 @@ import type { PeggedAsset } from "../enrich-prices";
 
 const NOW = 1_800_000_000;
 const REFERENCES: PriceValidationReferences = {
-  rates: { peggedCHF: 1.27, peggedCAD: 0.73, peggedJPY: 0.00628, peggedZAR: 0.0608, peggedXOF: 0.00172 },
+  rates: { peggedZAR: 0.0608, peggedXOF: 0.00172 },
   type: "fresh",
   updatedAt: NOW - 60,
-  updatedAtByPeg: { peggedCHF: NOW - 120, peggedCAD: NOW - 120, peggedJPY: NOW - 120, peggedZAR: NOW - 120, peggedXOF: NOW - 120 },
-  typeByPeg: { peggedCHF: "fresh", peggedCAD: "fresh", peggedJPY: "fresh", peggedZAR: "fresh", peggedXOF: "fresh" },
+  updatedAtByPeg: { peggedZAR: NOW - 120, peggedXOF: NOW - 120 },
+  typeByPeg: { peggedZAR: "fresh", peggedXOF: "fresh" },
 };
 const NOMINAL_ROUTES = [
   ["sofid-sofi", "peggedUSD", 1],
   ["usbd-bima", "peggedUSD", 1],
   ["usdq-quill", "peggedUSD", 1],
-  ["chfau-allunity", "peggedCHF", 1.27],
-  ["cadd-cad-digital", "peggedCAD", 0.73],
-  ["jpym-mento", "peggedJPY", 0.00628],
   ["zarm-mento", "peggedZAR", 0.0608],
   ["xofm-mento", "peggedXOF", 0.00172],
 ] as const;
@@ -141,12 +138,12 @@ describe("nominal par precedence (DEC-02 / CR-43)", () => {
   });
 
   it("publishes no nominal reference when non-USD par has no usable FX reference, and drops a carried one", async () => {
-    const carried = makeAsset("chfau-allunity", "peggedCHF", {
-      price: 1.27,
+    const carried = makeAsset("zarm-mento", "peggedZAR", {
+      price: 0.0608,
       priceSource: "protocol-par",
       priceObservedAtMode: "nominal_reference",
       priceSyncedAt: NOW - 600,
-      nominalPriceReference: { price: 1.27, source: "protocol-par", mode: "nominal_reference" },
+      nominalPriceReference: { price: 0.0608, source: "protocol-par", mode: "nominal_reference" },
     });
     // Explicit references object: passing `undefined` would fall back to the fresh default references.
     const published = await runPrecedence(carried, { rates: {}, type: "none", updatedAt: null });
