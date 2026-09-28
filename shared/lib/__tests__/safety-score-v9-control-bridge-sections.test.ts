@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
+import { provenNullShareDeploymentBound } from "../safety-score-v9/control-bridge-join";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   boundedUnknown,
@@ -117,5 +118,44 @@ describe("Safety Score v9 control bridge sections", () => {
 
     expect(result.components).toContainEqual(expect.objectContaining({ componentKey: "bridge:unverified" }));
     expect(result.reasons.map((reason) => reason.code)).toContain("missing-bridge-routes");
+  });
+
+  it("bounds a null-share deployment on an ambiguous chain by the unsplit chain row", () => {
+    const control = bridgeControl("bridge:xlayer", {
+      deploymentKey: "xlayer:0x74b7f16337b8972027f6196a17a631ac6de26d22",
+    });
+    const factsWithAmbiguousRow = (ambiguousShare: number) => ({
+      ...baseFacts([control]),
+      supply: makeSupplyPartition({
+        routes: [
+          {
+            deploymentRouteKey: "ethereum:0xnative",
+            supplyShare: 1 - ambiguousShare,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "native",
+          },
+          {
+            deploymentRouteKey: "ambiguous-chain:fixture-asset:xlayer",
+            supplyShare: ambiguousShare,
+            reviewState: "unmatched",
+          },
+        ],
+      }),
+    });
+    const materialityPath = `control:${control.controlKey}:materiality`;
+
+    const immaterialFacts = factsWithAmbiguousRow(0.0002);
+    expect(provenNullShareDeploymentBound(immaterialFacts, control)).toBeCloseTo(0.0002, 12);
+    expect(
+      evaluateV9EconomicControl(args({ facts: immaterialFacts })).reasons.map((reason) => reason.path),
+    ).not.toContain(materialityPath);
+
+    // The unsplit chain row is an upper bound, not a zero: a material row keeps
+    // the null-share deployment fail-closed.
+    const materialFacts = factsWithAmbiguousRow(0.2);
+    expect(provenNullShareDeploymentBound(materialFacts, control)).toBeCloseTo(0.2, 12);
+    expect(evaluateV9EconomicControl(args({ facts: materialFacts })).reasons).toContainEqual(
+      expect.objectContaining({ code: "runtime-bridge-materiality-unavailable", path: materialityPath }),
+    );
   });
 });

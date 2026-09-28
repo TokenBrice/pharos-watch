@@ -19,6 +19,7 @@ import {
   metaMap,
   rebuildFixed,
   reviewedOracleMeta,
+  reviewedLockMintRoute,
   reviewedUpgradeExtension,
   strategyVaultExtension,
   unresolvedMintMeta,
@@ -212,6 +213,29 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     // SAFETY-SCORE-V9-25 L-08: no supply observation cannot prove subthreshold applicability.
     expect(unmatchedFixture({ ethereum: 1 }, [bridgeRoute("hyperevm:0x4444444444444444444444444444444444444444")]).asset.economicControlReview?.bridge.status.applicability.state).toBe("required");
     expect(unmatchedFixture({ ethereum: 1 }, [bridgeRoute("futurechain:0x5555555555555555555555555555555555555555")]).asset.economicControlReview?.bridge.status.observationState).toBe("bounded-unknown");
+  });
+
+  it("accepts a subthreshold ambiguous chain row only when every candidate route is reviewed", () => {
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+    const ambiguousOutcome = (baseShare: number, secondRouteReviewed: boolean) => {
+      const secondBaseRoute = secondRouteReviewed
+        ? { ...reviewedLockMintRoute("base:0x3333333333333333333333333333333333333333"), sourceChain: "ethereum", canonicalChain: "ethereum" }
+        : bridgeRoute("base:0x3333333333333333333333333333333333333333");
+      const fixture = unmatchedFixture({ ethereum: 1 - baseShare, base: baseShare }, [bridgeRoute("base:0x2222222222222222222222222222222222222222", "reviewed"), secondBaseRoute]);
+      return {
+        rows: fixture.asset.supplyReview?.selectedBridgeRoutes,
+        state: fixture.asset.economicControlReview?.bridge.status.observationState,
+        reasons: evaluateV9FactSet(compileSafetyScoreV9FactSetFromFixedInput(fixture.fixed, fixture.extension), V9_CANDIDATE_POLICY_V1).assets[0]!.control.reasons.map((reason) => reason.code),
+      };
+    };
+    const reviewed = ambiguousOutcome(0.0002, true);
+    expect(reviewed.rows).toContainEqual(expect.objectContaining({ deploymentRouteKey: "ambiguous-chain:alpha:base", reviewState: "unmatched" }));
+    expect(reviewed.state).toBe("known");
+    expect(reviewed.reasons).not.toContain("runtime-bridge-materiality-unavailable");
+    const material = ambiguousOutcome(threshold + 0.01, true);
+    expect(material.state).toBe("bounded-unknown");
+    expect(material.reasons).toContain("runtime-bridge-materiality-unavailable");
+    expect(ambiguousOutcome(0.0002, false).state).toBe("bounded-unknown");
   });
 
   it("keeps access-only controls known without an unresolved identity gap", () => {

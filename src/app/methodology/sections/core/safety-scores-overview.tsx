@@ -110,6 +110,15 @@ export function SafetyScoresOverview() {
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
       </p>
       <p>
+        Since methodology v9.93, a chain whose supply row several reviewed profile routes compete for no longer blocks
+        the bridge review when that row is immaterial. The unsplit chain row is an upper bound on every candidate
+        deployment&apos;s share, so a row below both the deployment-material and common-mode thresholds, on a chain
+        whose candidate routes are all reviewed, is accepted as bounded supply evidence; a material ambiguous row, or
+        one with any unreviewed candidate route, still fails closed, and shares are never summed across rows. The
+        null-share deployment bound now includes that unsplit chain row instead of reading the unavailable
+        within-chain share as zero.
+      </p>
+      <p>
         Since methodology v9.92, an asset whose intake publishes only an aggregate circulating quantity and no per-chain
         rows no longer bounds that quantity on a bridge gap the control pillar already owns: there is no per-chain
         partition for the bridge-materiality join to be ambiguous about, the state is diagnosed as
