@@ -11,6 +11,7 @@ import {
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
   buildUniswapV4PoolQuery,
+  buildUniV3MessariPoolQuery,
   buildUniV3PoolQuery,
 } from "../constants";
 import {
@@ -78,12 +79,34 @@ describe("subgraph source families", () => {
     const releaseWave = createDeferred<void>();
     const fetchMock = mockFetch([{
       match: (request) => configuredChains.some(([, subgraphId]) => request.url.endsWith(subgraphId)),
-      respond: async () => {
+      respond: async (request) => {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
         if (inFlight === 5) waveStarted.resolve(undefined);
         await releaseWave.promise;
         inFlight--;
+        if (request.url.endsWith(UNIV3_SUBGRAPHS.celo)) {
+          return {
+            body: {
+              data: {
+                liquidityPools: [
+                  {
+                    id: poolAddress,
+                    inputTokens: [
+                      { id: token0, symbol: "USDC", decimals: 6 },
+                      { id: token1, symbol: "USDT", decimals: 18 },
+                    ],
+                    inputTokenBalances: ["500000000000", "500000000000000000000000"],
+                    fees: [{ feeType: "FIXED_TRADING_FEE", feePercentage: "0.3" }],
+                    // 1.0001^276324 * 10^(6 - 18) ≈ 1 USDT per USDC.
+                    tick: "276324",
+                    totalValueLockedUSD: "0",
+                  },
+                ],
+              },
+            },
+          };
+        }
         return {
           body: {
             data: {
@@ -280,6 +303,116 @@ describe("subgraph source families", () => {
       ]);
     expect(result.uniswapV4ExecutionCandidates.get(key!)?.map((row) => row.activeLiquidity))
       .toEqual(["123456789", "0"]);
+  });
+
+  it("reads the Celo lane through the Messari schema with tick spot prices and balance-derived TVL", async () => {
+    const usdt = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e";
+    const cusd = "0x765de816845861e75a25fca122bb6898b8b1282a";
+    const usdc = "0xceba9300f2b948710d2653dd7b07f33a8b32118c";
+    const usdtUsdcPool = "0x1a810e0b6c2dd5629afa2f0c898b9512c6f78846";
+    const usdtCusdPool = "0x5dc631ad6c26bea1a59fbf2c2680cf3df43d249f";
+    const unorderedPool = "0x4444444444444444444444444444444444444444";
+    const dustPool = "0x5555555555555555555555555555555555555555";
+    const tradingFee = (feePercentage: string) => [
+      { feeType: "FIXED_PROTOCOL_FEE", feePercentage: "0" },
+      { feeType: "FIXED_LP_FEE", feePercentage },
+      { feeType: "FIXED_TRADING_FEE", feePercentage },
+    ];
+    // Live Celo rows (2026-09-28): the deployment prices USD₮ at ~$4.84 and
+    // USDC at $0, so its `totalValueLockedUSD` must not reach the lookups.
+    const celoPools = [
+      {
+        id: usdtUsdcPool,
+        inputTokens: [
+          { id: usdt, symbol: "USD₮", decimals: 6 },
+          { id: usdc, symbol: "USDC", decimals: 6 },
+        ],
+        inputTokenBalances: ["100882319722", "86069486562"],
+        fees: tradingFee("0.01"),
+        tick: "-2",
+        totalValueLockedUSD: "487967.6232870665396164666847742079",
+      },
+      {
+        id: usdtCusdPool,
+        inputTokens: [
+          { id: usdt, symbol: "USD₮", decimals: 6 },
+          { id: cusd, symbol: "cUSD", decimals: 18 },
+        ],
+        inputTokenBalances: ["412427378097", "229522950517790733582893"],
+        fees: tradingFee("0.01"),
+        tick: "276321",
+        totalValueLockedUSD: "2220257.323562950490716069290656678",
+      },
+      {
+        id: unorderedPool,
+        inputTokens: [
+          { id: usdc, symbol: "USDC", decimals: 6 },
+          { id: usdt, symbol: "USD₮", decimals: 6 },
+        ],
+        inputTokenBalances: ["100000000000", "100000000000"],
+        fees: tradingFee("0.05"),
+        tick: "0",
+        totalValueLockedUSD: "200000",
+      },
+      {
+        id: dustPool,
+        inputTokens: [
+          { id: usdt, symbol: "USD₮", decimals: 6 },
+          { id: usdc, symbol: "USDC", decimals: 6 },
+        ],
+        inputTokenBalances: ["1000000000", "1000000000"],
+        fees: tradingFee("0.05"),
+        tick: "0",
+        totalValueLockedUSD: "9000000",
+      },
+    ];
+    const fetchMock = mockFetch([{
+      match: (request) => request.url.endsWith(UNIV3_SUBGRAPHS.celo),
+      respond: () => ({ body: { data: { liquidityPools: celoPools } } }),
+    }, {
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: () => ({ body: { data: { pools: [] } } }),
+    }], { requireMatch: true });
+
+    const result = await fetchUniV3Data(
+      "graph-key",
+      new Map(),
+      new Map([[`celo:${usdt}`, "usdt-tether"], [`celo:${cusd}`, "cusd-celo"]]),
+    );
+
+    expect(result.failedChains).toEqual([]);
+    const celoRequests = fetchMock.getHistory().filter(({ url }) => url.endsWith(UNIV3_SUBGRAPHS.celo));
+    expect(celoRequests).toHaveLength(1);
+    expect(JSON.parse(celoRequests[0]!.body ?? "{}").query).toBe(buildUniV3MessariPoolQuery(0));
+
+    // FIXED_TRADING_FEE 0.01% -> 100 pips; the unordered and sub-floor rows are dropped.
+    expect(result.uniV3PoolFees.get(`celo:${usdtUsdcPool}`)).toBe(100);
+    expect(result.uniV3PoolFees.get(`celo:${usdtCusdPool}`)).toBe(100);
+    expect(result.uniV3PoolFees.has(`celo:${unorderedPool}`)).toBe(false);
+    expect(result.uniV3PoolFees.has(`celo:${dustPool}`)).toBe(false);
+
+    // USDC is the reference side: USD₮ is priced at token1 per token0 from the
+    // tick, and TVL is valued from balances rather than the ~$488K reported.
+    const [usdtObs] = result.uniV3PriceObs.get("usdt-tether") ?? [];
+    const usdtPerUsdc = Math.pow(1.0001, -2);
+    expect(usdtObs?.chain).toBe("celo");
+    expect(usdtObs?.price).toBeCloseTo(usdtPerUsdc, 12);
+    expect(usdtObs?.tvl).toBeCloseTo(86_069.486562 + 100_882.319722 * usdtPerUsdc, 3);
+
+    // Neither USD₮ nor cUSD is a USD reference symbol: no price observation,
+    // but the pool still resolves as a measured-execution candidate.
+    expect(result.uniV3PriceObs.has("cusd-celo")).toBe(false);
+    const cusdPerUsdt = Math.pow(1.0001, 276_321) * 1e-12;
+    const [cusdCandidate] = result.uniV3ExecutionCandidates.get(
+      buildUniV3ExecutionCandidateKey("celo", [usdt, cusd], 100)!,
+    ) ?? [];
+    expect(cusdCandidate).toMatchObject({ chain: "celo", poolAddress: usdtCusdPool, feePips: 100 });
+    expect(cusdCandidate?.token1Price).toBeCloseTo(cusdPerUsdt, 12);
+    expect(cusdCandidate?.token0Price).toBeCloseTo(1 / cusdPerUsdt, 12);
+    expect(cusdCandidate?.tokens).toEqual([
+      { address: usdt, symbol: "USD₮", decimals: 6 },
+      { address: cusd, symbol: "cUSD", decimals: 18 },
+    ]);
   });
 
   it("records chains whose subgraph answers with a GraphQL error and no entities", async () => {

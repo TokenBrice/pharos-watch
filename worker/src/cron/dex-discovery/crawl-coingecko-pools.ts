@@ -6,6 +6,7 @@ import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CHAIN_META } from "@shared/lib/chains";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
+import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import {
   cgPoolVolume24hReading,
@@ -123,11 +124,12 @@ interface CgOnchainPoolAdmissionInput {
 
 /**
  * The single CG onchain row admission policy, shared by the token-pool crawl
- * and the stale-pool refresh pass: the tracked address must be a pool leg, TVL
- * must reach the $1k floor, the pool's own pair ratio must agree with its leg
- * prices, a usable price must be plausible for the stablecoin, and turnover
- * above 50x TVL is rejected as malformed. Volume is stored as `0` only when the
- * provider also reports zero 24h trades; otherwise an unproven zero is `null`.
+ * and the stale-pool refresh pass: the DEX id must not be blocked, the tracked
+ * address must be a pool leg, TVL must reach the $1k floor, the pool's own pair
+ * ratio must agree with its leg prices, a usable price must be plausible for
+ * the stablecoin, and turnover above 50x TVL is rejected as malformed. Volume
+ * is stored as `0` only when the provider also reports zero 24h trades;
+ * otherwise an unproven zero is `null`.
  */
 export function admitCgOnchainPool({
   pool,
@@ -138,6 +140,7 @@ export function admitCgOnchainPool({
   context,
   coherence,
 }: CgOnchainPoolAdmissionInput): StagedPool | null {
+  if (isBlockedDexId(parsed.dexId)) return null;
   const side =
     trackedAddress === parsed.baseTokenAddress
       ? "base"

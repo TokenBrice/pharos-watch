@@ -261,6 +261,16 @@ export const DexLiquidityCronMetadataSchema = z.object({
           }),
         )
         .optional(),
+      qualityDriftRebaselined: z
+        .array(
+          z.object({
+            flag: z.string(),
+            baselineValue: z.number(),
+            acceptedValue: z.number(),
+            runs: z.number(),
+          }),
+        )
+        .optional(),
       nearCoverageGuard: z.boolean().optional().default(false),
       nearValueGuard: z.boolean().optional().default(false),
       nearMajorCoverageGuard: z.boolean().optional().default(false),

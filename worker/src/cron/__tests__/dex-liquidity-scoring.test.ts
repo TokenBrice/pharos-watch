@@ -607,6 +607,32 @@ describe("dex-liquidity scoring", () => {
     expect(result.globalAgg.poolCount).toBe(1);
   });
 
+  it("drops NEAR Intents rows from coin scoring and the global aggregate while other NEAR venues count", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("frax-frax", "FRAX");
+    const pool = (poolId: string, project: string, chain: string, tvlUsd: number, volumeUsd1d: number, source: PoolEntry["source"]): PoolEntry => ({
+      poolId, project, chain, tvlUsd, symbol: "FRAX-X", volumeUsd1d, volumeUsd7d: volumeUsd1d * 7, poolType: "cg-amm", source,
+    });
+    metrics.topPools = [
+      pool("near:intents-wnear", "near-intents", "near", 90_000_000, 3, "cg_onchain"),
+      pool("near:refv1-4525", "rhea-finance", "near", 250_000, 35_000, "cg_onchain"),
+      pool("ethereum:curve-frax", "curve", "Ethereum", 1_000_000, 100_000, "dl"),
+    ];
+    withReadings(metrics.topPools);
+
+    const result = await computeStablecoinScores(db, new Map([["frax-frax", metrics]]), new Map(), undefined, SCORING_CLOCK_SEC);
+
+    expect(result.retainedPoolsByStablecoin.get("frax-frax")?.map((retained) => retained.poolId).sort())
+      .toEqual(["ethereum:curve-frax", "near:refv1-4525"]);
+    expect(metrics.totalTvlUsd).toBe(1_250_000);
+    expect(metrics.protocolTvl).toEqual({ "rhea-finance": 250_000, curve: 1_000_000 });
+    expect(result.globalAgg.totalTvl).toBe(1_250_000);
+    expect(result.globalAgg.poolCount).toBe(2);
+    expect(result.globalAgg.protocolTvl["near-intents"]).toBeUndefined();
+    expect(result.globalAgg.chainTvl.near).toBe(250_000);
+    expect(result.diagnostics.fallbackCounters.retainedExclusionBlockedDex).toBe(1);
+  });
+
   it("gates activity on admitted-TVL coverage and publishes global observed volume with its coverage", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const pool = (poolId: string, tvlUsd: number, volumeUsd1d: number | null, ageSec: number | null): PoolEntry => ({

@@ -150,6 +150,29 @@ describe("refreshStaleRegistryPools", () => {
     expect(next).toMatchObject({ poolsDue: 4, refreshed: 0, stalePoolsRemaining: 4 });
   });
 
+  it("never selects blocked DEX rows, so they spend no request and count as no stale TVL", async () => {
+    const { sqlite, db } = fixtures.open();
+    const n = (index: number) => addr("ab", index);
+    await seed(db, [
+      { poolId: `ethereum:${n(1)}`, protocol: "near-intents", dexId: "near-intents", tvlUsd: 120_000_000, refreshedAt: NOW - 48 * HOUR },
+      { poolId: `ethereum:${n(2)}`, tvlUsd: 3_000_000, refreshedAt: NOW - 48 * HOUR },
+    ]);
+    const deps = makeDeps(async (_network, addresses) => ({
+      transportOk: true,
+      schemaDegraded: false,
+      pools: addresses.map((address) => usdcPool("ethereum", address)),
+    }));
+
+    const summary = await refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: deps,
+    });
+
+    expect(deps.fetchCgPoolsByAddressesWithStatus.mock.calls.map(([, addresses]) => addresses)).toEqual([[n(2)]]);
+    expect(summary).toMatchObject({ poolsDue: 1, refreshed: 1, stalePoolsRemaining: 0, staleTvlRemaining: 0 });
+    expect(sqlite.prepare("SELECT refreshed_at FROM dex_pool_registry WHERE pool_id = ?").all(`ethereum:${n(1)}`))
+      .toEqual([{ refreshed_at: NOW - 48 * HOUR }]);
+  });
+
   it("stores a zero volume only when the provider also reports zero 24h trades", async () => {
     const { sqlite, db } = fixtures.open();
     const z = (index: number) => addr("fa", index);
