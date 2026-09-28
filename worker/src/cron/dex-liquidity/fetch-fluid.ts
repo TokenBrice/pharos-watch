@@ -45,11 +45,14 @@ const FLUID_MAX_ENRICHED_POOLS_PER_CHAIN = 5;
  * token units. For the large-pool anti-poisoning guard, a raw side volume at
  * least as large as the USD floor is the only source-side evidence available
  * before token references are loaded by the scoring stage. Smaller pools use
- * the existing TVL floor and are not subject to that guard.
+ * the existing TVL floor and are not subject to that guard. An absent
+ * side-volume reading (a malformed side) is unmeasured, not a zero, so it
+ * cannot clear the guard either — only measured sides can.
  */
 function shouldEnrichFluidPool(pool: DexApiPool): boolean {
   if (pool.tvlUsd <= FLUID_LARGE_POOL_TVL_USD) return true;
-  const tokenVolumes = pool.tokenVolumes24h ?? [];
+  const tokenVolumes = pool.tokenVolumes24h;
+  if (tokenVolumes == null) return false;
   return tokenVolumes.some(
     (volume) => Number.isFinite(volume) && volume >= FLUID_LARGE_POOL_MIN_VOLUME_USD,
   );

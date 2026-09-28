@@ -458,9 +458,34 @@ describe("adaptReservoirReserves", () => {
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "source-total-gap", effect: "degraded" })]),
     );
+    expect(result.warnings).not.toContainEqual(expect.objectContaining({ code: "source-rows-exceed-total" }));
     expect(result.metadata).toMatchObject({
       sourceTotalGapPct: 20,
     });
+  });
+
+  it("admits asset rows within the reconciliation tolerance above totalAssets without a gap or warning", async () => {
+    const { result } = await runReservoir("rusd-reservoir", { ...SAMPLE_RESPONSE, totalAssets: "99.6" });
+
+    expect(result.warnings?.filter((warning) => warning.effect !== "info") ?? []).toEqual([]);
+    expect(result.metadata).not.toHaveProperty("sourceTotalGapPct");
+  });
+
+  // runReservoir also runs output validation, so these slices reach the sync
+  // core's fatal-warning gate instead of being rejected as malformed first.
+  it.each(["99", "50"])("withholds asset rows above totalAssets %s with a fatal source-rows-exceed-total warning", async (totalAssets) => {
+    const { result } = await runReservoir("rusd-reservoir", { ...SAMPLE_RESPONSE, totalAssets, totalLiabilities: "40" });
+
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "source-rows-exceed-total", effect: "fatal" }));
+    expect(result.warnings).not.toContainEqual(expect.objectContaining({ code: "source-total-gap" }));
+  });
+
+  it("rejects a contra row with its own reason instead of dropping it from the reconciled rows", async () => {
+    await expect(runReservoir("rusd-reservoir", {
+      ...SAMPLE_RESPONSE,
+      assets: [...SAMPLE_RESPONSE.assets, { label: "USDC accrued fee offset", totalBalanceValue: "-10" }],
+      totalAssets: "90",
+    })).rejects.toThrow(/invalid value: -10/);
   });
 
   it("emits a degraded warning when total liabilities exceed total assets", async () => {

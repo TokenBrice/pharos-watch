@@ -343,3 +343,86 @@ describe("fetchBalancerPools stable-math amp join", () => {
     expect(result.ok).toBe(true);
   });
 });
+
+describe("fetchBalancerPools enrichment admission (absent volume is not a zero)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function admissionPool(address: string, totalLiquidity: string, volume24h: string) {
+    return {
+      id: `${address}0002000000000000000000aa`,
+      type: "COMPOSABLE_STABLE",
+      chain: "MAINNET",
+      address,
+      dynamicData: { totalLiquidity, volume24h, swapFee: "0.0001", isPaused: false, swapEnabled: true },
+      poolTokens: [
+        { address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", symbol: "USDC", decimals: 6, balance: "2500000", balanceUSD: "2500000", weight: "0.5", priceRate: "1.02" },
+        { address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", symbol: "USDT", decimals: 6, balance: "2500000", balanceUSD: "2500000", weight: "0.5", priceRate: "1.02" },
+      ],
+    };
+  }
+
+  function dispatch(pools: Array<{ id: string }>) {
+    // The sweep always offers an amp row for every pool, so a pool that is
+    // wrongly admitted as an exact candidate attaches amp and fails the test.
+    mockFetch([
+      {
+        match: "api-v3.balancer.fi",
+        matchBody: "aggregatorPools",
+        body: { data: { aggregatorPools: pools.map((pool) => ({ id: pool.id, chain: "MAINNET", amp: "250.0" })) } },
+      },
+      {
+        match: "api-v3.balancer.fi",
+        matchBody: "poolGetPools",
+        body: { data: { poolGetPools: pools } },
+      },
+    ], { requireMatch: true });
+  }
+
+  const SMALL = "0xaaaa000000000000000000000000000000000001";
+  const LARGE = "0xbbbb000000000000000000000000000000000002";
+
+  it("enriches a small pool whose volume field is unparseable (absent, not zero)", async () => {
+    dispatch([admissionPool(SMALL, "5000000", "not-a-number")]);
+    const result = await fetchBalancerPools();
+    const pool = result.pools.find((row) => row.poolAddress === SMALL);
+    expect(pool?.volume24hUsd).toBeNull();
+    expect(pool?.amp).toBe(250);
+    expect(pool?.executionCapabilityGate).toBeUndefined();
+  });
+
+  it("skips the capability sweep for a large pool with an absent volume reading", async () => {
+    dispatch([admissionPool(LARGE, "150000000", "not-a-number")]);
+    const result = await fetchBalancerPools();
+    const pool = result.pools.find((row) => row.poolAddress === LARGE);
+    expect(pool?.volume24hUsd).toBeNull();
+    expect(pool?.amp).toBeUndefined();
+    expect(pool?.executionCapabilityGate).toBeUndefined();
+  });
+
+  it("enriches a large pool whose measured volume clears the floor", async () => {
+    dispatch([admissionPool(LARGE, "150000000", "60000")]);
+    const result = await fetchBalancerPools();
+    const pool = result.pools.find((row) => row.poolAddress === LARGE);
+    expect(pool?.volume24hUsd).toBe(60000);
+    expect(pool?.amp).toBe(250);
+  });
+
+  it("does not enrich a large pool whose measured volume is zero", async () => {
+    dispatch([admissionPool(LARGE, "150000000", "0.00")]);
+    const result = await fetchBalancerPools();
+    const pool = result.pools.find((row) => row.poolAddress === LARGE);
+    expect(pool?.volume24hUsd).toBe(0);
+    expect(pool?.amp).toBeUndefined();
+    expect(pool?.executionCapabilityGate).toBeUndefined();
+  });
+
+  it("does not enrich any pool whose measured vol/TVL ratio exceeds the sanity bound", async () => {
+    dispatch([admissionPool(SMALL, "5000000", "300000000")]);
+    const result = await fetchBalancerPools();
+    const pool = result.pools.find((row) => row.poolAddress === SMALL);
+    expect(pool?.amp).toBeUndefined();
+    expect(pool?.executionCapabilityGate).toBeUndefined();
+  });
+});

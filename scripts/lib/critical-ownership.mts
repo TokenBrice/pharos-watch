@@ -20,6 +20,10 @@ export const ISOLATED_NODE_TESTS = [
   "scripts/__tests__/serve-static-export.test.ts",
   "shared/lib/__tests__/psi-eligible.test.ts",
   "shared/lib/__tests__/stablecoin-id-registry.test.ts",
+  // vi.mock("vitest") only intercepts mock-d1's onTestFinished import when
+  // this file owns the module cache; under isolate:false another node-project
+  // file that imports mock-d1 first leaves the real binding in place.
+  "shared/test-utils/__tests__/mock-d1.test.ts",
 ];
 export const THREADED_WORKER_TESTS = [
   "worker/src/lib/__tests__/safety-score-v9-native-input-pipeline.test.ts",

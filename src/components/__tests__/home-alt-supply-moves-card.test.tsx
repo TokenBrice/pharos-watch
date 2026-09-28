@@ -21,7 +21,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/lib/stablecoin-static-data", () => ({
-  ACTIVE_STABLECOIN_ID_SET: new Set(["usdr-real", "usdc-circle", "eur-stasis"]),
+  ACTIVE_STABLECOIN_ID_SET: new Set(["usdr-real", "usdc-circle", "eur-stasis", "usdai-usd-ai"]),
 }));
 
 vi.mock("next/image", () => ({
@@ -30,6 +30,7 @@ vi.mock("next/image", () => ({
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
   for (const key of Object.keys(logosByIdMock)) delete logosByIdMock[key];
 });
 
@@ -70,6 +71,29 @@ describe("SupplyMovesCard", () => {
     expect(peakLink.getAttribute("href")).toBe("/stablecoin/usdr-real");
     expect(peakLink.textContent).toContain("USDR");
     expect(peakLink.textContent).toContain("+202%");
+  });
+
+  // USDai's reviewed protocol-internal burn happened at 2026-09-23T20:48:00Z.
+  it.each([
+    ["seven days after the burn", "2026-09-30T20:48:00Z", "USDC — peak 7-day supply mover: +20.0%"],
+    ["just inside the eight-day window", "2026-10-01T20:47:59Z", "USDC — peak 7-day supply mover: +20.0%"],
+    ["once the burn leaves the window", "2026-10-01T20:48:01Z", "USDAI — peak 7-day supply mover: -29.1%"],
+  ])("ranks a coin with a reviewed protocol-internal burn only outside its window: %s", (_label, now, peakName) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(now));
+    useStablecoinsMock.mockReturnValue({
+      data: {
+        peggedAssets: [
+          makeStablecoin({ id: "usdai-usd-ai", symbol: "USDAI", currentSupply: 218_267_235, previousWeekSupply: 307_738_160 }),
+          makeStablecoin({ id: "usdc-circle", symbol: "USDC", currentSupply: 12_000_000, previousWeekSupply: 10_000_000 }),
+        ],
+      },
+      isLoading: false,
+    });
+
+    render(<SupplyMovesCard />);
+
+    expect(screen.getByRole("link", { name: peakName })).toBeTruthy();
   });
 });
 

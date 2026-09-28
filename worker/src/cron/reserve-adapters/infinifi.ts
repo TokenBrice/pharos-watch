@@ -15,8 +15,10 @@ import {
   fetchOnchainMulticall3,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
+  reconcileRowsWithSourceTotal,
   requireJsonInputFromConfig,
   reserveInfoWarning,
+  SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
   sourceKeySlug,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -159,8 +161,6 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "strcx":                   { risk: "high", ...cefiPositionMeta() },
 };
 
-const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
-
 // The protocol /data payload exposes no timestamp of its own. The transparency
 // dashboard's siUSD rate-history series is written by the same backend
 // snapshotter on a 2-hour cadence; its latest point timestamps that snapshot,
@@ -234,6 +234,8 @@ export interface AdaptInfiniFiResult {
   activeFarmCount: number;
   immediateRedeemableUsd?: number;
   supplyUsd?: number;
+  /** Fatal when the farm rows materially exceed the source TVL; the attempt must not publish. */
+  rowsExceedTotalWarning?: LiveReserveWarning;
 }
 
 /** Convert raw InfiniFi protocol data to ReserveSlice[]. Pure function — no I/O. */
@@ -261,8 +263,22 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     (f) => f.type === "PROTOCOL" && f.assetsNormalized > 0,
   );
   const activeFarmTotal = activeFarms.reduce((sum, farm) => sum + farm.assetsNormalized, 0);
-  const sourceTotalGapUsd = Math.max(0, tvl - activeFarmTotal);
+  // PROTOCOL farms sit inside the TVL without a row of their own, so every farm
+  // row reconciles against it. Rows are schema-bound non-negative and zero rows
+  // add nothing, so this sum is already the signed row sum.
+  const { rowsExceedTotalWarning } = reconcileRowsWithSourceTotal({
+    rowTotalUsd: excludedProtocolFarms.reduce((sum, farm) => sum + farm.assetsNormalized, activeFarmTotal),
+    sourceTotalUsd: tvl,
+    exceedsMessage: "InfiniFi farm rows exceed totalTVLAssetNormalized",
+  });
+  // The explicit gap is measured against the emitted active rows, so it carries
+  // the PROTOCOL farm exposure. The active rows are a subset of the reconciled
+  // rows, so clamping here only absorbs in-tolerance drift. A withheld attempt
+  // shares its rows over their own sum, because the sync core rejects malformed
+  // slices before it reads fatal warnings; those slices never publish.
+  const sourceTotalGapUsd = rowsExceedTotalWarning ? 0 : Math.max(0, tvl - activeFarmTotal);
   const sourceTotalGapPct = (sourceTotalGapUsd / tvl) * 100;
+  const shareBasisUsd = rowsExceedTotalWarning ? activeFarmTotal : tvl;
 
   const unknownFarms: string[] = [];
   let unknownExposurePct = 0;
@@ -270,7 +286,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
   const rawSlices: ReserveSlice[] = [];
 
   for (const f of activeFarms) {
-    const pct = (f.assetsNormalized / tvl) * 100;
+    const pct = (f.assetsNormalized / shareBasisUsd) * 100;
     const config = FARM_RISK_MAP[f.name];
     if (!config) {
       unknownFarms.push(f.name);
@@ -311,6 +327,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
       ? { immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized }
       : {}),
     ...(readReceiptSupply(payload) != null ? { supplyUsd: readReceiptSupply(payload) } : {}),
+    ...(rowsExceedTotalWarning ? { rowsExceedTotalWarning } : {}),
   };
 }
 
@@ -577,6 +594,7 @@ export async function fetchInfiniFiReserves(
     message: `Unmapped reserve positions: ${adapted.unknownFarms.sort().join(", ")}`,
     unknownExposurePct: adapted.unknownExposurePct, })]
     : [];
+  if (adapted.rowsExceedTotalWarning) warnings.push(adapted.rowsExceedTotalWarning);
   if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     warnings.push(buildUnknownExposureWarning({ adapterKey: "infinifi", code: "source-total-gap",
     message: adapted.excludedProtocolFarms.length > 0

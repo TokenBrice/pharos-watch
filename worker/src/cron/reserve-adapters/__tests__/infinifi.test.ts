@@ -417,6 +417,7 @@ describe("fetchInfiniFiReserves", () => {
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "source-total-gap", effect: "degraded" }),
     ]));
+    expect(result.warnings).not.toContainEqual(expect.objectContaining({ code: "source-rows-exceed-total" }));
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
       details: {
@@ -425,6 +426,48 @@ describe("fetchInfiniFiReserves", () => {
       sourceTotalGapPct: 20,
       excludedProtocolFarms: ["ProtocolBuffer"],
     });
+  });
+
+  it("admits farm rows within the reconciliation tolerance above TVL without a gap or warning", async () => {
+    const { result } = await run(infinifiNetwork({ payload: farmResponse([
+      { name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 60.2, type: "LIQUID" },
+      { name: "fluid-fUSDC", label: "Fluid USDC", assetsNormalized: 40.2, type: "LIQUID" },
+    ], 100) }));
+
+    expect(result.warnings?.filter((warning) => warning.effect !== "info") ?? []).toEqual([]);
+    expect(result.metadata).toMatchObject({ sourceTotalGapPct: 0, totalReserveUsd: 100 });
+  });
+
+  // runAdapter also runs output validation, so these slices reach the sync
+  // core's fatal-warning gate instead of being rejected as malformed first.
+  it.each([
+    {
+      label: "active rows slightly above TVL",
+      farms: [{ name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 101, type: "LIQUID" as const }],
+    },
+    {
+      label: "active rows far above TVL",
+      farms: [{ name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 150, type: "LIQUID" as const }],
+    },
+    {
+      label: "PROTOCOL rows pushing the farm total above TVL",
+      farms: [
+        { name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 100, type: "LIQUID" as const },
+        { name: "ProtocolBuffer", label: "Protocol Buffer", assetsNormalized: 5, type: "PROTOCOL" as const },
+      ],
+    },
+  ])("withholds $label with a fatal source-rows-exceed-total warning", async ({ farms }) => {
+    const { result } = await run(infinifiNetwork({ payload: farmResponse(farms, 100) }));
+
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "source-rows-exceed-total", effect: "fatal" }));
+    expect(result.warnings).not.toContainEqual(expect.objectContaining({ code: "source-total-gap" }));
+  });
+
+  it("rejects a contra (negative) farm row at the schema instead of netting or dropping it", async () => {
+    await expect(run(infinifiNetwork({ payload: farmResponse([
+      { name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 120, type: "LIQUID" },
+      { name: "fluid-fUSDC", label: "Fluid USDC", assetsNormalized: -20, type: "LIQUID" },
+    ], 100) }))).rejects.toThrow(/schema validation/);
   });
 
 

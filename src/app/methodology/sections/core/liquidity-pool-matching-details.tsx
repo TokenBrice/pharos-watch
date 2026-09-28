@@ -39,12 +39,16 @@ export function LiquidityPoolMatchingDetails() {
           ids with underscores or suffixes are normalized into canonical protocol families before identity matching.
         </p>
         <p>
-          Direct-source precedence is also measurement-aware now. A protocol-native pool only replaces an overlapping
-          DeFiLlama row when it has measured non-zero 24h volume, which means Slipstream pool-state rows can expand Base
-          and Optimism coverage without displacing stronger overlapping DL rows when volume telemetry is absent. Exact
-          pool ids from protocol-native sources still stay reserved for later staged-source dedupe even when the direct
-          row itself is too small to score, so discovery feeds cannot re-add the same address with incompatible TVL
-          semantics.
+          Direct-source precedence is also measurement-aware. A protocol-native pool normally replaces an overlapping
+          DeFiLlama row only when it carries a positive measured 24h volume reading; Aerodrome and Velodrome Slipstream
+          pools, whose on-chain pool-state rows publish no trailing volume, and pools whose tokens carry a reviewed
+          price dependency are explicit exceptions that take precedence without volume. When several registry lanes
+          observed the same pool, the reading that counts is the most trusted lane refreshed within 24 hours, else the
+          most trusted inside the 72-hour admission window, else the freshest lane with a usable reading; a registry
+          zero written before the v6.9 producer activation counts as unmeasured rather than a measured zero, except
+          CoinGecko onchain zeros, which were explicit zero-trade readings. Exact pool ids from protocol-native
+          sources still stay reserved for later staged-source dedupe even when the direct row itself is too small to
+          score, so discovery feeds cannot re-add the same address with incompatible TVL semantics.
         </p>
         <p>
           Discovery rows also need authoritative confirmation when they claim a protocol family that already has a clean

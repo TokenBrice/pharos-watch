@@ -324,14 +324,10 @@ export function parseMapStablecoins(payload: unknown): { peggedAssets: MapStable
     }
     if (ids.has(asset.id)) throw new Error(`Duplicate stablecoin id "${asset.id}" — refusing to build an ambiguous supply join`);
     ids.add(asset.id);
-    for (const [bucket, value] of Object.entries(asset.circulating)) {
-      if (!Number.isFinite(value)) {
-        throw new Error(`Invalid circulating supply for ${asset.id}.${bucket} — expected a finite number`);
-      }
-      if (value < 0) {
-        throw new Error(`Negative circulating supply for ${asset.id}.${bucket} — refusing to render a net-negative asset`);
-      }
-    }
+    // No per-bucket numeric revalidation here: StablecoinListResponseSchema's
+    // SupplyBucketsSchema (z.record(z.string(), z.number().finite().nonnegative()))
+    // already rejects negative and non-finite buckets before parseCanonicalPayload
+    // returns, so the former Number.isFinite/value < 0 checks were unreachable.
     return { id: asset.id, symbol: asset.symbol, circulating: asset.circulating };
   });
   return { peggedAssets };

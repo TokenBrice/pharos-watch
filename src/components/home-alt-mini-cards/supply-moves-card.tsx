@@ -12,6 +12,8 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { hasReviewedProtocolInternalFlowSince } from "@shared/lib/reviewed-protocol-internal-flows";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinData } from "@shared/types";
 
 // Coins whose total supply is below this floor are excluded from the
@@ -19,19 +21,28 @@ import type { StablecoinData } from "@shared/types";
 // a 5% move on USDT, and showing it would crowd out real signal.
 const MIN_TRACKED_MCAP_USD = 10_000_000;
 
+// A reviewed protocol-internal mint or burn (USDai's 2026-09-23 loan-deployment
+// burn) changes token supply without holder flow; mint/burn flow methodology
+// already excludes it from counted flow. A coin is left out of the movers while
+// such an event sits inside its week-over-week comparison. The previous-week
+// value is a daily point, so the window reaches back eight days, not seven.
+const REVIEWED_INTERNAL_FLOW_LOOKBACK_SEC = 8 * DAY_SECONDS;
+
 interface Mover {
   id: string;
   symbol: string;
   pctChange: number;
 }
 
-function compute(coins: readonly StablecoinData[]): {
+function computeSupplyMovers(coins: readonly StablecoinData[], nowSec: number): {
   ups: Mover[];
   downs: Mover[];
 } {
   const movers: Mover[] = [];
+  const internalFlowSinceSec = nowSec - REVIEWED_INTERNAL_FLOW_LOOKBACK_SEC;
   for (const c of coins) {
     if (!ACTIVE_STABLECOIN_ID_SET.has(c.id)) continue;
+    if (hasReviewedProtocolInternalFlowSince(c.id, internalFlowSinceSec)) continue;
     const current = getCirculatingRaw(c);
     const prev = getPrevWeekRaw(c);
     if (current < MIN_TRACKED_MCAP_USD && prev < MIN_TRACKED_MCAP_USD) continue;
@@ -57,7 +68,13 @@ export function SupplyMovesCard(): React.JSX.Element {
   const logos = logosById;
   const logoMap = logos ?? {};
 
-  const { ups, downs } = useMemo(() => compute(data?.peggedAssets ?? []), [data]);
+  const { ups, downs } = useMemo(() => {
+    const nowSec = query.dataUpdatedAt > 0
+      ? Math.floor(query.dataUpdatedAt / 1000)
+      : // eslint-disable-next-line react-hooks/purity -- Date.now() only used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result is bounded by the query's refetchInterval.
+        Math.floor(Date.now() / 1000);
+    return computeSupplyMovers(data?.peggedAssets ?? [], nowSec);
+  }, [data, query.dataUpdatedAt]);
   const peak = useMemo<Mover | null>(() => {
     const top = ups[0];
     const bottom = downs[0];

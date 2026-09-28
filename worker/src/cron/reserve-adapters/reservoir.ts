@@ -6,7 +6,9 @@ import {
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
   makeOnchainCallers,
+  reconcileRowsWithSourceTotal,
   reserveInfoWarning,
+  SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
   unverifiedFreshnessMetadata,
   requireJsonInputFromConfig,
 } from "./helpers";
@@ -149,8 +151,6 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
   },
 ];
 
-const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
-
 // Reservoir's USDC Peg Stability Module. Every modeled rUSD / srUSD / wsrUSD
 // exit terminates on this contract's USDC leg, so its current USDC balance —
 // not the wider balance-sheet USDC bucket, which sits in lending vaults — is
@@ -251,6 +251,8 @@ export interface AdaptReservoirResult {
   stableBucketLiquidityUsd: number;
   immediateRedeemableUsd: number;
   supplyUsd: number | null;
+  /** Fatal when the asset rows materially exceed totalAssets; the attempt must not publish. */
+  rowsExceedTotalWarning?: LiveReserveWarning;
 }
 
 export function adaptReservoirReserves(payload: ReservoirReservesResponse): AdaptReservoirResult {
@@ -267,12 +269,23 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     };
   }
 
+  // Signed: a contra row nets against the total rather than being dropped, so it
+  // cannot fabricate an overstatement. The shared classifier below still rejects
+  // negative and non-finite rows, so a contra row fails the attempt instead of
+  // being attributed to an arbitrary bucket.
   const disclosedAssetValue = payload.assets.reduce((sum, asset) => {
     const value = Number(asset.totalBalanceValue);
-    return Number.isFinite(value) && value > 0 ? sum + value : sum;
+    return Number.isFinite(value) ? sum + value : sum;
   }, 0);
-  const sourceTotalGapUsd = Math.max(0, totalAssets - disclosedAssetValue);
-  const sourceTotalGapPct = (sourceTotalGapUsd / totalAssets) * 100;
+  const {
+    gapUsd: sourceTotalGapUsd,
+    gapPct: sourceTotalGapPct,
+    rowsExceedTotalWarning,
+  } = reconcileRowsWithSourceTotal({
+    rowTotalUsd: disclosedAssetValue,
+    sourceTotalUsd: totalAssets,
+    exceedsMessage: "Reservoir asset rows exceed totalAssets",
+  });
   const assets =
     sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT
       ? [
@@ -315,6 +328,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     stableBucketLiquidityUsd,
     immediateRedeemableUsd,
     supplyUsd,
+    ...(rowsExceedTotalWarning ? { rowsExceedTotalWarning } : {}),
   };
 }
 
@@ -371,6 +385,7 @@ export async function fetchReservoirReserves(
           unknownExposurePct: adapted.unknownExposurePct, }),
         ]
       : [];
+  if (adapted.rowsExceedTotalWarning) warnings.push(adapted.rowsExceedTotalWarning);
   if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     warnings.push(
       buildUnknownExposureWarning({ adapterKey: "reservoir", code: "source-total-gap",
