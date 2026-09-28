@@ -48,11 +48,18 @@ interface PositionDetailsEntry {
     closed?: boolean;
     denied?: boolean;
     collateralBalance?: string;
-    /** Minted-token debt of this position, raw integer in zchfDecimals. */
+    /** Frankencoin: minted ZCHF debt of this position, raw integer in zchfDecimals. */
     minted?: string;
-    /** The stablecoin token this position mints (ZCHF or dEURO). */
+    /** Frankencoin: the ZCHF token this position mints. */
     zchf?: string;
     zchfDecimals?: number;
+    /** dEURO: outstanding principal (`Position.principal()`), raw integer in deuroDecimals. */
+    principal?: string;
+    /** dEURO: outstanding interest (`Position.getInterest()`), raw integer in deuroDecimals. */
+    interest?: string;
+    /** dEURO: the dEURO token this position mints. */
+    deuro?: string;
+    deuroDecimals?: number;
   }>;
 }
 
@@ -209,6 +216,44 @@ function parseCollateralBalance(raw: string | undefined, decimals: number): bigi
   return BigInt(raw);
 }
 
+interface PositionLiability {
+  raw: bigint;
+  decimals: number;
+  /** Minted-token address that prices the liability; absent leaves coverage incomplete. */
+  token: string | undefined;
+}
+
+/**
+ * Reads one open position's outstanding minted-token liability. Frankencoin
+ * rows carry `minted` in `zchfDecimals`. dEURO rows carry `principal` and
+ * `interest` in `deuroDecimals`: the API reads `Position.principal()` and
+ * `Position.getInterest()` live, and their sum is `Position.getDebt()`, the
+ * full debt the position owes. The API reports `interest: "0"` when its own
+ * interest read fails, which the payload cannot distinguish from zero accrual.
+ * The protocol is chosen from which field family the row carries; a row with
+ * both or neither family is unparseable rather than combined across different
+ * debt semantics.
+ */
+function parsePositionLiability(position: PositionDetailsEntry["positions"][number]): PositionLiability | null {
+  const hasDeuroFields = position.deuro !== undefined || position.deuroDecimals !== undefined ||
+    position.principal !== undefined || position.interest !== undefined;
+  const hasZchfFields = position.zchf !== undefined || position.zchfDecimals !== undefined ||
+    position.minted !== undefined;
+  if (hasDeuroFields === hasZchfFields) return null;
+  if (hasDeuroFields) {
+    const decimals = parseBoundedDecimals(position.deuroDecimals);
+    if (decimals == null) return null;
+    const principal = parseCollateralBalance(position.principal, decimals);
+    const interest = parseCollateralBalance(position.interest, decimals);
+    if (principal == null || interest == null) return null;
+    return { raw: principal + interest, decimals, token: position.deuro };
+  }
+  const decimals = parseBoundedDecimals(position.zchfDecimals);
+  const minted = decimals == null ? null : parseCollateralBalance(position.minted, decimals);
+  if (decimals == null || minted == null) return null;
+  return { raw: minted, decimals, token: position.zchf };
+}
+
 export function adaptCollateralPositions(
   details: PositionDetailsPayload,
   prices: PriceMappingPayload,
@@ -291,20 +336,19 @@ export function adaptCollateralPositions(
   const total = values.reduce((acc, value) => acc + value.usd, 0);
   if (total <= 0) return { slices: [] };
 
-  // Liability side: each open position's minted ZCHF/dEURO, valued through the
-  // minted token's own price-mapping row. Both sides of the assets ÷ liability
-  // ratio come from the same position payload over the same scope. A minted
-  // row without a price makes the liability incomplete, so the ratio is
-  // withheld rather than overstated.
+  // Liability side: each open position's outstanding ZCHF/dEURO debt, valued
+  // through the minted token's own price-mapping row. Both sides of the
+  // assets ÷ liability ratio come from the same position payload over the same
+  // scope. A minted row without a price makes the liability incomplete, so the
+  // ratio is withheld rather than overstated.
   let mintedUsd = 0;
   let mintedCoverageComplete = true;
   const debtPriceTimestamps: unknown[] = [];
   for (const entry of Object.values(details)) {
     for (const [positionIndex, position] of entry.positions.entries()) {
       if (position.closed || position.denied) continue;
-      const mintedDecimals = parseBoundedDecimals(position.zchfDecimals);
-      const mintedRaw = mintedDecimals == null ? null : parseCollateralBalance(position.minted, mintedDecimals);
-      if (mintedDecimals == null || mintedRaw == null) {
+      const liability = parsePositionLiability(position);
+      if (liability == null) {
         mintedCoverageComplete = false;
         warnings.push(reserveDegradedWarning(
           "unparseable-minted-balance",
@@ -312,9 +356,9 @@ export function adaptCollateralPositions(
         ));
         continue;
       }
-      if (mintedRaw <= 0n) continue;
-      const mintedPriceInfo = position.zchf
-        ? prices[position.zchf.toLowerCase()]
+      if (liability.raw <= 0n) continue;
+      const mintedPriceInfo = liability.token
+        ? prices[liability.token.toLowerCase()]
         : undefined;
       const mintedPrice = mintedPriceInfo?.price?.usd;
       if (typeof mintedPrice !== "number" || !Number.isFinite(mintedPrice) || mintedPrice <= 0) {
@@ -322,7 +366,7 @@ export function adaptCollateralPositions(
         continue;
       }
       debtPriceTimestamps.push(mintedPriceInfo?.timestamp);
-      const usd = valueUsdFromBigIntPrice(mintedRaw, mintedDecimals, mintedPrice);
+      const usd = valueUsdFromBigIntPrice(liability.raw, liability.decimals, mintedPrice);
       if (Number.isFinite(usd) && usd >= 0) {
         mintedUsd += usd;
       } else {

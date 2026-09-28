@@ -26,6 +26,9 @@ import {
 } from "../../test-helpers/v9-fixed-input";
 import {
   XAUT_FACT_SET_CLOCK_SEC,
+  alphaMeta,
+  metaMap,
+  rebuildFixed,
   wmFactSetFixedInput,
   wmFactSetMeta,
   xautFactSetFixedInput,
@@ -324,6 +327,67 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
           responsibility: "measured-adverse",
         })),
     );
+  });
+
+  it("keeps an unattributed asset's chain supply on the fixed-input clock when another asset's packet is older", () => {
+    const clockSec = XAUT_FACT_SET_CLOCK_SEC;
+    const xautInput = xautFactSetFixedInput({
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedGOLD: 2_480_000_000 },
+      omitLiveReserve: true,
+    });
+    const alphaInput = exactFixedInput({ clockSec });
+    const fixed = rebuildFixed({
+      ...xautInput,
+      activeAssetIds: ["alpha", "xaut-tether"],
+      pegDataById: { ...xautInput.pegDataById, ...alphaInput.pegDataById },
+      dexLiqMap: { ...xautInput.dexLiqMap, ...alphaInput.dexLiqMap },
+      resolvedBlacklistStatuses: {
+        ...xautInput.resolvedBlacklistStatuses,
+        ...alphaInput.resolvedBlacklistStatuses,
+      },
+      liveReserveMap: alphaInput.liveReserveMap,
+      liveReserveProvenanceMap: alphaInput.liveReserveProvenanceMap,
+      chainCirculatingById: { ...xautInput.chainCirculatingById, ...alphaInput.chainCirculatingById },
+    });
+    // Accepted under XAUT's one-hour window but older than the generic chain-supply window.
+    fixed.safetyScoreV9SupplyAttributionById = {
+      "xaut-tether": deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: 2_480_000_000,
+        registryFingerprint: fixed.registryFingerprint,
+        scoringClockSec: clockSec,
+        observation: makeXautObservation({
+          clockSec,
+          blockTimeSec: clockSec - 2_800,
+          disclosure: { sourceTimestampSec: clockSec - 2_900, responseSha256: "e".repeat(64) },
+        }),
+      })!,
+    };
+    fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: metaMap(alphaMeta(), xautFactSetMeta()),
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const chainSupply = (assetId: string) => {
+      const asset = compiled.assets.find((entry) => entry.assetId === assetId)!;
+      return {
+        state: asset.supply.status.observationState,
+        evidence: asset.evidence.find((entry) => entry.evidenceId === `${assetId}:chain-supply`),
+      };
+    };
+
+    expect(baseline.sources.chainSupply.maxAgeSec).toBeLessThan(2_800);
+    expect(chainSupply("alpha")).toMatchObject({
+      state: "known",
+      evidence: { observedAtSec: clockSec, freshness: { state: "current" } },
+    });
+    expect(chainSupply("xaut-tether")).toMatchObject({
+      state: "known",
+      evidence: {
+        observedAtSec: clockSec - 2_800,
+        freshness: { state: "current", ageSec: 2_800, maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC },
+      },
+    });
   });
 
   it("withholds XAUT when no reconciled V2 supply packet can establish global chain supply", () => {
