@@ -31,6 +31,8 @@ export interface CgPoolAttributes {
   locked_liquidity_percentage?: string | null;
   // GT-compat fields (CG onchain returns the same shape)
   volume_usd?: { h24: string | null } | null;
+  /** Unvalidated: read only as zero-volume corroboration by `cgPoolVolume24hReading`. */
+  transactions?: { h24?: { buys?: unknown; sells?: unknown } | null } | null;
 }
 
 export interface CgPoolRelationships {
@@ -58,6 +60,19 @@ export interface CgTokenPoolsResult {
   complete: boolean;
   pools: CgPool[];
 }
+
+export interface CgPoolsByAddressResult {
+  transportOk: boolean;
+  schemaDegraded: boolean;
+  pools: CgPool[];
+}
+
+/**
+ * Address ceiling for `/pools/multi`: CoinGecko documents 30 addresses per
+ * request on every plan (50 on Analyst and above), so 30 never depends on the
+ * key's tier.
+ */
+export const CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES = 30;
 
 const CG_ONCHAIN_LOOKUP_MISS_STATUSES = new Set([400, 404]);
 const CG_ONCHAIN_DEFAULT_TIMEOUT_MS = 15_000;
@@ -213,6 +228,57 @@ export async function fetchCgTokenPoolsWithStatus(
 }
 
 /**
+ * Fetch current data for up to 30 pools on one network by pool address.
+ * GET /onchain/networks/{network}/pools/multi/{address,...}
+ * One request, no pagination. Addresses the provider does not index are
+ * omitted from the response, so callers must match returned pools back to the
+ * requested set instead of assuming positional or complete answers.
+ */
+export async function fetchCgPoolsByAddressesWithStatus(
+  network: string,
+  addresses: readonly string[],
+  signal?: AbortSignal,
+  apiKey: string | null = null,
+  options?: CgFetchOptions,
+): Promise<CgPoolsByAddressResult> {
+  if (addresses.length === 0) return { transportOk: true, schemaDegraded: false, pools: [] };
+  if (addresses.length > CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES) {
+    throw new RangeError(`pools/multi accepts at most ${CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES} addresses, got ${addresses.length}`);
+  }
+  const url = cgUrl(
+    `/onchain/networks/${network}/pools/multi/${addresses.join(",")}?include=base_token,quote_token`,
+    apiKey,
+  );
+  const res = await fetchWithRetry(url, {
+    headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
+    signal,
+  }, options?.maxRetries ?? 1, {
+    timeoutMs: options?.timeoutMs,
+    passthroughStatuses: [...CG_ONCHAIN_LOOKUP_MISS_STATUSES],
+  });
+  if (!res?.ok) {
+    if (res && CG_ONCHAIN_LOOKUP_MISS_STATUSES.has(res.status)) {
+      await cancelResponseBodyQuietly(res);
+      return { transportOk: true, schemaDegraded: false, pools: [] };
+    }
+    return { transportOk: false, schemaDegraded: false, pools: [] };
+  }
+  const json = await readCgOnchainJsonBody<{ data?: unknown }>(
+    res,
+    options?.timeoutMs ?? CG_ONCHAIN_DEFAULT_TIMEOUT_MS,
+    signal,
+  );
+  if (!Array.isArray(json.data)) return { transportOk: true, schemaDegraded: true, pools: [] };
+  let schemaDegraded = false;
+  const pools = json.data.filter((pool): pool is CgPool => {
+    const valid = isCgPool(pool);
+    if (!valid) schemaDegraded = true;
+    return valid;
+  });
+  return { transportOk: true, schemaDegraded, pools };
+}
+
+/**
  * Parse a CoinGecko pool's volume. The CG Pro API uses flat `h24_volume_usd`,
  * while the GT-compat format uses nested `volume_usd.h24`. Handle both.
  */
@@ -228,4 +294,22 @@ export function parseCgPoolVolume(attrs: CgPoolAttributes): number {
     if (!isNaN(v) && v > 0) return v;
   }
   return 0;
+}
+
+/**
+ * The pool's 24h volume as an observation: the positive reading when one
+ * exists, `0` only when the provider publishes an explicit zero volume *and*
+ * zero 24h buys and sells, otherwise `null`. An absent or null volume field, or
+ * a zero volume beside nonzero or unpublished trade counts, is not evidence of
+ * a pool that did not trade.
+ */
+export function cgPoolVolume24hReading(attrs: CgPoolAttributes): number | null {
+  const positive = parseCgPoolVolume(attrs);
+  if (positive > 0) return positive;
+  const publishedZero = [attrs.h24_volume_usd, attrs.volume_usd?.h24]
+    .some((value) => value != null && Number.parseFloat(value) === 0);
+  const trades = attrs.transactions?.h24;
+  const noTrades = typeof trades?.buys === "number" && typeof trades.sells === "number" &&
+    trades.buys === 0 && trades.sells === 0;
+  return publishedZero && noTrades ? 0 : null;
 }
