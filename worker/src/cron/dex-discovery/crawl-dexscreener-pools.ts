@@ -1,3 +1,4 @@
+import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { throwIfAborted } from "../../lib/abort";
@@ -193,6 +194,7 @@ export async function crawlDexScreenerPoolsStage({
           });
           continue;
         }
+        if (isBlockedDexId(dexId)) continue;
 
         const poolId = canonicalExitRouteScopedKey(chain, poolAddress);
         const { side, priceUsd } = getChainAwareDsTrackedTokenPriceUsd(pair, address, chain);

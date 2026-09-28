@@ -11,6 +11,7 @@ import {
   type CgPoolsByAddressResult,
 } from "../../lib/coingecko-onchain";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -78,7 +79,7 @@ const SLIPSTREAM_SCOPE_SQL = SLIPSTREAM_REFRESH_SCOPES
 // One row per stablecoin attribution whose CG-family reading is due, plus
 // retained Slipstream rows lacking a fresh same-id CG-family reading. The
 // NOT EXISTS probe rides the (stablecoin_id, pool_id, source) primary key.
-const SELECT_REFRESH_CANDIDATES_SQL = `SELECT r.pool_id, r.stablecoin_id, r.source, r.chain, r.tvl_usd, r.refreshed_at
+const SELECT_REFRESH_CANDIDATES_SQL = `SELECT r.pool_id, r.stablecoin_id, r.source, r.chain, r.protocol, r.dex_id, r.tvl_usd, r.refreshed_at
   FROM dex_pool_registry r
  WHERE r.refreshed_at >= ?
    AND (r.source IN ('cg_onchain', 'gecko_terminal')
@@ -95,6 +96,8 @@ interface RefreshCandidateRow {
   stablecoin_id: string;
   source: string;
   chain: string;
+  protocol: string;
+  dex_id: string | null;
   tvl_usd: number | null;
   refreshed_at: number;
 }
@@ -185,6 +188,9 @@ interface RefreshStalePoolsOptions {
  * Collapse due registry rows into one candidate per physical pool id, ordered
  * stale-first: pools with no in-window reading before pools merely due, then
  * by retained TVL descending, then pool id for a deterministic tie-break.
+ * Blocked DEX rows are never candidates: admission would reject every reading,
+ * so they would only spend request slots and count as stale TVL until they age
+ * out of the registry horizon.
  */
 function buildStalePoolRefreshCandidates(
   rows: readonly RefreshCandidateRow[],
@@ -194,6 +200,7 @@ function buildStalePoolRefreshCandidates(
   const byPoolId = new Map<string, StalePoolRefreshCandidate & { latestCgRefreshAt: number | null }>();
   const unsupported = new Set<string>();
   for (const row of rows) {
+    if (isBlockedDexId(row.dex_id) || isBlockedDexId(row.protocol)) continue;
     const network = CG_CHAIN_MAP[row.chain] ?? CHAIN_META[row.chain]?.providers?.coingecko;
     const prefix = `${row.chain}:`;
     if (!network || !row.pool_id.startsWith(prefix) || row.pool_id.length === prefix.length) {

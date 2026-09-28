@@ -9,6 +9,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // are newest-first by version.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.91",
+    title: "NEAR Intents excluded as a non-AMM venue",
+    date: "2026-09-28",
+    effectiveAt: 1790589600,
+    summary:
+      "NEAR Intents (`near-intents`) joins the blocked DEX ids. It is an intent-settlement verifier, not an AMM: GeckoTerminal and CoinGecko Onchain price every NEAR Intents pair from the `intents.near` contract's shared custody of the quote asset, so the reported pool TVL is not executable depth for the stablecoin. Its rows no longer count toward coin or global DEX liquidity, pool counts, exit routes, challenger snapshots or DEX-implied prices.",
+    impact: [
+      "Evidence (2026-09-28): the FRAX / wNEAR pair reported $120.7M of TVL with $3.27 of 24h volume. That figure is the `intents.near` wNEAR balance (22.98M wNEAR at about $5.29), while the contract held 3.38 FRAX and the whole bridged FRAX supply on NEAR was about 237.7K. DefiLlama lists NEAR Intents as a bridge, and its NEAR-chain TVL counts the same 23.17M NEAR",
+      "Replay of the 09:16 UTC production scoring stage through the real scorer (baseline reproduced all 274 published scores and TVLs exactly): global DEX TVL falls from $9.195B to $8.456B (-$738.6M, -8.0%) and the global pool count from 11,258 to 11,107. USDC loses $383.7M (7.5% of its DEX TVL, 69 pools) and its score moves 73 -> 74. USDT loses $334.0M (8.8%, 72 pools) and holds at 67. FRAX loses $22.9M (29.7%, 11 pools) and moves 51 -> 50. No other coin carries NEAR Intents TVL, no coin loses 40% or more, and no other score changes",
+      "The block applies at every intake as well as at scoring: the CoinGecko Onchain admission policy (token-pool crawl and stale-pool refresh), the DexScreener crawl and the GeckoTerminal crawl reject the venue, so discovery stops persisting or refreshing its rows and they are not counted as observed pools in the deployment census. Existing registry rows are never refresh candidates; they age out over the 14-day staged horizon while the scorer already drops them",
+      "Other NEAR venues are unaffected. Rhea Finance pools, for example, keep counting under the unchanged gates",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.9",
     title: "Admitted-only DEX volume with a TVL coverage floor for Volume Activity",
     date: "2026-09-28",

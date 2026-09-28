@@ -107,8 +107,14 @@ export const COMPOSITE_POOL_NAMES: Record<string, string[]> = {
   "FRAXBP": ["FRAX", "USDC"],
 };
 
-/** Explicitly blocked DEX slugs (dead/deprecated protocols not yet flagged by DeFiLlama) */
-const BLOCKED_DEX_IDS = new Set(["retro", "retro-finance", "retro-finance-v3", "bunni"]);
+/**
+ * Explicitly blocked DEX slugs: dead/deprecated protocols not yet flagged by
+ * DeFiLlama, and non-AMM venues whose provider-reported "pool" reserves are not
+ * executable depth. `near-intents` is the NEAR Intents settlement verifier:
+ * GeckoTerminal/CoinGecko Onchain price every pair from the `intents.near`
+ * contract's shared custody of the quote asset, not from a pool of the pair.
+ */
+const BLOCKED_DEX_IDS = new Set(["retro", "retro-finance", "retro-finance-v3", "bunni", "near-intents"]);
 
 const BLOCKED_DEX_PREFIXES = ["bunni-"];
 

@@ -302,6 +302,36 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
+  it("drops blocked DexScreener venues before staging and before the deployment census counts them", async () => {
+    const pair = (pairAddress: string, dexId: string) => ({
+      chainId: "ethereum",
+      dexId,
+      pairAddress,
+      labels: [],
+      baseToken: { address: "0xabc", name: "Test USD", symbol: "TUSD" },
+      quoteToken: { address: "0xquote", name: "USD Coin", symbol: "USDC" },
+      priceUsd: "1.00",
+      volume: { h24: 15_000, h6: 0, h1: 0, m5: 0 },
+      liquidity: { usd: 75_000, base: 0, quote: 0 },
+      pairCreatedAt: null,
+    }) as never;
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
+      ok: true,
+      pairs: [pair("0xintents", "near-intents"), pair("0xrhea", "rhea-finance")],
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "test-coin",
+      [{ chain: "ethereum", address: "0xabc", decimals: 18 }],
+      null,
+      new Set(),
+    );
+
+    expect(result.pools.map((pool) => pool.poolId)).toEqual(["ethereum:0xrhea"]);
+    expect(result.deploymentOutcomes[0]).toMatchObject({ outcome: "observed_pools", observedPoolCount: 1 });
+  });
+
   it("records one DexScreener failure for a crawl with only target errors", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -658,6 +688,28 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(knownPoolIds).toEqual(
       new Set([knownPoolIdKey("usdc-circle", "ethereum:0xpool"), knownPoolIdKey("usdt-tether", "ethereum:0xpool")]),
     );
+  });
+
+  it("rejects blocked CoinGecko onchain venues while admitting other venues from the same response", async () => {
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: true,
+      schemaDegraded: false,
+      complete: true,
+      pools: [
+        coinGeckoPool({ id: "intents", address: "0xIntents", dex: "near-intents", reserve: "120000000", volume: "3" }) as never,
+        coinGeckoPool({ id: "rhea", address: "0xRhea", dex: "rhea-finance" }) as never,
+      ],
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(result.pools.map((pool) => [pool.poolId, pool.protocol])).toEqual([["ethereum:0xrhea", "rhea-finance"]]);
   });
 
   it("rejects CoinGecko onchain pools whose tracked token price is implausible", async () => {

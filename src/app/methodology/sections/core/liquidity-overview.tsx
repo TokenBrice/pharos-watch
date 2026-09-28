@@ -11,6 +11,9 @@ export function LiquidityOverview() {
       <p>
         Dead or explicitly blocked DEX slugs such as Bunni are excluded upstream from crawl intake, retained pools,
         challenger snapshots, and DEX-implied price publication instead of being treated as low-quality live venues.
+        The same block covers non-AMM venues whose reported &ldquo;pool&rdquo; reserves are not executable depth: NEAR
+        Intents pairs are priced from the settlement contract&rsquo;s shared custody of the quote asset, so they never
+        count as liquidity.
       </p>
     </>
   );
