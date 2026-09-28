@@ -3,6 +3,7 @@ import {
   computeFlowIntensity,
   computeGaugeScore,
   detectFlightToQuality,
+  detectFlightToQualityFromValuedNets,
   getGaugeBand,
 } from "../mint-burn-scoring";
 
@@ -268,5 +269,37 @@ describe("detectFlightToQuality", () => {
   it("requires both flows to strictly exceed $100M", () => {
     expect(detectFlightToQuality({ safeNet24h: 1e8, riskyNet24h: -2e8 })).toEqual({ active: false, intensity: 0 });
     expect(detectFlightToQuality({ safeNet24h: 2e8, riskyNet24h: -1e8 })).toEqual({ active: false, intensity: 0 });
+  });
+});
+
+describe("detectFlightToQualityFromValuedNets", () => {
+  const complete = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
+  const burnPartial = { mintCompleteness: "complete", burnCompleteness: "partial" } as const;
+  const mintPartial = { mintCompleteness: "partial", burnCompleteness: "complete" } as const;
+
+  it("is exact when every classified coin has complete valuation", () => {
+    expect(detectFlightToQualityFromValuedNets({
+      safe: [{ knownNetUsd: 300_000_000, valuation: complete }],
+      risky: [{ knownNetUsd: -600_000_000, valuation: complete }],
+    })).toMatchObject({ active: true, exact: true, safeNet24h: 300_000_000, riskyNet24h: -600_000_000 });
+  });
+
+  it("keeps a proven-inactive verdict when missing valuation cannot activate it", () => {
+    // Risky mints are unbounded upward only; burns are complete, so the risky net cannot fall below -$50M.
+    expect(detectFlightToQualityFromValuedNets({
+      safe: [{ knownNetUsd: 500_000_000, valuation: complete }],
+      risky: [{ knownNetUsd: -50_000_000, valuation: mintPartial }],
+    })).toEqual({ active: false, intensity: 0, safeNet24h: 500_000_000, riskyNet24h: -50_000_000, exact: false });
+  });
+
+  it("returns unavailable when missing valuation could change the verdict", () => {
+    expect(detectFlightToQualityFromValuedNets({
+      safe: [{ knownNetUsd: 500_000_000, valuation: complete }],
+      risky: [{ knownNetUsd: -50_000_000, valuation: burnPartial }],
+    })).toBeNull();
+    expect(detectFlightToQualityFromValuedNets({
+      safe: [{ knownNetUsd: null, valuation: complete }],
+      risky: [{ knownNetUsd: -600_000_000, valuation: complete }],
+    })).toBeNull();
   });
 });
