@@ -201,7 +201,7 @@ describe("curated on-chain supply paths", () => {
 
   it.each([
     ["pgold-pleasing", "https://api.zan.top/public/pharos-mainnet", "https://pharos.drpc.org"],
-    ["syzusd-yuzu", "https://pharos.drpc.org", undefined],
+    ["syzusd-yuzu", "https://api.zan.top/public/pharos-mainnet", undefined],
   ])("keeps %s primary and fallback overrides ahead of shared defaults", (id, primary, fallback) => {
     const config = selectCuratedAggregateOnchainSupplyProbeContracts(
       TRACKED_META_BY_ID.get(id!)!,

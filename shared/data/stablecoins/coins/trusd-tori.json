@@ -25,6 +25,9 @@
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "trusd-tori",
+    "scoring": {
+      "maxSourceAgeSec": 259200
+    },
     "display": {
       "url": "https://tori.accountable.capital/",
       "label": "Accountable Dashboard"
@@ -40,20 +43,20 @@
       "riskMap": {
         "Money Markets": "medium",
         "Cash & Equivalents": "medium",
-        "Delta-Neutral Futures Arbitrage": "high",
-        "On-chain Buffer": "low"
+        "Delta-Neutral Equity Arbitrage": "high",
+        "On-chain Liquidity": "medium"
       },
       "renameMap": {
         "Money Markets": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
-        "Delta-Neutral Futures Arbitrage": "Delta-neutral futures arbitrage and calendar-spread positions",
+        "Delta-Neutral Equity Arbitrage": "Delta-neutral equity arbitrage: long listed-equity book hedged with short single-stock futures",
         "Cash & Equivalents": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
-        "On-chain Buffer": "On-chain stablecoin buffer in the minting custodian wallet"
+        "On-chain Liquidity": "On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum"
       },
       "sourceKeyMap": {
         "Money Markets": "accountable:tori:deployment:money-markets",
         "Cash & Equivalents": "accountable:tori:deployment:cash-equivalents",
-        "Delta-Neutral Futures Arbitrage": "accountable:tori:deployment:delta-neutral-futures-arbitrage",
-        "On-chain Buffer": "accountable:tori:deployment:on-chain-buffer"
+        "Delta-Neutral Equity Arbitrage": "accountable:tori:deployment:delta-neutral-equity-arbitrage",
+        "On-chain Liquidity": "accountable:tori:deployment:on-chain-liquidity"
       }
     }
   },

@@ -4,7 +4,7 @@
     {
       "sourceKey": "accountable:tori:deployment:money-markets",
       "name": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
-      "pct": 62.22038432284772,
+      "pct": 67.75662145998768,
       "risk": "medium",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Undisclosed regulated custodian banks under Tori's mandate (identities withheld; verified by Accountable and HT Digital)",
@@ -17,13 +17,13 @@
       ]
     },
     {
-      "sourceKey": "accountable:tori:deployment:delta-neutral-futures-arbitrage",
-      "name": "Delta-neutral futures arbitrage and calendar-spread positions",
-      "pct": 26.884206551258444,
+      "sourceKey": "accountable:tori:deployment:delta-neutral-equity-arbitrage",
+      "name": "Delta-neutral equity arbitrage: long listed-equity book hedged with short single-stock futures",
+      "pct": 8.485618424106262,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Undisclosed regulated investment banks and execution venues; on-chain tracing shows exchange deposit flows",
-      "liquidityHorizon": "unknown",
+      "issuerOrObligor": "Undisclosed regulated investment banks and execution venues holding the listed-equity long book and short single-stock futures",
+      "liquidityHorizon": "seven-days",
       "riskFactors": [
         "basis",
         "counterparty",
@@ -34,7 +34,7 @@
     {
       "sourceKey": "accountable:tori:deployment:cash-equivalents",
       "name": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
-      "pct": 10.412020508191333,
+      "pct": 9.23243077800859,
       "risk": "medium",
       "assetClass": "cash",
       "issuerOrObligor": "Undisclosed regulated investment banks; Accountable data connectors include a CEX feed for this bucket",
@@ -46,26 +46,32 @@
       ]
     },
     {
-      "sourceKey": "accountable:tori:deployment:on-chain-buffer",
-      "name": "On-chain stablecoin buffer in the minting custodian wallet",
-      "pct": 0.483388617702502,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle USDC and Tether USDT held in Tori's on-chain custodian wallet",
-      "liquidityHorizon": "immediate",
+      "sourceKey": "accountable:tori:deployment:on-chain-liquidity",
+      "name": "On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum",
+      "pct": 14.52532933789746,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho USDC lending position (vault not named by the source) plus Circle USDC and Tether USDT held in Tori's Ethereum wallets",
+      "liquidityHorizon": "one-day",
       "riskFactors": [
+        "credit",
+        "liquidity",
         "custody",
-        "concentration"
+        "smart-contract"
       ]
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Codex Tori live proof-of-solvency refresh",
+    "reviewedAt": "2026-09-28",
+    "reviewer": "Pharos reserve research (Tori bucket-rename refresh)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Tori live proof-of-solvency API (source timestamp 2026-09-04T17:16:00.884Z)",
+        "label": "Accountable Tori dashboard API (data.ts 2026-09-28T20:16:00Z: assetBreakdown, underlying_exposure, equity_exposure, liquidity time-to-cash)",
+        "url": "https://cache.accountable.capital/dashboard/tori"
+      },
+      {
+        "label": "Tori live proof-of-solvency API (lastVerifiedAt 2026-09-28T20:16:00Z; long book, short single-stock futures memo, USDC - Morpho line item)",
         "url": "https://app.tori.finance/api/solvency"
       },
       {
@@ -73,8 +79,12 @@
         "url": "https://tori.accountable.capital"
       },
       {
-        "label": "Tori docs: backing and strategy overview (money markets typically the largest allocation; TradFi futures examples)",
+        "label": "Tori docs: strategy overview (money markets usually the largest allocation; futures arbitrage buys spot and sells single-stock futures, e.g. AAPL)",
         "url": "https://docs.tori.finance/strategy/overview.md"
+      },
+      {
+        "label": "Tori docs: backing and reserves (hedged positions; off-chain assets with qualified institutional custodians)",
+        "url": "https://docs.tori.finance/solution/backing.md"
       },
       {
         "label": "Tori docs: institutional minting and redemption (KYC/AML whitelisting for NAV mint/redeem)",
@@ -89,19 +99,19 @@
         "url": "https://eth.blockscout.com/address/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
       }
     ],
-    "rationale": "Refresh 2026-09-04: Tori's live proof-of-solvency API reported at 2026-09-04T17:16:00.884Z a four-bucket reserve split of money markets 62.22038432284772%, delta-neutral futures arbitrage 26.884206551258444%, cash and equivalents held as FX collateral 10.412020508191333%, and on-chain buffer 0.483388617702502%, summing to 100% within floating precision. Accountable independently verifies liabilities from the trUSD contract and asset values from custodian and venue data connectors on a 15-minute cadence using Merkle-root, enclave, and zero-knowledge proofs. Because the strategy-level percentages are independently attested and sum to the reported reserve total, the reserve split is treated as verified; the undisclosed custodian/venue identities and unpublished reserve-fund size are captured as risk factors and in the coin notice rather than as unknown reserve exposure.",
-    "compositionBasis": "Timestamped Tori proof-of-solvency API asset-distribution snapshot; Accountable proof-of-solvency methodology; Tori strategy and institutional docs; verified ToriMinting contract source and independent on-chain flow tracing of the custodian wallet.",
-    "compositionAsOf": "2026-09-04",
+    "rationale": "Refresh 2026-09-28: Tori's Accountable feed renamed two of its four categories. At data.ts 2026-09-28T20:16:00Z the assetBreakdown reported money markets 67.75662145998768%, on-chain liquidity 14.52532933789746%, cash and equivalents 9.23243077800859%, and delta-neutral equity arbitrage 8.485618424106262% of the USD 78,223,339.40 total_reserves, summing to 100%. Delta-neutral equity arbitrage is itemized (underlying_exposure/equity_exposure as of 2026-09-23) as a USD 5,890,059.49 long book against USD -6,447,026.94 short single-stock futures (memo) with a USD -556,967.44 net equity delta, consistent with the docs' buy-spot/sell-futures arbitrage; Accountable lists its liquidity as listed equities and exchange-traded derivatives with a 2 business-day time to cash, so it is classified as a high-risk hedged-market position (seven-day horizon), not a cash equivalent. On-chain liquidity is itemized as USDC - Morpho USD 10,052,591.42, USDC USD 1,202,921.38 and USDT USD 106,501.92 on Ethereum plus dust ETH/AUSD and Base balances, publicly verified from blockchain wallets and DeFi protocol data with a same-day time to cash; because 88% is a Morpho lending position it is classified as a medium-risk protocol position rather than a stablecoin buffer. Accountable verifies liabilities from the trUSD contract and asset values from custodian, asset-manager and venue connectors every 15 minutes; the strategy-level split is therefore treated as verified, with undisclosed custodian and venue identities kept as risk factors.",
+    "compositionBasis": "Timestamped Accountable Tori assetBreakdown snapshot cross-checked against Tori's live proof-of-solvency itemization; Accountable liquidity/time-to-cash classes; Tori strategy and backing docs; verified ToriMinting contract source.",
+    "compositionAsOf": "2026-09-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, and the size of the protocol reserve fund is undisclosed; the attested split cannot be independently reconciled against the on-chain flows, which terminate at exchange deposit addresses and an unlabeled wallet. These gaps affect custody/counterparty risk assessment, not the verified strategy-level composition split. The 0.483388617702502% on-chain buffer also combines USDC and USDT without component weights.",
-    "knownUnknownExposurePct": 0.483388617702502,
+    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, the Morpho vault behind the USDC - Morpho line is not named, and the size of the protocol reserve fund is undisclosed. These gaps affect custody/counterparty risk assessment, not the verified strategy-level composition split. The 14.52532933789746% on-chain liquidity bucket combines a Morpho USDC position with directly held USDC and USDT in one live category.",
+    "knownUnknownExposurePct": 14.52532933789746,
     "nonLinkDispositions": [
       {
         "reserveIndex": 3,
-        "reserveName": "On-chain stablecoin buffer in the minting custodian wallet",
-        "pct": 0.483388617702502,
+        "reserveName": "On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum",
+        "pct": 14.52532933789746,
         "disposition": "basket-needs-split",
-        "rationale": "The disclosed buffer combines USDC and USDT without current component weights, so it cannot support a single reserve-linked dependency.",
+        "rationale": "The live category combines USDC supplied to an unnamed Morpho vault with directly held USDC and USDT, so the single live slice cannot support one reserve-linked dependency.",
         "candidateCoinIds": [
           "usdc-circle",
           "usdt-tether"

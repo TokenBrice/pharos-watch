@@ -68,6 +68,9 @@
     "version": 1,
     "semantics": "protocol-reserve",
     "breakerScope": "usn-noon",
+    "scoring": {
+      "maxSourceAgeSec": 259200
+    },
     "display": {
       "url": "https://noon.accountable.capital/",
       "label": "Accountable Dashboard"

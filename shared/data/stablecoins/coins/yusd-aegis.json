@@ -68,6 +68,9 @@
     "version": 1,
     "semantics": "protocol-reserve",
     "breakerScope": "yusd-aegis",
+    "scoring": {
+      "maxSourceAgeSec": 259200
+    },
     "display": {
       "url": "https://aegis.accountable.capital/",
       "label": "Accountable Dashboard"

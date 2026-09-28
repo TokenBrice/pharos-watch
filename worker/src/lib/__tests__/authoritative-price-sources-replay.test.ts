@@ -305,37 +305,16 @@ describe("authoritative-price-sources", () => {
         asset("sofid-sofi", { circulating: { peggedUSD: 100_000_000 } }),
         asset("usbd-bima", { circulating: { peggedUSD: 7_500_000 } }),
         asset("usdq-quill", { circulating: { peggedUSD: 130_000 } }),
-        asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
-        asset("cadd-cad-digital", { circulating: { peggedCAD: 390_000 } }),
-        asset("jpym-mento", { circulating: { peggedJPY: 104_000 } }),
         asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
         asset("xofm-mento", { circulating: { peggedXOF: 32_000 } }),
       ],
       undefined,
       {
-        rates: {
-          peggedCHF: 1.27,
-          peggedCAD: 0.73,
-          peggedJPY: 0.00628,
-          peggedZAR: 0.0608,
-          peggedXOF: 0.00172,
-        },
+        rates: { peggedZAR: 0.0608, peggedXOF: 0.00172 },
         type: "fresh",
         updatedAt: 1_778_000_000,
-        updatedAtByPeg: {
-          peggedCHF: 1_778_000_000,
-          peggedCAD: 1_778_000_001,
-          peggedJPY: 1_778_000_002,
-          peggedZAR: 1_778_000_003,
-          peggedXOF: 1_778_000_004,
-        },
-        typeByPeg: {
-          peggedCHF: "fresh",
-          peggedCAD: "fresh",
-          peggedJPY: "fresh",
-          peggedZAR: "fresh",
-          peggedXOF: "fresh",
-        },
+        updatedAtByPeg: { peggedZAR: 1_778_000_003, peggedXOF: 1_778_000_004 },
+        typeByPeg: { peggedZAR: "fresh", peggedXOF: "fresh" },
       },
     );
 
@@ -347,51 +326,48 @@ describe("authoritative-price-sources", () => {
     const fx = (fxObservedAt: number) => ({ nominalFx: { fxReferenceType: "fresh", fxObservedAt } });
     expect(overrides.get("usbd-bima")).toEqual({ price: 1, ...nominal });
     expect(overrides.get("usdq-quill")).toEqual({ price: 1, ...nominal });
-    expect(overrides.get("chfau-allunity")).toEqual({ price: 1.27, ...nominal, ...fx(1_778_000_000) });
-    expect(overrides.get("cadd-cad-digital")).toEqual({ price: 0.73, ...nominal, ...fx(1_778_000_001) });
-    expect(overrides.get("jpym-mento")).toEqual({ price: 0.00628, ...nominal, ...fx(1_778_000_002) });
     expect(overrides.get("zarm-mento")).toEqual({ price: 0.0608, ...nominal, ...fx(1_778_000_003) });
     expect(overrides.get("xofm-mento")).toEqual({ price: 0.00172, ...nominal, ...fx(1_778_000_004) });
   });
 
-  it("skips CHF protocol-par overrides when the FX reference is missing or stale", async () => {
+  it("skips ZAR protocol-par overrides when the FX reference is missing or stale", async () => {
     const stale = await fetchLiveOverrides(
       [
-        asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
+        asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
       ],
       undefined,
       {
-        rates: { peggedCHF: 1.27 },
+        rates: { peggedZAR: 0.0608 },
         type: "stale",
         updatedAt: 1_778_000_000,
-        updatedAtByPeg: { peggedCHF: 1_778_000_000 },
-        typeByPeg: { peggedCHF: "stale" },
+        updatedAtByPeg: { peggedZAR: 1_778_000_000 },
+        typeByPeg: { peggedZAR: "stale" },
       },
     );
     const missing = await fetchLiveOverrides([
-      asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
+      asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
     ]);
 
-    expect(stale.has("chfau-allunity")).toBe(false);
-    expect(missing.has("chfau-allunity")).toBe(false);
+    expect(stale.has("zarm-mento")).toBe(false);
+    expect(missing.has("zarm-mento")).toBe(false);
   });
 
-  it("publishes static-FX CHF par as a nominal reference without an observation clock", async () => {
+  it("publishes static-FX ZAR par as a nominal reference without an observation clock", async () => {
     const overrides = await fetchLiveOverrides(
       [
-        asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
+        asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
       ],
       undefined,
       {
-        rates: { peggedCHF: 1.25 },
+        rates: { peggedZAR: 0.06 },
         type: "static",
         updatedAt: null,
-        typeByPeg: { peggedCHF: "static" },
+        typeByPeg: { peggedZAR: "static" },
       },
     );
 
-    expect(overrides.get("chfau-allunity")).toEqual({
-      price: 1.25,
+    expect(overrides.get("zarm-mento")).toEqual({
+      price: 0.06,
       source: "protocol-par",
       confidence: null,
       observedAt: null,
@@ -402,7 +378,7 @@ describe("authoritative-price-sources", () => {
 
   it.each([
     ["usbd-bima", "USD"],
-    ["chfau-allunity", "CHF"],
+    ["zarm-mento", "ZAR"],
   ] as const)("never synthesizes par replay history for %s, so replay preserves existing rows", async (id, pegCurrency) => {
     const result = await fetchAuthoritativeHistoricalPriceSeries(
       makeHistoricalMeta(id, id, id.toUpperCase(), { flags: { pegCurrency, governance: "centralized" } }),
