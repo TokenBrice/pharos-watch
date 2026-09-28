@@ -334,7 +334,7 @@ function getFpiCollateralDisplayConfig(key: string): TokenDisplayConfig | undefi
  * valued without inventing precision, so the adapter keeps failing closed on
  * it. FPI self-holdings are never estimated: they net against FPI liabilities.
  */
-export async function valueUnpricedFpiCollateralRows(
+async function valueUnpricedFpiCollateralRows(
   assets: readonly FraxFpiCollateralRow[],
   rpcByChain: Readonly<Record<string, { rpcUrl?: string; fallbackRpcUrl?: string }>>,
   signal: AbortSignal,
@@ -351,23 +351,26 @@ export async function valueUnpricedFpiCollateralRows(
   });
   if (rows.length === 0) return new Map();
 
+  // One row at a time: each row opens at most two concurrent RPC reads, so the
+  // valuation stays inside the Worker connection budget however many rows lack
+  // an issuer value.
   const quantities = new Map<FraxFpiCollateralRow, number>();
-  await Promise.all(rows.map(async ({ row, chain, token, owner }) => {
+  for (const { row, chain, token, owner } of rows) {
     const disclosed = nonnegativeFinite(row.tokenQuantity);
     if (disclosed != null) {
       quantities.set(row, disclosed);
-      return;
+      continue;
     }
-    if (!chain || !token || !owner) return;
+    if (!chain || !token || !owner) continue;
     try {
       const read = (data: string) => fetchOnchainUint256({ contract: token, data, chain, signal, ctx, ...rpcByChain[chain] });
       const [balanceRaw, decimals] = await Promise.all([read(encodeBalanceOfCallData(owner)), read(DECIMALS_SELECTOR)]);
-      if (balanceRaw == null || decimals == null || decimals > 36n) return;
+      if (balanceRaw == null || decimals == null || decimals > 36n) continue;
       quantities.set(row, decimalNumberFromBigInt(balanceRaw, Number(decimals)));
     } catch (error) {
       rethrowIfAborted(error, signal);
     }
-  }));
+  }
 
   const quoteLookups = rows.flatMap(({ row, key, chain, token, rowPrice }) =>
     (quantities.get(row) ?? 0) > 0 && rowPrice == null && chain && token ? [{ key, chain, address: token }] : []);
@@ -447,10 +450,12 @@ export function adaptFraxFpiCollateral(
     throw new Error("Frax FPI collateral response has no positive non-FPI collateral assets");
   }
   // A row the issuer left unpriced but Pharos could value is admitted as
-  // explicit unpriced exposure only while it stays under the adapter's shared
-  // unknown-exposure ceiling; a material one fails closed like any other
-  // unavailable row rather than resting the composition on Pharos' estimate.
-  const unpricedAdmitted = computeUnknownExposurePct(unpricedUsd, valuedCollateralUsd + unpricedUsd)
+  // explicit unpriced exposure only while it, together with any unmapped
+  // exposure, stays under the adapter's shared unknown-exposure ceiling (the
+  // same combined figure the snapshot validator gates); a material one fails
+  // closed like any other unavailable row rather than resting the composition
+  // on Pharos' estimate.
+  const unpricedAdmitted = computeUnknownExposurePct(unknownUsd + unpricedUsd, valuedCollateralUsd + unpricedUsd)
     <= getLiveReserveAdapterMaxUnknownExposurePct("frax-fpi-collateral");
   if (!unpricedAdmitted) unavailableAssetLabels.push(...unpricedAssetLabels);
   const admittedUnpricedUsd = unpricedAdmitted ? unpricedUsd : 0;
