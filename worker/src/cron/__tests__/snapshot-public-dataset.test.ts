@@ -112,6 +112,7 @@ const DEX_ROWS = [
     liquidity_score: 9.2,
     durability_score: 8.6,
     coverage_class: "deep",
+    methodology_version: "6.91",
     updated_at: 1779105600,
   },
 ];
@@ -138,7 +139,7 @@ function publishedDewsPointer(rows = STRESS_ROWS) {
   };
 }
 
-function buildDb(): MockD1Database {
+function buildDb(dexRows: readonly Record<string, unknown>[] = DEX_ROWS): MockD1Database {
   return mockD1([
     publishedDewsPointer(),
     snapshotCacheRows([
@@ -147,7 +148,7 @@ function buildDb(): MockD1Database {
     ]),
     { match: "FROM stability_index", rows: [], first: PSI_ROW },
     { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
-    { match: "FROM dex_liquidity", rows: DEX_ROWS },
+    { match: "FROM dex_liquidity", rows: [...dexRows] },
     { match: "INSERT OR IGNORE INTO public_snapshots", rows: [] },
   ]);
 }
@@ -320,6 +321,28 @@ describe("snapshotPublicDataset", () => {
       source.snapshot.safetyScoreIdentity.publicationGenerationId,
       "report-cards:v9:publication-health",
       source.snapshot.safetyScoreIdentity.publicationGenerationId,
+    ]);
+  });
+
+  it("labels liquidity provenance from the persisted rows, not the deployed methodology", async () => {
+    // Between a deploy and its first publication every scored row still carries the previous version;
+    // a retained row of a coin no longer scored keeps its own older one.
+    const db = buildDb([
+      DEX_ROWS[0]!,
+      { ...DEX_ROWS[0]!, stablecoin_id: "usdt-tether", methodology_version: "5.84" },
+      { ...DEX_ROWS[0]!, stablecoin_id: "dai-makerdao", methodology_version: null },
+    ]);
+    await snapshotPublicDataset(db);
+
+    const binds = getInsertBinds(db);
+    expect(JSON.parse(binds?.[2] as string)).toMatchObject({ liquidityScore: "6.91" });
+    const envelope = JSON.parse(await gunzipToText(binds?.[1] as Uint8Array)) as {
+      liquidity: Array<{ stablecoinId: string; methodologyVersion: string | null }>;
+    };
+    expect(envelope.liquidity.map(({ stablecoinId, methodologyVersion }) => [stablecoinId, methodologyVersion])).toEqual([
+      ["usdc-circle", "6.91"],
+      ["usdt-tether", "5.84"],
+      ["dai-makerdao", null],
     ]);
   });
 
