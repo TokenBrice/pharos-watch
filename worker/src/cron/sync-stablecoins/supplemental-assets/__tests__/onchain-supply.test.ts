@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { ChainRpcConfig } from "../../../../lib/chain-registry";
+import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
 vi.mock("../sui-vault-supply", () => ({ fetchEearnSuiSupply: fetchEearnSuiSupplyMock }));
@@ -479,6 +479,25 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     fetchStarknetTotalSupplyMock.mockRejectedValue(new Error("starknet_call failed"));
 
     await expect(fetchCuratedAggregateOnChainMcap(makeMre7yieldMeta(), 1)).resolves.toBeNull();
+  });
+
+  it("reads hbUSDT's HyperEVM-only supply through its reviewed pin when the Worker registry has no HyperEVM RPC", async () => {
+    // Production-shaped registry: HyperEVM is pin-only, so its Dwellir endpoint is supplemental.
+    const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: "dwellir-test" });
+    // A supply read with no resolvable RPC URL yields null, as evm-rpc does. Only the reviewed
+    // HyperEVM pin answers, so an unreviewed endpoint cannot satisfy this test.
+    probeTrackedTokenSupplyMock.mockImplementation(
+      async (_meta, _input, _signal, _adapter, _ctx, rpcUrl) =>
+        rpcUrl === "https://rpc.hyperliquid.xyz/evm" ? 3_204_481n * 10n ** 18n : null,
+    );
+
+    const result = await fetchCuratedAggregateOnChainMcap(TRACKED_META_BY_ID.get("hbusdt-hyperbeat")!, 1.13, chainRpcs);
+
+    expect(result).toMatchObject({
+      supplySource: "onchain-total-supply",
+      chainCirculating: { HyperEVM: { chainId: "hyperevm" } },
+    });
+    expect(result?.mcap).toBeCloseTo(3_621_063.53, 2);
   });
 });
 
