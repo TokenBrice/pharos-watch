@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.94",
+    title: "XAUT lock/mint attribution reconciles the circulating liability, not unissued treasury inventory",
+    date: "2026-09-28",
+    effectiveAt: 1790621225,
+    summary:
+      "The XAUT lock/mint group attribution now reconciles Tether's disclosure to finalized Ethereum state on the circulating liability alone: finalized `totalSupply()` minus the treasury balance must equal the disclosed `totalAuthorized - notIssued`. It no longer requires total supply and the treasury balance to match the two disclosed inputs separately, because unissued treasury inventory is not a liability and the attribution only consumes the circulating amount.",
+    impact: [
+      "Trigger: Tether publishes `transparency.json` once a day, while the observer reads the live chain. At 17:08:47 UTC Tether minted 119,670.541 XAUT into its own treasury after the snapshot stamped 2026-09-27 23:30 UTC. Total supply and the treasury balance both rose by exactly that amount and circulating supply reconciled exactly with the disclosure, but the two-term check rejected the packet with `transparency-onchain-mismatch` and `xaut-tether` fell from 78 B+ to 48 D. A treasury-only mint or burn now leaves the attribution admissible because it changes both terms equally.",
+      "What still fails closed: a circulating mismatch between chain and disclosure (still `transparency-onchain-mismatch`), a treasury balance above total supply, non-zero quarantined supply, a non-positive circulating liability, an adapter lock outside the circulating liability, a stale, future, or skewed disclosure, an unconfirmed finalized block, and any token, treasury, adapter, code-hash, or route-inventory identity mismatch. The observer and the packet re-validation apply the same shared rule.",
+      "Frozen replay captures carry no attribution packets, so replaying them moves no card. A live observer run at Ethereum block 26077853 (clock about 1790621399) admits the packet under the new rule: on-chain total supply 827,417.63 XAUT and treasury 138,093.970468 XAUT against the pre-mint disclosure of 707,747.089 and 18,423.429468, with a circulating liability of 689,323.659532 XAUT on both sides. The partition returns a canonical row of about $2.735B and an XAUt0 group of about $0.122B.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.93",
     title: "Sub-threshold ambiguous chain rows with reviewed candidate routes are bounded supply evidence",
     date: "2026-09-28",

@@ -142,8 +142,8 @@ binds the configured Tether transparency disclosure to one finalized Ethereum
 token/treasury/adapter observation and the complete reviewed XAUt0
 representation-group inventory. The issuer's `totalAuthorized - notIssued`
 amount is admitted as circulating liabilities only when finalized
-`totalSupply()` and treasury `balanceOf()` independently match the two disclosed
-inputs and quarantined supply is zero. It emits one non-group canonical row and
+`totalSupply()` minus treasury `balanceOf()` equals it (unissued treasury
+inventory is not a liability) and quarantined supply is zero. It emits one non-group canonical row and
 one pooled group row carrying the exact locked share of circulating liabilities
 and common failure domains, without claiming destination-chain shares. Any
 missing, duplicate, stale, skewed, issuer/on-chain-mismatched,

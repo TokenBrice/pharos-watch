@@ -28,6 +28,7 @@ import {
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
+  xautCirculatingLiabilityReconciles,
   xautLockMintIdentityValidationError,
   type XautLockMintObservation,
   type XautRepresentationGroupSupplyAttributionV2,
@@ -515,8 +516,12 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
     return reject("finalized-block-unavailable", null);
   }
   if (
-    canonicalTotalSupplyRaw.toString() !== disclosure.totalAuthorizedRaw ||
-    treasuryBalanceRaw.toString() !== disclosure.notIssuedRaw
+    !xautCirculatingLiabilityReconciles({
+      canonicalTotalSupplyRaw,
+      treasuryBalanceRaw,
+      disclosedTotalAuthorizedRaw: BigInt(disclosure.totalAuthorizedRaw),
+      disclosedNotIssuedRaw: BigInt(disclosure.notIssuedRaw),
+    })
   ) {
     return reject(
       "transparency-onchain-mismatch",

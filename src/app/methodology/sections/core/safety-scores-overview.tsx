@@ -110,6 +110,14 @@ export function SafetyScoresOverview() {
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
       </p>
       <p>
+        Since methodology v9.94, the XAUT lock/mint group attribution reconciles Tether&apos;s daily disclosure to
+        finalized Ethereum state on the circulating liability alone: total supply minus the treasury balance must equal
+        the disclosed authorized minus not-issued amount. Unissued treasury inventory is not a liability, so a
+        treasury-only mint or burn after the disclosure changes both terms equally and no longer rejects the
+        attribution; a circulating mismatch, a treasury balance above total supply, non-zero quarantined supply, and
+        every identity, freshness, and finalized-block check still fail closed.
+      </p>
+      <p>
         Since methodology v9.93, a chain whose supply row several reviewed profile routes compete for no longer blocks
         the bridge review when that row is immaterial. The unsplit chain row is an upper bound on every candidate
         deployment&apos;s share, so a row below both the deployment-material and common-mode thresholds, on a chain
