@@ -64,14 +64,18 @@ export const UNIV3_SUBGRAPHS: Record<string, string> = {
   base: "43Hwfi3dJSoGpyas9VwNoDAv55yjgGrPpNSmbQZArzMG",
   arbitrum: "FbCGRftH4a3yZugY7TnbYgPJVEv2LvMT6oF1fxPe9aJM",
   polygon: "3hCPRGf4z88VC5rsBKU5AA9FBBq5nF3jbKJG7VZCbhjm",
-  // Celo: "Uniswap V3 Celo" (deployment QmXfJmxY7C4A4UoWEexvei8XzcSxMegr78rt3Rzz8szkZA,
-  // last version 2024-03-12) is the only published Celo deployment, and since
-  // 2026-09-22 every serving indexer is bad (two HTTP 400s plus
-  // indexing_error on the sole attestor, at any `first` including 1). No
-  // admissible replacement deployment exists on the network, so the lane
-  // keeps failing closed and visibly in `failedSources` until indexer health
-  // returns; per-source quarantine keeps the other chains publishing.
-  celo: "ESdrTJ3twMwWVoQ1hUE2u7PugEHX3QkenudD6aXCkDQ4",
+  // 2026-09-28: replaced ESdrTJ3t… ("Uniswap V3 Celo", deployment
+  // QmXfJmxY7C4A4UoWEexvei8XzcSxMegr78rt3Rzz8szkZA), which reports
+  // `hasIndexingErrors: true` and whose serving indexers time out, answer
+  // HTTP 400, or refuse attestation (`indexing_error`) for any TVL-filtered or
+  // TVL-ordered pool page, so every run since 2026-09-22 recorded
+  // `univ3-subgraph:celo`. No native-schema Celo deployment serves this query,
+  // so the pin moved to the healthy Messari-standard "Uniswap V3 Celo"
+  // subgraph (deployment QmNi5byczejWFdvpK1ihgaQ1qo1owznhNMFQQLSu9aWUQQ, no
+  // indexing errors, every pool with liquidity answered in one sub-second
+  // page), read through `buildUniV3MessariPoolQuery` and normalized back to
+  // the native pool shape (see `UNIV3_MESSARI_SCHEMA_CHAINS`).
+  celo: "8cLf29KxAedWLVaEqjV8qKomdwwXQxjptBZFrqWNH5u2",
   bsc: "F85MNzUGYqgSHSHRGgeVMNsdnW1KtZSVgFULumXRZTw2",
 };
 
@@ -108,13 +112,16 @@ export const UNIV3_BASE_POOL_MAX_PAGES = 1;
  */
 export const SUBGRAPH_PAGE_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
+/** TVL floor for Uni V3 subgraph rows (native query filter; Messari rows client-side). */
+export const UNIV3_POOL_MIN_TVL_USD = 10_000;
+
 export const buildUniV3PoolQuery = (skip: number): string => `{
   pools(
     first: ${UNIV3_POOL_PAGE_SIZE},
     skip: ${skip},
     orderBy: totalValueLockedUSD,
     orderDirection: desc,
-    where: { totalValueLockedUSD_gt: "10000" }
+    where: { totalValueLockedUSD_gt: "${UNIV3_POOL_MIN_TVL_USD}" }
   ) {
     id
     token0 { id symbol decimals }
@@ -126,6 +133,40 @@ export const buildUniV3PoolQuery = (skip: number): string => `{
     token1Price
     totalValueLockedToken0
     totalValueLockedToken1
+  }
+}`;
+
+/**
+ * Uni V3 chains whose pinned subgraph serves the Messari subgraph-standard
+ * schema (`liquidityPools`) instead of the native `Uniswap/v3-subgraph`
+ * schema. These chains read `buildUniV3MessariPoolQuery` and normalize each
+ * pool back to the native shape before the shared mapping runs.
+ */
+export const UNIV3_MESSARI_SCHEMA_CHAINS: Readonly<Record<string, true>> = { celo: true };
+
+/**
+ * Messari-schema pool page. The deployment's USD valuations are unreliable
+ * (2026-09-28 on Celo: USD₮ at ~$4.84, USDC at $0), so the query neither
+ * filters nor orders by `totalValueLockedUSD`: it pages every pool with
+ * liquidity in stable `id` order, and the normalizer applies
+ * `UNIV3_POOL_MIN_TVL_USD` to a balance-derived TVL instead. `inputTokens` is
+ * `[token0, token1]`, the fee tier is the `FIXED_TRADING_FEE` percentage, and
+ * the spot price is derived from `tick`.
+ */
+export const buildUniV3MessariPoolQuery = (skip: number): string => `{
+  liquidityPools(
+    first: ${UNIV3_POOL_PAGE_SIZE},
+    skip: ${skip},
+    orderBy: id,
+    orderDirection: asc,
+    where: { totalLiquidity_gt: "0" }
+  ) {
+    id
+    inputTokens { id symbol decimals }
+    inputTokenBalances
+    fees { feeType feePercentage }
+    tick
+    totalValueLockedUSD
   }
 }`;
 

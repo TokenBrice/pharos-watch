@@ -11,13 +11,16 @@ import type {
 } from "./types";
 import {
   UNIV3_BASE_POOL_MAX_PAGES,
+  UNIV3_MESSARI_SCHEMA_CHAINS,
   UNIV3_POOL_MAX_PAGES,
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
   UNISWAP_V4_POOL_MAX_PAGES,
   UNISWAP_V4_POOL_PAGE_SIZE,
   UNISWAP_V4_SUBGRAPHS,
+  UNIV3_POOL_MIN_TVL_USD,
   buildUniswapV4PoolQuery,
+  buildUniV3MessariPoolQuery,
   buildUniV3PoolQuery,
 } from "./constants";
 import { buildDexPriceObservationIdentity, buildPoolIdentity } from "./pool-identity";
@@ -34,11 +37,17 @@ type UniV3SubgraphPool = {
   token1: { id: string; symbol: string; decimals: string };
   feeTier: string;
   totalValueLockedUSD: string;
-  volumeUSD: string;
   token0Price: string;
   token1Price: string;
-  totalValueLockedToken0: string;
-  totalValueLockedToken1: string;
+};
+
+type UniV3MessariSubgraphPool = {
+  id: string;
+  inputTokens?: { id: string; symbol: string; decimals: number | string }[] | null;
+  inputTokenBalances?: string[] | null;
+  fees?: { feeType: string; feePercentage: string | null }[] | null;
+  tick?: string | null;
+  totalValueLockedUSD: string;
 };
 
 type UniswapV4SubgraphPool = {
@@ -55,12 +64,81 @@ type UniswapV4SubgraphPool = {
 };
 
 const UNIV3_EXECUTION_ONLY_CHAINS = new Set(["bsc"]);
+const UNIV3_MAX_ABS_TICK = 887_272;
 
 function parseSubgraphInteger(value: string): number {
   const normalized = value.trim();
   if (!/^-?[0-9]+$/.test(normalized)) return Number.NaN;
   const parsed = Number(normalized);
   return Number.isSafeInteger(parsed) ? parsed : Number.NaN;
+}
+
+function parseRawTokenAmount(raw: string | undefined, decimals: number): number {
+  if (raw == null || !/^[0-9]+$/.test(raw.trim())) return Number.NaN;
+  return Number(raw.trim()) / Math.pow(10, decimals);
+}
+
+/**
+ * Maps one Messari-standard Uniswap V3 pool to the native pool shape, or null
+ * when the row cannot be read unambiguously or sits below
+ * `UNIV3_POOL_MIN_TVL_USD`. `inputTokens` must be the canonical
+ * `[token0, token1]` pair (strictly ascending addresses), the fee tier is the
+ * `FIXED_TRADING_FEE` percentage in pips, and both spot prices come from
+ * `tick`: token1 per token0 = 1.0001^tick * 10^(decimals0 - decimals1). The
+ * tick is the floor of the log spot price, so the derived spot sits within
+ * 1 bp below the pool's sqrtPrice spot.
+ *
+ * The deployment's own USD valuations are unreliable (USD₮ ~$4.84, USDC $0 on
+ * Celo, 2026-09-28), so a pool with a USD-reference side is valued from
+ * `inputTokenBalances` in reference units at the tick spot; that TVL gates and
+ * weights the price observations, which only exist for such pools. A pool
+ * without a USD-reference side keeps the deployment's `totalValueLockedUSD`,
+ * which then only gates fee enrichment and the execution candidate (Uni V3
+ * targets never read the candidate TVL magnitude).
+ */
+function normalizeMessariUniV3Pool(pool: UniV3MessariSubgraphPool): UniV3SubgraphPool | null {
+  const inputTokens = pool.inputTokens;
+  if (!inputTokens || inputTokens.length !== 2) return null;
+  const [token0, token1] = inputTokens;
+  if (token0.id.toLowerCase() >= token1.id.toLowerCase()) return null;
+
+  const tradingFee = pool.fees?.find((fee) => fee.feeType === "FIXED_TRADING_FEE");
+  const feePips = Math.round(Number(tradingFee?.feePercentage) * 10_000);
+  if (!Number.isSafeInteger(feePips) || feePips <= 0) return null;
+
+  const tick = pool.tick == null ? Number.NaN : parseSubgraphInteger(pool.tick);
+  if (!Number.isInteger(tick) || Math.abs(tick) > UNIV3_MAX_ABS_TICK) return null;
+
+  const token0Decimals = parseSubgraphInteger(String(token0.decimals));
+  const token1Decimals = parseSubgraphInteger(String(token1.decimals));
+  if (
+    !Number.isInteger(token0Decimals) || token0Decimals < 0 || token0Decimals > 255 ||
+    !Number.isInteger(token1Decimals) || token1Decimals < 0 || token1Decimals > 255
+  ) return null;
+  const token1PerToken0 = Math.pow(1.0001, tick) * Math.pow(10, token0Decimals - token1Decimals);
+  if (!Number.isFinite(token1PerToken0) || token1PerToken0 <= 0) return null;
+
+  let tvl: number;
+  if (isUsdReferenceSymbol(token0.symbol) || isUsdReferenceSymbol(token1.symbol)) {
+    const balance0 = parseRawTokenAmount(pool.inputTokenBalances?.[0], token0Decimals);
+    const balance1 = parseRawTokenAmount(pool.inputTokenBalances?.[1], token1Decimals);
+    tvl = isUsdReferenceSymbol(token0.symbol)
+      ? balance0 + balance1 / token1PerToken0
+      : balance1 + balance0 * token1PerToken0;
+  } else {
+    tvl = Number(pool.totalValueLockedUSD);
+  }
+  if (!Number.isFinite(tvl) || tvl < UNIV3_POOL_MIN_TVL_USD) return null;
+
+  return {
+    id: pool.id,
+    token0: { id: token0.id, symbol: token0.symbol, decimals: String(token0Decimals) },
+    token1: { id: token1.id, symbol: token1.symbol, decimals: String(token1Decimals) },
+    feeTier: String(feePips),
+    totalValueLockedUSD: String(tvl),
+    token0Price: String(1 / token1PerToken0),
+    token1Price: String(token1PerToken0),
+  };
 }
 
 function mapTrackedSubgraphPriceObservations(config: {
@@ -106,7 +184,7 @@ export async function fetchUniV3Data(
   signal?: AbortSignal,
   references?: PriceValidationReferences,
 ): Promise<SubgraphFamilyResult<UniV3Lookups>> {
-  return runSubgraphFamily<UniV3SubgraphPool, UniV3Lookups>({
+  return runSubgraphFamily<UniV3SubgraphPool | null, UniV3Lookups>({
     graphApiKey,
     signal,
     subgraphs: UNIV3_SUBGRAPHS,
@@ -118,110 +196,119 @@ export async function fetchUniV3Data(
       uniV3PriceObs: new Map<string, DexPriceObs[]>(),
       uniV3ExecutionCandidates: new Map(),
     }),
-    buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => ({
-      subgraphUrl,
-      sourceLabel: "Uni V3 subgraph",
-      chain,
-      buildQuery: (skip) => buildUniV3PoolQuery(skip),
-      pageSize: UNIV3_POOL_PAGE_SIZE,
-      maxPages: chain === "base" ? UNIV3_BASE_POOL_MAX_PAGES : UNIV3_POOL_MAX_PAGES,
-      signal: combinedSignal,
-      extractEntities: (data) => (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools,
-      mapEntity: (pool) => {
-        const feeTier = parseInt(pool.feeTier, 10);
-        if (isNaN(feeTier)) return [];
-        const tvl = parseFloat(pool.totalValueLockedUSD);
-        const executionOnly = UNIV3_EXECUTION_ONLY_CHAINS.has(chain);
+    buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => {
+      const messariSchema = UNIV3_MESSARI_SCHEMA_CHAINS[chain] === true;
+      return {
+        subgraphUrl,
+        sourceLabel: "Uni V3 subgraph",
+        chain,
+        buildQuery: (skip) => (messariSchema ? buildUniV3MessariPoolQuery(skip) : buildUniV3PoolQuery(skip)),
+        pageSize: UNIV3_POOL_PAGE_SIZE,
+        maxPages: chain === "base" ? UNIV3_BASE_POOL_MAX_PAGES : UNIV3_POOL_MAX_PAGES,
+        signal: combinedSignal,
+        // Messari rows normalize 1:1 (null when unreadable) so the page length
+        // still drives pagination.
+        extractEntities: (data) => (messariSchema
+          ? (data as { liquidityPools?: UniV3MessariSubgraphPool[] } | undefined)?.liquidityPools
+            ?.map((pool) => normalizeMessariUniV3Pool(pool))
+          : (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools),
+        mapEntity: (pool) => {
+          if (!pool) return [];
+          const feeTier = parseInt(pool.feeTier, 10);
+          if (isNaN(feeTier)) return [];
+          const tvl = parseFloat(pool.totalValueLockedUSD);
+          const executionOnly = UNIV3_EXECUTION_ONLY_CHAINS.has(chain);
 
-        if (!executionOnly) {
-          lookups.uniV3PoolFees.set(`${chain}:${pool.id.toLowerCase()}`, feeTier);
+          if (!executionOnly) {
+            lookups.uniV3PoolFees.set(`${chain}:${pool.id.toLowerCase()}`, feeTier);
 
-          const syms = [normalizeDexSymbol(pool.token0.symbol), normalizeDexSymbol(pool.token1.symbol)].sort().join(":");
-          const symKey = `${chain}:${syms}`;
-          const existing = lookups.uniV3SymbolFees.get(symKey);
-          if (existing == null || feeTier < existing) {
-            lookups.uniV3SymbolFees.set(symKey, feeTier);
+            const syms = [normalizeDexSymbol(pool.token0.symbol), normalizeDexSymbol(pool.token1.symbol)].sort().join(":");
+            const symKey = `${chain}:${syms}`;
+            const existing = lookups.uniV3SymbolFees.get(symKey);
+            if (existing == null || feeTier < existing) {
+              lookups.uniV3SymbolFees.set(symKey, feeTier);
+            }
           }
-        }
 
-        const token0Decimals = Number.parseInt(pool.token0.decimals, 10);
-        const token1Decimals = Number.parseInt(pool.token1.decimals, 10);
-        const token0Price = parseFloat(pool.token0Price);
-        const token1Price = parseFloat(pool.token1Price);
-        const executionKey = buildUniV3ExecutionCandidateKey(chain, [pool.token0.id, pool.token1.id], feeTier);
-        if (
-          executionKey &&
-          Number.isFinite(tvl) &&
-          tvl > 0 &&
-          Number.isInteger(token0Decimals) &&
-          token0Decimals >= 0 &&
-          token0Decimals <= 255 &&
-          Number.isInteger(token1Decimals) &&
-          token1Decimals >= 0 &&
-          token1Decimals <= 255 &&
-          Number.isFinite(token0Price) &&
-          token0Price > 0 &&
-          Number.isFinite(token1Price) &&
-          token1Price > 0
-        ) {
-          const candidates = lookups.uniV3ExecutionCandidates.get(executionKey) ?? [];
-          candidates.push({
+          const token0Decimals = Number.parseInt(pool.token0.decimals, 10);
+          const token1Decimals = Number.parseInt(pool.token1.decimals, 10);
+          const token0Price = parseFloat(pool.token0Price);
+          const token1Price = parseFloat(pool.token1Price);
+          const executionKey = buildUniV3ExecutionCandidateKey(chain, [pool.token0.id, pool.token1.id], feeTier);
+          if (
+            executionKey &&
+            Number.isFinite(tvl) &&
+            tvl > 0 &&
+            Number.isInteger(token0Decimals) &&
+            token0Decimals >= 0 &&
+            token0Decimals <= 255 &&
+            Number.isInteger(token1Decimals) &&
+            token1Decimals >= 0 &&
+            token1Decimals <= 255 &&
+            Number.isFinite(token0Price) &&
+            token0Price > 0 &&
+            Number.isFinite(token1Price) &&
+            token1Price > 0
+          ) {
+            const candidates = lookups.uniV3ExecutionCandidates.get(executionKey) ?? [];
+            candidates.push({
+              chain,
+              poolAddress: pool.id,
+              feePips: feeTier,
+              tvlUsd: tvl,
+              token0Price,
+              token1Price,
+              tokens: [
+                { address: pool.token0.id, symbol: pool.token0.symbol, decimals: token0Decimals },
+                { address: pool.token1.id, symbol: pool.token1.symbol, decimals: token1Decimals },
+              ],
+            });
+            lookups.uniV3ExecutionCandidates.set(executionKey, candidates);
+          }
+
+          // BSC is a shadow measured-execution source. Until a later activation
+          // review, its subgraph rows cannot alter fee-quality enrichment or DEX
+          // price consensus.
+          if (executionOnly) return [];
+
+          if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
+
+          if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
+
+          const sym0 = normalizeDexSymbol(pool.token0.symbol);
+          const sym1 = normalizeDexSymbol(pool.token1.symbol);
+          const isRef0 = isUsdReferenceSymbol(pool.token0.symbol);
+          const isRef1 = isUsdReferenceSymbol(pool.token1.symbol);
+          if (!isRef0 && !isRef1) return [];
+
+          const pricedTokens: { symbol: string; address: string; usdPrice: number }[] = [];
+          if (isRef1) {
+            pricedTokens.push({ symbol: sym0, address: pool.token0.id, usdPrice: token1Price });
+          }
+          if (isRef0) {
+            pricedTokens.push({ symbol: sym1, address: pool.token1.id, usdPrice: token0Price });
+          }
+
+          const identity = buildPoolIdentity({
             chain,
-            poolAddress: pool.id,
-            feePips: feeTier,
-            tvlUsd: tvl,
-            token0Price,
-            token1Price,
-            tokens: [
-              { address: pool.token0.id, symbol: pool.token0.symbol, decimals: token0Decimals },
-              { address: pool.token1.id, symbol: pool.token1.symbol, decimals: token1Decimals },
-            ],
+            protocol: "uniswap-v3",
+            poolAddressOrId: pool.id,
+            tokenAddresses: [pool.token0.id, pool.token1.id],
+            feeTierBps: feeTier / 100,
           });
-          lookups.uniV3ExecutionCandidates.set(executionKey, candidates);
-        }
-
-        // BSC is a shadow measured-execution source. Until a later activation
-        // review, its subgraph rows cannot alter fee-quality enrichment or DEX
-        // price consensus.
-        if (executionOnly) return [];
-
-        if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
-
-        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
-
-        const sym0 = normalizeDexSymbol(pool.token0.symbol);
-        const sym1 = normalizeDexSymbol(pool.token1.symbol);
-        const isRef0 = isUsdReferenceSymbol(pool.token0.symbol);
-        const isRef1 = isUsdReferenceSymbol(pool.token1.symbol);
-        if (!isRef0 && !isRef1) return [];
-
-        const pricedTokens: { symbol: string; address: string; usdPrice: number }[] = [];
-        if (isRef1) {
-          pricedTokens.push({ symbol: sym0, address: pool.token0.id, usdPrice: token1Price });
-        }
-        if (isRef0) {
-          pricedTokens.push({ symbol: sym1, address: pool.token1.id, usdPrice: token0Price });
-        }
-
-        const identity = buildPoolIdentity({
-          chain,
-          protocol: "uniswap-v3",
-          poolAddressOrId: pool.id,
-          tokenAddresses: [pool.token0.id, pool.token1.id],
-          feeTierBps: feeTier / 100,
-        });
-        return mapTrackedSubgraphPriceObservations({
-          chain,
-          protocol: "uniswap-v3",
-          tvl,
-          tokenEntries: pricedTokens,
-          chainAddressToId,
-          symbolToChainScopedIds,
-          references,
-          identity,
-        });
-      },
-    }),
+          return mapTrackedSubgraphPriceObservations({
+            chain,
+            protocol: "uniswap-v3",
+            tvl,
+            tokenEntries: pricedTokens,
+            chainAddressToId,
+            symbolToChainScopedIds,
+            references,
+            identity,
+          });
+        },
+      };
+    },
     handleResult: (lookups, _chain, result) => {
       mergeDexPriceObservationMap(lookups.uniV3PriceObs, result.observations);
     },
