@@ -22,20 +22,21 @@ function paxosReportDate(product: PaxosProduct, href: string): string | null {
   return href === manifest.reportUrl ? manifest.reportDate : null;
 }
 
-// Website pins reverified 2026-09-25 after a Framer redeploy changed every
-// module bundle hash. PAXG/PYUSD/USDP upgraded to the newly listed August 31
-// KPMG reports (official bytes downloaded and hash-verified); USDG lists
-// nothing newer and keeps its reviewed July 31 report. Only reviewed products
-// are registered; absent products fail closed.
+// Website pins reverified 2026-09-28 after another Framer redeploy changed
+// every module bundle hash; each product module still lists its reviewed
+// report. PAXG/PYUSD/USDP keep the August 31 KPMG reports admitted 2026-09-25.
+// USDG keeps its reviewed July 31 report; its newly listed August report is
+// not admitted. Only reviewed products are registered; absent products fail
+// closed.
 const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; profile: IndependentAssuranceProfile }>> = {
   PAXG: {
     // Reviewed 2026-09-25: official route and August 31 KPMG report selection
     // (Exhibit A adds a 5-token Robinhood column beside Ethereum and Solana).
     pin: {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CWLEQCuQ.mjs",
-      mainSha256: "bd0df948d197229e1ac0c93f1b692ca412550deda3d5f9f66d8323474f388010",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/9XsTDCj88fcSkvOKlIugorJnpRlJ-sQBU3zcghHZAGU.CdER7KRq.mjs",
-      pageSha256: "fe3f4afeff0d0957eea6911f035da29dc5cfb85ec84ea97dcd0c1e412ec33b73",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CU-BUxan.mjs",
+      mainSha256: "37179ea3a17093734729f8078448dd4ab7313d5053f8418d6b0039dab0c48030",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/9XsTDCj88fcSkvOKlIugorJnpRlJ-sQBU3zcghHZAGU.DQbrTS7f.mjs",
+      pageSha256: "904ad6c96c851d1a601432ba6f50f7a3e56e1f4002d56eb0f69b05836cff20d5",
     },
     profile: {
       adapterName: "paxos-independent-assurance",
@@ -59,10 +60,10 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
   PYUSD: {
     // Reviewed August 2026 year-specific open variants on 2026-09-25.
     pin: {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CWLEQCuQ.mjs",
-      mainSha256: "bd0df948d197229e1ac0c93f1b692ca412550deda3d5f9f66d8323474f388010",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.B8sYMhM5.mjs",
-      pageSha256: "ef47b724d86d212455d3655ac7f989c92308d2d3a3859991df1841eb881f7659",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CU-BUxan.mjs",
+      mainSha256: "37179ea3a17093734729f8078448dd4ab7313d5053f8418d6b0039dab0c48030",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.se44MCDY.mjs",
+      pageSha256: "24f08be1e5248a4112cd44408981fbee6f13ece74890cc87d47b6f2e3767ae5b",
     },
     profile: {
       adapterName: "paxos-independent-assurance", product: "PYUSD", profile: "pyusd-v1",
@@ -79,12 +80,13 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
   USDG: {
     // Reviewed 2026-09-09: July 2026 y397A2bek / MyKpGtOFv / LghKhDIKj
     // override selects IJR7..., not the base July U6Cd... report. Pins
-    // reverified 2026-09-25; the index still lists no newer USDG report.
+    // reverified 2026-09-28; the newly listed August Xn1U... report (as of
+    // August 6 and 31) is not yet reviewed, so July stays selected.
     pin: {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CWLEQCuQ.mjs",
-      mainSha256: "bd0df948d197229e1ac0c93f1b692ca412550deda3d5f9f66d8323474f388010",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.CVko8HBl.mjs",
-      pageSha256: "ed57577183855e71271dcdf7731d2f620e586c46b23b67d0a2f83b57ced32359",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CU-BUxan.mjs",
+      mainSha256: "37179ea3a17093734729f8078448dd4ab7313d5053f8418d6b0039dab0c48030",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.CwgpI-_s.mjs",
+      pageSha256: "c1ed4f8ca146cfe5f5db877ba8f938a41144704a0fdd01d511a11580ec5b1a1e",
     },
     profile: {
       adapterName: "paxos-independent-assurance", product: "USDG", profile: "usdg-v1",
@@ -101,10 +103,10 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
   USDP: {
     // Reviewed August 2026 year-specific open variants on 2026-09-25.
     pin: {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CWLEQCuQ.mjs",
-      mainSha256: "bd0df948d197229e1ac0c93f1b692ca412550deda3d5f9f66d8323474f388010",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.Ba4icBkY.mjs",
-      pageSha256: "3692a790a0ef3b54b1c5a006aa1bbcc608083e11c9452604dc21ed59fa64d735",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CU-BUxan.mjs",
+      mainSha256: "37179ea3a17093734729f8078448dd4ab7313d5053f8418d6b0039dab0c48030",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.D9Z8ihGD.mjs",
+      pageSha256: "8551ec0bcf25e4faa0566c4e598bc85d5151e93969286557a75957b79cf8d941",
     },
     profile: {
       adapterName: "paxos-independent-assurance", product: "USDP", profile: "usdp-v1",
