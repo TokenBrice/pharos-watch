@@ -21,6 +21,8 @@ const USDC = {
   ethereum: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   base: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
   optimism: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+  polygon: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+  solana: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 } as const;
 const STABLECOINS = [{
   id: "usdc-circle",
@@ -117,12 +119,13 @@ describe("refreshStaleRegistryPools", () => {
     expect(rows).not.toContainEqual(expect.objectContaining({ pool_id: `base:${b(3)}`, source: "cg_onchain" }));
   });
 
-  it("writes only rows that pass the crawl's admission gates and keeps rejected pools due", async () => {
+  it("writes only admitted rows, reports each refusal by reason, and backs refused pools off", async () => {
     const { sqlite, db } = fixtures.open();
     const q = (index: number) => addr("cc", index);
-    await seed(db, [1, 2, 3, 4, 5].map((index) => ({
+    await seed(db, [1, 2, 3, 4, 5, 6].map((index) => ({
       poolId: `ethereum:${q(index)}`, tvlUsd: index * 1_000_000, refreshedAt: NOW - 48 * HOUR,
     })));
+    const unparseable = usdcPool("ethereum", q(6));
     const respond = async () => ({
       transportOk: true,
       schemaDegraded: false,
@@ -131,23 +134,157 @@ describe("refreshStaleRegistryPools", () => {
         usdcPool("ethereum", q(2), { reserve: "500" }),
         { ...usdcPool("ethereum", q(3)), attributes: { ...usdcPool("ethereum", q(3)).attributes, base_token_price_quote_token: "1.2" } } as CgPool,
         usdcPool("ethereum", q(4), { basePrice: "1.6" }),
-        // q(5) is not returned by the provider.
+        // q(5) is not returned by the provider; q(6) comes back without a DEX id.
+        { ...unparseable, relationships: { ...unparseable.relationships, dex: undefined } } as unknown as CgPool,
       ],
     });
-
-    const first = await refreshStaleRegistryPools({
-      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: makeDeps(respond),
+    const run = (nowSec: number, deps = makeDeps(respond)) => refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec, deadlineMs: Date.now() + 60_000, dependencies: deps,
     });
 
-    expect(first).toMatchObject({ refreshed: 1, failed: 4, stalePoolsRemaining: 4, staleTvlRemaining: 14_000_000 });
+    const first = await run(NOW);
+
+    expect(first).toMatchObject({
+      refreshed: 1, failed: 5, backedOff: 0, stalePoolsRemaining: 5, staleTvlRemaining: 20_000_000,
+      failures: {
+        transport: 0, notReturned: 1, parseFailed: 1, poolIdMismatch: 0, untrackedToken: 0, blockedDex: 0,
+        minTvl: 1, incoherentPrice: 1, implausiblePrice: 1, turnoverCeiling: 0, invalidRow: 0,
+      },
+    });
     expect(sqlite.prepare("SELECT pool_id FROM dex_pool_registry WHERE refreshed_at = ?").all(NOW))
       .toEqual([{ pool_id: `ethereum:${q(1)}` }]);
 
-    const next = await refreshStaleRegistryPools({
-      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW + 2 * HOUR, deadlineMs: Date.now() + 60_000,
-      dependencies: makeDeps(async () => ({ transportOk: true, schemaDegraded: false, pools: [] })),
+    // Refused pools stay due and stale, but spend no request and no failure until their retry time.
+    const idle = makeDeps(respond);
+    const next = await run(NOW + 2 * HOUR, idle);
+    expect(next).toMatchObject({
+      outcome: "no-due-pools", poolsDue: 5, backedOff: 5, backedOffTvl: 20_000_000, requests: 0, failed: 0,
+      stalePoolsRemaining: 5,
     });
-    expect(next).toMatchObject({ poolsDue: 4, refreshed: 0, stalePoolsRemaining: 4 });
+    expect(idle.fetchCgPoolsByAddressesWithStatus).not.toHaveBeenCalled();
+
+    // First retry one backoff base later (minus half a tick of jitter slack); the delay then doubles.
+    const retry = await run(NOW + STALE_POOL_REFRESH_POLICY.backoffBaseSec - HOUR);
+    expect(retry).toMatchObject({ requests: 1, failed: 5, backedOff: 0 });
+    const backoff = JSON.parse(String(sqlite.prepare("SELECT value FROM kv_config WHERE key = 'dex_stale_pool_refresh_backoff'").get()!.value));
+    expect(backoff[`ethereum:${q(3)}`]).toEqual({
+      misses: 2, at: NOW + STALE_POOL_REFRESH_POLICY.backoffBaseSec - HOUR, reason: "incoherentPrice",
+    });
+    expect(Object.keys(backoff)).toHaveLength(5);
+    await expect(run(NOW + 2 * STALE_POOL_REFRESH_POLICY.backoffBaseSec)).resolves.toMatchObject({ requests: 0, backedOff: 5 });
+  });
+
+  it("retries a backed-off pool at once when another writer refreshed it after the miss, and never backs off transport failures", async () => {
+    const { sqlite, db } = fixtures.open();
+    const t = (index: number) => addr("ce", index);
+    const missAt = NOW - 22 * HOUR;
+    // Both pools missed three times; t(1) was then admitted by the cohort crawl and is due again.
+    await seed(db, [
+      { poolId: `ethereum:${t(1)}`, tvlUsd: 1_000_000, refreshedAt: NOW - 21 * HOUR },
+      { poolId: `ethereum:${t(2)}`, tvlUsd: 2_000_000, refreshedAt: NOW - 48 * HOUR },
+    ]);
+    const entry = { misses: 3, at: missAt, reason: "notReturned" };
+    sqlite.prepare("INSERT INTO kv_config (key, value) VALUES ('dex_stale_pool_refresh_backoff', ?)")
+      .run(JSON.stringify({ [`ethereum:${t(1)}`]: entry, [`ethereum:${t(2)}`]: entry }));
+
+    const failing = makeDeps(async () => ({ transportOk: false, schemaDegraded: false, pools: [] as CgPool[] }));
+    const summary = await refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: failing,
+    });
+
+    expect(failing.fetchCgPoolsByAddressesWithStatus.mock.calls.map(([, addresses]) => addresses)).toEqual([[t(1)]]);
+    expect(summary).toMatchObject({ poolsDue: 2, backedOff: 1, failed: 1, failures: expect.objectContaining({ transport: 1 }) });
+    const backoff = JSON.parse(String(sqlite.prepare("SELECT value FROM kv_config WHERE key = 'dex_stale_pool_refresh_backoff'").get()!.value));
+    expect(backoff).toEqual({ [`ethereum:${t(2)}`]: entry });
+  });
+
+  it("keeps valid entries of a corrupt backoff row, attempts the rest, and rewrites the row as valid JSON", async () => {
+    const { sqlite, db } = fixtures.open();
+    const m = (index: number) => addr("c1", index);
+    await seed(db, [1, 2, 3, 4].map((index) => ({ poolId: `ethereum:${m(index)}`, tvlUsd: index * 1_000_000, refreshedAt: NOW - 48 * HOUR })));
+    const readRow = () => String(sqlite.prepare("SELECT value FROM kv_config WHERE key = 'dex_stale_pool_refresh_backoff'").get()!.value);
+    const valid = { misses: 1, at: NOW - HOUR, reason: "minTvl" };
+    sqlite.prepare("INSERT INTO kv_config (key, value) VALUES ('dex_stale_pool_refresh_backoff', ?)").run(JSON.stringify({
+      [`ethereum:${m(1)}`]: valid,
+      [`ethereum:${m(2)}`]: { misses: 0, at: NOW - HOUR, reason: "minTvl" },
+      [`ethereum:${m(3)}`]: { misses: 1, at: NOW - HOUR, reason: "bogus" },
+      [`ethereum:${m(4)}`]: "not-an-entry",
+    }));
+    const notReturned = () => makeDeps(async () => ({ transportOk: true, schemaDegraded: false, pools: [] }));
+
+    const deps = notReturned();
+    await expect(refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: deps,
+    })).resolves.toMatchObject({ backedOff: 1, failed: 3 });
+    expect(deps.fetchCgPoolsByAddressesWithStatus.mock.calls[0]![1]).toEqual([m(4), m(3), m(2)]);
+    const rewritten = JSON.parse(readRow());
+    expect(rewritten[`ethereum:${m(1)}`]).toEqual(valid);
+    expect(rewritten[`ethereum:${m(4)}`]).toEqual({ misses: 1, at: NOW, reason: "notReturned" });
+
+    // An unparseable row degrades to "no backoff": every due pool is attempted and the row is replaced.
+    sqlite.prepare("UPDATE kv_config SET value = '{not json' WHERE key = 'dex_stale_pool_refresh_backoff'").run();
+    const all = notReturned();
+    await expect(refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: all,
+    })).resolves.toMatchObject({ backedOff: 0, failed: 4 });
+    expect(Object.keys(JSON.parse(readRow()))).toHaveLength(4);
+  });
+
+  it("prunes the lowest-TVL backoff entries when the state row would exceed its ceiling", async () => {
+    const { sqlite, db } = fixtures.open();
+    const c = (index: number) => addr("cd", index);
+    await seed(db, [1, 2, 3].map((index) => ({ poolId: `ethereum:${c(index)}`, tvlUsd: index * 1_000_000, refreshedAt: NOW - 48 * HOUR })));
+    // Each entry serializes to ~106 bytes, so this ceiling fits two.
+    const policy = STALE_POOL_REFRESH_POLICY as { backoffMaxRowBytes: number };
+    const ceiling = policy.backoffMaxRowBytes;
+    policy.backoffMaxRowBytes = 250;
+    try {
+      const summary = await refreshStaleRegistryPools({
+        db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000,
+        dependencies: makeDeps(async () => ({ transportOk: true, schemaDegraded: false, pools: [] })),
+      });
+      expect(summary).toMatchObject({ failed: 3, backoffPruned: 1 });
+    } finally {
+      policy.backoffMaxRowBytes = ceiling;
+    }
+    const row = String(sqlite.prepare("SELECT value FROM kv_config WHERE key = 'dex_stale_pool_refresh_backoff'").get()!.value);
+    expect(row.length).toBeLessThanOrEqual(250);
+    expect(Object.keys(JSON.parse(row)).sort()).toEqual([`ethereum:${c(2)}`, `ethereum:${c(3)}`]);
+  });
+
+  it("drops attributions without a tracked deployment and never counts dropped rows or mismatched ids as refreshed", async () => {
+    const { sqlite, db } = fixtures.open();
+    const u = (index: number) => addr("cf", index);
+    const solanaPool = "So1anaPooLAddressWithMixedCase1111111111111";
+    await seed(db, [
+      { poolId: `ethereum:${u(1)}`, stablecoinId: "frozen-coin", tvlUsd: 9_000_000, refreshedAt: NOW - 48 * HOUR },
+      { poolId: `ethereum:${u(2)}`, tvlUsd: 2_000_000, refreshedAt: NOW - 48 * HOUR },
+      { poolId: `ethereum:${u(2)}`, stablecoinId: "frozen-coin", tvlUsd: 2_000_000, refreshedAt: NOW - 48 * HOUR },
+      { poolId: `ethereum:${u(3)}`, tvlUsd: 1_000_000, refreshedAt: NOW - 48 * HOUR },
+      { poolId: `solana:${solanaPool}`, chain: "solana", tvlUsd: 500_000, refreshedAt: NOW - 48 * HOUR },
+    ]);
+    const deps = makeDeps(async (network, addresses) => ({
+      transportOk: true,
+      schemaDegraded: false,
+      pools: network === "solana"
+        ? [usdcPool("solana", solanaPool.toLowerCase())]
+        : addresses.map((address) => usdcPool("ethereum", address, address === u(3) ? { reserve: "20000000000" } : {})),
+    }));
+
+    const summary = await refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: deps,
+    });
+
+    expect(deps.fetchCgPoolsByAddressesWithStatus.mock.calls.map(([network, addresses]) => [network, addresses])).toEqual([
+      ["eth", [u(2), u(3)]],
+      ["solana", [solanaPool]],
+    ]);
+    expect(summary).toMatchObject({
+      poolsDue: 3, untrackedPools: 1, refreshed: 1, failed: 2,
+      failures: expect.objectContaining({ invalidRow: 1, poolIdMismatch: 1 }),
+    });
+    expect(sqlite.prepare("SELECT pool_id, stablecoin_id FROM dex_pool_registry WHERE refreshed_at = ?").all(NOW))
+      .toEqual([{ pool_id: `ethereum:${u(2)}`, stablecoin_id: "usdc-circle" }]);
   });
 
   it("never selects blocked DEX rows, so they spend no request and count as no stale TVL", async () => {

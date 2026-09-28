@@ -122,6 +122,17 @@ interface CgOnchainPoolAdmissionInput {
   coherence: PoolPriceCoherenceAdmissionGate;
 }
 
+/** Why the CG onchain admission policy refused a pool row, in gate order. */
+export type CgOnchainPoolRejectReason =
+  | "blocked-dex"
+  | "untracked-leg"
+  | "min-tvl"
+  | "incoherent-price"
+  | "implausible-price"
+  | "turnover-ceiling";
+
+export type CgOnchainPoolAdmission = { pool: StagedPool } | { reason: CgOnchainPoolRejectReason };
+
 /**
  * The single CG onchain row admission policy, shared by the token-pool crawl
  * and the stale-pool refresh pass: the DEX id must not be blocked, the tracked
@@ -129,7 +140,7 @@ interface CgOnchainPoolAdmissionInput {
  * ratio must agree with its leg prices, a usable price must be plausible for
  * the stablecoin, and turnover above 50x TVL is rejected as malformed. Volume
  * is stored as `0` only when the provider also reports zero 24h trades;
- * otherwise an unproven zero is `null`.
+ * otherwise an unproven zero is `null`. A refusal names the first failing gate.
  */
 export function admitCgOnchainPool({
   pool,
@@ -139,54 +150,56 @@ export function admitCgOnchainPool({
   trackedAddress,
   context,
   coherence,
-}: CgOnchainPoolAdmissionInput): StagedPool | null {
-  if (isBlockedDexId(parsed.dexId)) return null;
+}: CgOnchainPoolAdmissionInput): CgOnchainPoolAdmission {
+  if (isBlockedDexId(parsed.dexId)) return { reason: "blocked-dex" };
   const side =
     trackedAddress === parsed.baseTokenAddress
       ? "base"
       : trackedAddress === parsed.quoteTokenAddress
         ? "quote"
         : null;
-  if (!side) return null;
+  if (!side) return { reason: "untracked-leg" };
   const priceRaw = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
   const tvlUsd = parsed.tvlUsd;
-  if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) return null;
+  if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) return { reason: "min-tvl" };
 
-  if (!coherence.admits(side, parsed)) return null;
+  if (!coherence.admits(side, parsed)) return { reason: "incoherent-price" };
 
   const hasUsablePrice = Number.isFinite(priceRaw) && priceRaw > 0;
   if (hasUsablePrice && !isPlausibleDexObservationPrice(context.stablecoinId, priceRaw, context.references)) {
-    return null;
+    return { reason: "implausible-price" };
   }
 
   const volume24h = cgPoolVolume24hReading(pool.attributes);
-  if (volume24h != null && tvlUsd > 0 && volume24h / tvlUsd > 50) return null;
+  if (volume24h != null && tvlUsd > 0 && volume24h / tvlUsd > 50) return { reason: "turnover-ceiling" };
   const { qualityMultiplier, poolType, feePercentage, lockedLiquidityPct, balanceRatio } = classifyCgPool(
     parsed,
     pool.attributes,
   );
   const dexId = parsed.dexId;
-  return toStagedPool(context, {
-    poolId,
-    source: "cg_onchain",
-    chain,
-    protocol: normalizeProtocol(dexId),
-    dexId,
-    symbol: parsed.poolName,
-    tvlUsd,
-    volume24h,
-    qualityMultiplier,
-    poolType,
-    feeTier: feePercentage != null ? Math.round(feePercentage * 100) : null,
-    balanceRatio,
-    isStable: null,
-    baseToken: parsed.baseTokenAddress,
-    quoteToken: parsed.quoteTokenAddress,
-    quoteSymbol: null,
-    priceUsd: hasUsablePrice ? priceRaw : null,
-    lockedLiqPct: lockedLiquidityPct,
-    rawJson: null,
-  });
+  return {
+    pool: toStagedPool(context, {
+      poolId,
+      source: "cg_onchain",
+      chain,
+      protocol: normalizeProtocol(dexId),
+      dexId,
+      symbol: parsed.poolName,
+      tvlUsd,
+      volume24h,
+      qualityMultiplier,
+      poolType,
+      feeTier: feePercentage != null ? Math.round(feePercentage * 100) : null,
+      balanceRatio,
+      isStable: null,
+      baseToken: parsed.baseTokenAddress,
+      quoteToken: parsed.quoteTokenAddress,
+      quoteSymbol: null,
+      priceUsd: hasUsablePrice ? priceRaw : null,
+      lockedLiqPct: lockedLiquidityPct,
+      rawJson: null,
+    }),
+  };
 }
 
 export async function crawlCoinGeckoPoolsStage({
@@ -273,7 +286,7 @@ export async function crawlCoinGeckoPoolsStage({
         const poolId = canonicalExitRouteScopedKey(chain, parsed.poolAddress);
         if (context.hasKnownPool(poolId)) continue;
 
-        const stagedPool = admitCgOnchainPool({
+        const admission = admitCgOnchainPool({
           pool,
           parsed,
           poolId,
@@ -282,7 +295,8 @@ export async function crawlCoinGeckoPoolsStage({
           context,
           coherence: coherenceRejections,
         });
-        if (!stagedPool) continue;
+        if (!("pool" in admission)) continue;
+        const stagedPool = admission.pool;
 
         context.addPool(stagedPool);
 
