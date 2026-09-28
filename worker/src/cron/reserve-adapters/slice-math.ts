@@ -1,7 +1,7 @@
 import type { ReserveSlice } from "@shared/types/core";
 import type { LiveReserveAdapterKey, LiveReserveWarning } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition, MATERIAL_UNKNOWN_EXPOSURE_PCT } from "@shared/lib/live-reserve-adapters";
-import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
+import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
 import { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
 export { decimalNumberFromBigInt, decimalStringFromBigInt };
 
@@ -402,6 +402,64 @@ export function buildUnknownExposureWarning({
   return thresholdPct != null && unknownExposurePct > thresholdPct
     ? reserveDegradedWarning(code, fullMessage)
     : reserveInfoWarning(code, fullMessage);
+}
+
+/**
+ * Tolerance, in percent of the source total, within which an adapter's
+ * disclosed value rows and the source's own published total count as
+ * reconciled (upstream rounding and valuation-timing drift).
+ */
+export const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
+
+const SOURCE_ROWS_EXCEED_TOTAL_WARNING_CODE = "source-rows-exceed-total";
+
+interface SourceTotalReconciliationOptions {
+  /** Signed sum of the disclosed value rows: contra rows are netted, never dropped. */
+  rowTotalUsd: number;
+  /** The source's own published total; callers guarantee it is finite and positive. */
+  sourceTotalUsd: number;
+  /** Operator-facing statement of the contradiction, e.g. "Reservoir asset rows exceed totalAssets". */
+  exceedsMessage: string;
+}
+
+export interface SourceTotalReconciliation {
+  /** Source total above the rows; zero when the rows reach or exceed it. */
+  gapUsd: number;
+  /** `gapUsd` as a percentage of the source total. */
+  gapPct: number;
+  /**
+   * Fatal warning when the rows exceed the source total by more than the
+   * tolerance. The source then contradicts its own headline, so no
+   * composition, collateral total or ratio from this read may publish.
+   */
+  rowsExceedTotalWarning: LiveReserveWarning | null;
+}
+
+/**
+ * Reconcile an adapter's disclosed rows against the source's published total
+ * in both directions. A shortfall is returned as a non-negative gap the adapter
+ * surfaces as explicit unknown exposure; a material overstatement fails the
+ * attempt through a machine-readable fatal warning instead of being clamped
+ * away.
+ */
+export function reconcileRowsWithSourceTotal({
+  rowTotalUsd,
+  sourceTotalUsd,
+  exceedsMessage,
+}: SourceTotalReconciliationOptions): SourceTotalReconciliation {
+  const signedGapUsd = sourceTotalUsd - rowTotalUsd;
+  const signedGapPct = (signedGapUsd / sourceTotalUsd) * 100;
+  const rowsExceedTotalWarning = signedGapPct < -SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT
+    ? reserveFatalWarning(
+        SOURCE_ROWS_EXCEED_TOTAL_WARNING_CODE,
+        `${exceedsMessage} by ${(-signedGapPct).toFixed(2)}%; composition withheld`,
+      )
+    : null;
+  return {
+    gapUsd: Math.max(0, signedGapUsd),
+    gapPct: Math.max(0, signedGapPct),
+    rowsExceedTotalWarning,
+  };
 }
 
 interface CoverageShortfallWarningOptions {

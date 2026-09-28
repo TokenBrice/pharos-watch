@@ -177,10 +177,10 @@ describe("adaptFraxBalanceSheet", () => {
     });
   });
 
-  it("maps current frxUSD balance-sheet symbols from recorded fixture without degrading warnings", () => {
+  it("maps current frxUSD balance-sheet symbols from recorded fixture without degrading or withholding warnings", () => {
     const result = adaptFraxBalanceSheet(FRAX_BALANCE_SHEET_FIXTURE);
     expect(result.metadata?.freshnessMode).toBe("verified");
-    expect((result.warnings ?? []).filter((warning) => warning.effect === "degraded")).toEqual([]);
+    expect((result.warnings ?? []).filter((warning) => warning.effect !== "info")).toEqual([]);
   });
 
   it("throws on empty assets", () => {
@@ -435,22 +435,28 @@ describe("adaptFraxFpiCollateral", () => {
 });
 
 describe("frax balance-sheet fetch boundary", () => {
-  it.each([100.51, 200])("rejects materially overstated rows (%s) through fetch", async (value) => {
-    await expect(runAdapter("frax-balance-sheet", "frax-frax", {
+  // runAdapter also runs output validation, so these slices reach the sync
+  // core's fatal-warning gate instead of being rejected as malformed first.
+  it.each([
+    { label: "an overstated row", rows: [{ tokenSymbol: "USDC", totalValueUsd: 100.51 }] },
+    { label: "a duplicated row", rows: [{ tokenSymbol: "USDC", totalValueUsd: 100 }, { tokenSymbol: "USDC", totalValueUsd: 100 }] },
+  ])("withholds $label above totalAssets with a fatal source-rows-exceed-total warning", async ({ rows }) => {
+    const { result } = await runAdapter("frax-balance-sheet", "frax-frax", {
       network: { json: { [BALANCE_SHEET_ENDPOINT]: {
         asOfTimestamp: BALANCE_SHEET_SAMPLE.asOfTimestamp,
         totalAssets: 100,
-        assets: [{ tokenSymbol: "USDC", totalValueUsd: value, category: "asset:owned:usd" }],
+        assets: rows.map((row) => ({ ...row, category: "asset:owned:usd" })),
       } } },
       nowSec: 1_775_307_827,
-    })).rejects.toThrow(/exceed totalAssets/);
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "source-rows-exceed-total", effect: "fatal" }));
+    expect(result.metadata).not.toHaveProperty("sourceTotalGapPct");
   });
 
   it.each([
     { rows: [{ tokenSymbol: "USDC", totalValueUsd: 200 }, { tokenSymbol: "ETH", totalValueUsd: -100 }], error: /net asset is negative/ },
-    { rows: [{ tokenSymbol: "USDC", totalValueUsd: 100 }, { tokenSymbol: "USDC", totalValueUsd: 100 }], error: /exceed totalAssets/ },
     { rows: [{ tokenSymbol: "USDC", totalValueUsd: 100 }, { tokenSymbol: "ETH", totalValueUsd: null }], error: /unavailable/ },
-  ])("rejects invalid or duplicated headline accounting", async ({ rows, error }) => {
+  ])("rejects invalid headline accounting", async ({ rows, error }) => {
     await expect(runAdapter("frax-balance-sheet", "frax-frax", {
       network: { json: { [BALANCE_SHEET_ENDPOINT]: {
         asOfTimestamp: BALANCE_SHEET_SAMPLE.asOfTimestamp,

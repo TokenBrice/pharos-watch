@@ -11,7 +11,9 @@ import {
   freshnessMetadataFromTimestamp,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
+  reconcileRowsWithSourceTotal,
   reserveDegradedWarning,
+  SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
   sourceKeySlug,
 } from "./helpers";
 
@@ -149,8 +151,6 @@ const FPI_COLLATERAL_NAME_ONLY_DISPLAY: Record<string, TokenDisplayConfig> = {
   },
 };
 
-const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
-
 /* ---------- v2 balance-sheet adapter ---------- */
 
 export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subjectId?: string): AdapterResult {
@@ -184,10 +184,15 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
     throw new Error("Frax balance-sheet totalAssets is invalid or zero");
   }
   const total = sourceTotal;
-  const reconciliationGapPct = ((sourceTotal - categorizedAssetTotal) / sourceTotal) * 100;
-  if (reconciliationGapPct < -SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
-    throw new Error("Frax balance-sheet asset rows exceed totalAssets");
-  }
+  const reconciliation = reconcileRowsWithSourceTotal({
+    rowTotalUsd: categorizedAssetTotal,
+    sourceTotalUsd: sourceTotal,
+    exceedsMessage: "Frax balance-sheet asset rows exceed totalAssets",
+  });
+  if (reconciliation.rowsExceedTotalWarning) warnings.push(reconciliation.rowsExceedTotalWarning);
+  // The sync core rejects malformed slices before it reads fatal warnings, so a
+  // withheld attempt still shares its rows over their own sum; they never publish.
+  const shareBasisUsd = reconciliation.rowsExceedTotalWarning ? categorizedAssetTotal : total;
   const stableRedeemableUsd = ["USDC", "USDS", "PYUSD", "DAI", "FRAX"].reduce(
     (sum, symbol) => sum + (bySymbol.get(symbol) ?? 0),
     0,
@@ -211,7 +216,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
       slices.push({
         sourceKey: `frax-balance-sheet:${symbol.toLowerCase()}`,
         name: config.label,
-        pct: (usd / total) * 100,
+        pct: (usd / shareBasisUsd) * 100,
         risk: config.risk,
         ...(config.coinId && config.coinId !== subjectId ? { coinId: config.coinId } : {}),
       });
@@ -222,7 +227,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
     slices.push({
       sourceKey: "frax-balance-sheet:unknown",
       name: "Unmapped Frax balance-sheet assets",
-      pct: (unknownUsd / total) * 100,
+      pct: (unknownUsd / shareBasisUsd) * 100,
       risk: "high",
     });
     warnings.push(
@@ -230,18 +235,16 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
         adapterKey: "frax-balance-sheet",
         code: "unknown-token",
         message: `Frax balance-sheet unknown token(s): ${unknownSymbols.sort().join(", ")}`,
-        unknownExposurePct: (unknownUsd / total) * 100,
+        unknownExposurePct: (unknownUsd / shareBasisUsd) * 100,
       }),
     );
   }
 
-  const sourceTotalGapUsd = sourceTotal - categorizedAssetTotal;
-  const sourceTotalGapPct = (sourceTotalGapUsd / total) * 100;
-  if (sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
+  if (reconciliation.gapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     slices.push({
       sourceKey: "frax-balance-sheet:source-total-gap",
       name: "Unmapped Frax balance-sheet total-assets gap",
-      pct: sourceTotalGapPct,
+      pct: reconciliation.gapPct,
       risk: "high",
     });
     warnings.push(
@@ -249,7 +252,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
         adapterKey: "frax-balance-sheet",
         code: "source-total-gap",
         message: "Frax balance-sheet totalAssets exceeds mapped asset-category rows",
-        unknownExposurePct: sourceTotalGapPct,
+        unknownExposurePct: reconciliation.gapPct,
       }),
     );
   }
@@ -261,7 +264,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
       totalCollateralUsd: total,
       categorizedAssetTotalUsd: categorizedAssetTotal,
       sourceTotalAssetsUsd: sourceTotal,
-      ...(sourceTotalGapPct > 0 ? { sourceTotalGapPct } : {}),
+      ...(reconciliation.gapPct > 0 ? { sourceTotalGapPct: reconciliation.gapPct } : {}),
       assetCount: bySymbol.size,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,

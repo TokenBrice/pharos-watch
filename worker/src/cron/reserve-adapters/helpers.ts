@@ -46,6 +46,8 @@ export {
   parseBoundedDecimals,
   parsePositiveNumericLike,
   PCT_SUM_ERROR_TOLERANCE,
+  reconcileRowsWithSourceTotal,
+  SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
   slicesFromPercentages,
   slicesFromValues,
   valueUsdFromBigIntPrice,
