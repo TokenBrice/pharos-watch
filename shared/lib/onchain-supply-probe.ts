@@ -300,6 +300,14 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // whole global supply and the published aggregate is unchanged.
   "usdk-kast": [{ chain: "solana" }],
   "xo-exodus": [{ chain: "solana" }],
+  // hbUSDT's only deployment is on HyperEVM, a pin-only chain with no Worker
+  // registry RPC, so the generic single-contract probe cannot read it. This
+  // one-leg roster pins the reviewed HyperEVM supply endpoints; the vault-share
+  // totalSupply is the whole global supply. Verified 2026-09-28 on both
+  // endpoints: totalSupply 3,204,481.46 hbUSDT (18 decimals), within 0.3% of the
+  // ~3.21M units implied by CoinGecko's last (09-26) market cap, so no holder
+  // exclusion applies.
+  "hbusdt-hyperbeat": [supplyProbeChain("hyperevm")],
   // IAUon and SLVon are Ondo tokenized-commodity shares with no canonical-chain
   // escrow: verified 2026-07-29 that the Ethereum holder set contains no bridge
   // or adapter contract near the remote supplies, and CoinGecko's total supply
