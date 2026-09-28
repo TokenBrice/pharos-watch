@@ -32,11 +32,12 @@ export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
  * CoinGecko onchain parsers, and the v1 live-lane registry write-back), so a
  * registry zero refreshed earlier cannot be told apart from a missing reading
  * and the registry resolver treats it as absent. Positive legacy readings stay
- * usable. Set deliberately after the expected v6.9 deploy (2026-09-28 12:00
- * UTC) so the window fails closed. Inert once every earlier row is older than
- * the 72h volume admission window (after 2026-10-01 12:00 UTC); remove it then.
+ * usable. Set to the v6.9 Worker activation (2026-09-28 07:29:14 UTC): every
+ * producer that writes registry rows uses the explicit-zero rules from then on
+ * (CoinGecko onchain since 06:46 UTC). Inert once every earlier row is older than
+ * the 72h volume admission window (after 2026-10-01 07:30 UTC); remove it then.
  */
-export const DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC = 1_790_596_800;
+export const DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC = 1_790_566_154;
 
 // Uniswap V3 subgraph IDs per chain. Chain expansion is measured-execution
 // coupled: adding a chain here only turns that chain's DeFiLlama `uniswap-v3`
