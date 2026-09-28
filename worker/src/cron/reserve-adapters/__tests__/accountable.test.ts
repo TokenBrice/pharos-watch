@@ -11,6 +11,7 @@ import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
+import trusd from "@shared/data/stablecoins/coins/trusd-tori.json";
 import {
   ACCOUNTABLE_MAPPING_CASES,
   makeTimestampedYuzuPayload,
@@ -19,7 +20,8 @@ import {
   USN_DEPLOYMENT_CAPTURE,
   YUZU_SIGNED_EXPOSURE_CAPTURE,
 } from "./accountable.test-support";
-import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+import { adapterCoins, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 
 // Production removed NUSD's live config after its endpoint stopped resolving.
 // Keep this inline mapping fixture to exercise the reviewed historical
@@ -698,18 +700,30 @@ describe("adaptAccountableDashboard", () => {
     });
   });
 
-  it("keeps an approximately 81-hour-old truthful Yuzu exposure timestamp stale under the 3-day policy", async () => {
+  it("admits Yuzu's periodic exposure snapshot inside the 14-day Accountable ceiling and degrades it beyond", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const result = await runAccountablePayload(config, makeTimestampedYuzuPayload());
+    const sourceTimestamp = result.metadata?.sourceTimestamp as number;
+    const adapter = getReserveAdapter("accountable") ?? undefined;
+    const warningCodesAtAge = (ageSec: number) => validateAdapterOutput(result, {
+      adapter,
+      now: sourceTimestamp + ageSec,
+      ...(config.scoring?.maxSourceAgeSec == null ? {} : { maxSourceAgeSec: config.scoring.maxSourceAgeSec }),
+    }).warnings.map((warning) => warning.code);
 
-    const validation = validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 7, 27, 16, 31, 16) / 1000,
-    });
-    expect(validation.warnings).toContainEqual(expect.objectContaining({
-      code: "stale-source-data",
-      effect: "degraded",
-    }));
+    // Observed republication gaps reached ~10.4 and ~12 days in 2026-09.
+    expect(warningCodesAtAge(12 * 86_400)).not.toContain("stale-source-data");
+    expect(warningCodesAtAge(14 * 86_400 + 1)).toContain("stale-source-data");
+  });
+
+  it("keeps every live-dashboard Accountable feed on the 3-day budget below the adapter ceiling", () => {
+    const adapterCap = getReserveAdapter("accountable")?.validation?.maxSourceAgeSec ?? Infinity;
+    const widened = adapterCoins("accountable")
+      .filter((coin) => (coin.liveReservesConfig?.params as { bucket?: string } | undefined)?.bucket !== "exposure_split")
+      .filter((coin) => Math.min(coin.liveReservesConfig?.scoring?.maxSourceAgeSec ?? Infinity, adapterCap)
+        > DASHBOARD_SOURCE_MAX_AGE_SEC)
+      .map((coin) => coin.id);
+    expect(widened).toEqual([]);
   });
 
   it("rejects a timestamped Yuzu exposure split that misses the nearest timeline reserve total by more than 1%", async () => {
@@ -960,6 +974,60 @@ describe("adaptAccountableDashboard", () => {
     });
     expect(result.metadata?.unknownExposurePct).toBeUndefined();
     expect(result.warnings).toBeUndefined();
+  });
+
+  it("maps Tori's current equity-arbitrage and on-chain liquidity buckets through the catalog config", async () => {
+    // Captured 2026-09-28 from https://cache.accountable.capital/dashboard/tori (data.ts
+    // 1790626560152): the futures-arbitrage and on-chain-buffer categories were replaced.
+    const result = await runAccountablePayload(trusd.liveReservesConfig as LiveReservesConfig, {
+      collateralization: 1.006913,
+      ts: "1790626560152",
+      reserves: {
+        total_reserves: { name: "Total Reserves", value: 78_223_339.4 },
+        total_supply: { name: "Total Supply", value: 77_686_300.16, fx: 1 },
+      },
+      assetBreakdown: {
+        "Money Markets": { "Money Market Instruments": { status: "private", value: 53_001_491.97 } },
+        "On-chain Liquidity": { Ethereum: 11_362_191.014722636, Base: 6.652095881991734 },
+        "Delta-Neutral Equity Arbitrage": {
+          "Delta-Neutral Equity Arbitrage": { status: "private", value: 6_637_734.1 },
+        },
+        "Cash & Equivalents": {
+          "OTC & Exchange Reserve": 0,
+          "Bank Cash": { status: "private", value: 100_183.74226732111 },
+          "FX Collateral": { status: "private", value: 7_121_731.92 },
+        },
+      },
+    });
+
+    expect(result.slices).toEqual([
+      {
+        sourceKey: "accountable:tori:deployment:money-markets",
+        name: "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
+        pct: 67.8,
+        risk: "medium",
+      },
+      {
+        sourceKey: "accountable:tori:deployment:on-chain-liquidity",
+        name: "On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum",
+        pct: 14.5,
+        risk: "medium",
+      },
+      {
+        sourceKey: "accountable:tori:deployment:cash-equivalents",
+        name: "Cash and equivalents held as FX collateral at investment banks and exchange venues",
+        pct: 9.2,
+        risk: "medium",
+      },
+      {
+        sourceKey: "accountable:tori:deployment:delta-neutral-equity-arbitrage",
+        name: "Delta-neutral equity arbitrage: long listed-equity book hedged with short single-stock futures",
+        pct: 8.5,
+        risk: "high",
+      },
+    ]);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({ breakdownCount: 4, mappedBucketCount: 4 });
   });
 
   it("records unknownExposurePct for unmapped asset-breakdown categories", () => {

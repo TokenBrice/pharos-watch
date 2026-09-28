@@ -495,6 +495,10 @@ const fraxFpiCollateralParamsSchema = z
     outputTrackedAssetId: z.literal("frax-frax"),
     minOutputPriceUsd: z.number().finite().positive(),
     maxOutputPriceUsd: z.number().finite().positive(),
+    // Fraxtal endpoints for valuing issuer rows that omit their USD value; the
+    // Worker chain registry does not resolve Fraxtal.
+    fraxtalRpcUrl: AbsoluteUrlSchema.optional(),
+    fraxtalFallbackRpcUrl: AbsoluteUrlSchema.optional(),
     ...RequiredSourceUrlsFields,
     ...OptionalEvmRpcFields,
   })
@@ -2027,7 +2031,16 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_ACCOUNTABLE,
     redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: DASHBOARD_VALIDATION,
+    validation: {
+      // Ceiling only: every live-dashboard Accountable coin pins the 3-day
+      // dashboard budget via `scoring.maxSourceAgeSec`. Yuzu's timestamped
+      // `exposure_split` is republished irregularly (D1 attempt history: 08-28
+      // 09:26 held past 09-09, 09-11 15:47 held until 09-22, 2026), so its
+      // composition reuses the 14-day periodic-snapshot ceiling (solstice
+      // precedent) instead of reading stale between publications.
+      maxSourceAgeSec: 1_209_600,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
   "agora-independent-assurance": declareAdapter(agoraAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
   "anzen-usdz": declareAdapter(noParamsSchema, ONCHAIN_SINGLE_ASSET_V2, {

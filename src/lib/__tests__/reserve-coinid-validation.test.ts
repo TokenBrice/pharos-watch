@@ -21,6 +21,14 @@ const KNOWN_TICKERS = [
 ];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
+    "trusd-tori::On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum::USDC",
+    "Tori's Accountable 'On-chain Liquidity' bucket is an unsplit Morpho-USDC/USDC/USDT basket (basket-needs-split disposition), so a USDC coinId would overstate the dependency.",
+  ],
+  [
+    "trusd-tori::On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum::USDT",
+    "Tori's Accountable 'On-chain Liquidity' bucket is an unsplit Morpho-USDC/USDC/USDT basket (basket-needs-split disposition), so a USDT coinId would overstate the dependency.",
+  ],
+  [
     "usdm-mega::USDC and USDtb reserve basket::USDC",
     "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDC coinId would overstate the dependency.",
   ],

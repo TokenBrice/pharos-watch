@@ -68,6 +68,9 @@
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "apxusd-apyx",
+    "scoring": {
+      "maxSourceAgeSec": 259200
+    },
     "display": {
       "url": "https://accountable.apyx.fi/",
       "label": "Accountable Dashboard"

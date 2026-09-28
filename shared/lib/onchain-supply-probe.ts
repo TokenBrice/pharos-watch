@@ -672,9 +672,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("hyperevm", { allowZeroSupply: true }),
     // override: retain this asset's reviewed primary-only supply profile.
     supplyProbeChain("sei", { fallbackRpcUrl: undefined }),
-    // override: this reviewed syzUSD leg uses dRPC first, not the ZAN route.
-    // Keep its primary-only supply profile rather than adding a second endpoint.
-    supplyProbeChain("pharos", { rpcUrl: SUPPLY_RPC_DEFAULTS.pharos.fallbackRpcUrl, fallbackRpcUrl: undefined }),
+    // override: pharos.drpc.org answers eth_call with -32601 (method not
+    // available; re-checked 2026-09-28), so this leg reads the ZAN primary
+    // alone rather than declaring a fallback that can never serve totalSupply.
+    supplyProbeChain("pharos", { fallbackRpcUrl: undefined }),
     supplyProbeChain("berachain"),
   ],
   // IDRT is minted natively on Ethereum, BSC and Polygon: each is a

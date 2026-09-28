@@ -89,6 +89,8 @@
       "outputTrackedAssetId": "frax-frax",
       "minOutputPriceUsd": 0.98,
       "maxOutputPriceUsd": 1.02,
+      "fraxtalRpcUrl": "https://rpc.frax.com",
+      "fraxtalFallbackRpcUrl": "https://fraxtal.drpc.org",
       "sourceUrls": [
         "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
         "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/FPI/FPIControllerPool.sol",

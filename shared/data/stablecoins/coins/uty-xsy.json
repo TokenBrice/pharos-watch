@@ -79,6 +79,9 @@
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "uty-xsy",
+    "scoring": {
+      "maxSourceAgeSec": 259200
+    },
     "display": {
       "url": "https://accountable.xsy.fi/",
       "label": "Accountable"

@@ -548,6 +548,70 @@ describe("frax balance-sheet fetch boundary", () => {
     });
   });
 
+  describe("issuer row without a USD value", () => {
+    const SFRXUSD = "0xfc00000000000000000000000000000000000008";
+    const SFRXUSD_PRICE_URL = `https://coins.llama.fi/prices/current/fraxtal:${SFRXUSD}`;
+    const runWithUnpricedSfrxusd = (balanceRaw: bigint | null) =>
+      runAdapter("frax-fpi-collateral", "fpi-frax", {
+        network: {
+          code: { "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51": "0x" },
+          rpc: { [`${SFRXUSD}:balanceOf(address)`]: balanceRaw, [`${SFRXUSD}:decimals()`]: 18 },
+          json: {
+            [FPI_COLLATERAL_ENDPOINT]: {
+              ...FPI_COLLATERAL_SAMPLE,
+              assets: [...FPI_COLLATERAL_SAMPLE.assets!, {
+                key: "asset:fraxtal_fpi_comptroller:sfrxusd_balance",
+                chain: "fraxtal",
+                ownerAddress: "0x7fc64ffddf99cd64dc2cff86a82f3b749962cf33",
+                tokenAddress: SFRXUSD,
+                tokenSymbol: "sfrxUSD",
+                valueUsd: null,
+              }],
+            },
+            [SFRXUSD_PRICE_URL]: { coins: { [`fraxtal:${SFRXUSD}`]: {
+              price: 1.2, timestamp: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec, confidence: 0.99,
+            } } },
+          },
+        },
+        params: { fraxtalRpcUrl: "https://rpc.frax.com" },
+        nowSec: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec!,
+      });
+
+    it("admits an immaterial dust balance as informational unpriced exposure and keeps valued capacity", async () => {
+      const { result, report } = await runWithUnpricedSfrxusd(80_000_000_000_000_000n);
+
+      expect([...(result.warnings ?? []), ...report.warnings].filter((warning) => warning.effect !== "info")).toEqual([]);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-value-unavailable", effect: "info" }));
+      expect(result.metadata).toMatchObject({
+        compositionComplete: true,
+        unavailableAssetCount: 0,
+        unpricedAssetLabels: ["sfrxUSD"],
+        unpricedCollateralUsd: expect.closeTo(0.096, 9),
+        totalCollateralUsd: expect.closeTo(5_200_000.096, 6),
+        // The Pharos-valued sfrxUSD row is exposure, never redemption capacity.
+        redemption: { capacityUsd: 5_000_000 },
+      });
+    });
+
+    it("fails closed and withholds capacity when the unpriced row is material", async () => {
+      const { result } = await runWithUnpricedSfrxusd(1_000_000n * 10n ** 18n);
+
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
+      expect(result.warnings?.some((warning) => warning.code === "asset-value-unavailable")).toBe(false);
+      expect(result.metadata).toMatchObject({ compositionComplete: false, knownCollateralUsd: 5_200_000 });
+      expect(result.metadata?.totalCollateralUsd).toBeUndefined();
+      expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+    });
+
+    it("fails closed when the balance cannot be read", async () => {
+      const { result } = await runWithUnpricedSfrxusd(null);
+
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
+      expect(result.metadata).toMatchObject({ compositionComplete: false, unavailableAssetLabels: ["sfrxUSD"] });
+      expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+    });
+  });
+
   it("fetches the configured balance-sheet endpoint through the shared network harness", async () => {
     const { result, network } = await runAdapter("frax-balance-sheet", "frax-frax", {
       network: { json: { [BALANCE_SHEET_ENDPOINT]: BALANCE_SHEET_SAMPLE } },
