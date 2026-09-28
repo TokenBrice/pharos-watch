@@ -80,7 +80,7 @@ export function isPreferredDirectApiPool(
   minTvlUsd = DIRECT_API_POOL_MIN_TVL_USD,
 ): boolean {
   if (!isEligibleDirectApiPool(pool, minTvlUsd)) return false;
-  if (Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0) return true;
+  if (pool.volume24hUsd != null && Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0) return true;
   if (pool.tokens.some((token) => token.priceUsdDependency != null)) return true;
   return pool.source === "aerodrome-slipstream" || pool.source === "velodrome-slipstream";
 }
@@ -142,7 +142,8 @@ export function normalizeDexApiPoolsForMerge(pools: DexApiPool[]): DexApiPoolNor
       tokens,
       price: toPositiveFiniteNumberOrNull(pool.price),
       tvlUsd,
-      volume24hUsd: toNonNegativeFiniteNumberOrNull(pool.volume24hUsd) ?? 0,
+      // Absent/invalid provider volume stays null: no observation, never a measured zero.
+      volume24hUsd: toNonNegativeFiniteNumberOrNull(pool.volume24hUsd),
       feeRate: toNonNegativeFiniteNumberOrNull(pool.feeRate),
       balances,
       ...(tokenVolumes24h ? { tokenVolumes24h } : { tokenVolumes24h: null }),
@@ -590,6 +591,8 @@ function derivePoolBalanceMetrics(
 /**
  * Convert DexApiPool[] to GtNewPool[] keyed by stablecoinId.
  * Matches pool tokens against the stablecoin contract registry + symbol fallback.
+ * `volumeObservedAtSec` is the live fetch clock of the pools' volume readings;
+ * without it the readings cannot prove their window and classify as missing.
  */
 export function convertToGtNewPools(
   pools: DexApiPool[],
@@ -598,6 +601,7 @@ export function convertToGtNewPools(
   validationReferences?: PriceValidationReferences,
   trackedStablecoinPrices?: Map<string, number>,
   fallbackCounters?: LiquidityFallbackCounters,
+  volumeObservedAtSec?: number,
 ): Map<string, GtNewPool[]> {
   const result = new Map<string, GtNewPool[]>();
 
@@ -657,6 +661,7 @@ export function convertToGtNewPools(
         name: `${pool.source}:${symbolStr}`,
         tvlUsd: pool.tvlUsd,
         volume24hUsd,
+        ...(volumeObservedAtSec != null ? { volumeObservedAtSec } : {}),
         qualityMultiplier,
         maturityDays: 30,
         price: tokenPrice ?? 0,
@@ -678,7 +683,7 @@ export function convertToGtNewPools(
           : {}),
         measurement: {
           tvlMeasured: true,
-          volumeMeasured: pool.tokenVolumes24h != null || (Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0),
+          volumeMeasured: volume24hUsd != null,
           balanceMeasured: balanceMetrics != null,
           maturityMeasured: false,
           priceMeasured: tokenPrice != null && tokenPrice > 0,

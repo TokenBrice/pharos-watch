@@ -1,4 +1,7 @@
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { MethodologyDetails } from "../../methodology-shared";
+
+const VOLUME_ADMISSION_HOURS = DEX_VOLUME_OBSERVATION_MAX_AGE_SEC / 3600;
 
 export function LiquidityPoolMatchingDetails() {
   return (
@@ -119,9 +122,21 @@ export function LiquidityPoolMatchingDetails() {
           toward zero between UTC day rollovers.
         </p>
         <p>
-          Large retained pools must clear the minimum 24h volume floor even when volume is marked unmeasured. After bad
-          pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score input is rebuilt
-          from the retained pool set.
+          Large retained pools must clear the minimum 24h volume floor with an admitted reading; an unmeasured,
+          missing, or stale reading does not clear it. After bad pools are filtered and secondary-source TVL caps are
+          applied, every exported aggregate and score input is rebuilt from the retained pool set.
+        </p>
+        <p>
+          Since v6.9, DEX volume counts only admitted readings: a pool&apos;s provider 24h volume observed within the
+          last {VOLUME_ADMISSION_HOURS} hours. The reading stays a 24h figure as of its own observation time, and every
+          published volume record states the {VOLUME_ADMISSION_HOURS}h window and the oldest and newest observation
+          times. Older readings contribute nothing, even though the remembered discovery row keeps its decaying TVL. A
+          source field that is absent or unparseable is stored as unmeasured, never as zero; an explicit provider zero
+          (for CoinGecko onchain, only alongside zero reported trades) stays a measured zero. Registry zeros recorded before the v6.9 producer (before 2026-09-28 12:00 UTC) could
+          be coerced missing values, so they count as unmeasured while positive readings from that period stay usable.
+          A 24h or 7d total is published only when every retained pool is
+          admitted; otherwise the total is unavailable and the record shows the observed volume of the admitted pools
+          next to their share of retained TVL (volume coverage), including for the ecosystem-wide aggregate.
         </p>
         <p>
           Curve balance, registry, token-price, and metapool TVL enrichment is applied only to Curve DeFiLlama rows.

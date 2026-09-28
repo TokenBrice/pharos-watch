@@ -303,9 +303,7 @@ describe("DexLiquidityCard", () => {
         liquidityScore: null,
         scoreComponents: { tvlDepth: 70, volumeActivity: null, poolQuality: 60, durability: 50, pairDiversity: 10 },
       });
-      expect(
-        screen.getByText("Liquidity Score is not rated: 24h DEX volume was not measured across every contributing pool."),
-      ).toBeTruthy();
+      expect(screen.getByText(/^Liquidity Score is not rated:/)).toBeTruthy();
       expect(screen.queryByText("No observed direct DEX market for this token in the current pipeline.")).toBeNull();
       // Valid components stay visible beside the NR activity bar (header pill + bar).
       expect(screen.getByText("Score Breakdown")).toBeTruthy();

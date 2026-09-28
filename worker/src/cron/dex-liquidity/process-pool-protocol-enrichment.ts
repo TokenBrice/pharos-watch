@@ -126,7 +126,8 @@ export function enrichPoolProtocol(
       ? curveData!.metapoolAdjustedTvl
       : pool.tvlUsd,
     balanceDetails,
-    volumeUsd1d: pool.volumeUsd1d ?? 0,
-    volumeUsd7d: pool.volumeUsd7d,
+    volumeUsd1d: pool.volumeUsd1d ?? null,
+    volumeUsd7d: pool.volumeUsd7d ?? null,
+    volumeObservedAtSec: context.volumeObservedAtSec ?? null,
   };
 }

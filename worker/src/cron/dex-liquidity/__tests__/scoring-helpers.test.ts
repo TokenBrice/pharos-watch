@@ -2,12 +2,15 @@ import { describe, it, expect } from "vitest";
 import {
   accumulateGlobalAggregate,
   aggregateProtocolSources,
+  applyPoolVolumeEligibility,
   classifyCoverage,
   collapseDuplicateObservations,
   buildDexPriceObservationsFromRetainedPools,
   filterRetainedPools,
-  rebuildMetricsFromPools,
+  summarizeRetainedPoolVolume,
+  type GlobalPoolAggregateEntry,
 } from "../scoring-helpers";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { LiquiditySourceMixByFamily } from "../types";
 import { makeObs, makePool } from "./scoring-test-builders";
@@ -390,21 +393,66 @@ describe("filterRetainedPools", () => {
   });
 });
 
-describe("rebuildMetricsFromPools", () => {
-  it("marks 7d volume as unmeasured when any retained pool lacks 7d volume", () => {
-    const rebuilt = rebuildMetricsFromPools([
-      makePool({ poolId: "ethereum:0xmeasured", volumeUsd7d: 700_000 }),
-      makePool({ poolId: "ethereum:0xfallback", tvlUsd: 50_000, volumeUsd1d: 25_000, volumeUsd7d: null }),
-    ]);
+describe("DEC-19 retained pool volume", () => {
+  const NOW = 1_800_000_000;
+  const clock = { asOfSec: NOW, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC };
+  const pool = (volume24hUsd: number | null, ageSec: number | null, tvlUsd = 1_000) => ({
+    reading: { volume24hUsd, volume7dUsd: null, observedAtSec: ageSec == null ? null : NOW - ageSec },
+    tvlUsd,
+  });
 
-    expect(rebuilt.totalVolume7dUsd).toBe(700_000);
-    expect(rebuilt.totalVolume7dMeasured).toBe(false);
+  it("admits a reading exactly 72h old and excludes one a second older", () => {
+    const summary = summarizeRetainedPoolVolume(
+      [pool(100, 0), pool(50, 72 * 3600, 3_000), pool(1_000, 72 * 3600 + 1, 4_000), pool(50_000, 180 * 3600, 2_000)],
+      clock,
+    );
+    expect(summary.totalVolume24hUsd).toBeNull();
+    expect(summary.volumeAvailability["24h"]).toMatchObject({
+      completeness: "partial",
+      reason: "pool-observations-stale",
+      partialGrossUsd: 150,
+      measuredPoolCount: 2,
+      stalePoolCount: 2,
+      maxObservationAgeSec: 72 * 3600,
+      admittedTvlUsd: 4_000,
+      retainedTvlUsd: 10_000,
+      volumeCoverage: 0.4,
+    });
+  });
+
+  it("keeps a complete measured zero at full coverage and nulls all-missing and mixed windows", () => {
+    const zero = summarizeRetainedPoolVolume([pool(0, 60), pool(0, 0)], clock);
+    expect(zero.totalVolume24hUsd).toBe(0);
+    expect(zero.volumeAvailability["24h"]).toMatchObject({ completeness: "complete", volumeCoverage: 1 });
+    const missing = summarizeRetainedPoolVolume([pool(null, 0), { reading: undefined, tvlUsd: 500 }], clock);
+    expect(missing.totalVolume24hUsd).toBeNull();
+    expect(missing.volumeAvailability["24h"]).toMatchObject({ completeness: "missing", volumeCoverage: 0 });
+    const mixed = summarizeRetainedPoolVolume([pool(10, 0), pool(null, 0), pool(5, 200 * 3600)], clock);
+    expect(mixed.volumeAvailability["24h"]).toMatchObject({
+      completeness: "partial",
+      reason: "pool-observations-missing-and-stale",
+      partialGrossUsd: 10,
+    });
+  });
+
+  it("publishes only admitted pool volume and never a decayed or aged value", () => {
+    const aged = makePool({ poolId: "ethereum:0xaged", volumeUsd1d: 50_000 });
+    aged.volumeReading = pool(50_000, 180 * 3600).reading;
+    aged.extra = { measurement: { volumeMeasured: true, decayed: true } };
+    const admitted = makePool({ poolId: "ethereum:0xadmitted", volumeUsd1d: 7 });
+    admitted.volumeReading = pool(7, 72 * 3600).reading;
+    applyPoolVolumeEligibility([aged, admitted], clock);
+    expect(aged.volumeUsd1d).toBeNull();
+    expect(aged.volumeObservation).toEqual({ status: "stale", observedAtSec: NOW - 180 * 3600 });
+    expect(aged.extra?.measurement?.volumeMeasured).toBe(false);
+    expect(admitted.volumeUsd1d).toBe(7);
+    expect(admitted.volumeObservation).toEqual({ status: "measured", observedAtSec: NOW - 72 * 3600 });
   });
 });
 
 describe("accumulateGlobalAggregate", () => {
   it("dedupes the same poolId across stablecoins", () => {
-    const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>();
+    const seenTvl = new Map<string, GlobalPoolAggregateEntry>();
     const protoTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
     const protoChainTvl: Record<string, number> = {};
@@ -419,46 +467,23 @@ describe("accumulateGlobalAggregate", () => {
     expect(a.poolCount + b.poolCount).toBe(1);
   });
 
-  it("prefers the higher-TVL row on poolId collision", () => {
-    const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>();
+  it("lets the higher-TVL occurrence own the deduped pool, including its volume reading", () => {
+    const seenTvl = new Map<string, GlobalPoolAggregateEntry>();
     const protoTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
     const protoChainTvl: Record<string, number> = {};
     const chains = new Set<string>();
+    const lower = makePool({ chain: "ethereum", tvlUsd: 4_500_000 });
+    lower.volumeReading = { volume24hUsd: 900_000, volume7dUsd: null, observedAtSec: 1 };
+    const higher = makePool({ chain: "ethereum", tvlUsd: 5_000_000 });
+    higher.volumeReading = { volume24hUsd: 1_000_000, volume7dUsd: 7_000_000, observedAtSec: 2 };
 
-    const a = accumulateGlobalAggregate(
-      [makePool({ chain: "ethereum", tvlUsd: 4_500_000, volumeUsd1d: 900_000, volumeUsd7d: 6_300_000 })],
-      protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
-    );
-    const b = accumulateGlobalAggregate(
-      [makePool({ chain: "ethereum", tvlUsd: 5_000_000, volumeUsd1d: 1_000_000, volumeUsd7d: 7_000_000 })],
-      protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
-    );
+    const a = accumulateGlobalAggregate([lower], protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
+    const b = accumulateGlobalAggregate([higher], protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
 
     expect(a.totalTvl + b.totalTvl).toBe(5_000_000);
     expect(protoTvl["balancer"]).toBe(5_000_000);
     expect(chainTvl["ethereum"]).toBe(5_000_000);
-  });
-
-  it("tracks whether the selected deduped pool supplied measured 7d volume", () => {
-    const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>();
-    const protoTvl: Record<string, number> = {};
-    const chainTvl: Record<string, number> = {};
-    const protoChainTvl: Record<string, number> = {};
-    const chains = new Set<string>();
-
-    accumulateGlobalAggregate(
-      [makePool({ tvlUsd: 4_500_000, volumeUsd7d: null })],
-      protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
-    );
-    expect(seenTvl.get("ethereum:0xabc")?.vol7d).toBe(0);
-    expect(seenTvl.get("ethereum:0xabc")?.vol7dMeasured).toBe(false);
-
-    accumulateGlobalAggregate(
-      [makePool({ tvlUsd: 5_000_000, volumeUsd7d: 7_000_000 })],
-      protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
-    );
-    expect(seenTvl.get("ethereum:0xabc")?.vol7d).toBe(7_000_000);
-    expect(seenTvl.get("ethereum:0xabc")?.vol7dMeasured).toBe(true);
+    expect(seenTvl.get("ethereum:0xabc")).toMatchObject({ tvl: 5_000_000, reading: higher.volumeReading });
   });
 });

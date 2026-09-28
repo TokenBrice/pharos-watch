@@ -14,7 +14,15 @@ import type {
 } from "./scoring-stage-contract";
 import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
 
+// Manifest layout version. D1 pins `dex_liquidity_scoring_stages.schema_version`
+// with CHECK (schema_version = 1); it versions the manifest/chunk table layout,
+// which is unchanged, so it must not follow the payload version below.
 const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
+// Chunk payload version carried by the header record. v2 (liquidity methodology
+// 6.9): pools carry raw DEC-19 volume readings (`volumeReading`) and nullable
+// volumes. A v1 payload lacks the readings, so it is rejected rather than scored
+// as all-missing volume.
+const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 2;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 /** @internal Exported for focused scoring-stage tests. */
 export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 1;
@@ -80,7 +88,7 @@ type ScoringStageChunkInsertRow = [
 type ScoringStageRecord =
   | {
       kind: "header";
-      schemaVersion: typeof DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION;
+      schemaVersion: typeof DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION;
       source: EncodedSourceHeader;
       pool: PoolHeader;
     }
@@ -228,6 +236,18 @@ function requireFiniteNumber(value: unknown, label: string): number {
   return value;
 }
 
+function requireFiniteNumberOrNull(value: unknown, label: string): number | null {
+  return value === null ? null : requireFiniteNumber(value, label);
+}
+
+function requirePoolVolumeReading(value: unknown): void {
+  if (value === undefined) return;
+  if (!isRecord(value)) throw new Error("DEX liquidity scoring stage contains an invalid pool volume reading");
+  requireFiniteNumberOrNull(value.volume24hUsd, "pool 24h volume reading");
+  requireFiniteNumberOrNull(value.volume7dUsd, "pool 7d volume reading");
+  requireFiniteNumberOrNull(value.observedAtSec, "pool volume observation clock");
+}
+
 function buildPoolHeader(poolState: DexLiquidityPoolState): PoolHeader {
   const {
     metrics: _metrics,
@@ -267,7 +287,7 @@ function* iterateScoringStageRecords(
 
   yield {
     kind: "header",
-    schemaVersion: DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION,
+    schemaVersion: DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION,
     source: {
       ...source,
       stablecoinPrices: [...stablecoinPriceById],
@@ -452,8 +472,8 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
       if (decoder.sourceHeader || decoder.poolHeader) {
         throw new Error("DEX liquidity scoring stage contains duplicate header records");
       }
-      if (record.schemaVersion !== DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION) {
-        throw new Error(`Unsupported DEX liquidity scoring stage schema version ${record.schemaVersion}`);
+      if (record.schemaVersion !== DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION) {
+        throw new Error(`Unsupported DEX liquidity scoring stage payload version ${record.schemaVersion}`);
       }
       if (!isRecord(record.source) || !isRecord(record.pool)) {
         throw new Error("DEX liquidity scoring stage contains an invalid header");
@@ -512,7 +532,7 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
         throw new Error("DEX liquidity scoring stage contains an invalid metric");
       }
       requireFiniteNumber(record.metric.totalTvlUsd, "metric TVL");
-      requireFiniteNumber(record.metric.totalVolume24hUsd, "metric 24h volume");
+      requireFiniteNumberOrNull(record.metric.totalVolume24hUsd, "metric 24h volume");
       assertUniqueMapKey(decoder.metrics, record.stablecoinId, "metric");
       decoder.metrics.set(record.stablecoinId, {
         ...record.metric,
@@ -533,7 +553,8 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
         throw new Error("DEX liquidity scoring stage contains an invalid pool");
       }
       requireFiniteNumber(record.pool.tvlUsd, "pool TVL");
-      requireFiniteNumber(record.pool.volumeUsd1d, "pool 24h volume");
+      requireFiniteNumberOrNull(record.pool.volumeUsd1d, "pool 24h volume");
+      requirePoolVolumeReading(record.pool.volumeReading);
       const metric = decoder.metrics.get(record.stablecoinId);
       if (!metric) {
         throw new Error(

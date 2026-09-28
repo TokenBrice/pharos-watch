@@ -15,6 +15,7 @@ import type { DexLiquidityData } from "@shared/types/market";
 import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { describeDexVolume } from "@/lib/dex-volume-display";
+import { DEX_VOLUME_COVERAGE_MIN, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { getScoreTier, SCORE_TIER_CUTOFFS, TIER_PILL } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import {
@@ -189,7 +190,10 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
             {isLiquidityActivityNotRated(liq) ? (
               <>
-                <p>Liquidity Score is not rated: 24h DEX volume was not measured across every contributing pool.</p>
+                <p>
+                  Liquidity Score is not rated: pools with a 24h DEX volume reading from the last {DEX_VOLUME_OBSERVATION_MAX_AGE_SEC / 3600} hours cover less
+                  than {Math.round(DEX_VOLUME_COVERAGE_MIN * 100)}% of this token&apos;s retained DEX liquidity.
+                </p>
                 <p className="mt-1">
                   Pharos does not estimate missing activity or reweight the remaining components to fill its share.
                 </p>

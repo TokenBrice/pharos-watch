@@ -178,7 +178,7 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.degraded).toBe(false);
     expect(result.errors).toHaveLength(0);
     expect(result.pools).toHaveLength(1);
-    expect(result.pools[0]?.volume24hUsd).toBe(0);
+    expect(result.pools[0]?.volume24hUsd).toBeNull();
   });
 
   it("batches hourly lookups to stay under the subgraph row cap and sums per-pool rows", async () => {

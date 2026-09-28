@@ -19,6 +19,7 @@ import {
   normalizeProtocol,
   parsePoolSymbols,
 } from "../dex-liquidity/pool-helpers";
+import { withCompleteVolume } from "../dex-liquidity/__tests__/scoring-test-builders";
 
 describe("dex-liquidity pool helpers", () => {
   afterEach(() => {
@@ -104,7 +105,7 @@ describe("dex-liquidity pool helpers", () => {
     // 89.4*0.15 + 90*0.35 + 80*0.25 + 100*0.25 = 13.4+31.5+20+25 = 90
     expect(computeDurabilityScore(rich, 0.9, 0.8)).toBe(90);
 
-    const zeroLiquidity = computeLiquidityScore(empty, 41);
+    const zeroLiquidity = computeLiquidityScore(withCompleteVolume(empty), 41);
     expect(zeroLiquidity.score).toBe(8);
     expect(zeroLiquidity.components).toEqual({
       tvlDepth: 0,
@@ -122,7 +123,7 @@ describe("dex-liquidity pool helpers", () => {
     rich.chains = new Set(["Ethereum", "Base", "Arbitrum"]);
 
     // V/T = 1M/5M = 0.2 -> log-scale: 38*(log10(0.2)+3) = 38*2.301 = 87.4 → 87
-    const healthyLiquidity = computeLiquidityScore(rich, 90);
+    const healthyLiquidity = computeLiquidityScore(withCompleteVolume(rich), 90);
     expect(healthyLiquidity.score).toBeGreaterThan(60);
     expect(healthyLiquidity.components.pairDiversity).toBe(40);
     // crossChain should not be present
@@ -140,7 +141,7 @@ describe("dex-liquidity pool helpers", () => {
     const circulatingUsd = 100_000_000;
     const durability = 70;
 
-    const result = computeLiquidityScore(m, durability, circulatingUsd);
+    const result = computeLiquidityScore(withCompleteVolume(m), durability, circulatingUsd);
 
     // TVL Depth: 35 * log10(0.10 / 0.0007) = 35 * log10(142.86) = 35 * 2.155 = 75.4 → 75
     expect(result.components.tvlDepth).toBe(75);

@@ -118,7 +118,7 @@ function makePool(index: number): PoolEntry {
 
 function populateMetric(metric: LiquidityMetrics, pools: PoolEntry[]): LiquidityMetrics {
   const totalTvlUsd = pools.reduce((sum, pool) => sum + pool.tvlUsd, 0);
-  const totalVolume24hUsd = pools.reduce((sum, pool) => sum + pool.volumeUsd1d, 0);
+  const totalVolume24hUsd = pools.reduce((sum, pool) => sum + (pool.volumeUsd1d ?? 0), 0);
   return {
     ...metric,
     totalTvlUsd,
@@ -731,6 +731,13 @@ describe("DEX liquidity scoring stage", () => {
         ),
       ])
     ).toThrow("unknown target lane");
+    // A pre-6.9 payload carries no raw volume readings: rejected, never scored as all-missing volume.
+    const [header, ...rest] = base[0]!.payload.split("\n");
+    expect(() =>
+      decodeDexLiquidityScoringStageChunks([
+        withPayload([JSON.stringify({ ...JSON.parse(header!), schemaVersion: 1 }), ...rest].join("\n")),
+      ])
+    ).toThrow("payload version 1");
 
     const invalidPool = poolState(1);
     invalidPool.metrics.get("major")!.totalTvlUsd = Number.NaN;

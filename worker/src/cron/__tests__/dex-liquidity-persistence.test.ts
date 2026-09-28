@@ -24,6 +24,7 @@ import {
 import {
   makeDexRouteObservation,
   makeDexRouteObservationCoverage,
+  makeCompleteVolumeAvailability,
   makeFullScoreResult,
 } from "./dex-liquidity-persistence.test-support";
 import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
@@ -134,7 +135,7 @@ function makeDb(options: {
 
 
 
-const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 29;
+const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 30;
 
 function extractDexLiquidityRunRows(statements: readonly PreparedStatementWithMeta[]): unknown[][] {
   const rows: unknown[][] = [];
@@ -202,6 +203,7 @@ describe("dex-liquidity persistence", () => {
           makeFullScoreResult({
             tvl: 123_456,
             vol24h: 22_222,
+            volumeAvailability: makeCompleteVolumeAvailability(22_222, 155_555),
             score: 78,
             hhi: 0.2222,
             durability: 81,
@@ -231,7 +233,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 456_789,
         totalVol24h: 99_999,
         totalVol7d: 700_000,
-        totalVol7dMeasured: true,
+        volumeAvailability: makeCompleteVolumeAvailability(99_999, 700_000),
         poolCount: 12,
         chainCount: 4,
         protocolTvl: { curve: 200_000 },
@@ -287,7 +289,7 @@ describe("dex-liquidity persistence", () => {
       ),
     );
     expect(prepared.length).toBeLessThan(preparedRows.length);
-    expect(prepared.every((statement) => statement.boundValues.length <= 87)).toBe(true);
+    expect(prepared.every((statement) => statement.boundValues.length <= 3 * DEX_LIQUIDITY_RUN_ROW_BIND_COUNT)).toBe(true);
 
     const usdtRow = preparedRows.find((row) => row[1] === "usdt-tether");
     const usdcPlaceholder = preparedRows.find((row) => row[1] === "usdc-circle");
@@ -301,6 +303,7 @@ describe("dex-liquidity persistence", () => {
       22_222,
       155_555,
       1,
+      JSON.stringify(makeCompleteVolumeAvailability(22_222, 155_555)),
       2,
       2,
       2,
@@ -341,6 +344,7 @@ describe("dex-liquidity persistence", () => {
       0,
       0,
       1,
+      expect.any(String),
       0,
       0,
       0,
@@ -364,7 +368,11 @@ describe("dex-liquidity persistence", () => {
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
-    expect(JSON.parse(String(usdcPlaceholder?.[20]))).toMatchObject({
+    // Placeholders retain no pool: the vacuous complete-zero window at the run's volume clock.
+    expect(JSON.parse(String(usdcPlaceholder?.[7]))).toMatchObject({
+      "24h": { completeness: "complete", partialGrossUsd: null, measuredPoolCount: 0, volumeCoverage: null },
+    });
+    expect(JSON.parse(String(usdcPlaceholder?.[21]))).toMatchObject({
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "unknown",
@@ -385,6 +393,7 @@ describe("dex-liquidity persistence", () => {
       99_999,
       700_000,
       1,
+      JSON.stringify(makeCompleteVolumeAvailability(99_999, 700_000)),
       12,
       0,
       4,
@@ -439,7 +448,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 0,
         totalVol24h: 0,
         totalVol7d: 0,
-        totalVol7dMeasured: true,
+        volumeAvailability: makeCompleteVolumeAvailability(0, 0),
         poolCount: 0,
         chainCount: 0,
         protocolTvl: {},
@@ -451,7 +460,7 @@ describe("dex-liquidity persistence", () => {
     const row = extractDexLiquidityRunRows(
       getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
     ).find((candidate) => candidate[1] === meta.id);
-    expect(JSON.parse(String(row?.[20]))).toMatchObject({
+    expect(JSON.parse(String(row?.[21]))).toMatchObject({
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "populated",
@@ -512,7 +521,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 0,
         totalVol24h: 0,
         totalVol7d: 0,
-        totalVol7dMeasured: true,
+        volumeAvailability: makeCompleteVolumeAvailability(0, 0),
         poolCount: 0,
         chainCount: 0,
         protocolTvl: {},
@@ -524,7 +533,7 @@ describe("dex-liquidity persistence", () => {
     const row = extractDexLiquidityRunRows(
       getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
     ).find((candidate) => candidate[1] === meta.id);
-    expect(JSON.parse(String(row?.[20]))).toMatchObject({
+    expect(JSON.parse(String(row?.[21]))).toMatchObject({
       exitRouteObservationCoverage: {
         status: "unknown",
         retainedPoolCount: 0,
@@ -566,7 +575,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 579,
         totalVol24h: 0,
         totalVol7d: 0,
-        totalVol7dMeasured: true,
+        volumeAvailability: makeCompleteVolumeAvailability(0, 0),
         poolCount: 2,
         chainCount: 1,
         protocolTvl: {},
@@ -624,7 +633,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 1,
         totalVol24h: 1,
         totalVol7d: 1,
-        totalVol7dMeasured: true,
+        volumeAvailability: makeCompleteVolumeAvailability(1, 1),
         poolCount: 1,
         chainCount: 1,
         protocolTvl: {},
@@ -678,7 +687,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 1,
         totalVol24h: 1,
         totalVol7d: 1,
-        totalVol7dMeasured: true,
+        volumeAvailability: makeCompleteVolumeAvailability(1, 1),
         poolCount: 1,
         chainCount: 1,
         protocolTvl: {},
@@ -691,7 +700,7 @@ describe("dex-liquidity persistence", () => {
     const currentRow = extractDexLiquidityRunRows(
       getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
     ).find((row) => row[1] === "usdt-tether");
-    const currentRoute = JSON.parse(String(currentRow?.[20])).exitRouteObservations[0].routeId;
+    const currentRoute = JSON.parse(String(currentRow?.[21])).exitRouteObservations[0].routeId;
     const historyRoute = vi.mocked(executeAtomicBatch).mock.calls
       .flatMap(([, statements]) => statements as PreparedStatementWithMeta[])
       .filter((statement) => statement.sql.includes("INSERT INTO dex_liquidity_history"))
@@ -723,7 +732,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
-          totalVol7dMeasured: true,
+          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -756,7 +765,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
-          totalVol7dMeasured: true,
+          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -789,7 +798,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
-          totalVol7dMeasured: true,
+          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -821,7 +830,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
-          totalVol7dMeasured: true,
+          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -861,7 +870,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
-          totalVol7dMeasured: true,
+          volumeAvailability: makeCompleteVolumeAvailability(1, 1),
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -896,7 +905,7 @@ describe("dex-liquidity persistence", () => {
       sqlite.exec(`CREATE TRIGGER fail_retry_staging BEFORE INSERT ON dex_liquidity_run_rows
         BEGIN SELECT RAISE(ABORT, 'injected staging failure'); END`);
       await expect(persistScores(db, new Map(), new Map(), {
-        totalTvl: 1, totalVol24h: 1, totalVol7d: 1, totalVol7dMeasured: true,
+        totalTvl: 1, totalVol24h: 1, totalVol7d: 1, volumeAvailability: makeCompleteVolumeAvailability(1, 1),
         poolCount: 1, chainCount: 1, protocolTvl: {}, chainTvl: {},
       }, now)).rejects.toThrow("injected staging failure");
       expect(sqlite.prepare(`SELECT state, written_row_count, current_row_count,

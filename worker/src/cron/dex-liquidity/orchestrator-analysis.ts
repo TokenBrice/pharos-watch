@@ -56,6 +56,14 @@ type CoverageClasses = {
 
 const MAJOR_COVERAGE_GUARD_RAW_TVL_MIN_USD = 100_000_000;
 const MAJOR_COVERAGE_GUARD_MIN_EFFECTIVE_RATIO = 0.02;
+/**
+ * Coverage guards count rows that came from a score result. Since liquidity
+ * methodology 6.9 an observed row may carry an NR composite (DEC-19: required
+ * 24h activity unavailable), so a null score alone no longer marks a
+ * placeholder; placeholders are the `unobserved` unscored rows.
+ */
+const DEX_LIQUIDITY_OBSERVED_ROW_FILTER =
+  "(liquidity_score IS NOT NULL OR coverage_class != 'unobserved')";
 
 function parseDexLiquidityCronMetadata(metadata: string | null): DexLiquidityCronMetadata | null {
   if (!metadata) return null;
@@ -346,7 +354,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   ] = await Promise.all([
     params.db
       .prepare(
-        `SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+        `SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND ${DEX_LIQUIDITY_OBSERVED_ROW_FILTER} AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
       .first<{ cnt: number }>()
       .catch((e) => {
@@ -380,7 +388,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
         `SELECT stablecoin_id, total_tvl_usd, effective_tvl_usd
          FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
-           AND liquidity_score IS NOT NULL
+           AND ${DEX_LIQUIDITY_OBSERVED_ROW_FILTER}
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          ORDER BY total_tvl_usd DESC
          LIMIT 10`,

@@ -3,13 +3,14 @@ import {
   classifyDexPoolVolumeObservation,
   composeLiquidityScore,
   parseDexVolumeAvailabilityRecord,
+  readStoredDexTurnover24h,
   readStoredDexVolumeWindow,
   resolveDexVolumeView,
   resolveVolumeActivityComponent,
   summarizeDexVolumeWindow,
   type DexPoolVolumeObservationInput,
 } from "../dex-volume-availability";
-import { DexVolumeAvailabilityRecordSchema, type DexVolumeCompleteness } from "../../types/market";
+import { DexVolumeAvailabilityRecordSchema } from "../../types/market";
 
 const AS_OF = 1_790_000_000;
 const HOUR = 3_600;
@@ -92,10 +93,18 @@ describe("summarizeDexVolumeWindow", () => {
 
   it("produces records the stored-record schema accepts", () => {
     const record = {
-      "24h": summarizeDexVolumeWindow([at(1)], "24h", CLOCK).availability,
+      "24h": summarizeDexVolumeWindow([{ ...at(1), tvlUsd: 10 }, { ...at(30), tvlUsd: 30 }], "24h", CLOCK).availability,
       "7d": summarizeDexVolumeWindow([at(30)], "7d", CLOCK).availability,
     };
+    expect(record["24h"]).toMatchObject({ admittedTvlUsd: 10, retainedTvlUsd: 40, volumeCoverage: 0.25 });
     expect(DexVolumeAvailabilityRecordSchema.safeParse(record).success).toBe(true);
+  });
+
+  it("still reads records written before the coverage fields existed", () => {
+    const { admittedTvlUsd: _admitted, retainedTvlUsd: _retained, volumeCoverage: _coverage, ...legacy24h } =
+      summarizeDexVolumeWindow([at(1, 40_000), at(1, null)], "24h", CLOCK).availability;
+    const parsed = parseDexVolumeAvailabilityRecord(JSON.stringify({ "24h": legacy24h }));
+    expect(parsed).toMatchObject({ status: "recorded", record: { "24h": { completeness: "partial", partialGrossUsd: 40_000 } } });
   });
 });
 
@@ -138,6 +147,24 @@ describe("readStoredDexVolumeWindow", () => {
   });
 });
 
+describe("readStoredDexTurnover24h", () => {
+  const recorded = (pools: DexPoolVolumeObservationInput[]) =>
+    parseDexVolumeAvailabilityRecord(JSON.stringify({ "24h": summarizeDexVolumeWindow(pools, "24h", CLOCK).availability }));
+
+  it("uses admitted volume over admitted TVL for a day at the coverage floor and skips one just below", () => {
+    const atFloor = recorded([{ ...at(1, 5_000), tvlUsd: 500_000 }, { ...at(1, null), tvlUsd: 500_000 }]);
+    expect(readStoredDexTurnover24h(5_000, 1_000_000, atFloor)).toBeCloseTo(0.01, 10);
+    const belowFloor = recorded([{ ...at(1, 5_000), tvlUsd: 499_999 }, { ...at(1, null), tvlUsd: 500_001 }]);
+    expect(readStoredDexTurnover24h(5_000, 1_000_000, belowFloor)).toBeNull();
+  });
+
+  it("keeps complete and legacy days as volume over TVL and unknown days out", () => {
+    expect(readStoredDexTurnover24h(0, 1_000_000, recorded([{ ...at(1, 0), tvlUsd: 1_000_000 }]))).toBe(0);
+    expect(readStoredDexTurnover24h(20_000, 1_000_000, parseDexVolumeAvailabilityRecord(null))).toBe(0.02);
+    expect(readStoredDexTurnover24h(20_000, 1_000_000, parseDexVolumeAvailabilityRecord("{"))).toBeNull();
+  });
+});
+
 describe("resolveDexVolumeView", () => {
   it("interprets a legacy number as unknown completeness, never as measured", () => {
     expect(resolveDexVolumeView(5_000, undefined)).toMatchObject({
@@ -164,11 +191,17 @@ describe("resolveDexVolumeView", () => {
   });
 });
 
-describe("DEC-19 LiquidityScore contract", () => {
+describe("DEC-19 LiquidityScore contract (coverage-gated)", () => {
   const OTHER_COMPONENTS = { tvlDepth: 100, poolQuality: 100, durability: 100, pairDiversity: 100 };
+  const pool = (ageHours: number, volumeUsd: number | null, tvlUsd: number): DexPoolVolumeObservationInput => ({
+    ...at(ageHours, volumeUsd),
+    tvlUsd,
+  });
+  const activityOf = (pools: DexPoolVolumeObservationInput[]) =>
+    resolveVolumeActivityComponent(summarizeDexVolumeWindow(pools, "24h", CLOCK).availability);
 
   it("scores a complete measured zero as 0 activity under the full weight denominator", () => {
-    const activity = resolveVolumeActivityComponent({ measuredVolume24hUsd: 0, completeness: "complete", totalTvlUsd: 1_000_000 });
+    const activity = activityOf([pool(1, 0, 600_000), pool(2, 0, 400_000)]);
     expect(activity).toEqual({ status: "measured", score: 0 });
     // 0.30 + 0.20 + 0.20 + 0.10 = 0.80 of 100 — the 20% activity share is not redistributed.
     expect(composeLiquidityScore({ ...OTHER_COMPONENTS, volumeActivity: activity })).toMatchObject({
@@ -178,39 +211,39 @@ describe("DEC-19 LiquidityScore contract", () => {
     });
   });
 
-  it("keeps the existing log-scale activity formula for complete windows", () => {
-    // V/T = 5% → 38 × (log10(0.05) + 3) ≈ 64.56
-    const activity = resolveVolumeActivityComponent({ measuredVolume24hUsd: 1_000_000, completeness: "complete", totalTvlUsd: 20_000_000 });
+  it("keeps stale and missing pools out of both the activity numerator and denominator", () => {
+    // Admitted: $1M over $20M (V/T 5% → 38 × (log10(0.05) + 3) ≈ 64.56). The stale pool's
+    // $50M flow and the missing pool's TVL change nothing; coverage 20/35 clears the floor.
+    const activity = activityOf([pool(1, 1_000_000, 20_000_000), pool(180, 50_000_000, 10_000_000), pool(1, null, 5_000_000)]);
     expect(activity.status).toBe("measured");
     expect(activity.score).toBeCloseTo(64.56, 2);
   });
 
-  it.each([
-    ["partial", "activity-partial"],
-    ["missing", "activity-missing"],
-    ["stale", "activity-stale"],
-    ["unknown", "activity-completeness-unknown"],
-  ] as const satisfies ReadonlyArray<readonly [Exclude<DexVolumeCompleteness, "complete">, string]>)(
-    "%s required activity makes the component unavailable and the composite NR",
-    (completeness, reason) => {
-      // Even a present partial gross sum is never used as estimated activity.
-      const activity = resolveVolumeActivityComponent({ measuredVolume24hUsd: 500_000, completeness, totalTvlUsd: 1_000_000 });
-      expect(activity).toEqual({ status: "unavailable", score: null, reason });
-      expect(composeLiquidityScore({ ...OTHER_COMPONENTS, volumeActivity: activity })).toEqual({
-        status: "not-rated",
-        score: null,
-        reason: "volume-activity-unavailable",
-        activityReason: reason,
-        components: { ...OTHER_COMPONENTS, volumeActivity: null },
-      });
-    },
-  );
-
-  it("treats a complete window without a valid measured value as missing activity", () => {
-    expect(resolveVolumeActivityComponent({ measuredVolume24hUsd: null, completeness: "complete", totalTvlUsd: 1 })).toEqual({
-      status: "unavailable",
+  it("rates coverage exactly at the 0.50 floor and not rated just below it", () => {
+    const atFloor = activityOf([pool(1, 10_000, 500_000), pool(100, 10_000, 500_000)]);
+    expect(atFloor).toEqual({ status: "measured", score: expect.any(Number) });
+    const belowFloor = activityOf([pool(1, 10_000, 499_999), pool(100, 10_000, 500_001)]);
+    expect(belowFloor).toEqual({ status: "unavailable", score: null, reason: "activity-coverage-below-floor" });
+    expect(composeLiquidityScore({ ...OTHER_COMPONENTS, volumeActivity: belowFloor })).toEqual({
+      status: "not-rated",
       score: null,
-      reason: "activity-missing",
+      reason: "volume-activity-unavailable",
+      activityReason: "activity-coverage-below-floor",
+      components: { ...OTHER_COMPONENTS, volumeActivity: null },
     });
+  });
+
+  it.each([
+    ["all-missing", [pool(1, null, 1_000), pool(1, null, 2_000)], "activity-missing"],
+    ["all-stale", [pool(100, 5_000, 1_000)], "activity-stale"],
+  ] as const)("makes an %s window NR", (_name, pools, reason) => {
+    expect(activityOf([...pools])).toEqual({ status: "unavailable", score: null, reason });
+  });
+
+  it("treats an absent or unknown-completeness record as unavailable", () => {
+    const unknown = { status: "unavailable", score: null, reason: "activity-completeness-unknown" };
+    expect(resolveVolumeActivityComponent(undefined)).toEqual(unknown);
+    const unreadable = readStoredDexVolumeWindow(1, parseDexVolumeAvailabilityRecord("{"), "24h").availability;
+    expect(resolveVolumeActivityComponent(unreadable)).toEqual(unknown);
   });
 });

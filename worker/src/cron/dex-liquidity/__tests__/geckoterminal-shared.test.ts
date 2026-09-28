@@ -87,6 +87,17 @@ describe("geckoterminal shared helpers", () => {
     });
   });
 
+  it.each([
+    ["absent volume object", null, null],
+    ["null h24", { h24: null }, null],
+    ["unparseable h24", { h24: "n/a" }, null],
+    ["negative h24", { h24: "-5" }, null],
+    ["explicit zero", { h24: "0" }, 0],
+  ] as const)("keeps %s as %s instead of a fresh zero", (_name, volumeUsd, expected) => {
+    const pool = { ...GT_POOL_FIXTURE, attributes: { ...GT_POOL_FIXTURE.attributes, volume_usd: volumeUsd } } as GtPool;
+    expect(parseGtPool(pool, "ethereum")?.volume24hUsd).toBe(expected);
+  });
+
   it("drops pools with missing relationship data instead of throwing", () => {
     const malformed = {
       ...GT_POOL_FIXTURE,

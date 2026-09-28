@@ -56,7 +56,7 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import type { ExitRouteObservation } from "@shared/types/market";
 import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
 import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
-import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC, summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import {
   computeDepthStability,
   computeDexPrices,
@@ -67,6 +67,21 @@ import {
   selectDexRouteObservations,
 } from "../dex-liquidity/scoring";
 import type { PoolEntry } from "../dex-liquidity/types";
+
+/** Scoring clock for fixtures whose pools carry admitted live readings. */
+const SCORING_CLOCK_SEC = 1_800_000_000;
+
+/** Attach each pool's volumes as a raw reading observed `ageSec` before the scoring clock. */
+function withReadings<T extends PoolEntry>(pools: T[], ageSec = 60): T[] {
+  for (const pool of pools) {
+    pool.volumeReading = {
+      volume24hUsd: pool.volumeUsd1d,
+      volume7dUsd: pool.volumeUsd7d ?? null,
+      observedAtSec: SCORING_CLOCK_SEC - ageSec,
+    };
+  }
+  return pools;
+}
 
 interface QueryConfig {
   match: string;
@@ -273,13 +288,20 @@ describe("dex-liquidity scoring", () => {
     );
   });
 
-  it("keeps recorded non-complete 24h days out of volume consistency without estimating them", async () => {
+  it("feeds coverage-qualified admitted turnover into volume consistency and skips days below the floor", async () => {
     const asOfSec = 1_790_000_000;
-    const record = (pools: Array<{ volumeUsd: number | null; observedAtSec: number | null }>) => JSON.stringify({
-      "24h": summarizeDexVolumeWindow(pools, "24h", { asOfSec, maxObservationAgeSec: 86_400 }).availability,
+    const record = (pools: Array<{ volumeUsd: number | null; tvlUsd: number }>) => JSON.stringify({
+      "24h": summarizeDexVolumeWindow(
+        pools.map((pool) => ({ ...pool, observedAtSec: pool.volumeUsd == null ? null : asOfSec - 60 })),
+        "24h",
+        { asOfSec, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
+      ).availability,
     });
-    const partial = record([{ volumeUsd: 5_000, observedAtSec: asOfSec - 60 }, { volumeUsd: null, observedAtSec: null }]);
-    const complete = record([{ volumeUsd: 100_000, observedAtSec: asOfSec - 60 }]);
+    // Turnover 10% on every qualifying day: 100K over 1M retained, or 60K over the 600K admitted.
+    const complete = record([{ volumeUsd: 100_000, tvlUsd: 1_000_000 }]);
+    const qualified = record([{ volumeUsd: 60_000, tvlUsd: 600_000 }, { volumeUsd: null, tvlUsd: 400_000 }]);
+    // 40% coverage: below the floor, so its 1% admitted turnover never enters the series.
+    const belowFloor = record([{ volumeUsd: 4_000, tvlUsd: 400_000 }, { volumeUsd: null, tvlUsd: 600_000 }]);
     const row = (stablecoinId: string, day: number, volume: number, json: string | null) => ({
       stablecoin_id: stablecoinId,
       snapshot_date: day,
@@ -289,13 +311,14 @@ describe("dex-liquidity scoring", () => {
       volume_availability_json: json,
     });
     const historyRows = [
-      // 7 legacy days + 1 complete day at 100K; 3 partial days whose stored column holds a 5K partial gross sum.
-      ...Array.from({ length: 7 }, (_, index) => row("usdc-circle", index + 1, 100_000, null)),
-      row("usdc-circle", 8, 100_000, complete),
-      ...Array.from({ length: 3 }, (_, index) => row("usdc-circle", index + 9, 5_000, partial)),
-      // Too few measured days once partial days are excluded: no volume stability at all.
+      // 3 legacy days at 10% + 1 complete day + 3 coverage-qualified partial days = 7 samples, all 10%.
+      ...Array.from({ length: 3 }, (_, index) => row("usdc-circle", index + 1, 100_000, null)),
+      row("usdc-circle", 4, 100_000, complete),
+      ...Array.from({ length: 3 }, (_, index) => row("usdc-circle", index + 5, 60_000, qualified)),
+      row("usdc-circle", 8, 4_000, belowFloor),
+      // Below-floor days leave too few samples: no volume stability.
       ...Array.from({ length: 3 }, (_, index) => row("usdt-tether", index + 1, 100_000, null)),
-      ...Array.from({ length: 5 }, (_, index) => row("usdt-tether", index + 4, 5_000, partial)),
+      ...Array.from({ length: 5 }, (_, index) => row("usdt-tether", index + 4, 4_000, belowFloor)),
     ];
     const db = makeNoopD1({
       prepare: (sql: string) => ({
@@ -489,6 +512,8 @@ describe("dex-liquidity scoring", () => {
       },
     ];
 
+    withReadings(usdt.topPools);
+    withReadings(usdc.topPools);
     const { scores, globalAgg } = await computeStablecoinScores(
       db,
       new Map([
@@ -496,6 +521,8 @@ describe("dex-liquidity scoring", () => {
         ["usdc-circle", usdc],
       ]),
       new Map([["sushiswap", 100_000]]),
+      undefined,
+      SCORING_CLOCK_SEC,
     );
 
     const usdtScore = scores.get("usdt-tether");
@@ -558,6 +585,8 @@ describe("dex-liquidity scoring", () => {
       },
     ];
 
+    withReadings(activeMetrics.topPools);
+    withReadings(inactiveMetrics.topPools);
     const result = await computeStablecoinScores(
       db,
       new Map([
@@ -565,6 +594,8 @@ describe("dex-liquidity scoring", () => {
         ["usr-resolv", inactiveMetrics],
       ]),
       new Map(),
+      undefined,
+      SCORING_CLOCK_SEC,
     );
 
     expect(result.scores.has("usdt-tether")).toBe(true);
@@ -574,6 +605,64 @@ describe("dex-liquidity scoring", () => {
     expect(result.globalAgg.totalVol24h).toBe(10_000);
     expect(result.globalAgg.totalVol7d).toBe(70_000);
     expect(result.globalAgg.poolCount).toBe(1);
+  });
+
+  it("gates activity on admitted-TVL coverage and publishes global observed volume with its coverage", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const pool = (poolId: string, tvlUsd: number, volumeUsd1d: number | null, ageSec: number | null): PoolEntry => ({
+      poolId,
+      project: "curve",
+      chain: "ethereum",
+      tvlUsd,
+      symbol: "USD-USD",
+      volumeUsd1d,
+      poolType: "curve-stableswap",
+      source: "dl",
+      ...(ageSec == null
+        ? {}
+        : { volumeReading: { volume24hUsd: volumeUsd1d, volume7dUsd: null, observedAtSec: SCORING_CLOCK_SEC - ageSec } }),
+    });
+    const rated = initMetrics("usdt-tether", "USDT");
+    // 60% of retained TVL admitted; the stale pool's volume and TVL stay out of activity.
+    rated.topPools = [pool("ethereum:admitted", 600_000, 30_000, 3_600), pool("ethereum:stale", 400_000, 400_000, 72 * 3600 + 1)];
+    const notRated = initMetrics("usdc-circle", "USDC");
+    // The exact 72h boundary is admitted, but it covers only 40% of retained TVL.
+    notRated.topPools = [pool("ethereum:boundary", 400_000, 20_000, 72 * 3600), pool("ethereum:missing", 600_000, null, null)];
+
+    const { scores, globalAgg } = await computeStablecoinScores(
+      db,
+      new Map([["usdt-tether", rated], ["usdc-circle", notRated]]),
+      new Map(),
+      undefined,
+      SCORING_CLOCK_SEC,
+    );
+
+    const usdt = scores.get("usdt-tether");
+    // 38 × (log10(30K / 600K) + 3) ≈ 64.56 → 65, not the all-pool ratio.
+    expect(usdt?.components.volumeActivity).toBe(65);
+    expect(usdt?.score).toEqual(expect.any(Number));
+    expect(usdt?.vol24h).toBeNull();
+    expect(usdt?.volumeAvailability["24h"]).toMatchObject({
+      completeness: "partial",
+      partialGrossUsd: 30_000,
+      admittedTvlUsd: 600_000,
+      retainedTvlUsd: 1_000_000,
+      volumeCoverage: 0.6,
+    });
+    const usdc = scores.get("usdc-circle");
+    expect(usdc?.score).toBeNull();
+    expect(usdc?.components.volumeActivity).toBeNull();
+    expect(usdc?.volumeAvailability["24h"]).toMatchObject({ partialGrossUsd: 20_000, volumeCoverage: 0.4 });
+
+    expect(globalAgg.totalVol24h).toBeNull();
+    expect(globalAgg.volumeAvailability["24h"]).toMatchObject({
+      completeness: "partial",
+      partialGrossUsd: 50_000,
+      admittedTvlUsd: 1_000_000,
+      retainedTvlUsd: 2_000_000,
+      volumeCoverage: 0.5,
+      maxObservationAgeSec: 72 * 3600,
+    });
   });
 
   it("keeps paused Balancer pools only in the P4 capability denominator", async () => {
@@ -1519,10 +1608,13 @@ describe("dex-liquidity scoring", () => {
       },
     ];
 
+    withReadings(metrics.topPools);
     const result = await computeStablecoinScores(
       db,
       new Map([["xaut-tether", metrics]]),
       new Map([["carbon-defi", 3_500_000]]),
+      undefined,
+      SCORING_CLOCK_SEC,
     );
 
     expect(metrics.totalTvlUsd).toBe(3_500_000);

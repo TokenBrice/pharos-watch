@@ -12,6 +12,8 @@ import { DISCOVERY_STAGE_TIMEOUT_MS, buildStageSignal, type CrawlStageContext, t
 import type { DexDeploymentProviderCheck } from "./types";
 
 type GeckoTerminalNewPool = GtNewPool & {
+  // Null when GeckoTerminal published no parseable 24h volume (stored absent, never 0).
+  volume24hUsd: number | null;
   baseToken: string;
   quoteToken: string;
   quoteSymbol: string | null;
@@ -134,7 +136,8 @@ export async function crawlGeckoTerminalPoolsStage({
   for (const pool of gtPools) {
     const poolId = canonicalExitRouteScopedKey(pool.chain, pool.address);
     if (context.hasKnownPool(poolId)) continue;
-    if (pool.volume24hUsd <= 0 && pool.tvlUsd < 10_000) continue;
+    // Small pools without a positive reading are not worth staging.
+    if (!(pool.volume24hUsd != null && pool.volume24hUsd > 0) && pool.tvlUsd < 10_000) continue;
 
     context.addPool(
       toStagedPool(context, {

@@ -4,6 +4,8 @@ import {
   STAGED_POOL_PRICE_MAX_AGE_HOURS,
   type StagedPool,
 } from "../dex-discovery/types";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC } from "./constants";
 
 export interface RegistryPoolView {
   stablecoinId: string;
@@ -13,6 +15,16 @@ export interface RegistryPoolView {
     | "feeTier" | "isStable" | "baseToken" | "quoteToken" | "quoteSymbol">;
   value: StagedPool;
   price: StagedPool | null;
+  /**
+   * Row supplying the pool's 24h volume reading (DEC-19): the most trusted row
+   * with a usable reading inside the staged fresh window (24h), else the most
+   * trusted row inside the volume admission window (72h), else the freshest row
+   * with any reading (so an aged reading is classified stale, never counted),
+   * else null when no source observed volume. A row dated after the run clock,
+   * or a zero refreshed before DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC (possibly a
+   * coerced absent value), is not a usable reading.
+   */
+  volume: StagedPool | null;
   discoveredAt: number;
   lastSeenAt: number;
   sources: string[];
@@ -67,6 +79,13 @@ export function resolveRegistryPools(rows: StagedPool[], nowSec: number): Regist
     const value = freshValue ?? group.reduce((best, row) => compareFreshness(row, best) < 0 ? row : best);
     const price = group.find((row) => row.priceUsd != null && row.priceUsd > 0
       && nowSec - row.refreshedAt <= STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600) ?? null;
+    const volumeRows = group.filter((row) =>
+      row.refreshedAt <= nowSec
+      && row.volume24h != null && Number.isFinite(row.volume24h) && row.volume24h >= 0
+      && !(row.volume24h === 0 && row.refreshedAt < DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC));
+    const volume = volumeRows.find((row) => nowSec - row.refreshedAt <= STAGED_POOL_FRESH_HOURS * 3600)
+      ?? volumeRows.find((row) => nowSec - row.refreshedAt <= DEX_VOLUME_OBSERVATION_MAX_AGE_SEC)
+      ?? volumeRows.reduce<StagedPool | null>((best, row) => best == null || compareFreshness(row, best) < 0 ? row : best, null);
     const metadataRows = group.filter((row) =>
       nowSec - row.refreshedAt <= STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600);
     const field = <K extends keyof RegistryPoolView["metadata"]>(key: K): StagedPool[K] =>
@@ -93,6 +112,7 @@ export function resolveRegistryPools(rows: StagedPool[], nowSec: number): Regist
       },
       value,
       price,
+      volume,
       discoveredAt: group.reduce((earliest, row) => Math.min(earliest, row.discoveredAt), Infinity),
       lastSeenAt: group.reduce((latest, row) => Math.max(latest, row.refreshedAt), -Infinity),
       sources: [...new Set(group.map((row) => row.source))].sort(compareText),

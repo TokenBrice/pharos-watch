@@ -103,8 +103,9 @@ export function buildLiquidityVerdictLine(components: DexLiquidityData["scoreCom
 
 /**
  * DEC-19 read side: the published LiquidityScore is NR because required 24h
- * volume activity was partial, missing, stale or unknown — not because the
- * token lacks a direct DEX market. Legacy payloads never match.
+ * volume activity was unavailable (admitted pools below the TVL coverage
+ * floor, or unknown completeness) — not because the token lacks a direct DEX
+ * market. Legacy payloads never match.
  */
 export function isLiquidityActivityNotRated(liq: DexLiquidityData): boolean {
   if (liq.liquidityScore != null) return false;

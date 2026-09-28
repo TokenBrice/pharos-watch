@@ -150,6 +150,8 @@ function buildDirectApiFactoryInput(input: {
     balanceDetails: undefined,
     volumeUsd1d: pool.volume24hUsd,
     volumeUsd7d: null,
+    // Factory projection only; this enrichment never becomes a scored pool.
+    volumeObservedAtSec: null,
   };
   return { context, identity, enrichment, stablecoinId };
 }

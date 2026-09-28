@@ -5,6 +5,7 @@ import {
   type DexLiquidityDriftSummary,
 } from "../orchestrator-drift";
 import type { FullScoreResult } from "../types";
+import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-persistence.test-support";
 
 // The aggregate guards in orchestrator-analysis abort the run only when global
 // or top-10 TVL lands below 60% of the prior publication. On 2026-08-20 USDS
@@ -20,6 +21,7 @@ function scoreResult(tvl: number, poolCount = 1): FullScoreResult {
     tvl,
     effectiveTvl: tvl,
     vol24h: tvl / 10,
+    volumeAvailability: makeCompleteVolumeAvailability(tvl / 10, tvl),
     score: 46,
     hhi: 0.1,
     durability: 0.8,

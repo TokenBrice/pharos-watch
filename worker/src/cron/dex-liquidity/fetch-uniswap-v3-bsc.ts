@@ -232,7 +232,8 @@ export async function fetchUniswapV3BscShadowPools(input: {
         })),
         price: spot,
         tvlUsd,
-        volume24hUsd: 0,
+        // Pinned pool-state capture carries no trailing volume: no observation, not zero.
+        volume24hUsd: null,
         feeRate: row.fee / 1_000_000,
         balances: tokenRows.map((token) => token.balance),
         balancesNormalized: true,

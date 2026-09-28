@@ -436,7 +436,9 @@ const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], LiquidityPoolSourceFami
  * STAGED_POOL_CONFIDENCE_HORIZON_HOURS, convert to pool entries with confidence
  * decay and defaults, and merge into existing metrics. The horizon is inventory
  * memory only: price evidence is separately pinned to
- * STAGED_POOL_PRICE_MAX_AGE_HOURS.
+ * STAGED_POOL_PRICE_MAX_AGE_HOURS, and volume carries its raw reading plus
+ * observation clock so scoring counts it only inside
+ * DEX_VOLUME_OBSERVATION_MAX_AGE_SEC (decay applies to TVL, never to flow).
  */
 export async function mergeStagedPools(
   db: D1Database,
@@ -719,7 +721,14 @@ export async function mergeStagedPools(
       });
     }
 
-    const adjustedVolume = (stagedPool.volume24h ?? 0) * confidence;
+    // DEC-19: the volume reading is the resolver's volume row as observed —
+    // never scaled by the TVL confidence decay. Its refresh clock decides at
+    // scoring whether it is in-window (measured) or aged (stale, never counted).
+    const volumeReadingRow = view.volume;
+    const volumeReading = {
+      volume24hUsd: volumeReadingRow?.volume24h ?? null,
+      volumeObservedAtSec: volumeReadingRow?.refreshedAt ?? null,
+    };
     const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
     const orderbookMetadata =
       stagedPool.source === "cg_tickers" ? readCgTickerOrderbookMetadata(stagedPool.rawJson) : null;
@@ -731,7 +740,7 @@ export async function mergeStagedPools(
         dexId,
         name: stagedPool.symbol,
         tvlUsd: adjustedTvl,
-        volume24hUsd: adjustedVolume,
+        ...volumeReading,
         qualityMultiplier,
         maturityDays,
         poolType,
@@ -747,7 +756,7 @@ export async function mergeStagedPools(
         feePercentage: stagedPool.feeTier ? stagedPool.feeTier / 100 : null,
         measurement: {
           tvlMeasured: true,
-          volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
+          volumeMeasured: volumeReadingRow != null,
           balanceMeasured: stagedPool.balanceRatio != null,
           maturityMeasured: false,
           priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
@@ -765,7 +774,7 @@ export async function mergeStagedPools(
       dexId,
       name: stagedPool.symbol,
       tvlUsd: adjustedTvl,
-      volume24hUsd: adjustedVolume,
+      ...volumeReading,
       qualityMultiplier,
       maturityDays,
       poolType,
@@ -782,7 +791,7 @@ export async function mergeStagedPools(
             ...(orderbookMetadata ?? {}),
             measurement: {
               tvlMeasured: orderbookMetadata?.orderbookDepthUsd != null,
-              volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
+              volumeMeasured: volumeReadingRow != null,
               balanceMeasured: false,
               maturityMeasured: false,
               priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
@@ -793,7 +802,7 @@ export async function mergeStagedPools(
         : {
             measurement: {
               tvlMeasured: true,
-              volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
+              volumeMeasured: volumeReadingRow != null,
               balanceMeasured: stagedPool.balanceRatio != null,
               maturityMeasured: false,
               priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,

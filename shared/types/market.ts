@@ -390,9 +390,13 @@ const nullableEpochSec = z.number().int().nonnegative().nullable();
  * Availability record for one measured-volume window. The advertised measured
  * total (`totalVolume24hUsd` / `totalVolume7dUsd`, history `volume24h`) is a
  * number only when `completeness === "complete"`; otherwise it is null and
- * `partialGrossUsd` separately labels the sum of the in-budget observations
- * that were present (a lower bound, never the measured statistic). Clock fields
- * name the observation window and freshness budget that produced the verdict.
+ * `partialGrossUsd` separately labels the sum of the admitted (in-budget)
+ * observations that were present — observed volume over the admitted pools, a
+ * lower bound, never the complete statistic. `admittedTvlUsd` /
+ * `retainedTvlUsd` / `volumeCoverage` publish the bound with that statistic:
+ * the admitted pools' share of the retained scoring TVL (liquidity v6.9;
+ * absent on records written before it). Clock fields name the observation
+ * window and admission budget that produced the verdict.
  */
 const DexVolumeAvailabilitySchema = z
   .object({
@@ -407,6 +411,9 @@ const DexVolumeAvailabilitySchema = z
     maxObservationAgeSec: z.number().int().positive().nullable(),
     oldestObservedAtSec: nullableEpochSec,
     newestObservedAtSec: nullableEpochSec,
+    admittedTvlUsd: z.number().finite().nonnegative().nullable().optional(),
+    retainedTvlUsd: z.number().finite().nonnegative().nullable().optional(),
+    volumeCoverage: z.number().finite().min(0).max(1).nullable().optional(),
   })
   .superRefine((availability, ctx) => {
     if ((availability.completeness === "complete") !== (availability.reason === null)) {

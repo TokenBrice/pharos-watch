@@ -37,6 +37,7 @@ export function accumulatePoolMetrics(
     rawContribTvl,
     volumeUsd1d,
     volumeUsd7d,
+    volumeObservedAtSec,
   } = enrichment;
   let metric = metrics.get(stablecoinId);
   if (!metric) {
@@ -87,6 +88,7 @@ export function accumulatePoolMetrics(
     symbol: pool.symbol,
     volumeUsd1d,
     volumeUsd7d,
+    volumeReading: { volume24hUsd: volumeUsd1d, volume7dUsd: volumeUsd7d, observedAtSec: volumeObservedAtSec },
     poolType: resolvedPoolType,
     source: "dl",
     ...(poolPrice != null ? { price: poolPrice } : {}),
@@ -112,7 +114,7 @@ export function accumulatePoolMetrics(
       maturityDays: poolMaturityDays,
       measurement: {
         tvlMeasured: true,
-        volumeMeasured: volumeUsd1d > 0 || (volumeUsd7d ?? 0) > 0,
+        volumeMeasured: volumeUsd1d != null,
         balanceMeasured: curveData != null,
         maturityMeasured: poolMaturityDays > 0,
         priceMeasured: poolPrice != null && poolPrice > 0,

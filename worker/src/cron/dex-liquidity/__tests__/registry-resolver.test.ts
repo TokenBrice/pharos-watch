@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StagedPool } from "../../dex-discovery/types";
 import { resolveRegistryPools } from "../registry-resolver";
+import { DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC } from "../constants";
 
 const NOW = 1_710_000_000;
 function row(overrides: Partial<StagedPool> = {}): StagedPool {
@@ -44,6 +45,36 @@ describe("resolveRegistryPools", () => {
     expect(view.price).toBe(price);
     expect(view.price?.source).toBe("cg_onchain");
     expect(resolveRegistryPools([price, value], NOW + 1)[0].price).toBeNull();
+  });
+
+  it("takes volume from the most trusted day-fresh reading, then the 72h admission window, then the freshest", () => {
+    const trustedAged = row({ refreshedAt: NOW - 60 * 3600 });
+    const secondaryFresh = row({ source: "cg_onchain", refreshedAt: NOW - 2 * 3600 });
+    const unreadTrusted = row({ source: "direct_api", volume24h: null });
+    expect(resolveRegistryPools([trustedAged, secondaryFresh, unreadTrusted], NOW)[0].volume).toBe(secondaryFresh);
+    const secondaryAdmitted = row({ source: "cg_onchain", refreshedAt: NOW - 72 * 3600 });
+    expect(resolveRegistryPools([secondaryAdmitted, trustedAged], NOW)[0].volume).toBe(trustedAged);
+    const stale = row({ refreshedAt: NOW - 100 * 3600 });
+    const staleNewer = row({ source: "dexscreener", refreshedAt: NOW - 80 * 3600 });
+    expect(resolveRegistryPools([stale, staleNewer], NOW)[0].volume).toBe(staleNewer);
+  });
+
+  it("ignores volume rows dated after the run clock", () => {
+    const future = row({ refreshedAt: NOW + 240 });
+    const valid = row({ source: "dexscreener", refreshedAt: NOW - 3600 });
+    expect(resolveRegistryPools([future, valid], NOW)[0].volume).toBe(valid);
+    expect(resolveRegistryPools([future], NOW)[0].volume).toBeNull();
+  });
+
+  it("treats a zero refreshed before the provenance cutover as absent and keeps positive legacy readings", () => {
+    const cutover = DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC;
+    const now = cutover + 3600;
+    const legacyZero = row({ volume24h: 0, refreshedAt: cutover - 1 });
+    const legacyPositive = row({ source: "dexscreener", volume24h: 700, refreshedAt: cutover - 1 });
+    expect(resolveRegistryPools([legacyZero, legacyPositive], now)[0].volume).toBe(legacyPositive);
+    expect(resolveRegistryPools([legacyZero], now)[0].volume).toBeNull();
+    const cutoverZero = row({ volume24h: 0, refreshedAt: cutover });
+    expect(resolveRegistryPools([cutoverZero, legacyPositive], now)[0].volume).toBe(cutoverZero);
   });
 
   it("borrows the token tuple from one complete witness, not opposite partial orientations", () => {

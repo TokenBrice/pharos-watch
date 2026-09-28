@@ -1,4 +1,5 @@
 import type {
+  DexPoolVolumeReading,
   DexPriceObs,
   LiquidityCoverageClass,
   LiquidityFallbackCounters,
@@ -6,12 +7,80 @@ import type {
   LiquiditySourceMixByFamily,
   PoolEntry,
 } from "./types";
+import type { DexVolumeAvailabilityRecord } from "@shared/types/market";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { clamp } from "@shared/lib/math";
 import { median, weightedMedian } from "@shared/lib/stats";
+import { classifyDexPoolVolumeObservation, summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { normalizeProtocol } from "./pool-helpers";
 import { logWorkerEvent } from "../../lib/structured-log";
+
+/** Evaluation clock for DEC-19 volume windows: the run's source clock plus the producer budget. */
+export type DexVolumeClock = Parameters<typeof summarizeDexVolumeWindow>[2];
+
+const MISSING_VOLUME_READING: DexPoolVolumeReading = { volume24hUsd: null, volume7dUsd: null, observedAtSec: null };
+
+/**
+ * DEC-19 eligibility pass. Classifies each pool's raw readings against the run
+ * clock, keeps only in-window values in `volumeUsd1d` / `volumeUsd7d` (an aged
+ * or absent reading becomes null, never a decayed or zero value), and records
+ * the published 24h observation. Idempotent: it always reads `volumeReading`.
+ */
+export function applyPoolVolumeEligibility(pools: readonly PoolEntry[], clock: DexVolumeClock): void {
+  for (const pool of pools) {
+    const reading = pool.volumeReading ?? MISSING_VOLUME_READING;
+    const observedAtSec = reading.observedAtSec;
+    const status24h = classifyDexPoolVolumeObservation({ volumeUsd: reading.volume24hUsd, observedAtSec }, clock);
+    const status7d = classifyDexPoolVolumeObservation({ volumeUsd: reading.volume7dUsd, observedAtSec }, clock);
+    pool.volumeUsd1d = status24h === "measured" ? reading.volume24hUsd : null;
+    pool.volumeUsd7d = status7d === "measured" ? reading.volume7dUsd : null;
+    pool.volumeObservation = {
+      status: status24h,
+      observedAtSec: observedAtSec != null && Number.isInteger(observedAtSec) && observedAtSec >= 0 ? observedAtSec : null,
+    };
+    if (pool.extra?.measurement) pool.extra.measurement.volumeMeasured = status24h === "measured";
+  }
+}
+
+export interface RetainedPoolVolumeSummary {
+  totalVolume24hUsd: number | null;
+  totalVolume7dUsd: number | null;
+  volumeAvailability: DexVolumeAvailabilityRecord;
+}
+
+/** One retained pool's raw readings and its retained scoring TVL (the coverage weight). */
+export interface RetainedPoolVolumeInput {
+  reading: DexPoolVolumeReading | undefined;
+  tvlUsd: number;
+}
+
+/**
+ * Summarize both measured-volume windows over a COMPLETE retained (or globally
+ * deduped) pool set — never the visible top-N. Only admitted observations enter
+ * a sum or the admitted TVL; the total is null unless every pool was admitted,
+ * and each window records its admitted share of the retained TVL.
+ */
+export function summarizeRetainedPoolVolume(
+  pools: readonly RetainedPoolVolumeInput[],
+  clock: DexVolumeClock,
+): RetainedPoolVolumeSummary {
+  const window24h = summarizeDexVolumeWindow(
+    pools.map(({ reading, tvlUsd }) => ({ volumeUsd: reading?.volume24hUsd, observedAtSec: reading?.observedAtSec, tvlUsd })),
+    "24h",
+    clock,
+  );
+  const window7d = summarizeDexVolumeWindow(
+    pools.map(({ reading, tvlUsd }) => ({ volumeUsd: reading?.volume7dUsd, observedAtSec: reading?.observedAtSec, tvlUsd })),
+    "7d",
+    clock,
+  );
+  return {
+    totalVolume24hUsd: window24h.measuredUsd,
+    totalVolume7dUsd: window7d.measuredUsd,
+    volumeAvailability: { "24h": window24h.availability, "7d": window7d.availability },
+  };
+}
 
 type PoolExtra = NonNullable<LiquidityMetrics["topPools"][number]["extra"]>;
 type PoolExtraKey = keyof PoolExtra;
@@ -81,9 +150,6 @@ export function rebuildMetricsFromPools(
   const pairs = new Set<string>();
 
   let totalTvlUsd = 0;
-  let totalVolume24hUsd = 0;
-  let totalVolume7dUsd = 0;
-  let totalVolume7dMeasured = true;
   let qualityAdjustedTvl = 0;
   let effectiveTvl = 0;
   let balanceRatioWeightedSum = 0;
@@ -110,11 +176,6 @@ export function rebuildMetricsFromPools(
     pairs.add(pool.symbol);
 
     totalTvlUsd += pool.tvlUsd;
-    totalVolume24hUsd += pool.volumeUsd1d || 0;
-    totalVolume7dUsd += pool.volumeUsd7d ?? 0;
-    if (pool.volumeUsd7d == null) {
-      totalVolume7dMeasured = false;
-    }
     const poolQualityAdjustedTvl = getPoolExtraNumber(pool.extra, "qualityAdjustedTvl");
     const poolEffectiveTvl = getPoolExtraNumber(pool.extra, "effectiveTvl");
     if (fallbackCounters && poolQualityAdjustedTvl == null) fallbackCounters.rebuildQualityAdjustedTvlFallback++;
@@ -165,15 +226,13 @@ export function rebuildMetricsFromPools(
     }
   }
 
+  // Unobserved/aged flow (null) ranks below a measured zero; TVL breaks ties.
   const visiblePools = [...pools]
-    .sort((a, b) => (b.volumeUsd1d || 0) - (a.volumeUsd1d || 0) || b.tvlUsd - a.tvlUsd)
+    .sort((a, b) => (b.volumeUsd1d ?? -1) - (a.volumeUsd1d ?? -1) || b.tvlUsd - a.tvlUsd)
     .slice(0, 10);
 
   return {
     totalTvlUsd,
-    totalVolume24hUsd,
-    totalVolume7dUsd,
-    totalVolume7dMeasured,
     poolCount: pools.length,
     chains,
     pairs,
@@ -209,12 +268,15 @@ export function filterRetainedPools(
       if (fallbackCounters) fallbackCounters.retainedExclusionBlockedDex++;
       return false;
     }
-    const vol = pool.volumeUsd1d || 0;
-    if (pool.tvlUsd > 0 && vol / pool.tvlUsd > POOL_VOL_TO_TVL_RATIO_MAX) {
+    // Runs after the DEC-19 eligibility pass: `volumeUsd1d` is an in-window
+    // reading or null. The ratio sanity check needs a reading; the large-pool
+    // floor treats unobserved or aged flow as not clearing it.
+    const vol = pool.volumeUsd1d;
+    if (vol != null && pool.tvlUsd > 0 && vol / pool.tvlUsd > POOL_VOL_TO_TVL_RATIO_MAX) {
       if (fallbackCounters) fallbackCounters.retainedExclusionVolTvlRatio++;
       return false;
     }
-    if (pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && vol < LARGE_POOL_MIN_VOLUME_USD) {
+    if (pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && !(vol != null && vol >= LARGE_POOL_MIN_VOLUME_USD)) {
       if (fallbackCounters) fallbackCounters.retainedExclusionLargePoolLowVolume++;
       return false;
     }
@@ -299,9 +361,6 @@ export function applyRebuiltMetrics(
   metric.protocolTvl = rebuilt.protocolTvl;
   metric.chainTvl = rebuilt.chainTvl;
   metric.totalTvlUsd = rebuilt.totalTvlUsd;
-  metric.totalVolume24hUsd = rebuilt.totalVolume24hUsd;
-  metric.totalVolume7dUsd = rebuilt.totalVolume7dUsd;
-  metric.totalVolume7dMeasured = rebuilt.totalVolume7dMeasured;
   metric.poolCount = rebuilt.poolCount;
   metric.chains = rebuilt.chains;
   metric.pairs = rebuilt.pairs;
@@ -318,34 +377,33 @@ export function applyRebuiltMetrics(
   metric.topPools = rebuilt.visiblePools;
 }
 
+export interface GlobalPoolAggregateEntry {
+  tvl: number;
+  reading: DexPoolVolumeReading | undefined;
+  proto: string;
+  chain: string;
+}
+
 export function accumulateGlobalAggregate(
   pools: LiquidityMetrics["topPools"],
   globalProtocolTvl: Record<string, number>,
   globalChainTvl: Record<string, number>,
   globalProtoChainTvl: Record<string, number>,
   globalChains: Set<string>,
-  seenPoolTvl: Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>,
-): { totalTvl: number; totalVol24h: number; totalVol7d: number; poolCount: number } {
+  seenPoolTvl: Map<string, GlobalPoolAggregateEntry>,
+): { totalTvl: number; poolCount: number } {
   let totalTvl = 0;
-  let totalVol24h = 0;
-  let totalVol7d = 0;
   let poolCount = 0;
 
   for (const pool of pools) {
     const proto = normalizeProtocol(pool.project);
     const chainKey = pool.chain;
-    const incomingVol7d = pool.volumeUsd7d ?? 0;
-    const incomingVol7dMeasured = pool.volumeUsd7d != null;
     const prev = seenPoolTvl.get(pool.poolId);
 
     if (prev) {
+      // The highest-TVL occurrence owns the deduped pool, including its volume reading.
       if (pool.tvlUsd > prev.tvl) {
-        const tvlDelta = pool.tvlUsd - prev.tvl;
-        const vol24hDelta = pool.volumeUsd1d - prev.vol24h;
-        const vol7dDelta = incomingVol7d - prev.vol7d;
-        totalTvl += tvlDelta;
-        totalVol24h += vol24hDelta;
-        totalVol7d += vol7dDelta;
+        totalTvl += pool.tvlUsd - prev.tvl;
         globalProtocolTvl[prev.proto] = (globalProtocolTvl[prev.proto] ?? 0) - prev.tvl;
         globalChainTvl[prev.chain] = (globalChainTvl[prev.chain] ?? 0) - prev.tvl;
         globalProtoChainTvl[`${prev.proto}:${prev.chain}`] =
@@ -355,15 +413,13 @@ export function accumulateGlobalAggregate(
         globalProtoChainTvl[`${proto}:${chainKey}`] =
           (globalProtoChainTvl[`${proto}:${chainKey}`] ?? 0) + pool.tvlUsd;
         globalChains.add(chainKey);
-        seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, vol7dMeasured: incomingVol7dMeasured, proto, chain: chainKey });
+        seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
       }
       continue;
     }
 
-    seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, vol7dMeasured: incomingVol7dMeasured, proto, chain: chainKey });
+    seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
     totalTvl += pool.tvlUsd;
-    totalVol24h += pool.volumeUsd1d;
-    totalVol7d += incomingVol7d;
     poolCount++;
     globalChains.add(chainKey);
     globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + pool.tvlUsd;
@@ -371,7 +427,7 @@ export function accumulateGlobalAggregate(
     globalProtoChainTvl[`${proto}:${chainKey}`] = (globalProtoChainTvl[`${proto}:${chainKey}`] ?? 0) + pool.tvlUsd;
   }
 
-  return { totalTvl, totalVol24h, totalVol7d, poolCount };
+  return { totalTvl, poolCount };
 }
 
 /**

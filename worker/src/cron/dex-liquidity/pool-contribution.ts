@@ -94,6 +94,11 @@ export function addSecondaryPoolContribution(
     symbol: pool.symbol,
     volumeUsd1d: pool.volume24hUsd,
     volumeUsd7d: pool.volume7dUsd ?? null,
+    volumeReading: {
+      volume24hUsd: pool.volume24hUsd,
+      volume7dUsd: pool.volume7dUsd ?? null,
+      observedAtSec: pool.volumeObservedAtSec ?? null,
+    },
     poolType: pool.poolType,
     source: pool.sourceFamily,
     ...(pool.price > 0 ? { price: pool.price } : {}),

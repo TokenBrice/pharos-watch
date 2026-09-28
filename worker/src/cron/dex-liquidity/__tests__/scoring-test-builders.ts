@@ -1,4 +1,6 @@
-import type { DexPriceObs, PoolEntry } from "../types";
+import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "../types";
+import { summarizeRetainedPoolVolume } from "../scoring-helpers";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 
 export type PoolOverrides = Partial<PoolEntry> & Pick<PoolEntry, "poolId" | "project" | "chain" | "tvlUsd">;
 
@@ -53,4 +55,20 @@ export function makePricePoolMap(entries: readonly PricePoolSpec[]): Map<string,
 
 export function makeObservationMap(entries: readonly ObservationMapEntry[]): Map<string, DexPriceObs[]> {
   return new Map(entries.map(({ stablecoinId, observations }) => [stablecoinId, observations.map((observation) => makeObs(observation))]));
+}
+
+/**
+ * Records a metric's totals as one retained pool whose readings were admitted at
+ * the evaluation clock, i.e. a complete 24h/7d window (full volume coverage).
+ */
+export function withCompleteVolume(m: LiquidityMetrics): LiquidityMetrics {
+  const asOfSec = 1_800_000_000;
+  m.volumeAvailability = summarizeRetainedPoolVolume(
+    [{
+      reading: { volume24hUsd: m.totalVolume24hUsd ?? 0, volume7dUsd: m.totalVolume7dUsd, observedAtSec: asOfSec },
+      tvlUsd: m.totalTvlUsd,
+    }],
+    { asOfSec, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
+  ).volumeAvailability;
+  return m;
 }

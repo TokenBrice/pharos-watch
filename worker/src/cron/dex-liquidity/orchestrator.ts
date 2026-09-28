@@ -1039,6 +1039,7 @@ async function buildDexLiquidityPoolState(
       sourceState.subgraphEnrichment.uniV3ExecutionCandidates,
     stablecoinPriceById: sourceState.stablecoinPriceById,
     measuredTargetCapturedAt: ctx.syncStartSec,
+    volumeObservedAtSec: ctx.syncStartSec,
     validationReferences: sourceState.validationReferences,
     curvePoolCandidatesByFingerprint:
       sourceState.curvePoolCandidatesByFingerprint,
@@ -1085,6 +1086,7 @@ async function buildDexLiquidityPoolState(
     preprocessedPoolCounts: sourceState.directApiPoolCounts,
     attemptedProtocolChains: sourceState.directApiPhase.attemptedProtocolChains,
     fallbackCounters: ctx.fallbackCounters,
+    volumeObservedAtSec: ctx.syncStartSec,
   });
   logDirectApiSourceSummary(directApiIntegration, sourceState.directApiPhase.circuitEvents);
 

@@ -95,12 +95,12 @@ function parseOptionalPairRatio(value: string | null | undefined): number | null
 
 // Shared projection for both GT-shaped providers; the 24h volume and the
 // pool_created_at normalization are provider-specific and passed in.
-export function parseGtShapedPool(
+export function parseGtShapedPool<TVolume extends number | null>(
   pool: GtShapedPool,
   chain: string,
-  volume24hUsd: number,
+  volume24hUsd: TVolume,
   createdAt: string | null,
-): ParsedPool | null {
+): ParsedPool<TVolume> | null {
   const attrs = pool.attributes;
   const dexId = pool.relationships?.dex?.data?.id;
   const poolAddress = canonicalExitRouteScopedId(chain, attrs.address ?? "");
@@ -128,11 +128,21 @@ export function parseGtShapedPool(
   };
 }
 
-export function parseGtPool(pool: GtPool, chain: string): ParsedPool | null {
+/**
+ * GeckoTerminal 24h volume reading: an explicit finite non-negative value
+ * (including "0") is a measurement; an absent, null, unparseable or negative
+ * field is no reading (`null`, DEC-19), never a fresh 0.
+ */
+function parseGtVolume24hUsd(h24: string | null | undefined): number | null {
+  const parsed = h24 == null ? Number.NaN : Number.parseFloat(h24);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export function parseGtPool(pool: GtPool, chain: string): ParsedPool<number | null> | null {
   return parseGtShapedPool(
     pool,
     chain,
-    parseFloat(pool.attributes.volume_usd?.h24 ?? "0"),
+    parseGtVolume24hUsd(pool.attributes.volume_usd?.h24),
     pool.attributes.pool_created_at,
   );
 }

@@ -55,10 +55,12 @@ export interface LiquidityMetrics {
   stablecoinId: string;
   symbol: string;
   totalTvlUsd: number;
-  totalVolume24hUsd: number;
-  totalVolume7dUsd: number;
-  /** True only when every retained contributing pool supplied measured 7d volume. */
-  totalVolume7dMeasured: boolean;
+  /** DEC-19 full-window measured 24h sum over the retained pool set; null unless the window is complete. */
+  totalVolume24hUsd: number | null;
+  /** DEC-19 full-window measured 7d sum over the retained pool set; null unless the window is complete. */
+  totalVolume7dUsd: number | null;
+  /** Per-window availability over the retained pool set; null until scoring summarizes it. */
+  volumeAvailability: DexVolumeAvailabilityRecord | null;
   poolCount: number;
   chains: Set<string>;
   pairs: Set<string>;
@@ -82,6 +84,7 @@ import type {
   DexAmmExecutionModel,
   DexExecutionCapabilityGate,
   DexLiquidityPool,
+  DexVolumeAvailabilityRecord,
   LiquidityPoolSourceFamily,
   LiquiditySourceMixEntry,
   LiquidityCoverageClass,
@@ -120,14 +123,37 @@ export interface CurveStableswapRateInputExecutionCandidate {
   }[];
 }
 
+/**
+ * A pool's raw provider volume readings and the clock they were observed at
+ * (DEC-19). Never decayed or coerced: a missing reading stays null. Window
+ * summaries classify it (measured / stale / missing) against the run clock.
+ */
+export interface DexPoolVolumeReading {
+  volume24hUsd: number | null;
+  volume7dUsd: number | null;
+  observedAtSec: number | null;
+}
+
+export type DexPoolVolumeObservation = NonNullable<DexLiquidityPool["volumeObservation"]>;
+
 export interface PoolEntry {
   poolId: string;
   project: string;
   chain: string;
   tvlUsd: number;
   symbol: string;
-  volumeUsd1d: number;
+  /**
+   * Provider 24h volume. In the source stage this is the raw reading (null when
+   * the source published none); the scoring eligibility pass replaces it with
+   * the in-window value, null unless `volumeObservation.status` is `measured`.
+   */
+  volumeUsd1d: number | null;
+  /** Provider 7d volume under the same raw-then-in-window contract as `volumeUsd1d`. */
   volumeUsd7d?: number | null;
+  /** DEC-19 eligibility of the 24h reading; set by the scoring eligibility pass and published. */
+  volumeObservation?: DexPoolVolumeObservation;
+  /** Internal raw readings; absent means no reading (classified missing). Never published. */
+  volumeReading?: DexPoolVolumeReading;
   poolType: string;
   /** Canonical source family for coverage-confidence accounting and UI attribution. */
   source: LiquidityPoolSourceFamily;
@@ -239,7 +265,8 @@ export interface GtPool {
 
 export interface ScoreComponents {
   tvlDepth: number;
-  volumeActivity: number;
+  /** Null when DEC-19 marks required 24h activity unavailable. */
+  volumeActivity: number | null;
   poolQuality: number;
   durability: number;
   pairDiversity: number;
@@ -348,8 +375,12 @@ export interface UniswapV4Lookups {
 export interface ScoreResult {
   tvl: number;
   effectiveTvl: number;
-  vol24h: number;
-  score: number;
+  /** Measured full-window 24h volume; null unless the retained window is complete. */
+  vol24h: number | null;
+  /** Composite LiquidityScore; null (NR) when required 24h activity is unavailable (DEC-19). */
+  score: number | null;
+  /** Per-window availability behind `vol24h`, persisted as `volume_availability_json`. */
+  volumeAvailability: DexVolumeAvailabilityRecord;
 }
 
 export interface GtNewPool {
@@ -358,7 +389,8 @@ export interface GtNewPool {
   dexId: string;
   name: string;
   tvlUsd: number;
-  volume24hUsd: number;
+  /** Provider 24h volume reading; null when the source published no usable value. */
+  volume24hUsd: number | null;
   qualityMultiplier: number;
   maturityDays: number;
   /** The stablecoin's price in this pool */
@@ -384,6 +416,12 @@ export interface GtNewPool {
   priceEvidenceTvlUsd?: number;
   /** Optional per-pool 7d volume when source provides it */
   volume7dUsd?: number | null;
+  /**
+   * Observation clock of `volume24hUsd` / `volume7dUsd`: the live fetch clock,
+   * or a staged row's refresh time. Absent means no clock proves the reading's
+   * window, so it is classified missing (DEC-19).
+   */
+  volumeObservedAtSec?: number | null;
   /** Optional measured balance ratio from richer direct/discovery APIs. */
   balanceRatio?: number | null;
   /** Optional normalized fee tier in basis points. */
@@ -424,9 +462,10 @@ export interface CgNewPool extends GtNewPool {
 /** Global deduped aggregate for the __global__ sentinel row. */
 export interface GlobalAgg {
   totalTvl: number;
-  totalVol24h: number;
-  totalVol7d: number;
-  totalVol7dMeasured: boolean;
+  /** DEC-19 measured sums over the deduped pool set; null unless the window is complete. */
+  totalVol24h: number | null;
+  totalVol7d: number | null;
+  volumeAvailability: DexVolumeAvailabilityRecord;
   poolCount: number;
   chainCount: number;
   protocolTvl: Record<string, number>;
@@ -448,8 +487,8 @@ export interface LiquidityFallbackCounters {
   stagedOrganicFractionDefault: number;
   /** STAGED_POOL_DEFAULTS.balanceRatioFallback applied to a newly merged secondary pool. */
   stagedBalanceRatioFallback: number;
-  /** Fluid tickers with a non-finite base/target volume coerced to 0. */
-  fluidVolumeCoercedToZero: number;
+  /** Fluid tickers with a non-finite or negative base/target volume, left unmeasured (null). */
+  fluidVolumeUnmeasured: number;
   /** Fluid pools whose feeRate stayed null after RPC enrichment. */
   fluidFeeRateUnmeasured: number;
   /** Fluid pools whose balances stayed null after RPC enrichment. */
