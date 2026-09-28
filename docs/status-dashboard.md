@@ -260,27 +260,34 @@ logger, cron health and cron-backed dataset freshness. New rows persist `metadat
 (the actual generation clock where available, otherwise confirmed completion) or explicit `null`; metadata
 compaction preserves this clock and quality reasons. Legacy rows require affirmative publication metadata
 or an `ok` result with a positive output count; an unannotated degraded attempt is not success.
+A legacy blacklist scan with positive, equal attempted/succeeded/quiet configuration counts and zero
+coverage failures is a confirmed quiet observation even when it inserts no events. Explicit no-output
+markers still override this legacy evidence.
 Canary and DEWS budgets remain separate named policies; they do not call this producer fact loader.
 Status uses a `2x` window; the staleness watchdog retains its `2x`/`3x` policy.
 Canonical control-plane jobs with `freshnessSurface: "none"` require a completed observation rather than a
 consumer publication. Subject to a successful history read, cron availability is healthy when:
 
 - A fresh non-stale `crons[*].inFlight` heartbeat exists (without advancing the output clock), or
-- The latest attempt is fresh and has confirmed output within `2 * expectedIntervalSec`, regardless of a
-  quality-degraded attempt status; control-plane jobs instead accept a fresh `ok`/`degraded` observation, or
-- A fresh `skipped_neutral` attempt inherits such evidence from the latest required run, or
+- The latest attempt is fresh and `ok`/`degraded`, and its latest confirmed output is within
+  `2 * expectedIntervalSec`. That output can come from an earlier attempt: cadence reuse and
+  `already_written_today` do not erase it or renew its clock. Control-plane jobs instead accept a fresh
+  `ok`/`degraded` observation, or
+- A fresh `skipped_neutral` attempt inherits such evidence from the latest required successful or locked run, or
 - Last run status is `skipped_neutral` whose `metadata.reason` is in `PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS`
   (`shared/lib/cron-jobs.ts`: `same_day_snapshot_exists`, `weekly-recap-exists`) — the skip was recorded only after a
   successful precheck read found the period's write-once artifact, so it is fresh positive evidence the period's
   output exists. Such a skip also supersedes an earlier fresh error for the same period in `summary.cronErrors`
   (the error row and its machine-readable reason stay in history; one transient precheck read failure must not keep
   a write-once daily artifact's producer red until the next day's real run). An inherited `degraded` run stays a
-  warning: the artifact existing proves availability, not that the producing run's inputs were clean, or
+  warning: the artifact existing proves availability, not that the producing run's inputs were clean.
+  Later generic neutral admissions retain this fresh readback evidence; a required attempt after the
+  readback supersedes it, so a newer error still wins, or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run with confirmed output in the same window, or
 - The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
 
-The display retains the latest ten runs. When all ten entries in that window are neutral skips, the loader performs a bounded per-job lookup for the latest non-neutral run so admission skips cannot evict valid producer evidence. Jobs whose display window already contains a required attempt need no extra lookup. This does not extend freshness budgets or treat skipped work as successful. That appended required attempt is also served as an eleventh `recentRuns` entry, so a job counted in `summary.degradedCrons` (or `summary.cronErrors`) through inheritance is always attributable from the served records instead of warning with an all-neutral visible history.
+The display retains the latest ten runs. When all ten entries in that window are neutral skips, the loader performs a bounded per-job lookup for the latest non-neutral run so admission skips cannot evict required-attempt evidence. That appended required attempt is also served as an eleventh `recentRuns` entry, so inherited warning/error counts remain attributable. Separately, a full display window without fresh confirmed output triggers a latest-confirmed-output aggregate over that job's retained history using `CONFIRMED_CRON_OUTPUT_AT_SQL`. This handles daily producers whose publication has fallen behind dozens of successful no-op attempts without expanding display history, extending freshness budgets, or treating skipped work as publication.
 
 Otherwise the job is unhealthy, including stale history, non-fresh errors, or a generic neutral skip (no
 proven-satisfied reason) whose latest required run errored or lacks confirmed output. A required degraded run

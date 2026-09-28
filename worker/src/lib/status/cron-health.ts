@@ -4,7 +4,7 @@ import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { cronEventCacheKey } from "../cron-logger";
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
-import { confirmedCronOutputAt } from "../cron-output";
+import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
 import { staleSlotEventCacheKey } from "../scheduled-slot-fence";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
@@ -40,6 +40,8 @@ export interface ScheduledSlotHealthSummary {
 }
 
 const CRON_HISTORY_ROWS_PER_JOB = 10;
+// Upper bound on one attempt's duration (scheduled invocations stop well within an hour).
+const CRON_OUTPUT_LOOKBACK_DURATION_SLACK_SEC = 3_600;
 const NEUTRAL_CRON_RUN_STATUS = "skipped_neutral";
 // D1's compound SELECT term limit is lower than upstream SQLite's default.
 // Each per-job branch here contributes two SELECT terms because it wraps a
@@ -245,7 +247,8 @@ const STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC = 10 * 60;
 async function fetchCronHistoryRows(
   db: D1Database,
   cronJobs: string[],
-): Promise<{ value: CronHistoryRow[] | null; error: string | null }> {
+  now: number,
+): Promise<{ value: CronHistoryRow[] | null; error: string | null; freshOutputJobs?: Set<string> }> {
   try {
     // Each batch is an independent SELECT, so fire all batches concurrently
     // rather than awaiting them in sequence; D1's HTTP/2 connection is
@@ -279,8 +282,41 @@ async function fetchCronHistoryRows(
         && parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS);
     }));
     rows.push(...requiredBatches.flat());
+    const freshOutputJobs = new Set<string>();
+    for (const row of rows) {
+      if (row.status !== "ok" && row.status !== "degraded") continue;
+      const outputAt = confirmedCronOutputAt(
+        { status: row.status, itemCount: row.item_count ?? undefined },
+        parseMetadataObject(row.metadata) ?? null,
+        row.started_at + Math.ceil(row.duration_ms / 1000),
+      );
+      if (outputAt != null && outputAt <= now && now - outputAt <= CRON_INTERVALS[row.job] * 2) {
+        freshOutputJobs.add(row.job);
+      }
+    }
+    // Display history can contain an entire day of successful no-op attempts.
+    // Recover the actual output clock independently, without renewing it from
+    // an admission/readback attempt or expanding the UI's ten-row window.
+    await Promise.all(cronJobs.filter((job) =>
+      (historyCounts.get(job) ?? 0) >= CRON_HISTORY_ROWS_PER_JOB
+      && !freshOutputJobs.has(job)
+      && getCronJobMeta(job)?.freshnessSurface !== "none",
+    ).map(async (job) => {
+      // output_at never exceeds the attempt's completion, so attempts that started before
+      // the freshness window (less a run-duration slack) cannot contribute; keep an index range scan.
+      const windowStart = now - CRON_INTERVALS[job] * 2 - CRON_OUTPUT_LOOKBACK_DURATION_SLACK_SEC;
+      const result = await db.prepare(`
+        SELECT MAX(output_at) AS output_at FROM (
+          SELECT ${CONFIRMED_CRON_OUTPUT_AT_SQL} AS output_at
+          FROM cron_runs WHERE job = ? AND started_at >= ?
+        ) WHERE output_at <= ?
+      `).bind(job, windowStart, now).first<{ output_at: number | null }>();
+      if (result?.output_at != null && now - result.output_at <= CRON_INTERVALS[job] * 2) {
+        freshOutputJobs.add(job);
+      }
+    }));
     rows.sort((a, b) => b.started_at - a.started_at);
-    return { value: rows, error: null };
+    return { value: rows, error: null, freshOutputJobs };
   } catch (err) {
     logWorkerEvent({
       scope: "status",
@@ -448,7 +484,7 @@ export async function loadCronHealth(
   // run in parallel; the dependent processing below preserves the original
   // ordering. This collapses ~13 sequential D1 awaits into one parallel wave.
   const [historyResult, leaseResult, progressResult, slotEventResult, runningSlotResult] = await Promise.all([
-    fetchCronHistoryRows(db, cronJobs),
+    fetchCronHistoryRows(db, cronJobs, now),
     fetchCronLeaseRows(db, cronJobInClause),
     fetchCronProgressRows(db, cronJobInClause),
     fetchCronSlotEventRows(db, eventKeyInClause),
@@ -634,16 +670,23 @@ export async function loadCronHealth(
     // same period — one transient precheck read failure must not keep a
     // write-once daily artifact's producer red all day. Generic admission
     // skips prove nothing and keep inheriting the latest required run.
-    const lastRunProvesPeriodSatisfied =
-      lastRun != null &&
-      lastRun.status === NEUTRAL_CRON_RUN_STATUS &&
-      isProvenSatisfiedNeutralSkipReason(lastRun.metadata?.reason);
-    const hasFreshRequiredAvailability = hasFreshOutput(job, latestRequiredRun, now, interval);
+    // A later generic neutral admission does not erase a still-fresh artifact
+    // readback. Conversely, a required attempt after that proof supersedes it.
+    const satisfiedRun = runs.find((run) => run.status === NEUTRAL_CRON_RUN_STATUS
+      && isProvenSatisfiedNeutralSkipReason(run.metadata?.reason));
+    const periodSatisfiedSinceRequiredAttempt = isFreshCronRun(satisfiedRun, now, interval)
+      && (latestRequiredRun == null || satisfiedRun.startedAt >= latestRequiredRun.startedAt);
+    const hasFreshConfirmedOutput = historyResult.freshOutputJobs?.has(job) === true;
+    const requiredAttemptCompleted = latestRequiredRun?.status === "ok" || latestRequiredRun?.status === "degraded"
+      || latestRequiredRun?.status === "skipped_locked";
+    const hasFreshRequiredAvailability = latestRequiredRunFresh && requiredAttemptCompleted
+      && (hasFreshOutput(job, latestRequiredRun, now, interval) || hasFreshConfirmedOutput);
     const availabilityHealthyFromLastRun =
       isFresh &&
       lastRun != null &&
-      (hasFreshOutput(job, lastRun, now, interval) ||
-        (lastRun.status === NEUTRAL_CRON_RUN_STATUS && (hasFreshRequiredAvailability || lastRunProvesPeriodSatisfied)) ||
+      (((lastRun.status === "ok" || lastRun.status === "degraded")
+          && (hasFreshOutput(job, lastRun, now, interval) || hasFreshConfirmedOutput)) ||
+        (lastRun.status === NEUTRAL_CRON_RUN_STATUS && (hasFreshRequiredAvailability || periodSatisfiedSinceRequiredAttempt)) ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
     const qualityRun = lastRun?.status === NEUTRAL_CRON_RUN_STATUS ? latestRequiredRun : lastRun;
@@ -690,7 +733,7 @@ export async function loadCronHealth(
       || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS
         && latestRequiredRun?.status === "error"
         && latestRequiredRunFresh
-        && !lastRunProvesPeriodSatisfied);
+        && !periodSatisfiedSinceRequiredAttempt);
     if (!telemetryUnknown && latestErrorRunFresh && !inFlightFresh) {
       cronErrorCount++;
       if (statusImpact === "critical") {
@@ -699,7 +742,7 @@ export async function loadCronHealth(
       // Consecutive-error streak: only counts if the two most-recent runs are
       // both in-error. Generic neutral skips do not reset the streak because
       // they are not required attempts; a proven-satisfied skip supersedes the
-      // earlier error entirely (see lastRunProvesPeriodSatisfied). A single
+      // earlier error entirely (see periodSatisfiedSinceRequiredAttempt). A single
       // transient error surfaces as `degraded` in availability evaluation;
       // only 2+ consecutive escalate to `stale`.
       if (

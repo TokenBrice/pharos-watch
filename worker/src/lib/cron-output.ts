@@ -53,6 +53,13 @@ export function confirmedCronOutputAt(
   if (persistence?.skipped === false && typeof persistence.generationId === "string"
     && persistence.generationId.length > 0 && typeof metadata?.rowsWritten === "number"
     && metadata.rowsWritten > 0) return completedAt;
+  // Legacy quiet scans persisted coverage/cursor state even when no events were inserted.
+  const outcomes = metadata?.coverageOutcomeCounts;
+  const attempted = metadata?.configsAttempted;
+  if (typeof attempted === "number" && Number.isSafeInteger(attempted) && attempted > 0
+    && metadata?.configsSucceeded === attempted && metadata?.coverageFailures === 0
+    && outcomes != null && typeof outcomes === "object" && !Array.isArray(outcomes)
+    && "quiet" in outcomes && outcomes.quiet === attempted) return completedAt;
   return status === "ok" && (result?.itemCount ?? 0) > 0 ? completedAt : null;
 }
 
@@ -77,5 +84,15 @@ export const CONFIRMED_CRON_OUTPUT_AT_SQL = `CASE
     OR ${field("lastWriteAdvanced")} = 1
     OR (${field("persistence.skipped")} = 0 AND length(${field("persistence.generationId")}) > 0
       AND ${field("rowsWritten")} > 0)
+    OR (json_type(${JSON_METADATA}, '$.configsAttempted') IN ('integer', 'real')
+      AND ${field("configsAttempted")} > 0 AND ${field("configsAttempted")} <= 9007199254740991
+      AND ${field("configsAttempted")} = CAST(${field("configsAttempted")} AS INTEGER)
+      AND json_type(${JSON_METADATA}, '$.configsSucceeded') IN ('integer', 'real')
+      AND ${field("configsSucceeded")} = ${field("configsAttempted")}
+      AND json_type(${JSON_METADATA}, '$.coverageFailures') IN ('integer', 'real')
+      AND ${field("coverageFailures")} = 0
+      AND json_type(${JSON_METADATA}, '$.coverageOutcomeCounts') = 'object'
+      AND json_type(${JSON_METADATA}, '$.coverageOutcomeCounts.quiet') IN ('integer', 'real')
+      AND ${field("coverageOutcomeCounts.quiet")} = ${field("configsAttempted")})
     OR (status = 'ok' AND item_count > 0) THEN started_at
   ELSE NULL END`;
