@@ -60,6 +60,7 @@ const phaseFixtures = vi.hoisted(() => {
         registryRowsRead: 0,
         registryMultiSourcePools: 0,
         registryFamilyBySource: {},
+        deadPoolUnindexedChainSkips: {},
       },
       scores: {
         measuredTargetInventory: { mode: "active", active: [], shadow: [] },
@@ -781,6 +782,7 @@ describe("dex liquidity scoring stage cycle", () => {
       registryRowsRead: 0,
       registryMultiSourcePools: 0,
       registryFamilyBySource: {},
+      deadPoolUnindexedChainSkips: {},
     });
     let callsAtTelemetryEntry: number[] | undefined;
     vi.mocked(fetchMajorStablecoinOrderbookDepthSummary).mockImplementationOnce(async () => {
@@ -1015,7 +1017,7 @@ describe("dex liquidity scoring stage cycle", () => {
       failedChainReasons: {},
     });
     vi.mocked(mergeStagedPools).mockImplementationOnce(
-      async (_db, _metrics, _known, _now, _references, confirmation) => {
+      async (_db, _metrics, _known, _now, _trackedDeployments, _references, confirmation) => {
         expect(sourceData.pools).toEqual([]);
         expect(sourceData.dexProjects.size).toBe(0);
         expect(directResult.pools).toEqual([]);
@@ -1037,6 +1039,7 @@ describe("dex liquidity scoring stage cycle", () => {
           registryRowsRead: 0,
           registryMultiSourcePools: 0,
           registryFamilyBySource: {},
+          deadPoolUnindexedChainSkips: {},
         };
       },
     );

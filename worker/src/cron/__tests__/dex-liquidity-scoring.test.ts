@@ -336,6 +336,44 @@ describe("dex-liquidity scoring", () => {
     expect(result.tvlStabilityMap).toEqual(new Map([["usdc-circle", 1], ["usdt-tether", 1]]));
   });
 
+  it("keeps TVL and turnover stability inside one TVL-measurement epoch", async () => {
+    const row = (stablecoinId: string, day: number, tvl: number, methodologyVersion: string | null) => ({
+      stablecoin_id: stablecoinId,
+      snapshot_date: day,
+      total_tvl_usd: tvl,
+      total_volume_24h_usd: tvl / 10,
+      coverage_confidence: 1,
+      volume_availability_json: null,
+      methodology_version: methodologyVersion,
+    });
+    const historyRows = [
+      // 20 flat days before the 6.92 re-measurement (legacy, 6.9 and 6.91 rows), then 7 flat days after it.
+      ...Array.from({ length: 10 }, (_, day) => row("paxg-paxos", day + 1, 160_000_000, null)),
+      ...Array.from({ length: 9 }, (_, day) => row("paxg-paxos", day + 11, 160_000_000, "6.9")),
+      row("paxg-paxos", 20, 160_000_000, "6.91"),
+      ...Array.from({ length: 7 }, (_, day) => row("paxg-paxos", day + 21, 50_000_000, "6.92")),
+      // Six days on the new basis are too few: the old basis alone is scored, never the mix.
+      ...Array.from({ length: 9 }, (_, day) => row("usdb-blast", day + 1, 11_000_000, "6.8")),
+      ...Array.from({ length: 6 }, (_, day) => row("usdb-blast", day + 10, 2_700_000, "6.92")),
+      // One sample on each basis: no stability.
+      row("jpyc-jpyc", 1, 31_000_000, "6.9"),
+      row("jpyc-jpyc", 2, 2_600_000, "6.92"),
+    ];
+    const db = makeNoopD1({
+      prepare: (sql: string) => ({
+        bind: (_since: number, cursorStablecoinId: string) => ({
+          all: async () => ({ results: cursorStablecoinId === "" ? historyRows : [], success: true, meta: {} }),
+        }),
+        sql,
+      }),
+    });
+
+    const result = await loadConfidentHistoryStability(db);
+
+    expect(result.tvlStabilityMap).toEqual(new Map([["paxg-paxos", 1], ["usdb-blast", 1]]));
+    expect(result.volumeStabilityMap).toEqual(new Map([["paxg-paxos", 1], ["usdb-blast", 1]]));
+  });
+
   it("filters and scales pools, truncates visible pools, and computes deduped global aggregates", async () => {
     const nowMs = Date.UTC(2026, 0, 1);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);

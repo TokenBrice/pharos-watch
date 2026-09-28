@@ -10,7 +10,8 @@ import {
   summarizeRetainedPoolVolume,
   type GlobalPoolAggregateEntry,
 } from "../scoring-helpers";
-import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { DEX_DEAD_POOL_TVL_MIN_USD, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { initLiquidityFallbackCounters } from "../pool-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { LiquiditySourceMixByFamily } from "../types";
 import { makeObs, makePool } from "./scoring-test-builders";
@@ -390,6 +391,63 @@ describe("filterRetainedPools", () => {
     ]);
 
     expect(retained).toHaveLength(0);
+  });
+
+  describe("dead-pool floor (v6.92)", () => {
+    const NOW = 1_800_000_000;
+    const clock = { asOfSec: NOW, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC };
+    const pool = (
+      poolId: string,
+      tvlUsd: number,
+      reading: { volume24hUsd: number | null; ageSec?: number; signed?: boolean },
+    ) => {
+      const entry = makePool({ poolId, tvlUsd, volumeUsd1d: reading.volume24hUsd });
+      entry.volumeReading = {
+        volume24hUsd: reading.volume24hUsd,
+        volume7dUsd: null,
+        observedAtSec: NOW - (reading.ageSec ?? 3_600),
+        ...(reading.signed ? { deadPoolSignature: true as const } : {}),
+      };
+      return entry;
+    };
+
+    it("drops a signed in-window zero from exactly the $1M threshold and keeps everything else", () => {
+      const pools = [
+        pool("ethereum:0xat", DEX_DEAD_POOL_TVL_MIN_USD, { volume24hUsd: 0, signed: true }),
+        pool("ethereum:0xabove", 23_667_525, { volume24hUsd: 0, signed: true }),
+        pool("ethereum:0xbelow", DEX_DEAD_POOL_TVL_MIN_USD - 0.01, { volume24hUsd: 0, signed: true }),
+        // Measured zero without the signature: unverified provider zero or tracked counter-token.
+        pool("ethereum:0xunsigned", 5_000_000, { volume24hUsd: 0 }),
+        // Unknown volume is never a zero, signature or not.
+        pool("ethereum:0xmissing", 5_000_000, { volume24hUsd: null, signed: true }),
+        // A signed zero older than the admission window is stale, not measured.
+        pool("ethereum:0xstale", 5_000_000, { volume24hUsd: 0, ageSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC + 1, signed: true }),
+        pool("ethereum:0xtraded", 5_000_000, { volume24hUsd: 12, signed: true }),
+      ];
+      applyPoolVolumeEligibility(pools, clock);
+      const tally = { poolCount: 0, tvlUsd: 0 };
+      const retained = filterRetainedPools(pools, undefined, tally);
+
+      expect(retained.map((entry) => entry.poolId)).toEqual([
+        "ethereum:0xbelow",
+        "ethereum:0xunsigned",
+        "ethereum:0xmissing",
+        "ethereum:0xstale",
+        "ethereum:0xtraded",
+      ]);
+      expect(tally).toEqual({ poolCount: 2, tvlUsd: DEX_DEAD_POOL_TVL_MIN_USD + 23_667_525 });
+    });
+
+    it("leaves a signed zero above $100M to the large-pool floor", () => {
+      const counters = initLiquidityFallbackCounters();
+      const tally = { poolCount: 0, tvlUsd: 0 };
+      const pools = [pool("polygon:0xubs", 100_337_203, { volume24hUsd: 0, signed: true })];
+      applyPoolVolumeEligibility(pools, clock);
+
+      expect(filterRetainedPools(pools, counters, tally)).toHaveLength(0);
+      expect(counters.retainedExclusionLargePoolLowVolume).toBe(1);
+      expect(tally.poolCount).toBe(0);
+    });
   });
 });
 

@@ -104,6 +104,16 @@ function makePool(index: number): PoolEntry {
     volumeUsd7d: 35_000 + index,
     poolType: index % 3 === 0 ? "stable" : "volatile",
     source,
+    ...(source === "cg_onchain"
+      ? {
+          volumeReading: {
+            volume24hUsd: index % 5 === 0 ? 0 : 5_000 + index,
+            volume7dUsd: null,
+            observedAtSec: 1_000,
+            ...(index % 5 === 0 ? { deadPoolSignature: true as const } : {}),
+          },
+        }
+      : {}),
     price: 1 + (index % 7) / 100_000,
     extra: {
       qualityAdjustedTvl: 45_000 + index,
@@ -303,6 +313,12 @@ describe("DEX liquidity scoring stage", () => {
     expect(decodedPools.filter((entry) => entry.source === "dl")).toHaveLength(3_565);
     expect(decodedPools.filter((entry) => entry.source === "direct_api")).toHaveLength(1_486);
     expect(decodedPools.filter((entry) => entry.source === "cg_onchain")).toHaveLength(2_351);
+    // The consumer scores the dead-pool floor from signatures the staged merge wrote.
+    const signedIds = (pools: readonly PoolEntry[]) =>
+      pools.filter((entry) => entry.volumeReading?.deadPoolSignature === true).map((entry) => entry.poolId);
+    const originalPools = [...pool.metrics.values()].flatMap((metric) => metric.topPools);
+    expect(signedIds(decodedPools)).toHaveLength(470);
+    expect(signedIds(decodedPools)).toEqual(signedIds(originalPools));
   });
 
   it("preserves multibyte records across a partial encodeInto boundary and enforces exact byte caps", () => {
@@ -731,13 +747,16 @@ describe("DEX liquidity scoring stage", () => {
         ),
       ])
     ).toThrow("unknown target lane");
-    // A pre-6.9 payload carries no raw volume readings: rejected, never scored as all-missing volume.
+    // A pre-6.9 payload carries no raw volume readings, and a pre-6.92 payload no
+    // dead-pool signatures: both are rejected, never scored under the current label.
     const [header, ...rest] = base[0]!.payload.split("\n");
-    expect(() =>
-      decodeDexLiquidityScoringStageChunks([
-        withPayload([JSON.stringify({ ...JSON.parse(header!), schemaVersion: 1 }), ...rest].join("\n")),
-      ])
-    ).toThrow("payload version 1");
+    for (const schemaVersion of [1, 2]) {
+      expect(() =>
+        decodeDexLiquidityScoringStageChunks([
+          withPayload([JSON.stringify({ ...JSON.parse(header!), schemaVersion }), ...rest].join("\n")),
+        ])
+      ).toThrow(`payload version ${schemaVersion}`);
+    }
 
     const invalidPool = poolState(1);
     invalidPool.metrics.get("major")!.totalTvlUsd = Number.NaN;

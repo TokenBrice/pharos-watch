@@ -20,10 +20,11 @@ import {
   filterRetainedPools,
   rebuildMetricsFromPools,
   summarizeRetainedPoolVolume,
+  type DeadPoolExclusionTally,
   type DexVolumeClock,
   type GlobalPoolAggregateEntry,
 } from "./scoring-helpers";
-import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { DEX_DEAD_POOL_TVL_MIN_USD, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { applyDexRouteObservationBounds, selectDexRouteObservationPoolSet, selectDexRouteObservationPools, selectDexRouteObservations, type DexRouteSelectionDiagnostic } from "./dex-route-observation-selection";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeDepthStability, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages } from "./dex-scoring-stage-store";
 import { computeDexPrices, type DexPricePersistenceDiagnostics } from "./dex-price-publisher";
@@ -55,6 +56,8 @@ interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
   /** Report-only optimistic-default/silent-exclusion counters from the scoring pass. */
   fallbackCounters: LiquidityFallbackCounters;
+  /** Pools excluded by the v6.92 dead-pool floor (reason, count, TVL, top coins). */
+  deadPoolExclusions: DeadPoolExclusionSummary;
   routeSelection: DexRouteSelectionDiagnostic[];
   measuredExecution: {
     join: DexMeasuredExecutionJoinDiagnostics;
@@ -66,6 +69,36 @@ interface ScoreDiagnostics {
     shadowTargetPublication:
       | { status: "published"; generationId: string; rowCount: number }
       | { status: "skipped" | "failed"; reason: string };
+  };
+}
+
+const DEAD_POOL_EXCLUSION_REASON = "dead-pool-zero-trade-untracked-counter";
+const DEAD_POOL_EXCLUSION_TOP_STABLECOINS = 10;
+
+/**
+ * Run-metadata summary of the liquidity v6.92 dead-pool floor. Counts are per
+ * (stablecoin, pool) attribution, before protocol caps.
+ */
+export interface DeadPoolExclusionSummary {
+  reason: typeof DEAD_POOL_EXCLUSION_REASON;
+  thresholdTvlUsd: number;
+  poolCount: number;
+  tvlUsd: number;
+  topStablecoins: Array<{ stablecoinId: string; poolCount: number; tvlUsd: number }>;
+}
+
+function summarizeDeadPoolExclusions(
+  byStablecoin: Array<{ stablecoinId: string } & DeadPoolExclusionTally>,
+): DeadPoolExclusionSummary {
+  return {
+    reason: DEAD_POOL_EXCLUSION_REASON,
+    thresholdTvlUsd: DEX_DEAD_POOL_TVL_MIN_USD,
+    poolCount: byStablecoin.reduce((sum, entry) => sum + entry.poolCount, 0),
+    tvlUsd: Math.round(byStablecoin.reduce((sum, entry) => sum + entry.tvlUsd, 0)),
+    topStablecoins: [...byStablecoin]
+      .sort((a, b) => b.tvlUsd - a.tvlUsd || (a.stablecoinId < b.stablecoinId ? -1 : 1))
+      .slice(0, DEAD_POOL_EXCLUSION_TOP_STABLECOINS)
+      .map((entry) => ({ ...entry, tvlUsd: Math.round(entry.tvlUsd) })),
   };
 }
 
@@ -166,6 +199,7 @@ export async function computeStablecoinScores(
   const fallbackCounters = initLiquidityFallbackCounters();
   const preparedRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
   const p4OnlyRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
+  const deadPoolExclusionsByStablecoin: Array<{ stablecoinId: string } & DeadPoolExclusionTally> = [];
 
   // Nothing mutates metrics' key set across either pass (value-level updates
   // only), so direct iteration visits identical entries in insertion order.
@@ -176,7 +210,13 @@ export async function computeStablecoinScores(
     // in-window volume (aged/absent readings are null, never decayed or zero).
     applyPoolVolumeEligibility(m.topPools, volumeClock);
     p4OnlyRetainedPools.set(id, m.topPools.filter(isP4OnlyPausedBalancerPool));
-    m.topPools = filterRetainedPools(m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)), fallbackCounters);
+    const deadPoolTally: DeadPoolExclusionTally = { poolCount: 0, tvlUsd: 0 };
+    m.topPools = filterRetainedPools(
+      m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)),
+      fallbackCounters,
+      deadPoolTally,
+    );
+    if (deadPoolTally.poolCount > 0) deadPoolExclusionsByStablecoin.push({ stablecoinId: id, ...deadPoolTally });
     const capResult = applyProtocolCaps(m.topPools, protocolTvlCaps);
     protocolCapDiagnostics.cappedPoolCount += capResult.cappedPoolCount;
     protocolCapDiagnostics.cappedProtocols += capResult.cappedProtocols;
@@ -505,6 +545,7 @@ export async function computeStablecoinScores(
         reducedTvlUsd: protocolCapDiagnostics.reducedTvlUsd + Math.round(globalCapReduction),
       },
       fallbackCounters,
+      deadPoolExclusions: summarizeDeadPoolExclusions(deadPoolExclusionsByStablecoin),
       routeSelection: routeSelectionDiagnostics,
       measuredExecution: {
         join: measuredExecutionJoin,

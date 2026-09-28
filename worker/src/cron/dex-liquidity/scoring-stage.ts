@@ -20,9 +20,11 @@ import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
 const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 // Chunk payload version carried by the header record. v2 (liquidity methodology
 // 6.9): pools carry raw DEC-19 volume readings (`volumeReading`) and nullable
-// volumes. A v1 payload lacks the readings, so it is rejected rather than scored
-// as all-missing volume.
-const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 2;
+// volumes. v3 (6.92): the staged merge stamps the dead-pool signature onto those
+// readings. An older payload lacks what the consumer scores, so it is rejected
+// rather than scored as all-missing volume (v1) or without the dead-pool floor
+// under a 6.92 label (v2).
+const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 3;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 /** @internal Exported for focused scoring-stage tests. */
 export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 1;
@@ -246,6 +248,9 @@ function requirePoolVolumeReading(value: unknown): void {
   requireFiniteNumberOrNull(value.volume24hUsd, "pool 24h volume reading");
   requireFiniteNumberOrNull(value.volume7dUsd, "pool 7d volume reading");
   requireFiniteNumberOrNull(value.observedAtSec, "pool volume observation clock");
+  if (value.deadPoolSignature !== undefined && value.deadPoolSignature !== true) {
+    throw new Error("DEX liquidity scoring stage contains an invalid pool dead-pool signature");
+  }
 }
 
 function buildPoolHeader(poolState: DexLiquidityPoolState): PoolHeader {

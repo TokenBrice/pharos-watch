@@ -1,13 +1,14 @@
 import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persistence";
 import type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 import type { DexPaginationPersistenceSummary } from "../../lib/dex-api-common";
-import type { DexPricePersistenceDiagnostics } from "./scoring";
+import type { DeadPoolExclusionSummary, DexPricePersistenceDiagnostics } from "./scoring";
 import {
   POOL_REJECTION_MATERIAL_TVL_USD,
   hasMaterialPoolRejections,
 } from "./process-pools";
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { LiquidityFallbackCounters } from "./types";
+import type { DeadPoolUnindexedChainSkips } from "./staging-merge";
 
 export function isDexLiquidityDegraded(params: {
   criticalSourceFailures: string[];
@@ -80,6 +81,8 @@ export function buildDexLiquidityCronMetadata(params: {
   degradedSources?: string[];
   fallbackSignals: string[];
   fallbackCounters: LiquidityFallbackCounters;
+  deadPoolExclusions: DeadPoolExclusionSummary;
+  deadPoolUnindexedChainSkips: DeadPoolUnindexedChainSkips;
   persistence: PersistScoresResult;
   historicalSnapshot: HistoricalSnapshotWriteResult;
 }): Record<string, unknown> {
@@ -125,6 +128,8 @@ export function buildDexLiquidityCronMetadata(params: {
     dexPriceDiagnostics: params.dexPriceDiagnostics,
     fallbackMode: [...new Set(params.fallbackSignals)],
     fallbackCounters: params.fallbackCounters,
+    retainedDeadPoolExclusions: params.deadPoolExclusions,
+    deadPoolUnindexedChainSkips: params.deadPoolUnindexedChainSkips,
     persistence: {
       generationId: params.persistence.generationId ?? null,
       expectedRowCount: params.persistence.expectedRowCount ?? null,

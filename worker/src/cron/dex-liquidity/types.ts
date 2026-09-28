@@ -132,6 +132,15 @@ export interface DexPoolVolumeReading {
   volume24hUsd: number | null;
   volume7dUsd: number | null;
   observedAtSec: number | null;
+  /**
+   * Liquidity v6.92 dead-pool signature, stamped only by the staged merge: this
+   * 24h reading is a trade-verified zero (a usable zero from a
+   * DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES registry row) and no counter-token
+   * of the pool is a tracked stablecoin deployment on its chain. Absent means the
+   * signature is not established; such a pool is never screened. Internal, never
+   * published.
+   */
+  deadPoolSignature?: true;
 }
 
 export type DexPoolVolumeObservation = NonNullable<DexLiquidityPool["volumeObservation"]>;
@@ -422,6 +431,8 @@ export interface GtNewPool {
    * window, so it is classified missing (DEC-19).
    */
   volumeObservedAtSec?: number | null;
+  /** Dead-pool signature of the 24h reading (see DexPoolVolumeReading.deadPoolSignature). */
+  volumeDeadPoolSignature?: true;
   /** Optional measured balance ratio from richer direct/discovery APIs. */
   balanceRatio?: number | null;
   /** Optional normalized fee tier in basis points. */
@@ -519,6 +530,10 @@ export interface LiquidityFallbackCounters {
   retainedExclusionVolTvlRatio: number;
   /** Pools silently excluded by filterRetainedPools: >$100M TVL with <$50K volume. */
   retainedExclusionLargePoolLowVolume: number;
+  /** Live-lane pools with no volume reading that adopted the dedup-skipped registry view's reading. */
+  stagedLiveVolumeBackfill: number;
+  /** Staged price observations withheld under the v6.92 dead-pool floor. */
+  stagedDeadPoolPriceObservationExcluded: number;
 }
 
 export type FullScoreResult = ScoreResult & {

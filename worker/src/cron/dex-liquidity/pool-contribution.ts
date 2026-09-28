@@ -98,6 +98,7 @@ export function addSecondaryPoolContribution(
       volume24hUsd: pool.volume24hUsd,
       volume7dUsd: pool.volume7dUsd ?? null,
       observedAtSec: pool.volumeObservedAtSec ?? null,
+      ...(pool.volumeDeadPoolSignature ? { deadPoolSignature: true } : {}),
     },
     poolType: pool.poolType,
     source: pool.sourceFamily,

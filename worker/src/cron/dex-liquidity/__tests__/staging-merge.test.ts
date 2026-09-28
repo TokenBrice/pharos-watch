@@ -9,7 +9,17 @@ import {
   stagedPoolMaturityDays,
 } from "../../dex-discovery/types";
 import { mergeStagedPools } from "../staging-merge";
-import { applyRebuiltMetrics, rebuildMetricsFromPools } from "../scoring-helpers";
+import {
+  applyPoolVolumeEligibility,
+  applyRebuiltMetrics,
+  filterRetainedPools,
+  rebuildMetricsFromPools,
+} from "../scoring-helpers";
+import { initLiquidityFallbackCounters, initMetrics } from "../pool-helpers";
+import { DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC } from "../constants";
+import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import type { LiquidityMetrics } from "../types";
+import { makePool } from "./scoring-test-builders";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import {
   buildPoolIdentity,
@@ -146,6 +156,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+    new Map(),
     );
 
     expect(result.mergedCount).toBe(1);
@@ -188,6 +199,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+    new Map(),
     );
 
     expect(result.mergedCount).toBe(1);
@@ -224,6 +236,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+    new Map(),
     );
 
     expect(result.mergedCount).toBe(2);
@@ -261,6 +274,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+    new Map(),
     );
 
     expect(result.mergedCount).toBe(1);
@@ -277,7 +291,7 @@ describe("mergeStagedPools", () => {
     const mockDb = createMockDb([]);
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex();
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000, new Map());
 
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
@@ -295,7 +309,7 @@ describe("mergeStagedPools", () => {
     });
     const originalTvl = metrics.get("test-coin")?.totalTvlUsd;
 
-    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), 1710000000);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), 1710000000, new Map());
 
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
@@ -336,7 +350,7 @@ describe("mergeStagedPools", () => {
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex();
 
-    const result = await mergeStagedPools(createMockDb(trackedRows), metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(createMockDb(trackedRows), metrics as never, knownPoolIndex, now, new Map());
     const topPools = metrics.get("usdt-tether")?.topPools as Array<{ poolId: string }>;
 
     expect(result.mergedCount).toBe(rowCount);
@@ -360,7 +374,7 @@ describe("mergeStagedPools", () => {
     ]);
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex([`ethereum:${exactPoolAddress}`], "usdt-tether");
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000, new Map());
 
     expect(result.skippedCount).toBe(1);
     expect(result.skippedByExactIdentityCount).toBe(1);
@@ -393,7 +407,7 @@ describe("mergeStagedPools", () => {
       }),
     ]);
     const metrics = new Map();
-    const result = await mergeStagedPools(mockDb, metrics, makeKnownPoolIndex(), 1710000000);
+    const result = await mergeStagedPools(mockDb, metrics, makeKnownPoolIndex(), 1710000000, new Map());
 
     expect(result.skippedCount).toBe(1);
     expect(result.mergedCount).toBe(0);
@@ -429,7 +443,7 @@ describe("mergeStagedPools", () => {
       }),
     ]);
     const metrics = new Map();
-    const result = await mergeStagedPools(mockDb, metrics, makeKnownPoolIndex(), 1710000000);
+    const result = await mergeStagedPools(mockDb, metrics, makeKnownPoolIndex(), 1710000000, new Map());
 
     expect(result.skippedCount).toBe(1);
     expect(result.mergedCount).toBe(0);
@@ -460,7 +474,7 @@ describe("mergeStagedPools", () => {
       `derived:ethereum:pancakeswap-v3:${baseToken}:${quoteToken}:gt-concentrated:na:stable`,
     ]);
 
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000, new Map());
 
     expect(result.skippedCount).toBe(1);
     expect(result.skippedByExactIdentityCount).toBe(0);
@@ -511,7 +525,7 @@ describe("mergeStagedPools", () => {
       `derived:ethereum:pancakeswap-v3:${baseToken}:${quoteToken}:gt-concentrated:na:stable`,
     ]);
 
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, now, new Map());
 
     expect(result.skippedCount).toBe(2);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(1);
@@ -586,7 +600,7 @@ describe("mergeStagedPools", () => {
       }),
     );
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
     expect(result.skippedCount).toBe(1);
     expect(result.skippedByOptionalWildcardIdentityCount).toBe(1);
@@ -666,7 +680,7 @@ describe("mergeStagedPools", () => {
       }),
     );
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
     expect(result.skippedByOptionalWildcardIdentityCount).toBe(0);
     expect(result.mergedCount).toBe(2);
@@ -680,7 +694,7 @@ describe("mergeStagedPools", () => {
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex();
     await expect(
-      mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000),
+      mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000, new Map()),
     ).rejects.toThrow("no such table: dex_pool_registry");
   });
 
@@ -694,7 +708,7 @@ describe("mergeStagedPools", () => {
       return { results: [] };
     });
 
-    const result = await mergeStagedPools(db, new Map(), makeKnownPoolIndex(), 1_710_000_000);
+    const result = await mergeStagedPools(db, new Map(), makeKnownPoolIndex(), 1_710_000_000, new Map());
 
     expect(attempts).toBe(2);
     expect(result.mergedCount).toBe(0);
@@ -728,7 +742,7 @@ describe("mergeStagedPools", () => {
     ]);
     const metrics = new Map();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now, new Map());
     const metric = metrics.get("usdt-tether");
     applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
 
@@ -761,6 +775,7 @@ describe("mergeStagedPools", () => {
         metrics as never,
         makeKnownPoolIndex(),
         now,
+      new Map(),
       );
       const metric = metrics.get("usdt-tether");
       applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
@@ -798,7 +813,7 @@ describe("mergeStagedPools", () => {
     ]);
     const metrics = new Map();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now, new Map());
     const metric = metrics.get("usdt-tether");
     applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
 
@@ -851,7 +866,7 @@ describe("mergeStagedPools", () => {
     ]);
     const metrics = new Map();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now, new Map());
     const metric = metrics.get("eurc-circle");
 
     expect(result.mergedCount).toBe(1);
@@ -890,6 +905,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+    new Map(),
     );
 
     expect(result.mergedCount).toBe(1);
@@ -898,7 +914,7 @@ describe("mergeStagedPools", () => {
 
   it.each([null, "{}", "{", JSON.stringify({ reserves: [{ identityReviewVersion: TEZOS_POOL_IDENTITY_REVIEW_VERSION }] })])("rejects legacy or unreviewed Tezos staging: %s", async (raw_json) => {
     const metrics = new Map();
-    const result = await mergeStagedPools(createMockDb([makeStagedPoolRow({ source: "tezos", chain: "tezos", raw_json })]), metrics as never, makeKnownPoolIndex(), 1710000000);
+    const result = await mergeStagedPools(createMockDb([makeStagedPoolRow({ source: "tezos", chain: "tezos", raw_json })]), metrics as never, makeKnownPoolIndex(), 1710000000, new Map());
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(1);
     expect(metrics.size).toBe(0);
@@ -906,7 +922,7 @@ describe("mergeStagedPools", () => {
 
   it.each([null, "{}", JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION })])("only replays factory-reviewed Slipstream writeback: %s", async (raw_json) => {
     const metrics = new Map();
-    const result = await mergeStagedPools(createMockDb([makeStagedPoolRow({ source: "direct_api", protocol: "aerodrome", pool_type: "aerodrome-slipstream-1bp", raw_json })]), metrics as never, makeKnownPoolIndex(), 1710000000);
+    const result = await mergeStagedPools(createMockDb([makeStagedPoolRow({ source: "direct_api", protocol: "aerodrome", pool_type: "aerodrome-slipstream-1bp", raw_json })]), metrics as never, makeKnownPoolIndex(), 1710000000, new Map());
     expect(result.mergedCount).toBe(raw_json?.includes(SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION) ? 1 : 0);
   });
 
@@ -986,6 +1002,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       knownPoolIndex,
       now,
+    new Map(),
     );
 
     expect(result.mergedCount).toBe(fixtures.length);
@@ -1052,7 +1069,7 @@ describe("mergeStagedPools", () => {
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
     expect(result.mergedCount).toBe(2);
     expect(result.skippedCount).toBe(0);
@@ -1096,6 +1113,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+      new Map(),
       undefined,
       makeAuthoritativeConfirmationIndex([{ protocol: "balancer", chains: ["plasma"] }]),
     );
@@ -1150,6 +1168,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+      new Map(),
       undefined,
       makeAuthoritativeConfirmationIndex([{ protocol: "aerodrome", chains: ["base"] }]),
     );
@@ -1196,6 +1215,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+      new Map(),
       undefined,
       makeAuthoritativeConfirmationIndex([{ protocol: "aerodrome", chains: ["base"] }]),
     );
@@ -1238,7 +1258,7 @@ describe("mergeStagedPools", () => {
     ]);
     const metrics = new Map();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now, new Map());
     const metric = metrics.get("usdai-usd-ai");
     applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
 
@@ -1313,6 +1333,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+      new Map(),
       undefined,
       makeAuthoritativeConfirmationIndex([
         { protocol: "orca", chains: ["solana"] },
@@ -1362,6 +1383,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+      new Map(),
       undefined,
       makeAuthoritativeConfirmationIndex([{ protocol: "orca", chains: ["solana"] }]),
     );
@@ -1407,6 +1429,7 @@ describe("mergeStagedPools", () => {
       metrics as never,
       makeKnownPoolIndex(),
       now,
+      new Map(),
       undefined,
       makeAuthoritativeConfirmationIndex([{ protocol: "pancakeswap", chains: ["bsc"] }]),
     );
@@ -1445,7 +1468,7 @@ describe("mergeStagedPools", () => {
     ]);
     const metrics = new Map();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now, new Map());
     const metric = metrics.get("usdt-tether");
     applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
 
@@ -1496,7 +1519,7 @@ describe("mergeStagedPools", () => {
     // Pool address is already known (from DL yields) — will be deduped for metrics
     const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`], "usdt-tether");
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
     // Metrics dedup still works — pool was NOT merged into metrics
     expect(result.skippedCount).toBe(1);
@@ -1543,7 +1566,7 @@ describe("mergeStagedPools", () => {
       `derived:ethereum:pancakeswap-v3:${baseToken}:${quoteToken}:gt-concentrated:na:stable`,
     ]);
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
     // Metrics dedup still works
     expect(result.skippedCount).toBe(1);
@@ -1586,7 +1609,7 @@ describe("mergeStagedPools", () => {
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`], "usdt-tether");
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
     expect(result.skippedCount).toBe(1);
     // TVL $30K × confidence 1.0 = $30K < $50K threshold — no price observation
@@ -1627,7 +1650,7 @@ describe("mergeStagedPools", () => {
     // skipped by fingerprint dedup — only exact poolId match matters
     const knownPoolIndex = makeKnownPoolIndex();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
@@ -1676,7 +1699,7 @@ describe("mergeStagedPools", () => {
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
     expect(result.mergedCount).toBe(2);
     expect(result.skippedCount).toBe(0);
@@ -1696,6 +1719,7 @@ describe("mergeStagedPools", () => {
       metrics,
       makeKnownPoolIndex(),
       now,
+    new Map(),
     );
     expect(result.mergedCount).toBe(1);
     expect(result.skippedCount).toBe(0);
@@ -1718,6 +1742,7 @@ describe("mergeStagedPools", () => {
       metrics,
       makeKnownPoolIndex(),
       1710000000,
+      new Map(),
       undefined,
       makeAuthoritativeConfirmationIndex([{ protocol: "pancakeswap", chains: ["ethereum"], exactPoolKeys: [] }]),
     );
@@ -1725,5 +1750,180 @@ describe("mergeStagedPools", () => {
     expect(result.skippedByAuthoritativeProtocolCount).toBe(1);
     expect(result.priceObservations.size).toBe(0);
     expect(metrics.size).toBe(0);
+  });
+});
+
+describe("mergeStagedPools dead-pool floor (v6.92)", () => {
+  const NOW = DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC + 6 * 3600;
+  const USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+  const USDT = "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2";
+  const JUNK = "0x4c3f33fd2f6cf46dd53940eba9b7d0b16cef4e7b";
+  const trackedDeployments = new Map([
+    [`base:${USDC}`, "usdc-circle"],
+    [`base:${USDT}`, "usdt-tether"],
+  ]);
+  const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
+  const cgZeroRow = (n: number, overrides: Parameters<typeof makeStagedPoolRow>[0] = {}) =>
+    makeStagedPoolRow({
+      pool_id: `base:${address(n)}`,
+      stablecoin_id: "usdc-circle",
+      source: "cg_onchain",
+      chain: "base",
+      protocol: "uniswap-v3",
+      dex_id: "uniswap_v3_base",
+      symbol: "JUNK / USDC",
+      tvl_usd: 5_000_000,
+      volume_24h: 0,
+      base_token: JUNK,
+      quote_token: USDC,
+      price_usd: 1,
+      refreshed_at: NOW - 3600,
+      ...overrides,
+    });
+  const scoreRetained = (metric: LiquidityMetrics) => {
+    applyPoolVolumeEligibility(metric.topPools, { asOfSec: NOW, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC });
+    return filterRetainedPools(metric.topPools).map((pool) => pool.poolId);
+  };
+
+  it("signs only trade-verified zeros against untracked counter-tokens and withholds their prices", async () => {
+    const metrics = new Map<string, LiquidityMetrics>();
+    const counters = initLiquidityFallbackCounters();
+    const result = await mergeStagedPools(
+      createMockDb([
+        cgZeroRow(1),
+        // Tracked counter-token (USDT/USDC): a quiet stable pair stays.
+        cgZeroRow(2, { base_token: USDT, symbol: "USDT / USDC" }),
+        // GeckoTerminal stores an explicit "0" without a trade-count check.
+        cgZeroRow(3, { source: "gecko_terminal" }),
+        // A pre-cutover CoinGecko onchain zero keeps its exempt, trusted provenance.
+        cgZeroRow(4, { refreshed_at: DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC - 60 }),
+        cgZeroRow(5, { volume_24h: 12 }),
+        cgZeroRow(6, { tvl_usd: 999_999 }),
+        // Unknown token identity proves nothing.
+        cgZeroRow(7, { base_token: null }),
+      ]),
+      metrics,
+      makeKnownPoolIndex(),
+      NOW,
+      trackedDeployments,
+      undefined,
+      undefined,
+      counters,
+    );
+
+    const metric = metrics.get("usdc-circle")!;
+    const signed = metric.topPools.filter((pool) => pool.volumeReading?.deadPoolSignature).map((pool) => pool.poolId);
+    expect(signed.sort()).toEqual([1, 4, 6].map((n) => `base:${address(n)}`));
+    expect(result.priceObservations.get("usdc-circle")?.map((obs) => obs.poolKey).sort()).toEqual(
+      [2, 3, 5, 6, 7].map((n) => `base:${address(n)}`),
+    );
+    expect(counters.stagedDeadPoolPriceObservationExcluded).toBe(2);
+    expect(scoreRetained(metric).sort()).toEqual([2, 3, 5, 6, 7].map((n) => `base:${address(n)}`));
+  });
+
+  it("signs no zero on a chain where CoinGecko reports no positive in-window volume", async () => {
+    const metrics = new Map<string, LiquidityMetrics>();
+    const hydrationTracked = new Map([...trackedDeployments, [`hydration:${USDC}`, "usdc-circle"]]);
+    const hydrationRow = (n: number, overrides: Parameters<typeof makeStagedPoolRow>[0] = {}) =>
+      cgZeroRow(n, { pool_id: `hydration:${address(n)}`, chain: "hydration", protocol: "hydration-dex", dex_id: "hydration-dex", ...overrides });
+    const result = await mergeStagedPools(
+      createMockDb([
+        cgZeroRow(11),
+        cgZeroRow(12, { volume_24h: 12 }),
+        // CoinGecko lists Hydration pools but indexes no trades: every reading is an explicit zero.
+        hydrationRow(13),
+        hydrationRow(14, { tvl_usd: 2_000_000 }),
+        // A positive reading older than the admission window does not prove indexing.
+        cgZeroRow(15, { chain: "moonriver", pool_id: `moonriver:${address(15)}`, volume_24h: 900, refreshed_at: NOW - DEX_VOLUME_OBSERVATION_MAX_AGE_SEC - 1 }),
+        cgZeroRow(16, { chain: "moonriver", pool_id: `moonriver:${address(16)}` }),
+      ]),
+      metrics,
+      makeKnownPoolIndex(),
+      NOW,
+      new Map([...hydrationTracked, [`moonriver:${USDC}`, "usdc-circle"]]),
+    );
+
+    const signed = metrics.get("usdc-circle")!.topPools
+      .filter((pool) => pool.volumeReading?.deadPoolSignature)
+      .map((pool) => pool.poolId);
+    expect(signed).toEqual([`base:${address(11)}`]);
+    // The kept candidates are counted per chain for run metadata: both hydration zeros,
+    // and the moonriver zero whose chain has only an aged positive reading.
+    expect(result.deadPoolUnindexedChainSkips).toEqual({
+      hydration: { poolCount: 2, tvlUsd: 7_000_000 },
+      moonriver: { poolCount: 1, tvlUsd: 5_000_000 },
+    });
+  });
+
+  it("hands a live pool without volume the trade-verified zero of the registry view it dedup-skips", async () => {
+    const slipstream = `base:${address(8)}`;
+    const quiet = `base:${address(9)}`;
+    const metric = initMetrics("usdc-circle", "USDC");
+    const livePool = makePool({
+      poolId: slipstream,
+      project: "aerodrome",
+      chain: "base",
+      tvlUsd: 23_667_525,
+      volumeUsd1d: null,
+      volumeUsd7d: null,
+      volumeReading: { volume24hUsd: null, volume7dUsd: null, observedAtSec: null },
+      poolType: "aerodrome-slipstream-100bp",
+      source: "direct_api",
+      price: 1,
+    });
+    // A live pool that measured its own volume keeps it.
+    const measuredPool = makePool({
+      poolId: quiet,
+      project: "aerodrome",
+      chain: "base",
+      tvlUsd: 2_000_000,
+      volumeUsd1d: 40_000,
+      volumeReading: { volume24hUsd: 40_000, volume7dUsd: null, observedAtSec: NOW },
+      source: "direct_api",
+    });
+    metric.topPools.push(livePool, measuredPool);
+    const metrics = new Map([["usdc-circle", metric]]);
+    const counters = initLiquidityFallbackCounters();
+    const slipstreamRow = {
+      stablecoin_id: "usdc-circle",
+      source: "direct_api" as const,
+      chain: "base",
+      protocol: "aerodrome",
+      dex_id: "aerodrome",
+      pool_type: "aerodrome-slipstream-100bp",
+      volume_24h: null,
+      base_token: null,
+      quote_token: null,
+      refreshed_at: NOW - 600,
+      raw_json: JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION }),
+    };
+
+    const result = await mergeStagedPools(
+      createMockDb([
+        makeStagedPoolRow({ ...slipstreamRow, pool_id: slipstream, tvl_usd: 23_667_525 }),
+        cgZeroRow(8, { dex_id: "aerodrome-slipstream", protocol: "aerodrome", tvl_usd: 22_551_139, refreshed_at: NOW - 4 * 3600 }),
+        makeStagedPoolRow({ ...slipstreamRow, pool_id: quiet, tvl_usd: 2_000_000 }),
+        cgZeroRow(9, { dex_id: "aerodrome-slipstream", protocol: "aerodrome", tvl_usd: 2_000_000, volume_24h: 30_000 }),
+      ]),
+      metrics,
+      createKnownPoolIdentityIndex(),
+      NOW,
+      trackedDeployments,
+      undefined,
+      undefined,
+      counters,
+    );
+
+    expect(result.skippedByExactIdentityCount).toBe(2);
+    expect(counters.stagedLiveVolumeBackfill).toBe(1);
+    expect(livePool.volumeReading).toEqual({
+      volume24hUsd: 0,
+      volume7dUsd: null,
+      observedAtSec: NOW - 4 * 3600,
+      deadPoolSignature: true,
+    });
+    expect(measuredPool.volumeReading).toEqual({ volume24hUsd: 40_000, volume7dUsd: null, observedAtSec: NOW });
+    expect(result.priceObservations.get("usdc-circle")?.map((obs) => obs.poolKey)).toEqual([quiet]);
+    expect(scoreRetained(metric)).toEqual([quiet]);
   });
 });

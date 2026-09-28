@@ -86,7 +86,7 @@ describe("processPoolMetrics", () => {
       base_token: tokens[0], quote_token: tokens[1], price_usd: 1, refreshed_at: now,
     });
     const db = makeNoopD1({ prepare: () => ({ bind: () => ({ all: async () => ({ results: [staged] }) }) }) });
-    const result = await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), now);
+    const result = await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), now, new Map());
     const metric = metrics.get("crvusd-curve")!;
     expect(metric.topPools).toHaveLength(1);
     expect(metric.topPools[0]).toMatchObject({ poolId: `ethereum:${address}`, tvlUsd: 2_800_000 });

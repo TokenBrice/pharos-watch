@@ -223,6 +223,7 @@ describe("buildStagedPoolWriteback", () => {
       outageMetrics,
       createKnownPoolIdentityIndex(),
       NOW + 3_600,
+    new Map(),
     );
 
     expect(merged.mergedCount).toBe(1);
@@ -258,6 +259,7 @@ describe("buildStagedPoolWriteback", () => {
       metrics,
       createKnownPoolIdentityIndex(),
       NOW,
+    new Map(),
     );
 
     const backfilled = metrics

@@ -8,7 +8,9 @@ import {
   type MethodologyChangelogEntry,
 } from "../methodology-versions/base";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../methodology-versions/depeg-resolver";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
+import { LIQUIDITY_METHODOLOGY_VERSION, SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
+import { LIQUIDITY_SCORE_V6 } from "../../data/methodology-changelogs/liquidity-score/v6";
+import { liquidityTvlBasisEpoch } from "../dex-liquidity-evidence";
 import {
   getMethodologyVersionAt,
   METHODOLOGY_CHANGELOG_REGISTRY,
@@ -202,5 +204,22 @@ describe("methodology display helpers", () => {
 
   it("derives changelog entry ids from version labels", () => {
     expect(methodologyChangelogEntryId("3.01")).toBe("changelog-v-3-01");
+  });
+});
+
+describe("liquidity TVL-basis break list", () => {
+  it("breaks only at released liquidity versions at or below the current one", () => {
+    const released = LIQUIDITY_SCORE_V6.map((changelogEntry) => changelogEntry.version)
+      .sort((a, b) => Number(a) - Number(b));
+    // No break above the current version: the current epoch is the last one.
+    expect(liquidityTvlBasisEpoch(LIQUIDITY_METHODOLOGY_VERSION)).toBe(liquidityTvlBasisEpoch("999"));
+    expect(liquidityTvlBasisEpoch(null)).toBe(0);
+    // Between consecutive released versions the epoch never moves: every break is a released version.
+    for (let index = 1; index < released.length; index++) {
+      const justBelow = String(Number(released[index]) - 1e-6);
+      expect(liquidityTvlBasisEpoch(justBelow)).toBe(liquidityTvlBasisEpoch(released[index - 1]));
+    }
+    expect(liquidityTvlBasisEpoch("6.9")).toBeLessThan(liquidityTvlBasisEpoch("6.91"));
+    expect(liquidityTvlBasisEpoch("6.91")).toBeLessThan(liquidityTvlBasisEpoch("6.92"));
   });
 });

@@ -12,7 +12,7 @@
 // of the same thing on two adjacent days. They are deliberately fail-closed:
 // an inadmissible pair produces no editorial signal at all rather than a
 // hedged one, because the prompt renders raw TVL evidence the model can quote.
-import { isTrendworthyLiquiditySnapshot } from "./dex-liquidity-evidence";
+import { hasSameLiquidityMethodologyBasis, isTrendworthyLiquiditySnapshot } from "./dex-liquidity-evidence";
 import {
   LIQUIDITY_TVL_DEPTH_SLOPE,
   LIQUIDITY_TVL_DEPTH_WEIGHT,
@@ -118,7 +118,7 @@ export function admitLiquidityShift(
   if (latest.snapshotDate - previous.snapshotDate !== ONE_DAY_SEC) {
     return reject("non-adjacent-snapshots");
   }
-  if (latest.methodologyVersion !== previous.methodologyVersion) {
+  if (!hasSameLiquidityMethodologyBasis(latest.methodologyVersion, previous.methodologyVersion)) {
     return reject("methodology-basis-change");
   }
   if (

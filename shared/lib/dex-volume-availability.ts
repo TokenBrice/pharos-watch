@@ -57,6 +57,16 @@ export const DEX_VOLUME_OBSERVATION_MAX_AGE_SEC = 72 * 3600;
  */
 export const DEX_VOLUME_COVERAGE_MIN = 0.5;
 
+/**
+ * Dead-pool floor (liquidity v6.92). A retained pool whose scoring TVL is at
+ * least this value is excluded from scoring and DEX price inputs when its
+ * admitted 24h reading is a trade-verified zero (the provider reported no 24h
+ * buys and no sells) and no counter-token of the pool is a tracked stablecoin
+ * deployment on its chain. The threshold is inclusive (`tvlUsd >= min`).
+ * Absent, stale or unverified volume never triggers it.
+ */
+export const DEX_DEAD_POOL_TVL_MIN_USD = 1_000_000;
+
 /** One pool's provider rolling-window reading. */
 export interface DexPoolVolumeObservationInput {
   /** Null, undefined, non-finite or negative values are not observations. */
