@@ -21,6 +21,8 @@ export const CLI_ARGV_EXEMPTION_CATEGORIES = Object.freeze({
 
 export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
+    strict(".codex/skills/stablecoin-pulse-report/scripts/build-pulse-pdf.mjs"),
+    strict(".codex/skills/stablecoin-pulse-report/scripts/fetch-pulse-data.mjs"),
     strict("scripts/ci/check-dex-census-provider-drift.ts"),
     strict("scripts/ci/check-doc-symbols.ts"),
     strict("scripts/ci/guard-worker-deploy.ts"),
