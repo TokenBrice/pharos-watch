@@ -16,7 +16,7 @@ Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries
 
 Schema rejections use canonical diagnostics (the first failing field path and schema issue), rather than translating errors into historical map-specific wording. Valid payloads still pass the map's score/grade, duplicate-ID, supply-join, and geometry checks.
 
-`.github/workflows/safety-map-refresh.yml` schedules the refresh at 01:20, 03:20, and 05:20 UTC and accepts `workflow_dispatch` with a `mode` input: `force` (operator default) always renders, while `ensure` — also used by every scheduled run — exits early once today's map is live. GitHub starts scheduled runs five to eight hours late, so the Worker's pre-digest producer kick dispatches the workflow in `ensure` mode between 06:20 and 08:00 UTC whenever today's manifest is missing ([Safety Score Map](./safety-score-map.md#pre-digest-producer-kick)). The digest can still carry forward a recent dated map within its bounded continuity window if every attempt fails.
+`.github/workflows/safety-map-refresh.yml` runs at 01:20, 03:20, 05:20 UTC and on `workflow_dispatch` (`mode`: `force` renders; `ensure` skips if today's map is live). Schedules start hours late, so the Worker's [producer kick](./safety-score-map.md#pre-digest-producer-kick) dispatches `ensure` from 06:20 to 08:00 UTC; the digest can reuse a recent map.
 
 ## Daily Social Posters
 
