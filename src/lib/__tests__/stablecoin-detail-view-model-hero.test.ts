@@ -28,8 +28,7 @@ describe("stablecoin detail hero view-model builder", () => {
       mcap: 500_000,
       supply: 500_000,
       prevDay: 600_000,
-      prevWeek: 450_000,
-      prevMonth: 0,
+      nativeSupply: { current: 500_000, prevWeek: 450_000, prevMonth: 0 },
       performanceVsUsd1y: 12.34,
       pegRef: 1,
       deviationBps: -300,
@@ -84,9 +83,9 @@ describe("stablecoin detail hero view-model builder", () => {
       redemptionBackstop: { accessModel: "issuer-api" } as never,
     });
 
-    expect(hero.market.safePrevMonth).toBeNull();
+    expect(hero.market.supplyTrend.safePrevMonth).toBeNull();
     expect(hero.market.prevDayTrendClass).toContain("text-red-700");
-    expect(hero.market.prevWeekTrendClass).toContain("text-green-700");
+    expect(hero.market.supplyTrend.prevWeekTrendClass).toContain("text-green-700");
     expect(hero.price.limitedDepegCoverageNote).toContain("Below $1.00M live-event floor");
 
     const pegMetric = hero.tertiaryMetrics.find((metric) => metric.key === "peg-score");

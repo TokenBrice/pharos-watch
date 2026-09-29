@@ -1,3 +1,4 @@
+import type { NativeSupplyCheckpoints } from "@/lib/api-query-descriptors";
 import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/lib/case-study-outcomes";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
@@ -87,12 +88,8 @@ export interface HeroCardViewModel {
     mcap: number;
     supply: number | null;
     safePrevDay: number | null;
-    safePrevWeek: number | null;
-    hasPrevMonth: boolean;
-    safePrevMonth: number | null;
     prevDayTrendClass: string;
-    prevWeekTrendClass: string;
-    prevMonthTrendClass: string;
+    supplyTrend: HeroSupplyTrendViewModel;
   };
   peg: { activeDepeg: boolean };
   tertiaryMetrics: HeroTertiaryMetricViewModel[];
@@ -100,6 +97,19 @@ export interface HeroCardViewModel {
   signalRailItems: HeroSignalRailItemViewModel[];
   passportItems: HeroPassportItemViewModel[];
   caseStudyCallout: HeroCaseStudyCalloutViewModel | null;
+}
+
+/**
+ * 7D/30D token-supply deltas. `current` and both anchors come from the native token-count
+ * series, never from USD market-cap history, so non-$1 prices cannot leak into the ratio.
+ */
+export interface HeroSupplyTrendViewModel {
+  current: number | null;
+  safePrevWeek: number | null;
+  safePrevMonth: number | null;
+  hasPrevMonth: boolean;
+  prevWeekTrendClass: string;
+  prevMonthTrendClass: string;
 }
 
 export interface BuildHeroCardViewModelParams {
@@ -110,8 +120,7 @@ export interface BuildHeroCardViewModelParams {
   mcap: number;
   supply: number | null;
   prevDay: number | null;
-  prevWeek: number | null;
-  prevMonth: number | null;
+  nativeSupply: NativeSupplyCheckpoints | null;
   performanceVsUsd1y: number | null;
   pegRef: number | null;
   deviationBps: number | null;
@@ -153,24 +162,17 @@ function resolveEffectivePegScore(isNavToken: boolean, pegScoreResult: PegSummar
   return isNavToken || pegScoreResult?.pegScore == null ? null : pegScoreResult.pegScore;
 }
 
-function buildMarketTrends(
-  mcap: number,
-  prevDay: number | null,
-  prevWeek: number | null,
-  prevMonth: number | null,
-): Omit<HeroCardViewModel["market"], "supply"> {
-  const safePrevDay = posOrNull(prevDay);
-  const safePrevWeek = posOrNull(prevWeek);
-  const safePrevMonth = posOrNull(prevMonth);
+function buildSupplyTrend(nativeSupply: NativeSupplyCheckpoints | null): HeroSupplyTrendViewModel {
+  const current = nativeSupply?.current ?? null;
+  const safePrevWeek = posOrNull(nativeSupply?.prevWeek ?? null);
+  const safePrevMonth = posOrNull(nativeSupply?.prevMonth ?? null);
   return {
-    mcap,
-    safePrevDay,
+    current,
     safePrevWeek,
-    hasPrevMonth: safePrevMonth !== null,
     safePrevMonth,
-    prevDayTrendClass: getTrendClass(safePrevDay !== null, mcap, safePrevDay ?? 0),
-    prevWeekTrendClass: getTrendClass(safePrevWeek !== null, mcap, safePrevWeek ?? 0),
-    prevMonthTrendClass: getTrendClass(safePrevMonth !== null, mcap, safePrevMonth ?? 0),
+    hasPrevMonth: safePrevMonth !== null,
+    prevWeekTrendClass: getTrendClass(current !== null && safePrevWeek !== null, current ?? 0, safePrevWeek ?? 0),
+    prevMonthTrendClass: getTrendClass(current !== null && safePrevMonth !== null, current ?? 0, safePrevMonth ?? 0),
   };
 }
 
@@ -246,8 +248,7 @@ export function buildStablecoinDetailHeroViewModel({
   mcap,
   supply,
   prevDay,
-  prevWeek,
-  prevMonth,
+  nativeSupply,
   performanceVsUsd1y,
   pegRef,
   deviationBps,
@@ -293,6 +294,7 @@ export function buildStablecoinDetailHeroViewModel({
     outcomeLabel: CASE_STUDY_OUTCOME_LABELS[subjectCaseStudy.outcome],
     outcomeChipClass: CASE_STUDY_OUTCOME_CHIPS[subjectCaseStudy.outcome],
   } : null;
+  const safePrevDay = posOrNull(prevDay);
 
   return {
     coin,
@@ -316,7 +318,13 @@ export function buildStablecoinDetailHeroViewModel({
       isNavToken,
       limitedDepegCoverageNote: buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps),
     },
-    market: { ...buildMarketTrends(mcap, prevDay, prevWeek, prevMonth), supply },
+    market: {
+      mcap,
+      supply,
+      safePrevDay,
+      prevDayTrendClass: getTrendClass(safePrevDay !== null, mcap, safePrevDay ?? 0),
+      supplyTrend: buildSupplyTrend(nativeSupply),
+    },
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,
     desktopTertiaryMetrics: tertiaryMetrics.filter((metric) => !MOBILE_ONLY_TERTIARY_KEYS.has(metric.key)),

@@ -129,6 +129,8 @@ describe("stablecoin detail view-model builder", () => {
         circulatingPrevWeek: { peggedUSD: 100 },
         circulatingPrevMonth: { peggedUSD: 0 },
       },
+      // USD market cap doubled over the week while the token count fell: the Supply trend follows tokens.
+      nativeSupply: { current: 150, prevWeek: 160, prevMonth: 0 },
       queries: {
         pegSummary: { data: { coins: [makePegSummaryCoin({ pegScore: 45, eventCount: 2 })] } as PegSummaryResponse },
         reportCards: { data: { cards: [makeV9Card({ id: coin.id, grade: "B+", score: 79 })] } as never },
@@ -137,13 +139,38 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
     expect(viewModel.mcap).toBe(200);
-    expect(viewModel.hero.market.safePrevMonth).toBeNull();
     expect(viewModel.hero.market.prevDayTrendClass).toContain("text-red-700");
-    expect(viewModel.hero.market.prevWeekTrendClass).toContain("text-green-700");
+    expect(viewModel.hero.market.supplyTrend).toMatchObject({
+      current: 150,
+      safePrevWeek: 160,
+      safePrevMonth: null,
+      hasPrevMonth: false,
+    });
+    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toContain("text-red-700");
     expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display)
       .toMatchObject({ value: "45", sub: "2 incidents" });
     expect(viewModel.hero.signalRailItems.find((item) => item.key === "safety"))
       .toMatchObject({ primary: "B+", secondary: "79/100" });
+  });
+
+  it("leaves Supply trends unavailable when only USD market-cap history exists", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const viewModel = buildStablecoinDetailViewModel(makeReadyDetailParams({
+      id: coin.id,
+      coin,
+      asset: {
+        circulatingPrevWeek: { peggedUSD: 90 },
+        circulatingPrevMonth: { peggedUSD: 80 },
+      },
+    }));
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+    expect(viewModel.hero.market.supplyTrend).toMatchObject({
+      current: null,
+      safePrevWeek: null,
+      safePrevMonth: null,
+      hasPrevMonth: false,
+    });
   });
 
   it("builds a ready view model from fetched inputs", () => {

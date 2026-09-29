@@ -52,12 +52,7 @@ export interface HeroSignalRailItem {
   href: string;
   colorClass: string;
 }
-export type HeroSupplyFields = Pick<HeroCardViewModel["market"], "supply" | "hasPrevMonth"> & {
-  safePrevWeek: number | null;
-  prevWeekTrendClass: string;
-  safePrevMonth: number | null;
-  prevMonthTrendClass: string;
-};
+export type HeroSupplyFields = Pick<HeroCardViewModel["market"], "supply" | "supplyTrend">;
 
 type HeroMetricVariant = "cell" | "card";
 
@@ -224,12 +219,8 @@ function HeroMarketCapMetric({
 function HeroSupplyMetric({
   variant = "cell",
   supply,
+  supplyTrend: { current, safePrevWeek, prevWeekTrendClass, hasPrevMonth, safePrevMonth, prevMonthTrendClass },
   coinSymbol,
-  safePrevWeek,
-  prevWeekTrendClass,
-  hasPrevMonth,
-  safePrevMonth,
-  prevMonthTrendClass,
 }: HeroSupplyFields & { coinSymbol: string; variant?: HeroMetricVariant }) {
   if (variant === "cell") {
     return (
@@ -237,12 +228,12 @@ function HeroSupplyMetric({
         label="Supply"
         subline={
           <span className="pharos-numeric">
-            <span className={prevWeekTrendClass}>{formatSupplyTrendPercent(supply, safePrevWeek)}</span>
+            <span className={prevWeekTrendClass}>{formatSupplyTrendPercent(current, safePrevWeek)}</span>
             <span className="text-muted-foreground"> 7D</span>
             {hasPrevMonth ? (
               <>
                 <span className="text-muted-foreground"> · </span>
-                <span className={prevMonthTrendClass}>{formatSupplyTrendPercent(supply, safePrevMonth)}</span>
+                <span className={prevMonthTrendClass}>{formatSupplyTrendPercent(current, safePrevMonth)}</span>
                 <span className="text-muted-foreground"> 30D</span>
               </>
             ) : null}
@@ -269,11 +260,11 @@ function HeroSupplyMetric({
         </div>
         <div className="text-right">
           <p className={`text-xs pharos-numeric ${prevWeekTrendClass}`}>
-            {formatSupplyTrendPercent(supply, safePrevWeek)} <span className="text-muted-foreground">7d</span>
+            {formatSupplyTrendPercent(current, safePrevWeek)} <span className="text-muted-foreground">7d</span>
           </p>
           {hasPrevMonth && (
             <p className={`text-xs pharos-numeric ${prevMonthTrendClass}`}>
-              {formatSupplyTrendPercent(supply, safePrevMonth)} <span className="text-muted-foreground">30d</span>
+              {formatSupplyTrendPercent(current, safePrevMonth)} <span className="text-muted-foreground">30d</span>
             </p>
           )}
         </div>
@@ -312,14 +303,7 @@ export function HeroMarketMetricGrid({
   market,
   tertiaryMetric,
 }: HeroMarketMetricGridProps) {
-  const supplyFields: HeroSupplyFields = {
-    supply: market.supply,
-    safePrevWeek: market.safePrevWeek,
-    prevWeekTrendClass: market.prevWeekTrendClass,
-    hasPrevMonth: market.hasPrevMonth,
-    safePrevMonth: market.safePrevMonth,
-    prevMonthTrendClass: market.prevMonthTrendClass,
-  };
+  const supplyFields: HeroSupplyFields = { supply: market.supply, supplyTrend: market.supplyTrend };
 
   if (variant === "card") {
     return (

@@ -124,7 +124,7 @@ function makeViewModelBase(coin: StablecoinMeta) {
       circulatingPrevMonth: { peggedUSD: 97 },
       chainCirculating: {}, chains: ["ethereum"],
     },
-    mcap: 100, supply: 100, prevDay: 99, prevWeek: 98, prevMonth: 97,
+    mcap: 100, supply: 100, prevDay: 99, nativeSupply: { current: 100, prevWeek: 98, prevMonth: 97 },
     performanceVsUsd1y: null, pegRef: 1, deviationBps: 0,
     isNavToken: false, pegScoreResult: null, consensusSources: [], agreeSources: [],
     dexPriceCheck: null, liquidityData: undefined, yieldRanking: null, hasYieldSection: false,

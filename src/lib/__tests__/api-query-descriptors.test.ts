@@ -108,6 +108,7 @@ describe("frontend API query descriptors", () => {
     expect(summary.circulatingPrevDay).toEqual({});
     expect(summary.circulatingPrevWeek).toEqual({});
     expect(summary.circulatingPrevMonth).toEqual({});
+    expect(summary.nativeSupply).toEqual({ current: null, prevWeek: null, prevMonth: null });
   });
 
   it("uses the newest sample at or before each target instead of the nearest one", () => {
@@ -119,18 +120,38 @@ describe("frontend API query descriptors", () => {
       priceConfidence: "high" as const,
       priceUpdatedAt: latest,
       tokens: [
-        { date: latest - 30 * day - 4 * 3600, totalCirculatingUSD: { peggedUSD: 30 } },
-        { date: latest - 30 * day + 4 * 3600, totalCirculatingUSD: { peggedUSD: 31 } },
-        { date: latest - 7 * day - 4 * 3600, totalCirculatingUSD: { peggedUSD: 70 } },
-        { date: latest - 7 * day + 2 * 3600, totalCirculatingUSD: { peggedUSD: 71 } },
+        { date: latest - 30 * day - 4 * 3600, totalCirculatingUSD: { peggedUSD: 30 }, totalCirculating: { peggedUSD: 300 } },
+        { date: latest - 30 * day + 4 * 3600, totalCirculatingUSD: { peggedUSD: 31 }, totalCirculating: { peggedUSD: 310 } },
+        { date: latest - 7 * day - 4 * 3600, totalCirculatingUSD: { peggedUSD: 70 }, totalCirculating: { peggedUSD: 700 } },
+        { date: latest - 7 * day + 2 * 3600, totalCirculatingUSD: { peggedUSD: 71 }, totalCirculating: { peggedUSD: 710 } },
         { date: latest - day, totalCirculatingUSD: { peggedUSD: 99 } },
-        { date: latest, totalCirculatingUSD: { peggedUSD: 100 } },
+        { date: latest, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 1_000 } },
       ],
     });
 
     expect(summary.circulatingPrevDay).toEqual({ peggedUSD: 99 });
     expect(summary.circulatingPrevWeek).toEqual({ peggedUSD: 70 });
     expect(summary.circulatingPrevMonth).toEqual({ peggedUSD: 30 });
+    expect(summary.nativeSupply).toEqual({ current: 1_000, prevWeek: 700, prevMonth: 300 });
+  });
+
+  it("never substitutes USD market cap for a missing native token-count anchor", () => {
+    const day = 86_400;
+    const latest = 1_700_000_000;
+    const summary = projectStablecoinLiveSummary({
+      price: 4_000,
+      priceSource: "coingecko",
+      priceConfidence: "high" as const,
+      priceUpdatedAt: latest,
+      tokens: [
+        { date: latest - 30 * day, totalCirculatingUSD: { peggedGOLD: 3_200_000 }, totalCirculating: { peggedGOLD: 800 } },
+        { date: latest - 7 * day, totalCirculatingUSD: { peggedGOLD: 3_300_000 } },
+        { date: latest, totalCirculatingUSD: { peggedGOLD: 3_240_000 }, totalCirculating: { peggedGOLD: 810 } },
+      ],
+    });
+
+    expect(summary.circulatingPrevWeek).toEqual({ peggedGOLD: 3_300_000 });
+    expect(summary.nativeSupply).toEqual({ current: 810, prevWeek: null, prevMonth: 800 });
   });
 
   it("keeps the summary projection isolated from the detailed rankings cache", () => {
