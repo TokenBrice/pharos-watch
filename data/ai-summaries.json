@@ -4807,15 +4807,35 @@
   },
   "sofid-sofi": {
     "title": "The Fed's Own Stablecoin Customer",
-    "text": "SoFiUSD is what happens when a nationally chartered U.S. bank decides the stablecoin wrapper is worth adding to old-fashioned cash at the Federal Reserve. Reserves sit at SoFi Bank's Fed master account, with BitGo running 1:1 mint and redemption on an upgradeable, bank-controlled contract. The distribution question got its answer in May 2026, when SoFi opened the token to its nearly 15 million app members, making SOFID the first national-bank stablecoin offered directly inside a consumer banking app. What has not arrived is a number: no permitted market-data source reports a positive circulating supply or market cap, so Pharos has temporarily withheld the listing until the figures exist. The attestation story is similarly aspirational. Press coverage mentions monthly Deloitte verification, but no public attestation report or transparency page has materialized. A bank that can put a stablecoin in front of fifteen million customers but not a supply figure in front of anyone is running bank-grade issuance with bank-grade opacity, and only one of those is a compliment.",
-    "updatedAt": "2026-08-11",
+    "text": "SoFiUSD is the first stablecoin issued by a U.S. national bank; SoFi Bank, N.A. describes the reserves as cash at its Federal Reserve master account. BitGo runs the 1:1 mint and redemption, and the reserve interest stays with the bank, not holders. Distribution came first: after a December 2025 enterprise launch on Ethereum, the SoFi app opened retail access on 27 May 2026 to nearly 15 million members, and Mastercard settlement went live on 22 September 2026 as SoFi migrates its $25 billion card program to the token. Pharos re-admitted the listing on 29 September 2026, when CoinGecko and DefiLlama began publishing a circulating supply, now {{supplyUsd}}, matching the on-chain totals: 228.9M SOFID on Solana, 100.1M on Ethereum. It traded five basis points under par on CoinGecko that day. The {{term:attestation}}attestation{{/term}} record has not kept pace: the retail-launch release cites a U.S.-licensed CPA, but no report is publicly filed, and the Deloitte SEC filing once cited as verification is an agreed-upon-procedures report on consumer-loan securitizations, not token reserves. Until one appears, the reserve claim rests on the issuer's disclosure.",
+    "updatedAt": "2026-09-29",
     "authoredBy": "ai",
-    "model": "claude-fable-5",
-    "factsAsOf": "2026-08-11",
+    "model": "glm-5.3",
+    "factsAsOf": "2026-09-29",
+    "claimTokens": [
+      {
+        "token": "supplyUsd",
+        "placeholder": "{{supplyUsd}}",
+        "source": "stablecoin.circulating-usd",
+        "factsAsOf": "2026-09-29"
+      }
+    ],
     "sources": [
+      {
+        "label": "CoinGecko: SoFiUSD price and circulating supply (Sep 29, 2026)",
+        "url": "https://www.coingecko.com/en/coins/sofiusd"
+      },
       {
         "label": "SoFi press release: SoFiUSD retail launch to nearly 15M members (May 27, 2026)",
         "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx"
+      },
+      {
+        "label": "SoFi press release: Mastercard settlement go-live, $25B card program migrating to SoFiUSD (Sep 22, 2026)",
+        "url": "https://investors.sofi.com/news/news-details/2026/SoFi-Becomes-First-National-Bank-to-Go-Live-with-Stablecoin-Settlement-across-Mastercards-Global-Payments-Network/default.aspx"
+      },
+      {
+        "label": "SoFiUSD product page: reserves held at the Federal Reserve master account",
+        "url": "https://www.sofi.com/crypto/sofiusd/"
       }
     ]
   },
