@@ -476,8 +476,8 @@ Returns normalized issuer freeze, unfreeze, blacklist, and destruction events.
 
 ```json
 {
-  "currentVersion": "4.1",
-  "currentVersionLabel": "v4.1"
+  "currentVersion": "4.2",
+  "currentVersionLabel": "v4.2"
 }
 ```
 

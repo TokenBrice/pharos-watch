@@ -1,7 +1,7 @@
 {
   "id": "zsd-zephyr-protocol",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Zephyr native-asset documentation",
@@ -20,17 +20,33 @@
         "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/wallet/wallet2.cpp#L1975-L2059"
       },
       {
-        "label": "Zephyr Explorer current HF11 block 837231",
-        "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
+        "label": "Zephyr mandatory HF8 audit and HF9 transfer halt",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.1.0"
+      },
+      {
+        "label": "Zephyr HF10 audit extension disabling ordinary transfers",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.2.0"
+      },
+      {
+        "label": "Zephyr HF11 invalidation of unaudited asset types",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.3.0"
+      },
+      {
+        "label": "Zephyr current consensus audit and pause restrictions",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/blockchain.cpp#L4706-L4723"
+      },
+      {
+        "label": "Zephyr mainnet hardfork activation schedule",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/hardforks/hardforks.cpp#L42-L46"
       },
       {
         "label": "Zephyr reserve snapshot",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       }
     ],
-    "evidence": "Write-time re-open 2026-08-08 against official Zephyr documentation, the still-current v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a, and native-chain HF11 block 837231 (2026-08-08 19:36:16 UTC; hash 9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d). ZSD is one of four native Zephyr asset types; the official docs list the EVM bridge as testnet-only, so no production wrapper exposure is identified. Same-asset ZSD sends map to STABLE_TRANSFER in cryptonote_tx_utils.cpp; the reviewed consensus and wallet paths expose no address blacklist, holder freeze, seize, privileged burn, or issuer/admin transfer-pause path. wallet2.cpp freeze() only marks a locally held transfer/key image, while daemon bans are host/subnet controls. The failure domain is Zephyr chain consensus and its oracle inputs, not a token-level issuer. No direct blacklistability established.",
-    "reviewer": "Codex C10 wave1 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "The Zephyr protocol team, which issues the native assets and ships the mandatory consensus implementation, exercised a holder-facing global transfer control in 2025. HF8 at block 481500 (2025-03-31) disabled ordinary transfers and conversions, allowing only mandatory per-holder audit migrations; HF9 at 508000 paused all transactions; HF10 at 511000 reopened only audit migrations. HF11 at 536000 restored ordinary transfers of the new assets and permanently invalidated non-migrated ZEPHUSD and ZYIELD balances. Official current documentation still states that unaudited assets cannot be sent or received. The issuer-driven transfer halt and balance invalidation establish a demonstrated mutable holder-facing control under the possible tier, even though activation required network adoption of consensus releases. This differs from fusd-freedom-dollar, whose underlying Zano rollback was performed by chain developers rather than the fUSD issuer. Current v2.3.0 commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a retains the historical restrictions behind hardfork-version gates; same-asset ZSD maps to STABLE_TRANSFER and no standing address blacklist, issuer freeze key or privileged holder burn was identified, so true is not established. The official snapshot captured 2026-09-29T07:47:36.883Z at height 874253 reports HF11, 4,512,886.257473004 native ZEPH in reserve and 402,665.6490463683 ZSD circulating. Disclosed collateral is 100% native ZEPH, with 0% independently issuer/custodian-exposed collateral; the direct possible control determines the verdict. No material production wrapper was identified; the discovered EVM bridge remains testnet. Precedent: usdk-orki classifies mutable holder-facing control as possible without a confirmed active blacklist.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

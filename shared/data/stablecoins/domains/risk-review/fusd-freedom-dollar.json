@@ -18,11 +18,31 @@
       {
         "label": "Freedom Dollar asset explorer",
         "url": "https://explorer.zano.org/assets?asset_id=86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f"
+      },
+      {
+        "label": "Zano v2.2.3.600 asset ownership and burn validation",
+        "url": "https://github.com/hyle-team/zano/blob/98bbd725364526391f48944f91fbcaa6da9ae297/src/currency_core/blockchain_storage.cpp#L4976-L5189"
+      },
+      {
+        "label": "Zano descriptor-update limits including mutable metadata",
+        "url": "https://github.com/hyle-team/zano/blob/98bbd725364526391f48944f91fbcaa6da9ae297/src/currency_core/currency_format_utils.cpp#L1431-L1443"
+      },
+      {
+        "label": "Zano emergency rollback and HF7 release",
+        "url": "https://github.com/hyle-team/zano/releases/tag/2.2.3.600"
+      },
+      {
+        "label": "Freedom Dollar current ZANO reserve disclosure",
+        "url": "https://www.freedomdollar.com/en"
+      },
+      {
+        "label": "Freedom Dollar native-chain and DAI swap-reserve scope",
+        "url": "https://www.freedomdollar.com/en/faq"
       }
     ],
-    "evidence": "At Zano height 3807334 on 2026-08-08, get_asset_info returned the same FUSD asset-owner key, hidden_supply = false, and an on-chain descriptor calling the asset censorship-resistant. Zano's primary documentation states that the owner key is used only for EMIT and UPDATE validation, that update_asset can change only the owner, and that ordinary Confidential Asset transfers are protocol operations rather than issuer contract calls. No blacklist, freeze, pause, seizure, or arbitrary holder-burn authority exists for the asset owner. ZANO reserve volatility is collateral risk rather than an upstream stablecoin freeze surface, so direct holder freeze is false.",
-    "reviewer": "OpenAI Codex C05 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "On 2026-09-29, node.zano.org getinfo reported height 3837194, HF7 active, version 2.2.3.601[bfbe5c1-dirty-release_compact], and pre_hf_tx_freeze_period_active false. The adjacent get_asset_info read for 86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f returned owner 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1, empty owner_eth_pub_key, hidden_supply false and 12,000,000 fUSD supply. Latest published release 2.2.3.600 (98bbd725) validates the owner signature only for EMIT and UPDATE; ETH-signature ownership changes authentication, not holder permissions. Contrary to the update_asset documentation's owner-only description, validate_ado_update_allowed also permits metadata changes; UPDATE cannot change current supply, maximum supply, ticker, name, decimals or hidden-supply mode. PUBLIC_BURN requires the transaction's asset amount commitment and balance proofs, not an owner privilege to burn another holder's outputs. No issuer blacklist, pause, seizure or mutable transfer hook was identified. HF7 rolls the chain back to 3833000 and disables gateway input/output types by consensus. The September 2026 rollback was performed by Zano chain developers, not the fUSD issuer, unlike Zephyr where the issuer shipped the 2025 transfer-halting hardforks; it therefore does not establish an fUSD issuer-controlled holder restriction. The issuer FAQ confines fUSD to Zano and describes Ethereum/TRON routes as swaps into native fUSD, not deployed fUSD wrappers. The 2026-09-29 11:42:16 issuer dashboard discloses 1,328,148.90 ZANO worth $7,650,137.67 and 4,436,896 self-held fUSD; excluding own uncirculated tokens, disclosed collateral is 100% native ZANO and computed exposed reserve share is 0%. The FAQ separately identifies DAI swap-liquidity reserves without a balance or evidence that they collateralize circulating fUSD; this remains an unquantified liquidity-rail exposure, not evidence of majority reserve exposure. The rollback/security incident and swap-service interruption remain separate from direct issuer freeze authority.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

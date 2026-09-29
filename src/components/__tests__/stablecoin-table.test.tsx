@@ -84,11 +84,11 @@ const dai = makeStablecoin({
   circulating: { peggedUSD: 90_000_000 },
 });
 
-const lisusd = makeStablecoin({
+const lusd = makeStablecoin({
   ...coin,
-  id: "lisusd-lista",
-  name: "Lista USD",
-  symbol: "LISUSD",
+  id: "lusd-liquity",
+  name: "Liquity USD",
+  symbol: "LUSD",
   circulating: { peggedUSD: 75_000_000 },
 });
 
@@ -102,7 +102,7 @@ const reportCardsResponse = makeReportCardsV9Response({
       },
     }),
     makeV9Card({
-      id: "lisusd-lista",
+      id: "lusd-liquity",
       accessPosture: {
         ...makeV9Card().accessPosture,
         freezeExposure: "possible",
@@ -298,7 +298,7 @@ describe("StablecoinTable", () => {
 
     render(
       <StablecoinTable
-        data={[lisusd]}
+        data={[lusd]}
         isLoading={false}
         activeFilters={[]}
         reportCards={reportCards}

@@ -1,7 +1,7 @@
 {
   "id": "lisusd-lista",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Sourcify LisUSD implementation source",
@@ -16,13 +16,33 @@
         "url": "https://bscscan.com/token/0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5"
       },
       {
+        "label": "Sourcify verified lisUSD ProxyAdmin",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x1fa3e4718168077975ff4039304cc2e19ae58c4c?fields=abi,sources"
+      },
+      {
+        "label": "Sourcify verified Lista admin timelock",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x07d274a68393e8b8a2ccf19a2ce4ba3518735253?fields=abi,sources"
+      },
+      {
+        "label": "Sourcify verified slisBNB implementation",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xd9edeba7f3580f5e22821a52fc1ba8508f4e34d0?fields=abi,sources"
+      },
+      {
+        "label": "Lista CDP collateral and PSM deployment registry",
+        "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/smart-contract"
+      },
+      {
+        "label": "Sourcify verified USDT PSM vault accounting",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x15fc4e6417c74577dee27aaafb2e2c5806727ec2?fields=abi,sources"
+      },
+      {
         "label": "Sourcify verified wBETH implementation",
-        "url": "https://sourcify.dev/server/v2/contract/56/0xfe928A7D8Be9c8cEce7e97F0Ed5704f4fA2cb42A?fields=abi,sources"
+        "url": "https://sourcify.dev/server/v2/contract/56/0xfe928a7d8be9c8cece7e97f0ed5704f4fa2cb42a?fields=abi,sources"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The lisUSD implementation exposes ordinary transfers, allowance-gated burns, and ward-gated mint/cap administration without a native blacklist or holder-selective transfer control. Current structured collateral includes minority BTCB/wBETH issuer-control exposure and no >50% stablecoin PSM reserve share under the v3.9973 upstream threshold, so those reserve-side controls no longer resolve lisUSD as Upstream.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "At BSC block 124711098 (2026-09-29T11:46:40Z), lisUSD 0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5 resolves through EIP-1967 implementation slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc to 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8; admin slot 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103 is ProxyAdmin 0x1fa3e4718168077975ff4039304cc2e19ae58c4c and the beacon slot is zero. ProxyAdmin.owner() is TimeLock 0x07d274a68393e8b8a2ccf19a2ce4ba3518735253, whose getMinDelay() is 86400 seconds; its confirmed proposer 0x08ae09467ff962af105c23775b9bc8eaa175d27f is a 3-of-6 Safe. The implementation has no native blacklist or transfer pause, and burn(address,uint256) requires the holder's allowance when the caller differs from the holder, including ward callers. However, the live timelocked upgrade path can replace holder-facing transfer logic, so possible applies under the usdk-orki precedent regardless of reserve exposure. This also reconciles the existing Safety Score V9 restrictable transfer overlay. BSC is the sole authored lisUSD deployment; the registry's Ethereum ListaOFT 0xf9b24c9364457ea85792179d285855753549ebaa returned symbol slisBNB at Ethereum block 26082927 and is not another lisUSD deployment. A same-block census of all 21 issuer-listed GemJoins, valued using their Lista oracle peek() quotes, totals $90,883,432.51; the USDT PSM VaultManager reports $425,021.67 net deposits, giving a $91,308,454.18 measured subtotal. slisBNB is $82,954,715.32 (90.8511% of that subtotal), not an ungoverned native-BNB slice: its EIP-1967 implementation is 0xd9edeba7f3580f5e22821a52fc1ba8508f4e34d0 and ProxyAdmin 0x8ce30a8d13d6d729708232aa415d7da46a4fa07b is owned by the same timelock; the timelock also has DEFAULT_ADMIN_ROLE and can replace the stakeManager, whose burn(address,uint256) does not require holder allowance. Counting that protocol-controlled collateral yields at least 94.5024% exposed within the measured subtotal; excluding it pending the DAO-collateral policy decision leaves at least 3.6513% confirmed issuer/custodian exposure from BTCB, wBETH/cewBETH, USDT and FDUSD. wBETH uses a non-EIP-1967 FiatTokenProxy with implementation 0xfe928a7d8be9c8cece7e97f0ed5704f4fa2cb42a and blacklist/pauser controls; BTCB has Binance custody exposure, although its verified token has no holder blacklist. These are protocol-oracle/book values, not independently realizable market values; sUSDX alone is quoted near $1 by Lista despite the prior reserve review's materially lower market valuation. The subtotal does not reconcile all credit-based D3M/AMO claims or establish a complete USDC/FDUSD PSM inventory. Therefore neither the old approximately 98% slisBNB weight nor the old whole-reserve stablecoin-share conclusion is certified as current. The direct mutable-token verdict is unaffected by those remaining reserve-denominator uncertainties.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

@@ -493,24 +493,24 @@ describe("blacklistable projection", () => {
     makeV9Card({ id, accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" } });
 
   it("sorts reviewed FreezeWatch status before stale V9 freeze exposure", () => {
-    const lisusd = makeCoin("lisusd-lista", "Lista USD");
+    const lusd = makeCoin("lusd-liquity", "Liquity USD");
     const runtimePossible = makeCoin("runtime-possible", "Runtime Possible");
 
     const result = sortStablecoins({
-      filtered: [runtimePossible, lisusd],
+      filtered: [runtimePossible, lusd],
       sort: sortAsc("blacklistable"),
       effectiveSortKey: "blacklistable",
-      reportCards: safetyTableRows([freezePossible("lisusd-lista"), freezePossible("runtime-possible")]),
+      reportCards: safetyTableRows([freezePossible("lusd-liquity"), freezePossible("runtime-possible")]),
     });
 
-    expect(result.map((row) => row.id)).toEqual(["lisusd-lista", "runtime-possible"]);
+    expect(result.map((row) => row.id)).toEqual(["lusd-liquity", "runtime-possible"]);
   });
 
   it("exports reviewed FreezeWatch status before stale V9 freeze exposure", () => {
     downloadCsvMock.mockReset();
-    const lisusd = makeCoin("lisusd-lista", "Lista USD");
+    const lusd = makeCoin("lusd-liquity", "Liquity USD");
 
-    exportStablecoinsCsv([lisusd], undefined, undefined, safetyTableRows([freezePossible("lisusd-lista")]));
+    exportStablecoinsCsv([lusd], undefined, undefined, safetyTableRows([freezePossible("lusd-liquity")]));
 
     const [, columns] = downloadCsvMock.mock.calls[0]! as [
       StablecoinData[],
@@ -518,7 +518,7 @@ describe("blacklistable projection", () => {
       string,
     ];
     const blacklistColumn = columns.find((column) => column.header === "Blacklistable");
-    expect(blacklistColumn?.accessor(lisusd, 0)).toBe("No");
+    expect(blacklistColumn?.accessor(lusd, 0)).toBe("No");
   });
 });
 

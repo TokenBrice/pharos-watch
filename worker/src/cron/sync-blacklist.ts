@@ -10,6 +10,7 @@ import {
   backfillTronBlacklistAmounts,
   type TronAmountBackfillResult,
 } from "../lib/blacklist/tron-amount-recovery";
+import { resolveTronBlacklistOrder, type TronOrderBackfillResult } from "../lib/blacklist/tron-order-recovery";
 import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
@@ -122,6 +123,11 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     parked: 0,
     limit: 0,
   };
+  let tronOrderBackfill: TronOrderBackfillResult = {
+    blocksAttempted: 0,
+    positionsResolved: 0,
+    blocksDeferred: 0,
+  };
 
   // Historical amount repair and Tron freeze-amount replay are maintenance work.
   // They run only after every admissible event source has had its turn. A short,
@@ -156,6 +162,13 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   const tronGridCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID);
   if (tronGridCircuitAllowed && !blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
     try {
+      tronOrderBackfill = await resolveTronBlacklistOrder(db, {
+        apiKey: trongridApiKey,
+        limiter: tronLimiter,
+        budget,
+        signal,
+        pagesFetched: { count: 0 },
+      }, maintenanceRunBudget);
       tronAmountBackfill = await backfillTronBlacklistAmounts(db, {
         trongridApiKey,
         limiter: tronLimiter,
@@ -300,6 +313,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         tronAmountRepairRetried: tronAmountBackfill.retried,
         tronAmountRepairParked: tronAmountBackfill.parked,
         tronAmountRepairLimit: tronAmountBackfill.limit,
+        tronOrderBlocksAttempted: tronOrderBackfill.blocksAttempted,
+        tronOrderPositionsResolved: tronOrderBackfill.positionsResolved,
+        tronOrderBlocksDeferred: tronOrderBackfill.blocksDeferred,
         maintenanceRuntimeBudgetMs: SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS,
         runtimeBudgetReached: runtimeBudgetHit,
         subrequestBudgetReached,

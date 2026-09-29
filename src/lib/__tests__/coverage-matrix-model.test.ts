@@ -157,18 +157,18 @@ describe("buildCoverageMatrixModel", () => {
       makeMatrixInput({
         stablecoins: {
           peggedAssets: [
-            { id: "lisusd-lista", name: "Lista USD", symbol: "LISUSD", circulating: { peggedUSD: 1_000 } },
+            { id: "lusd-liquity", name: "Liquity USD", symbol: "LUSD", circulating: { peggedUSD: 1_000 } },
           ],
         },
         reportCards: makeReportCardsV9Response({
           cards: [
             makeV9Card({
-              id: "lisusd-lista",
+              id: "lusd-liquity",
               accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
             }),
           ],
         }),
-        activeStablecoins: [trackedMeta("lisusd-lista")],
+        activeStablecoins: [trackedMeta("lusd-liquity")],
       }),
     );
 

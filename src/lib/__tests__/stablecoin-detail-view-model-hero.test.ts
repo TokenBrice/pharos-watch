@@ -204,22 +204,22 @@ describe("stablecoin detail hero view-model builder", () => {
   });
 
   it("uses reviewed FreezeWatch status before stale V9 freeze exposure in the hero passport", () => {
-    const coin = TRACKED_META_BY_ID.get("lisusd-lista");
+    const coin = TRACKED_META_BY_ID.get("lusd-liquity");
     expect(coin).toBeDefined();
 
     const hero = buildDetailHero({
       coin: coin!,
       coinData: {
-        id: "lisusd-lista",
-        name: "Lista USD",
-        symbol: "LISUSD",
+        id: "lusd-liquity",
+        name: "Liquity USD",
+        symbol: "LUSD",
         pegType: "peggedUSD",
         price: 1,
         circulating: { peggedUSD: 100 },
         chains: [],
       } as never,
       reportCard: makeV9Card({
-        id: "lisusd-lista",
+        id: "lusd-liquity",
         accessPosture: {
           ...makeV9Card().accessPosture,
           freezeExposure: "possible",

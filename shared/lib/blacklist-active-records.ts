@@ -135,25 +135,28 @@ export function buildBlacklistActiveRecords(
 ): BlacklistActiveRecord[] {
   const active = new Map<string, BlacklistActiveRecord>();
   const ordered = [...events].sort(compareBlacklistEvents);
-  const tronGroups = new Map<string, { effects: Map<string, Set<string>>; ambiguous: boolean }>();
+  const tronGroups = new Map<string, BlacklistEvent[]>();
+  const ambiguousGroups = new Set<string>();
   for (const event of ordered) {
     if (event.chainId !== "tron") continue;
     const groupKey = `${buildBlacklistRecordIdentityKey(event)}:${event.blockNumber}`;
-    const group = tronGroups.get(groupKey) ?? { effects: new Map<string, Set<string>>(), ambiguous: false };
-    for (const [effect, transactions] of group.effects) {
-      if (effect !== event.eventType
-        && (effect === "blacklist" || event.eventType === "blacklist")
-        && (transactions.size > 1 || !transactions.has(event.txHash))) group.ambiguous = true;
+    const group = tronGroups.get(groupKey) ?? [];
+    for (const previous of group) {
+      if (previous.eventType !== event.eventType
+        && (previous.eventType === "blacklist" || event.eventType === "blacklist")
+        && previous.txHash !== event.txHash
+        && (previous.transactionIndex == null || event.transactionIndex == null
+          || previous.transactionIndex === event.transactionIndex)) {
+        ambiguousGroups.add(groupKey);
+      }
     }
-    const transactions = group.effects.get(event.eventType) ?? new Set<string>();
-    transactions.add(event.txHash);
-    group.effects.set(event.eventType, transactions);
+    group.push(event);
     tronGroups.set(groupKey, group);
   }
 
   for (const event of ordered) {
     const key = buildBlacklistRecordIdentityKey(event);
-    if (event.chainId === "tron" && tronGroups.get(`${key}:${event.blockNumber}`)?.ambiguous) {
+    if (event.chainId === "tron" && ambiguousGroups.has(`${key}:${event.blockNumber}`)) {
       active.set(key, {
         key, stablecoin: event.stablecoin, chainId: event.chainId, address: event.address,
         blacklistedAt: event.timestamp, destroyedAt: null, frozenAmountUsd: null,

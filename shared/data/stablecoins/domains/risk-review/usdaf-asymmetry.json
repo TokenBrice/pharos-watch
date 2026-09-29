@@ -4,41 +4,41 @@
     "reviewedStatus": false,
     "sources": [
       {
-        "label": "Asymmetry USDaf overview",
-        "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf"
-      },
-      {
-        "label": "Asymmetry Terms of Service",
-        "url": "https://docs.asymmetry.finance/legal/terms-of-service"
-      },
-      {
-        "label": "Ethereum USDaf BoldToken verified source and ABI",
+        "label": "Ethereum USDaf verified BoldToken source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8"
       },
       {
-        "label": "Pinned USDaf V2 BoldToken source",
-        "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/BoldToken.sol"
+        "label": "USDaf CollateralRegistry verified source and branch enumeration",
+        "url": "https://eth.blockscout.com/address/0x33d68055cd54061991b2e98b9ab326ffce4d60fe?tab=contract"
       },
       {
-        "label": "Asymmetry USDaf documentation",
-        "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf"
+        "label": "USDaf TroveManager verified collateral and price reads",
+        "url": "https://eth.blockscout.com/address/0xf8a25a2e4c863bb7cea7e4b4eeb3866bb7f11718?tab=contract"
       },
       {
-        "label": "Asymmetry Terms of Service",
-        "url": "https://docs.asymmetry.finance/legal/terms-of-service"
+        "label": "ysyBOLD immutable strategy verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23346b04a7f55b8760e5860aa5a77383d63491cd"
       },
       {
-        "label": "Ethereum PublicNode control reads",
-        "url": "https://ethereum.publicnode.com"
+        "label": "Yearn TokenizedStrategy fixed implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd377919fa87120584b21279a491f82d5265a139c"
       },
       {
-        "label": "Asymmetry current USDaf reserve stats",
-        "url": "https://app.asymmetry.finance/api/stats"
+        "label": "WBTC verified owner-controlled transfer pause",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+      },
+      {
+        "label": "tBTC verified immutable token",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x18084fba666a33d37592fa2633fd49a74dd93a88"
+      },
+      {
+        "label": "tBTC Vault governance and delayed ownership migration",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9c070027cdc9dc8f82416b2e5314e11dfb4fe3cd"
       }
     ],
-    "evidence": "At Ethereum block 25712463 (2026-08-08T19:53:59Z; hash 0x618ff702108d99dab9aefdef506ad07bb2bf95a86f571ea65db27698420510af), the sole tracked USDaf deployment 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 returned owner() = zero and zero EIP-1967 implementation, admin, and beacon slots; its runtime code remained the verified direct BoldToken deployment. The pinned and verified source exposes ordinary holder transfer and allowance transferFrom behavior, a fixed core-contract recipient guard, and fixed protocol mint/burn routes, but no mutable pause, holder blacklist, seizure, or arbitrary-holder burn. The reviewed project materials and holder terms identify protocol and reserve risks but no separate issuer power to freeze existing USDaf balances. Direct holder freeze is therefore false; matched reserve-asset controls remain below the strict >50% upstream threshold.",
-    "reviewer": "OpenAI Codex C10 access review; OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "At Ethereum block 26082913 (2026-09-29T11:46:23Z), the sole tracked USDaf deployment 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 had owner() = zero, zero EIP-1967 implementation/admin/beacon slots, and runtime bytecode identical to the verified direct BoldToken deployment. Its recipient guard rejects only zero and the token itself, not other core contracts as the previous evidence stated. No mutable holder blacklist, pause, seizure, upgrade path, or issuer-controlled arbitrary-holder burn was found; mint/burn routes remain fixed protocol operations. collateralRegistryAddress() returned 0x33d68055cd54061991b2e98b9ab326ffce4d60fe and totalCollaterals() returned 6. Enumerating getToken/getTroveManager and multiplying each getEntireBranchColl() (ActivePool plus DefaultPool collateral) by the price returned by getUnbackedPortionPriceAndRedeemability() at that same block gave total collateral value $389485.404484: ysyBOLD $222322.920062 (57.081194%), scrvUSD $44640.658868 (11.461446%), sUSDS $29786.813882 (7.647736%), sfrxUSD $33205.858801 (8.525572%), tBTC $46276.767671 (11.881515%), and WBTC18 $13252.385200 (3.402537%). ysyBOLD 0x23346b04a7f55b8760e5860aa5a77383d63491cd delegates to constant TokenizedStrategy 0xd377919fa87120584b21279a491f82d5265a139c; its nonzero EIP-1967 implementation slot is an explorer marker, not an upgrade mechanism, and admin/beacon slots are zero. The implementation has ordinary transfers without management restrictions. asset() is yBOLD 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, whose live 45-byte EIP-1167 runtime fixes VaultV3 0xd8063123bba3b480569244ae66bfe72b6c84b00d; ybold-yearn and bold-liquity are reviewed false. scrvusd-curve and susds-sky are reviewed inherited, and sfrxusd-frax true. WBTC18 wraps WBTC, whose owner 0xca06411bd7a7296d7dbdd0050dfc846e95febeb7 can pause transfers (paused() was false), so this slice is exposed. Canonical tBTC is a direct immutable token with zero EIP-1967 slots, ordinary transfers and allowance-gated burnFrom; owner TBTCVault 0x9c070027cdc9dc8f82416b2e5314e11dfb4fe3cd can mint but cannot freeze existing balances. The vault owner 0x9f6e831c8f8939dc0c830c6e492e7cef4f9c2f5f can migrate mint ownership after 86400 seconds; this does not replace token transfer logic. Identified exposed collateral is 31.037291%; even counting the entire tBTC governance/bridge rail conservatively raises it only to 42.918806%, below the strict >50% upstream threshold. Retain false, consistent with ybold-yearn and bold-liquity; the USDaf transfer overlay's permissionless posture agrees, although it repeats the inaccurate core-contract guard description.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   },
   "oracleRisk": {
     "tier": "standard-external",

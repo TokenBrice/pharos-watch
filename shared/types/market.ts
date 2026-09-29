@@ -971,6 +971,7 @@ const BlacklistEventSchema = z.object({
   amountStatus: z.enum(BLACKLIST_AMOUNT_STATUS_VALUES),
   txHash: z.string(),
   blockNumber: z.number(),
+  transactionIndex: z.number().int().nonnegative().nullable().optional(),
   timestamp: z.number(),
   methodologyVersion: z.string(),
   contractAddress: z.string().nullable(),

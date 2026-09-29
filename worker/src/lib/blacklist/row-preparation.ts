@@ -9,23 +9,23 @@ import type { BlacklistRow } from "./shared";
 const BLACKLIST_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 
 function unambiguousRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
-  const effects = new Map<string, Map<string, Set<string>>>();
+  const effects = new Map<string, BlacklistRow[]>();
   const ambiguousBlocks = new Map<string, number>();
   for (const row of rows) {
     if (row.chain_id !== "tron") continue;
     const key = `${buildCurrentBalanceKey(row)}:${row.block_number}`;
-    const group = effects.get(key) ?? new Map<string, Set<string>>();
-    for (const [effect, transactions] of group) {
-      if (effect !== row.event_type
-        && (effect === "blacklist" || row.event_type === "blacklist")
-        && (transactions.size > 1 || !transactions.has(row.tx_hash))) {
+    const group = effects.get(key) ?? [];
+    for (const previous of group) {
+      if (previous.event_type !== row.event_type
+        && (previous.event_type === "blacklist" || row.event_type === "blacklist")
+        && previous.tx_hash !== row.tx_hash
+        && (previous.transaction_index == null || row.transaction_index == null
+          || previous.transaction_index === row.transaction_index)) {
         const identity = buildCurrentBalanceKey(row);
         ambiguousBlocks.set(identity, Math.max(ambiguousBlocks.get(identity) ?? -1, row.block_number));
       }
     }
-    const transactions = group.get(row.event_type) ?? new Set<string>();
-    transactions.add(row.tx_hash);
-    group.set(row.event_type, transactions);
+    group.push(row);
     effects.set(key, group);
   }
   return rows.filter((row) => row.block_number > (ambiguousBlocks.get(buildCurrentBalanceKey(row)) ?? -1));

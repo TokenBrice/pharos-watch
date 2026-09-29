@@ -29,6 +29,7 @@ type BlacklistEventRow = {
   amount_status: string;
   tx_hash: string;
   block_number: number;
+  transaction_index: number | null;
   timestamp: number;
   methodology_version: string | null;
   contract_address: string | null;
@@ -377,7 +378,7 @@ async function main(argv = process.argv.slice(2)) {
   // SAFETY: table/columns are fixed and both CLI-selected filters are SQL-quoted by sqlString.
   const sql = `
     SELECT id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event,
-           amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address,
+           amount_source, amount_status, tx_hash, block_number, transaction_index, timestamp, methodology_version, contract_address,
            config_key, event_signature, event_topic0, suppression_reason, explorer_tx_url, explorer_address_url
     FROM blacklist_events
     WHERE stablecoin = ${sqlString(options.stablecoin)}
@@ -403,6 +404,7 @@ async function main(argv = process.argv.slice(2)) {
       | "ambiguous",
     txHash: row.tx_hash,
     blockNumber: row.block_number,
+    transactionIndex: row.transaction_index,
     timestamp: row.timestamp,
     methodologyVersion: row.methodology_version ?? "3.4",
     contractAddress: row.contract_address,

@@ -34,7 +34,8 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
          AND (
            amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
-           OR (amount_source = 'derived' AND amount_native = 0 AND amount_status = 'resolved')
+           OR (amount_source = 'derived' AND amount_native = 0 AND amount_status = 'resolved'
+               AND COALESCE(provenance_source, '') NOT LIKE 'trongrid-transfer-replay-zero%')
          )`,
     )
     .bind(now, now)
@@ -57,6 +58,7 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
              AND NOT (
                blacklist_events.amount_source = 'derived'
                AND blacklist_events.amount_native = 0
+               AND COALESCE(blacklist_events.provenance_source, '') NOT LIKE 'trongrid-transfer-replay-zero%'
              )
          )`,
     )

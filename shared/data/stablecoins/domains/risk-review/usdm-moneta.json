@@ -1,10 +1,67 @@
 {
   "id": "usdm-moneta",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDM resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Moneta official Cardano policy and asset identity",
+        "url": "https://moneta.global/policy-id/"
+      },
+      {
+        "label": "Cardano native asset transfer and mint-policy semantics",
+        "url": "https://developers.cardano.org/docs/learn/core-concepts/assets/"
+      },
+      {
+        "label": "Koios Cardano chain tip",
+        "url": "https://api.koios.rest/api/v1/tip"
+      },
+      {
+        "label": "Koios deployed minting-policy script",
+        "url": "https://api.koios.rest/api/v1/script_info"
+      },
+      {
+        "label": "Koios USDM supply and identity",
+        "url": "https://api.koios.rest/api/v1/asset_info"
+      },
+      {
+        "label": "Koios live control-token and holder outputs",
+        "url": "https://api.koios.rest/api/v1/asset_utxos"
+      },
+      {
+        "label": "Koios control-token authority datum",
+        "url": "https://api.koios.rest/api/v1/datum_info"
+      },
+      {
+        "label": "Sundae Labs Mehen mint, burn and delayed-upgrade audit",
+        "url": "https://cdn.sundaeswap.finance/audits/mehen.pdf"
+      },
+      {
+        "label": "Moneta current reserve disclosure",
+        "url": "https://moneta.global/transparency/"
+      },
+      {
+        "label": "Moneta reserve architecture",
+        "url": "https://moneta.global/learn/usdm-reserve-architecture/"
+      },
+      {
+        "label": "NBX named USDM reserve institutions",
+        "url": "https://nbx.com/en/usdm"
+      },
+      {
+        "label": "NBX separate issuer obligations and reserve pools",
+        "url": "https://nbx.com/en/usdm-terms"
+      },
+      {
+        "label": "Moneta segregation, redemption and account restrictions",
+        "url": "https://moneta.global/terms-of-service.pdf"
+      },
+      {
+        "label": "US Treasury definition of blocked financial property",
+        "url": "https://ofac.treasury.gov/faqs/9"
+      }
+    ],
+    "evidence": "USDM is Moneta Digital LLC's Cardano-native dollar asset, separately co-issued in the EEA by Norwegian Block Exchange AS; geckoId usdm-2. The sole catalogued deployment is policy c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad plus asset name 0014df105553444d, six decimals, fingerprint asset12ffdj8kk2w485sr7a5ekmjjdyecz8ps2cm5zed, matching Moneta's primary identity publication. Live Koios reads on 2026-09-29, with observed tip block 14003170 / slot 199116087, return this PlutusV2 policy created in transaction c6b0831fa16e101ae18de65c2a0c8825cebffe17ccfe38385e711c900f62d261 and supply 13,544,372.76 USDM. These endpoint reads are contemporaneous, not historical queries pinned to that tip. An unspent holder output at transaction 17db179b81c7a3e43b82e55397438d24d62125fe88674d2fe06b89b0f60776d4#2 (creation block 10080856) is at a key-controlled address with no datum. Cardano validates ordinary holder transfers without invoking the minting policy; no token-wide blacklist, freeze, transfer pause, arbitrary-holder burn or seizure hook exists in that native transfer path. Burning requires spending available token inputs, not merely issuer authorization. EVM proxy/admin/beacon slots and DEFAULT_ADMIN_ROLE do not apply. The policy identity binds immutable script bytes, while mint/control operations can still be governed by replaceable state-token validators: the audit describes delayed owner upgrades, not mutable holder-transfer logic. Live USDM_CONTROL under policy e319d8e6629ff7991c8ae4f8aec2e0f10463ebdf29b57d26d34914f6 remains at validator 6b3cb86f8aee9b5d754ba7aff3acea986297e833d52af0b00efe37c7 in creation transaction #0, block 10065348. Datum 5fe0960416b7aa69501abf9be07c9f02194f3c9f68d91b7c67b8d1c51c1ff743 contains 5-of-7 owner and 2-of-3 minter conditions under the audited datum layout, with no pending reclaim timer; signer identities and the currently enforced upgrade delay are not independently established. Reserve exposure changes the public verdict to Upstream. As of 2026-09-29, Moneta discloses wholly fiat reserves in USD bank deposits, institutional money-market funds and managed short-duration Treasury exposure; NBX names Fidelity and Western Asset Management for Moneta, and Sparebanken Norge plus Amundi USD MM fund for NBX. Both pools are custodial financial claims subject to account/legal blocking, rather than native unfreezable collateral. NBX terms explicitly separate issuer liabilities and reserve pools; Moneta terms provide segregation from operating funds, not immunity from blocking. Computed exposed reserve share is 100% of the disclosed reserve universe, exceeding 50%, independently of the undisclosed bank/fund and co-issuer weights. This is a classification of the published reserve composition, not independent verification of reserve balances: the current transparency page shows $9,609,507.48 and matching displayed supply, below live token supply, and no longer establishes the stored 20% bank / 80% fund allocation. No current point-in-time backing ratio is inferred. Issuer KYC, account blocking and redemption refusal are not misreported as a direct on-chain token freeze. The inherited-reserve precedent is dai-makerdao; unlike an EVM mutable-transfer proxy such as usdk-orki, the mint/control upgrade path here cannot replace Cardano's native holder-transfer semantics. The 2026-09-05 Safety Score transfer overlay's permissionless posture agrees with this direct-transfer finding and does not remove upstream reserve exposure.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   }
 }

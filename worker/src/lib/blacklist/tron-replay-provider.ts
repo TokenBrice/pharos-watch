@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { logWorkerEventArgs } from "../structured-log";
 import { rethrowIfAborted } from "../abort";
@@ -5,6 +7,7 @@ import { budgetExhausted, type RateLimitedFetch } from "../evm-logs";
 import type { SubrequestBudget } from "../evm-logs";
 import {
   TronBlockHeaderSchema,
+  TronEventsResponseSchema,
   TronTransactionInfoSchema,
   TronTrc20HistorySchema,
   TronTriggerConstantContractSchema,
@@ -154,6 +157,36 @@ export async function fetchTronHeadBlock(ctx: TronReplayProviderContext): Promis
     blockNumber: parsed.data.block_header.raw_data.number,
     timestampMs: parsed.data.block_header.raw_data.timestamp,
   };
+}
+
+/** Canonical confirmed block-array order, never explorer event or hash order. */
+export async function fetchTronBlockTransactionPositions(
+  ctx: TronReplayProviderContext,
+  blockNumber: number,
+): Promise<{ timestamp: number; positions: ReadonlyMap<string, number> }> {
+  const body = await readTronJson<{
+    block_header?: { raw_data?: { number?: number; timestamp?: number } };
+    transactions?: { txID?: string }[];
+  }>(ctx, {
+    url: `${TRONGRID_ORIGIN}/walletsolidity/getblockbynum`,
+    init: { method: "POST", body: JSON.stringify({ num: blockNumber }) },
+    label: "tron-confirmed-block-order",
+    failed: "confirmed block order unreadable",
+  });
+  const header = body?.block_header?.raw_data;
+  if (header?.number !== blockNumber || !Number.isSafeInteger(header.timestamp)
+    || !Array.isArray(body.transactions)) {
+    throw new TronReplayProviderError("provider_null", "confirmed block order payload invalid");
+  }
+  const positions = new Map<string, number>();
+  for (const [index, transaction] of body.transactions.entries()) {
+    if (typeof transaction?.txID !== "string" || !/^[0-9a-f]{64}$/i.test(transaction.txID)
+      || positions.has(transaction.txID.toLowerCase())) {
+      throw new TronReplayProviderError("provider_null", "confirmed block transaction identity invalid");
+    }
+    positions.set(transaction.txID.toLowerCase(), index);
+  }
+  return { timestamp: Math.floor(header.timestamp! / 1000), positions };
 }
 
 /**
@@ -307,4 +340,112 @@ export async function fetchTronTransferWindow(
     next = meta.links?.next ?? null;
   }
   return { transfers, watermarkMs, complete: next == null, stopped: false };
+}
+
+const DestroyWindowSchema = TronEventsResponseSchema.extend({
+  success: z.literal(true),
+  meta: z.object({
+    at: z.number().int().nonnegative(),
+    links: z.object({ next: z.string().optional() }).optional(),
+  }),
+});
+
+export interface TronDestroyWindowObservation {
+  urls: string[];
+  watermarkMs: number | null;
+  pagesFetched: number;
+  outcome: "clear" | "evidence_mismatch" | "state_raced" | "runtime_budget";
+}
+
+export interface TronDestroyWindowResult {
+  outcome: TronDestroyWindowObservation["outcome"];
+  observation: TronDestroyWindowObservation;
+  /** Distinguishes truncated evidence from a positively observed matching destroy. */
+  capExceeded?: true;
+}
+
+/** A bounded, complete confirmed destroy-event window; partial pages never prove absence. */
+export async function fetchTronDestroyWindowClear(
+  ctx: TronReplayProviderContext,
+  contractAddress: string,
+  accountBase58: string,
+  events: readonly { signature: string; tronResultKey?: string }[],
+  fromMs: number,
+  throughMs: number,
+  maxPages = 40,
+): Promise<TronDestroyWindowResult> {
+  const observation: TronDestroyWindowObservation = {
+    urls: [], watermarkMs: null, pagesFetched: 0, outcome: "evidence_mismatch",
+  };
+  const finish = (outcome: TronDestroyWindowObservation["outcome"]): TronDestroyWindowResult => {
+    observation.outcome = outcome;
+    return { outcome, observation };
+  };
+  if (ctx.shouldStop?.()) return finish("runtime_budget");
+  if (events.length === 0) {
+    throw new TronReplayProviderError("provider_null", "destroy event configuration missing");
+  }
+  for (const eventConfig of events) {
+    const eventName = eventConfig.signature.split("(")[0]!;
+    const initial = new URL(`${TRONGRID_ORIGIN}/v1/contracts/${contractAddress}/events`);
+    for (const [key, value] of Object.entries({
+      event_name: eventName, only_confirmed: "true", min_timestamp: String(fromMs),
+      max_timestamp: String(throughMs), order_by: "block_timestamp,asc", limit: "200",
+    })) initial.searchParams.set(key, value);
+    let next: string | undefined = initial.toString();
+    while (next) {
+      if (ctx.shouldStop?.()) return finish("runtime_budget");
+      if (observation.pagesFetched >= Math.min(maxPages, 40)) {
+        return { ...finish("evidence_mismatch"), capExceeded: true };
+      }
+      // A rejected hop consumes the window budget as well, but never opens a connection.
+      ctx.pagesFetched.count++;
+      observation.pagesFetched++;
+      let url: URL;
+      try {
+        if (next.length > MAX_TRC20_PAGINATION_URL_LENGTH) throw new Error("URL too long");
+        url = new URL(next);
+        if (url.origin !== initial.origin || url.pathname !== initial.pathname ||
+            url.username !== "" || url.password !== "" || url.hash !== "" ||
+            [...initial.searchParams].some(([key, value]) => url.searchParams.get(key) !== value) ||
+            [...url.searchParams.keys()].some((key) =>
+              (!initial.searchParams.has(key) && key !== "fingerprint") || url.searchParams.getAll(key).length !== 1)) {
+          throw new Error("changed destroy window");
+        }
+      } catch {
+        throw new TronReplayProviderError("provider_null", "destroy pagination URL rejected");
+      }
+      observation.urls.push(url.toString());
+      const parsed = DestroyWindowSchema.safeParse(await readTronJson<unknown>(ctx, {
+        url: url.toString(), label: "tron-destroy-window", failed: "destroy window unreadable",
+      }));
+      if (!parsed.success) throw new TronReplayProviderError("provider_null", "destroy window payload invalid");
+      observation.watermarkMs = Math.min(observation.watermarkMs ?? Infinity, parsed.data.meta.at);
+      if (parsed.data.meta.at < throughMs) return finish("state_raced");
+      for (const event of parsed.data.data) {
+        if (event.event_name !== eventName || event.block_timestamp < fromMs ||
+            event.block_timestamp > throughMs) {
+          throw new TronReplayProviderError("provider_null", "destroy event outside requested window");
+        }
+        const rawAddress = eventConfig.tronResultKey
+          ? event.result[eventConfig.tronResultKey]
+          : event.result._blackListedUser ?? event.result._user ?? event.result["0"];
+        if (typeof rawAddress !== "string" || !rawAddress) {
+          throw new TronReplayProviderError("provider_null", "destroy victim missing or invalid");
+        }
+        const hexAddress = rawAddress.replace(/^0x(?=41[0-9a-f]{40}$)/i, "");
+        const address = rawAddress.startsWith("T")
+          ? await tronBase58ToHex(rawAddress) ? rawAddress : null
+          : await tronHexAddressToBase58(/^[0-9a-f]{40}$/i.test(hexAddress) ? `0x${hexAddress}` : hexAddress);
+        if (!address) throw new TronReplayProviderError("provider_null", "destroy victim invalid");
+        if (address === accountBase58) return finish("evidence_mismatch");
+      }
+      next = parsed.data.meta.links?.next;
+      // A full page without a continuation is not proof that the provider exhausted history.
+      if (!next && parsed.data.data.length >= TRC20_PAGE_LIMIT) {
+        throw new TronReplayProviderError("provider_null", "full destroy page missing continuation");
+      }
+    }
+  }
+  return finish("clear");
 }

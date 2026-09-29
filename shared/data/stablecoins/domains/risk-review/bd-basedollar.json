@@ -1,28 +1,28 @@
 {
   "id": "bd-basedollar",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Base Blockscout verified BD token source",
-        "url": "https://base.blockscout.com/address/0x252d36f435582ecb01686448d21e8c9ea0b2ca65?tab=contract"
+        "label": "Verified BD token and privileged burn paths",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x252d36f435582ecb01686448d21e8c9ea0b2ca65"
       },
       {
-        "label": "Pinned Base Dollar BoldToken source",
-        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/BoldToken.sol"
+        "label": "Verified CollateralRegistry branch authorization",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7551ebfc8340b7f91874942be9c653733d4fb04f"
       },
       {
-        "label": "Base public RPC used for the block 50734519 reads",
-        "url": "https://base-rpc.publicnode.com"
+        "label": "Collateral governor Safe",
+        "url": "https://base.blockscout.com/address/0x519ca17dae2e2a23396ebec12da1f645accec196"
       },
       {
-        "label": "Base block 50734519",
-        "url": "https://base.blockscout.com/block/50734519"
+        "label": "Fixed-block state and collateral valuation",
+        "url": "https://base.blockscout.com/block/51946525"
       }
     ],
-    "evidence": "Re-derived from primary sources 2026-09-01 at Base block 50734519, replacing the 2026-05-12 inferred backfill. BD 0x252d36f435582ecb01686448d21e8c9ea0b2ca65 is the sole registry deployment and is a direct non-proxy contract: all three EIP-1967 slots (implementation, admin, beacon) read zero and proxiableUUID() reverts, so no authority can swap in a freezing implementation. owner() returned the zero address. Probes for paused(), isBlacklisted(address), isBlackListed(address), frozen(address), isFrozen(address) and DEFAULT_ADMIN_ROLE() all revert, so the deployment exposes no holder-selective denylist, freeze flag, pause switch or role registry. The only balance-destroying entry point is burn(address,uint256), which reverted with 'BoldToken: Caller is neither CR nor BorrowerOperations nor TroveManager nor StabilityPool': it is reachable only by the immutable protocol branch contracts through their scoped debt-repayment and Stability Pool accounting paths, never by a discretionary key, and there is no seize, wipe or reissue path at all. Reads at the block: name() 'Base Dollar', symbol() 'BD', decimals() 18, totalSupply() 125,576.35 BD. No direct freeze reach; no upstream freeze reach either, since BD is minted against WETH, wstETH, rETH, cbBTC and cbETH collateral rather than against a freezable stablecoin.",
-    "reviewer": "Claude ODR-A5 blacklistability re-derivation",
-    "reviewedAt": "2026-09-01"
+    "evidence": "Re-verified sole catalogued deployment at Base block 51946525. BD 0x252d36f435582ecb01686448d21e8c9ea0b2ca65 has zero EIP-1967 implementation/admin/beacon slots and owner() is zero, but ownership renunciation does not close its non-proxy holder-control path. collateralRegistryAddress() is 0x7551ebfc8340b7f91874942be9c653733d4fb04f; its governor() and collateralGovernor() both return the 4-of-6 Safe 0x519ca17dae2e2a23396ebec12da1f645accec196. Verified createNewBranch(address,bool) accepts governor-selected branch contracts and calls token.setBranchAddressesViaCollateralRegistry, authorizing new burners and stability pools without a timelock on branch creation. Authorized burn(address,uint256) destroys arbitrary holders' balances without allowance; sendToPool(address,address,uint256) likewise moves balances without allowance. An eth_call impersonating the existing registry burned one wei from pool holder 0x7d837bf114785642d225d1101145ddb8af4ba438 successfully, while the unrelated caller reverted with the caller-authorization error; no transaction was submitted. The Safe can authorize another burner through the existing branch-registration path, establishing direct holder intervention, analogous to chfm-mento and dllr-sovryn, not merely mint authority or hypothetical token upgrades. Current registry contains five branches. getEntireBranchColl multiplied by each branch's getUnbackedPortionPriceAndRedeemability price, normalized by collateral decimals, gives WETH 34.7608%, wstETH 34.6701%, rETH 0.3856%, wrapped cbBTC 17.6816%, and cbETH 12.5019% of $280293.32 collateral value. Issuer/custodian-exposed share is 30.1835%; including DAO/protocol-governed LST/bridge controls gives 65.2392%. That collateral policy distinction does not change the direct true verdict. The permissionless Safety Score transfer overlay omits this mutable branch-authorization path.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   },
   "oracleRisk": {
     "tier": "standard-external",

@@ -29,6 +29,7 @@ export function mapBlacklistEventRow(row: BlacklistEventRow): BlacklistEvent {
     amountStatus: row.amount_status,
     txHash: row.tx_hash,
     blockNumber: row.block_number,
+    transactionIndex: row.transaction_index ?? null,
     timestamp: row.timestamp,
     contractAddress: row.contract_address,
     configKey: row.config_key,
