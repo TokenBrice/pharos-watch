@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { makeReportCardsV9Card } from "@shared/test-utils/report-cards-v9";
+import { scoreToGrade } from "@shared/lib/report-card-core";
 import { runSafetyScoreMapCli } from "../maintenance/build-safety-score-map";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
@@ -476,6 +477,34 @@ describe("safety-score map — availability-first rendering", () => {
     expect(stablecoinReads).toBe(1);
     expect(run.stdout).toMatch(/Fetching canonical data/);
     expect(run.stdout).toMatch(/Render input graded=20/);
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("renders a legitimate census whose two supply leaders sit in different outer bands", async () => {
+    // The 2026-09-28 publication: the second-largest asset moved from A to C
+    // while the largest stayed in B, and D grew by 14. Every guard must still
+    // pass; a grade redistribution is not a reason to lose the day's poster.
+    const bands: Array<{ tier: string; count: number; scores: number[]; leader?: number }> = [
+      { tier: "A", count: 6, scores: [90, 84] },
+      { tier: "B", count: 42, scores: [78, 72, 66], leader: 1.84e11 },
+      { tier: "C", count: 118, scores: [63, 57, 51], leader: 7.5e10 },
+      { tier: "D", count: 86, scores: [45] },
+      { tier: "F", count: 60, scores: [20] },
+    ];
+    const fixture: { cards: Card[]; assets: Asset[] } = { cards: [], assets: [] };
+    for (const band of bands) {
+      for (let i = 0; i < band.count; i++) {
+        const id = `${band.tier.toLowerCase()}-${String(i).padStart(3, "0")}`;
+        const score = band.scores[i % band.scores.length];
+        const supply = i === 0 && band.leader ? band.leader : 5e9 * 0.9 ** (i + 1);
+        fixture.cards.push({ id, score, grade: scoreToGrade(score) });
+        fixture.assets.push({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: supply } });
+      }
+    }
+    expect(new Set(fixture.cards.map((card) => card.grade.charAt(0)))).toEqual(new Set(["A", "B", "C", "D", "F"]));
+
+    const run = await runGenerator(fixture, { stopBeforeRender: true });
+    expect(run.stderr).not.toMatch(/Could not fit/);
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });
 });

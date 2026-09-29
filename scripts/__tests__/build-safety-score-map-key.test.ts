@@ -9,6 +9,7 @@ import {
   computeDemandOrbitZones,
   loadLogoDataUri,
   buildPsiSubtitle,
+  packEllipticalOrbit,
   parseMapPsi,
   placeSubgradeRadialLanes,
   radiusForMcap,
@@ -213,6 +214,39 @@ describe("Safety Map supply mass and demand bands", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.detail).toMatch(/require .*px.*only .*px is available/);
+  });
+
+  it("fits supply leaders stranded in different outer bands by giving each a long-axis anchor", () => {
+    // 2026-09-28: USDC fell from A+ to C while USDT stayed in B. Charging both
+    // full diameters to the 188px short axis failed every scale down to the
+    // search floor. Each band only needs its leader to fit where it is placed.
+    const leaders = { B: 68, C: 43.5 };
+    const result = computeDemandOrbitZones(radii({
+      B: [leaders.B, 11.2, ...Array.from({ length: 40 }, () => 7.8125)],
+      C: [leaders.C, 10.6, 10.5, ...Array.from({ length: 115 }, () => 7.8125)],
+      D: Array.from({ length: 86 }, () => 7.8125),
+      F: Array.from({ length: 60 }, () => 7.8125),
+    }), { B: true, C: true });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.zones.B.outerRx - result.zones.B.innerRx).toBeGreaterThanOrEqual(2 * leaders.B);
+    expect(result.zones.C.outerRx - result.zones.C.innerRx).toBeGreaterThanOrEqual(2 * leaders.C);
+    // Every other mark still clears the short axis.
+    expect(result.zones.B.outerRy - result.zones.B.innerRy).toBeGreaterThanOrEqual(2 * 11.2);
+    expect(result.zones.C.outerRy - result.zones.C.innerRy).toBeGreaterThanOrEqual(2 * 10.6);
+  });
+
+  it("moves a census-heavy C outward until its guide ring holds every mark", () => {
+    const census = radii({ C: Array.from({ length: 150 }, () => 7.8125) });
+    const result = computeDemandOrbitZones(census, { B: true, C: true });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const guideRx = (result.zones.C.innerRx + result.zones.C.outerRx) / 2;
+    const guideRy = (result.zones.C.innerRy + result.zones.C.outerRy) / 2;
+    expect(packEllipticalOrbit(census.C, guideRx, guideRy, Math.PI)).not.toBeNull();
+
+    const overflow = computeDemandOrbitZones(radii({ C: Array.from({ length: 180 }, () => 7.8125) }), { B: true, C: true });
+    expect(overflow.ok).toBe(false);
   });
 });
 
