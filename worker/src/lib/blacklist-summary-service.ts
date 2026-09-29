@@ -207,7 +207,7 @@ async function queryLatestEventTypeHistory(db: D1Database): Promise<BlacklistEve
          SELECT
            id, stablecoin, chain_id, chain_name, event_type, address,
            amount_native, amount_usd_at_event, amount_source, amount_status,
-           tx_hash, block_number, timestamp, methodology_version,
+           tx_hash, block_number, transaction_index, timestamp, methodology_version,
            contract_address, config_key, event_signature, event_topic0,
            suppression_reason, explorer_tx_url, explorer_address_url,
            ROW_NUMBER() OVER (
@@ -220,7 +220,7 @@ async function queryLatestEventTypeHistory(db: D1Database): Promise<BlacklistEve
        )
        SELECT id, stablecoin, chain_id, chain_name, event_type, address,
               amount_native, amount_usd_at_event, amount_source, amount_status,
-              tx_hash, block_number, timestamp, methodology_version,
+              tx_hash, block_number, transaction_index, timestamp, methodology_version,
               contract_address, config_key, event_signature, event_topic0,
               suppression_reason, explorer_tx_url, explorer_address_url
        FROM latest_event_type

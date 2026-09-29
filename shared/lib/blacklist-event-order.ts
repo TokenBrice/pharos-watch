@@ -7,6 +7,8 @@ type OrderedEvent = {
   chain_id?: string;
   txHash?: string;
   tx_hash?: string;
+  transactionIndex?: number | null;
+  transaction_index?: number | null;
 };
 
 function position(event: OrderedEvent): [number, number] {
@@ -18,15 +20,21 @@ function position(event: OrderedEvent): [number, number] {
   return [Number(index) || 0, Number(suffix) || 0];
 }
 
-/** Tron indices are transaction-local: a tie across transactions is unknown,
- * not hash order. Stable sort preserves input position, never invents one. */
+/** Tron log indices are transaction-local. Only observed block transaction
+ * positions may break a cross-transaction tie between two Tron events with
+ * differing hashes; hashes never imply order, and a transaction-local index is
+ * never compared across chains. */
 export function compareBlacklistEvents(left: OrderedEvent, right: OrderedEvent): number {
   const time = left.timestamp - right.timestamp;
   if (time) return time;
   const block = (left.blockNumber ?? left.block_number ?? 0) - (right.blockNumber ?? right.block_number ?? 0);
   if (block) return block;
-  if ((left.chainId ?? left.chain_id) === "tron"
-    && (left.txHash ?? left.tx_hash) !== (right.txHash ?? right.tx_hash)) return 0;
+  if ((left.chainId ?? left.chain_id) === "tron" && (right.chainId ?? right.chain_id) === "tron"
+    && (left.txHash ?? left.tx_hash) !== (right.txHash ?? right.tx_hash)) {
+    const a = left.transactionIndex ?? left.transaction_index;
+    const b = right.transactionIndex ?? right.transaction_index;
+    return a != null && b != null ? a - b : 0;
+  }
   const a = position(left);
   const b = position(right);
   return a[0] - b[0] || a[1] - b[1];

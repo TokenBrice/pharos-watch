@@ -32,6 +32,7 @@ export interface BlacklistPersistedRow {
   amount_status: BlacklistAmountStatus;
   tx_hash: string;
   block_number: number;
+  transaction_index?: number | null;
   timestamp: number;
   methodology_version: string;
   contract_address: string | null;

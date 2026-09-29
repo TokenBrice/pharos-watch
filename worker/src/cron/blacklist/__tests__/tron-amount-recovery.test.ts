@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../lib/blacklist/tron-replay-provider", async (importOriginal) => ({
@@ -6,6 +7,7 @@ vi.mock("../../../lib/blacklist/tron-replay-provider", async (importOriginal) =>
   fetchTronRawTokenBalance: vi.fn(),
   fetchTronTransactionInfo: vi.fn(),
   fetchTronTransferWindow: vi.fn(),
+  fetchTronDestroyWindowClear: vi.fn(),
 }));
 vi.mock("../../../lib/circuit-breaker", () => ({
   recordOutcomeSafe: vi.fn().mockResolvedValue(null),
@@ -24,12 +26,15 @@ import {
   fetchTronRawTokenBalance,
   fetchTronTransactionInfo,
   fetchTronTransferWindow,
+  fetchTronDestroyWindowClear,
+  type TronReplayProviderContext,
   type TronTransferWindow,
 } from "../../../lib/blacklist/tron-replay-provider";
 import { recordOutcomeSafe } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { createBudget, createRateLimiter } from "../../../lib/evm-logs";
 import { getBlacklistConfigByKey } from "../../../lib/blacklist-contracts";
+import { refreshBlacklistAmountRepairQueue } from "../../../lib/blacklist/amount-repair-queue";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../../lib/tron-address";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
@@ -73,6 +78,14 @@ function provider() {
     limiter: <T,>(fn: () => Promise<T>) => fn(),
     budget: createBudget(1000),
     pagesFetched: { count: 0 },
+  };
+}
+
+function destroyResult(outcome: "clear" | "evidence_mismatch" | "state_raced" | "runtime_budget", pagesFetched = 1, capExceeded?: true) {
+  return {
+    outcome,
+    observation: { urls: [], watermarkMs: SETTLE_HEAD_MS + 60_000, pagesFetched, outcome },
+    ...(capExceeded ? { capExceeded } : {}),
   };
 }
 
@@ -168,7 +181,31 @@ beforeEach(() => {
   vi.mocked(fetchTronHeadBlock).mockReset();
   vi.mocked(fetchTronTransferWindow).mockReset();
   vi.mocked(fetchTronRawTokenBalance).mockReset();
+  vi.mocked(fetchTronDestroyWindowClear).mockReset().mockResolvedValue(destroyResult("clear"));
   vi.mocked(recordOutcomeSafe).mockClear().mockResolvedValue(null);
+});
+
+describe("proven-zero repair queue", () => {
+  it("closes proved zeroes without re-enqueuing them as legacy derived zeroes", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`CREATE TABLE blacklist_events(id, event_type, amount_source, amount_native, amount_status, provenance_source);
+        CREATE TABLE blacklist_amount_repair_queue(event_id PRIMARY KEY, status, priority, reason, available_at, created_at, updated_at, last_error_class, completed_at);
+        INSERT INTO blacklist_events VALUES
+          ('zero', 'blacklist', 'derived', 0, 'resolved', 'trongrid-transfer-replay-zero'),
+          ('cli-zero', 'blacklist', 'derived', 0, 'resolved', 'trongrid-transfer-replay-zero:hash'),
+          ('legacy', 'blacklist', 'derived', 0, 'resolved', NULL);
+        INSERT INTO blacklist_amount_repair_queue(event_id,status) VALUES ('zero','retry');`);
+      const db = { prepare: (sql: string) => ({
+        bind: (...values: number[]) => ({ run: async () => sqlite.prepare(sql).run(...values) }),
+      }) } as unknown as D1Database;
+      await refreshBlacklistAmountRepairQueue(db, 1_790_000_000);
+      expect(sqlite.prepare("SELECT event_id,status FROM blacklist_amount_repair_queue ORDER BY event_id").all())
+        .toEqual([{ event_id: "legacy", status: "pending" }, { event_id: "zero", status: "resolved" }]);
+    } finally {
+      sqlite.close();
+    }
+  });
 });
 
 describe("sumSignedTransfers", () => {
@@ -198,6 +235,81 @@ describe("resolveQueueOutcomeForFailure", () => {
 });
 
 describe("recoverTronFreezeAmountForRow", () => {
+  it("resolves a non-trivial reconciled zero with a clear destroy window", async () => {
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
+    ]);
+    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    expect(recovery.amount).toBe(0);
+    expect(recovery.lastErrorClass).toBeNull();
+  });
+
+  it("keeps a zero unresolved when a later destroy cannot be excluded", async () => {
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
+    ]);
+    vi.mocked(fetchTronDestroyWindowClear).mockResolvedValue(destroyResult("evidence_mismatch"));
+    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    expect(recovery.amount).toBeNull();
+    expect(recovery.lastErrorClass).toBe("evidence_mismatch");
+  });
+
+  it("keeps a destroy-window index race uncounted as a state race", async () => {
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
+    ]);
+    vi.mocked(fetchTronDestroyWindowClear).mockResolvedValue(destroyResult("state_raced"));
+    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    expect(recovery.amount).toBeNull();
+    expect(recovery.lastErrorClass).toBe("state_raced");
+  });
+
+  it("treats a destroy window truncated by the remaining run budget as a runtime condition", async () => {
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
+    ]);
+    // Only three pages remain for the row, so the destroy window is capped at
+    // three; the provider's cap exit proves the window was truncated, and a
+    // truncated window is a runtime condition that must not park the row.
+    vi.mocked(fetchTronDestroyWindowClear).mockResolvedValue(destroyResult("evidence_mismatch", 3, true));
+    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider(), { pagesRemaining: 3 });
+    expect(recovery.amount).toBeNull();
+    expect(recovery.lastErrorClass).toBe("runtime_budget");
+  });
+
+  it("keeps a destroy observed on the final budget page a deterministic mismatch", async () => {
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
+    ]);
+    // Same three-page budget as the truncation case, but the mismatch is a
+    // positively observed victim on the last allowed page (no cap exit), so it
+    // stays evidence_mismatch instead of being reclassified as a runtime condition.
+    vi.mocked(fetchTronDestroyWindowClear).mockResolvedValue(destroyResult("evidence_mismatch", 3));
+    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider(), { pagesRemaining: 3 });
+    expect(recovery.amount).toBeNull();
+    expect(recovery.lastErrorClass).toBe("evidence_mismatch");
+  });
+
+  it("does not mistake an empty history and zero balance for proven zero", async () => {
+    await stubEvidence([]);
+    expect((await recoverTronFreezeAmountForRow(await makeRow(), config, provider())).amount).toBeNull();
+  });
+
+  it("rejects a negative freeze balance even if later inflows reconcile", async () => {
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 60_000, value: 1_000_000n, direction: "out" },
+      { timestampMs: FREEZE_MS + 60_000, value: 2_000_000n, direction: "in" },
+    ]);
+    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    expect(recovery.amount).toBeNull();
+    expect(recovery.lastErrorClass).toBe("evidence_mismatch");
+  });
+
   it("derives the balance held at the freeze and excludes later receipts", async () => {
     await stubEvidence([
       { timestampMs: FREEZE_MS - 60_000, value: BigInt(3_000_000), direction: "in" },
@@ -433,6 +545,64 @@ describe("backfillTronBlacklistAmounts", () => {
     expect(result).toMatchObject({ attempted: 0, resolved: 0, retried: 0, parked: 0 });
     expect(db.getHistory().some((entry) => entry.sql.includes("amount_attempt_count = COALESCE"))).toBe(false);
     expect(vi.mocked(recordOutcomeSafe)).not.toHaveBeenCalled();
+  });
+
+  it("does not book an attempt when the destroy window races the index", async () => {
+    const row = await makeRow();
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
+    ]);
+    vi.mocked(fetchTronDestroyWindowClear).mockResolvedValue(destroyResult("state_raced"));
+    const db = mockD1([
+      { match: "blacklist-tron-replay-candidates", rows: [row as unknown as Record<string, unknown>] },
+      ...QUEUE_TABLES,
+    ]);
+
+    const result = await backfillTronBlacklistAmounts(db, {
+      trongridApiKey: "tron-key",
+      limiter: createRateLimiter(1000),
+      runBudget: makeRunBudget(),
+    });
+
+    expect(result).toMatchObject({ attempted: 0, resolved: 0, retried: 0, parked: 0 });
+    expect(db.getHistory().some((entry) => entry.sql.includes("amount_attempt_count = COALESCE"))).toBe(false);
+    expect(vi.mocked(recordOutcomeSafe)).not.toHaveBeenCalled();
+  });
+
+  it("counts destroy-window pages inside the lane page budget", async () => {
+    const rows = [await makeRow(), await makeRow({ id: `tron-${FREEZE_TX}-2` })];
+    const destroyCaps: number[] = [];
+    let lane: TronReplayProviderContext | undefined;
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
+    ], { consumeLedgerPages: 110 });
+    vi.mocked(fetchTronDestroyWindowClear).mockImplementation(async (ctx, _contract, _account, _events, _from, _through, maxPages) => {
+      if (maxPages === undefined) throw new Error("Expected an explicit destroy-window page cap");
+      destroyCaps.push(maxPages);
+      lane = ctx;
+      ctx.pagesFetched.count += 1;
+      return destroyResult("clear", 1);
+    });
+    const db = mockD1([
+      { match: "blacklist-tron-replay-candidates", rows: rows as unknown as Array<Record<string, unknown>> },
+      ...QUEUE_TABLES,
+      { match: "amount_native = ?", rows: [] },
+    ]);
+
+    const result = await backfillTronBlacklistAmounts(db, {
+      trongridApiKey: "tron-key",
+      limiter: createRateLimiter(1000),
+      runBudget: makeRunBudget(),
+    });
+
+    // The ledger consumes 110 of the 120-page run budget, so each row's destroy
+    // window may only spend what is left, and its pages count against the same
+    // budget: the second row's cap shrinks below the first one's.
+    expect(result).toMatchObject({ attempted: 2, resolved: 2 });
+    expect(destroyCaps).toEqual([10, 9]);
+    expect(lane?.pagesFetched.count).toBe(112);
   });
 
   it("clamps each row's page cap to the remaining run page budget", async () => {

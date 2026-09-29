@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   fetchTronHeadBlock,
+  fetchTronBlockTransactionPositions,
+  fetchTronDestroyWindowClear,
   fetchTronRawTokenBalance,
   fetchTronTransactionInfo,
   fetchTronTransferWindow,
@@ -57,6 +59,147 @@ function requestUrl(input: RequestInfo | URL): string {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+const DESTROY_EVENTS = [{ signature: "DestroyedBlackFunds(address,uint256)" }];
+
+function destroyUrl(fingerprint: string): string {
+  const url = new URL(`https://api.trongrid.io/v1/contracts/${CONTRACT}/events`);
+  for (const [key, value] of Object.entries({
+    event_name: "DestroyedBlackFunds", only_confirmed: "true",
+    min_timestamp: String(WINDOW_START), max_timestamp: String(WINDOW_END),
+    order_by: "block_timestamp,asc", limit: "200", fingerprint,
+  })) url.searchParams.set(key, value);
+  return url.toString();
+}
+
+function destroyEvent(victim: string, timestamp = WINDOW_START + 1) {
+  return {
+    block_number: 1, block_timestamp: timestamp, transaction_id: "a".repeat(64),
+    event_index: 0, event_name: "DestroyedBlackFunds", result: { account: victim, _blackListedUser: victim },
+  };
+}
+
+describe("fetchTronDestroyWindowClear", () => {
+  it("follows complete multiple pages and retains the actual observation", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(transferPage([], destroyUrl("page2")))
+      .mockResolvedValueOnce(transferPage([])));
+    const ctx = providerContext();
+    const result = await fetchTronDestroyWindowClear(ctx, CONTRACT, ACCOUNT, DESTROY_EVENTS, WINDOW_START, WINDOW_END);
+    expect(result.outcome).toBe("clear");
+    expect(result.observation).toMatchObject({ pagesFetched: 2, watermarkMs: WINDOW_END + 60_000, outcome: "clear" });
+    expect(result.observation.urls[1]).toBe(destroyUrl("page2"));
+    expect(ctx.pagesFetched.count).toBe(2);
+  });
+
+  it("rejects a window longer than its page cap", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(transferPage([], destroyUrl("page2"))));
+    const ctx = providerContext();
+    expect(await fetchTronDestroyWindowClear(ctx, CONTRACT, ACCOUNT, DESTROY_EVENTS, WINDOW_START, WINDOW_END, 1))
+      .toMatchObject({ outcome: "evidence_mismatch", capExceeded: true });
+    expect(ctx.pagesFetched.count).toBe(1);
+  });
+
+  it.each([ACCOUNT, USDT_CONTRACT_HEX, USDT_CONTRACT_HEX.slice(2), USDT_CONTRACT_HEX.slice(4)])("rejects a matching victim in base58 or hex form: %s", async (victim) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(transferPage([destroyEvent(victim)])));
+    expect((await fetchTronDestroyWindowClear(providerContext(), CONTRACT, ACCOUNT,
+      DESTROY_EVENTS, WINDOW_START, WINDOW_END)).outcome).toBe("evidence_mismatch");
+  });
+
+  it("uses the configured victim key and admits an unrelated victim", async () => {
+    const event = destroyEvent(ADDRESS_HEX);
+    event.result._blackListedUser = ACCOUNT;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(transferPage([event])));
+    expect((await fetchTronDestroyWindowClear(providerContext(), CONTRACT, ACCOUNT,
+      [{ ...DESTROY_EVENTS[0]!, tronResultKey: "account" }], WINDOW_START, WINDOW_END)).outcome).toBe("clear");
+  });
+
+  it.each([WINDOW_START - 1, WINDOW_END + 1])("rejects out-of-window evidence at %s", async (timestamp) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(transferPage([destroyEvent(ADDRESS_HEX, timestamp)])));
+    await expect(fetchTronDestroyWindowClear(providerContext(), CONTRACT, ACCOUNT,
+      DESTROY_EVENTS, WINDOW_START, WINDOW_END)).rejects.toMatchObject({ errorClass: "provider_null" });
+  });
+
+  it("classifies a malformed response as a metered provider failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ success: true, data: [] })));
+    const ctx = providerContext();
+    await expect(fetchTronDestroyWindowClear(ctx, CONTRACT, ACCOUNT,
+      DESTROY_EVENTS, WINDOW_START, WINDOW_END)).rejects.toMatchObject({ errorClass: "provider_null" });
+    expect(ctx.pagesFetched.count).toBe(1);
+  });
+
+  it("distinguishes a stale watermark from mismatching evidence", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ success: true, data: [], meta: { at: WINDOW_END - 1 } })));
+    expect((await fetchTronDestroyWindowClear(providerContext(), CONTRACT, ACCOUNT,
+      DESTROY_EVENTS, WINDOW_START, WINDOW_END)).outcome).toBe("state_raced");
+  });
+
+  it("stops before opening a request when runtime expires", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    expect((await fetchTronDestroyWindowClear(providerContext({ shouldStop: () => true }), CONTRACT, ACCOUNT,
+      DESTROY_EVENTS, WINDOW_START, WINDOW_END)).outcome).toBe("runtime_budget");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("stops between pages without treating the partial window as clear", async () => {
+    const ctx = providerContext();
+    ctx.shouldStop = () => ctx.pagesFetched.count >= 1;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(transferPage([], destroyUrl("page2"))));
+    const result = await fetchTronDestroyWindowClear(ctx, CONTRACT, ACCOUNT, DESTROY_EVENTS, WINDOW_START, WINDOW_END);
+    expect(result.outcome).toBe("runtime_budget");
+    expect(result.observation.pagesFetched).toBe(1);
+  });
+
+  it.each([
+    (url: URL) => { url.hostname = "evil.example"; },
+    (url: URL) => { url.pathname = "/v1/contracts/other/events"; },
+    (url: URL) => { url.searchParams.set("event_name", "OtherEvent"); },
+    (url: URL) => { url.searchParams.set("only_confirmed", "false"); },
+    (url: URL) => { url.searchParams.set("min_timestamp", "0"); },
+    (url: URL) => { url.searchParams.set("max_timestamp", "0"); },
+    (url: URL) => { url.searchParams.append("event_name", "OtherEvent"); },
+  ])("rejects changed pagination bounds without fetching them", async (mutate) => {
+    const next = new URL(destroyUrl("page2"));
+    mutate(next);
+    const fetch = vi.fn().mockResolvedValue(transferPage([], next.toString()));
+    vi.stubGlobal("fetch", fetch);
+    const ctx = providerContext();
+    await expect(fetchTronDestroyWindowClear(ctx, CONTRACT, ACCOUNT,
+      DESTROY_EVENTS, WINDOW_START, WINDOW_END)).rejects.toMatchObject({ errorClass: "provider_null" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(ctx.pagesFetched.count).toBe(2);
+  });
+
+  it("does not prove absence without any configured destroy family", async () => {
+    await expect(fetchTronDestroyWindowClear(providerContext(), CONTRACT, ACCOUNT,
+      [], WINDOW_START, WINDOW_END)).rejects.toMatchObject({ errorClass: "provider_null" });
+  });
+});
+
+describe("fetchTronBlockTransactionPositions", () => {
+  const block = {
+    block_header: { raw_data: { number: 123, timestamp: WINDOW_START + 999 } },
+    transactions: [{ txID: "A".repeat(64) }, { txID: "b".repeat(64) }],
+  };
+
+  it("returns canonical zero-based positions with lowercase ids and seconds", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(block)));
+    const result = await fetchTronBlockTransactionPositions(providerContext(), 123);
+    expect(result.timestamp).toBe(Math.floor((WINDOW_START + 999) / 1000));
+    expect([...result.positions]).toEqual([["a".repeat(64), 0], ["b".repeat(64), 1]]);
+  });
+
+  it.each([
+    { ...block, block_header: { raw_data: { number: 124, timestamp: WINDOW_START } } },
+    { ...block, transactions: {} },
+    { ...block, transactions: [{ txID: "bad" }] },
+    { ...block, transactions: [{ txID: "A".repeat(64) }, { txID: "a".repeat(64) }] },
+  ])("rejects noncanonical block data", async (payload) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(payload)));
+    await expect(fetchTronBlockTransactionPositions(providerContext(), 123)).rejects.toMatchObject({ errorClass: "provider_null" });
+  });
 });
 
 describe("validateTronTransferPaginationUrl", () => {

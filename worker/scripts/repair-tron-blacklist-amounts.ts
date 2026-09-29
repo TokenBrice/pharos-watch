@@ -9,6 +9,8 @@ import { tronBase58ToHex } from "../src/lib/tron-address";
 import { getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
 import { parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
 import { createRemoteD1Client, sqlString } from "./lib/remote-d1";
+import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
+import { fetchTronDestroyWindowClear, type TronDestroyWindowObservation } from "../src/lib/blacklist/tron-replay-provider";
 
 const SCRIPT = "repair-tron-blacklist-amounts";
 const TOKEN = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
@@ -36,7 +38,14 @@ const schema = z.object({
   })).min(1).max(8),
 });
 
-export interface TronReplayRepair { event: z.infer<typeof event>; rawAmount: string; amount: number; evidenceObservedAt: number; }
+export interface TronReplayRepair {
+  event: z.infer<typeof event>;
+  rawAmount: string;
+  amount: number;
+  evidenceObservedAt: number;
+  /** Live destroy-window proof for a zero; audited next to the evidence hash. */
+  zeroDestroyObservation?: TronDestroyWindowObservation;
+}
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 
 /** Validates captured official responses; never turns incomplete evidence into a balance. */
@@ -45,6 +54,8 @@ export async function validateTronReplayEvidence(input: unknown, nowMs = Date.no
   assert(nowMs >= evidence.capturedAtMs && nowMs - evidence.capturedAtMs <= 15 * 60_000, "Evidence is stale or future-dated");
   const ids = new Set<string>();
   const repairs: TronReplayRepair[] = [];
+  const provider = { apiKey: process.env.TRONGRID_API_KEY ?? null, limiter: createRateLimiter(1),
+    budget: createBudget(16), pagesFetched: { count: 0 } };
   for (const entry of evidence.entries) {
     const e = entry.event, anchor = entry.anchor;
     assert(!ids.has(e.id), "Duplicate event id"); ids.add(e.id);
@@ -69,6 +80,7 @@ export async function validateTronReplayEvidence(input: unknown, nowMs = Date.no
     assert(!initial.searchParams.has("fingerprint") && [...initial.searchParams.keys()].every((key) => allowed.has(key) && initial.searchParams.getAll(key).length === 1), "Unexpected history filters");
     let next: string | undefined = initial.href;
     let lastTimestamp = -1, net = 0n, postFreeze = 0n;
+    let nonTrivialPreFreezeHistory = false;
     const records = new Set<string>();
     for (const page of entry.history.pages) {
       assert(next === page.requestUrl, "Pagination chain mismatch");
@@ -86,6 +98,7 @@ export async function validateTronReplayEvidence(input: unknown, nowMs = Date.no
         const identity = JSON.stringify([t.transaction_id, t.block_timestamp, t.from, t.to, t.value]);
         assert(!records.has(identity), "Duplicate transfer record requires receipt-level review"); records.add(identity);
         const value = BigInt(t.value);
+        if (value > 0n && t.block_timestamp < e.timestamp * 1000) nonTrivialPreFreezeHistory = true;
         const delta = (t.to === e.base58 ? value : 0n) - (t.from === e.base58 ? value : 0n);
         net += delta;
         assert(net >= 0n, "Incomplete history has a negative running balance");
@@ -97,10 +110,46 @@ export async function validateTronReplayEvidence(input: unknown, nowMs = Date.no
     const current = BigInt(`0x${anchor.balance.response.constant_result[0]}`);
     assert(net === current, "History does not reconcile with raw confirmed balance");
     const rawAmount = current - postFreeze;
-    assert(rawAmount > 0n && rawAmount <= BigInt(Number.MAX_SAFE_INTEGER), "Invalid or unrepresentable event balance");
-    repairs.push({ event: e, rawAmount: rawAmount.toString(), amount: Number(rawAmount) / 1e6, evidenceObservedAt: Math.floor(evidence.capturedAtMs / 1000) });
+    assert(rawAmount >= 0n && rawAmount <= BigInt(Number.MAX_SAFE_INTEGER), "Invalid or unrepresentable event balance");
+    let zeroDestroyObservation: TronDestroyWindowObservation | undefined;
+    if (rawAmount === 0n) {
+      assert(nonTrivialPreFreezeHistory, "Zero balance lacks non-trivial historical evidence");
+      assert(cutoff - e.timestamp * 1000 >= 15 * 60_000, "Freeze is too recent for zero replay");
+      const destroy = await fetchTronDestroyWindowClear(
+        provider,
+        TOKEN,
+        e.base58,
+        [{ signature: "DestroyedBlackFunds(address,uint256)" }],
+        e.timestamp * 1000,
+        cutoff,
+      );
+      assert(destroy.outcome === "clear", `Zero balance lacks a clear post-freeze destroy window (${destroy.outcome})`);
+      zeroDestroyObservation = destroy.observation;
+    }
+    repairs.push({
+      event: e,
+      rawAmount: rawAmount.toString(),
+      amount: Number(rawAmount) / 1e6,
+      evidenceObservedAt: Math.floor(evidence.capturedAtMs / 1000),
+      ...(zeroDestroyObservation ? { zeroDestroyObservation } : {}),
+    });
   }
   return repairs;
+}
+
+/**
+ * Rechecks only the time-dependent bounds on already-validated evidence bytes;
+ * never repeats the semantic validation or its live destroy-window reads.
+ * Capture and anchor ages are independent: anchors may predate the capture by
+ * the whole validation window, so a fresh capture does not keep an aging anchor
+ * provable — both bounds must hold at the import instant.
+ */
+export function assertTronReplayEvidenceFresh(input: unknown, nowMs: number): void {
+  const evidence = schema.parse(input);
+  assert(nowMs >= evidence.capturedAtMs && nowMs - evidence.capturedAtMs <= 15 * 60_000, "Evidence is stale or future-dated");
+  for (const entry of evidence.entries) {
+    assert(nowMs - entry.anchor.observedAtMs <= 45 * 60_000, "Balance anchor aged past its bounded capture window");
+  }
 }
 
 function guard(repair: TronReplayRepair): string {
@@ -111,14 +160,24 @@ function guard(repair: TronReplayRepair): string {
 export function buildTronReplayRepairSql(repairs: TronReplayRepair[], hash: string, bookmark: string, nowSec: number): string[] {
   assert(repairs.length > 0 && repairs.length <= 8 && /^[0-9a-f]{64}$/.test(hash), "Invalid repair plan");
   const where = repairs.map(guard).join(" OR ");
-  const details = JSON.stringify({ evidenceSha256: hash, bookmark, events: repairs.map((r) => ({ id: r.event.id, rawAmount: r.rawAmount, evidenceObservedAt: r.evidenceObservedAt })) });
+  const details = JSON.stringify({
+    evidenceSha256: hash,
+    bookmark,
+    events: repairs.map((r) => ({
+      id: r.event.id,
+      rawAmount: r.rawAmount,
+      evidenceObservedAt: r.evidenceObservedAt,
+      ...(r.zeroDestroyObservation ? { zeroDestroy: r.zeroDestroyObservation } : {}),
+    })),
+  });
   const value = `CASE id ${repairs.map((r) => `WHEN ${sqlString(r.event.id)} THEN ${r.amount}`).join(" ")} END`;
   const observedAt = `CASE id ${repairs.map((r) => `WHEN ${sqlString(r.event.id)} THEN ${r.evidenceObservedAt}`).join(" ")} END`;
+  const provenance = `CASE id ${repairs.map((r) => `WHEN ${sqlString(r.event.id)} THEN ${sqlString(`trongrid-transfer-replay${r.amount === 0 ? "-zero" : ""}:${hash}`)}`).join(" ")} END`;
   // The audit CHECK deliberately aborts the single atomic D1 import if any row changed.
   // SAFETY: identities/provenance use sqlString; numeric CASE values come from validated raw amounts and integer timestamps.
   return [
     `INSERT INTO admin_action_audit(created_at,actor,action,target,result,details_json,intent_key) SELECT ${nowSec},'operator-cli',${sqlString(SCRIPT)},'tron-USDT',CASE WHEN (SELECT COUNT(*) FROM blacklist_events WHERE ${where})=${repairs.length} THEN 'ok' ELSE 'guard_failed' END,${sqlString(details)},${sqlString(hash)};`,
-    `UPDATE blacklist_events SET amount=${value},amount_native=${value},amount_usd_at_event=${value},amount_source='derived',amount_status='resolved',amount_last_error_class=NULL,amount_last_provider='trongrid-transfer-ledger',amount_last_attempted_at=${nowSec},amount_attempt_count=amount_attempt_count+1,provenance_source=${sqlString(`trongrid-transfer-replay:${hash}`)},provenance_observed_at=${observedAt} WHERE ${where};`,
+    `UPDATE blacklist_events SET amount=${value},amount_native=${value},amount_usd_at_event=${value},amount_source='derived',amount_status='resolved',amount_last_error_class=NULL,amount_last_provider='trongrid-transfer-ledger',amount_last_attempted_at=${nowSec},amount_attempt_count=amount_attempt_count+1,provenance_source=${provenance},provenance_observed_at=${observedAt} WHERE ${where};`,
     `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(",")});`,
   ];
 }
@@ -129,7 +188,8 @@ export async function main(argv: string[]): Promise<void> {
   assert(typeof values.evidence === "string", "--evidence is required");
   const bytes = readFileSync(values.evidence, "utf8");
   const hash = createHash("sha256").update(bytes).digest("hex");
-  const repairs = await validateTronReplayEvidence(JSON.parse(bytes));
+  const evidenceInput: unknown = JSON.parse(bytes);
+  const repairs = await validateTronReplayEvidence(evidenceInput);
   const db = createRemoteD1Client("stablecoin-db");
   const pending = db.query<{ n: number }>(`SELECT COUNT(*) AS n FROM blacklist_events WHERE ${repairs.map(guard).join(" OR ")}`)[0]?.n;
   assert(pending === repairs.length, "One or more exact events are no longer unresolved; no mutations performed");
@@ -139,11 +199,14 @@ export async function main(argv: string[]): Promise<void> {
   const bookmark = bookmarkResult.bookmark;
   assert(typeof bookmark === "string" && bookmark.length > 0, "Fresh Time Travel bookmark unavailable");
   console.log(`Pre-repair bookmark: ${bookmark}`);
-  // Recheck freshness immediately before the atomic import; do not recapture or alter evidence.
-  await validateTronReplayEvidence(JSON.parse(bytes));
+  // Recheck only the time-dependent bounds immediately before the atomic import.
+  // The full validation above already proved these exact bytes, and repeating it
+  // would re-run the live destroy-window reads — but capture and anchor ages move
+  // independently while the bookmark is taken, so both bounds are re-asserted.
+  assertTronReplayEvidenceFresh(evidenceInput, Date.now());
   db.executeStatements(buildTronReplayRepairSql(repairs, hash, bookmark, Math.floor(Date.now() / 1000)), SCRIPT);
   // SAFETY: the SHA-256 provenance value is quoted by sqlString, never used as SQL syntax.
-  const changed = db.query<{ id: string; amount_native: number }>(`SELECT id,amount_native FROM blacklist_events WHERE provenance_source=${sqlString(`trongrid-transfer-replay:${hash}`)} AND amount_status='resolved'`);
+  const changed = db.query<{ id: string; amount_native: number }>(`SELECT id,amount_native FROM blacklist_events WHERE provenance_source IN (${sqlString(`trongrid-transfer-replay:${hash}`)},${sqlString(`trongrid-transfer-replay-zero:${hash}`)}) AND amount_status='resolved'`);
   assert(changed.length === repairs.length && repairs.every((r) => changed.some((c) => c.id === r.event.id && c.amount_native === r.amount)), "Repair readback failed; inspect audit and bookmark");
   console.log(`Verified ${changed.length} repaired event amounts; evidence ${hash}`);
 }

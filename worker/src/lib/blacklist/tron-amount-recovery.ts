@@ -21,6 +21,7 @@ import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueu
 import { buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence } from "./amount-persistence";
 import {
   fetchTronHeadBlock,
+  fetchTronDestroyWindowClear,
   fetchTronRawTokenBalance,
   fetchTronTransactionInfo,
   fetchTronTransferWindow,
@@ -261,8 +262,49 @@ export async function recoverTronFreezeAmountForRow(
       throw new TronReplayEvidenceError("ambiguous", "transfers share the freeze millisecond");
     }
     const rawAmount = atFreeze.net;
-    if (rawAmount <= BigInt(0) || rawAmount > MAX_SAFE_RAW_AMOUNT) {
+    if (rawAmount < BigInt(0) || rawAmount > MAX_SAFE_RAW_AMOUNT) {
       throw new TronReplayEvidenceError("evidence_mismatch", "derived frozen balance is not representable");
+    }
+    if (rawAmount === BigInt(0)) {
+      // Empty/zero-value history plus a zero balance is not evidence that the
+      // indexer found this account. Require observed pre-freeze activity instead.
+      if (!history.transfers.some((transfer) => transfer.timestampMs < freezeTimestampMs && transfer.value > BigInt(0))) {
+        throw new TronReplayEvidenceError("evidence_mismatch", "zero balance lacks non-trivial historical evidence");
+      }
+      let running = BigInt(0);
+      let previousTimestamp = -1;
+      for (const transfer of history.transfers) {
+        running += (transfer.to === accountBase58 ? transfer.value : BigInt(0)) -
+          (transfer.from === accountBase58 ? transfer.value : BigInt(0));
+        if (transfer.timestampMs < previousTimestamp || running < BigInt(0)) {
+          throw new TronReplayEvidenceError("evidence_mismatch", "zero history is not a complete ordered ledger");
+        }
+        previousTimestamp = transfer.timestampMs;
+      }
+      if (provider.pagesFetched.count - pagesAtStart >= pagesRemaining) {
+        throw new TronReplayEvidenceError("runtime_budget", "run page budget consumed before the destroy window read");
+      }
+      const destroyPageCap = windowPageCap();
+      const destroy = await fetchTronDestroyWindowClear(
+        provider,
+        config.contractAddress,
+        accountBase58,
+        config.events.filter((event) => event.eventType === "destroy"),
+        freezeTimestampMs,
+        settleHead.timestampMs,
+        destroyPageCap,
+      );
+      if (destroy.outcome !== "clear") {
+        // A window cut short only by the run's remaining pages proves nothing
+        // about the destroy history, so it stays a runtime condition like a
+        // stopped ledger read. `capExceeded` marks the truncation itself; a
+        // positively observed destroy — even on the final budget page — keeps
+        // the deterministic mismatch class.
+        if (destroy.capExceeded === true && destroyPageCap < TRON_REPLAY_MAX_PAGES_PER_HISTORY) {
+          throw new TronReplayEvidenceError("runtime_budget", "run page budget truncated the destroy window");
+        }
+        throw new TronReplayEvidenceError(destroy.outcome, "zero balance lacks a clear post-freeze destroy window");
+      }
     }
     return {
       amount: decimalNumberFromBigInt(rawAmount, config.decimals),
@@ -466,7 +508,7 @@ export async function backfillTronBlacklistAmounts(
         attemptedAt: attemptAt,
         lastErrorClass: null,
         lastProvider: "trongrid",
-        provenanceSource: TRON_REPLAY_PROVENANCE_SOURCE,
+        provenanceSource: recovery.amount === 0 ? `${TRON_REPLAY_PROVENANCE_SOURCE}-zero` : TRON_REPLAY_PROVENANCE_SOURCE,
         provenanceObservedAt: recovery.evidenceObservedAt,
       },
       { requireUnresolvedAmount: true },

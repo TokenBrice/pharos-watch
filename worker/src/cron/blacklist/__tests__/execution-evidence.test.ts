@@ -84,6 +84,31 @@ describe("blacklist execution evidence", () => {
     ]);
   });
 
+  it.each([
+    [6, 108, "destroyed"],
+    [108, 6, "frozen"],
+    [null, 108, "ambiguous"],
+    [6, null, "ambiguous"],
+    [6, 6, "ambiguous"],
+  ] as const)("uses confirmed Tron positions %s/%s, otherwise withholds state", (freezePosition, destroyPosition, expected) => {
+    const rows = (["blacklist", "destroy"] as const).map((event_type, index) => ({
+      ...makeBlacklistRow({
+        chain_id: "tron", tx_hash: `tx${index}`, id: `tron-tx${index}-${9 - index}`,
+        timestamp: 100, block_number: 10, event_type,
+      }),
+      transaction_index: index === 0 ? freezePosition : destroyPosition,
+    }) as BlacklistRow);
+    for (const permutation of [rows, [...rows].reverse()]) {
+      const records = buildBlacklistActiveRecords(permutation.map((row) => mapBlacklistEventRow({
+        ...row, suppression_reason: row.suppression_reason ?? null,
+      })));
+      expect(records[0].orderAmbiguityReason).toBe(expected === "ambiguous" ? "tron-cross-transaction-order" : undefined);
+      expect(records[0].destroyedAt).toBe(expected === "destroyed" ? 100 : null);
+      expect(buildLatestBlacklistRows(permutation).map((row) => row.event_type))
+        .toEqual(expected === "ambiguous" ? [] : [expected === "destroyed" ? "destroy" : "blacklist"]);
+    }
+  });
+
   it.each(["data", "result"])("bounds oversized %s evidence while releasing the third-scan frontier", async (field) => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT CHECK(length(value) < 20000), updated_at INTEGER)");
