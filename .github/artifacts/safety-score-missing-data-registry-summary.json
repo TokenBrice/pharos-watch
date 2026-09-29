@@ -1,109 +1,93 @@
 {
   "schemaVersion": 1,
   "generatedFrom": {
-    "asOfSec": 1788257829,
-    "asOfIso": "2026-09-01T10:17:09.000Z",
-    "factSetDigest": "60edb857cb312f0fb8075987ac2e98ef3c682331f10729d86f731218ea05238f",
-    "queueDigest": "6a155c7eca15c16922a62b2eb8b1b6ae814bae313635a01e73c21ff0395b7040",
+    "asOfSec": 1790705835,
+    "asOfIso": "2026-09-29T18:17:15.000Z",
+    "factSetDigest": "68e448d3f39c5264a1bc32cc3d7561c73f8e2d641f266e8c47cc072b54758b8f",
+    "queueDigest": "e6238083ea3a5d632c3209665e22ac40f0dd4c2a45cd5f734e7ff26a5608df05",
     "policyId": "safety-score-v9",
-    "policyDigest": "fa4af0387d3be293f6d6f3882900f0b5a567ed80bd4afa0a7e80563e8a11b455"
+    "policyDigest": "55217d24772395557c900c403edb62fc7e0d993bf2502f23126d8026c7eeccd3"
   },
   "summary": {
-    "stablecoinCount": 337,
-    "affectedStablecoinCount": 293,
-    "openItemCount": 925,
-    "compiledFactItemCount": 831,
-    "supplementalScoreItemCount": 94,
-    "claimGroupCount": 639,
+    "stablecoinCount": 330,
+    "affectedStablecoinCount": 278,
+    "openItemCount": 906,
+    "compiledFactItemCount": 714,
+    "supplementalScoreItemCount": 192,
+    "claimGroupCount": 622,
     "responsibilityCounts": [
       {
         "responsibility": "integration-missing",
-        "count": 18
+        "count": 20
       },
       {
         "responsibility": "issuer-undisclosed",
-        "count": 455
+        "count": 349
       },
       {
         "responsibility": "measured-adverse",
-        "count": 126
+        "count": 133
       },
       {
         "responsibility": "method-unsupported",
-        "count": 123
+        "count": 111
       },
       {
         "responsibility": "producer-failed",
-        "count": 96
+        "count": 80
       },
       {
         "responsibility": "published-evidence-expired",
-        "count": 13
+        "count": 21
       }
     ],
     "workTypeCounts": [
       {
         "key": "MECHANISM_REVIEW",
-        "count": 196
-      },
-      {
-        "key": "EXIT_DEX_COVERAGE",
-        "count": 179
-      },
-      {
-        "key": "ACCESS_REVIEW",
-        "count": 141
-      },
-      {
-        "key": "DEPLOYMENT_CONTROLS",
-        "count": 111
-      },
-      {
-        "key": "RESERVE_COMPOSITION",
-        "count": 111
-      },
-      {
-        "key": "BRIDGE_ROUTE_REVIEW",
-        "count": 67
-      },
-      {
-        "key": "EXIT_RUNTIME_ROUTE",
-        "count": 43
+        "count": 193
       },
       {
         "key": "BRIDGE_MATERIALITY",
-        "count": 22
+        "count": 154
       },
       {
-        "key": "ARCHETYPE_CLASSIFICATION",
-        "count": 13
+        "key": "EXIT_DEX_COVERAGE",
+        "count": 148
+      },
+      {
+        "key": "ACCESS_REVIEW",
+        "count": 137
+      },
+      {
+        "key": "RESERVE_COMPOSITION",
+        "count": 95
+      },
+      {
+        "key": "EXIT_RUNTIME_ROUTE",
+        "count": 56
+      },
+      {
+        "key": "BRIDGE_ROUTE_REVIEW",
+        "count": 46
+      },
+      {
+        "key": "DEPLOYMENT_CONTROLS",
+        "count": 24
       },
       {
         "key": "EXIT_OUTPUT",
-        "count": 10
+        "count": 17
       },
       {
         "key": "PEG_INPUT",
-        "count": 10
-      },
-      {
-        "key": "MINT_AUTHORITY",
-        "count": 6
-      },
-      {
-        "key": "ORACLE_BRANCH",
-        "count": 5
-      },
-      {
-        "key": "ORACLE_PROFILE",
-        "count": 4
+        "count": 16
       },
       {
         "key": "RESERVE_SLICE",
-        "count": 3
+        "count": 14
       },
       {
-        "key": "PARENT_RATEABILITY",
+        "key": "ORACLE_PROFILE",
         "count": 2
       },
       {
@@ -113,34 +97,42 @@
       {
         "key": "EXIT_SETTLEMENT_BOUND",
         "count": 1
+      },
+      {
+        "key": "MINT_AUTHORITY",
+        "count": 1
+      },
+      {
+        "key": "ORACLE_BRANCH",
+        "count": 1
       }
     ],
     "resolutionModeCounts": [
       {
         "key": "agent-curation",
-        "count": 594
+        "count": 463
       },
       {
         "key": "producer-runtime",
-        "count": 222
-      },
-      {
-        "key": "issuer-or-onchain-evidence",
-        "count": 77
+        "count": 205
       },
       {
         "key": "mixed-curation-and-runtime",
-        "count": 32
+        "count": 170
+      },
+      {
+        "key": "issuer-or-onchain-evidence",
+        "count": 68
       }
     ],
     "taskSourceCounts": [
       {
         "key": "compiled-fact-gap",
-        "count": 831
+        "count": 714
       },
       {
         "key": "score-projection-gap",
-        "count": 94
+        "count": 192
       }
     ]
   }
