@@ -18,7 +18,6 @@ import { runShellCommand, type CommandImplementation } from "../lib/command-runn
 
 const execFileAsync = promisify(execFile);
 const MANIFEST_KEY = "safety-map:latest.json";
-const FRESH_SAME_DAY_SECONDS = 6 * 3600;
 const MAX_MANIFEST_BYTES = 16_384;
 
 const USAGE = `Usage: npx tsx scripts/maintenance/publish-safety-score-map.ts <phase> [options]
@@ -33,6 +32,7 @@ Options:
   --state <path>         Run-state JSON (default: agents/safety-score-map/ci/publish-state.json)
   --out-dir <path>       Render output directory (default: agents/safety-score-map/ci)
   --event-name <name>    GitHub event name (plan; default: GITHUB_EVENT_NAME or workflow_dispatch)
+  --mode <mode>          Plan mode, required for plan: ensure skips when today's map is live; force supersedes it
   --job-status <status>  GitHub job status (summary; default: unknown)
   --dry-run              Plan only: inspect and print the decision without KV writes
   --plan-token <token>   Render/publish token emitted by plan; refuses a different plan
@@ -58,9 +58,12 @@ interface SafetyMapManifest {
   bytes: { png: number; alt: number };
 }
 
+export type SafetyMapPlanMode = "force" | "ensure";
+
 export interface SafetyMapPublishState {
   phase: "planned" | "rendered" | "published";
   eventName: string;
+  mode: SafetyMapPlanMode;
   plannedAtSec: number;
   planToken?: string;
   alreadyPublished: boolean;
@@ -177,6 +180,7 @@ export async function planSafetyMapPublication({
   adapter,
   dryRun = false,
   eventName,
+  mode,
   io = DEFAULT_IO,
   nowSec = Math.floor(Date.now() / 1000),
   statePath,
@@ -184,6 +188,7 @@ export async function planSafetyMapPublication({
   adapter: SafetyMapKvAdapter;
   dryRun?: boolean;
   eventName: string;
+  mode: SafetyMapPlanMode;
   io?: PublicationIo;
   nowSec?: number;
   statePath: string;
@@ -194,11 +199,14 @@ export async function planSafetyMapPublication({
 
   const today = utcDate(nowSec);
   const ageSec = nowSec - Number(priorManifest?.asOfSec);
-  const fresh = Number.isFinite(ageSec) && ageSec >= 0 && ageSec < FRESH_SAME_DAY_SECONDS;
-  const alreadyPublished = eventName === "schedule" && priorManifest?.date === today && fresh;
+  // `ensure` never re-renders a date that is already live: its dated PNG is the
+  // URL the digest has embedded and CDNs cache as immutable. Only `force`
+  // supersedes a same-day poster.
+  const alreadyPublished = mode === "ensure" && priorManifest?.date === today;
   const planToken = buildPlanToken({
     alreadyPublished,
     eventName,
+    mode,
     hadManifest,
     nowSec,
     priorManifest,
@@ -206,6 +214,7 @@ export async function planSafetyMapPublication({
   const state: SafetyMapPublishState = {
     phase: "planned",
     eventName,
+    mode,
     plannedAtSec: nowSec,
     planToken,
     alreadyPublished,
@@ -215,8 +224,8 @@ export async function planSafetyMapPublication({
 
   if (!hadManifest) io.stdout.write(`No existing ${MANIFEST_KEY} — treating this as the first publication.\n`);
   io.stdout.write(alreadyPublished
-    ? `Manifest for ${today} is live with data ${Math.round(ageSec / 60)}m old — skipping the re-render.\n`
-    : `Proceeding: manifest date=${priorManifest?.date ?? "none"}, today=${today}, event=${eventName}, data age=${Math.round(ageSec / 60)}m.\n`);
+    ? `Manifest for ${today} is already live (data ${Math.round(ageSec / 60)}m old) — ensure mode skips the re-render.\n`
+    : `Proceeding: manifest date=${priorManifest?.date ?? "none"}, today=${today}, event=${eventName}, mode=${mode}, data age=${Math.round(ageSec / 60)}m.\n`);
 
   if (!dryRun) writeState(statePath, state);
   io.writeOutput("already_published", alreadyPublished);
@@ -229,19 +238,22 @@ export async function planSafetyMapPublication({
 function buildPlanToken({
   alreadyPublished,
   eventName,
+  mode,
   hadManifest,
   nowSec,
   priorManifest,
 }: {
   alreadyPublished: boolean;
   eventName: string;
+  mode: SafetyMapPlanMode;
   hadManifest: boolean;
   nowSec: number;
   priorManifest?: Record<string, unknown>;
 }): string {
   return sha256(Buffer.from(JSON.stringify({
-    version: 1,
+    version: 2,
     eventName,
+    mode,
     plannedAtSec: nowSec,
     alreadyPublished,
     hadManifest,
@@ -254,6 +266,7 @@ function assertPlanToken(state: SafetyMapPublishState, expectedPlanToken?: strin
   const computedPlanToken = buildPlanToken({
     alreadyPublished: state.alreadyPublished,
     eventName: state.eventName,
+    mode: state.mode,
     hadManifest: state.hadManifest,
     nowSec: state.plannedAtSec,
     priorManifest: state.priorManifest,
@@ -398,7 +411,7 @@ export function buildSafetyMapSummary(state: SafetyMapPublishState | null, jobSt
     `| Prior manifest existed | ${value(state?.hadManifest ?? "unknown")} |`, "",
   ];
   if (state?.alreadyPublished) {
-    lines.push("### Skipped — today is already published", "", "The live `safety-map:latest.json` already carries today's date with fresh", "data, so this scheduled retry slot exited without rendering or writing.");
+    lines.push("### Skipped — today is already published", "", "The live `safety-map:latest.json` already carries today's date, so this", `\`${state.mode}\`-mode run exited without rendering or writing; only a \`force\` dispatch supersedes a same-day map.`);
   } else if (jobStatus === "success" && state?.phase === "published" && manifest) {
     lines.push("### Published keys", "", ...safetyMapPublicationEntries(state, dirname(state.manifestPath ?? "")).map(({ key }) => `- \`${key}\`${key === MANIFEST_KEY ? " — manifest, written last" : key === `safety-map:${manifest.date}.png` ? " — the URL the digest embeds" : ""}`));
   } else {
@@ -421,6 +434,7 @@ export async function runSafetyMapPublicationCli(argv: readonly string[], io: Pu
       "job-status": { type: "string" },
       "dry-run": { type: "boolean" },
       "plan-token": { type: "string" },
+      mode: { type: "string" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE, io.stdout)) return;
@@ -432,7 +446,9 @@ export async function runSafetyMapPublicationCli(argv: readonly string[], io: Pu
   const statePath = resolve(typeof values.state === "string" ? values.state : join(outDir, "publish-state.json"));
   const planToken = typeof values["plan-token"] === "string" ? values["plan-token"] : undefined;
   if (phase === "plan") {
-    await planSafetyMapPublication({ adapter: defaultAdapter(), dryRun: values["dry-run"] === true, eventName: typeof values["event-name"] === "string" ? values["event-name"] : process.env.GITHUB_EVENT_NAME ?? "workflow_dispatch", io, statePath });
+    const mode = values.mode;
+    assertCliUsage(mode === "force" || mode === "ensure", "plan requires --mode=force or --mode=ensure");
+    await planSafetyMapPublication({ adapter: defaultAdapter(), dryRun: values["dry-run"] === true, eventName: typeof values["event-name"] === "string" ? values["event-name"] : process.env.GITHUB_EVENT_NAME ?? "workflow_dispatch", mode, io, statePath });
   } else if (phase === "render") {
     await renderSafetyMapPublication({ io, outDir, planToken, statePath });
   } else if (phase === "publish") {

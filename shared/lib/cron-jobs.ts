@@ -869,6 +869,17 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
       "Retries immutable Telegram daily/weekly digest editions without regenerating copy and surfaces ambiguous sends for operator reconciliation.",
   },
   {
+    job: "safety-map-producer-kick",
+    label: "Safety map producer kick",
+    intervalSec: DAY_SECONDS,
+    scheduleKey: "digestTriggerPoll",
+    maxConnections: 1,
+    connectionGroup: "digest-trigger-poll-chain",
+    statusTracked: false,
+    notes:
+      "Between 06:20 and 08:00 UTC, serially reads the Safety Score map manifest and, when it is not today's, dispatches the map workflow in ensure mode (at most three times a day, 15 minutes apart) so the map lands before the 08:05 digest.",
+  },
+  {
     job: "digest-trigger-poll",
     label: "Manual digest trigger poll",
     scheduleKey: "digestTriggerPoll",

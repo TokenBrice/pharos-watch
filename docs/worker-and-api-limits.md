@@ -75,7 +75,7 @@ The scheduler is structured around that conservative repo constraint:
 - shared slots bundle only related work
 - the quarter-hourly handler sequences jobs instead of fanning them out blindly, with D1-only DDR work moved to the later `+8` follow-up lane
 - `npm run check:cron-connections` fails any trigger at or above `6/6` and reports `5/6` triggers as **headroom full**
-- the connection check includes budget-only scheduled surfaces that do not create separate `cron_runs` rows: `telegram-registration-reconciliation`, `telegram-digest-outbox-drain`, and `digest-trigger-poll`
+- the connection check includes budget-only scheduled surfaces that do not create separate `cron_runs` rows: `telegram-registration-reconciliation`, `telegram-digest-outbox-drain`, `safety-map-producer-kick`, and `digest-trigger-poll`
 
 Treat any new fetch-heavy work added to an existing trigger slot as competing for the same trigger-wide outbound connection budget. A trigger at `5/6` must be treated as full for new fetch-heavy work unless the change also reduces existing peak usage or moves work to a different slot.
 

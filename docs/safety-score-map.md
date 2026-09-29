@@ -62,7 +62,7 @@ There is deliberately no day-over-day score, grade, tier, leader, census, supply
 
 `.github/workflows/safety-map-refresh.yml` owns checkout, credentials, scheduling, and artifact upload. Its lightweight `plan` job inspects live KV with Node but no browser, emits `should_render` and an immutable plan token, and hands the state to the browser-enabled `render` job only when rendering is needed. `scripts/maintenance/publish-safety-score-map.ts` owns the tested operational state machine through explicit `plan`, `render`, `publish`, and `summary` phases; the workflow passes the plan token to render and publish so a stale plan cannot publish.
 
-The workflow reads the live manifest only in the plan-before-browser phase to decide whether a scheduled slot has already produced a sufficiently fresh same-day map. When needed, the render job installs Playwright/Firefox, renders the daily edition, builds the compact KV manifest from the renderer's manifest sidecar, and publishes. Key order is load-bearing:
+The workflow reads the live manifest only in the plan-before-browser phase. The plan runs in one of two modes: `ensure` (every `schedule` run and the Worker's pre-digest dispatch) exits early, rendering and writing nothing, whenever the live manifest already carries today's date, whatever that map's data age; `force` (the default for a manual `workflow_dispatch`) always renders, so an operator can supersede a bad same-day poster. `ensure` never re-renders a live same-day date because its dated PNG is the URL the digest has already embedded and CDNs cache as `immutable`. When needed, the render job installs Playwright/Firefox, renders the daily edition, builds the compact KV manifest from the renderer's manifest sidecar, and publishes. Key order is load-bearing:
 
 | Key | Contents |
 | --- | --- |
@@ -75,13 +75,23 @@ Because the manifest is written last, a consumer that requires it can never obse
 
 Keys live under the single-purpose `safety-map:` prefix inside the existing `SELECTOR_SNAPSHOTS` namespace — the same namespace `functions/selector-snapshot/[[path]].ts` uses. Reusing it changes account state not at all, so the weekly Cloudflare account-state drift check needs no manifest update. (R2 was rejected for this reason among others: that check normalizes `d1` and `kv_namespace` bindings only, so an R2 bucket would be unmonitored surface.)
 
-Failure surfaces as a red run and a GitHub notification; the workflow itself has no alerting path. The operator-visible signal comes from the Worker instead: the digest publication watchdog fetches `/safety-scores/map.json` after 07:45 UTC and, when the manifest is not today's, raises the advisory `map-producer-lag` condition as a `Producer-lag notice` on the operator Telegram destination. Being advisory, it never consumes the digest publication alert cooldown and never marks the sentinel run degraded — digest publication stays unblocked.
+Failure surfaces as a red run and a GitHub notification; the workflow itself has no alerting path. The operator-visible signal comes from the Worker instead: the digest publication watchdog fetches `/safety-scores/map.json` from 07:15 UTC — once the producer kick below has spent its whole dispatch budget plus one render of slack — and, when the manifest is not today's, raises the advisory `map-producer-lag` condition as a `Producer-lag notice` on the operator Telegram destination. On the 15-minute status lane the first check lands at 07:24, leaving about 40 minutes for a manual `force` dispatch before the 08:05 digest. Being advisory, it never consumes the digest publication alert cooldown and never marks the sentinel run degraded — digest publication stays unblocked.
+
+### Pre-Digest Producer Kick
+
+GitHub starts scheduled workflow runs hours late: in September 2026 the earliest of the three daily slots was created five to six and a half hours after its cron time, and other scheduled workflows in the repository lagged by up to eight and a half hours. Scheduled slots alone therefore missed the 08:05 UTC digest on 2026-09-27 and 2026-09-29. `workflow_dispatch` events are not subject to that scheduler queue, so the Worker owns the pre-digest trigger.
+
+`worker/src/cron/safety-map-producer-kick.ts` runs as the budget-only `safety-map-producer-kick` surface on the five-minute digest trigger poll. Between 06:20 and 08:00 UTC it reads the manifest date; only a manifest dated today suppresses action, so an unreadable manifest is treated as missing rather than as published. Otherwise it dispatches `safety-map-refresh.yml` on `main` in `ensure` mode through the GitHub REST API with the Worker's `GITHUB_PAT`, at most three times per UTC day and at least 15 minutes apart. Each attempt is claimed in the D1 `cache` key `safety-map:producer-kick:v1` before the request is sent, so a lost response costs one bounded attempt and never loops. A render takes about three minutes, so the three attempts (normally 06:20, 06:35, 06:50) finish well before the digest. Outside the window the surface makes no reads and records nothing; its status telemetry therefore uses a one-day interval.
+
+The surface reports `current`, `dispatched`, `awaiting-render` (skipped until the spacing elapses), `dispatch-failed` with the GitHub status and a bounded message snippet, `attempts-exhausted`, or `token-missing`; the last three are `degraded`. A persistent render failure consumes all three attempts and is then left to the operator advisory: retrying a deterministic generator guard cannot fix it.
 
 ### Provisioning
 
 `vars.SAFETY_MAP_KV_NAMESPACE_ID` and `secrets.SAFETY_MAP_KV_TOKEN` are provisioned. The token is scoped to *Workers KV Storage: Edit* on that one namespace and is deliberately **not** `CLOUDFLARE_API_TOKEN`, the broad account token that deploys production Pages. Scoping this writer to one namespace keeps an unattended browser job away from the deploy token, even though some other scheduled workflows (for example `curation-expiry-sweep.yml`) still consume that account token outside `production` environment protection.
 
-The workflow runs on three daily schedules, 02:20, 04:20, and 06:20 UTC, and also supports `workflow_dispatch`. GitHub delays scheduled runs by up to about an hour under load (observed: 47 minutes on 2026-08-24, which made the original single 07:20 slot miss that day's digest; 53 minutes on 2026-08-26), so a single slot leaves exactly one attempt before the 08:05 UTC digest cron. A later scheduled slot exits early — rendering and writing nothing — when the live manifest already carries today's date with data under six hours old. Manual dispatches never take that early exit, so an operator can always supersede a bad same-day poster.
+The Worker kick reuses the Worker secret `GITHUB_PAT` that the feedback issue bridge already requires. A classic token needs `repo` scope; a fine-grained token needs *Actions: Read and write* on this repository in addition to the feedback bridge's *Issues* access. A token without Actions write access surfaces as `dispatch-failed` with `dispatch-http-403` on the kick surface.
+
+The workflow keeps three daily schedules, 01:20, 03:20, and 05:20 UTC, as a no-cost fallback behind the Worker kick: `schedule` runs plan in `ensure` mode and exit early once today's map is live. It also supports `workflow_dispatch` with a `mode` input (`force` by default for operators, `ensure` for the Worker).
 
 ## Serving
 
@@ -116,7 +126,7 @@ If any condition fails, the digest still generates and delivers without the map 
 
 Three levers, in increasing order of what has already escaped:
 
-1. **Stop generating.** `gh workflow disable safety-map-refresh.yml`. Previously published keys stay live and served.
+1. **Stop generating.** `gh workflow disable safety-map-refresh.yml`. Previously published keys stay live and served. A disabled workflow also refuses the Worker's pre-digest dispatches; the kick surface then reports `dispatch-failed` until its daily attempt budget is spent.
 2. **Stop serving the image.** Delete `safety-map:latest.png` and today's dated key plus any dated keys still eligible for the two-day carry-forward window, then run `.github/workflows/purge-pages-zone-cache.yml`. The Function then returns 404 with `no-store` and the page renders its unavailable panel. No Pages release is required.
 
    The purge is not optional. `latest.png` is served with `s-maxage=300, stale-while-revalidate=86400`, so a deleted key can keep being served from the edge for up to a day. Dated keys are `immutable` and will not re-validate at all until purged.

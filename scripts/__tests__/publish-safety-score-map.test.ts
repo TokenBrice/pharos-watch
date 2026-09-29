@@ -68,6 +68,7 @@ function writeRenderedState(directory: string, overrides: Partial<SafetyMapPubli
   const state: SafetyMapPublishState = {
     phase: "rendered",
     eventName: "schedule",
+    mode: "ensure",
     plannedAtSec: 1_785_283_200,
     alreadyPublished: false,
     hadManifest: false,
@@ -108,34 +109,35 @@ describe("Safety Map publication CLI", () => {
     ]);
   });
 
-  it("skips a scheduled same-day publication only while data is under six hours old", async () => {
+  it("lets ensure mode skip any live same-day manifest while force and older dates render", async () => {
     const directory = temporaryDirectory();
     const statePath = join(directory, "publish-state.json");
     const adapter = new MockKvAdapter();
     const nowSec = Date.UTC(2026, 6, 27, 8, 0, 0) / 1000;
-    adapter.listings.set("safety-map:latest.json", ["safety-map:latest.json"]);
-    adapter.values.set("safety-map:latest.json", Buffer.from(JSON.stringify({
-      date: "2026-07-27",
-      asOfSec: nowSec - (6 * 3600 - 1),
+    const setLiveManifest = (date: string) => adapter.values.set("safety-map:latest.json", Buffer.from(JSON.stringify({
+      date,
+      // Held publications can leave a same-day map on old data; ensure must
+      // still never re-render the dated key the digest has already embedded.
+      asOfSec: nowSec - 20 * 3600,
       renderedAtSec: nowSec - 100,
     })));
+    adapter.listings.set("safety-map:latest.json", ["safety-map:latest.json"]);
+    setLiveManifest("2026-07-27");
     const io = createIo();
 
-    const result = await planSafetyMapPublication({ adapter, eventName: "schedule", io, nowSec, statePath });
-
-    expect(result.alreadyPublished).toBe(true);
-    expect(io.output).toContain("already_published=true");
+    const ensured = await planSafetyMapPublication({ adapter, eventName: "workflow_dispatch", mode: "ensure", io, nowSec, statePath });
+    expect(ensured.alreadyPublished).toBe(true);
+    expect(io.output).toContain("should_render=false");
     expect(adapter.puts).toEqual([]);
 
-    adapter.values.set("safety-map:latest.json", Buffer.from(JSON.stringify({
-      date: "2026-07-27",
-      asOfSec: nowSec - 6 * 3600,
-      renderedAtSec: nowSec - 100,
-    })));
     const dryRunStatePath = join(directory, "dry-run-state.json");
-    const boundary = await planSafetyMapPublication({ adapter, dryRun: true, eventName: "schedule", io, nowSec, statePath: dryRunStatePath });
-    expect(boundary.alreadyPublished).toBe(false);
+    const forced = await planSafetyMapPublication({ adapter, dryRun: true, eventName: "workflow_dispatch", mode: "force", io, nowSec, statePath: dryRunStatePath });
+    expect(forced.alreadyPublished).toBe(false);
     expect(existsSync(dryRunStatePath)).toBe(false);
+
+    setLiveManifest("2026-07-26");
+    const carried = await planSafetyMapPublication({ adapter, dryRun: true, eventName: "schedule", mode: "ensure", io, nowSec, statePath: dryRunStatePath });
+    expect(carried.alreadyPublished).toBe(false);
   });
 
   it("renders directly from canonical inputs and builds the KV manifest", async () => {
@@ -146,6 +148,7 @@ describe("Safety Map publication CLI", () => {
     await planSafetyMapPublication({
       adapter,
       eventName: "workflow_dispatch",
+      mode: "force",
       nowSec,
       statePath,
     });

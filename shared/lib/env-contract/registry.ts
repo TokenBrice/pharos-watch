@@ -358,7 +358,7 @@ export const ENV_BINDINGS = [
   {
     key: "GITHUB_PAT",
     valueType: "string",
-    description: "GitHub personal access token used by the feedback -> issue bridge; required to keep `POST /api/feedback` available.",
+    description: "GitHub personal access token used by the feedback -> issue bridge (required to keep `POST /api/feedback` available) and by the pre-digest Safety Score map producer kick, which dispatches `safety-map-refresh.yml`; it needs classic `repo` scope or fine-grained Issues and Actions write access on the repository.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
       worker: { status: "required" },

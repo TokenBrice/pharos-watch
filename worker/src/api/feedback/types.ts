@@ -44,6 +44,3 @@ export interface ValidatedFeedbackSubmission {
   feedback: FeedbackBody;
   canonicalStablecoinId?: string;
 }
-
-export const GITHUB_OWNER = "TokenBrice";
-export const GITHUB_REPO = "pharos-watch";
