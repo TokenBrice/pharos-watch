@@ -17,8 +17,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv13)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "Pharos pre-expiry reserve refresh 2026-09-29",
     "confidence": "verified",
     "sources": [
       {
@@ -30,7 +30,7 @@
         "url": "https://www.forteaud.com/transparency"
       }
     ],
-    "rationale": "Reviewed 2026-09-21. Forte's current transparency page states that AUDF is fully backed 1:1 by Australian dollar reserves held with regulated financial institutions. Horizon Nexus (Audit) Pty Ltd audited the complete AUDF reserve bank-account cash balance of AUD 5,142,851.53 as of 31 August 2026 and issued an unmodified opinion dated 7 September 2026 under Australian Auditing Standards. The report supports one 100% AUD bank-deposit slice. It does not identify the bank or reconcile token liabilities inside the audit engagement, so those matters remain custody and assurance limitations rather than unidentified reserve assets.",
+    "rationale": "Reviewed 2026-09-21. Forte's current transparency page states that AUDF is fully backed 1:1 by Australian dollar reserves held with regulated financial institutions. Horizon Nexus (Audit) Pty Ltd audited the complete AUDF reserve bank-account cash balance of AUD 5,142,851.53 as of 31 August 2026 and issued an unmodified opinion dated 7 September 2026 under Australian Auditing Standards. The report supports one 100% AUD bank-deposit slice. It does not identify the bank or reconcile token liabilities inside the audit engagement, so those matters remain custody and assurance limitations rather than unidentified reserve assets. Rechecked 2026-09-29 for the pre-expiry sweep: the issuer documents endpoint still serves audf-reserves-report-august-2026 as the newest monthly reserve audit, the September and October 2026 slugs return 404, monthly slugs resolve continuously from February through August 2026, and the legacy Squarespace PDF paths are dead after the site migration, so no newer primary evidence exists and compositionAsOf stays 2026-08-31. The August report was signed on 7 September 2026, so the September 2026 report covering September 30, 2026 balances is expected around the first week of October 2026; until it is published, this curated composition stops being admitted for Safety Score V9 when the 31-day composition window plus 7-day reporting grace ends on 2026-10-08.",
     "compositionBasis": "Horizon Nexus independent audit of the AUDF reserve bank-account cash balance as of 2026-08-31",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

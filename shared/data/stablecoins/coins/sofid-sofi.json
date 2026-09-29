@@ -40,16 +40,9 @@
   ],
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "status": "quarantined",
+  "status": "active",
   "announcedDate": "2025-12",
   "launchDate": "2025-12-18",
-  "notices": [
-    {
-      "type": "info",
-      "title": "Market data preview-only",
-      "message": "Coin is live but CoinGecko market data is preview-only pending retail rollout; price may report null until market activates."
-    }
-  ],
   "featuredContent": [
     {
       "type": "article",
@@ -101,19 +94,35 @@
       "title": "SoFiUSD expansion to Solana announced at Solana Accelerate Miami",
       "description": "Solana deployment in progress; retail rollout to SoFi's 13.7M members planned for 'coming months'.",
       "sourceUrl": "https://cryptobriefing.com/sofiusd-launch-solana/"
+    },
+    {
+      "date": "2026-05-27",
+      "type": "milestone",
+      "title": "SoFiUSD retail launch on the SoFi banking app across Ethereum and Solana",
+      "description": "Nearly 15 million members can buy, sell, hold, and convert SoFiUSD in-app; first U.S. national-bank stablecoin available directly on a banking platform. Issuer cites regular reserve attestations by an independent U.S.-licensed CPA.",
+      "sourceUrl": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx"
+    },
+    {
+      "date": "2026-09-22",
+      "type": "milestone",
+      "title": "Stablecoin settlement live across Mastercard's global payments network",
+      "description": "SoFi Bank becomes the first U.S. national bank to go live with SoFiUSD settlement on Mastercard's network and is migrating its entire $25 billion card program to SoFiUSD settlement.",
+      "sourceUrl": "https://investors.sofi.com/news/news-details/2026/SoFi-Becomes-First-National-Bank-to-Go-Live-with-Stablecoin-Settlement-across-Mastercards-Global-Payments-Network/default.aspx"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "milestone",
+      "title": "Pharos coverage re-admitted after supply data restored",
+      "description": "CoinGecko and DefiLlama now publish a positive circulating supply (~$329M) that matches the combined on-chain SoFiUSD totals on Ethereum and Solana.",
+      "sourceUrl": "https://www.coingecko.com/en/coins/sofiusd"
     }
   ],
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.sofi.com/crypto/sofiusd/",
-    "provider": "SoFi product disclosures (press reports monthly Deloitte verification, but no public attestation report or transparency page exists; the previously recorded SEC URL resolved to an unrelated ABS-15G filing under a different CIK)",
+    "provider": "SoFi product disclosures; the May 2026 retail-launch release cites regular reserve attestations by an independent U.S.-licensed CPA, but no SoFiUSD attestation report is publicly filed — SEC EDGAR full-text search (2026-09-29) returns no SoFiUSD attestation, and SoFi Bank N.A.'s ABS-15G filings are agreed-upon-procedures reports for its consumer-loan securitization trusts",
     "attestorTier": "self",
     "cadence": "undisclosed",
     "attestorJurisdiction": "United States"
-  },
-  "listingStatusReview": {
-    "changedAt": "2026-07-15",
-    "reviewBy": "2026-08-15",
-    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
   }
 }

@@ -1,5 +1,5 @@
 import { drainResponseBody } from "../../lib/response-body";
-import { GITHUB_OWNER, GITHUB_REPO } from "./types";
+import { GITHUB_OWNER, GITHUB_REPO } from "../../lib/github-repo";
 
 export class GitHubIssueRejectedError extends Error {
   readonly status: number;

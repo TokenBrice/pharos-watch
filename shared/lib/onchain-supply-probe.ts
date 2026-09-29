@@ -362,6 +362,21 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("hyperevm"),
     supplyProbeChain("stable"),
   ],
+  // thUSD is a LayerZero OFT mesh whose Ethereum leg is the OFTAdapter lockbox
+  // 0x9AA9Aa0530a6AF70EE7BC47cF1240100f514b065. Verified 2026-09-29 at Ethereum
+  // block 26083731: the adapter escrows 50,106,870.731594 thUSD against
+  // 49,916,245.786914 minted on Stable and 190,624.946680 on Arbitrum (sum
+  // 50,106,870.733574, adapter escrow within rounding of the live reads), so
+  // Ethereum totalSupply() 133,670,676.056526 is the conserved global total and
+  // is reallocated below. CoinGecko lists theo-usd with a price but zero market
+  // cap, so this aggregate is the market-cap admission path. BSC and Mantle
+  // OFTs are deployed at the same address but hold zero supply and have no
+  // documented live lane, so they are not tracked deployments.
+  "thusd-theo": [
+    { chain: "ethereum" },
+    supplyProbeChain("stable"),
+    { chain: "arbitrum" },
+  ],
   // wiTRY's Ethereum escrow 0x698b7518711bDe4832fDc19F5262DF705c713006 holds
   // 346,349,590.501584 wiTRY, bit-for-bit the MegaETH totalSupply(), so 94% of
   // the Ethereum total is really MegaETH float and must be reallocated. The
@@ -747,6 +762,7 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "wsrusd-reservoir": "ethereum",
   "savusd-avant": "avalanche",
   "thbill-theo": "ethereum",
+  "thusd-theo": "ethereum",
   "witry-brix": "ethereum",
   "krwq-iq": "ethereum",
   "syrupusdt-maple": "ethereum",

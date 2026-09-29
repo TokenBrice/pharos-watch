@@ -55,7 +55,7 @@ export const content: ArchetypeContent = {
     },
     {
       coinId: "usdy-ondo-finance",
-      note: "NAV-appreciating dollar token backed by short Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits. Permissioned for non-U.S. investors; bank-wire redemption at daily NAV.",
+      note: "NAV-appreciating dollar token backed by short-term U.S. Treasury bills and bank demand deposits, verified daily against the issuer's accounts by an independent verification agent. Permissioned for non-U.S. investors; bank-wire redemption at daily NAV.",
     },
     {
       coinId: "ousg-ondo-finance",

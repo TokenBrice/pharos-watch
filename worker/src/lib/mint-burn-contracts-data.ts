@@ -152,6 +152,7 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "ousg-ondo-finance", dustThreshold: 100 },
   { stablecoinId: "mtbill-midas", dustThreshold: 10_000 },
   { stablecoinId: "thbill-theo", dustThreshold: 10_000 },
+  { stablecoinId: "thusd-theo", dustThreshold: 10_000 },
   { stablecoinId: "wsrusd-reservoir", dustThreshold: 10_000 },
   { stablecoinId: "audd-novatti", dustThreshold: 10_000 },
   { stablecoinId: "jpyc-jpyc", dustThreshold: 10_000 },

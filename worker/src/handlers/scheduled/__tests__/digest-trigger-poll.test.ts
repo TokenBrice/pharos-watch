@@ -149,7 +149,7 @@ describe("runDigestTriggerPollSlot", () => {
       jobsNeutralSkipped: 1,
       jobsDegraded: 0,
       jobsErrored: 0,
-      budgetOnlyJobs: 2,
+      budgetOnlyJobs: 3,
       jobs: [
         {
           job: "digest-trigger-poll",

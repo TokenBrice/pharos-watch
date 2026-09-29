@@ -1,9 +1,8 @@
 import { formatIsoDate } from "@shared/lib/format";
-import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
-import { cancelResponseBodyQuietly, readResponseTextWithinLimitWithSignal } from "../lib/response-body";
+import { readSafetyMapManifestDate, type SafetyMapManifestDateObservation } from "../lib/digest-safety-map";
 import { escapeHtml, type TelegramCreds } from "../lib/telegram";
 import type { CronResult } from "../lib/cron-logger";
 import {
@@ -12,16 +11,14 @@ import {
   NON_WEEKLY_DIGEST_SQL_FILTER,
 } from "../lib/digest-sql-filters";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
+import { SAFETY_MAP_READY_AFTER_SEC } from "./safety-map-producer-kick";
 
 const DIGEST_WATCHDOG_STATE_KEY = "digest-publication-watchdog:state:v1";
 const DIGEST_WATCHDOG_ALERT_KEY = "digest-publication-watchdog:alert:v1";
 const DIGEST_PUBLICATION_ALERT_COOLDOWN_SEC = 30 * 60;
 
-const MAP_READY_AFTER_SEC = 7 * 3600 + 45 * 60;
 const DAILY_DIGEST_DUE_AFTER_SEC = 8 * 3600 + 30 * 60;
 const WEEKLY_DIGEST_DUE_AFTER_SEC = 8 * 3600 + 35 * 60;
-const MAP_MANIFEST_MAX_BYTES = 16_384;
-const MAP_MANIFEST_TIMEOUT_MS = 3_000;
 
 /**
  * Single source for the condition set. The union is derived from it and every
@@ -60,11 +57,6 @@ interface DigestPublicationObservation {
   state: ConditionState;
   detail: string;
   advisory: boolean;
-}
-
-interface MapManifestObservation {
-  date: string | null;
-  reason: string | null;
 }
 
 export interface DigestPublicationWatchdogOptions {
@@ -121,49 +113,6 @@ async function readFirst<T>(
   );
   throwIfAborted(signal);
   return row ?? null;
-}
-
-async function readMapManifestDate(
-  signal?: AbortSignal,
-): Promise<MapManifestObservation> {
-  const timeoutSignal = AbortSignal.timeout(MAP_MANIFEST_TIMEOUT_MS);
-  const requestSignal = signal
-    ? AbortSignal.any([signal, timeoutSignal])
-    : timeoutSignal;
-  try {
-    const response = await fetch(`${SITE_ORIGIN}/safety-scores/map.json`, {
-      headers: { Accept: "application/json" },
-      signal: requestSignal,
-    });
-    if (!response.ok) {
-      await cancelResponseBodyQuietly(response);
-      return { date: null, reason: `manifest-http-${response.status}` };
-    }
-    const raw = await readResponseTextWithinLimitWithSignal(
-      response,
-      MAP_MANIFEST_MAX_BYTES,
-      requestSignal,
-    );
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return { date: null, reason: "manifest-invalid-json" };
-    }
-    const manifestDate = parsed && typeof parsed === "object"
-      ? (parsed as { date?: unknown }).date
-      : null;
-    if (typeof manifestDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(manifestDate)) {
-      return { date: null, reason: "manifest-invalid" };
-    }
-    return { date: manifestDate, reason: null };
-  } catch (error) {
-    throwIfAborted(signal);
-    const reason = error instanceof Error && error.message
-      ? error.message.slice(0, 80)
-      : "read-failed";
-    return { date: null, reason: `manifest-read-failed:${reason}` };
-  }
 }
 
 function conditionLabel(condition: DigestPublicationCondition): string {
@@ -243,9 +192,9 @@ async function readPublicationObservations(
     mapDue: boolean;
   },
   signal?: AbortSignal,
-): Promise<{ observations: DigestPublicationObservation[]; map: MapManifestObservation | null }> {
+): Promise<{ observations: DigestPublicationObservation[]; map: SafetyMapManifestDateObservation | null }> {
   const observations: DigestPublicationObservation[] = [];
-  let map: MapManifestObservation | null = null;
+  let map: SafetyMapManifestDateObservation | null = null;
 
   if (options.dailyDue) {
     const dailyRow = await readFirst<{ present: number }>(
@@ -336,7 +285,7 @@ async function readPublicationObservations(
   }
 
   if (options.mapDue) {
-    map = await readMapManifestDate(signal);
+    map = await readSafetyMapManifestDate(signal);
     const mapCurrent = map.date === date;
     observations.push({
       condition: "map-producer-lag",
@@ -366,7 +315,7 @@ export async function runDigestPublicationWatchdog(
   const weekDate = formatIsoDate(weekStartSec);
   const dailyDue = nowSec - dayStartSec >= DAILY_DIGEST_DUE_AFTER_SEC;
   const weeklyDue = nowSec - weekStartSec >= WEEKLY_DIGEST_DUE_AFTER_SEC;
-  const mapDue = nowSec - dayStartSec >= MAP_READY_AFTER_SEC;
+  const mapDue = nowSec - dayStartSec >= SAFETY_MAP_READY_AFTER_SEC;
   const { observations, map } = await readPublicationObservations(
     db,
     date,

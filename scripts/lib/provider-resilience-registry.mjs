@@ -229,19 +229,19 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     files: [
       "worker/src/lib/digest-safety-map.ts",
       "worker/src/cron/digest/publish.ts",
-      "worker/src/cron/digest-publication-watchdog.ts",
     ],
     tests: [
       "worker/src/lib/__tests__/digest-safety-map.test.ts",
       "worker/src/cron/__tests__/daily-digest-generation.test.ts",
       "worker/src/cron/__tests__/digest-publication-watchdog.test.ts",
+      "worker/src/cron/__tests__/safety-map-producer-kick.test.ts",
     ],
     allowBareFetch: true,
     directFetchJustification:
       "The same-owned Pages publication is an optional digest attachment: reads are time-bounded per phase, response bodies are consumed or cancelled, and an unready map is carried forward within a bounded window or simply omitted. It never blocks or defers the edition, per the safety-map hard rule in docs/doc-ownership.json.",
     resilience: {
       transport: "direct-fetch",
-      timeout: "Uses independent eight-second AbortSignal budgets for the manifest GET and the dated-image HEAD probe, plus a bounded probe in the publication watchdog.",
+      timeout: "Uses independent eight-second AbortSignal budgets for the manifest GET and the dated-image HEAD probe, plus a three-second manifest-date probe shared by the publication watchdog and the producer kick.",
       body: "Reads the manifest through a bounded response helper and cancels unsuccessful or bodyless image responses.",
       circuitSources: [],
     },
@@ -250,6 +250,29 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "readResponseTextBoundedWithSignal",
       "body?.cancel",
       "resolveDigestSafetyMap",
+    ],
+  },
+  {
+    id: "safety-map-producer-dispatch",
+    family: "provider-transport",
+    description: "Pre-digest GitHub workflow_dispatch of the Safety Score map producer.",
+    files: ["worker/src/cron/safety-map-producer-kick.ts"],
+    tests: ["worker/src/cron/__tests__/safety-map-producer-kick.test.ts"],
+    allowBareFetch: true,
+    directFetchJustification:
+      "At most three D1-claimed dispatches per UTC day inside a bounded pre-digest window; a failed dispatch is reported and left to the next spaced attempt, never retried in-line.",
+    resilience: {
+      transport: "direct-fetch",
+      timeout: "Uses a ten-second AbortSignal.timeout() composed with the slot signal.",
+      body: "Cancels accepted bodies and reads a bounded snippet from rejected responses before cancelling.",
+      circuitSources: [],
+    },
+    requiredMarkers: [
+      "AbortSignal.timeout",
+      "X-GitHub-Api-Version",
+      "cancelResponseBodyQuietly",
+      "readSafetyMapManifestDate",
+      "SAFETY_MAP_KICK_MAX_DISPATCHES",
     ],
   },
   {

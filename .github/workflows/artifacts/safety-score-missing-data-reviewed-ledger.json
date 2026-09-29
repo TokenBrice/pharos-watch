@@ -25027,6 +25027,608 @@
       ],
       "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPENDENCY_REVIEW:ousg-ondo-finance",
+      "taskIds": [
+        "V9G-ef09c939673cb13d"
+      ],
+      "workType": "DEPENDENCY_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (DepDrain)",
+      "evidence": [
+        "https://ondo.finance/ousg",
+        "https://www.coingecko.com/en/coins/franklin-templeton-benji",
+        "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+      ],
+      "rationale": "Upstream blocker, verified first per the DEP rule: the 11.8559% BENJI collateral edge points at benji-franklin-templeton, which is tracked but quarantined since 2026-07-15 (listingStatusReview: permitted runtime sources provide no positive circulating supply or market cap) and is therefore outside the replay activeAssetIds, so the edge is dropped with outside-active-set:benji-franklin-templeton and the graph stays invalid. Re-checked 2026-09-29: the configured provider CoinGecko (franklin-templeton-benji, last_updated 2026-09-29T14:46:40Z) still reports circulating_supply 0 and market_cap 0, so the upstream is not rateable and neither material-dependency-unavailable nor unreviewed-dependency-relationships can clear from OUSG-owned files. Curated composition was refreshed from the issuer's dated 2026-09-28T20:00Z portfolio (seven positions totaling $312,910,926.57 with exact amounts) and the live-withheld triage residual was reconciled only from evidence: the Other Assets funds-in-transit line persists at $121,045.25 (0.0387%), so knownUnknownExposurePct stays nonzero and the ==0 curated-fallback gate remains honestly blocked; no dated independent attestor report is retrievable from a stable public URL (the former report folder is sign-in-gated), so the audited-fallback path also stays closed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/ousg-ondo-finance.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "ousg-ondo-finance:gap:effective-dependencies"
+        }
+      ],
+      "nextReviewTrigger": "benji-franklin-templeton becomes rateable (quarantine lifted after a permitted runtime source reports a positive circulating supply or market cap) or a dated OUSG portfolio drops the BENJI position below dependency materiality; re-review the OUSG dependency graph on either event.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPENDENCY_REVIEW:srusde-strata",
+      "taskIds": [
+        "V9S-4587dee9a77e053c"
+      ],
+      "workType": "DEPENDENCY_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (DepDrain)",
+      "evidence": [
+        "https://docs.strata.markets/technical-documentation/protocol-overview",
+        "https://docs.strata.markets/markets/ethena-usde",
+        "https://docs.strata.markets/resources/faqs"
+      ],
+      "rationale": "Fixed the exact collateral-to-reserve-exposure mapping. The curated reserve review linked the single deployed strategy position to susde-ethena while the declared serial chain is the variant parent usde-ethena (variantOf usde-ethena; chained variants are structurally invalid in this registry because sUSDe is itself a variant of USDe), leaving the tracked exposure unattributed against the serial chain and emitting material-dependency-unavailable with cause dependency-projection:unattributed on reserve:435f86c8339fb3b243bde157. Strata's protocol documentation establishes USDe as the market's Base Asset with all vault shares denominated in USDe and sUSDe as the strategy-managed yield source, matching the live adapter's producer-enforced expectedAssetAddress invariant (asset() == USDe) and the sUSDe precedent of linking a variant's reserve book to its parent. The slice now links usde-ethena with a wrapper dependency; the strategy's sUSDe staking leg stays documented through the issuer-obligor name and the basis, counterparty, market, and cooldown liquidity risk factors. Scoped smoke against the production replay's live slices confirms the exposure's trackedAssetId is serially resolved and the graph state is valid. Composition re-verified by a pinned Ethereum read of the vault at 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 (totalAssets() 18,502,556.63 at block 0x18e01f8, 2026-09-29).",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/srusde-strata.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenScoreReasonAbsent": {
+            "reasonCode": "material-dependency-unavailable",
+            "path": "backing:reserve:reserve:435f86c8339fb3b243bde157:cause:dependency-projection%3Aunattributed"
+          }
+        }
+      ],
+      "nextReviewTrigger": "A fresh production replay must show the sentinel reason absent without an adverse replacement; re-review if Strata changes the market's base asset or the vault's deployed strategy composition.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPENDENCY_REVIEW:usdm-mega",
+      "taskIds": [
+        "V9G-a8e1f8410d73af72"
+      ],
+      "workType": "DEPENDENCY_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (DepDrain)",
+      "evidence": [
+        "https://app.megausd.money/api/transparency/backing-and-supply/current",
+        "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
+      ],
+      "rationale": "Cleared dependency-review-mismatch by making the reviewed relationship set exactly match the derived effective set within the registry's single dependency weight budget. The live megausd-custody feed maps two tracked collateral exposures (usdc-circle 99.9%, usdtb-ethena 0.1%) and those two anchors are now authored as manual dependency entries with the adapter-published weights (total exactly 1), so the curated and manual fallback derivations agree with the live set. The issuer transparency API publishes dated per-custodian backing amounts (checked 2026-09-29T14:53:11Z: USDC $17,439,383.81 = 99.8803%, USDtb $20,915.84 = 0.1197% of $17,460,299.65 total). MegaETH documents USDm v1 as issued on Ethena's USDtb rails, so the USDtb relationship additionally carries the control-operator economic role on its collateral anchor, following the usdf-astherus multi-role encoding; the registry caps authored dependency weights at 1 total, so a full-basket asset cannot also author a separate full-weight mechanism entry, and the role edge's projection weight equals the anchor's basket share (a known limitation of the authoring budget, flagged for the methodology owner). Scoped smoke against the production replay's live slices confirms reviewMatchesDerived with no issue codes and graphState valid, and the collateral edges map exactly to the reserve exposures; npm run check:stablecoin-data passes.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/usdm-mega.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdm-mega:gap:effective-dependencies"
+        }
+      ],
+      "nextReviewTrigger": "A fresh production replay must show the gap absent without an adverse replacement; re-review when the issuer's disclosed USDC/USDtb mix drifts materially from the reviewed 99.9/0.1 adapter weights or when USDm issuance changes rails away from USDtb.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usda-avalon",
+      "taskIds": [
+        "V9G-c13fcb9da36574ff"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvalonRiver)",
+      "evidence": [
+        "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda",
+        "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management",
+        "https://defillama.com/protocol/avalon-usda",
+        "https://github.com/DefiLlama/DefiLlama-Adapters/blob/main/projects/avalon-finance-usda/index.js",
+        "https://stablecoins.llama.fi/stablecoins?includePrices=true"
+      ],
+      "rationale": "The 2026-08-08 review had crossed the 38-day composition window; all five sources were re-read on 2026-09-29 and the material findings are unchanged, so the untracked-exogenous CeDeFi envelope (FBTC CDP positions plus USDT/USDC 1:1 mint reserves) is re-dated with fresh observations: docs still document exactly two mint paths with no supply-weighted split, the risk page still lists FBTC 60/90/80 and USDC/USDT at 100% max LTV exempt from liquidation and names Cobo/Fireblocks/Coinbase Prime custody without addresses, and the DefiLlama avalon-usda adapter (methodology materially unchanged) reported $2.00 TVL versus $145,575,231.78 circulating USDa at the 2026-09-29 read, so on-chain adapter balances still do not reconcile liability. custodyProfile re-dated on the same evidence. Verified: buildSafetyScoreV9ReviewedStandaloneReserveRows admits the refreshed composition (provenance curated, 1 row) at both the sweep capture clock 1790689605 and the next-day clock.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/usda-avalon.json"
+      ],
+      "sentinels": [
+        "usda-avalon:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Re-review when Avalon publishes a supply-weighted split, a dated reserve composition or attestation, custody addresses, or when the DefiLlama avalon-usda adapter methodology or measured TVL materially changes; otherwise at the next 38-day composition-window expiry.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:satusd-river",
+      "taskIds": [
+        "V9G-2a7414bf999c2998"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvalonRiver)",
+      "evidence": [
+        "https://app.riverai.inc/",
+        "https://app.riverai.inc/prime-vault",
+        "https://app.riverai.inc/smart-vault",
+        "https://api.riverai.inc/protocol-info",
+        "https://arbiscan.io/address/0xa7b54413129441e872f42c1c4fe7d1984332ca87",
+        "https://basescan.org/address/0x01df7d28c51639f2f2f95dcf2fdff374269327b0",
+        "https://docs.riverai.inc/outro/deployed-contracts.md",
+        "https://docs.riverai.inc/products/smart-vault.md",
+        "https://docs.riverai.inc/products/prime-vault.md"
+      ],
+      "rationale": "River's protocol dashboard now decomposes satUSD backing into product-level collateral, replacing the prior unresolved basket: (1) on-chain omni-CDP trove collateral $46.67M (27.19%), with the two material branches reconciled to pinned reads — Arbitrum clBTC TroveManagerProxy at block 510062308 holds 449.9901 clBTC backing 9,645,850.28 satUSD of debt, Base clBTC TroveManagerProxy at block 51952263 holds 100.0021 clBTC, and the Base uniBTC trove managers hold zero, proving the dashboard uniBTC rows are not trove positions; (2) Prime Vault custodial BTC $107.33M (62.54%): bfBTC 655.00 on BNB, uniBTC 205.00 on BOB and 341.3682 on Base, counted once each (the uniBTC overlap with the dashboard rows is excluded from the trove bucket); (3) Smart Vault custodial USDT $17.62M (10.27%) across the two listed Ethereum vaults, both claimable at review time. Total identified backing $171.62M versus protocol-reported circulation $137.08M (corroborated on-chain via satUSD totalSupply on BNB/Base/Arbitrum/Ethereum) yields 125.2% coverage. Percentages are computed from same-day issuer-dashboard observations; USDT stays an unlinked candidate because the vault deposits are not address-verifiable and both vaults are claimable. Verified: buildSafetyScoreV9ReviewedCuratedFallbackReserveRows admits the composition (provenance curated-fallback, 3 rows) at both the sweep capture clock 1790689605 and the next-day clock.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/satusd-river.json"
+      ],
+      "sentinels": [
+        "satusd-river:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Re-review when River discloses Prime/Smart Vault custodians or address-level vault holdings, publishes a reserve attestation or trove-debt versus internal-mint reconciliation, or when the Smart Vault USDT vaults are withdrawn; otherwise at the next 38-day composition-window expiry or if the live river-protocol-info producer resumes publishing rows.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:avusd-avant",
+      "taskIds": [
+        "V9G-f26a02cc7e3e07a4"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvantTheo)",
+      "evidence": [
+        "https://app.avantprotocol.com/api/metrics/avusd",
+        "https://app.avantprotocol.com/transparency",
+        "https://docs.avantprotocol.com/overview/core-tokens"
+      ],
+      "rationale": "The issuer metrics API itemizes the gross-long book at 2026-09-22T23:59:59Z (USDe 74.02%, syrupUSDT 10.03%, syrupUSDC 5.39%, aMonUSDe 4.25%, USDC 3.79%, smaller receipts), which would satisfy the curated-fallback gate. It was not adopted: the avant-reserves-api live adapter publishes aggregate category rows, so itemized curated rows with tracked coinId links would not bridge to live rows once the adapter resumes (surfacing material-reserve-slice-unstructured), and the mapped dependency set has no reviewed adapter-mapping rule (check:dependency-review-gaps). The curated envelope stays at origin/main until the adapter itemizes asset identities or a reviewed mapping rule exists.",
+      "changeRefs": [],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "avusd-avant:gap:reserve-composition"
+      },
+      "nextReviewTrigger": "avant-reserves-api adapter emits per-asset identities (or a reviewed adapter-mapping rule for its categories is added to shared/data/coverage-dispositions/dependency-target-dispositions.ts); then re-author the itemized composition from the newest issuer snapshot.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:thbill-theo",
+      "taskIds": [
+        "V9G-9ed8f82b1396ee3f"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvantTheo)",
+      "evidence": [
+        "https://etherscan.io/address/0x5FA487BCa6158c64046B2813623e20755091DA0b#tokenBalances",
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/theo-fidelity-international-filq-thbill-chainlink-integration",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md"
+      ],
+      "rationale": "The sidecar was structurally admissible (full-composition, verified, ku 0, untracked-exogenous-asset disposition) but its compositionAsOf 2026-06-30 was 91 days stale at the capture clock, so the curated-fallback rung rejected it and the fact-set emitted missing-reserve-composition. The composition was re-dated from fresh pinned evidence rather than date-bumped: Ethereum mainnet reads at blocks 26083833-26083836 (2026-09-29T14:50:35Z) show the thBILL token contract holding 35,645,094.648 tULTRA (0x82b840b6edf77f90c92a70b99f0b5d50e7967330, equal to its entire totalSupply), a full-list ERC-20 scan of the token contract, minter, and backing wallet found no FILQ token (consistent with Sygnum-held FILQ per the June 30, 2026 announcement), and Theo documentation was re-verified onchain September 1, 2026. The single opaque fund-share slice and its exact name are preserved so the single-asset live adapter still bridges; liquidityHorizon improves to seven-days from the documented T+1 redemption and T+4 business-day collateral settlement; the stale tULTRA custody source URL is replaced with the current Wellington ULTRA fact sheet. Allocation weights between ULTRA and FILQ remain undisclosed and stay expressed as the opaque basket. Scoped schema + admission check: buildSafetyScoreV9ReviewedCuratedFallbackReserveRows admits 1 row (curated-fallback/static-validated) at clocks 2026-09-29T13:46:45Z through 2026-10-06.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/thbill-theo.json"
+      ],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "thbill-theo:gap:reserve-composition"
+      },
+      "nextReviewTrigger": "Issuer disclosure of ULTRA/FILQ allocation weights or any newer dated composition statement; mandatory re-review when compositionAsOf 2026-09-29 crosses the 31-day window plus grace on 2026-11-06.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:moveusd-cfx",
+      "taskIds": [
+        "V9G-ceb6f2d3a73e4e88"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvCfxAsterOnre)",
+      "evidence": [
+        "https://cfx.to/",
+        "https://trust.cfx.to",
+        "https://docs.moveusd.com/docs/what-is-moveusd",
+        "https://docs.cfx.to/llms.txt",
+        "https://www.prnewswire.com/news-releases/cfx-launches-moveusd-enhancing-us-dollar-competitiveness-with-the-first-instant-transfer-bank-integrated-global-settlement-network-302416929.html",
+        "https://coinmarketcap.com/currencies/movemoney-usd/"
+      ],
+      "rationale": "Re-review 2026-09-29 with a fresh negative search across the CFX homepage, the new Trust Center, the docs.cfx.to index (llms.txt), the MoveUSD docs redirect, the launch PR, and CoinMarketCap: CFX publishes no dated reserve report, reserve balance, reconciliation, or attestation. The homepage now describes 1:1 tokenized cash deposits placed across 3,000+ FDIC-insured banks via U.S. sponsor banks and the Trust Center asserts segregated custodial accounts at FDIC-member banks (FinCEN MSB plus state money-transmission licensing), so the 100% bank-deposit envelope was refreshed with those claims and dated 2026-09-29 sources. Admission stays blocked precisely on review confidence: the reviewed-curated standalone path requires a verified-confidence full-composition review, and the evidence class (undated standing web claim, unnamed banks, no account-level terms) supports only probable, the confidence the 2026-08-08 review already chose; there is no proofOfReserves and hence no audited-fallback ceiling. compositionAsOf stays 2026-07-28, preserving the prior review's explicit no-date-bump decision because no newer dated publication exists; upgrading confidence or advancing the date to clear the sentinel would fabricate evidence.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/moveusd-cfx.json"
+      ],
+      "sentinels": [
+        "moveusd-cfx:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Issuer publishes a dated reserve statement, composition report, or independent attestation (watch cfx.to, trust.cfx.to, docs.cfx.to); otherwise re-confirm the blocker at the next weekly sweep.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdf-astherus",
+      "taskIds": [
+        "V9G-a4d95a28a07d486b"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvCfxAsterOnre)",
+      "evidence": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs",
+        "https://docs.asterdex.com/llms.txt",
+        "https://www.ceffu.com/solutions/mirrorx"
+      ],
+      "rationale": "Re-review 2026-09-29 re-verified the issuer-documented delta-neutral backing structure against live pages: USDT 1:1 mint, Ceffu custody, MirrorX 1:1 balance delegation to a Binance sub-account while assets remain in Ceffu custody, spot BTC/ETH longs against matching short perpetual notional, weekly profit distribution to asUSDF, RWA yield sources described only as future. The full docs index (llms.txt) still lists no USDF transparency, dashboard, proof-of-reserves, or attestation page and no constituent weights, so the single hedged-crypto envelope slice and its untracked-exogenous disposition are unchanged. The stale 2026-08-08 review (aged past the 31-day window plus 7-day grace) was refreshed to reviewedAt and compositionAsOf 2026-09-29 with confidence unchanged at verified, following this asset's established convention of dating the re-verified standing issuer documentation. Scoped replay of the admission predicate at the capture clock (1790689605) and at clock+1d returns admitted curated/static-validated rows, so the missing-reserve-composition gap should disappear on a fresh production replay.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/usdf-astherus.json"
+      ],
+      "sentinels": [
+        "usdf-astherus:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Next weekly sweep re-verification of the standing issuer documentation, or immediately upon any Aster-published USDF reserve dashboard, attestation, or constituent-weight disclosure under docs.asterdex.com/usdf-stablecoin.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:onyc-onre",
+      "taskIds": [
+        "V9S-acf7f8bf0198a488"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvCfxAsterOnre)",
+      "evidence": [
+        "https://app.onre.finance/earn/transparency",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
+        "https://docs.onre.finance/for-capital-providers/collateral-composition"
+      ],
+      "rationale": "onyc-onre's own envelope is verified sound and needs no edit: the flagged slice at backing:reserve:reserve:d6792140aeb524579d8e6f02 is the fully structured sUSDS slice (sourceKey onre-holdings-csv:susds; assetClass stablecoin; issuerOrObligor Sky Ecosystem sUSDS savings token; coinId susds-sky; liquidityHorizon immediate), the 2026-09-21 review with compositionAsOf 2026-09-16 is admitted as curated-fallback at the capture clock, and the replay's compiled facts carry no local reserve-classification gap for onyc. The score reason material-reserve-slice-unstructured is an upstream projection from susds-sky's own unstructured live slice Sky Savings USDS deployed strategy positions (gap susds-sky:gap:reserve:reserve:7458876a390e89ec2ac4ec60), which passes through onto onyc's linked sUSDS exposure. The clearing action belongs to the RESV-susds-sky claim group (owner: ResvSkySpark agent in this sweep, structuring the deployed-strategy slice with pinned block 26079396 evidence); no onyc-sidecar change can honestly remove a real upstream dependency, and delinking the sUSDS collateral to dodge the projection would weaken evidence.",
+      "changeRefs": [],
+      "sentinels": [
+        "score-reason-absent:material-reserve-slice-unstructured@backing:reserve:reserve:d6792140aeb524579d8e6f02"
+      ],
+      "nextReviewTrigger": "Fresh production replay after the RESV-susds-sky structuring lands in this sweep; the projected reason disappears together with susds-sky gap reserve:7458876a390e89ec2ac4ec60.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:frax-frax",
+      "taskIds": [
+        "V9S-fd5e17d80e92a47e"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvFraxDola)",
+      "evidence": [
+        "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+        "https://etherscan.io/address/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6#code",
+        "https://etherscan.io/block/26083895"
+      ],
+      "rationale": "The captured frax-frax sfrxUSD exposure is already classified. Its remaining reason is projected from sfrxusd-frax's unclassified deployed exposure reserve:b646f7db3d21e4747f604e5f. With orchestrator-granted ownership, added a reviewed deployedExposure attestation to sfrxusd-frax's live reserve config (the established all-deployed ERC-4626 pattern), so the adapter attributes the fully deployed vault to the reviewed slice keyed by the underlying address. At Ethereum block 26083895 (2026-09-29T15:02:59Z), 0xcf62f905562626cfcdd2261162a51fd02fc9c5b6 returned Staked Frax USD / sfrxUSD, asset() 0xcacd6fd266af91b8aed52accc382b4e165586e29 (Frax USD), totalAssets 36,108,754.218811420290055171 frxUSD, and underlying balanceOf(vault) zero. Current Frax documentation confirms the existing Benchmark Yield Strategy classification and frxUSD redemption relationship. Retained unknown liquidity horizon, omitted unsupported maximum maturity, and preserved existing custody uncertainties; no strategy weights or composition date were invented. A scoped call to the production classification-overlay function against the captured live row produced registry-reviewed protocol-position classification with a failure-domain identity. This is overlay smoke evidence, not full replay or production closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/sfrxusd-frax.json",
+        "shared/data/stablecoins/coins/sfrxusd-frax.json"
+      ],
+      "sentinels": [
+        "material-reserve-slice-unstructured@backing:reserve:reserve:33776b0f2d131dc1d67daab1"
+      ],
+      "nextReviewTrigger": "First fresh replay after integration; subsequently re-review if vault identity or deployed sourceKey changes, or Frax changes its strategy disclosures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:dola-inverse-finance",
+      "taskIds": [
+        "V9G-988ff64cd4e051ed"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvFraxDola)",
+      "evidence": [
+        "https://www.inverse.finance/api/f2/fixed-markets",
+        "https://www.inverse.finance/api/dola",
+        "https://www.inverse.finance/api/transparency/fed-overview",
+        "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds",
+        "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-peg-mechanism",
+        "https://etherscan.io/block/26083836",
+        "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+      ],
+      "rationale": "BLOCKED: the 34% sourceKey dola-inverse:unattributed is a calculated supply-minus-FiRM-debt residual, not a disclosed homogeneous reserve asset. New issuer evidence narrows the problem: /api/transparency/fed-overview at 2026-09-29T15:02:22Z reports FiRM Fed supply 105,564,203.48 versus borrows 71,661,149.85; Frontier Fed supply 3,100,000 with borrows 2,761,767.88; PSM Fed supply 200,000 with circulating zero; other listed Feds zero. Pinned DOLA totalSupply at Ethereum block 26083836 (2026-09-29T14:51:11Z) is 108,868,118.240939048310629383. The market API separately reports about 33.227M idle DOLA, not the 33.903M inferred by subtracting FiRM debt from Fed global supply. Issuer docs explicitly distinguish pre-minted market inventory from Frontier legacy unbacked debt. These asynchronous quantities do not reconcile the exact captured residual, and a single protocol-position label would conflate self-issued inventory, unsecured bad debt and reserve assets, crediting an unidentified mixed exposure as a structured reserve. An exploratory candidate classification was withdrawn and the DOLA sidecar restored unchanged. Missing prerequisite: a same-block facility-level reconciliation of total supply, market debts, actual idle DOLA holdings, legacy debt and supply exclusions, followed by producer-level separation of those economically different portions; holder-backed assets and any unsecured loss exposure must remain explicit. No asset class, issuer claim, liquidity bound, maturity or custody claim is asserted for the mixed residual. The other requested path, reserve:8cc91ae6fcf582d330c6d7a3, is already-classified sUSDS collateral inheriting susds-sky's unstructured deployed-row gap; its upstream repair is owned by ResvSkySpark, not a DOLA metadata change.",
+      "changeRefs": [],
+      "sentinels": [
+        "dola-inverse-finance:gap:reserve:reserve:b4b909c95961ca74a9aa3334"
+      ],
+      "nextReviewTrigger": "Pharos reserve-producer owner to review the same-block reconciliation and supply/debt accounting boundary by 2026-10-06, or earlier when Inverse supplies a reconciled current facility balance sheet; separately re-measure the sUSDS projection after its upstream repair.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:rwausdi-multipli",
+      "taskIds": [
+        "V9G-549cd5e05d0d3bdb"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvMultipliGate)",
+      "evidence": [
+        "https://verification.afiprotocol.xyz/multipli/rwaUSDi",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/issuance-parameters",
+        "https://app.multipli.fi/dashboard",
+        "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets",
+        "https://github.com/Chainrisk-Cloud/ASSET-BASE-VERIFICATION-FOR-TOKENIZED-ISSUANCE-ELIGIBILITY/blob/main/ASSET%20BASE%20VERIFICATION%20FOR%20TOKENIZED%20ISSUANCE%20ELIGIBILITY.pdf"
+      ],
+      "rationale": "The AFI verification network now publishes a signed, dated rwaUSDi collateral distribution: Li Mines $600,000,000 (40%), Commodities (Gold) $450,000,000 (30%), Real Estate $375,000,000 (25%), Cu Mines $75,000,000 (5%), totalling $1,500,000,000, exactly the TEE-attested and ZK-verified aggregate reserves (proof 3eb0ce0917dbb230, TEE attestation 2026-09-29T14:30:46Z) against verified liabilities of $479,782,100 that match the issuance-parameter circulation. The reserves sidecar is restructured from the one 100%-unknown basket into four category slices (verified confidence, knownUnknownExposurePct 0, untracked-exogenous-asset dispositions, compositionAsOf 2026-09-29), and the base proofOfReserves.latestReport periodEnd/publishedAt move to 2026-09-29 in lockstep. Instrument-level facts (obligors, legal form, gold holding form, custodians, seniority, maturities, marks) remain private salted commitments and are recorded as slice-level unknowns, so the separate MECHANISM_REVIEW bounded gaps are unaffected.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/rwausdi-multipli.json",
+        "shared/data/stablecoins/coins/rwausdi-multipli.json"
+      ],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "rwausdi-multipli:gap:reserve-composition",
+        "reasonCode": "missing-reserve-composition"
+      },
+      "nextReviewTrigger": "AFI publishes a changed collateral distribution or the rwaUSDi proof feed goes inactive; otherwise refresh at the next monthly sweep in October 2026 as the composition approaches the 38-day admission bound.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:gusd-gate",
+      "taskIds": [
+        "V9G-669a2f62d29f4461"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvMultipliGate)",
+      "evidence": [
+        "https://www.gate.com/earn/staking/GUSD",
+        "https://www.gate.com/gusd",
+        "https://www.gate.com/help/lend/staking/46831",
+        "https://www.gate.com/announcements/article/100959",
+        "https://www.gate.com/proof-of-reserves"
+      ],
+      "rationale": "BLOCKED on issuer disclosure. Re-verified 2026-09-29 across the product page (202.6M GUSD subscribed), the GUSD hub page, the 2025-08-29 minting/RWA help article, and the latest exchange proof-of-reserves announcements (July 27 and August 19, 2026 snapshots). Gate describes GUSD backing only at category level (tokenized treasury bills, stablecoins, ecosystem revenue, USDC reserves and short-term Treasuries) and publishes no dated product-level reserve composition: no weights, instrument identities, reserve vehicle, custodians, or reconciliation of issued GUSD to backing assets. The help article's commitment to reserve audit reports and partner-custodial-bank proof of funds on the product page remains unfulfilled, and the exchange PoR books GUSD as a customer asset held in the same tokens, which evidences token custody rather than product backing. The 100%-undisclosed envelope and insufficient-evidence disposition are retained with the review refreshed to 2026-09-29; the missing datum is a dated GUSD reserve composition from Gate.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/gusd-gate.json"
+      ],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "gusd-gate:gap:reserve-composition",
+        "reasonCode": "missing-reserve-composition"
+      },
+      "nextReviewTrigger": "Gate publishes a GUSD product-level reserve composition, reserve audit report, or custodial-bank proof of funds on the product page or in an announcement; recheck at each monthly Gate proof-of-reserves announcement, next expected early October 2026.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-5f1c812332ef2743"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvOndoA7a5)",
+      "evidence": [
+        "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=1",
+        "https://bin.bnbstatic.com/images/web3-data/public/token/ondo/pdf/daily-2026-09-22.pdf"
+      ],
+      "rationale": "Refreshed the curated USDY envelope from the Ankura ATCAttest report for 2026-09-23 (15 T-bill CUSIPs, First Citizens MMA, StoneX cash; Permitted Assets $2,082,443,851.32 vs Token Principal $2,066,500,758.43). The BVI-issued share (5.9673% of canonical circulating at the 2026-09-29 capture) is backed only by the Ondo Global Markets (BVI) aggregate collateral pool shared with USDon and Ondo Stocks (OGM daily report 2026-09-22: 173,440,642.63 USDY, $198,949,893.44 market value), with no per-token attribution, so it stays recorded as knownUnknownExposurePct and the curated admission gate (== 0) remains honestly closed. A structured-slice alternative was replayed and rejected: it removes the composition gap but leaves the card without an attributable D-grade cause (NR), a worse public outcome than the current D/41.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json",
+        "shared/data/stablecoins/coins/usdy-ondo-finance.json"
+      ],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "usdy-ondo-finance:gap:reserve-composition",
+        "doneWhenScoreReasonAbsent": null
+      },
+      "nextReviewTrigger": "OGM (BVI) publishes per-token or per-liability collateral attribution, or an LLC-scope attestation covers all USDY issuance; re-run the D-grade attribution check in the promotion replay. Otherwise refresh the LLC composition from the newest ATCAttest report before 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:a7a5-old-vector",
+      "taskIds": [
+        "V9G-daead42a172de3b5"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvOndoA7a5)",
+      "evidence": [
+        "https://docs.a7a5.io/legal/transparency.md",
+        "https://www.a7a5.io/audit.pdf",
+        "https://docs.a7a5.io/llms.txt",
+        "https://www.a7a5.kg/transparency?lang=en"
+      ],
+      "rationale": "BLOCKED, precise missing datum: a dated reserve composition (instruments, weights, and/or reserve-bank identities) from the issuer or an independent attestor. Negative search re-verified 2026-09-29: docs.a7a5.io/legal/transparency.md still publishes only the licensed-distribution sentence (no reserve schedule, attestation, or bank identities); a7a5.io/audit.pdf still returns the SPA HTML shell (HTTP 200, text/html, 500 bytes) instead of a reserve document; the documentation corpus index (docs.a7a5.io/llms.txt) contains no reserve-report page — only smart-contract code audits; a7a5.kg/transparency renders only per-network token-distribution counts. The existing 100% known-unknown envelope remains the honest representation (issuer-undisclosed), so no composition was authored and the public fact stays open. Sidecar review provenance refreshed to 2026-09-29 so the negative search carries a current date; envelope, custody profile, and coin proofOfReserves (attestorTier none, cadence none) unchanged.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/a7a5-old-vector.json"
+      ],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "a7a5-old-vector:gap:reserve-composition",
+        "doneWhenScoreReasonAbsent": null
+      },
+      "nextReviewTrigger": "Issuer or an independent attestor publishes a dated reserve composition naming instruments, weights, or reserve banks — e.g. a restored a7a5.io/audit.pdf reserve document, the weekly reserve reports / quarterly independent audits promised on a7a5.io/about, or a reserve schedule on docs.a7a5.io or a7a5.kg/transparency; otherwise re-verify the negative by 2026-12-29.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:cash-phantom",
+      "taskIds": [
+        "V9G-e4eabaeb089fb42f"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvPhantomJpysc)",
+      "evidence": [
+        "https://reserves.bridge.xyz/cash",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "https://www.usecash.xyz/"
+      ],
+      "rationale": "Bridge (Stripe) now publishes a per-coin reserves dashboard at reserves.bridge.xyz/cash: page last updated 2026-09-29 2:20 PM UTC reporting 131,419,065 CASH circulating against $131,420,074 reserve assets ($1,009 overcollateralized, 100.00%) with the issuer-stated allocation Cash $8,111,025 (6.2%) and Treasury $123,309,049 (93.8%), Treasuries including MMFs of T-bill ladders under 3-month duration. Identity boundary verified: the dashboard lists Solana CASHx9… and HyperEVM 0x061A…Ed06, matching this asset's contracts and canonical supply. The buckets reconcile to the published total and sit inside the unchanged BBI Terms §02 eligible-class envelope (re-verified HTTP 200 with the issuance FAQ and usecash.xyz). The prior 100% aggregate basket (confidence probable, knownUnknownExposurePct 100, basket-needs-split disposition) is replaced by the issuer's own split, meeting every curated-fallback admission requirement: scope full-composition, confidence verified, knownUnknownExposurePct 0, no unresolved dispositions, compositionAsOf 2026-09-29, slices total 100. proofOfReserves (real-time, self-attested dashboard with full supply reconciliation) and the custody profile (BlackRock/Fidelity, segregated, bankruptcy-remote; re-verified) were added/refreshed. No independent attestation exists yet (quarterly audits promised in the FAQ), so evidence remains issuer self-reported at bucket granularity, recorded in knownUnknownExposure prose.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/cash-phantom.json",
+        "shared/data/stablecoins/coins/cash-phantom.json"
+      ],
+      "sentinels": [
+        "cash-phantom:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Fresh production replay should drop backing:reserve-envelope cause cash-phantom:gap:reserve-composition via the curated-fallback path (asset is in liveToFallbackCoins) or via resumed curated-validated live rows built from the refreshed slices. Re-review when compositionAsOf 2026-09-29 crosses the 38-day admission bound (2026-11-06), when the dashboard allocation materially shifts, or when Bridge publishes its first quarterly attestation/transparency report.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:jpysc-sbi-startale",
+      "taskIds": [
+        "V9G-a8361d1714fbc20a"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvPhantomJpysc)",
+      "evidence": [
+        "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf",
+        "https://www.sbigroup.co.jp/news/2026/0907_16567.html",
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.sbigroup.co.jp/news/2026/0624_16425.html",
+        "https://www.fsa.go.jp/common/diet/217/02/setsumei.pdf"
+      ],
+      "rationale": "The SBI Shinsei Trust / SBI VC Trade press release of 2026-09-07 (PDF and HTML retrieved) states that ¥10.0B of the JPYSC trust property is invested in short-term JGBs (≤3-month residual maturity under the amended PSA framework in force since 2026-06-01) against JPYSC issuance of approximately ¥20.1B as of 2026-09-07. Composition refreshed to 49.8% short-term JGBs (government-security, maturityDaysMax 90, conservative seven-day horizon) and 50.2% residual yen demand deposits (bank-deposit, immediate), replacing the expired 2026-06-30 100%-deposit composition; the deposit remainder follows from the 1:1 trust structure verified by the trustee's 2026-06-30 statutory disclosure. Admission requirements met: scope full-composition, confidence verified, knownUnknownExposurePct 0, compositionAsOf 2026-09-07 (admitted through 2026-10-15), slices total 100. Added a custodyProfile (SBI Shinsei Trust Bank trustee custody, statutory trust segregation) and base proofOfReserves (self-reported trustee disclosure, latestReport = the 2026-09-07 release, partial reconciliation). The statutory disclosure page remains geo-restricted to Japan (fetch attempts timed out) and no independent attestation program exists; residual unknowns (exact deposit balances and banks, JGB issues, possible time deposits) are recorded in knownUnknownExposure prose.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/jpysc-sbi-startale.json",
+        "shared/data/stablecoins/coins/jpysc-sbi-startale.json"
+      ],
+      "sentinels": [
+        "jpysc-sbi-startale:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Re-review by 2026-10-15 when compositionAsOf 2026-09-07 crosses the 38-day admission bound; earlier if the trustee statutory disclosure becomes retrievable outside Japan, a newer monthly balance or attestation is published, or issuance grows materially beyond the ≈¥20.1B base (≈¥6.9B of JPYSC Lending applications pending on top).",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:susds-sky",
+      "taskIds": [
+        "V9G-446072ae7c0b1336"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvSkySpark)",
+      "evidence": [
+        "https://developers.skyeco.com/protocol/tokens/susds/",
+        "https://github.com/sky-ecosystem/sdai/blob/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol",
+        "https://etherscan.io/block/26079396",
+        "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd#readContract"
+      ],
+      "rationale": "Identity: the Ethereum sUSDS vault and its USDS asset were verified by archive eth_call at block 26079396, 2026-09-28T23:59:59Z. Source: totalAssets=4411049738164593904315517122 and USDS balanceOf(vault)=4411048966444342796076869286 (18 decimals), producing 99.999982504839% idle USDS and 0.00001749516100346682% accounting remainder. The pinned SUsds implementation extrapolates chi in convertToAssets and funds accrued yield through Vat/Vow/UsdsJoin in drip. The exact deployed row behind exposure 7458876a390e89ec2ac4ec60 is now classified as that protocol-accounting claim, without inventing an external strategy or extra collateral dependency. Methodology: existing sourceKey classification matching is reused; liquidity horizon stays unknown and no unsupported maturity maximum is entered. Safety/publication: full fresh replay remains Main's closure gate; this entry closes no fact mechanically. The parent USDS/DAI PSM composition remains out of scope and unchanged.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/susds-sky.json"
+      ],
+      "sentinels": [
+        "susds-sky:gap:reserve:reserve:7458876a390e89ec2ac4ec60"
+      ],
+      "nextReviewTrigger": "Fresh production replay after integration; repeat review by 2026-10-06 or immediately after an sUSDS implementation or SSR funding-path change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:susdt-spark",
+      "taskIds": [
+        "V9G-e3927c7ee62dd613"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvSkySpark)",
+      "evidence": [
+        "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy",
+        "https://github.com/sparkdotfi/spark-vaults-v2/blob/51c6d7a1da85944804ba87234f2eac13dba8330e/src/SparkVault.sol",
+        "https://github.com/sparkdotfi/spark-address-registry/blob/2ec1f5c9b9d6b2f8b94a4a2f063b83d56175f265/src/Ethereum.sol",
+        "https://etherscan.io/block/26079396",
+        "https://etherscan.io/address/0xe2e7a17dff93280dec073c995595155283e3c372#readContract",
+        "https://data.spark.finance/savings/"
+      ],
+      "rationale": "Identity: pinned Spark address registry identifies spUSDT, and archive asset() confirms USDT at Ethereum block 26079396, 2026-09-28T23:59:59Z. Source: totalAssets=397809076331145 and USDT balanceOf(vault)=77934639501976 (6 decimals), giving 19.590965651347% idle and 80.409034348653% non-idle accounting exposure. The exact deployed row behind exposure 7fd1f6e757dc56ee53bd46a0 is classified as a Spark protocol position using the published taker architecture. Promote is limited to that category-level classification. BLOCKED(issuer disclosure) remains for the live-withheld fallback: the USDT strategy page names SparkLend, Morpho, Maple syrupUSDT, Curve and sUSDS but its May 5, 2026 aggregate snapshot does not establish current spUSDT-specific constituent weights, liability reconciliation, downstream custody shares or maturity bounds. The September 29 review preserves 80.409034348653% known-unknown and basket-needs-split, retains probable confidence, omits an invented maturity maximum and removes an unsupported 100% provider allocation. Methodology and safety: exact keyed classification can be admitted separately from fail-closed fallback composition; no assurance report or method relaxation was invented. Fresh replay must establish sentinel disappearance; broader issuer-disclosure facts remain open.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/susdt-spark.json"
+      ],
+      "sentinels": [
+        "susdt-spark:gap:reserve:reserve:7fd1f6e757dc56ee53bd46a0"
+      ],
+      "nextReviewTrigger": "Fresh production replay after integration; Spark must publish a current spUSDT-specific reconciled allocation with constituent and custodian weights before fallback promotion. Recheck disclosure by 2026-10-06.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usx-solstice",
+      "taskIds": [
+        "V9G-7d99245306939745"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvSolsticeTron)",
+      "evidence": [
+        "https://attestation-api.solstice.finance/dashboard",
+        "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md",
+        "https://docs.solstice.finance/solstice-for-users/usx.md",
+        "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21",
+        "https://solstice.finance/usx"
+      ],
+      "rationale": "BLOCKED on issuer disclosure. The newest dated Solstice disclosure (attestation timeline point 2026-09-23, artifacts published 2026-09-23T12:16Z) reports aggregate reserves of $219,157,088.72 against supply of $217,959,749.69 (100.5493 percent), delta-neutral and overcollateralized flags, and SEV, Merkle-root, snapshot, and ZKP proof artifacts; the decoded ZKP archives carry opaque proof bytes with no asset-level balances or category keys. The May 2026 whitepaper states composition is reported continuously on the Accountable Proof of Solvency dashboard, but the dashboard API publishes only aggregate reserves and supply. The precise missing datum is the current split (weights or balances) across audited cash, tokenized Treasuries, and delta-neutral hedged positions, plus instrument-level holdings and custodian shares. Structuring reserves[] beyond one aggregate slice would require inventing weights, so the envelope was refreshed to the 2026-09-23 attestation (sidecar compositionAsOf and coin latestReport periodEnd/publishedAt advanced together per PoR lockstep, custody segregation upgraded to issuer-stated segregated accounts from the whitepaper) while knownUnknownExposurePct stays 100 with the basket-needs-split disposition. The capture also shows the weekly live producer outside its freshness bound (last point 6 days old), so the missing-reserve-composition reason may clear transiently when a fresh weekly point lands inside the bound.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/usx-solstice.json",
+        "shared/data/stablecoins/coins/usx-solstice.json"
+      ],
+      "sentinels": [
+        "usx-solstice:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Solstice or Accountable publishes category-level or instrument-level reserve composition on the attestation dashboard or API; otherwise re-check at the next weekly Accountable point (cadence weekly, next expected around 2026-09-30) for both a composition view and a fresh live row inside the producer freshness bound",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:susdd-tron-dao-reserve",
+      "taskIds": [
+        "V9G-f9a0bb7f2f22b7ae"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-09-29",
+      "reviewer": "GLM issue-sweep 2026-09-29 (ResvSolsticeTron)",
+      "evidence": [
+        "https://docs.usdd.io/system-architecture/susdd-mechanism",
+        "https://docs.usdd.io/system-architecture/smart-allocator",
+        "https://docs.usdd.io/introduction/collateral-asset-contract-addresses",
+        "https://etherscan.io/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+        "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview"
+      ],
+      "rationale": "Fact-integration repair promoted. The material slice (100 percent of sUSDD) is an all-deployed ERC-4626 position: pinned Ethereum reads at block 26083816 (2026-09-29T14:47:11Z) confirm vault 0xc5d6a7b61d18afa11435a889557b068bb9f29930 asset() returns USDD at 0x4f8e5de400de08b164e7421b3ee387f461becd1a, totalAssets() of 198738616.64 USDD against 186200657.69 sUSDD shares, and zero idle USDD held by the vault, so the live producer reported the whole vault as unclassified deployed strategy positions and the reviewed classification never bridged. The coin live reserve config now carries a reviewed deployedExposure attestation (the established all-deployed pattern), so the adapter publishes one reviewed row keyed by the underlying address, matching the sidecar slice exactly. USDD documentation states deposited USDD accrues returns through the Smart Allocator strategy (protocol capital deployed to platforms such as Aave and JustLend) and each sUSDD is fully redeemable for USDD at any time with no lock-up. The slice carries assetClass protocol-position, issuer and obligor named as the USDD savings system and Smart Allocator strategy, liquidityHorizon immediate per documented anytime redemption, risk high, and the wrapper link to tracked parent usdd-tron-dao-reserve.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/susdd-tron-dao-reserve.json",
+        "shared/data/stablecoins/coins/susdd-tron-dao-reserve.json"
+      ],
+      "sentinels": [
+        "susdd-tron-dao-reserve:gap:reserve:reserve:21c7d9bb24df8cbc7a2f9cb8"
+      ],
+      "nextReviewTrigger": "Closure requires a fresh production replay (after the adapter re-runs with the deployedExposure attestation) to drop susdd-tron-dao-reserve:gap:reserve:reserve:21c7d9bb24df8cbc7a2f9cb8 without an adverse replacement; re-review if the vault regains idle underlying or the issuer publishes venue-level allocation.",
+      "factsClosed": 0
     }
   ]
 }

@@ -106,6 +106,7 @@
   "budgetOnlySurfaces": [
     "digest-trigger-poll",
     "price-corroboration",
+    "safety-map-producer-kick",
     "telegram-digest-outbox-drain",
     "telegram-registration-reconciliation"
   ]

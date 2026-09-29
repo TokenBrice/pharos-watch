@@ -17,16 +17,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Codex Wave 5 R-A1 reserve research",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "Codex Wave 5 R-A1 reserve research; issue-sweep pre-expiry re-check 2026-09-29 (no newer attestation than August 2026)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "CADC July 2026 ATB Financial bank confirmation",
+        "label": "CADC August 2026 ATB Financial bank confirmation (newest as of 2026-09-29)",
         "url": "https://loon.finance/api/attestations"
       },
       {
-        "label": "CADC July 2026 report object",
+        "label": "CADC August 2026 report object",
         "url": "https://loon.finance/api/attestations"
       },
       {
@@ -34,7 +34,7 @@
         "url": "https://loon.finance/transparency/"
       }
     ],
-    "rationale": "The issuer API listed an August 2026 bank confirmation uploaded 2026-09-01. The ATB Financial form confirms CAD 1,820,785.35 in a Business Growth Plus deposit as of 2026-08-31. The single disclosed reserve asset is Canadian-dollar cash at the named bank. The form is not an accountant's opinion or audit and does not state CADC circulation or reconcile liabilities; account number, account legal safeguards, and withdrawal terms remain undisclosed.",
+    "rationale": "The issuer API listed an August 2026 bank confirmation uploaded 2026-09-01. The ATB Financial form confirms CAD 1,820,785.35 in a Business Growth Plus deposit as of 2026-08-31. The single disclosed reserve asset is Canadian-dollar cash at the named bank. The form is not an accountant's opinion or audit and does not state CADC circulation or reconcile liabilities; account number, account legal safeguards, and withdrawal terms remain undisclosed. Pre-expiry re-check 2026-09-29: the issuer API still lists CADC_Bank_Attestation_Aug_2026.pdf (uploaded 2026-09-01) as the newest entry and the transparency page adds nothing newer, so the composition remains as at 2026-08-31. Monthly uploads from January 2025 through August 2026 landed between day 1 and day 16 of the following month, so the September 2026 confirmation is expected in early-to-mid October 2026. No live adapter snapshot landed this cycle; the configured adapter is an on-chain Ethereum totalSupply liveness probe whose contract remains readable over public RPC, so the silence is not attributable to the issuer source.",
     "compositionBasis": "ATB Financial bank confirmation for PayTrie AB Inc as listed in Loon's August 2026 attestation API",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

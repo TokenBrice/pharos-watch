@@ -4,7 +4,7 @@
     {
       "sourceKey": "usdtb-transparency:buidl",
       "name": "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
-      "pct": 98.8,
+      "pct": 98.9927,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
@@ -19,49 +19,42 @@
     },
     {
       "sourceKey": "usdtb-transparency:assets-in-motion",
-      "name": "Assets in motion (settlement float)",
-      "pct": 1.2,
+      "name": "Bank Demand Deposits (FDIC-Insured)",
+      "pct": 1.0073,
       "risk": "low",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed USD settlement counterparties",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Major U.S. commercial banks (FDIC-insured)",
       "riskFactors": [
-        "counterparty"
+        "counterparty",
+        "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (live-adapter alignment: curated rows carry the usdtb-transparency adapter's slice identities - BUIDL and assets-in-motion - so V9 can classify live rows; the Deloitte June 30 examination remains the assurance artefact on proofOfReserves.latestReport)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle) — fallback-composition reconciliation to the July 2026 USDtb reserve report (Deloitte & Touche LLP examination via Anchorage; report PDF read directly this pass)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "USDtb current backing and supply",
-        "url": "https://usdtb.money/api/transparency/backing-and-supply/current"
+        "label": "USDtb Reserve Report - July 2026 (Deloitte via Anchorage)",
+        "url": "https://learn.anchorage.com/07.31.26_USDtb-Stablecoin-Attestation-Report-signed.pdf"
       },
       {
-        "label": "USDtb Reserve Report - June 2026 (Deloitte via Anchorage)",
-        "url": "https://learn.anchorage.com/06.30.26_USDtb-Stablecoin-Attestation-Report.pdf"
+        "label": "USDtb current backing and supply",
+        "url": "https://usdtb.money/api/transparency/backing-and-supply/current"
       },
       {
         "label": "USDtb transparency dashboard",
         "url": "https://usdtb.money/transparency"
       }
     ],
-    "rationale": "Curated rows mirror the live usdtb-transparency adapter's slice identities (BUIDL held at the published Anchorage custody address, plus the USD assets-in-motion settlement float the endpoint reports). The Deloitte June 30, 2026 examination (read directly this pass: $777.2M reserves vs $775.1M redeemable USDtb - $766.9M BUIDL at fair value, $10.2M FDIC-insured demand deposits) is recorded on the proofOfReserves latestReport and corroborates the ~98.7% BUIDL concentration; the float's banking counterparty and settlement timing remain undisclosed. compositionAsOf is intentionally absent: the live endpoint is a rolling basis, not the examined balance-sheet date.",
-    "compositionBasis": "USDtb backing-and-supply endpoint (live-adapter classification scaffold)",
+    "rationale": "Rows keep the live usdtb-transparency adapter's two slice identities (adapter-owned source keys), with weights reconciled to Schedule II of the examination as of July 31, 2026: total reserve assets $401,718,132 vs $400,956,706 redeemable USDtb, composed of BUIDL at fair value $397,671,702 (98.9927%; self-custodied by Anchorage in segregated wallets — Solana $172,726,853, BSC $110,765,307, Avalanche $114,179,542) and cash $4,046,430 (1.0073%; demand deposit accounts at FDIC-insured depository institutions, held directly, United States, of which $3,796,430 exceeded the FDIC insurance limit). The examination classifies the entire non-BUIDL balance as FDIC-insured bank demand deposits, so the prior 'Assets in motion (settlement float)' unknown-counterparty slice is reclassified to the examined bank-deposit category with an immediate liquidity horizon; the live endpoint continues to label this balance 'assets in motion' (the source key is unchanged so V9 keeps classifying live rows), and the prior non-link disposition and 1.2% known-unknown are resolved by this disclosure. compositionAsOf equals the examination period end, so the curated rows are the independently examined fallback composition; the 2026-08-08 pass deliberately omitted the date because its weights tracked the rolling live endpoint rather than the examined balance-sheet date.",
+    "compositionBasis": "Deloitte & Touche LLP examination of the USDtb Reserve Report as of July 31, 2026 (Schedule II composition of reserve assets by asset type), mapped onto the usdtb-transparency adapter's two slice identities",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The assets-in-motion USD settlement float has no disclosed banking counterparty or settlement timing.",
-    "knownUnknownExposurePct": 1.2,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 1,
-        "reserveName": "Assets in motion (settlement float)",
-        "pct": 1.2,
-        "disposition": "insufficient-evidence",
-        "rationale": "The issuer reports this amount as USD assets in motion but does not identify its banking counterparty or settlement timeline."
-      }
-    ]
+    "knownUnknownExposure": "All examined reserve assets are classified (BUIDL fund shares at fair value; FDIC-insured bank demand deposits). Individual deposit bank names are not disclosed, and BUIDL's own underlying fund holdings are governed by BlackRock's separate fund disclosures rather than this examination.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

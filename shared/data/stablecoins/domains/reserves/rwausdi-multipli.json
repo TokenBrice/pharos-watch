@@ -2,12 +2,58 @@
   "id": "rwausdi-multipli",
   "reserves": [
     {
-      "sourceKey": "afi-proof:aggregate",
-      "name": "Institutional credit and market-neutral fund basket",
-      "pct": 100,
+      "name": "Lithium mining assets (AFI Li Mines)",
+      "pct": 40,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Undisclosed rwaUSDi private-pool obligors financing lithium mining assets",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "legal",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Gold commodity exposure (AFI Commodities Gold)",
+      "pct": 30,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Undisclosed rwaUSDi private-pool borrowers, funds, and strategy counterparties",
+      "issuerOrObligor": "Undisclosed gold commodity holders and obligors behind rwaUSDi private pools",
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity",
+        "counterparty",
+        "legal"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Real estate collateral (AFI Real Estate)",
+      "pct": 25,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Undisclosed rwaUSDi private-pool obligors financing real estate assets",
+      "riskFactors": [
+        "credit",
+        "market",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Copper mining assets (AFI Cu Mines)",
+      "pct": 5,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Undisclosed rwaUSDi private-pool obligors financing copper mining assets",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -21,67 +67,112 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Grok wave-8 reserve re-verification; Pharos reserve research",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvMultipliGate); Pharos reserve research",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "AFI rwaUSDi proof-of-reserves snapshot",
+        "label": "AFI rwaUSDi verification dashboard, Collateral Distribution reviewed 2026-09-29",
+        "url": "https://verification.afiprotocol.xyz/multipli/rwaUSDi"
+      },
+      {
+        "label": "AFI rwaUSDi signed reserve-breakdown feed, retrieved 2026-09-29",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown"
+      },
+      {
+        "label": "AFI rwaUSDi proof-of-reserves snapshot (TEE attestation 2026-09-29T14:30:46Z)",
         "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
       },
       {
-        "label": "AFI rwaUSDi periodic reserve reports",
-        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
+        "label": "Multipli rwaUSD and rwaUSDi transparency dashboard",
+        "url": "https://app.multipli.fi/dashboard"
+      },
+      {
+        "label": "AFI rwaUSDi issuance parameters (circulation and mint cap)",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/issuance-parameters"
       },
       {
         "label": "Multipli rwaUSDi institutional-credit documentation",
         "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
+      },
+      {
+        "label": "Chainrisk Asset Base Verification for Tokenized Issuance Eligibility, January 5, 2026",
+        "url": "https://github.com/Chainrisk-Cloud/ASSET-BASE-VERIFICATION-FOR-TOKENIZED-ISSUANCE-ELIGIBILITY/blob/main/ASSET%20BASE%20VERIFICATION%20FOR%20TOKENIZED%20ISSUANCE%20ELIGIBILITY.pdf"
       }
     ],
-    "rationale": "Re-opened 2026-09-04: the AFI proof endpoint reports active rwaUSDi total reserves of $1,500,000,000.00 against total liabilities of $472,502,100.00 (collateral ratio 317.4589). The cryptographic proof verifies aggregate reserve and liability totals but exposes no itemized holdings, borrowers, funds, strategy counterparties, or weights. Multipli documentation independently describes a KYB-gated institutional credit layer spanning private credit, structured finance, project finance, asset-backed lending, and market-neutral strategies with scheduled redemptions. The complete envelope therefore remains one unresolved mixed basket rather than a fabricated allocation. The live producer (afi-proof, weak-live-probe) publishes the proof's aggregate totals and collateral ratio as unverified ratio telemetry only: proof generation does not establish the as-of dates of the underlying assets.",
-    "compositionBasis": "AFI aggregate solvency proof plus Multipli's documented rwaUSDi eligible-asset envelope; current constituents and weights undisclosed",
-    "compositionAsOf": "2026-09-04",
+    "rationale": "Refreshed 2026-09-29 from the AFI verification network. The rwaUSDi verification dashboard and its signed reserve-breakdown feed now publish a current collateral distribution: Li Mines $600,000,000 (40%), Commodities (Gold) $450,000,000 (30%), Real Estate $375,000,000 (25%), and Cu Mines $75,000,000 (5%), totalling $1,500,000,000. The category total equals the TEE-attested and ZK-verified aggregate reserves in the same proof payload (proof 3eb0ce0917dbb230, TEE attestation timestamp 2026-09-29T14:30:46Z), which reports total liabilities of $479,782,100 matching the issuance-parameter circulation and the dashboard chainwise supply distribution across Ethereum, Base, Monad, Arbitrum One, and Pharos. The 2026-09-04 review held one unresolved basket because only aggregate totals were published; the published breakdown now resolves the category split, so the basket-needs-split disposition is replaced by four category slices. Instrument-level facts remain undisclosed: the proof pipeline commits each reserve record's custodian identifier, asset identifier, and value as private salted fields, so individual obligors, the legal form of each position, the gold holding form, seniority, maturities, and valuation marks stay unknown, and slices carry undisclosed-obligor descriptors with conservative high risk tiers. Multipli documentation frames rwaUSDi as a permissioned institutional credit layer financing mines, infrastructure, and real assets through private pools, and the January 5, 2026 Chainrisk asset-base letter independently corroborates natural-resource and real-estate originators behind the network with a combined asset base above $2.5 billion.",
+    "compositionBasis": "AFI verification-network Collateral Distribution for rwaUSDi (Li Mines $600,000,000 / 40%, Commodities Gold $450,000,000 / 30%, Real Estate $375,000,000 / 25%, Cu Mines $75,000,000 / 5%), retrieved 2026-09-29 from the signed reserve-breakdown feed; category values sum exactly to the TEE- and ZK-verified aggregate reserves of $1,500,000,000",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current asset classes, individual borrowers and funds, constituent weights, credit seniority, maturities, valuation marks, custody shares, strategy exposures, and redemption schedules are not exposed by the reviewed proof.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "Category weights are fully disclosed and sum to the verified aggregate, so no share of the composition is unknown. Instrument-level facts sit outside the disclosure: individual obligors and counterparties, the legal form of each position (credit, equity, royalty, or offtake), the gold holding form, custodian identities and shares, seniority, maturities, and valuation marks are committed as private salted fields and are not published.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Institutional credit and market-neutral fund basket",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "AFI verifies only the aggregate and Multipli publishes an eligible-asset envelope rather than a dated current constituent allocation."
+        "reserveName": "Lithium mining assets (AFI Li Mines)",
+        "pct": 40,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Lithium mining assets financed through rwaUSDi private pools are exogenous real-world collateral with no tracked stablecoin counterpart."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Gold commodity exposure (AFI Commodities Gold)",
+        "pct": 30,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The disclosed gold commodity exposure is exogenous real-world collateral with no tracked stablecoin counterpart."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Real estate collateral (AFI Real Estate)",
+        "pct": 25,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Real estate collateral financed through rwaUSDi private pools is exogenous real-world collateral with no tracked stablecoin counterpart."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Copper mining assets (AFI Cu Mines)",
+        "pct": 5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Copper mining assets financed through rwaUSDi private pools are exogenous real-world collateral with no tracked stablecoin counterpart."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed institutional custodians, prime brokers, and fund administrators behind Multipli's rwaUSDi private pools",
+        "name": "Undisclosed approved custodians behind rwaUSDi eligible collateral (custodian identifiers are committed privately inside the AFI proof pipeline)",
         "role": "custodian"
       },
       {
-        "name": "AFI Protocol (proof-of-reserves attestation layer, not a custodian)",
+        "name": "AFI Protocol (proof-of-reserves verification middleware, not a custodian)",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvMultipliGate)",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "AFI rwaUSDi proof-of-reserves snapshot (2026-07-16)",
-        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
+        "label": "AFI rwaUSDi verification dashboard, reviewed 2026-09-29",
+        "url": "https://verification.afiprotocol.xyz/multipli/rwaUSDi"
       },
       {
-        "label": "AFI rwaUSDi periodic reserve reports",
-        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
+        "label": "Multipli rwaUSD and rwaUSDi transparency dashboard, reviewed 2026-09-29",
+        "url": "https://app.multipli.fi/dashboard"
+      },
+      {
+        "label": "AFI proof-of-reserve network documentation, data pipeline",
+        "url": "https://docs.afiprotocol.xyz/proof-of-reserve-network/the-data-pipeline.md"
+      },
+      {
+        "label": "Multipli issuer, custody and operational risk documentation",
+        "url": "https://docs.multipli.fi/risks/issuer-custody-and-operational-risk.md"
       }
     ],
-    "uncertainty": "AFI's proof verifies aggregate rwaUSDi reserves and liabilities but does not identify the custodians, administrators, or prime brokers holding the underlying credit and fund positions; Multipli's documentation names strategy counterparties (e.g., Nomura, Fasanara, Edge Capital) without custody terms.",
+    "uncertainty": "The AFI data pipeline commits a custodian identifier, asset identifier, and USD value for every reserve record inside the enclave, and the dashboard describes eligible collateral held in approved custody, but no custodian name, share, jurisdiction, segregation term, or bankruptcy-remoteness arrangement is published. Multipli's issuer-custody documentation names institutional-grade counterparty standards for the rwaUSD liquid class and an insurance framework underwritten by Realm without identifying rwaUSDi-specific custodians.",
     "knownUnknownExposurePct": 100
   }
 }

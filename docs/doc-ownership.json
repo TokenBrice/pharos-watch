@@ -364,6 +364,7 @@
         "worker/src/cron/daily-digest/**",
         "worker/src/cron/digest/**",
         "worker/src/cron/digest-publication-watchdog.ts",
+        "worker/src/cron/safety-map-producer-kick.ts",
         "worker/src/handlers/scheduled/digest-trigger-poll.ts",
         "worker/src/cron/prepare-safety-score-v9-input.ts",
         "worker/src/cron/compute-safety-score-v9.ts",

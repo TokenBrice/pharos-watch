@@ -11,7 +11,7 @@
     "navToken": true
   },
   "mechanismArchetype": "tbill",
-  "collateral": "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits",
+  "collateral": "Short-term U.S. Treasury bills and bank demand deposits",
   "pegMechanism": "Bank wire redemption at NAV-based price with independent verification and collateral agent oversight",
   "llamaId": "129",
   "detailProvider": "defillama",
@@ -22,7 +22,22 @@
     "provider": "Ankura Trust",
     "attestorTier": "niche",
     "cadence": "daily-nav",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-09-23",
+      "publishedAt": "2026-09-28",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Ankura Trust Company, LLC (Verification Agent)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Ondo USDY LLC ATCAttest daily report 2026-09-23 (newest in the September 2026 archive)",
+          "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
+        }
+      ]
+    }
   },
   "links": [
     {

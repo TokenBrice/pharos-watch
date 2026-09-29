@@ -21,6 +21,31 @@
   "pegMechanism": "Trust-bank-backed JPY stablecoin issued by Shinsei Trust & Banking and distributed by SBI VC Trade. The June 24, 2026 launch is closed-loop for verified SBI VC Trade users; the Ethereum token is deployed, but external-wallet withdrawals and open public-chain circulation remain disabled pending legal and tax policy.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.shinseitrust.com/stablecoin/jpysc.html",
+    "provider": "SBI Shinsei Trust Bank (trustee statutory disclosure)",
+    "attestorTier": "self",
+    "latestReport": {
+      "periodEnd": "2026-09-07",
+      "publishedAt": "2026-09-07",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Pharos reserve research (GLM issue-sweep 2026-09-29)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "SBI Shinsei Trust / SBI VC Trade press release, 2026-09-07 (¥10.0B short-term JGBs in the JPYSC trust property; issuance ≈¥20.1B as of 2026-09-07)",
+          "url": "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf"
+        },
+        {
+          "label": "SBI Holdings news release page, 2026-09-07 (HTML version)",
+          "url": "https://www.sbigroup.co.jp/news/2026/0907_16567.html"
+        }
+      ]
+    }
+  },
   "links": [
     {
       "label": "Website",

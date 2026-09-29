@@ -41,10 +41,14 @@ import {
 import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { runSafetyMapProducerKick } from "../../cron/safety-map-producer-kick";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
 const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
 const TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE = "telegram-digest-outbox-drain";
+const SAFETY_MAP_PRODUCER_KICK_SURFACE = "safety-map-producer-kick";
+const DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS = SCHEDULED_SLOT_PLANS.digestTriggerPoll.budgetOnlyJobs?.length ?? 0;
 export const MAX_ATTEMPTS = 3;
 export const DIGEST_TRIGGER_POLL_INTERVAL_SECONDS = 5 * 60;
 /**
@@ -112,6 +116,55 @@ async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): P
       outcome: "error",
       error,
       producer: getRuntimeProducerIdentity(runtime, TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE),
+    });
+  }
+}
+
+/**
+ * Pre-digest Safety Score map producer kick. Outside its window it makes no
+ * reads and records nothing; its telemetry interval is therefore one day.
+ */
+async function runSafetyMapProducerKickSurface(runtime: ScheduledRuntimeContext): Promise<void> {
+  const startedMs = Date.now();
+  try {
+    const result = await runRuntimeBudgetOnlyTask(
+      runtime,
+      SAFETY_MAP_PRODUCER_KICK_SURFACE,
+      (signal) => runSafetyMapProducerKick({
+        db: runtime.db,
+        nowSec: runtime.slotStartedAt,
+        githubToken: runtime.env.GITHUB_PAT,
+        signal,
+      }),
+    );
+    if (result.outcome === null) return;
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: SAFETY_MAP_PRODUCER_KICK_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: result.action === "current" ? 0 : 1,
+      processedCount: result.action === "dispatched" ? 1 : 0,
+      outcome: result.outcome,
+      skippedReason: result.outcome === "skipped" ? result.action : null,
+      error: result.error,
+      metadata: {
+        action: result.action,
+        date: result.date,
+        manifestDate: result.manifestDate,
+        manifestReason: result.manifestReason,
+        dispatches: result.dispatches,
+      },
+      producer: getRuntimeProducerIdentity(runtime, SAFETY_MAP_PRODUCER_KICK_SURFACE),
+    });
+  } catch (err) {
+    logWorkerEvent({ scope: "handler", level: "error", event: "safety_map_producer_kick_failed", message: "Safety map producer kick failed", job: SAFETY_MAP_PRODUCER_KICK_SURFACE, error: err });
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: SAFETY_MAP_PRODUCER_KICK_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 0,
+      processedCount: 0,
+      outcome: "error",
+      error: toErrorMessage(err),
+      producer: getRuntimeProducerIdentity(runtime, SAFETY_MAP_PRODUCER_KICK_SURFACE),
     });
   }
 }
@@ -354,7 +407,7 @@ async function runWeeklyResumeIfDue(
     caught
       ? summarizeThrownScheduledJob("weekly-recap", caught)
       : summarizeCronResult("weekly-recap", result),
-  ], { budgetOnlyJobs: 2 });
+  ], { budgetOnlyJobs: DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS });
 }
 
 async function finishSkippedDigestTriggerPoll(
@@ -378,13 +431,14 @@ async function finishSkippedDigestTriggerPoll(
   });
   return buildScheduledSlotSummary([
     summarizeSkippedScheduledJob("digest-trigger-poll", skippedReason, neutral ? { neutral: true } : undefined),
-  ], { budgetOnlyJobs: 2 });
+  ], { budgetOnlyJobs: DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS });
 }
 
 
 export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
   const startedMs = Date.now();
   await runTelegramDigestOutboxDrain(runtime);
+  await runSafetyMapProducerKickSurface(runtime);
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
   if (!pending) {
     return finishSkippedDigestTriggerPoll(
@@ -420,7 +474,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "malformed-payload"),
-    ], { budgetOnlyJobs: 2 });
+    ], { budgetOnlyJobs: DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS });
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -617,5 +671,5 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     caught
       ? summarizeThrownScheduledJob("daily-digest", caught)
       : summarizeCronResult("daily-digest", result),
-  ], { budgetOnlyJobs: 2 });
+  ], { budgetOnlyJobs: DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS });
 }

@@ -41,7 +41,7 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
 });
 
 const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 409;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 411;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -140,6 +140,7 @@ describe("tracked stablecoin metadata", () => {
       "gynusd-gyndore",
       "gelt-tether",
       "tgld-tenbin",
+      "thgold-theo",
       "ejpy-jbfd",
       "aed-rakbank",
       "bils-bitsofgold",

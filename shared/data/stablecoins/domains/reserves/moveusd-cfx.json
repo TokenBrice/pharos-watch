@@ -6,7 +6,7 @@
       "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed FDIC member bank holding the CFX Labs beneficiary account",
+      "issuerOrObligor": "CFX Labs sponsor-bank program: USD cash deposits at FDIC-member U.S. banks, spread across a reciprocal network of 3,000+ FDIC-insured banks; individual banks and account terms undisclosed",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -16,16 +16,20 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve research (R02 refresh)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvCfxAsterOnre)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "CFX digital dollar infrastructure (retrieved 2026-09-04; 1:1/FDIC-bank claim, no dated composition report)",
+        "label": "CFX homepage (retrieved 2026-09-29; 1:1 tokenized deposits placed across 3,000+ FDIC-insured banks via sponsor banks; no dated composition report)",
         "url": "https://cfx.to/"
       },
       {
-        "label": "MoveUSD documentation (what is MoveUSD; U.S. universal bank partner and T-bill revenue note; retrieved 2026-09-04; redirect's 2025-10-21 update, no dated composition report)",
+        "label": "CFX Trust Center (retrieved 2026-09-29; segregated custodial accounts at FDIC-member banks, FinCEN MSB registration and state money-transmission licensing; no reserve report or attestation)",
+        "url": "https://trust.cfx.to"
+      },
+      {
+        "label": "MoveUSD documentation (what is MoveUSD; retrieved 2026-09-29; redirects to docs.cfx.to, page updated 2025-10-21, no dated composition report)",
         "url": "https://docs.moveusd.com/docs/what-is-moveusd"
       },
       {
@@ -33,15 +37,15 @@
         "url": "https://www.prnewswire.com/news-releases/cfx-launches-moveusd-enhancing-us-dollar-competitiveness-with-the-first-instant-transfer-bank-integrated-global-settlement-network-302416929.html"
       },
       {
-        "label": "CoinMarketCap MoveUSD about (retrieved 2026-09-04; live descriptive page, no dated composition report)",
+        "label": "CoinMarketCap MoveUSD about (retrieved 2026-09-29; live descriptive page, no dated composition report)",
         "url": "https://coinmarketcap.com/currencies/movemoney-usd/"
       }
     ],
-    "rationale": "Negative search 2026-09-04: cfx.to still states CFX-issued digital assets are redeemable 1:1 for U.S. dollars with USD custody by FDIC Member Banks, and its footer says MoveUSD deposits are held in an FDIC Member Bank beneficiary account, but it publishes no report period or reserve balance. The MoveUSD documentation URL redirects to docs.cfx.to (page updated 2025-10-21) and supplies no dated composition. Independently hosted PR Newswire launch copy is dated 2025-04-01 and states every MoveUSD dollar is backed 1:1 in beneficiary accounts at participating FDIC-insured banks; CoinMarketCap's live page likewise describes 1:1 regulated-bank demand deposits without a report date. No named bank, account-level terms, liquidity terms, or dated independent reserve-to-liability report were found. The 100% bank-deposit slice is retained as the last observed composition: compositionAsOf 2026-07-28 is 38.345 days before fixed capture clock 1788509806 because full dates are midnight UTC, exceeding the 38-day effective bound by 0.345 day; no newer dated publication supports a date change.",
-    "compositionBasis": "CFX issuer site + MoveUSD docs + independently hosted launch PR + CMC bank-deposit description of MoveUSD USD deposit backing",
+    "rationale": "Negative search 2026-09-29 across the CFX homepage, the new Trust Center, the docs.cfx.to index (llms.txt), the MoveUSD docs redirect, the independently hosted launch PR, and CoinMarketCap: CFX still publishes no dated reserve report, reserve balance, reconciliation, or attestation. The homepage now describes every dollar as a cash deposit placed across 3,000+ FDIC-insured banks through U.S. sponsor banks and asserts a real bank-failure survival record, and the Trust Center asserts customer funds are held in segregated custodial accounts at FDIC-member banks under FinCEN MSB registration and state money-transmission licensing; the docs portal remains unchanged since its 2025-10-21 update and contains only product and API pages. The single disclosed reserve category is therefore still a 100% U.S. bank-deposit claim with unnamed banks and no account-level terms. Confidence stays probable and compositionAsOf stays 2026-07-28, preserving the 2026-08-08 review's explicit decision not to advance the composition date without a newer dated publication; the standing web claim is re-observed, not re-dated. Reviewed-curated admission for the missing-reserve-composition gap remains blocked on issuer disclosure of a dated reserve statement or attestation.",
+    "compositionBasis": "CFX issuer site and Trust Center standing custody claims plus MoveUSD docs redirect, launch PR, and CMC bank-deposit description; standing 1:1 FDIC-bank-deposit claim with no dated composition report",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The single disclosed reserve category is known, but CFX does not identify the FDIC member bank, publish account-level terms, or provide a dated independent reserve report.",
+    "knownUnknownExposure": "The single disclosed reserve category is known, but CFX does not identify the sponsor or custodian banks in its 3,000+ bank network, publish account-level terms, or provide a dated independent reserve report.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -56,24 +60,28 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed FDIC member bank holding the CFX Labs beneficiary account",
+        "name": "Undisclosed FDIC-member banks in the CFX Labs sponsor-bank program (deposits spread across a 3,000+ bank reciprocal network)",
         "role": "bank",
         "sharePct": 100,
         "jurisdiction": "United States"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvCfxAsterOnre)",
     "confidence": "probable",
     "sources": [
       {
         "label": "CFX digital dollar infrastructure",
         "url": "https://cfx.to/"
+      },
+      {
+        "label": "CFX Trust Center (segregated custodial accounts at FDIC-member banks)",
+        "url": "https://trust.cfx.to"
       }
     ],
-    "uncertainty": "CFX discloses a beneficiary-account arrangement at an FDIC member bank but does not name the bank or establish segregation, bankruptcy remoteness, or rehypothecation terms for MoveUSD reserves."
+    "uncertainty": "CFX's Trust Center asserts customer funds are held in segregated custodial accounts at FDIC-member banks and the homepage describes deposits spread across a 3,000+ bank reciprocal network, but no bank is named and no independent verification, account-level segregation terms, bankruptcy-remoteness treatment, or rehypothecation restrictions are published; the segregation value is the issuer's own assertion."
   }
 }

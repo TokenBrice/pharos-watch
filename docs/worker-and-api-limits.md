@@ -75,7 +75,7 @@ The scheduler is structured around that conservative repo constraint:
 - shared slots bundle only related work
 - the quarter-hourly handler sequences jobs instead of fanning them out blindly, with D1-only DDR work moved to the later `+8` follow-up lane
 - `npm run check:cron-connections` fails any trigger at or above `6/6` and reports `5/6` triggers as **headroom full**
-- the connection check includes budget-only scheduled surfaces that do not create separate `cron_runs` rows: `telegram-registration-reconciliation`, `telegram-digest-outbox-drain`, and `digest-trigger-poll`
+- the connection check includes budget-only scheduled surfaces that do not create separate `cron_runs` rows: `telegram-registration-reconciliation`, `telegram-digest-outbox-drain`, `safety-map-producer-kick`, and `digest-trigger-poll`
 
 Treat any new fetch-heavy work added to an existing trigger slot as competing for the same trigger-wide outbound connection budget. A trigger at `5/6` must be treated as full for new fetch-heavy work unless the change also reduces existing peak usage or moves work to a different slot.
 
@@ -168,7 +168,7 @@ The same cleanup rule applies to Worker-side integration clients. Telegram deliv
 | Mint/burn SQL `IN` chunk size | `90` ids | `worker/src/cron/sync-mint-burn.ts` | Current safeguard for large batched SQL |
 | Mint/burn event insert batch size | `50` statements | `worker/src/lib/mint-burn-pipeline/persistence.ts` | Each insert binds 18 values; chunked to stay below D1 batch bind ceilings |
 | Mint/burn extended attempt SLO | `2` due runs / `75 minutes` | `worker/src/cron/mint-burn/run-state.ts` | The next run resumes at the first capacity-deferred config; active provider deferrals are explicitly exempted until their recorded expiry |
-| Stablecoin producer metadata ceiling | `<60 KiB` before scheduler enrichment; `<64 KiB` persisted | `worker/src/cron/sync-stablecoins/metadata.ts`, `worker/src/lib/cron-metadata-persistence.ts` | The stablecoin producer reserves 4 KiB for wrapper-owned lease, slot, invocation, and timeout metadata. Its size guard compacts diagnostics before that enrichment so top-level publication and active-price coverage survive unchanged into `cron_runs`; the global `<64 KiB` persistence guard remains the final fallback. |
+| Stablecoin producer metadata ceiling | `<60 KiB` before scheduler enrichment; `<64 KiB` persisted | `worker/src/cron/sync-stablecoins/metadata.ts`, `worker/src/lib/cron-metadata-persistence.ts` | The stablecoin producer reserves 4 KiB for wrapper-owned lease, slot, invocation, and timeout metadata. Its size guard compacts diagnostics before that enrichment so top-level publication and active-price coverage survive unchanged into `cron_runs`; because the compacted shape still scales with the missing-asset count, the guard enforces the budget through an ordered degradation ladder (duplicate ledger missing-ID list, verbose gap details, attempt records — counts and truncation markers retained) and fails closed with a scalar-only envelope marked `sizeGuardEvidenceDropped` when no rung fits. The global `<64 KiB` persistence guard remains the final fallback. |
 
 ### Per-Job Cron Timeouts
 

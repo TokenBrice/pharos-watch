@@ -216,6 +216,8 @@
     "ustbl-spiko": "cash-equivalent",
     "bib01-backed": "cash-equivalent",
     "thbill-theo": "cash-equivalent",
+    "thusd-theo": "core-stablecoin",
+    "thgold-theo": "cash-equivalent",
     "rusd-reservoir": "stable-value-investment",
     "wsrusd-reservoir": "stablecoin-variant",
     "srusd-reservoir": "stablecoin-variant",

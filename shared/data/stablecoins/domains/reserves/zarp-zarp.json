@@ -16,8 +16,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-24",
-    "reviewer": "Pharos live-reserve sync repair 2026-09-24",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "Pharos pre-expiry reserve refresh 2026-09-29",
     "confidence": "verified",
     "sources": [
       {
@@ -27,9 +27,13 @@
       {
         "label": "ZARP transparency page",
         "url": "https://www.zarpstablecoin.com/transparency/"
+      },
+      {
+        "label": "Kempen ZARP Stablecoin digital report page for September 2026 (published 2026-09-21; links the same 2026-09-01 signed-draft PDF)",
+        "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-september-2026/"
       }
     ],
-    "rationale": "Kempen Audit's ISRS 4400 (Revised) agreed-upon procedures report dated September 1, 2026 (the PDF that ZARP's transparency page links carries the filename suffix for a signed draft) covers ZARP balances on August 31, 2026. Procedure 2 verifies R89,062,624 in the Old Mutual Wealth Trust Company JHB account (cash: 31 August 2026 bank statement) and R2,923,773 in ZARP's Standard Bank accounts, while procedure 3 verifies the on-chain contract balances across Ethereum, Solana, Base, and Polygon against the 1 September 2026 blockchain snapshot. The attached management reserve report states 84,653,279.03 ZARP in circulation and R91,986,396.84 of cash and equivalents; the verified account components total R91,986,397 and the verified supply total of 84,653,279 agrees with the stated circulation, so this report's components and management total reconcile where the prior report left a R311,059.97 variance. The verified reserve balances therefore exceed the stated circulating liability. Kempen expressly states that an agreed-upon procedures engagement is not an assurance engagement and gives no opinion. The complete curated composition remains 100% ZAR fiat reserves.",
+    "rationale": "Kempen Audit's ISRS 4400 (Revised) agreed-upon procedures report dated September 1, 2026 (the PDF that ZARP's transparency page links carries the filename suffix for a signed draft) covers ZARP balances on August 31, 2026. Procedure 2 verifies R89,062,624 in the Old Mutual Wealth Trust Company JHB account (cash: 31 August 2026 bank statement) and R2,923,773 in ZARP's Standard Bank accounts, while procedure 3 verifies the on-chain contract balances across Ethereum, Solana, Base, and Polygon against the 1 September 2026 blockchain snapshot. The attached management reserve report states 84,653,279.03 ZARP in circulation and R91,986,396.84 of cash and equivalents; the verified account components total R91,986,397 and the verified supply total of 84,653,279 agrees with the stated circulation, so this report's components and management total reconcile where the prior report left a R311,059.97 variance. The verified reserve balances therefore exceed the stated circulating liability. Kempen expressly states that an agreed-upon procedures engagement is not an assurance engagement and gives no opinion. The complete curated composition remains 100% ZAR fiat reserves. Rechecked 2026-09-29 for the pre-expiry sweep: the transparency report index still lists September 2026 as the newest period and links the same 2026-09-01 signed-draft PDF, and Kempen's September 2026 digital report page (published 2026-09-21) links no newer engagement, so no newer primary evidence exists and compositionAsOf stays 2026-08-31. The page's live counters (last updated 28 September 2026; 76,586,438 ZARP circulating; R92,970,053 treasury reserves) are issuer dashboard data, not a dated composition report. Recent publication dates 2026-07-01, 2026-08-12, and 2026-09-01 imply a roughly monthly cadence after longer historical gaps, so the next report plausibly lands in early to mid October 2026 covering September 30, 2026 balances; until it does, this curated composition stops being admitted for Safety Score V9 when the 31-day composition window plus 7-day reporting grace ends on 2026-10-08.",
     "compositionBasis": "Kempen Audit ISRS 4400 (Revised) agreed-upon procedures report on ZARP's August 31, 2026 reserve and supply balances",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

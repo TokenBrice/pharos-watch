@@ -400,6 +400,11 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     nextReviewAt: "2026-09-12",
     note: "2026-08-12 review: current Aave Umbrella docs confirm dynamic on-chain rewards plus slashing/cooldown exposure, but Pharos still lacks an emissions-aware adapter that combines every reward stream with the holder-risk contract; keep the intentional gap until that reader is scoped",
   },
+  "thgold-theo": {
+    code: "pre-launch",
+    since: "2026-09-29",
+    note: "pre-launch yield-bearing gold asset with no published token contract or runtime yield source yet",
+  },
   "trusd-tori": {
     code: "pre-launch",
     since: "2026-04-14",

@@ -87,4 +87,12 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Saturn staking (sUSDat)",
     yieldType: "nav-appreciation",
   },
+  // thUSD -> sthUSD (Theo staking ERC-4626 vault — delta-neutral gold carry yield)
+  "thusd-theo": {
+    variantSymbol: "sthUSD",
+    variantAddress: "0xa808bc9775cb41c52c7842f8b50427fe7a770326",
+    variantChain: "ethereum",
+    yieldSource: "Theo staking (sthUSD)",
+    yieldType: "nav-appreciation",
+  },
 };

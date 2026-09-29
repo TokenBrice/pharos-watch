@@ -26,6 +26,7 @@ import {
   resolveStablecoinPriceGapReviews,
   type PreviousStablecoinActivePriceCoverage,
   type StablecoinPriceCoverageAsset,
+  type StablecoinPublicationCoverage,
   type StablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
 import { MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../../lib/cron-metadata-persistence";
@@ -78,25 +79,29 @@ function buildPriceSourceAttemptLedger(input: {
   };
 }
 
+function compactPriceSourceAttemptRecord(attempt: PricingAssetAttemptRecord): CompactPriceSourceAttempt {
+  return [
+    attempt.assetId,
+    attempt.adapter,
+    attempt.source,
+    attempt.chain ?? null,
+    attempt.target ?? null,
+    attempt.state === "skipped"
+      ? `skipped:${attempt.skipReason ?? "unknown"}`
+      : attempt.result ?? "attempted",
+    attempt.rejectionClass ?? null,
+    attempt.candidateAt ?? null,
+    attempt.observedAt ?? null,
+    attempt.replaySafe,
+  ];
+}
+
 function compactPriceSourceAttemptLedger(ledger: PriceSourceAttemptLedger): Omit<PriceSourceAttemptLedger, "records"> & {
   records: CompactPriceSourceAttempt[];
 } {
   return {
     ...ledger,
-    records: ledger.records.map((attempt) => [
-      attempt.assetId,
-      attempt.adapter,
-      attempt.source,
-      attempt.chain ?? null,
-      attempt.target ?? null,
-      attempt.state === "skipped"
-        ? `skipped:${attempt.skipReason ?? "unknown"}`
-        : attempt.result ?? "attempted",
-      attempt.rejectionClass ?? null,
-      attempt.candidateAt ?? null,
-      attempt.observedAt ?? null,
-      attempt.replaySafe,
-    ]),
+    records: ledger.records.map(compactPriceSourceAttemptRecord),
   };
 }
 
@@ -282,6 +287,145 @@ export function buildPricingSourceAuditReport(
   };
 }
 
+// The size guard must hold the pre-enrichment budget for any catalog size, so
+// compaction walks an explicit degradation ladder instead of emitting one
+// fixed compacted shape whose size still grows with the missing-asset count.
+// Every rung keeps counts and truncation markers; only retained detail depth
+// changes. Rungs shed, in order: the attempt ledger's duplicate of
+// activePriceCoverage.missingActiveIds (the exact list stays one key up),
+// verbose per-gap details (compact streak state always survives in full), and
+// ledger attempt records (recordCount/truncated keep the totals). If no rung
+// fits — a catalog so large that the exact ID sets and streak state alone
+// exceed the budget — the guard fails closed with a scalar-only envelope
+// instead of letting the global 64 KiB persistence compaction destroy the
+// evidence unmarked.
+const SIZE_GUARD_RUNGS: readonly {
+  coverageDetailCount: number;
+  ledgerRecordCount: number;
+  omitLedgerMissingActiveIds: boolean;
+}[] = [
+  { coverageDetailCount: MAX_DIAGNOSTIC_ARRAY_ITEMS, ledgerRecordCount: MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS, omitLedgerMissingActiveIds: false },
+  { coverageDetailCount: MAX_DIAGNOSTIC_ARRAY_ITEMS, ledgerRecordCount: MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS, omitLedgerMissingActiveIds: true },
+  { coverageDetailCount: 10, ledgerRecordCount: MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS, omitLedgerMissingActiveIds: true },
+  { coverageDetailCount: 5, ledgerRecordCount: MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS, omitLedgerMissingActiveIds: true },
+  { coverageDetailCount: 0, ledgerRecordCount: MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS, omitLedgerMissingActiveIds: true },
+  { coverageDetailCount: 0, ledgerRecordCount: 40, omitLedgerMissingActiveIds: true },
+  { coverageDetailCount: 0, ledgerRecordCount: 16, omitLedgerMissingActiveIds: true },
+  { coverageDetailCount: 0, ledgerRecordCount: 4, omitLedgerMissingActiveIds: true },
+  { coverageDetailCount: 0, ledgerRecordCount: 0, omitLedgerMissingActiveIds: true },
+];
+
+interface StablecoinsMetadataSizeGuardInput {
+  metadata: Record<string, unknown>;
+  publicationCoverage: StablecoinPublicationCoverage;
+  activePriceCoverage: StablecoinActivePriceCoverage;
+  priceSourceAttemptLedger: PriceSourceAttemptLedger;
+  capabilities: { stablecoinsCache: boolean; depegPipeline: boolean };
+  originalMetadataBytes: number;
+}
+
+function sizeGuardLedgerForRung(
+  ledger: PriceSourceAttemptLedger,
+  rung: { ledgerRecordCount: number; omitLedgerMissingActiveIds: boolean },
+): Record<string, unknown> {
+  const records = ledger.records.slice(0, rung.ledgerRecordCount);
+  return {
+    version: ledger.version,
+    ...(rung.omitLedgerMissingActiveIds
+      ? { missingActiveIdCount: ledger.missingActiveIds.length }
+      : { missingActiveIds: ledger.missingActiveIds }),
+    recordCount: ledger.recordCount,
+    truncated: ledger.truncated + ledger.records.length - records.length,
+    records: records.map(compactPriceSourceAttemptRecord),
+  };
+}
+
+function sizeGuardMetadataForRung(
+  guard: StablecoinsMetadataSizeGuardInput,
+  rung: (typeof SIZE_GUARD_RUNGS)[number],
+): Record<string, unknown> {
+  return {
+    rowsRead: guard.metadata.rowsRead,
+    rowsWritten: guard.metadata.rowsWritten,
+    rowsDropped: guard.metadata.rowsDropped,
+    assetCount: guard.metadata.assetCount,
+    missingPrices: guard.metadata.missingPrices,
+    canonicalDeduplication: guard.metadata.canonicalDeduplication,
+    rejectedPrices: guard.metadata.rejectedPrices,
+    nativePegCorrections: guard.metadata.nativePegCorrections,
+    nativePegFills: guard.metadata.nativePegFills,
+    priceObservationEffectiveness: guard.metadata.priceObservationEffectiveness,
+    depegErrorCount: guard.metadata.depegErrorCount,
+    stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
+    activePublicationCoverage: guard.publicationCoverage,
+    activePriceCoverage: compactStablecoinActivePriceCoverage(
+      guard.activePriceCoverage,
+      rung.coverageDetailCount,
+    ),
+    priceSourceAttemptLedger: sizeGuardLedgerForRung(guard.priceSourceAttemptLedger, rung),
+    metadataCompactedBySizeGuard: true,
+    originalMetadataBytes: guard.originalMetadataBytes,
+  };
+}
+
+// Terminal fail-closed envelope: bounded scalars only. With the coverage ID
+// arrays absent, health readers fail closed to `unknown`, which degrades
+// public health (`active-price-coverage-unknown` in public-health-assessment),
+// and the next run's continuity loader reports the previous coverage as
+// malformed rather than as a healthy empty missing set — strictly better than
+// an oversized payload whose global persistence compaction would silently
+// drop the same evidence without any marker.
+function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Record<string, unknown> {
+  return {
+    reason: "stablecoins-metadata-over-budget",
+    metadataCompactedBySizeGuard: true,
+    sizeGuardEvidenceDropped: true,
+    originalMetadataBytes: guard.originalMetadataBytes,
+    rowsRead: guard.metadata.rowsRead,
+    rowsWritten: guard.metadata.rowsWritten,
+    rowsDropped: guard.metadata.rowsDropped,
+    assetCount: guard.metadata.assetCount,
+    missingPrices: guard.metadata.missingPrices,
+    rejectedPrices: guard.metadata.rejectedPrices,
+    depegErrorCount: guard.metadata.depegErrorCount,
+    stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
+    activePublicationCoverage: {
+      complete: guard.publicationCoverage.complete,
+      expectedActiveCount: guard.publicationCoverage.expectedActiveCount,
+      presentActiveCount: guard.publicationCoverage.presentActiveCount,
+      waivedActiveCount: guard.publicationCoverage.waivedActiveCount,
+      missingActiveCount: guard.publicationCoverage.missingActiveIds.length,
+    },
+    activePriceCoverage: {
+      complete: guard.activePriceCoverage.complete,
+      expectedActiveCount: guard.activePriceCoverage.expectedActiveCount,
+      presentActiveCount: guard.activePriceCoverage.presentActiveCount,
+      pricedActiveCount: guard.activePriceCoverage.pricedActiveCount,
+      missingPriceCount: guard.activePriceCoverage.missingPriceCount,
+      alertEligibleCount: guard.activePriceCoverage.alertEligibleCount,
+      maxConsecutiveMissingGenerations: guard.activePriceCoverage.maxConsecutiveMissingGenerations,
+    },
+  };
+}
+
+/** @internal Exported for the metadata size-guard ladder test. */
+export function buildSizeGuardedStablecoinsSyncMetadata(
+  guard: StablecoinsMetadataSizeGuardInput,
+  budgetBytes: number = MAX_STABLECOINS_CRON_METADATA_BYTES,
+): string {
+  for (const rung of SIZE_GUARD_RUNGS) {
+    const candidate = buildSyncMetadata(sizeGuardMetadataForRung(guard, rung), {
+      cacheWriteMode: "published",
+      capabilities: guard.capabilities,
+    });
+    if (serializedByteLength(candidate) < budgetBytes) return candidate;
+  }
+  return buildSyncMetadata(sizeGuardTerminalMetadata(guard), {
+    cacheWriteMode: "published",
+    capabilities: guard.capabilities,
+  });
+}
+
 export function buildStablecoinsSyncResult(input: {
   assets: PeggedAsset[];
   rawAssetCount: number;
@@ -456,32 +600,13 @@ export function buildStablecoinsSyncResult(input: {
     capabilities,
   });
   if (serializedByteLength(serializedMetadata) >= MAX_STABLECOINS_CRON_METADATA_BYTES) {
-    const compactedActivePriceCoverage = compactStablecoinActivePriceCoverage(
+    serializedMetadata = buildSizeGuardedStablecoinsSyncMetadata({
+      metadata,
+      publicationCoverage,
       activePriceCoverage,
-      MAX_DIAGNOSTIC_ARRAY_ITEMS,
-    );
-    const compactedMetadata = {
-      rowsRead: input.rawAssetCount,
-      rowsWritten: input.assets.length,
-      rowsDropped: input.droppedMalformedAssets,
-      assetCount: input.assets.length,
-      missingPrices: finalMissing,
-      activePublicationCoverage: publicationCoverage,
-      activePriceCoverage: compactedActivePriceCoverage,
-      priceSourceAttemptLedger: compactPriceSourceAttemptLedger(priceSourceAttemptLedger),
-      canonicalDeduplication: metadata.canonicalDeduplication,
-      rejectedPrices: input.rejectedCount,
-      nativePegCorrections: input.nativePegCorrectionCount ?? 0,
-      nativePegFills: input.nativePegFillCount ?? 0,
-      priceObservationEffectiveness: input.priceObservationEffectiveness,
-      depegErrorCount: input.depegErrorCount,
-      stalenessCheckFailed: input.stalenessCheckFailed,
-      metadataCompactedBySizeGuard: true,
-      originalMetadataBytes: serializedByteLength(serializedMetadata),
-    };
-    serializedMetadata = buildSyncMetadata(compactedMetadata, {
-      cacheWriteMode: "published",
+      priceSourceAttemptLedger,
       capabilities,
+      originalMetadataBytes: serializedByteLength(serializedMetadata),
     });
   }
 

@@ -21,17 +21,17 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-28",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle; refreshed to the July 2026 report; PDF retrieved, Deloitte & Touche LLP examination opinion and Anchorage management assertion dated August 28, 2026 verified by research pass)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "USDtb Reserve Report - June 2026",
-          "url": "https://learn.anchorage.com/06.30.26_USDtb-Stablecoin-Attestation-Report.pdf"
+          "label": "USDtb Reserve Report - July 2026",
+          "url": "https://learn.anchorage.com/07.31.26_USDtb-Stablecoin-Attestation-Report-signed.pdf"
         }
       ]
     }

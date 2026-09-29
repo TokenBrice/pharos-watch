@@ -289,7 +289,7 @@ describe("digest publication watchdog", () => {
 
   it("starts each daily, weekly, and map check at its exact cutoff second", async () => {
     for (const [time, condition, options] of [
-      ["07:45:00", "map-producer-lag", {}],
+      ["07:15:00", "map-producer-lag", {}],
       ["08:30:00", "daily-row", { dailyRow: false }],
       ["08:35:00", "weekly-row", { weeklyRow: false }],
     ] as const) {

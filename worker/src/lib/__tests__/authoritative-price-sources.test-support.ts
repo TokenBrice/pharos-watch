@@ -72,10 +72,10 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
       },
     ],
   }),
-  // Deliberately permissive: everything is active except the two ids these suites
-  // assert are excluded from authoritative-override eligibility.
+  // Deliberately permissive: everything is active except the id these suites
+  // assert is excluded from authoritative-override eligibility.
   ACTIVE_IDS: {
-    has: (stablecoinId: string) => stablecoinId !== "sofid-sofi" && stablecoinId !== "usx-dforce",
+    has: (stablecoinId: string) => stablecoinId !== "usx-dforce",
   },
 }));
 

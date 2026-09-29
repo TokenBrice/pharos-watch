@@ -18,14 +18,25 @@
 name: Safety Map Refresh
 
 on:
-  # GitHub scheduled workflows are best-effort and routinely start hours late.
-  # Extra slots improve the odds, but the digest no longer depends on winning
-  # this race because it carries the map forward when today's map is missing.
+  # GitHub starts scheduled runs five to eight hours late (observed September
+  # 2026), so these slots alone routinely miss the 08:05 UTC digest. The
+  # Worker's pre-digest producer kick (digest trigger poll, 06:20-08:00 UTC)
+  # dispatches this workflow in `ensure` mode whenever today's manifest is
+  # missing; the slots remain a no-cost fallback because `ensure` and
+  # `schedule` runs exit early once today's map is live.
   schedule:
-    - cron: "20 2 * * *"
-    - cron: "20 4 * * *"
-    - cron: "20 6 * * *"
-  workflow_dispatch: {}
+    - cron: "20 1 * * *"
+    - cron: "20 3 * * *"
+    - cron: "20 5 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "force re-renders and supersedes today's map; ensure renders only when today's map is not live yet"
+        type: choice
+        options:
+          - force
+          - ensure
+        default: force
 
 permissions:
   contents: read
@@ -59,16 +70,18 @@ jobs:
           install-playwright-firefox: "false"
 
       # KV listing doubles as the namespace/token probe and lets scheduled
-      # retries skip a same-day publication that is already fresh.
+      # and ensure-mode runs skip once today's map is already published.
       - name: Plan publication from live KV state
         id: plan
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
           KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          PLAN_MODE: ${{ github.event_name == 'schedule' && 'ensure' || inputs.mode }}
         run: >-
           npx tsx scripts/maintenance/publish-safety-score-map.ts plan
           --event-name="${{ github.event_name }}"
+          --mode="${PLAN_MODE}"
           --out-dir="${MAP_OUT_DIR}"
 
       - name: Preserve immutable plan state

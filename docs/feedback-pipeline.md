@@ -176,7 +176,7 @@ Set in `worker/wrangler.toml` (non-secret) or via Cloudflare dashboard / `wrangl
 
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
-| `GITHUB_PAT` | Secret | Yes | Personal access token with `repo` scope (write Issues) |
+| `GITHUB_PAT` | Secret | Yes | Personal access token with `repo` scope (write Issues); the same token also dispatches the Safety Score map workflow ([Safety Score Map](./safety-score-map.md#provisioning)) |
 | `FEEDBACK_IP_SALT` | Secret | Yes | Random string used to hash IPs before storage |
 
 Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503.

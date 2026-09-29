@@ -14,6 +14,27 @@
   "llamaId": "316",
   "detailProvider": "defillama",
   "geckoId": "cash-4",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://reserves.bridge.xyz/cash",
+    "provider": "Bridge Building Inc (Bridge by Stripe)",
+    "attestorTier": "self",
+    "latestReport": {
+      "periodEnd": "2026-09-29",
+      "publishedAt": "2026-09-29",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Pharos reserve research (GLM issue-sweep 2026-09-29)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Bridge CASH reserves dashboard - Sep 29, 2026, 2:20 PM UTC page update (131,419,065 CASH supply vs $131,420,074 reserve assets, 100.00% collateralized; Cash 6.2% / Treasury 93.8%)",
+          "url": "https://reserves.bridge.xyz/cash"
+        }
+      ]
+    }
+  },
   "links": [
     {
       "label": "Website",

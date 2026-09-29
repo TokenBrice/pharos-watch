@@ -129,15 +129,18 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
       totalFactCount: card.scoreTrace.evidenceResponsibility.totalFactCount,
       reasonCodes: card.reasonCodes,
     }).toEqual({
-      score: null,
-      grade: "NR",
+      // The 2026-09-29 curation reconciled the curated composition to the
+      // Deloitte July 2026 examination (compositionAsOf == report periodEnd),
+      // so the audited fallback composition is admitted at the current clock
+      // and this no-live-producer scenario scores instead of returning NR for
+      // missing reserve composition.
+      score: 54,
+      grade: "C-",
       // SAFETY-SCORE-V9-25 L-08 keeps the missing bridge-supply attribution
       // explicit instead of treating the route as measured zero.
-      totalFactCount: 7,
+      totalFactCount: 6,
       reasonCodes: [
-        "insufficient-evidence",
         "missing-peg-input",
-        "missing-reserve-composition",
         "missing-same-notional-route",
         "runtime-bridge-materiality-unavailable",
         "unresolved-control-identity",

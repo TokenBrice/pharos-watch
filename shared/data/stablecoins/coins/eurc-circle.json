@@ -24,17 +24,17 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-29",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-27",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR remediation pass 2026-08 (refreshed to the June 2026 report; PDF confirmed live, same Deloitte engagement as USDC)",
+      "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle; refreshed to the July 2026 report; PDF retrieved, same Deloitte engagement as USDC, examination opinion and management assertion dated August 27, 2026 verified by research pass)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte EURC examination report - June 2026",
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20June%2026.pdf"
+          "label": "Deloitte EURC examination report - July 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20July%2026%20(1).pdf"
         }
       ]
     }

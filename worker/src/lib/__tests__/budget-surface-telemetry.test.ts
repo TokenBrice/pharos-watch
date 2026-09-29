@@ -51,6 +51,13 @@ describe("budget-only surface telemetry", () => {
         outcome: "unknown",
       }),
       expect.objectContaining({
+        job: "safety-map-producer-kick",
+        expectedIntervalSec: 86400,
+        telemetryStatus: "missing",
+        telemetryUnknown: true,
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
         job: "digest-trigger-poll",
         telemetryStatus: "fresh",
         telemetryUnknown: false,

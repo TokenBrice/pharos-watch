@@ -130,6 +130,15 @@ const OUTER_INNER_RX = BASE_ORBIT_ZONES.B.innerRx;
 const OUTER_INNER_RY = BASE_ORBIT_ZONES.B.innerRy;
 const OUTER_RX = BASE_ORBIT_ZONES.F.outerRx;
 const OUTER_RY = BASE_ORBIT_ZONES.F.outerRy;
+// Each outer band's largest mark sits on a long-axis vertex, the widest point
+// of its annulus. Adjacent bands alternate sides so stacked supply giants
+// balance across the centre instead of piling up on one flank.
+const OUTER_ANCHOR_PHASE: Readonly<Record<(typeof OUTER_TIERS)[number], number>> = {
+  B: 0,
+  C: Math.PI,
+  D: 0,
+  F: Math.PI,
+};
 const BAND_GAP_X = 14;
 const BAND_GAP_Y = 8;
 const BAND_SEMANTIC_MIN = 8;
@@ -539,15 +548,32 @@ export type DemandOrbitZoneResult =
 /**
  * Allocate the bounded B-F radial span from the actual bubble footprint. The
  * area term accounts for census demand while 2r + BAND_SEMANTIC_MIN guarantees
- * a visually meaningful thickness around the largest mark in each band. The
- * bands are then stacked from the compact A core to the outer map bound; C
- * receives any remaining thickness because it carries the largest census.
+ * a visually meaningful thickness around every mark. The bands are then
+ * stacked from the compact A core to the outer map bound; C receives the
+ * remaining thickness because it carries the largest census.
+ *
+ * The short-axis thickness only has to hold a band's runner-up mark. Its
+ * largest mark is anchored on a long-axis vertex (`OUTER_ANCHOR_PHASE`), where
+ * every band is `longAxisRatio` times thicker because the allocation always
+ * spends the whole short-axis budget. Charging a supply giant's diameter to
+ * the short axis instead would reserve that width around the entire ring and
+ * leave two giants in different outer bands (USDT in B and USDC in C on
+ * 2026-09-28) unplaceable at any scale.
+ *
+ * Each band is a single guide ring, so its census must also fit around the
+ * guide's circumference. D and F sit against the fixed outer bound, so the
+ * only way to lengthen C's guide is to move it outward: B takes the least
+ * share of the surplus that closes every ring, and C keeps the rest.
  */
 export function computeDemandOrbitZones(
   radiiByTier: Readonly<Record<Tier, readonly number[]>>,
   modifierLanesByTier: Readonly<Partial<Record<Tier, boolean>>> = {},
 ): DemandOrbitZoneResult {
+  const availableThickness = OUTER_RY - OUTER_INNER_RY - BAND_GAP_Y * (OUTER_TIERS.length - 1);
+  const availableThicknessX = OUTER_RX - OUTER_INNER_RX - BAND_GAP_X * (OUTER_TIERS.length - 1);
+  const longAxisRatio = availableThicknessX / availableThickness;
   const baseThickness = Object.fromEntries(TIER_ORDER.map((tier) => [tier, 0])) as Record<Tier, number>;
+  const rings = {} as Record<(typeof OUTER_TIERS)[number], { count: number; length: number; widestPair: number }>;
   for (const tier of OUTER_TIERS) {
     const radii = radiiByTier[tier];
     if (radii.some((radius) => !Number.isFinite(radius) || radius < 0)) {
@@ -559,16 +585,29 @@ export function computeDemandOrbitZones(
       (baseline.innerRx + baseline.outerRx) / 2,
       (baseline.innerRy + baseline.outerRy) / 2,
     );
-    const largestDiameter = radii.length > 0 ? Math.max(...radii) * 2 : 0;
+    let largest = 0;
+    let runnerUp = 0;
+    for (const radius of radii) {
+      if (radius > largest) {
+        runnerUp = largest;
+        largest = radius;
+      } else if (radius > runnerUp) {
+        runnerUp = radius;
+      }
+    }
     baseThickness[tier] = Math.max(
       BAND_SEMANTIC_MIN,
-      largestDiameter + BAND_SEMANTIC_MIN,
+      (largest * 2) / longAxisRatio + BAND_SEMANTIC_MIN,
+      runnerUp * 2 + BAND_SEMANTIC_MIN,
       footprint / (perimeter * BAND_PACKING_EFFICIENCY) + BAND_SEMANTIC_MIN,
     );
+    rings[tier] = {
+      count: radii.length,
+      length: radii.reduce((sum, radius) => sum + radius * 2 + BUBBLE_GAP, 0),
+      widestPair: largest + runnerUp + BUBBLE_GAP,
+    };
   }
 
-  const availableThickness = OUTER_RY - OUTER_INNER_RY - BAND_GAP_Y * (OUTER_TIERS.length - 1);
-  const availableThicknessX = OUTER_RX - OUTER_INNER_RX - BAND_GAP_X * (OUTER_TIERS.length - 1);
   const baseTotal = OUTER_TIERS.reduce((sum, tier) => sum + baseThickness[tier], 0);
   if (baseTotal > availableThickness + 1e-9) {
     return {
@@ -578,6 +617,46 @@ export function computeDemandOrbitZones(
     };
   }
 
+  // Spending the whole short-axis budget is what makes every band exactly
+  // `longAxisRatio` times thicker on its long axis than on its short axis.
+  const stack = (thickness: Readonly<Record<Tier, number>>): Record<Tier, OrbitZone> => {
+    const zones = { A: { ...BASE_ORBIT_ZONES.A } } as Record<Tier, OrbitZone>;
+    let innerRx = OUTER_INNER_RX;
+    let innerRy = OUTER_INNER_RY;
+    for (const [index, tier] of OUTER_TIERS.entries()) {
+      const thicknessY = thickness[tier];
+      const thicknessX = thicknessY * longAxisRatio;
+      const isLast = index === OUTER_TIERS.length - 1;
+      zones[tier] = {
+        innerRx,
+        innerRy,
+        outerRx: isLast ? OUTER_RX : innerRx + thicknessX,
+        outerRy: isLast ? OUTER_RY : innerRy + thicknessY,
+      };
+      innerRx += thicknessX + BAND_GAP_X;
+      innerRy += thicknessY + BAND_GAP_Y;
+    }
+    return zones;
+  };
+  // `packEllipticalOrbit` spreads its arc slack evenly and then requires every
+  // neighbour chord to clear the pair's centre distance. No guide curves more
+  // tightly than its short-axis circle of curvature, so (Schur) each pair needs
+  // at most the arc that subtends the widest pair's distance on that circle.
+  const ringShortfall = (tier: (typeof OUTER_TIERS)[number], zone: OrbitZone): number => {
+    const ring = rings[tier];
+    if (ring.count < 2) return 0;
+    const guideRx = (zone.innerRx + zone.outerRx) / 2;
+    const guideRy = (zone.innerRy + zone.outerRy) / 2;
+    const tightestRadius = Math.min(guideRx, guideRy) ** 2 / Math.max(guideRx, guideRy);
+    if (ring.widestPair >= 2 * tightestRadius) return Number.POSITIVE_INFINITY;
+    const pairArc = 2 * tightestRadius * Math.asin(ring.widestPair / (2 * tightestRadius));
+    const demand = ring.length + ring.count * (pairArc - ring.widestPair);
+    return demand - approximateEllipsePerimeter(guideRx, guideRy);
+  };
+  const firstOpenRing = (zones: Readonly<Record<Tier, OrbitZone>>) =>
+    OUTER_TIERS.map((tier) => ({ tier, shortfall: ringShortfall(tier, zones[tier]) })).find(({ shortfall }) => shortfall > 0);
+
+  let ringFailure: string | null = null;
   for (let laneStep = SUBGRADE_LANE_DEGRADE_STEPS; laneStep >= 0; laneStep--) {
     const laneScale = laneStep / SUBGRADE_LANE_DEGRADE_STEPS;
     const requiredThickness = { ...baseThickness };
@@ -593,31 +672,38 @@ export function computeDemandOrbitZones(
     const requiredTotal = OUTER_TIERS.reduce((sum, tier) => sum + requiredThickness[tier], 0);
     if (requiredTotal > availableThickness + 1e-9) continue;
 
-    // Consume the entire short-axis budget. The surplus is not empty padding:
-    // it widens C, whose census and modifier lanes need the most radial room.
-    const allocatedThickness = { ...requiredThickness };
-    allocatedThickness.C += availableThickness - requiredTotal;
-    const allocatedTotal = OUTER_TIERS.reduce((sum, tier) => sum + allocatedThickness[tier], 0);
-    const xScale = availableThicknessX / allocatedTotal;
-    const zones = { A: { ...BASE_ORBIT_ZONES.A } } as Record<Tier, OrbitZone>;
-    let innerRx = OUTER_INNER_RX;
-    let innerRy = OUTER_INNER_RY;
-    for (const [index, tier] of OUTER_TIERS.entries()) {
-      const thicknessY = allocatedThickness[tier];
-      const thicknessX = thicknessY * xScale;
-      const isLast = index === OUTER_TIERS.length - 1;
-      zones[tier] = {
-        innerRx,
-        innerRy,
-        outerRx: isLast ? OUTER_RX : innerRx + thicknessX,
-        outerRy: isLast ? OUTER_RY : innerRy + thicknessY,
-      };
-      innerRx += thicknessX + BAND_GAP_X;
-      innerRy += thicknessY + BAND_GAP_Y;
+    // The surplus is not empty padding: it widens C, whose census and
+    // modifier lanes need the most radial room, after B has taken the least
+    // share that moves every guide ring out to its census circumference.
+    const surplus = availableThickness - requiredTotal;
+    const withBShare = (shareB: number) => stack({
+      ...requiredThickness,
+      B: requiredThickness.B + shareB,
+      C: requiredThickness.C + surplus - shareB,
+    });
+    const widestOpen = firstOpenRing(withBShare(surplus));
+    if (widestOpen) {
+      ringFailure = `Band ${widestOpen.tier} needs ${widestOpen.shortfall.toFixed(1)}px more guide circumference than the bounded map can give its census`;
+      continue;
     }
-    return { ok: true, zones, requiredThickness };
+    let closed = surplus;
+    if (!firstOpenRing(withBShare(0))) {
+      closed = 0;
+    } else {
+      let open = 0;
+      while (closed - open > 1e-3) {
+        const middle = (open + closed) / 2;
+        if (firstOpenRing(withBShare(middle))) open = middle;
+        else closed = middle;
+      }
+    }
+    return { ok: true, zones: withBShare(closed), requiredThickness };
   }
-  return { ok: false, detail: "Outer bands cannot retain their bounded extents and semantic gaps", requiredThickness: baseThickness };
+  return {
+    ok: false,
+    detail: ringFailure ?? "Outer bands cannot retain their bounded extents and semantic gaps",
+    requiredThickness: baseThickness,
+  };
 }
 
 function circleFitsOrbit(zone: OrbitZone, cx: number, cy: number, r: number): boolean {
@@ -898,8 +984,16 @@ export function placeSubgradeRadialLanes(
   const directions = grades.map(subgradeLaneDirection);
   if (directions.every((direction) => direction === 0)) return { centers: [...centers], offsetY: 0 };
 
-  const modifierClearances = radii
-    .map((radius, index) => directions[index] === 0 ? Number.POSITIVE_INFINITY : halfY - radius - BUBBLE_GAP / 2);
+  // Lane offsets scale with the band's local half-thickness, which grows from
+  // halfY on the short axis to halfX on the long axis. Measure each modifier
+  // mark's clearance where it actually sits: a band leader anchored on a
+  // long-axis vertex may be wider than the short-axis half-thickness.
+  const modifierClearances = radii.map((radius, index) => {
+    if (directions[index] === 0) return Number.POSITIVE_INFINITY;
+    const t = Math.atan2((centers[index].y - GALAXY_CY) / orbitRy, (centers[index].x - GALAXY_CX) / orbitRx);
+    const localHalf = Math.hypot(halfX * Math.cos(t), halfY * Math.sin(t));
+    return localHalf > 0 ? (halfY * (localHalf - radius - BUBBLE_GAP / 2)) / localHalf : 0;
+  });
   const boundedTarget = Math.max(0, Math.min(SUBGRADE_LANE_TARGET_Y, ...modifierClearances));
   const first = centers[0];
   const referencePhase = Math.atan2((first.y - GALAXY_CY) / orbitRy, (first.x - GALAXY_CX) / orbitRx);
@@ -977,11 +1071,19 @@ function layoutBands(
   for (const tier of TIER_ORDER) {
     // Supply order is retained inside each published sub-grade. Outer tiers
     // interleave those discrete populations around the guide so adjacent
-    // marks can separate radially without turning angle into another metric.
+    // marks can separate radially without turning angle into another metric,
+    // then rotate that cyclic order so the band's supply leader comes first
+    // and lands on its long-axis anchor, the only thickness the demand model
+    // reserved for it.
     const supplySorted = graded
       .filter((coin) => coin.tier === tier)
       .sort((a, b) => b.mcap - a.mcap || b.score - a.score || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-    const coins = tier === "A" ? supplySorted : interleaveSubgradeLanes(supplySorted);
+    let coins = supplySorted;
+    if (tier !== "A" && supplySorted.length > 0) {
+      const interleaved = interleaveSubgradeLanes(supplySorted);
+      const leader = interleaved.indexOf(supplySorted[0]);
+      coins = [...interleaved.slice(leader), ...interleaved.slice(0, leader)];
+    }
     if (coins.length === 0) continue;
     const zone = zoneResult.zones[tier];
     const bubbles: Bubble[] = [];
@@ -1018,7 +1120,7 @@ function layoutBands(
     } else {
       const orbitRx = (zone.innerRx + zone.outerRx) / 2;
       const orbitRy = (zone.innerRy + zone.outerRy) / 2;
-      const packedCenters = packEllipticalOrbit(radii, orbitRx, orbitRy, TIER_ORDER.indexOf(tier) * 0.47 - Math.PI / 2);
+      const packedCenters = packEllipticalOrbit(radii, orbitRx, orbitRy, OUTER_ANCHOR_PHASE[tier]);
       const lanePlacement = packedCenters
         ? placeSubgradeRadialLanes(packedCenters, radii, coins.map((coin) => coin.grade), zone, placedAcrossTiers)
         : null;

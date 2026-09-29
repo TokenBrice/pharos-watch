@@ -6,7 +6,7 @@
       "name": "Strata Senior USDe deployed strategy positions",
       "pct": 100,
       "risk": "high",
-      "coinId": "susde-ethena",
+      "coinId": "usde-ethena",
       "depType": "wrapper",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Strata senior-tranche strategy and Ethena sUSDe",
@@ -21,12 +21,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice3)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (DepDrain)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Strata protocol overview",
+        "label": "Strata protocol overview (Base Asset and share denomination)",
         "url": "https://docs.strata.markets/technical-documentation/protocol-overview"
       },
       {
@@ -38,9 +38,9 @@
         "url": "https://docs.strata.markets/resources/faqs"
       }
     ],
-    "rationale": "Strata documents srUSDe as the senior ERC-4626 tranche of its Ethena market, with USDe as base asset and sUSDe as the yield source managed by the strategy. The deployed balance is therefore a protocol position linked to tracked sUSDe and inherits Ethena basis, counterparty, market, and cooldown liquidity risks.",
-    "compositionBasis": "Live ERC-4626 deployed balance captured 2026-09-21 and current Strata market documentation",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Strata documents the Ethena USDe market meta-vaults with USDe as the Base Asset and all vault shares denominated in USDe, while the strategy stakes assets into Ethena sUSDe as the yield source. The deployed strategy position is therefore linked to the tracked variant parent USDe with a wrapper dependency so the serial dependency projection attributes exactly; the strategy's sUSDe staking leg remains documented through the issuer-obligor name and the basis, counterparty, market, and cooldown liquidity risk factors. The previous susde-ethena slice link left the tracked exposure unattributed against the usde-ethena serial chain and emitted material-dependency-unavailable. Chained variants are structurally invalid in this registry (sUSDe is itself a variant of USDe), so the parent link is the only exact mapping.",
+    "compositionBasis": "Live ERC-4626 deployed balance re-verified 2026-09-29 by a pinned Ethereum read of the vault at 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 (totalAssets() 18,502,556.63 USDe at block 0x18e01f8; the deployed strategy position remains the vault's entire asset base) and current Strata market documentation",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct deployed position is identified as the Strata senior-tranche strategy over sUSDe; changing internal USDe and sUSDe balances are not separately weighted by the live adapter.",
     "knownUnknownExposurePct": 0

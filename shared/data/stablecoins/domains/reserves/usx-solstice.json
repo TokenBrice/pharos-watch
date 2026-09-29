@@ -19,26 +19,34 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Grok wave8 GROK-RESEARCH phase1; Pharos reserve research refresh",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSolsticeTron)",
     "confidence": "verified",
     "sources": [
-      {
-        "label": "Solstice USX product page",
-        "url": "https://solstice.finance/usx"
-      },
       {
         "label": "Solstice attestation API",
         "url": "https://attestation-api.solstice.finance/dashboard"
       },
       {
+        "label": "Solstice attestations and proof-of-solvency documentation",
+        "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md"
+      },
+      {
         "label": "Solstice USX documentation",
         "url": "https://docs.solstice.finance/solstice-for-users/usx.md"
+      },
+      {
+        "label": "Solstice Finance whitepaper, May 2026",
+        "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
+      },
+      {
+        "label": "Solstice USX product page",
+        "url": "https://solstice.finance/usx"
       }
     ],
-    "rationale": "Re-opened 2026-08-29: the Solstice attestation API's latest reserve timeline point is dated 2026-08-28 and reports total reserves of $303,713,470.56 against total supply of $303,025,006.49 (approximately 100.2272% collateralization), with verifiability 100, delta-neutral true, and overcollateralized true. The endpoint supplies cryptographic SEV, Merkle, and ZK proof material but no asset-level balances, category keys, or current split. Solstice product and user documentation name audited cash, tokenized Treasuries, and delta-neutral hedged positions, without category weights. The reserve remains one aggregate slice; no category percentages are inferred from the aggregate solvency proof.",
-    "compositionBasis": "Current Solstice collateral disclosure and 2026-08-28 aggregate reserve-versus-supply attestation",
-    "compositionAsOf": "2026-08-28",
+    "rationale": "Re-reviewed 2026-09-29 against the newest dated disclosure. The Solstice attestation API's latest reserve timeline point is dated 2026-09-23 and reports total reserves of $219,157,088.72 against total supply of $217,959,749.69 (approximately 100.5493 percent collateralization), with verifiability 100, delta-neutral true, and overcollateralized true. Same-day proof artifacts (Merkle root 2026-09-23T12:16:16Z, snapshot, SEV, and ZKP material) were inspected: the decoded ZKP archives carry opaque proof bytes with no asset-level balances, category keys, or current split. The May 2026 whitepaper states that reserve composition is reported continuously through the Accountable Proof of Solvency dashboards and that off-chain reserves sit at regulated custodians under segregated account structures, but the dashboard API publishes only aggregate reserves and supply with cryptographic proofs. Product and user documentation name audited cash, tokenized Treasuries, and delta-neutral hedged positions without category weights. The reserve therefore remains one aggregate slice; no category percentages are inferred from the aggregate solvency proof.",
+    "compositionBasis": "Current Solstice collateral disclosure and 2026-09-23 aggregate reserve-versus-supply attestation",
+    "compositionAsOf": "2026-09-23",
     "scope": "full-composition",
     "knownUnknownExposure": "The current split among audited cash, tokenized Treasuries, and delta-neutral hedged positions is not published; underlying instruments, custodian shares, execution venues, and hedge counterparties are also undisclosed.",
     "knownUnknownExposurePct": 100,
@@ -63,16 +71,16 @@
         "role": "custodian"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave8 GROK-RESEARCH phase1",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSolsticeTron)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Solstice USX product page",
-        "url": "https://solstice.finance/usx"
+        "label": "Solstice Finance whitepaper, May 2026",
+        "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
       },
       {
         "label": "Solstice USX documentation",
@@ -83,7 +91,7 @@
         "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md"
       }
     ],
-    "uncertainty": "Solstice names Copper and Ceffu as third-party custodians (USX docs collateral-flow step; risk disclosures custody counterparty section; product page institutional custody and partner logos) but does not publish their current shares, identify hedge venues, or establish legal segregation, bankruptcy remoteness, or rehypothecation terms for the complete reserve.",
+    "uncertainty": "Solstice names Copper and Ceffu as third-party custodians and the May 2026 whitepaper states that off-chain reserves sit at regulated custodians under segregated account structures, but the issuer does not publish current custodian shares, identify hedge venues, or establish legal bankruptcy remoteness or rehypothecation terms for the complete reserve.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv25)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv25); issue-sweep pre-expiry re-check 2026-09-29 (no newer report than 1 September 2026)",
     "confidence": "verified",
     "sources": [
       {
@@ -31,7 +31,7 @@
         "url": "https://www.macropod.com/transparency"
       }
     ],
-    "rationale": "Macropod's issuer self-verification report under paragraph 12 of ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867 covers the full reserve at 1 September 2026. It identifies AUD 2,899,657.78 of cash at Westpac Banking Corporation in the named 'AUDM Trust Class A Reserve' account held by Macropod as trustee for the AUDM Trust. The report reconciles that balance against AUD 2,898,943.78 of AUDM across Ethereum, Redbelly, Solana and Base, leaving AUD 714.00 of excess reserves. The issuer states that it reviewed bank statements, transaction and withdrawal records, blockchain transactions, contract addresses, and transfers between the reserve account and the blockchains. The report is issuer-signed self-verification rather than an independent audit.",
+    "rationale": "Macropod's issuer self-verification report under paragraph 12 of ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867 covers the full reserve at 1 September 2026. It identifies AUD 2,899,657.78 of cash at Westpac Banking Corporation in the named 'AUDM Trust Class A Reserve' account held by Macropod as trustee for the AUDM Trust. The report reconciles that balance against AUD 2,898,943.78 of AUDM across Ethereum, Redbelly, Solana and Base, leaving AUD 714.00 of excess reserves. The issuer states that it reviewed bank statements, transaction and withdrawal records, blockchain transactions, contract addresses, and transfers between the reserve account and the blockchains. The report is issuer-signed self-verification rather than an independent audit. Pre-expiry re-check 2026-09-29: the live transparency index still lists this 1 September 2026 report as the newest dated reserve report, the Hall Chadwick agreed-upon-procedures series is last represented by the June 2026 report, and no interim report exists, so the composition remains as at 2026-09-01. The next monthly report (as at 1 October 2026) is expected in the first days of October 2026. No live adapter snapshot landed this cycle; the index anchor and the pinned report PDF (re-downloaded 2026-09-29, 95,518 bytes, byte-identical to the reviewed manifest) are unchanged, so the adapter silence is not attributable to the issuer source.",
     "compositionBasis": "Macropod issuer self-verification report as at 1 September 2026",
     "compositionAsOf": "2026-09-01",
     "scope": "full-composition",

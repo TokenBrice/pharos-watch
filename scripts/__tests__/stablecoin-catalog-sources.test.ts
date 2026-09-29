@@ -472,20 +472,28 @@ describe("real stablecoin catalog composed records", () => {
     expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview", "oracleRisk"]);
   });
 
-  it("composes susds-sky's review-backed wrapper composition with no attestation or custody evidence", () => {
+  it("composes susds-sky's review-backed wrapper composition with no attestation evidence", () => {
     const { coin } = composedEntry("susds-sky");
 
     expect(coin.variantOf).toBe("usds-sky");
     expect(coin.variantKind).toBe("savings-passthrough");
     expect(coin.mintAuthority?.inheritedFrom).toBe(coin.variantOf);
+    // The idle wrapper slice carries the variantOf link; the residual deployed
+    // accrual slice stays unlinked by review.
     expect(coin.reserves).toEqual([
-      expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 100 }),
+      expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 99.999982504839 }),
+      expect.objectContaining({
+        name: "Sky Savings USDS deployed strategy positions",
+        pct: 0.00001749516100346682,
+        risk: "high",
+      }),
     ]);
     expect(coin.reserveReview?.scope).toBe("full-composition");
-    // The lockstep pair stays silent here: the sidecar review has no base-file
-    // attestation to agree with, and this reserves sidecar omits custody entirely.
+    // The attestation lockstep stays silent here: the sidecar review has no
+    // base-file attestation to agree with. Custody is reviewed on the reserves
+    // sidecar itself.
     expect(coin.proofOfReserves).toBeUndefined();
-    expect(coin.custodyProfile).toBeUndefined();
+    expect(coin.custodyProfile).toBeDefined();
     expect(coin.liveReservesConfig?.semantics).toBe("single-asset");
     expect(domainFields(coin, "risk-review")).toEqual([
       "blacklistabilityReview",

@@ -9,7 +9,7 @@ import {
   type DigestSafetyMapTierSummary,
 } from "@shared/types/digest-safety-map-contract";
 import { throwIfAborted } from "./abort";
-import { readResponseTextBoundedWithSignal } from "./response-body";
+import { cancelResponseBodyQuietly, readResponseTextBoundedWithSignal, readResponseTextWithinLimitWithSignal } from "./response-body";
 export type { DigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
 
 const MANIFEST_URL = `${SITE_ORIGIN}/safety-scores/map.json`;
@@ -17,6 +17,7 @@ const IMAGE_PATH = "/safety-scores/map.png";
 const SAFETY_MAP_PHASE_TIMEOUT_MS = 8_000;
 const MANIFEST_MAX_BYTES = 16_384;
 const UTC_DAY_SEC = 86_400;
+const MANIFEST_DATE_PROBE_TIMEOUT_MS = 3_000;
 
 /** Maximum whole days a carried-forward map may lag the requested date. */
 export const MAX_SAFETY_MAP_CARRY_FORWARD_DAYS = 2;
@@ -185,5 +186,59 @@ export async function resolveDigestSafetyMap(
   } catch (error) {
     if (signal?.aborted) throw error;
     return { kind: "unavailable", reason: `read-failed:${toErrorMessage(error).slice(0, 80)}` };
+  }
+}
+
+/** Date the live manifest commits to, or the bounded reason it could not be read. */
+export interface SafetyMapManifestDateObservation {
+  date: string | null;
+  reason: string | null;
+}
+
+/**
+ * Lightweight probe of the live manifest's `date`, shared by the publication
+ * watchdog and the pre-digest producer kick. It never checks the image: a
+ * `date` equal to today is the only positive claim either caller acts on.
+ */
+export async function readSafetyMapManifestDate(
+  signal?: AbortSignal,
+): Promise<SafetyMapManifestDateObservation> {
+  const timeoutSignal = AbortSignal.timeout(MANIFEST_DATE_PROBE_TIMEOUT_MS);
+  const requestSignal = signal
+    ? AbortSignal.any([signal, timeoutSignal])
+    : timeoutSignal;
+  try {
+    const response = await fetch(MANIFEST_URL, {
+      headers: { Accept: "application/json" },
+      signal: requestSignal,
+    });
+    if (!response.ok) {
+      await cancelResponseBodyQuietly(response);
+      return { date: null, reason: `manifest-http-${response.status}` };
+    }
+    const raw = await readResponseTextWithinLimitWithSignal(
+      response,
+      MANIFEST_MAX_BYTES,
+      requestSignal,
+    );
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { date: null, reason: "manifest-invalid-json" };
+    }
+    const manifestDate = parsed && typeof parsed === "object" && "date" in parsed
+      ? parsed.date
+      : null;
+    if (typeof manifestDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(manifestDate)) {
+      return { date: null, reason: "manifest-invalid" };
+    }
+    return { date: manifestDate, reason: null };
+  } catch (error) {
+    throwIfAborted(signal);
+    const reason = error instanceof Error && error.message
+      ? error.message.slice(0, 80)
+      : "read-failed";
+    return { date: null, reason: `manifest-read-failed:${reason}` };
   }
 }
