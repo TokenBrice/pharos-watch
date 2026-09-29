@@ -8,11 +8,13 @@ import {
   minimalAsset,
 } from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { V9_REASON_CODES } from "@shared/types/safety-score-v9";
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Pillars,
 } from "@shared/test-utils/report-cards-v9";
 import { makeCoin } from "./stablecoin-catalog.test-support";
+import { curationDispositionForReason } from "../lib/safety-score-v9-missing-data-work-types";
 import { describe, expect, it } from "vitest";
 import {
   classifyV9MissingDataWorkType,
@@ -165,7 +167,8 @@ describe("Safety Score v9 missing-data work routing", () => {
     ["unresolved-mint-authority", "MINT_AUTHORITY"],
     ["material-unknown-reserve-exposure", "RESERVE_COMPOSITION"],
     ["missing-custody-profile", "RESERVE_COMPOSITION"],
-    ["missing-latest-assurance-report", "RESERVE_COMPOSITION"],
+    ["parent-cycle", "DEPENDENCY_REVIEW"],
+    ["implementation-parent-cycle", "DEPENDENCY_REVIEW"],
   ] as const)("routes score-only reason %s to %s", (reasonCode, expected) => {
     expect(classifyV9ScoreProjectionWorkType(reasonCode)).toBe(expected);
   });
@@ -233,6 +236,27 @@ describe("Safety Score v9 missing-data work routing", () => {
 
   it("does not turn explicitly non-curation structural risk into a missing-data task", () => {
     expect(classifyV9ScoreProjectionWorkType("correlated-exit-routes")).toBeNull();
+  });
+
+  it.each(["no-viable-exit-path", "bounded-unknown-reserve-exposure"] as const)(
+    "keeps measured-terminal reason %s out of the missing-data task lanes",
+    (reasonCode) => {
+      expect(classifyV9ScoreProjectionWorkType(reasonCode)).toBeNull();
+    },
+  );
+
+  it("defines a work disposition for every reason code the evaluators can emit", () => {
+    // Routing contract for the weekly sweep generators: any code eligible for
+    // a card pillar reason, nr reason, or compiled fact gap must resolve to a
+    // work-type disposition (routed stream or explicit non-curation); an
+    // uncovered code crashes the generators fail-closed instead of silently
+    // dropping work. Sole exception: missing-pillar-evidence resolves by its
+    // local-component path because the code alone does not identify a work
+    // type (see descriptorForReason).
+    const pathRouted = new Set(["missing-pillar-evidence"]);
+    expect(
+      V9_REASON_CODES.filter((code) => !pathRouted.has(code) && curationDispositionForReason(code) === null),
+    ).toEqual([]);
   });
 
   it("fails closed when a score projection reason has no typed routing metadata", () => {

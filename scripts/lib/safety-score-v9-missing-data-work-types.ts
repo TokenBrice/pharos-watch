@@ -154,7 +154,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     defaultResolutionMode: "agent-curation",
     ...workReasons({
       ARCH: ["missing-archetype"],
-      "non-curation": ["insufficient-evidence", "missing-pillar"],
+      "non-curation": ["insufficient-evidence", "missing-pillar", "critical-unresolved"],
     }),
     context: (asset) => ({
       archetype: asset.archetype,
@@ -172,7 +172,9 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     cautions: ["Never clear or mask the quarantine gap without repairing the compilation failure at its source."],
     ownerDomain: "evidence",
     defaultResolutionMode: "producer-runtime",
-    ...workReasons({}),
+    // Producer/integration timestamp defects on critical input facts are
+    // repaired like quarantines, not curated from issuer documents.
+    ...workReasons({ "non-curation": ["future-dated-input-fact", "historical-critical-input"] }),
     context: (asset) => ({ gaps: asset.gaps }),
     touchpoints: (source) =>
       unique([
@@ -246,7 +248,12 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     ownerDomain: "dependency",
     defaultResolutionMode: "agent-curation",
     ...workReasons({
-      DEP: ["unreviewed-dependency-relationships", "material-dependency-unavailable"],
+      DEP: [
+        "unreviewed-dependency-relationships",
+        "material-dependency-unavailable",
+        "parent-cycle",
+        "implementation-parent-cycle",
+      ],
       "non-curation": ["nonmaterial-dependency-unavailable"],
     }),
     context: (asset) => asset.dependencies,
@@ -317,7 +324,10 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
         "incomparable-route-requests",
         "missing-same-notional-route",
       ],
-      "non-curation": ["correlated-exit-routes"],
+      // A reviewed-complete exit portfolio with zero score-eligible routes is
+      // a measured terminal finding, not missing evidence: it clears only when
+      // a viable route observation lands through the curated EXIT work above.
+      "non-curation": ["correlated-exit-routes", "no-viable-exit-path"],
     }),
     context: exitContext,
     touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9/extension.ts"],
@@ -436,7 +446,11 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "partial-reserve-review",
       "stale-audited-reserve-composition",
       "unreviewed-reserve-envelope",
-    ] }),
+      ],
+      // Sub-materiality twin of material-unknown-reserve-exposure: policy
+      // bounds the unknown instead of ceiling it, so it is not drain work.
+      "non-curation": ["bounded-unknown-reserve-exposure"],
+    }),
     context: (asset) => ({
       reserveStatus: asset.reserveStatus,
       reserveExposures: asset.reserveExposures,

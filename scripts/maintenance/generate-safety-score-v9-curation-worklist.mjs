@@ -5,8 +5,10 @@
 // batch; an item disappears from the regenerated list when its codes clear.
 //
 // Usage:
-//   node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs \
+//   npm run safety-score-v9:curation-worklist -- \
 //     --replay <replay-v9.json> [--output <worklist.md>]
+// (The .ts imports resolve through tsconfig paths, so run via the npm script's
+// `node --import tsx` — bare `node` cannot resolve @shared/lib.)
 import { readFileSync, writeFileSync } from "node:fs";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources.ts";
 import {
@@ -80,7 +82,7 @@ function arg(name) {
 
 const replayPath = arg("--replay");
 if (!replayPath) {
-  console.error("Usage: generate-safety-score-v9-curation-worklist.mjs --replay <replay.json> [--output <md>]");
+  console.error("Usage: npm run safety-score-v9:curation-worklist -- --replay <replay.json> [--output <md>]");
   process.exit(2);
 }
 const replay = JSON.parse(readFileSync(replayPath, "utf8"));
@@ -167,7 +169,7 @@ lines.push("");
 lines.push("```bash");
 lines.push("# 0. npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts  # generated catalog aggregate is gitignored and goes stale against coin edits");
 lines.push("# 1. fresh exact capture + replay");
-lines.push("# 2. node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs --replay <replay.json> --output <this file>");
+lines.push("# 2. npm run safety-score-v9:curation-worklist -- --replay <replay.json> --output <this file>");
 lines.push("```");
 lines.push("");
 lines.push("## Protocol for agents");

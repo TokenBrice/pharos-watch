@@ -57,7 +57,7 @@ jobs:
             --published-at "$CLOCK_SEC" \
             --allow-registry-mismatch 2>&1 | tee agents/sweep/replay-command.log
           replay_status=${PIPESTATUS[0]}
-          node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs \
+          npm run safety-score-v9:curation-worklist -- \
             --replay agents/sweep/replay.json \
             --output agents/sweep/worklist.md 2>&1 | tee agents/sweep/worklist-command.log
           worklist_status=${PIPESTATUS[0]}
