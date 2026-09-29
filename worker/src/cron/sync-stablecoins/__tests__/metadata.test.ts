@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS, ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { buildFallbackStablecoinsSyncResult, buildPricingSourceAuditReport, buildStablecoinsSyncResult } from "../metadata";
+import {
+  buildFallbackStablecoinsSyncResult,
+  buildPricingSourceAuditReport,
+  buildSizeGuardedStablecoinsSyncMetadata,
+  buildStablecoinsSyncResult,
+} from "../metadata";
+import type { PricingAssetAttemptRecord } from "../../../lib/pricing-provider-diagnostics";
+import {
+  evaluateStablecoinActivePriceCoverage,
+  evaluateStablecoinPublicationCoverage,
+  loadPreviousStablecoinActivePriceCoverage,
+  STABLECOIN_PRICE_GAP_REVIEWS,
+} from "../../../lib/stablecoin-publication-coverage";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { PriceObservationEffectiveness } from "../price-corroboration-observations";
 import type { PeggedAsset } from "../enrich-prices";
 import { normalizeCronMetadataWithLease } from "../../../lib/cron-metadata";
@@ -8,7 +21,6 @@ import {
   compactCronMetadataForPersistence,
   MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
 } from "../../../lib/cron-metadata-persistence";
-import { STABLECOIN_PRICE_GAP_REVIEWS } from "../../../lib/stablecoin-publication-coverage";
 
 function syncInput(
   assets: PeggedAsset[],
@@ -39,6 +51,69 @@ const observationEffectiveness: PriceObservationEffectiveness = {
   minimumFreshnessHeadroomSec: null,
 };
 
+
+function allMissingSizeGuardFixture(): {
+  assets: PeggedAsset[];
+  guard: Parameters<typeof buildSizeGuardedStablecoinsSyncMetadata>[0];
+} {
+  const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
+    id: stablecoin.id,
+    name: stablecoin.name,
+    symbol: stablecoin.symbol,
+    price: null,
+    priceSource: "coingecko",
+    priceObservedAt: 1_776_999_900,
+    circulating: { peggedUSD: 1 },
+  })) as PeggedAsset[];
+  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets);
+  const ledgerRecords: PricingAssetAttemptRecord[] = ACTIVE_STABLECOINS.slice(0, 6).map(
+    (stablecoin, index) => ({
+      assetId: stablecoin.id,
+      adapter: "coinmarketcap",
+      source: "coinmarketcap",
+      target: `slug:${stablecoin.id}`,
+      state: "attempted",
+      result: "rejected",
+      rejectionClass: "stale",
+      candidateAt: 1_777_000_000,
+      observedAt: 1_776_900_000 + index,
+      replaySafe: false,
+    }),
+  );
+  return {
+    assets,
+    guard: {
+      metadata: {
+        rowsRead: assets.length,
+        rowsWritten: assets.length,
+        rowsDropped: 0,
+        assetCount: assets.length,
+        missingPrices: assets.length,
+        canonicalDeduplication: { duplicateRows: 0, affectedIds: [], affectedIdsTruncated: 0 },
+        rejectedPrices: 0,
+        nativePegCorrections: 0,
+        nativePegFills: 0,
+        priceObservationEffectiveness: observationEffectiveness,
+        depegErrorCount: 0,
+        stalenessCheckFailed: false,
+      },
+      publicationCoverage: evaluateStablecoinPublicationCoverage(
+        assets.map((asset) => asset.id),
+        1_777_000_000,
+      ),
+      activePriceCoverage,
+      priceSourceAttemptLedger: {
+        version: 1 as const,
+        missingActiveIds: activePriceCoverage.missingActiveIds,
+        recordCount: ledgerRecords.length,
+        truncated: 0,
+        records: ledgerRecords,
+      },
+      capabilities: { stablecoinsCache: false, depegPipeline: true },
+      originalMetadataBytes: 500_000,
+    },
+  };
+}
 describe("stablecoins pricing metadata", () => {
   it.each(["kava-pricefeed", "mento-fpmm", "mento-broker", "protocol-redeem-cached-rate"])(
     "retains %s fallback observations in source health",
@@ -381,7 +456,8 @@ describe("stablecoins pricing metadata", () => {
       ])),
     });
 
-    expect(new TextEncoder().encode(result.metadata ?? "").byteLength).toBeLessThan(64 * 1024);
+    expect(new TextEncoder().encode(result.metadata ?? "").byteLength)
+      .toBeLessThan(MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       activePriceCoverage: {
         missingActiveAssets: unknown[];
@@ -438,15 +514,20 @@ describe("stablecoins pricing metadata", () => {
       ])),
     });
 
-    expect(new TextEncoder().encode(result.metadata ?? "").byteLength).toBeLessThan(64 * 1024);
+    expect(new TextEncoder().encode(result.metadata ?? "").byteLength)
+      .toBeLessThan(MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
+      activePriceCoverage: { missingActiveIds: string[] };
       priceObservationEffectiveness: PriceObservationEffectiveness;
       metadataCompactedBySizeGuard: boolean;
-      priceSourceAttemptLedger: { missingActiveIds: string[]; records: unknown[][] };
+      priceSourceAttemptLedger: { missingActiveIdCount: number; records: unknown[][] };
     };
     expect(metadata.metadataCompactedBySizeGuard).toBe(true);
     expect(metadata.priceObservationEffectiveness).toEqual(observationEffectiveness);
-    expect(metadata.priceSourceAttemptLedger.missingActiveIds).toContain(missingId);
+    // The guard drops the ledger's duplicate ID list before any attempt
+    // records: the exact missing set survives one key up in coverage.
+    expect(metadata.activePriceCoverage.missingActiveIds).toContain(missingId);
+    expect(metadata.priceSourceAttemptLedger.missingActiveIdCount).toBe(ACTIVE_STABLECOINS.length);
     expect(metadata.priceSourceAttemptLedger.records).toContainEqual([
       missingId,
       "coinmarketcap",
@@ -459,5 +540,75 @@ describe("stablecoins pricing metadata", () => {
       1_776_900_000,
       false,
     ]);
+  });
+
+  it("degrades size-guarded metadata through bounded rungs and fails closed when no rung fits", () => {
+    const { guard } = allMissingSizeGuardFixture();
+
+    // A mid-ladder budget sheds verbose gap details but keeps the exact ID
+    // sets, the full compact streak state, and every attempt record.
+    const midBudget = buildSizeGuardedStablecoinsSyncMetadata(guard, 32_000);
+    expect(new TextEncoder().encode(midBudget).byteLength).toBeLessThan(32_000);
+    const mid = JSON.parse(midBudget) as {
+      metadataCompactedBySizeGuard: boolean;
+      activePriceCoverage: { missingActiveState: unknown[]; missingActiveIds: string[] };
+      priceSourceAttemptLedger: { records: unknown[][] };
+    };
+    expect(mid.metadataCompactedBySizeGuard).toBe(true);
+    expect(mid.activePriceCoverage.missingActiveIds).toHaveLength(ACTIVE_STABLECOINS.length);
+    expect(mid.activePriceCoverage.missingActiveState).toHaveLength(ACTIVE_STABLECOINS.length);
+    expect(mid.priceSourceAttemptLedger.records).toHaveLength(6);
+
+    // No rung can satisfy an impossible budget: the guard fails closed with
+    // bounded scalars instead of an oversized payload.
+    const terminalBudget = buildSizeGuardedStablecoinsSyncMetadata(guard, 2_000);
+    expect(new TextEncoder().encode(terminalBudget).byteLength).toBeLessThan(2_000);
+    const terminal = JSON.parse(terminalBudget) as Record<string, unknown> & {
+      metadataCompactedBySizeGuard: boolean;
+      sizeGuardEvidenceDropped: boolean;
+    };
+    expect(terminal.metadataCompactedBySizeGuard).toBe(true);
+    expect(terminal.sizeGuardEvidenceDropped).toBe(true);
+    expect(terminal).not.toHaveProperty("priceSourceAttemptLedger");
+    expect(terminal.activePriceCoverage).not.toHaveProperty("missingActiveIds");
+  });
+
+  it("treats terminal size-guard payloads as unavailable continuity and preserves streaks across late rungs", async () => {
+    const { assets, guard } = allMissingSizeGuardFixture();
+
+    // A terminal envelope persisted as the previous run's cron metadata is
+    // reported as malformed continuity — unavailable, never a healthy empty
+    // missing set that would silently restart every streak.
+    const terminalMetadata = buildSizeGuardedStablecoinsSyncMetadata(guard, 2_000);
+    const terminalPrior = await loadPreviousStablecoinActivePriceCoverage(
+      mockD1([{ match: "activePriceCoverage", rows: [], first: { metadata: terminalMetadata } }]),
+      1_777_000_000,
+    );
+    expect(terminalPrior).toMatchObject({ status: "read-error", reason: "previous-coverage-malformed" });
+
+    // A late rung that drops every verbose gap detail still round-trips: the
+    // loader restores the full missing set with its streak state, and the next
+    // generation builds on those streaks instead of restarting them.
+    const lateRungMetadata = buildSizeGuardedStablecoinsSyncMetadata(guard, 27_600);
+    const lateRung = JSON.parse(lateRungMetadata) as {
+      activePriceCoverage: { missingActiveAssets: unknown[]; missingActiveAssetsTruncated: number };
+    };
+    expect(lateRung.activePriceCoverage.missingActiveAssets).toHaveLength(0);
+    expect(lateRung.activePriceCoverage.missingActiveAssetsTruncated).toBe(ACTIVE_STABLECOINS.length);
+    const prior = await loadPreviousStablecoinActivePriceCoverage(
+      mockD1([{ match: "activePriceCoverage", rows: [], first: { metadata: lateRungMetadata } }]),
+      1_777_000_000,
+    );
+    expect(prior.status).toBe("ok");
+    if (prior.status !== "ok") throw new Error("Expected readable late-rung continuity");
+    expect(prior.coverage.missingActiveIds).toHaveLength(ACTIVE_STABLECOINS.length);
+    expect(prior.coverage.missingActiveAssets).toHaveLength(ACTIVE_STABLECOINS.length);
+    const nextGeneration = evaluateStablecoinActivePriceCoverage(assets, undefined, {
+      previousCoverage: prior.coverage,
+    });
+    expect(nextGeneration.maxConsecutiveMissingGenerations).toBe(2);
+    expect(nextGeneration.missingActiveAssets.every(
+      (detail) => detail.consecutiveMissingGenerations === 2,
+    )).toBe(true);
   });
 });
