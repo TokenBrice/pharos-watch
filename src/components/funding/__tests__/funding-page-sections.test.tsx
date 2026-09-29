@@ -130,6 +130,7 @@ describe("DonorList", () => {
         display: "alice.eth",
         kind: "community",
         asset_symbol: "ETH",
+        token_address: null,
         amount_decimal: 0.1,
         usd_at_receipt: 300,
         price_note: "coingecko-historical-2026-04-18",
@@ -142,6 +143,7 @@ describe("DonorList", () => {
         display: "TokenBrice (founder subsidy)",
         kind: "founder",
         asset_symbol: "ETH",
+        token_address: null,
         amount_decimal: 0.3,
         usd_at_receipt: 1000,
         price_note: "coingecko-historical-2026-04-18",
@@ -165,15 +167,6 @@ describe("SupportCtas", () => {
     expect(screen.getByText("Set up Giveth support")).toBeTruthy();
     expect(screen.getByText(/Recurring streams run on Optimism or Base only/)).toBeTruthy();
     expect(screen.getByText(/recurring Giveth stream on Optimism or Base/)).toBeTruthy();
-  });
-
-  it("advertises the supporter API key perk with its threshold and rate limit", () => {
-    render(<SupportCtas />);
-    expect(screen.getByText("Supporter API key")).toBeTruthy();
-    expect(screen.getByText(/at least \$10 in stablecoin donations on this ledger/)).toBeTruthy();
-    expect(screen.getByText(/graded A or B \(including \+\/−\) when claiming/)).toBeTruthy();
-    expect(screen.getByText(/10 requests per minute, no expiry, one per wallet/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "the API page" }).getAttribute("href")).toMatch(/^\/api\/?$/);
   });
 });
 

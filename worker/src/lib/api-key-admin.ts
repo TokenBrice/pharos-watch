@@ -29,7 +29,7 @@ import {
 import { errorResponse } from "./api-response";
 import type { MinimalD1RunResult, MinimalD1Statement } from "./minimal-d1";
 
-function apiKeyPostWriteReadbackFailure(action: "create" | "activate" | "update" | "deactivate" | "rotate"): Response {
+function apiKeyPostWriteReadbackFailure(action: "create" | "update" | "deactivate" | "rotate"): Response {
   const recovery =
     action === "rotate"
       ? "Inspect the key prefix in inventory. If it changed, the prior token is revoked and the replacement token is unavailable; start a new rotation intent to issue another token."
@@ -164,7 +164,7 @@ export function buildTrustedApiKeyInsertStatement<TStatement extends MinimalD1St
     ) as TStatement;
 }
 
-export async function createTrustedApiKey(
+async function createTrustedApiKey(
   db: ApiKeyDb,
   pepper: string,
   input: TrustedApiKeyCreateInput,
@@ -186,45 +186,6 @@ export async function createTrustedApiKey(
     key: mapRowToSummary(createdRow),
     token: material.token,
   };
-}
-
-export async function activateTrustedApiKey(
-  db: ApiKeyDb,
-  id: number,
-  keyPrefix: string,
-  nowSec = getNowSec(),
-  requireIssuedSelfServeRequestId?: string,
-): Promise<ApiKeyMutationResponse | Response> {
-  // Activation is the last step of self-serve issuance: it must not revive a key
-  // whose request or email claim was released/blocked while issuance ran.
-  const issuanceGuard = requireIssuedSelfServeRequestId
-    ? ` AND EXISTS (
-           SELECT 1
-             FROM api_key_requests r
-             JOIN api_key_self_serve_email_claims c ON c.request_id = r.request_id
-            WHERE r.request_id = ?
-              AND r.api_key_id = api_keys.id
-              AND r.status = 'issued'
-              AND c.status = 'issued')`
-    : "";
-  const statement = db.prepare(
-    `UPDATE api_keys SET is_active = 1, updated_at = ? WHERE id = ? AND is_active = 0${issuanceGuard}`,
-  );
-  const result = await (requireIssuedSelfServeRequestId
-    ? statement.bind(nowSec, id, requireIssuedSelfServeRequestId)
-    : statement.bind(nowSec, id)
-  ).run();
-  if ((result.meta?.changes ?? 0) === 0) {
-    return errorResponse(409, "API key could not be activated");
-  }
-
-  clearApiKeyCache(keyPrefix);
-  getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
-  const updated = await selectPublicApiKeyById(db, id);
-  if (!updated) {
-    return apiKeyPostWriteReadbackFailure("activate");
-  }
-  return { key: mapRowToSummary(updated) };
 }
 
 export async function updateApiKey(

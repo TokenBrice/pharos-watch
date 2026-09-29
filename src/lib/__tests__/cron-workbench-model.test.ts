@@ -370,6 +370,36 @@ describe("cron workbench model", () => {
     expect(model.groups[0]?.summary).toMatchObject({ unhealthy: 0, skipped: 1 });
   });
 
+  it.each([
+    { order: "readback newer than the error", provenStartedAt: 1_699_999_500, errorStartedAt: 1_699_999_000, expected: "skipped" },
+    { order: "error newer than the readback", provenStartedAt: 1_699_999_000, errorStartedAt: 1_699_999_500, expected: "unhealthy" },
+  ] as const)("resolves an inherited failure against a proven skip behind generic admissions: $order", ({ provenStartedAt, errorStartedAt, expected }) => {
+    // Backend parity for the 2026-09-29 snapshot-psi row: post-midnight
+    // `before_daily_slot` skips sit in front of the evening readback that
+    // superseded the abandoned slot's synthetic error.
+    const neutralRun = {
+      startedAt: 1_700_000_000,
+      durationMs: 200,
+      status: "skipped_neutral" as const,
+      metadata: { reason: "before_daily_slot" },
+    };
+    const provenRun = {
+      startedAt: provenStartedAt,
+      durationMs: 200,
+      status: "skipped_neutral" as const,
+      metadata: { reason: "same_day_snapshot_exists" },
+    };
+    const errorRun = { startedAt: errorStartedAt, durationMs: 0, status: "error" as const };
+    const cron = makeCron({
+      lastRun: neutralRun,
+      recentRuns: [neutralRun, ...[provenRun, errorRun].sort((a, b) => b.startedAt - a.startedAt)],
+      expectedIntervalSec: 86_400,
+      healthy: expected === "skipped",
+    });
+
+    expect(classifyCronWorkbenchState(cron, 1_700_000_600)).toBe(expected);
+  });
+
   it("keeps an inherited failure unhealthy when the skip reason proves nothing", () => {
     const neutralRun = {
       startedAt: 1_700_000_000,

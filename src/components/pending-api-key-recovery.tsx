@@ -70,8 +70,8 @@ export function PendingApiKeyRecovery() {
             <Button type="button" onClick={() => void copyText(token).then((result) => {
               setCopyError(!result.ok);
               if (result.ok) clearPendingApiKey(token);
-            })}>Copy API Key</Button>
-            <Button type="button" variant="outline" onClick={() => clearPendingApiKey(token)}>I Saved This Key</Button>
+            })}>Copy API key</Button>
+            <Button type="button" variant="outline" onClick={() => clearPendingApiKey(token)}>I saved this key</Button>
           </div>
         </div>
       ))}

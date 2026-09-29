@@ -13,7 +13,6 @@ import type { TelegramCreds } from "../lib/telegram";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { DwellirBudgetEnv } from "../lib/rpc-provider-budget";
 import type { FeedbackEnv } from "../api/feedback";
-import type { ApiKeySelfServeEnv } from "../api/api-key-requests/types";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
 import type { InternalRouteProbe } from "../lib/catalog-action-audit";
@@ -53,10 +52,6 @@ export interface DonorKeyClaimRouteFields {
 
 export interface FeedbackRouteFields {
   feedbackEnv: FeedbackEnv;
-}
-
-export interface ApiKeySelfServeRouteFields {
-  apiKeySelfServeEnv: ApiKeySelfServeEnv;
 }
 
 export interface MintBurnFreshnessRouteFields {
@@ -108,7 +103,6 @@ export interface RouteDependencyFieldMap {
   chainRpcs: ChainRpcRouteFields;
   coingeckoApiKey: CoingeckoRouteFields;
   dwellirBudgetEnv: DwellirBudgetRouteFields;
-  apiKeySelfServeEnv: ApiKeySelfServeRouteFields;
   donorKeyClaimRateLimit: DonorKeyClaimRouteFields;
   feedbackEnv: FeedbackRouteFields;
   mintBurnFreshnessConfig: MintBurnFreshnessRouteFields;

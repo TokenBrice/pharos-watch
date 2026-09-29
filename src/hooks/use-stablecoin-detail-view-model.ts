@@ -139,7 +139,9 @@ export function useStablecoinDetailViewModel({
     const summaryData = liveSummaryQuery.data ?? archivedLiveSummary;
     const usingArchive = liveSummaryQuery.data == null && archivedLiveSummary != null;
     return {
-      data: summaryData ? { peggedAssets: [projectLiveSummary(coin, summaryData)] } : undefined,
+      data: summaryData
+        ? { peggedAssets: [projectLiveSummary(coin, summaryData)], nativeSupply: summaryData.nativeSupply }
+        : undefined,
       isLoading: !usingArchive && liveSummaryQuery.isLoading,
       isError: !usingArchive && liveSummaryQuery.isError,
       error: usingArchive ? null : liveSummaryQuery.error,

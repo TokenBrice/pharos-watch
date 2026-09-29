@@ -250,8 +250,7 @@ function makeHeroProps(overrides: HeroBuilderOverrides = {}): HeroBuilderParams 
     mcap: 1_000_000_000,
     supply: 1_000_000_000,
     prevDay: 995_000_000,
-    prevWeek: 980_000_000,
-    prevMonth: 970_000_000,
+    nativeSupply: { current: 1_000_000_000, prevWeek: 980_000_000, prevMonth: 970_000_000 },
     performanceVsUsd1y: null,
     pegRef: 1,
     deviationBps: -2,
@@ -394,8 +393,6 @@ describe("HeroCard", () => {
       mcap: 1_035_000,
       supply: 1_000_000,
       prevDay: 1_000_000,
-      prevWeek: 1_000_000,
-      prevMonth: 1_000_000,
       deviationBps: 350,
       pegScoreResult: null,
       verdict: { archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" },
@@ -512,8 +509,6 @@ describe("HeroCard", () => {
       mcap: 500_000,
       supply: 500_000,
       prevDay: 495_000,
-      prevWeek: 490_000,
-      prevMonth: 480_000,
       deviationBps: -300,
       pegScoreResult: { ...pegScoreResult, activeDepeg: false, depegEventCoverageLimited: true },
       reportCard: reportCardWithInheritedBlacklistRisk,
@@ -522,26 +517,28 @@ describe("HeroCard", () => {
     expect(html).toContain("Below $1.00M live-event floor. Deviation is shown, but event history may stay empty.");
   });
 
-  it("does not use USD market-cap history for Supply trends", () => {
+  it("derives Supply trends from native token counts, never from USD market-cap history", () => {
+    // XAUT shape: ~808K tokens priced near $4,140. A USD market-cap anchor would render -99.98%.
     const html = renderHero({
-      coin: { flags: { pegCurrency: "CHF" } },
+      coin: { flags: { pegCurrency: "GOLD" } },
       coinData: {
-        price: 1.2,
-        circulating: { peggedCHF: 1_200_000 },
-        circulatingPrevWeek: { peggedCHF: 1_000_000 },
-        circulatingPrevMonth: { peggedCHF: 1_000_000 },
+        price: 4_140,
+        circulating: { peggedGOLD: 3_345_120_000 },
+        circulatingPrevWeek: { peggedGOLD: 3_533_600_000 },
+        circulatingPrevMonth: { peggedGOLD: 2_731_000_000 },
       },
-      mcap: 1_200_000,
-      supply: 1_000_000,
-      prevDay: 1_100_000,
-      prevWeek: 1_000_000,
-      prevMonth: 1_000_000,
-      pegRef: 1.2,
+      mcap: 3_345_120_000,
+      supply: 808_000,
+      prevDay: null,
+      nativeSupply: { current: 808_000, prevWeek: 800_000, prevMonth: 790_000 },
+      pegRef: 4_140,
       reportCard: null,
     });
 
-    expect(html).not.toContain("+20.00%");
-    expect(html).toContain("1.00M");
+    expect(html).toContain("808.00K");
+    expect(html).toContain("+1.00%");
+    expect(html).toContain("+2.28%");
+    expect(html).not.toContain("-99.98%");
   });
 
   // Infrastructure membership is the only axis these cases vary: everything

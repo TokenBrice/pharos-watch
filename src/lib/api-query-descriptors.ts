@@ -4,6 +4,7 @@ import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/dat
 import type { ChainsResponse } from "@shared/types/chains";
 import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { sumPegBucketsOrNull } from "@shared/lib/supply";
 import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
@@ -29,7 +30,7 @@ import type {
   SafetyScoreHistoryResponse,
   SafetyScoreHistoryV2Response,
 } from "@shared/types/safety-score-history";
-import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9CurrentResponse, SafetyGradesResponse } from "@shared/types/report-cards-v9";
 import type {
   HealthResponse,
   PublicStatusHistoryResponse,
@@ -74,6 +75,18 @@ export const STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS = 1825;
 
 const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number());
 
+/**
+ * Token-count supply checkpoints read from the detail history's native `totalCirculating`
+ * series. All three come from one series, so their ratios never mix token counts with USD
+ * market cap; `null` means unavailable, never zero.
+ */
+const NativeSupplyCheckpointsSchema = z.object({
+  current: z.number().nullable(),
+  prevWeek: z.number().nullable(),
+  prevMonth: z.number().nullable(),
+});
+export type NativeSupplyCheckpoints = z.infer<typeof NativeSupplyCheckpointsSchema>;
+
 export const StablecoinLiveSummarySchema = z.object({
   price: z.number().nullable(),
   priceSource: z.string().nullable(),
@@ -90,6 +103,7 @@ export const StablecoinLiveSummarySchema = z.object({
   circulatingPrevDay: StablecoinDetailPegBucketsSchema,
   circulatingPrevWeek: StablecoinDetailPegBucketsSchema,
   circulatingPrevMonth: StablecoinDetailPegBucketsSchema,
+  nativeSupply: NativeSupplyCheckpointsSchema,
 }).transform((summary) => isObservedPrice(summary) ? summary : {
   ...summary,
   price: null,
@@ -113,7 +127,11 @@ const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
  * one, and a gap wider than one daily bucket reads as unavailable (`{}`, the no-bucket
  * discriminant `sumPegBucketsOrNull` resolves to `null`) rather than as a real reading.
  */
-function detailBucketsAt(detail: StablecoinDetailResponse, targetDate: number): Record<string, number> {
+function detailBucketsAt(
+  detail: StablecoinDetailResponse,
+  targetDate: number,
+  field: "totalCirculatingUSD" | "totalCirculating",
+): Record<string, number> {
   let chosen: Record<string, number> | undefined;
   let chosenDate = Number.NEGATIVE_INFINITY;
   for (const token of detail.tokens ?? []) {
@@ -122,7 +140,7 @@ function detailBucketsAt(detail: StablecoinDetailResponse, targetDate: number): 
     if (targetDate - date > DETAIL_BUCKET_MAX_BACKFILL_SEC) continue;
     if (date > chosenDate) {
       chosenDate = date;
-      chosen = token.totalCirculatingUSD;
+      chosen = token[field];
     }
   }
   return chosen ?? {};
@@ -152,9 +170,18 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     agreeSources: detail.agreeSources,
     supplyObservedAt: latestDate,
     circulating: latest?.totalCirculatingUSD ?? {},
-    circulatingPrevDay: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400),
-    circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400),
-    circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400),
+    circulatingPrevDay: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
+    circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculatingUSD"),
+    circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400, "totalCirculatingUSD"),
+    nativeSupply: {
+      current: sumPegBucketsOrNull(latest?.totalCirculating),
+      prevWeek: latestDate == null
+        ? null
+        : sumPegBucketsOrNull(detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculating")),
+      prevMonth: latestDate == null
+        ? null
+        : sumPegBucketsOrNull(detailBucketsAt(detail, latestDate - 30 * 86_400, "totalCirculating")),
+    },
   });
 }
 
@@ -181,6 +208,8 @@ export function projectFrozenSnapshotLiveSummary(snapshot: FrozenSnapshot): Stab
     circulatingPrevDay: row.circulatingPrevDay,
     circulatingPrevWeek: row.circulatingPrevWeek,
     circulatingPrevMonth: row.circulatingPrevMonth,
+    // Archived list rows carry USD peg buckets only, so native token-count checkpoints are unavailable.
+    nativeSupply: { current: null, prevWeek: null, prevMonth: null },
   });
   return parsed.success ? parsed.data : null;
 }
@@ -451,6 +480,19 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     "meta",
     createLazySchema<ReportCardsV9CurrentResponse>(
       async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9CurrentResponseSchema,
+    ),
+  ),
+  // Free no-key grade projection of the same V9 publication; `/api/` reads it
+  // only when a visitor checks a donor wallet.
+  safetyGrades: defineApiQuery(
+    {
+      queryKey: ["safety-grades"] as const,
+      path: API_PATHS.safetyGrades(),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
+    },
+    "plain",
+    createLazySchema<SafetyGradesResponse>(
+      async () => (await import("@shared/types/report-cards-v9")).SafetyGradesResponseSchema,
     ),
   ),
   depegResolver: defineApiQuery(

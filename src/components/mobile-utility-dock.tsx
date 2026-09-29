@@ -6,6 +6,7 @@ import { ChevronUp, MessageSquarePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { FeedbackModal } from "@/components/feedback-modal-lazy";
+import { isFeedbackHiddenPath } from "@/components/feedback-button";
 
 export function MobileUtilityDock() {
   const pathname = usePathname();
@@ -26,6 +27,7 @@ export function MobileUtilityDock() {
   }, []);
 
   if (pathname === "/") return null;
+  const feedbackEnabled = !isFeedbackHiddenPath(pathname);
 
   return (
     <>
@@ -46,15 +48,17 @@ export function MobileUtilityDock() {
             "pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background p-1",
           )}
         >
-          <button
-            type="button"
-            onClick={() => setFeedbackOpen(true)}
-            aria-label="Send feedback"
-            tabIndex={showFeedback ? undefined : -1}
-            className="pharos-focus-ring flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground"
-          >
-            <MessageSquarePlus className="h-4 w-4" />
-          </button>
+          {feedbackEnabled ? (
+            <button
+              type="button"
+              onClick={() => setFeedbackOpen(true)}
+              aria-label="Send feedback"
+              tabIndex={showFeedback ? undefined : -1}
+              className="pharos-focus-ring flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" })}
@@ -69,7 +73,7 @@ export function MobileUtilityDock() {
           </button>
         </div>
       </div>
-      {feedbackOpen && <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />}
+      {feedbackEnabled && feedbackOpen && <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />}
     </>
   );
 }

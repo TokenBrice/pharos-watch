@@ -3,9 +3,11 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Link from "next/link";
+import { API_PAGE_ANCHORS } from "@shared/lib/public-api-contract";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { DonorKeyClaim } from "@/components/donor-key-claim";
 import { clearPendingApiKey, PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
-import { claimDonorKey } from "@/lib/donor-key-claim-client";
+import { DonorKeyClaimError, claimDonorKey } from "@/lib/donor-key-claim-client";
 
 vi.mock("@/lib/donor-key-claim-client", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/donor-key-claim-client")>(),
@@ -58,7 +60,7 @@ describe("DonorKeyClaim one-time reveal", () => {
     fireEvent.click(screen.getByText("Funding"), { ctrlKey: true });
     expect(confirm).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: "I Saved This Key" }));
+    fireEvent.click(screen.getByRole("button", { name: "I saved this key" }));
     fireEvent.click(screen.getByText("Funding"));
     expect(confirm).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledTimes(2);
@@ -75,7 +77,7 @@ describe("DonorKeyClaim one-time reveal", () => {
     window.dispatchEvent(unload);
     expect(unload.defaultPrevented).toBe(true);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } });
-    fireEvent.click(screen.getByRole("button", { name: "Copy API Key" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy API key" }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved API keys" })).toBeNull());
     const afterSave = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(afterSave);
@@ -87,10 +89,10 @@ describe("DonorKeyClaim one-time reveal", () => {
     await issueKey();
     view.rerender(<PendingApiKeyRecovery />);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn().mockRejectedValue(new Error("blocked")) } });
-    fireEvent.click(screen.getByRole("button", { name: "Copy API Key" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy API key" }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Copy failed"));
     expect(screen.getByText(token)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "I Saved This Key" }));
+    fireEvent.click(screen.getByRole("button", { name: "I saved this key" }));
     expect(screen.queryByRole("region", { name: "Unsaved API keys" })).toBeNull();
   });
 
@@ -110,7 +112,7 @@ describe("DonorKeyClaim one-time reveal", () => {
       key: { keyPrefix: "prefix-test", maskedToken: "prefix-test...", tier: "donor", rateLimitPerMinute: 10, expiresAt: null },
     }));
     expect(screen.getByText(token)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "I Saved This Key" }));
+    fireEvent.click(screen.getByRole("button", { name: "I saved this key" }));
     expect(screen.queryByRole("region", { name: "Unsaved API keys" })).toBeNull();
     const savedUnload = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(savedUnload);
@@ -133,5 +135,46 @@ describe("DonorKeyClaim one-time reveal", () => {
     window.dispatchEvent(failedUnload);
     expect(failedUnload.defaultPrevented).toBe(false);
     expect(screen.queryByRole("region", { name: "Unsaved API keys" })).toBeNull();
+  });
+});
+
+describe("DonorKeyClaim failure details", () => {
+  it("renders the counted donation amount and ledger date from an ineligible response", async () => {
+    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
+    vi.mocked(claimDonorKey).mockRejectedValue(new DonorKeyClaimError(403, "opaque", 1788681300, "ineligible", 4.25, ["USDC"]));
+    render(<DonorKeyClaim />);
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("$4.25");
+    expect(alert.textContent).toContain("$10");
+    expect(alert.textContent).toContain("2026-09-06");
+    expect(screen.queryByText(token)).toBeNull();
+  });
+});
+
+describe("DonorKeyClaim wallet handoff", () => {
+  it("focuses the handoff after a provider disappears between mount and click", async () => {
+    vi.stubGlobal("ethereum", { request: vi.fn() });
+    render(<DonorKeyClaim />);
+    expect(screen.queryByRole("link", { name: "Open in MetaMask" })).toBeNull();
+    vi.stubGlobal("ethereum", undefined);
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("link", { name: "Open in MetaMask" })));
+  });
+
+  it("offers wallet-app links to the claim section only when no wallet is injected", async () => {
+    const claimUrl = `${SITE_ORIGIN}/api/#${API_PAGE_ANCHORS.claim}`;
+    const view = render(<DonorKeyClaim />);
+    const metamask = await screen.findByRole("link", { name: "Open in MetaMask" });
+    expect(metamask.getAttribute("href")).toBe(`https://link.metamask.io/dapp/${new URL(SITE_ORIGIN).host}/api/#claim`);
+    const coinbase = screen.getByRole("link", { name: "Open in Coinbase Wallet" });
+    expect(new URL(coinbase.getAttribute("href") ?? "").searchParams.get("cb_url")).toBe(claimUrl);
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
+    expect(document.activeElement).toBe(metamask);
+    view.unmount();
+
+    vi.stubGlobal("ethereum", { request: vi.fn() });
+    render(<DonorKeyClaim />);
+    expect(screen.queryByRole("link", { name: "Open in MetaMask" })).toBeNull();
   });
 });

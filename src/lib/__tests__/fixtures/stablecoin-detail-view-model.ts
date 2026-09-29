@@ -1,6 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types";
+import type { NativeSupplyCheckpoints } from "@/lib/api-query-descriptors";
 import { buildStablecoinDetailViewModel } from "@/lib/stablecoin-detail-view-model";
 
 type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDetailViewModel>[0];
@@ -32,6 +33,7 @@ export type ReadyDetailParamsOverrides = {
   coin: BuildStablecoinDetailViewModelParams["core"]["coin"];
   asset?: Partial<StablecoinData>;
   fxFallbackRates?: Record<string, number>;
+  nativeSupply?: NativeSupplyCheckpoints;
   queries?: BuildStablecoinDetailViewModelOverrides["queries"];
   supplemental?: BuildStablecoinDetailViewModelOverrides["supplemental"];
 };
@@ -149,6 +151,7 @@ export function makeReadyDetailParams({
   coin,
   asset,
   fxFallbackRates,
+  nativeSupply,
   queries,
   supplemental,
 }: ReadyDetailParamsOverrides): BuildStablecoinDetailViewModelParams {
@@ -169,7 +172,11 @@ export function makeReadyDetailParams({
         ...queries?.supplyHistory,
       },
       stablecoinList: {
-        data: { peggedAssets: [readyAsset], fxFallbackRates: fxFallbackRates ?? {} },
+        data: {
+          peggedAssets: [readyAsset],
+          fxFallbackRates: fxFallbackRates ?? {},
+          ...(nativeSupply ? { nativeSupply } : {}),
+        },
         dataUpdatedAt: 1,
         ...queries?.stablecoinList,
       },

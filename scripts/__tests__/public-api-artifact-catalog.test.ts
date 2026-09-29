@@ -19,10 +19,9 @@ const integrationFacingPublicKeys = ENDPOINT_DEFINITIONS.filter(
 
 const noKeyPublicArtifactKeys = ["health", "safety-grades"];
 const FORBIDDEN_ARTIFACT_PATHS = [
-  "/api/api-key-requests",
-  "/api/api-key-requests/verify",
-  "/api/api-key-requests-admin",
   "/api/donor-key-claims",
+  "/api/feedback",
+  "/api/api-keys",
 ];
 
 function isPostmanRequestConfig(
@@ -95,7 +94,7 @@ describe("public API artifact catalog", () => {
     expect(PUBLIC_STATIC_POSTMAN_REQUESTS.map((request) => request.noAuth)).toEqual([true, true, true]);
   });
 
-  it("excludes self-serve issuance and admin routes from public artifacts", () => {
+  it("excludes key-issuance, write-only and admin routes from public artifacts", () => {
     const catalogPaths = PUBLIC_API_ARTIFACT_ENDPOINTS.map((endpoint) => endpoint.path);
     const openApi = JSON.parse(readFileSync(join(process.cwd(), "public/openapi.json"), "utf8")) as {
       paths?: Record<string, unknown>;

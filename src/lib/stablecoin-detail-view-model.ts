@@ -51,7 +51,13 @@ export function buildStablecoinDetailViewModel({
 
   const isNavToken = coin.flags.navToken ?? false;
   const resolvedSupplyHistory = supplyHistory.data ?? [];
-  const market = buildDetailMarketSnapshot(coin, coinData, resolvedSupplyHistory, supplemental.nowMs ?? Date.now());
+  const market = buildDetailMarketSnapshot(
+    coin,
+    coinData,
+    listData.nativeSupply ?? null,
+    resolvedSupplyHistory,
+    supplemental.nowMs ?? Date.now(),
+  );
   const pegPrice = buildDetailPegPriceSnapshot(id, coin, pegSummary.data);
   const pegScoreResult = pegPrice.pegScoreResult
     ? {
@@ -100,8 +106,7 @@ export function buildStablecoinDetailViewModel({
     mcap: market.mcap,
     supply: market.supply,
     prevDay: market.prevDay,
-    prevWeek: market.prevWeek,
-    prevMonth: market.prevMonth,
+    nativeSupply: market.nativeSupply,
     performanceVsUsd1y: market.performanceVsUsd1y,
     pegRef: pegPrice.pegRef,
     deviationBps: pegPrice.deviationBps,

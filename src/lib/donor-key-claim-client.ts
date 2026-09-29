@@ -1,6 +1,6 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import { DonorKeyClaimResponseSchema } from "@shared/types/api-keys";
+import { DONOR_KEY_CLAIM_FAILURE_REASONS, DonorKeyClaimResponseSchema, type DonorKeyClaimFailureReason } from "@shared/types/api-keys";
 import type { DonorKeyClaimRequest, DonorKeyClaimResponse } from "@shared/types";
 import { ApiFetchError, apiFetch } from "@/lib/api";
 
@@ -23,7 +23,14 @@ export class DonorKeyClaimError extends Error {
   /** Epoch seconds of the donation-ledger reconciliation, present on 403 ineligible. */
   readonly ledgerUpdatedAt: number | null;
 
-  constructor(status: number, message: string, ledgerUpdatedAt: number | null = null) {
+  constructor(
+    status: number,
+    message: string,
+    ledgerUpdatedAt: number | null = null,
+    readonly reason: DonorKeyClaimFailureReason | null = null,
+    readonly qualifyingUsd: number | null = null,
+    readonly countedAssets: string[] | null = null,
+  ) {
     super(message);
     this.name = "DonorKeyClaimError";
     this.status = status;
@@ -45,8 +52,14 @@ function toClaimError(error: ApiFetchError): DonorKeyClaimError {
   const message = typeof payload?.error === "string" && payload.error.trim().length > 0
     ? payload.error
     : `Request failed with status ${error.status}`;
-  const ledgerUpdatedAt = typeof payload?.ledgerUpdatedAt === "number" ? payload.ledgerUpdatedAt : null;
-  return new DonorKeyClaimError(error.status, message, ledgerUpdatedAt);
+  const ledgerUpdatedAt = typeof payload?.ledgerUpdatedAt === "number" && Number.isFinite(payload.ledgerUpdatedAt)
+    ? payload.ledgerUpdatedAt : null;
+  const reason = DONOR_KEY_CLAIM_FAILURE_REASONS.find((value) => value === payload?.reason) ?? null;
+  const qualifyingUsd = typeof payload?.qualifyingUsd === "number"
+    && Number.isFinite(payload.qualifyingUsd) && payload.qualifyingUsd >= 0 ? payload.qualifyingUsd : null;
+  const countedAssets = Array.isArray(payload?.countedAssets)
+    && payload.countedAssets.every((asset) => typeof asset === "string") ? payload.countedAssets : null;
+  return new DonorKeyClaimError(error.status, message, ledgerUpdatedAt, reason, qualifyingUsd, countedAssets);
 }
 
 /** Exchange a signed SIWE message for a supporter API key. The token is shown once. */

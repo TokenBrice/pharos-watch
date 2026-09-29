@@ -41,6 +41,8 @@ export const DonationSchema = z.object({
   display: z.string().min(1),
   kind: z.enum(["founder", "pool", "community"]),
   asset_symbol: z.string().min(1),
+  // Transferred ERC-20 contract, lowercase; null for native assets (ETH, POL/MATIC, xDAI).
+  token_address: z.string().regex(/^0x[0-9a-f]{40}$/, "token_address must be a lowercase 0x address").nullable(),
   amount_decimal: NonNegativeFiniteSchema,
   usd_at_receipt: NonNegativeFiniteSchema,
   price_note: z.string().min(1),
@@ -75,10 +77,16 @@ export type DonationsFile = z.infer<typeof DonationsFileSchema>;
  *   `display` should read "via Giveth" rather than the raw contract address.
  * - `kind: "community"` is everything else (default).
  *
+ * `asset_symbol` is display-only. `token_address` is the transferred ERC-20
+ * contract (lowercase) or null for a native asset; donor-key eligibility
+ * identifies a qualifying stablecoin by `(chain, token_address)` only, because
+ * other tokens reuse the same tickers. The schema does not check the reviewed
+ * list, so one unreviewed contract never fails the whole ledger.
+ *
  * `usd_at_receipt` is computed once at insertion time — no historical-price
- * pipeline at runtime. Stablecoin donations are priced at $1. ETH and other
- * native / whitelisted assets are priced via the CoinGecko `/coins/{id}/history`
- * endpoint for the transfer's UTC block date, with the skill recording the
- * source in `price_note`.
+ * pipeline at runtime. USD stablecoin donations are priced at $1; EURC at the
+ * receipt-date ECB EUR/USD reference rate. ETH and other native / whitelisted
+ * assets are priced via the CoinGecko `/coins/{id}/history` endpoint for the
+ * transfer's UTC block date, with the skill recording the source in `price_note`.
  */
 export type Donation = z.infer<typeof DonationSchema>;

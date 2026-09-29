@@ -28,6 +28,7 @@ function detailSnapshot(generatedAt: number): StablecoinDetailSnapshot {
         circulatingPrevDay: {},
         circulatingPrevWeek: {},
         circulatingPrevMonth: {},
+        nativeSupply: { current: null, prevWeek: null, prevMonth: null },
       },
       supplyHistory: [],
     },

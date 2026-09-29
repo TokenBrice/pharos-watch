@@ -145,7 +145,7 @@ Selected specialized checks:
   - `reserve-network`: all nested reserve-adapter modules must reach network transport through the existing `request.ts`, `defillama.ts`, or Worker `evm-rpc.ts` gateways, never bypass them to import `fetch-retry.ts` or acquire network globals. Gateway implementation safety remains owned by provider-resilience and fetch-body-timeout checks.
   - `frontend-routes`: reusable components, hooks, and libraries cannot reach `src/app`; script-consumed case-study/mechanism content stays outside route-owned directories (index re-exports remain allowed).
   - `recap-cost`: personalized recap planning cannot reach daily/weekly digest generation, AI provider modules, or network capabilities, including aliased/destructured/bracketed access.
-  - `verification-url`: the analytics entry must reach the URL scrubber, whose graph excludes Zod, shared schemas, and the self-serve API module.
+  - `verification-url`: the analytics entry must reach the URL scrubber, whose graph excludes Zod and shared schemas.
   - `stability-light`: the lightweight PSI contract cannot reach Zod or the full shared stability schema.
   - Deletion owners: `scripts/ci/check-architecture-boundaries.ts` and its synthetic-fixture test replace the retired `fetch-guard.test.ts` (`reserve-network`), `frontend-route-boundary.test.ts` (`frontend-routes`), and `telegram-recap-cost-boundary.test.ts` (`recap-cost`) suites, plus only the source-scan cases in `src/lib/__tests__/api-key-verification-url.test.ts` (`verification-url`) and `src/lib/__tests__/api-query-descriptors.test.ts` (`stability-light`). Their behavioral tests remain.
 

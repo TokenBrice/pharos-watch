@@ -31,6 +31,7 @@ function liveSummary(overrides: Partial<StablecoinLiveSummary> = {}): Stablecoin
     circulatingPrevDay: { peggedUSD: 99 },
     circulatingPrevWeek: { peggedUSD: 98 },
     circulatingPrevMonth: { peggedUSD: 97 },
+    nativeSupply: { current: 100, prevWeek: 98, prevMonth: 97 },
     ...overrides,
   };
 }

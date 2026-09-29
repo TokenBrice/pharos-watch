@@ -142,7 +142,7 @@ describe("evaluateAccessGate", () => {
   });
 
   it("denies site-api admin paths after a valid site-proxy credential", async () => {
-    const request = new Request("https://site-api.pharos.watch/api/api-key-requests-admin?limit=1", {
+    const request = new Request("https://site-api.pharos.watch/api/api-keys?limit=1", {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
@@ -154,7 +154,7 @@ describe("evaluateAccessGate", () => {
   });
 
   it("keeps site-api path rejection ahead of method rejection", async () => {
-    const request = new Request("https://site-api.pharos.watch/api/api-key-requests", {
+    const request = new Request("https://site-api.pharos.watch/api/feedback", {
       method: "POST",
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });

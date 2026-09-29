@@ -38,13 +38,13 @@ describe("site-data route mapping", () => {
     expect(isSiteDataAllowedMethod(undefined)).toBe(true);
     expect(isSiteDataAllowedMethod("post")).toBe(false);
     expect(isSiteDataAllowedApiPath("/api/stablecoins?limit=10")).toBe(true);
-    expect(isSiteDataAllowedApiPath("/api/api-key-requests")).toBe(false);
+    expect(isSiteDataAllowedApiPath("/api/donor-key-claims")).toBe(false);
     expect(isSiteDataAllowedApiPath("/api/report-cards/v9-preview")).toBe(false);
     expect(isSiteDataAllowedApiPath("/api/report-cards/v9-preview-412d818c031b7bc5")).toBe(false);
     expect(resolveSiteDataProxyPath("/api/stablecoins?limit=10", "GET")).toBe("/_site-data/stablecoins?limit=10");
     expect(resolveSiteDataProxyPath("/api/report-cards/v9-preview", "GET")).toBeNull();
     expect(resolveSiteDataProxyPath("/api/stablecoins", "POST")).toBeNull();
-    expect(resolveSiteDataProxyPath("/api/api-key-requests", "GET")).toBeNull();
+    expect(resolveSiteDataProxyPath("/api/donor-key-claims", "GET")).toBeNull();
     expect(resolveSiteDataUpstreamPath("/_site-data/stablecoins", "POST")).toBeNull();
   });
 

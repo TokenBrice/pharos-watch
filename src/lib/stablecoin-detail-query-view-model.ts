@@ -1,4 +1,5 @@
 import type { SupplyHistoryPoint } from "@shared/types";
+import type { NativeSupplyCheckpoints } from "@/lib/api-query-descriptors";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";
@@ -12,12 +13,7 @@ import type {
   StablecoinDetailViewModelQueryInputs,
   StablecoinDetailViewModelSupplementalInputs,
 } from "@/lib/stablecoin-detail-view-model-types";
-import {
-  getCirculatingRaw,
-  getPrevDayRawOrNull,
-  getPrevMonthRawOrNull,
-  getPrevWeekRawOrNull,
-} from "@shared/lib/supply";
+import { getCirculatingRaw, getPrevDayRawOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type {
   BlacklistStablecoin,
@@ -38,8 +34,8 @@ export interface DetailMarketSnapshot {
   mcap: number;
   supply: number | null;
   prevDay: number | null;
-  prevWeek: number | null;
-  prevMonth: number | null;
+  /** Token-count checkpoints for the hero Supply trend; USD market-cap history never feeds it. */
+  nativeSupply: NativeSupplyCheckpoints | null;
   performanceVsUsd1y: number | null;
   earliestTrackingDate: number | null;
 }
@@ -104,6 +100,7 @@ function computePerformanceVsUsd1y(
 export function buildDetailMarketSnapshot(
   coin: StablecoinMeta,
   coinData: StablecoinData,
+  nativeSupply: NativeSupplyCheckpoints | null,
   supplyHistory: SupplyHistoryPoint[],
   nowMs: number,
 ): DetailMarketSnapshot {
@@ -113,8 +110,7 @@ export function buildDetailMarketSnapshot(
     mcap,
     supply: deriveSupplyFromMarketCap(mcap, observedPrice),
     prevDay: getPrevDayRawOrNull(coinData),
-    prevWeek: getPrevWeekRawOrNull(coinData),
-    prevMonth: getPrevMonthRawOrNull(coinData),
+    nativeSupply,
     performanceVsUsd1y: computePerformanceVsUsd1y(coin, observedPrice, supplyHistory, nowMs),
     earliestTrackingDate: supplyHistory.length > 0 ? supplyHistory[0].date : null,
   };

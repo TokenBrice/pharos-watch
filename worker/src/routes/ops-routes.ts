@@ -22,9 +22,6 @@ export const OPS_STATIC_ROUTES = [
   defineLazyStaticRoute("api-key-audit-log", () =>
     import("../api/api-key-audit-log").then(({ handleApiKeyAuditLog }) => handleApiKeyAuditLog),
   ),
-  defineLazyStaticRoute("api-key-requests-admin", () =>
-    import("../api/api-key-requests").then(({ handleApiKeyRequestsAdminRoute }) => handleApiKeyRequestsAdminRoute),
-  ),
   defineLazyStaticRoute("trigger-digest", () =>
     import("../api/admin-actions").then(({ handleTriggerDigest }) => handleTriggerDigest),
   ),

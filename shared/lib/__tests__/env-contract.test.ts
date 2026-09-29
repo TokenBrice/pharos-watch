@@ -25,7 +25,6 @@ describe("env contract manifest", () => {
     expect(envExample).toContain("NEXT_PUBLIC_API_BASE=");
     expect(envExample).toContain("VAULTS_FYI_API_KEY=");
     expect(envExample).toContain("VAULTS_FYI_ENABLED=");
-    expect(envExample).toContain("API_KEY_SELF_SERVE_PUBLIC_BASE_URL=https://pharos.watch/api");
     expect(envExample).toContain("SITE_API_ORIGIN=https://site-api.pharos.watch");
     expect(envExample).toContain("SELECTOR_SNAPSHOT_IP_HASH_SECRET=");
     expect(envExample).toContain("TELEGRAM_ADOPTION_IP_HASH_SECRET=");

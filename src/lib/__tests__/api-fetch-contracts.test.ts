@@ -358,15 +358,14 @@ describe("api contract validation policy", () => {
 
     expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
     expect(buildRequestUrl("/api/public-status-history?limit=10")).toBe("/_site-data/public-status-history?limit=10");
-    expect(buildRequestUrl("/api/api-key-requests", { method: "POST" })).toBe("/api/api-key-requests");
+    expect(buildRequestUrl("/api/donor-key-claims", { method: "POST" })).toBe("/api/donor-key-claims");
     expect(buildRequestUrl("/api/og/stablecoin/usdt-tether")).toBe("/api/og/stablecoin/usdt-tether");
   });
 
   it("keeps browser public POST and non-site-data GET routes off the site-data proxy", () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
 
-    expect(buildRequestUrl("/api/api-key-requests", { method: "POST" })).toBe("/api/api-key-requests");
-    expect(buildRequestUrl("/api/api-key-requests/verify", { method: "POST" })).toBe("/api/api-key-requests/verify");
+    expect(buildRequestUrl("/api/donor-key-claims", { method: "POST" })).toBe("/api/donor-key-claims");
     expect(buildRequestUrl("/api/feedback", { method: "POST" })).toBe("/api/feedback");
     expect(buildRequestUrl("/api/og/stablecoin/usdt-tether")).toBe("/api/og/stablecoin/usdt-tether");
   });
@@ -392,9 +391,9 @@ describe("api contract validation policy", () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     const fetchSpy = mockJsonOnce({ ok: true });
 
-    await apiRequest("/api/api-key-requests", (response) => response.json(), { method: "POST" });
+    await apiRequest("/api/donor-key-claims", (response) => response.json(), { method: "POST" });
 
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe("/api/api-key-requests");
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("/api/donor-key-claims");
   });
 
   it("propagates caller-provided AbortSignal through the shared request helper", async () => {

@@ -1,4 +1,10 @@
-import { CRON_INTERVALS, getCronJobMeta, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
+import {
+  CRON_INTERVALS,
+  getCronJobMeta,
+  getCronStatusImpact,
+  isProvenSatisfiedNeutralSkipReason,
+  PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS,
+} from "@shared/lib/cron-jobs";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
@@ -60,6 +66,27 @@ const LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER = `NOT (
     ELSE 0
   END
 )`;
+
+// Reasons are code-owned identifiers inlined like the status literals, so each
+// per-job branch binds only its job and freshness bound.
+const PROVEN_SATISFIED_NEUTRAL_SKIP_SQL_FILTER = `status = '${NEUTRAL_CRON_RUN_STATUS}'
+  AND CASE
+    WHEN metadata IS NOT NULL AND json_valid(metadata)
+      THEN COALESCE(json_extract(metadata, '$.reason') IN (${
+        PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS.map((reason) => `'${reason}'`).join(", ")
+      }), 0)
+    ELSE 0
+  END`;
+
+type CronHistoryQueryMode = "display" | "latest-required" | "latest-proven-satisfied";
+
+const CRON_HISTORY_MODE_SQL_FILTER: Readonly<Record<CronHistoryQueryMode, string>> = {
+  display: "",
+  "latest-required": `AND status != '${NEUTRAL_CRON_RUN_STATUS}'`,
+  // Only a fresh readback can satisfy availability, so bound the index range
+  // scan to the job's freshness window.
+  "latest-proven-satisfied": `AND started_at >= ? AND ${PROVEN_SATISFIED_NEUTRAL_SKIP_SQL_FILTER}`,
+};
 
 function parseMetadataObject(value: string | null | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
@@ -163,7 +190,7 @@ function hasFreshOutput(job: string, run: CronRun | null, now: number, interval:
   return outputAt != null && outputAt <= now && now - outputAt <= interval * 2;
 }
 
-function buildCronHistoryQuery(jobCount: number, requiredOnly = false): string {
+function buildCronHistoryQuery(jobCount: number, mode: CronHistoryQueryMode = "display"): string {
   if (jobCount <= 0) {
     throw new Error("buildCronHistoryQuery: jobCount must be positive");
   }
@@ -174,9 +201,9 @@ function buildCronHistoryQuery(jobCount: number, requiredOnly = false): string {
            FROM cron_runs
           WHERE job = ?
             AND ${LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER}
-            ${requiredOnly ? `AND status != '${NEUTRAL_CRON_RUN_STATUS}'` : ""}
+            ${CRON_HISTORY_MODE_SQL_FILTER[mode]}
           ORDER BY started_at DESC
-          LIMIT ${requiredOnly ? 1 : CRON_HISTORY_ROWS_PER_JOB}
+          LIMIT ${mode === "display" ? CRON_HISTORY_ROWS_PER_JOB : 1}
        )`
   ));
 
@@ -268,20 +295,43 @@ async function fetchCronHistoryRows(
     const jobsWithRequiredRun = new Set(rows
       .filter((row) => parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS)
       .map((row) => row.job));
+    const jobsWithProvenSatisfiedSkip = new Set(rows
+      .filter((row) => parseCronRunStatus(row.status) === NEUTRAL_CRON_RUN_STATUS
+        && isProvenSatisfiedNeutralSkipReason(parseMetadataObject(row.metadata)?.reason))
+      .map((row) => row.job));
     const historyCounts = new Map<string, number>();
     for (const row of rows) historyCounts.set(row.job, (historyCounts.get(row.job) ?? 0) + 1);
     const jobsMissingRequiredRun = cronJobs.filter((job) => !jobsWithRequiredRun.has(job)
       && (historyCounts.get(job) ?? 0) >= CRON_HISTORY_ROWS_PER_JOB);
+    const jobsMissingProvenSkip = jobsMissingRequiredRun.filter((job) => !jobsWithProvenSatisfiedSkip.has(job));
     // A daily producer's hourly admission skips can fill its display window.
-    // Only those jobs need one older required attempt; preserve the same indexed
-    // per-job LIMIT and compound-query batch bound as the display-history read.
-    const requiredBatches = await Promise.all(chunkCronJobs(jobsMissingRequiredRun).map(async (jobBatch) => {
-      const jobSet = new Set(jobBatch);
-      const result = await db.prepare(buildCronHistoryQuery(jobBatch.length, true)).bind(...jobBatch).all<CronHistoryRow>();
-      return (result.results ?? []).filter((row) => jobSet.has(row.job)
-        && parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS);
-    }));
-    rows.push(...requiredBatches.flat());
+    // Only those jobs need one older required attempt and, when the window
+    // holds no proven readback either, the latest fresh proven-satisfied skip:
+    // generic admissions after a period boundary must not evict the readback
+    // that superseded an earlier error. Both lookups preserve the indexed
+    // per-job LIMIT and compound-query batch bound of the display-history read.
+    const [requiredBatches, provenBatches] = await Promise.all([
+      Promise.all(chunkCronJobs(jobsMissingRequiredRun).map(async (jobBatch) => {
+        const jobSet = new Set(jobBatch);
+        const result = await db
+          .prepare(buildCronHistoryQuery(jobBatch.length, "latest-required"))
+          .bind(...jobBatch)
+          .all<CronHistoryRow>();
+        return (result.results ?? []).filter((row) => jobSet.has(row.job)
+          && parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS);
+      })),
+      Promise.all(chunkCronJobs(jobsMissingProvenSkip).map(async (jobBatch) => {
+        const jobSet = new Set(jobBatch);
+        const result = await db
+          .prepare(buildCronHistoryQuery(jobBatch.length, "latest-proven-satisfied"))
+          .bind(...jobBatch.flatMap((job) => [job, now - CRON_INTERVALS[job] * 2]))
+          .all<CronHistoryRow>();
+        return (result.results ?? []).filter((row) => jobSet.has(row.job)
+          && parseCronRunStatus(row.status) === NEUTRAL_CRON_RUN_STATUS
+          && isProvenSatisfiedNeutralSkipReason(parseMetadataObject(row.metadata)?.reason));
+      })),
+    ]);
+    rows.push(...requiredBatches.flat(), ...provenBatches.flat());
     const freshOutputJobs = new Set<string>();
     for (const row of rows) {
       if (row.status !== "ok" && row.status !== "degraded") continue;
@@ -623,8 +673,15 @@ export async function loadCronHealth(
     }
     const runs = cronByJob.get(row.job) ?? [];
     const parsedStatus = parseCronRunStatus(row.status);
+    // Beyond the display window, keep only the inheritance evidence appended
+    // behind an all-neutral window: the latest required attempt and a proven
+    // readback newer than it. Rows arrive newest first, so a readback older
+    // than the required attempt is dropped.
     if (runs.length < CRON_HISTORY_ROWS_PER_JOB
-      || (parsedStatus !== NEUTRAL_CRON_RUN_STATUS && runs.every((run) => run.status === NEUTRAL_CRON_RUN_STATUS))) {
+      || (runs.every((run) => run.status === NEUTRAL_CRON_RUN_STATUS)
+        && (parsedStatus !== NEUTRAL_CRON_RUN_STATUS
+          || (isProvenSatisfiedNeutralSkipReason(parsedMeta?.reason)
+            && !runs.some((run) => isProvenSatisfiedNeutralSkipReason(run.metadata?.reason)))))) {
       runs.push({
         startedAt: row.started_at,
         durationMs: row.duration_ms,
@@ -755,20 +812,15 @@ export async function loadCronHealth(
       }
     }
 
-    // Serve the ten-run display window plus, when that window is entirely
-    // neutral admission skips, the single older required attempt the history
-    // read appends for inheritance evaluation. Without the appended row the
-    // summary can count a job in degradedCronRuns (or cronErrors) while every
-    // served run is neutral, leaving the warning unattributable in the admin
-    // cron table.
-    const displayRuns = runs.slice(0, CRON_HISTORY_ROWS_PER_JOB);
-    const inheritedRequiredRun = runs.length > displayRuns.length
-      && displayRuns.every((run) => run.status === NEUTRAL_CRON_RUN_STATUS)
-      ? runs[displayRuns.length]
-      : null;
+    // Serve the ten-run display window plus the inheritance evidence the
+    // history read appends behind an all-neutral window (the latest required
+    // attempt and a newer proven readback). Without the appended rows the
+    // summary can count a job in degradedCronRuns or cronErrors, or clear an
+    // inherited error, while every served run is a generic neutral skip,
+    // leaving the verdict unattributable in the admin cron table.
     crons[job] = {
       lastRun,
-      recentRuns: inheritedRequiredRun != null ? [...displayRuns, inheritedRequiredRun] : displayRuns,
+      recentRuns: runs,
       expectedIntervalSec: interval,
       healthy,
       telemetryUnknown,

@@ -13,7 +13,6 @@ export type EndpointDependency =
   | "feedbackEnv"
   | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
-  | "apiKeySelfServeEnv"
   | "dwellirBudgetEnv"
   | "donorKeyClaimRateLimit"
   | "workerStatusConfig"
@@ -290,19 +289,12 @@ export interface EndpointMethodValidationError {
   allowedMethods: readonly EndpointMethod[];
 }
 
-export type DynamicAdminEndpointMatch =
-  | {
-      key: "api-key-update" | "api-key-deactivate" | "api-key-rotate";
-      path: string;
-      apiKeyId: number;
-      methods: readonly EndpointMethod[];
-    }
-  | {
-      key: "api-key-request-reject" | "api-key-request-release-claim";
-      path: string;
-      requestId: string;
-      methods: readonly EndpointMethod[];
-    };
+export type DynamicAdminEndpointMatch = {
+  key: "api-key-update" | "api-key-deactivate" | "api-key-rotate";
+  path: string;
+  apiKeyId: number;
+  methods: readonly EndpointMethod[];
+};
 
 const NO_DRY_RUN: StatusPageActionDryRun = {
   supported: false,
@@ -610,16 +602,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.feedback(),
     routeDependencies: ["feedbackEnv"],
   }),
-  publicPostExempt({
-    key: "api-key-requests",
-    path: API_PATHS.apiKeyRequests(),
-    routeDependencies: ["apiKeySelfServeEnv"],
-  }),
-  publicPostExempt({
-    key: "api-key-request-verify",
-    path: API_PATHS.apiKeyRequestVerify(),
-    routeDependencies: ["apiKeyHashPepper", "apiKeySelfServeEnv"],
-  }),
   // Wallet-signed supporter key claim (SIWE). Exempt from X-API-Key; the
   // Cloudflare ratelimit binding runs before the body is read.
   publicPostExempt({
@@ -671,11 +653,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheBypass: true,
     routeDependencies: ["apiKeyHashPepper"],
   },
-  adminGet({
-    key: "api-key-requests-admin",
-    path: API_PATHS.apiKeyRequestsAdmin(),
-    siteDataAccess: "denied",
-  }),
   adminGet({
     key: "credential-lifecycle-summary",
     path: API_PATHS.credentialLifecycleSummary(),

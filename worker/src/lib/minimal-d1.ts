@@ -1,8 +1,6 @@
 /**
  * The minimal structural D1 surface the rate-limit and API-key modules actually
- * consume. Four verbatim copies of this shape used to live in `rate-limit.ts`,
- * `api/api-key-requests/rate-limit.ts`, `api-key-core.ts` and
- * `api/api-key-requests/types.ts`; they all alias this one now.
+ * consume.
  *
  * It stays structural (rather than importing Cloudflare's `D1Database`) so
  * tests can pass narrow stubs and so these modules do not depend on the full

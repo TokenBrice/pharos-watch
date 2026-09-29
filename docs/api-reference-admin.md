@@ -31,8 +31,6 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-blacklist-current-balances`
 - `POST /api/admin-telegram-broadcast`
-- `POST /api/api-key-requests-admin/:requestId/reject`
-- `POST /api/api-key-requests-admin/:requestId/release-claim`
 - `POST /api/api-keys`
 - `POST /api/api-keys/:id/update`
 - `POST /api/api-keys/:id/deactivate`
@@ -512,7 +510,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `reserveComposition.runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose the latest live-reserve deferred-tail cursor when the internal sync budget stopped the run before the queue tail. `persistentlyStaleIndependentCoins` lists independent feeds whose latest source has been failing beyond the persistent-stale window. `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path and could not be proven authoritative by readback.
 
-`crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own. Every counted job is derivable from the served records — a fresh degraded `lastRun`, or a neutral `lastRun` whose inherited degraded required run is served in `recentRuns` (as an eleventh entry when the ten-run display window is all neutral).
+`crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own. Every counted job is derivable from the served records — a fresh degraded `lastRun`, or a neutral `lastRun` whose inherited degraded required run is served in `recentRuns` (appended after the ten-run display window when that window is all neutral, behind a newer proven-satisfied readback when one exists).
 
 `availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ public-impact open circuit groups can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
 
@@ -709,7 +707,7 @@ Admin-only API key creation route.
 | -------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`               | `string`               | Yes      | Display name for the key                                                                                                                    |
 | `ownerEmail`         | `string`               | No       | Optional operator / owner contact                                                                                                           |
-| `tier`               | `"standard" \| "self-serve" \| "donor"` | No       | Issuance tier; defaults to `"standard"`. `"self-serve"` is written by the verified public issuance path, and `"donor"` by the supporter-key claim at `POST /api/donor-key-claims` |
+| `tier`               | `"standard" \| "self-serve" \| "donor"` | No       | Issuance tier; defaults to `"standard"`. `"self-serve"` is the retired self-serve lane's tier (issuance path removed 2026-09-29; existing keys drain until their 60-day expiry), and `"donor"` is written by the supporter-key claim at `POST /api/donor-key-claims` |
 | `rateLimitPerMinute` | `integer`              | No       | Per-key threshold (`1`–`10000`, default `120`)                                                                                              |
 | `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
@@ -760,34 +758,9 @@ Donor eligibility uses Safety Score grades at claim time, not donation time. Lat
 
 **Response shape:** `ApiKeyRotateResponse`
 
-Supporter keys never rotate by self-service: re-signing the claim message returns `409`, so a donor who lost a key asks through the feedback form and an operator rotates it here. The key is named `donor <full lowercase address>`, so the admin list is searchable by the full address.
+Supporter keys never rotate by self-service: re-signing the claim message returns `409`, so a donor who lost a key asks through the private channel (Telegram DM to `@TokenBrice`, secondary X DM to `@PharosWatch`; constants in `shared/lib/public-api-contract.ts`), the operator verifies the donating wallet, and rotates it here. The same channel handles key-record removal requests. The key is named `donor <full lowercase address>`, so the admin list is searchable by the full address.
 
 Correcting the ledger is a two-step operator action. When removing or correcting a donation row in `shared/data/funding/donations.json` leaves a wallet with less than $10 in qualifying stablecoin donations, the runtime does not revoke anything on its own, because eligibility is only read at claim time. Find the `donor` key whose name carries that address and deactivate it with `POST /api/api-keys/:id/deactivate`. Leave the `api_key_donor_claims` row in place: it keeps that address from claiming again, and a re-claim attempt against a deactivated key returns `403` rather than issuing a second key.
-
-### `GET /api/api-key-requests-admin`
-
-Admin-only self-serve API key request list used by `ops.pharos.watch/admin-api/`. Returns requester details, risk context, intended endpoints, verification/issuance timestamps, linked key metadata, and claim state. It never returns plaintext API tokens.
-
-**Query params:**
-
-| Param    | Type      | Default | Max | Description                                                                            |
-| -------- | --------- | ------- | --- | -------------------------------------------------------------------------------------- |
-| `status` | `string`  | n/a     | n/a | Optional filter: `pending_verification`, `issued`, `rejected`, `blocked`, or `expired` |
-| `limit`  | `integer` | `50`    | 100 | Number of request rows to return                                                       |
-
-**Response shape:** `ApiKeySelfServeRequestAdminListResponse` (defined in `shared/types/api-key-requests.ts`)
-
-### `POST /api/api-key-requests-admin/:requestId/reject`
-
-Admin-only rejection for a self-serve request. If a linked key exists, the handler deactivates it before marking the request rejected and releasing the email claim.
-
-**Response shape:** `ApiKeySelfServeAdminMutationResponse`
-
-### `POST /api/api-key-requests-admin/:requestId/release-claim`
-
-Admin-only claim release for a self-serve request that should no longer block the normalized email. The handler refuses to release a claim while the request still has an active, unexpired linked key.
-
-**Response shape:** `ApiKeySelfServeAdminMutationResponse`
 
 ### `POST /api/backfill-depegs`
 

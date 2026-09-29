@@ -194,9 +194,9 @@ The manual zone-cache recovery workflow additionally requires the Cloudflare tok
 
 The zone's free plan provides a single rate-limiting slot, held by the
 deliberately disabled `api-rate-limit-ip` rule; per-endpoint ingress limiting
-(API-key rates, self-serve issuance fencing, Telegram webhook dedup and
-mini-app quotas) is enforced in the Worker application layer, so the drift
-manifest requires exactly that one edge rule.
+(API-key rates, Telegram webhook dedup and mini-app quotas) is enforced in the
+Worker application layer, so the drift manifest requires exactly that one edge
+rule.
 
 The scheduled Cloudflare account-state drift workflow uses the separate
 repository secret `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`. It is a dedicated
@@ -312,19 +312,19 @@ The current origin split is:
 
 The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project, and its runtime contract lives in [Worker Infrastructure: Site-Data Auth](./worker-infrastructure.md#site-data-auth). Every Pages host uses `SITE_API_SHARED_SECRET` only with the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`. The selector-snapshot Pages Function uses those same bindings server-side to recompute share artifacts from schema-validated canonical sources; missing or failing source access makes snapshot creation fail closed. Binding `DB` enables proxy-outcome attribution and is required for selector daily quotas; `SELECTOR_SNAPSHOT_IP_HASH_SECRET` is also required for privacy-preserving selector rate keys. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
 
-The public self-serve API-key form is not a production Pages proxy route. On `pharos.watch`, `/api/` is the static form page and its browser requests go cross-origin to `https://api.pharos.watch/api/api-key-requests` and `/api/api-key-requests/verify`; CORS must allow JSON `POST` from `https://pharos.watch`. Local static-export smoke uses a proxy for endpoint-like `/api/*` only so the built artifact can be rehearsed without a deployed Pages Function.
+Public API `/api/*` POST requests are not production Pages proxy routes. On `pharos.watch`, `/api/` is the static API access page; its browser POST is the supporter-key claim, which goes cross-origin to `https://api.pharos.watch/api/donor-key-claims`, so CORS must allow JSON `POST` from `https://pharos.watch`. Local static-export smoke uses a proxy for endpoint-like `/api/*` only so the built artifact can be rehearsed without a deployed Pages Function.
 
-## Self-Serve API Key Rollback
+## Self-Serve Key Incident Rollback
 
-For an incident isolated to public self-serve key issuance:
+The self-serve request lane was removed on 2026-09-29: the public request/verification routes and the admin decision routes under `/api/api-key-requests-admin/` are unregistered and respond like any unknown API path on the public host (`401` without a valid `X-API-Key`, `404` with one), so no new self-serve issuance can occur. Existing `tier="self-serve"` keys keep authenticating until they drain through their 60-day expiry (about 2026-11-06), so an incident on this surface now means a compromised or leaked self-serve key:
 
-1. Hide or disable the `/api/` form in Pages.
-2. If edge blocking is required, the account owner may replace the deliberately disabled `api-rate-limit-ip` placeholder with one exact POST-path rule for `/api/api-key-requests` and `/api/api-key-requests/verify`; the free plan has one slot, so this is an explicit reallocation, not activation of a pre-existing self-serve rule. Do not match `/api/api-key-requests-admin*`. Update `scripts/ci/cloudflare-account-state-manifest.json` in the same operated change, record the rule ID, and verify matches in Security Events.
+1. Pause the supporter-key claim if the incident reaches it: set the supporter-claim switch to false in `shared/lib/public-api-contract.ts` and release. The Worker then answers `POST /api/donor-key-claims` with `403` before reading the body, and `/api/` shows the paused notice. The retired self-serve lane has no form page and no live route to hide.
+2. No edge blocking rule is needed for the retired lane: its former POST paths are unknown routes and answer `401` without a valid key before any routing. Leave the deliberately disabled `api-rate-limit-ip` placeholder untouched; the free plan has one slot, and reallocating it for a removed lane buys nothing.
 3. Roll back Worker or Pages through the normal deployment rollback path as needed.
-4. Query self-serve keys created after the incident cutoff, deactivate incident or smoke keys, release associated claims through the Access-gated admin route, and verify matching audit rows.
-5. Check Worker logs, email-provider logs, and Cloudflare Security Events for plaintext API keys, raw verification tokens, raw IP addresses, or provider-echoed requester data.
+4. Query self-serve keys around the incident window, deactivate compromised keys through `POST /api/api-keys/:id/deactivate` (or the SQL below), and verify matching audit rows. The retired release-claim admin route is gone; email-claim rows are handled only through the SQL below.
+5. Check Worker logs and Cloudflare Security Events for plaintext API keys or raw IP addresses. The lane no longer uses an email provider, so there are no verification-token or provider-echoed requester surfaces to audit.
 
-Use these SQL templates from a trusted operator shell. Set `cutoff_epoch` to the first suspect issuance timestamp.
+Use these SQL templates from a trusted operator shell. Set `cutoff_epoch` to the first suspect issuance timestamp; issuance ended when the lane was closed, so this window is historical. The lane's D1 tables remain in place until a separate follow-up rollout drops them.
 
 ```bash
 cutoff_epoch=1778500000
@@ -387,7 +387,7 @@ WHERE c.status = 'pending_verification' AND r.request_id IS NULL;
 "
 ```
 
-Production smoke for this surface should request a smoke key, receive the email, verify once, confirm verification-token reuse fails, confirm the admin queue/key/claim/audit state through `ops-api`, then deactivate the smoke key and release its claim.
+Production smoke for this surface should confirm the retired request and verification paths respond like unknown API paths (`401` without a valid key, `404` with one), confirm an existing self-serve key still authenticates at its `30` requests per minute limit, then deactivate the smoke key through the admin key route and confirm the audit row.
 
 ## Failure Policy
 

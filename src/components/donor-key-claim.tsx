@@ -1,10 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { KeyRound, Loader2 } from "lucide-react";
-import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
-import { buildPublicApiCurlCommand } from "@shared/lib/public-api-contract";
+import { DONOR_API_KEY_MIN_USD, DONOR_KEY_CLAIM_MAX_AGE_SEC } from "@shared/lib/ops-limits";
+import {
+  API_ACCESS_TELEGRAM_HANDLE,
+  API_ACCESS_TELEGRAM_URL,
+  API_ACCESS_X_HANDLE,
+  API_ACCESS_X_URL,
+  API_PAGE_ANCHORS,
+  PUBLIC_API_ARTIFACTS,
+  buildPublicApiCurlCommand,
+} from "@shared/lib/public-api-contract";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { buildDonorClaimSiweMessage, generateDonorClaimNonce } from "@shared/lib/donor-key-claim";
 import { getAddress } from "viem/utils";
 import { formatIsoDate } from "@shared/lib/format";
@@ -13,14 +22,15 @@ import { Button } from "@/components/ui/button";
 import { IssuedTokenPanel } from "@/components/issued-token-panel";
 import { copyText as writeClipboardText } from "@/lib/clipboard";
 import { DonorKeyClaimError, claimDonorKey, hexUtf8 } from "@/lib/donor-key-claim-client";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { useUnsavedTokenGuard } from "@/hooks/use-unsaved-token-guard";
 import { beginPendingApiKeyIssuance, clearPendingApiKey } from "@/components/pending-api-key-recovery";
 
-type ClaimStatus = "idle" | "no-provider" | "connecting" | "signing" | "submitting" | "issued" | "error";
+type ClaimStatus = "idle" | "connecting" | "signing" | "submitting" | "issued" | "error";
 
 interface ClaimFailure {
   status: number | null;
-  text: string;
+  text: ReactNode;
 }
 
 /** Minimal EIP-1193 surface; the page never loads a wallet library. */
@@ -28,8 +38,27 @@ interface EthereumProvider {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
 }
 
-const NO_PROVIDER_COPY =
-  "Open this page inside your wallet's in-app browser, or use a desktop browser wallet. Only externally-owned wallets can sign.";
+const NO_PROVIDER_COPY = "No browser wallet found. Use a wallet extension, or open this page in:";
+
+/** The claim section URL a mobile wallet opens in its in-app browser. */
+const CLAIM_PAGE_URL = `${SITE_ORIGIN}/api/#${API_PAGE_ANCHORS.claim}`;
+/** MetaMask deep links take the host and path without the scheme. */
+const METAMASK_CLAIM_URL = `https://link.metamask.io/dapp/${CLAIM_PAGE_URL.replace(/^https?:\/\//, "")}`;
+const COINBASE_WALLET_CLAIM_URL = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(CLAIM_PAGE_URL)}`;
+
+const CLAIM_MAX_AGE_MINUTES = DONOR_KEY_CLAIM_MAX_AGE_SEC / 60;
+
+const TELEGRAM_CONTACT_LINK = (
+  <a href={API_ACCESS_TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
+    @{API_ACCESS_TELEGRAM_HANDLE}
+  </a>
+);
+
+const X_CONTACT_LINK = (
+  <a href={API_ACCESS_X_URL} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
+    @{API_ACCESS_X_HANDLE}
+  </a>
+);
 
 function readProvider(): EthereumProvider | null {
   if (typeof window === "undefined") return null;
@@ -56,25 +85,60 @@ function describeClaimFailure(error: unknown): ClaimFailure {
     return { status: null, text: "The claim could not be completed. Check your connection and try again." };
   }
 
-  switch (error.status) {
+  if (error.reason === "grade_unavailable") {
+    return { status: error.status, text: "Safety grades are temporarily unavailable, so this wallet's eligibility cannot be confirmed yet. Try again later." };
+  }
+  if (error.reason === "ineligible" && error.qualifyingUsd != null && error.ledgerUpdatedAt != null) {
+    const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(error.qualifyingUsd);
+    return {
+      status: error.status,
+      text: `This wallet has ${amount} of $${DONOR_API_KEY_MIN_USD} in qualifying donations as of ${formatIsoDate(error.ledgerUpdatedAt)}. The qualifying stablecoins are listed on this page, and the donor list is updated every Sunday.`,
+    };
+  }
+  const reasonStatus = error.reason == null ? error.status
+    : error.reason === "ineligible" || error.reason === "claim_revoked" || error.reason === "claims_closed" ? 403
+      : error.reason === "claim_exists" || error.reason === "claim_orphaned" ? 409
+        : error.reason === "rate_limited" ? 429
+          : error.reason === "body_invalid" || error.reason === "siwe_invalid" || error.reason === "signature_invalid" ? 400
+            : 503;
+  switch (reasonStatus) {
     case 400:
-      return { status: 400, text: "The wallet could not be verified. Try again." };
+      return {
+        status: 400,
+        text: `The signature could not be verified. Smart-contract wallets (Safe, Coinbase Smart Wallet and similar) cannot claim yet. If this is a regular wallet, check the device clock (the message is valid for ${CLAIM_MAX_AGE_MINUTES} minutes) and try again.`,
+      };
     case 403:
-      if (error.ledgerUpdatedAt != null) {
+      if (error.reason === "ineligible" || (error.reason == null && error.ledgerUpdatedAt != null)) {
         return {
           status: 403,
-          text: `This wallet needs at least $${DONOR_API_KEY_MIN_USD} in donations of stablecoins currently graded A+, A, A−, B+, B, or B−, using the ledger reconciled on ${formatIsoDate(error.ledgerUpdatedAt)}. Claims are not instant: the donor list is updated once a week, on Sunday mornings, and a donation only counts once it appears on the funding page.`,
+          text: `This wallet has not reached $${DONOR_API_KEY_MIN_USD} in qualifying donations${error.ledgerUpdatedAt == null ? "" : ` in the ledger reconciled on ${formatIsoDate(error.ledgerUpdatedAt)}`}. The qualifying stablecoins are listed on this page, and the donor list is updated every Sunday.`,
         };
       }
-      if (/revok/i.test(error.message)) {
-        return { status: 403, text: "The key for this wallet was deactivated. Ask through the feedback form if you think that is wrong." };
+      if (error.reason === "claim_revoked" || (error.reason == null && /revok/i.test(error.message))) {
+        return {
+          status: 403,
+          text: (
+            <>
+              The key for this wallet was deactivated. If you think that is wrong, message {TELEGRAM_CONTACT_LINK} on
+              Telegram or DM {X_CONTACT_LINK} on X.
+            </>
+          ),
+        };
       }
-      if (/paus|clos/i.test(error.message)) {
-        return { status: 403, text: "Supporter key claims are paused for now. Try again after the next release." };
+      if (error.reason === "claims_closed" || (error.reason == null && /paus|clos/i.test(error.message))) {
+        return { status: 403, text: "Supporter key claims are paused. Try again after the next release." };
       }
       return { status: 403, text: error.message };
     case 409:
-      return { status: 409, text: "This wallet already claimed its key. Lost it? Ask for a rotation through the" };
+      return {
+        status: 409,
+        text: (
+          <>
+            This wallet already claimed its key. Lost it? Message {TELEGRAM_CONTACT_LINK} on Telegram (or DM{" "}
+            {X_CONTACT_LINK} on X) for a rotation.
+          </>
+        ),
+      };
     case 429:
       return { status: 429, text: "Too many attempts, wait a minute." };
     case 503:
@@ -151,13 +215,32 @@ export function DonorKeyClaim() {
   const [failure, setFailure] = useState<ClaimFailure | null>(null);
   const [siweMessage, setSiweMessage] = useState<string | null>(null);
   const [issued, setIssued] = useState<DonorKeyClaimResponse | null>(null);
+  const [providerMissing, setProviderMissing] = useState(false);
+  const [walletFocusRequest, setWalletFocusRequest] = useState(0);
+  const walletLinkRef = useRef<HTMLAnchorElement | null>(null);
+  const { copied: pageLinkCopied, copy: copyPageLink } = useCopyToClipboard(1800);
   const controls = useIssuedTokenControls(issued?.token ?? null, status === "submitting");
   const { retainIssuedToken } = controls;
+
+  useEffect(() => {
+    // Wallet injection only exists in the browser, so detection waits for
+    // mount and the server and hydration markup stay identical.
+    setProviderMissing(readProvider() === null);
+    // Some wallets inject after load and announce it with this event.
+    const recheck = () => setProviderMissing(readProvider() === null);
+    window.addEventListener("ethereum#initialized", recheck, { once: true });
+    return () => window.removeEventListener("ethereum#initialized", recheck);
+  }, []);
+
+  useEffect(() => {
+    if (providerMissing && walletFocusRequest > 0) walletLinkRef.current?.focus();
+  }, [providerMissing, walletFocusRequest]);
 
   const handleClaim = useCallback(async () => {
     const provider = readProvider();
     if (!provider) {
-      setStatus("no-provider");
+      setProviderMissing(true);
+      setWalletFocusRequest((request) => request + 1);
       return;
     }
 
@@ -252,6 +335,15 @@ export function DonorKeyClaim() {
           tokenSecured={controls.tokenSecured}
           markTokenSaved={controls.markTokenSaved}
         />
+        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+          Save it as <code className="font-mono text-foreground">PHAROS_API_KEY</code> and call from a server or
+          script; browsers on other sites are blocked. Next:{" "}
+          <Link href="/about/api/#endpoint-directory" className="pharos-prose-link">endpoint directory</Link>
+          {" · "}
+          <a href={PUBLIC_API_ARTIFACTS.postmanCollection} className="pharos-prose-link">Postman collection</a>
+          {" · "}
+          <Link href="/about/api/#polling-guidance" className="pharos-prose-link">polling guidance</Link>.
+        </p>
       </div>
     );
   }
@@ -265,7 +357,7 @@ export function DonorKeyClaim() {
 
   return (
     <div className="mt-4 space-y-3">
-      <Button type="button" onClick={() => void handleClaim()} disabled={busy} className="w-full sm:w-auto">
+      <Button type="button" size="lg" onClick={() => void handleClaim()} disabled={busy} className="w-full sm:w-auto">
         {busy ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         ) : (
@@ -273,6 +365,23 @@ export function DonorKeyClaim() {
         )}
         {busy ? busyLabel : "Claim supporter key"}
       </Button>
+
+      {providerMissing ? (
+        <div className="space-y-2.5 rounded-md border border-border/60 bg-muted/40 px-3 py-3 text-sm text-muted-foreground">
+          <p>{NO_PROVIDER_COPY}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <a ref={walletLinkRef} href={METAMASK_CLAIM_URL}>Open in MetaMask</a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href={COINBASE_WALLET_CLAIM_URL}>Open in Coinbase Wallet</a>
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => void copyPageLink(CLAIM_PAGE_URL)}>
+              {pageLinkCopied ? "Link copied" : "Copy page link"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <p className="text-xs leading-relaxed text-muted-foreground">
         Sign only on pharos.watch. If the wallet warns that the requesting site does not match pharos.watch, reject
@@ -286,12 +395,6 @@ export function DonorKeyClaim() {
         </details>
       ) : null}
 
-      {status === "no-provider" ? (
-        <p role="status" className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          {NO_PROVIDER_COPY}
-        </p>
-      ) : null}
-
       {note ? (
         <p role="status" className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
           {note}
@@ -301,15 +404,6 @@ export function DonorKeyClaim() {
       {failure ? (
         <div role="alert" className="rounded-md border border-red-500/30 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
           {failure.text}
-          {failure.status === 409 ? (
-            <>
-              {" "}
-              <Link href="/feedback/" className="pharos-prose-link">
-                feedback form
-              </Link>
-              .
-            </>
-          ) : null}
         </div>
       ) : null}
     </div>

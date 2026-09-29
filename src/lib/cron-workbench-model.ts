@@ -220,15 +220,21 @@ function getInheritedRequiredOutcome(cron: CronStatus): InheritedRequiredOutcome
   if (cron.lastRun?.status !== "skipped_neutral") return null;
   const latestRequiredRun = cron.recentRuns.find((run) => run.status !== "skipped_neutral");
   if (latestRequiredRun?.status !== "degraded" && latestRequiredRun?.status !== "error") return null;
-  // The backend supersedes an inherited error when the fresh skip proves the
+  // The backend supersedes an inherited error when a fresh skip proves the
   // period's write-once artifact exists (it was read and found); the lane
   // must resolve the same way, or one transient precheck failure keeps the
-  // row "Unavailable" until the next real run. An inherited degraded run
-  // stays a warning: the artifact existing does not prove that run's inputs
-  // were clean.
+  // row "Unavailable" until the next real run. Later generic admissions keep
+  // that readback, which the backend serves behind an all-neutral display
+  // window, so resolve against the newest proven skip, not only the last run.
+  // A required attempt after the readback still wins. An inherited degraded
+  // run stays a warning: the artifact existing does not prove that run's
+  // inputs were clean.
+  const provenSatisfiedRun = cron.recentRuns.find((run) => run.status === "skipped_neutral"
+    && isProvenSatisfiedNeutralSkipReason(run.metadata?.reason));
   if (
     latestRequiredRun.status === "error"
-    && isProvenSatisfiedNeutralSkipReason(cron.lastRun.metadata?.reason)
+    && provenSatisfiedRun != null
+    && provenSatisfiedRun.startedAt >= latestRequiredRun.startedAt
   ) {
     return null;
   }

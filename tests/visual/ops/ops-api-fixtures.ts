@@ -1,7 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import type {
   ApiKeyAuditLogResponse,
-  ApiKeySelfServeRequestAdminListResponse,
   ApiRequestAttributionResponse,
   StatusHistoryResponse,
 } from "../../../shared/types";
@@ -81,40 +80,6 @@ const requestSourceResponse: ApiRequestAttributionResponse = {
   },
 };
 
-const apiKeyRequestsResponse: ApiKeySelfServeRequestAdminListResponse = {
-  generatedAt: STATUS_FIXTURE_NOW_SECONDS,
-  total: 1,
-  nextCursor: null,
-  requests: [
-    {
-      requestId: "fixture-request-001",
-      status: "pending_verification",
-      email: "requester@example.invalid",
-      requesterName: "Fixture Requester",
-      organization: "Fixture Integration Lab",
-      projectUrl: "https://integration.example.invalid",
-      useCase: "Read-only fixture analytics for monitored stablecoin data.",
-      expectedCadence: "hourly",
-      expectedVolume: "100 requests/day",
-      acceptedTerms: true,
-      emailVerified: false,
-      linkedKeyId: null,
-      linkedKeyPrefix: null,
-      linkedKeyActive: null,
-      linkedKeyExpiresAt: null,
-      rateLimitPerMinute: 30,
-      selfServeExpiresAt: null,
-      claimStatus: "pending_verification",
-      verificationSentAt: STATUS_FIXTURE_NOW_SECONDS - 60,
-      verificationExpiresAt: STATUS_FIXTURE_NOW_SECONDS + 1_800,
-      issuedAt: null,
-      rejectedAt: null,
-      createdAt: STATUS_FIXTURE_NOW_SECONDS - 120,
-      updatedAt: STATUS_FIXTURE_NOW_SECONDS - 60,
-    },
-  ],
-};
-
 const apiKeyAuditLogResponse: ApiKeyAuditLogResponse = {
   entries: [
     {
@@ -160,8 +125,6 @@ function payloadForApiPath(pathname: string): unknown {
       return requestSourceResponse;
     case "/api/api-keys":
       return apiKeyInventory;
-    case "/api/api-key-requests-admin":
-      return apiKeyRequestsResponse;
     case "/api/api-keys/audit-log":
       return apiKeyAuditLogResponse;
     default:

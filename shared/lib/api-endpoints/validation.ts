@@ -15,10 +15,7 @@ const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
 const AUDIT_DEPEG_HISTORY_PATH = API_PATHS.auditDepegHistoryBase();
 const BACKFILL_DEWS_PATH = API_PATHS.backfillDews();
-const ADMIN_DYNAMIC_PATH_ROOTS = [
-  "/api/api-key-requests-admin",
-  "/api/api-keys",
-] as const;
+const ADMIN_DYNAMIC_PATH_ROOTS = ["/api/api-keys"] as const;
 const ADMIN_STATIC_PATH_ROOTS = ENDPOINT_DEFINITIONS
   .filter((endpoint) => endpoint.adminRequired)
   .map((endpoint) => endpoint.path);
@@ -61,27 +58,6 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
   const match = path.match(dynamicDescriptor.pattern);
   if (!match) {
     return null;
-  }
-
-  if (
-    dynamicDescriptor.key === "api-key-request-reject"
-    || dynamicDescriptor.key === "api-key-request-release-claim"
-  ) {
-    let requestId: string;
-    try {
-      requestId = decodeURIComponent(match[1] ?? "");
-    } catch {
-      return null;
-    }
-    if (!/^[A-Za-z0-9_-]{8,80}$/.test(requestId)) {
-      return null;
-    }
-    return {
-      key: dynamicDescriptor.key,
-      path,
-      requestId,
-      methods: dynamicDescriptor.methods,
-    };
   }
 
   const apiKeyId = Number.parseInt(match[1] ?? "", 10);

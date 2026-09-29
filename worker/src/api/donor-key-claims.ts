@@ -1,6 +1,6 @@
 import donationsAsset from "@shared/data/funding/donations.json";
 import { DONOR_CLAIM_SIWE_DOMAIN, buildDonorClaimSiweMessage } from "@shared/lib/donor-key-claim";
-import { isEligibleDonor, sumEligibleDonationsByAddress } from "@shared/lib/funding/donor-eligibility";
+import { isEligibleDonor, summarizeDonorKeyEligibility } from "@shared/lib/funding/donor-eligibility";
 import { DonationsFileSchema } from "@shared/lib/funding/schema";
 import type { DonationsFile } from "@shared/lib/funding/schema";
 import {
@@ -8,8 +8,13 @@ import {
   DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
   DONOR_KEY_CLAIM_MAX_AGE_SEC,
 } from "@shared/lib/ops-limits";
-import { DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
-import { DonorKeyClaimRequestSchema, type DonorKeyClaimResponse } from "@shared/types/api-keys";
+import {
+  API_ACCESS_TELEGRAM_HANDLE,
+  API_ACCESS_TELEGRAM_URL,
+  API_ACCESS_X_HANDLE,
+  DONOR_KEY_CLAIMS_OPEN,
+} from "@shared/lib/public-api-contract";
+import { DonorKeyClaimRequestSchema, type DonorKeyClaimFailureReason, type DonorKeyClaimResponse } from "@shared/types/api-keys";
 import { parseSiweMessage, validateSiweMessage } from "viem/siwe";
 import { verifyMessage } from "viem/utils";
 import { buildTrustedApiKeyInsertStatement } from "../lib/api-key-admin";
@@ -22,7 +27,7 @@ import {
   requireApiKeyPepper,
 } from "../lib/api-key-core";
 import { parseRequestJsonWithSchema } from "../lib/api-json-body";
-import { errorResponse, jsonResponse } from "../lib/api-response";
+import { jsonResponse } from "../lib/api-response";
 import { logWorkerEvent } from "../lib/structured-log";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 
@@ -34,10 +39,11 @@ const SIWE_INVALID_MESSAGE = "Claim message or signature is invalid";
 const UNAVAILABLE_MESSAGE = "Supporter key claims are temporarily unavailable";
 const INELIGIBLE_MESSAGE =
   `This wallet needs at least $${DONOR_API_KEY_MIN_USD} in stablecoin donations in the public ledger whose current Safety Score is in the A or B grade band. `
-  + "Donations are reconciled weekly and go live with the next release; see https://pharos.watch/funding/";
+  + "The donor list is updated every Sunday; see https://pharos.watch/funding/";
+const PRIVATE_CONTACT = `message @${API_ACCESS_TELEGRAM_HANDLE} on Telegram (${API_ACCESS_TELEGRAM_URL}) or @${API_ACCESS_X_HANDLE} on X`;
 const ALREADY_CLAIMED_MESSAGE =
-  "This wallet already claimed its supporter key; to rotate a lost key use the feedback form at https://pharos.watch/feedback/";
-const REVOKED_MESSAGE = "The supporter key for this wallet was revoked; see https://pharos.watch/feedback/";
+  `This wallet already claimed its supporter key; to rotate a lost key ${PRIVATE_CONTACT}`;
+const REVOKED_MESSAGE = `The supporter key for this wallet was revoked; ${PRIVATE_CONTACT}`;
 
 let donationsLedgerState:
   | { ok: true; value: DonationsFile }
@@ -77,9 +83,13 @@ function claimOutcome(outcome: string, status: number, level: "warn" | "error" |
   });
 }
 
-function claimError(status: number, message: string, outcome: string, retryAfterSec?: number): Response {
-  claimOutcome(outcome, status);
-  return errorResponse(status, message, { noStore: true, ...(retryAfterSec == null ? {} : { retryAfterSec }) });
+function claimError(status: number, message: string, reason: DonorKeyClaimFailureReason, retryAfterSec?: number): Response {
+  claimOutcome(reason, status);
+  return jsonResponse({ error: message, reason }, {
+    status,
+    noStore: true,
+    ...(retryAfterSec == null ? {} : { headers: { "Retry-After": String(retryAfterSec) } }),
+  });
 }
 
 async function selectDonorClaim(db: D1Database, address: string): Promise<DonorClaimRow | null> {
@@ -165,8 +175,8 @@ export async function handleDonorKeyClaim(
     responseOptions: { noStore: true },
   });
   if (body instanceof Response) {
-    claimOutcome("body_invalid", body.status);
-    return body;
+    const payload = await body.json() as { error: string };
+    return claimError(body.status, payload.error, "body_invalid");
   }
 
   const parsedMessage = parseSiweMessage(body.message);
@@ -194,11 +204,26 @@ export async function handleDonorKeyClaim(
     return claimError(503, UNAVAILABLE_MESSAGE, "safety_scores_unavailable");
   }
   const grades = new Map(activeScores.snapshot.cards.map((card) => [card.id, card.grade]));
-  const eligibleTotalsByAddress = sumEligibleDonationsByAddress(donationsLedger.donations, grades);
-  if (!isEligibleDonor(address, eligibleTotalsByAddress, DONOR_API_KEY_MIN_USD)) {
+  const summary = summarizeDonorKeyEligibility(address, donationsLedger.donations, grades);
+  const totals = new Map([[address, summary.qualifyingUsd]]);
+  if (!isEligibleDonor(address, totals, DONOR_API_KEY_MIN_USD)) {
+    let potentiallyQualifyingUsd = summary.qualifyingUsd;
+    for (const row of summary.rows) {
+      if (row.status === "grade-unavailable") potentiallyQualifyingUsd += row.donation.usd_at_receipt;
+    }
+    totals.set(address, potentiallyQualifyingUsd);
+    if (isEligibleDonor(address, totals, DONOR_API_KEY_MIN_USD)) {
+      return claimError(503, UNAVAILABLE_MESSAGE, "grade_unavailable", RATE_LIMIT_RETRY_AFTER_SEC);
+    }
     claimOutcome("ineligible", 403);
     return jsonResponse(
-      { error: INELIGIBLE_MESSAGE, ledgerUpdatedAt: donationsLedger.last_updated_at },
+      {
+        error: INELIGIBLE_MESSAGE,
+        reason: "ineligible" satisfies DonorKeyClaimFailureReason,
+        ledgerUpdatedAt: donationsLedger.last_updated_at,
+        qualifyingUsd: summary.qualifyingUsd,
+        countedAssets: summary.countedAssets,
+      },
       { status: 403, noStore: true },
     );
   }
@@ -230,21 +255,12 @@ export async function handleDonorKeyClaim(
     // Atomic: a concurrent first claim loses on the address primary key and
     // rolls the key insert back with it, so no orphan key can be issued.
     await db.batch([claimInsert, keyInsert]);
-  } catch (error) {
+  } catch {
     const raced = await selectDonorClaim(db, address).catch(() => null);
     if (raced) {
       return existingClaimResponse(raced);
     }
-    logWorkerEvent({
-      scope: "api",
-      level: "error",
-      event: "donor_key_claim_outcome",
-      route: ROUTE,
-      status: 503,
-      message: "issue_failed",
-      error,
-    });
-    return errorResponse(503, UNAVAILABLE_MESSAGE, { noStore: true });
+    return claimError(503, UNAVAILABLE_MESSAGE, "issue_failed");
   }
 
   clearApiKeyCache(material.keyPrefix);

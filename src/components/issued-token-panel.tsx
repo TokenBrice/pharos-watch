@@ -24,10 +24,9 @@ export interface IssuedTokenPanelProps {
 }
 
 /**
- * One-time token reveal shared by the self-serve email flow and the supporter
- * key claim: token block, curl sample, copy handling, and the unsaved-token
- * warning. Copy state and refs stay with the caller so each flow keeps its own
- * before-unload guard and focus handling.
+ * One-time token reveal for the supporter key claim: token block, curl sample,
+ * copy handling, and the unsaved-token warning. Copy state and refs stay with
+ * the caller, which owns the before-unload guard and focus handling.
  */
 export function IssuedTokenPanel({
   token,
@@ -50,7 +49,7 @@ export function IssuedTokenPanel({
         <p className="text-base font-semibold">Copy this token now.</p>
         <p className="mt-1 text-xs leading-relaxed opacity-90">{onceCopy}</p>
         <p className="mt-2 text-xs opacity-90">
-          Prefix {keyPrefix} - {expiresAt == null ? "No expiry" : `Expires ${formatDateTimeLocale(expiresAt)}`}
+          Prefix {keyPrefix} · {expiresAt == null ? "No expiry" : `Expires ${formatDateTimeLocale(expiresAt)}`}
         </p>
         {!tokenSecured ? (
           <p className="mt-2 text-xs font-medium opacity-95">
@@ -62,7 +61,7 @@ export function IssuedTokenPanel({
       {copyError ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
           <span>{copyError}</span>
-          <Button type="button" size="xs" variant="outline" onClick={selectTokenText}>Select Token</Button>
+          <Button type="button" size="xs" variant="outline" onClick={selectTokenText}>Select token</Button>
         </div>
       ) : null}
 
@@ -112,7 +111,7 @@ export function IssuedTokenPanel({
         className="w-full"
         onClick={markTokenSaved}
       >
-        {tokenSecured ? "Key Saved" : "I Saved This Key"}
+        {tokenSecured ? "Key saved" : "I saved this key"}
       </Button>
     </div>
   );

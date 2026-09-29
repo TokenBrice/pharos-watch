@@ -1,5 +1,4 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import type { ApiKeySelfServeEnv } from "../../api/api-key-requests/types";
 import type { FeedbackEnv } from "../../api/feedback";
 import type { TelegramCreds } from "../../lib/telegram";
 import { makeScheduledEnv } from "../../test-helpers/scheduled-runtime.test-support";
@@ -37,18 +36,6 @@ describe("route context typing", () => {
       expectTypeOf(routeCtx.telegramCreds).toEqualTypeOf<TelegramCreds | null | undefined>();
       return new Response("ok");
     });
-
-    defineStaticRoute("api-key-requests", async (routeCtx) => {
-      expectTypeOf(routeCtx.apiKeySelfServeEnv).toEqualTypeOf<ApiKeySelfServeEnv>();
-      expectTypeOf(routeCtx.apiKeyHashPepper).toEqualTypeOf<string | undefined>();
-      return new Response("ok");
-    });
-
-    defineStaticRoute("api-key-request-verify", async (routeCtx) => {
-      expectTypeOf(routeCtx.apiKeySelfServeEnv).toEqualTypeOf<ApiKeySelfServeEnv>();
-      expectTypeOf(routeCtx.apiKeyHashPepper).toEqualTypeOf<string | undefined>();
-      return new Response("ok");
-    });
   });
 
   it("narrows dynamic route contexts to declared dependencies", () => {
@@ -80,13 +67,6 @@ describe("route context typing", () => {
         tag: "preview-v1",
         timestamp: "2026-07-12T00:00:00Z",
       },
-      API_KEY_SELF_SERVE_IP_SALT: "self-serve-ip",
-      API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER: "self-serve-email",
-      API_KEY_SELF_SERVE_REQUEST_PEPPER: "self-serve-request",
-      API_KEY_SELF_SERVE_EMAIL_FROM: "Pharos API <api@mail.pharos.watch>",
-      API_KEY_SELF_SERVE_EMAIL_REPLY_TO: "api@mail.pharos.watch",
-      API_KEY_SELF_SERVE_PUBLIC_BASE_URL: "https://pharos.watch/api",
-      RESEND_API_KEY: "re_demo",
     });
     const execCtx = {
       waitUntil: (_promise: Promise<unknown>) => {},
@@ -133,33 +113,12 @@ describe("route context typing", () => {
       FEEDBACK_IP_SALT: "salt",
     });
     expect(feedbackCtx.coingeckoApiKey).toBeUndefined();
-
-    const selfServeCtx = buildRouteContext({
-      request,
-      url,
-      env,
-      execCtx,
-      trustedAdmin: false,
-      routeDependencies: ["apiKeySelfServeEnv"] as const,
-    });
-    expect(selfServeCtx.apiKeySelfServeEnv).toEqual({
-      API_KEY_SELF_SERVE_IP_SALT: "self-serve-ip",
-      API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER: "self-serve-email",
-      API_KEY_SELF_SERVE_REQUEST_PEPPER: "self-serve-request",
-      API_KEY_SELF_SERVE_EMAIL_FROM: "Pharos API <api@mail.pharos.watch>",
-      API_KEY_SELF_SERVE_EMAIL_REPLY_TO: "api@mail.pharos.watch",
-      API_KEY_SELF_SERVE_PUBLIC_BASE_URL: "https://pharos.watch/api",
-      RESEND_API_KEY: "re_demo",
-    });
-    expect(selfServeCtx.feedbackEnv).toBeUndefined();
   });
 
   it("keeps dynamic admin dependency mapping centralized", () => {
     expect(getDynamicRouteMatch("/api/api-keys/7/update")?.dependencies).toEqual(["apiKeyHashPepper"]);
     expect(getDynamicRouteMatch("/api/api-keys/7/deactivate")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/api-keys/7/rotate")?.dependencies).toEqual(["apiKeyHashPepper"]);
-    expect(getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/reject")?.dependencies).toEqual([]);
-    expect(getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/release-claim")?.dependencies).toEqual([]);
   });
 
   it("keeps static route dependency mapping centralized", () => {
@@ -188,12 +147,6 @@ describe("route context typing", () => {
     );
     expect(getDynamicEndpointDescriptorByKey("api-key-rotate")?.routeDependencies).toEqual(
       getDynamicRouteMatch("/api/api-keys/7/rotate")?.dependencies,
-    );
-    expect(getDynamicEndpointDescriptorByKey("api-key-request-reject")?.routeDependencies).toEqual(
-      getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/reject")?.dependencies,
-    );
-    expect(getDynamicEndpointDescriptorByKey("api-key-request-release-claim")?.routeDependencies).toEqual(
-      getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/release-claim")?.dependencies,
     );
   });
 });

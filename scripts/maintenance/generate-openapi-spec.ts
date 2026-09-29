@@ -1,6 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { API_PARTNER_ACCESS_URL } from "@shared/lib/public-api-contract";
 
 import {
   OPENAPI_JSON_VALUE_ENDPOINT_KEYS,
@@ -248,11 +249,10 @@ export function buildOpenApiDocument() {
       title: "Pharos API",
       version: "1.0.0",
       description:
-        "Stablecoin analytics API for peg monitoring, liquidity, risk, blacklist events, mint/burn flows, yield, chains, and market-structure data. Protected public routes require X-API-Key. Request email-verified access at https://pharos.watch/api/.",
+        "Stablecoin analytics API for peg monitoring, liquidity, risk, blacklist events, mint/burn flows, yield, chains, and market-structure data. Protected public routes require X-API-Key. Get a supporter key or request a partner key at https://pharos.watch/api/.",
       contact: {
         name: "Pharos",
-        url: "https://pharos.watch/api/",
-        email: "admin@pharos.watch",
+        url: API_PARTNER_ACCESS_URL,
       },
       license: {
         name: "MIT",

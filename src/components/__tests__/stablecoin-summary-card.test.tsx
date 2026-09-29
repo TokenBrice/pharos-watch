@@ -8,11 +8,14 @@ describe("stablecoin summary card", () => {
       <HeroCompactSupplyCell
         supply={1_000}
         coinSymbol="USDT"
-        safePrevWeek={null}
-        prevWeekTrendClass="text-muted-foreground"
-        hasPrevMonth
-        safePrevMonth={null}
-        prevMonthTrendClass="text-muted-foreground"
+        supplyTrend={{
+          current: 1_000,
+          safePrevWeek: null,
+          safePrevMonth: null,
+          hasPrevMonth: true,
+          prevWeekTrendClass: "text-muted-foreground",
+          prevMonthTrendClass: "text-muted-foreground",
+        }}
       />,
     );
 

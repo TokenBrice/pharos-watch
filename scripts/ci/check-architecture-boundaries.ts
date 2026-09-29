@@ -241,7 +241,7 @@ export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] 
         (file) => /(?:^|\/)(?:daily-digest|weekly-recap|anthropic|openai|ai-request)(?:\.|\/|$)|\/cron\/digest\//i.test(file), true);
     } else if (rule === "verification-url") {
       walk(rule, [SCRUBBER], (file) => /^package:zod(?:\/|$)/.test(file)
-        || file.startsWith("shared/types/") || file === "src/lib/api-key-self-serve.ts");
+        || file.startsWith("shared/types/"));
       const reachable = walk(rule, ["src/components/google-analytics.tsx"], () => false);
       if (!reachable.has(SCRUBBER)) violations.add(`${rule}: google-analytics must reach ${SCRUBBER}`);
     } else {

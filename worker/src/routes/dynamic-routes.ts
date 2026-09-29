@@ -151,20 +151,6 @@ const DYNAMIC_ADMIN_ROUTE_BINDINGS = {
     const { handleApiKeyRotateRoute } = await import("../api/api-keys");
     return handleApiKeyRotateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId });
   }),
-  "api-key-request-reject": defineDynamicAdminRouteBinding(
-    "api-key-request-reject",
-    async (routeCtx, dynamicAdminEndpoint) => {
-      const { handleApiKeyRequestRejectRoute } = await import("../api/api-key-requests");
-      return handleApiKeyRequestRejectRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId });
-    },
-  ),
-  "api-key-request-release-claim": defineDynamicAdminRouteBinding(
-    "api-key-request-release-claim",
-    async (routeCtx, dynamicAdminEndpoint) => {
-      const { handleApiKeyRequestReleaseClaimRoute } = await import("../api/api-key-requests");
-      return handleApiKeyRequestReleaseClaimRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId });
-    },
-  ),
 } satisfies DynamicAdminRouteBindingMap;
 
 export const DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS = Object.freeze(
