@@ -927,11 +927,11 @@ export function getCronStatusImpact(job: string): CronStatusImpact {
  * read found the artifact (for example today's `public_snapshots` row), so a
  * fresh `skipped_neutral` run carrying one of these reasons is positive
  * evidence that the period's output exists — unlike a generic admission skip,
- * which proves nothing about the period (ADR-29). Cron-health availability and
- * the admin cron lanes both resolve neutral skips through this single
- * vocabulary (ADR-32).
+ * which proves nothing about the period (ADR-29). Cron-health availability,
+ * its bounded history lookup, and the admin cron lanes all resolve neutral
+ * skips through this single vocabulary (ADR-32).
  */
-const PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS: readonly string[] = [
+export const PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS: readonly string[] = [
   // snapshot-psi / snapshot-public-dataset same-day catch-up precheck.
   "same_day_snapshot_exists",
   // weekly-recap already-generated precheck.

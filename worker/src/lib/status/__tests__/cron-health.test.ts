@@ -174,6 +174,39 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     },
   );
 
+  it.each([
+    { order: "readback newer than the error", provenAgeSec: 26_000, errorAgeSec: 49_000, healthy: true },
+    { order: "error newer than the readback", provenAgeSec: 49_000, errorAgeSec: 26_000, healthy: false },
+  ])("resolves an inherited error against a proven skip beyond ten generic skips: $order", async ({ provenAgeSec, errorAgeSec, healthy }) => {
+    // Production shape 2026-09-28/29: an abandoned 17:15 quarter-hourly slot
+    // wrote a synthetic not_started error for snapshot-psi after the 08:00
+    // run published; the evening catch-ups proved the artifact with
+    // `same_day_snapshot_exists`, then post-midnight `before_daily_slot`
+    // skips filled the ten-run display window.
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        "INSERT INTO cron_runs(job,started_at,duration_ms,status,item_count,metadata) VALUES ('snapshot-psi',?,0,?,0,?)",
+      );
+      insert.run(NOW - errorAgeSec, "error", JSON.stringify({ reason: "stale-slot-reconciled", childDisposition: "not_started" }));
+      insert.run(NOW - provenAgeSec, "skipped_neutral", JSON.stringify({ reason: "same_day_snapshot_exists" }));
+      for (let index = 0; index < 12; index++) {
+        insert.run(NOW - 300 - index * 900, "skipped_neutral", JSON.stringify({ reason: "before_daily_slot" }));
+      }
+
+      const snapshot = await loadCronHealth(db, NOW);
+      const cron = snapshot.crons["snapshot-psi"];
+
+      expect(cron.healthy).toBe(healthy);
+      expect(snapshot.cronErrorCount).toBe(healthy ? 0 : 1);
+      // The served history carries whichever evidence decided the verdict so
+      // the admin lane resolves it the same way.
+      expect(cron.recentRuns.slice(10).map((run) => [run.status, run.metadata?.reason])).toEqual(healthy
+        ? [["skipped_neutral", "same_day_snapshot_exists"], ["error", "stale-slot-reconciled"]]
+        : [["error", "stale-slot-reconciled"]]);
+    } finally { sqlite.close(); }
+  });
+
   it("does not let a generic same-day skip reason mask a fresh failed required run", async () => {
     // `before_daily_slot` says the period is not due yet; it proves nothing
     // about the artifact, so the earlier error stays the health evidence.
