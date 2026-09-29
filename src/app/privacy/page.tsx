@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import {
+  API_ACCESS_TELEGRAM_HANDLE,
+  API_ACCESS_TELEGRAM_URL,
+  API_ACCESS_X_HANDLE,
+  API_ACCESS_X_URL,
+} from "@shared/lib/public-api-contract";
 import { PENDING_TTL_SEC, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { TELEGRAM_RECAP_TTL_SEC } from "@shared/lib/telegram-recap-policy";
 
@@ -36,8 +42,9 @@ export default function PrivacyPage() {
             Pharos does not ask for accounts. The only wallet interaction is the optional supporter API key claim on
             the API page, which stores a wallet address, key prefix, and claim time. Portfolio data and homepage
             shortcut preferences are stored locally by default, share links encode holdings in the URL, analytics are
-            anonymized when enabled, and support or API-access requests route through the feedback/contact channels
-            listed below. Stablecoin Picker functional browser storage and share snapshots are described below.
+            anonymized when enabled, support requests route through the feedback channel described below, and
+            API-access requests arrive by Telegram or X direct message. Stablecoin Picker functional browser storage
+            and share snapshots are described below.
           </p>
         </div>
 
@@ -53,9 +60,9 @@ export default function PrivacyPage() {
             snooze state, and an optional private-chat daily recap schedule,
             and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API
-            access, Pharos stores the email address you verify plus any name, organization, project URL, use-case,
-            intended-endpoint, cadence, and volume details you submit; request throttling stores salted hashes of IP
-            address and user-agent data. Homepage saved shortcuts store only an ordered list of route hrefs in
+            access, Pharos receives your Telegram or X direct message and deletes it once the key is issued or rotated;
+            request throttling stores salted hashes of IP address and user-agent data. Homepage saved shortcuts store
+            only an ordered list of route hrefs in
             browser-local storage and are not sent to the API. The Stablecoin Picker stores local browser state for
             callout dismissal and tab-scoped result recovery, and share links can store a content-addressed snapshot of
             the generated selector output in Cloudflare KV.
@@ -191,7 +198,7 @@ export default function PrivacyPage() {
           <h2 className="pharos-section-title">No Accounts</h2>
           <p>
             Pharos does not require user accounts or logins for the website. Optional feedback contact details and
-            self-serve API request emails are self-declared and are not used as site accounts.
+            API-access request details sent by direct message are self-declared and are not used as site accounts.
           </p>
           <p>
             The one exception is optional: the supporter API key claim on{" "}
@@ -202,12 +209,26 @@ export default function PrivacyPage() {
             wallet address, the issued key prefix, and the claim time, plus the key record itself, which is named after
             the address and carries the last-used timestamp and route that every API key records. Those records are
             retained without an automatic expiry. Deactivation stops access but does not delete these records. You
-            can request removal of the key record and its usage metadata through the{" "}
-            <Link href="/feedback/" className="pharos-prose-link">
-              feedback form
-            </Link>
-            . We retain the wallet address, key prefix, and claim time to prevent a second claim, unless an operator
-            explicitly approves removing that restriction. The public donation ledger is a separate record.
+            can request removal of the key record and its usage metadata by messaging{" "}
+            <a
+              href={API_ACCESS_TELEGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pharos-prose-link"
+            >
+              @{API_ACCESS_TELEGRAM_HANDLE}
+            </a>{" "}
+            on Telegram or sending a direct message to{" "}
+            <a
+              href={API_ACCESS_X_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pharos-prose-link"
+            >
+              @{API_ACCESS_X_HANDLE}
+            </a>{" "}
+            on X. We retain the wallet address, key prefix, and claim time to prevent a second claim, unless an
+            operator explicitly approves removing that restriction. The public donation ledger is a separate record.
             Signatures and plaintext API tokens are never persistently stored or logged; only a keyed hash verifies
             the token. An unsaved token remains in browser memory across internal navigation so you can recover it,
             until you copy or acknowledge it or leave or reload the site. It is never written to localStorage or
@@ -235,9 +256,11 @@ export default function PrivacyPage() {
             maintain user-account databases. Feedback submissions are sent to GitHub Issues for product support and
             issue tracking; optional follow-up contact details are included there when you provide them. The worker
             stores rate-limit metadata for feedback abuse prevention. The current submission path does not persist a
-            separate D1 submission row. Self-serve API key requests are stored for operator review and duplicate-claim
-            enforcement; verification tokens are stored only as hashes and expire after 30 minutes. Issued self-serve
-            API keys expire after 60 days by default. Homepage shortcut
+            separate D1 submission row. The self-serve API key request lane was retired in September 2026; stored
+            request records remain in private operator storage until a planned cleanup deletes them, and no new
+            requests are accepted. Issued self-serve API keys expire after 60 days. Partner-key, lost-key, and
+            key-removal requests arrive by
+            Telegram or X direct message and are deleted once the key is issued or rotated. Homepage shortcut
             preferences remain until reset or browser site data is cleared. Picker localStorage remains until browser
             site data is cleared. Unread Picker KV snapshots expire after 90 days; the first successful read extends
             retention to five years because they are content-addressed analytical records rather than user-account records.
@@ -251,7 +274,7 @@ export default function PrivacyPage() {
             processed by Google (GA4) only when analytics is enabled on the public website, excluding
             operator pages, preview deployments, and the embedded PharosWatchBot Mini App. Feedback submissions
             are also forwarded to GitHub Issues for product triage; optional Telegram/X handles are echoed publicly in
-            those GitHub issues. API request verification emails are sent through Resend. API key issuance records stay
+            those GitHub issues. API key issuance records stay
             in private operator storage and structured Worker logs; requester details and key material are not published
             to GitHub Issues.
           </p>

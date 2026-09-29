@@ -11,6 +11,11 @@
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
 
+# The feedback form is a modal, not a route; API-access and lost-key requests
+# moved to the partner-key section of /api/ (2026-09-29).
+/feedback/ /api/#partner-access 301
+/feedback /api/#partner-access 301
+
 # Consolidated public documentation routes.
 /docs/data-pipeline/* /docs/data-flow-map/ 301
 /docs/data-pipeline/ /docs/data-flow-map/ 301

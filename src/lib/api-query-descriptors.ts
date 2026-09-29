@@ -30,7 +30,7 @@ import type {
   SafetyScoreHistoryResponse,
   SafetyScoreHistoryV2Response,
 } from "@shared/types/safety-score-history";
-import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9CurrentResponse, SafetyGradesResponse } from "@shared/types/report-cards-v9";
 import type {
   HealthResponse,
   PublicStatusHistoryResponse,
@@ -480,6 +480,19 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     "meta",
     createLazySchema<ReportCardsV9CurrentResponse>(
       async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9CurrentResponseSchema,
+    ),
+  ),
+  // Free no-key grade projection of the same V9 publication; `/api/` reads it
+  // only when a visitor checks a donor wallet.
+  safetyGrades: defineApiQuery(
+    {
+      queryKey: ["safety-grades"] as const,
+      path: API_PATHS.safetyGrades(),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
+    },
+    "plain",
+    createLazySchema<SafetyGradesResponse>(
+      async () => (await import("@shared/types/report-cards-v9")).SafetyGradesResponseSchema,
     ),
   ),
   depegResolver: defineApiQuery(

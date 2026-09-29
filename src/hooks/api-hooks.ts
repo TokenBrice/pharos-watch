@@ -173,6 +173,11 @@ export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
   });
 }
 
+/** Free-lane grades, off until the caller enables them (the `/api/` wallet check). */
+export const useSafetyGrades = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.safetyGrades, {
+  enabled: false,
+});
+
 export const useDepegResolver = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.depegResolver, {
   keepPreviousData: true,
 });

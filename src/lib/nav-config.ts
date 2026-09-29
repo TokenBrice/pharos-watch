@@ -254,7 +254,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Peer sets and substitutes side by side", keywords: "compare vs versus side by side alternative" },
       { href: "/portfolio/", label: "Portfolio", icon: Wallet, description: "Your holdings as one stablecoin book", keywords: "portfolio holdings my coins wallet exposure" },
       { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "Telegram alerts for depegs and launches", keywords: "alert bot telegram notifications subscribe watch" },
-      { href: "/api/", label: "API Access", icon: KeyRound, description: "Public API keys and endpoint reference", keywords: "api key developer access endpoint docs integration" },
+      { href: "/api/", label: "API Access", icon: KeyRound, description: "Supporter and partner API keys, free Safety Score grades", keywords: "api key developer access endpoint docs integration" },
     ],
   },
   {
