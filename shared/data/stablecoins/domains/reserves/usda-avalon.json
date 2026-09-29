@@ -20,36 +20,36 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve research (R02 refresh)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvalonRiver)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Avalon USDa usage documentation",
+        "label": "Avalon USDa usage documentation (reviewed 2026-09-29)",
         "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
       },
       {
-        "label": "Avalon USDa risk parameters",
+        "label": "Avalon USDa risk parameters (reviewed 2026-09-29)",
         "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
       },
       {
-        "label": "DefiLlama Avalon USDa CDP adapter (TVL methodology and live TVL)",
+        "label": "DefiLlama Avalon USDa CDP adapter (live TVL $2.00 at 2026-09-29 timestamp 1790688167)",
         "url": "https://defillama.com/protocol/avalon-usda"
       },
       {
-        "label": "DefiLlama Avalon USDa adapter source (pool/owner token list)",
+        "label": "DefiLlama Avalon USDa adapter source (pool/owner token list, reviewed 2026-09-29)",
         "url": "https://github.com/DefiLlama/DefiLlama-Adapters/blob/main/projects/avalon-finance-usda/index.js"
       },
       {
-        "label": "DefiLlama stablecoins API (Avalon USDa circulating supply)",
+        "label": "DefiLlama stablecoins API (Avalon USDa circulating $145,575,231.78 peggedUSD, read 2026-09-29)",
         "url": "https://stablecoins.llama.fi/stablecoins?includePrices=true"
       }
     ],
-    "rationale": "R02 refresh 2026-08-08: Avalon documentation still describes two mint paths (FBTC-backed CeDeFi CDP loan; USDT/USDC deposited 1:1) and 1:1 USDT conversion via an Ethereum vault, with no published supply-weighted split between FBTC-collateralized debt and 1:1 fiat-token deposits. Risk-management still lists FBTC (60% max LTV / 90% liquidation / 80% recovery, liquidatable) plus USDC and USDT at 100% max LTV and not subject to liquidation, and names Cobo, Fireblocks, and Coinbase Prime for protocol-asset custody without publishing addresses, provider shares, or segregation terms. DefiLlama's avalon-usda CDP adapter methodology counts FBTC collateral plus optional USDT/USDe/sUSDe at documented pool and USDaMinter Safe owners; the live protocol endpoint reports ~$2 TVL (residual USDe only) versus ~$148M DefiLlama circulating USDa. The adapter source explicitly excludes Avalon-minted wrappers (lfbtc, WFBTC) and V3/Movement treasuries as team-only/dead-liquidity positions. On-chain adapter balances therefore do not reconcile circulating liability, and no dual-source percentage split is available, so the single reserve is dispositioned as an untracked exogenous asset rather than a splittable basket.",
-    "compositionBasis": "Officially documented issuance and collateral paths; constituent shares remain undisclosed; independent DefiLlama CDP TVL and circulating-supply read confirm non-reconciliation",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "R02 refresh 2026-09-29 (prior review 2026-08-08 had crossed the composition freshness window): all source pages were re-read and the material findings are unchanged, so this is a re-verified re-dating rather than a date bump. Avalon documentation still describes exactly two mint paths — an FBTC-backed CeDeFi CDP loan and USDT deposited at 1:1 (with a 1:1 USDa-to-USDT conversion vault on Ethereum) — and still publishes no supply-weighted split between FBTC-collateralized debt and 1:1 fiat-token deposits. The risk-management page still lists FBTC (60% max LTV / 90% liquidation threshold / 80% recovery, subject to liquidation) plus USDC and USDT at 100% max LTV and exempt from liquidation, names Cobo, Fireblocks, and Coinbase Prime for protocol-asset custody, asserts custody addresses are publicly available without listing them, and names Redstone as the BTC-USD oracle. DefiLlama's avalon-usda adapter methodology is materially unchanged (FBTC collateral plus optional USDT/USDe/sUSDe at documented pool and USDaMinter Safe owners, excluding Avalon-minted wrappers lfbtc/WFBTC and V3 treasuries) and reported $2.00 total TVL ($2.99956 on Ethereum, all other chains zero) at the 2026-09-29 read, versus $145,575,231.78 circulating USDa. On-chain adapter balances therefore still do not reconcile circulating liability, and no dual-source percentage split is available, so the single reserve remains dispositioned as an untracked exogenous CeDeFi envelope rather than a splittable basket.",
+    "compositionBasis": "Officially documented issuance and collateral paths re-verified 2026-09-29; constituent shares remain undisclosed; independent DefiLlama CDP TVL and circulating-supply reads confirm continued non-reconciliation",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The single disclosed reserve category is now classified as an untracked exogenous CeDeFi envelope. Avalon does not publish the current proportions of FBTC-backed debt, USDT deposits, and USDC deposits, and on-chain adapter balances do not measure full backing.",
+    "knownUnknownExposure": "The single disclosed reserve category remains an untracked exogenous CeDeFi envelope. Avalon does not publish the current proportions of FBTC-backed debt, USDT deposits, and USDC deposits, and on-chain adapter balances do not measure full backing.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -83,20 +83,20 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvalonRiver)",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Avalon USDa usage documentation",
+        "label": "Avalon USDa usage documentation (reviewed 2026-09-29)",
         "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
       },
       {
-        "label": "Avalon USDa risk parameters",
+        "label": "Avalon USDa risk parameters (custody solutions section, reviewed 2026-09-29)",
         "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
       }
     ],
-    "uncertainty": "Write-time re-open 2026-07-28: risk-management still names Cobo, Fireblocks, and Coinbase Prime and asserts custody addresses are publicly available, but the reviewed pages do not list those addresses, provider share, legal segregation, bankruptcy remoteness, or rehypothecation terms.",
+    "uncertainty": "Re-opened 2026-09-29: the risk-management page's custody section still names Cobo, Fireblocks, and Coinbase Prime and asserts custody addresses are publicly available, but the reviewed pages do not list those addresses, provider share, legal segregation, bankruptcy remoteness, or rehypothecation terms.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -36,8 +36,8 @@
     "attestorTier": "self",
     "cadence": "weekly",
     "latestReport": {
-      "periodEnd": "2026-09-04",
-      "publishedAt": "2026-09-04",
+      "periodEnd": "2026-09-29",
+      "publishedAt": "2026-09-29",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
@@ -45,12 +45,16 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "AFI rwaUSDi proof-of-reserves snapshot",
+          "label": "AFI rwaUSDi proof-of-reserves snapshot (TEE attestation 2026-09-29T14:30:46Z, proof 3eb0ce0917dbb230)",
           "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
         },
         {
-          "label": "AFI rwaUSDi periodic reserve reports",
-          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
+          "label": "AFI rwaUSDi verification dashboard, reviewed 2026-09-29",
+          "url": "https://verification.afiprotocol.xyz/multipli/rwaUSDi"
+        },
+        {
+          "label": "AFI rwaUSDi signed reserve-breakdown feed, retrieved 2026-09-29",
+          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown"
         }
       ]
     }

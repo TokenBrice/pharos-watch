@@ -81,8 +81,16 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The Fraxswap V2 FRAX/FPIS LP is an identified protocol position, not an isolable upstream FRAX reserve slice, so no single coinId is representative.",
   ],
   [
-    "susdt-spark::USDT deposited in Spark Savings vault::USDT",
-    "Spark does not publish the current spUSDT-specific split between idle USDT and downstream strategies.",
+    "susdt-spark::Spark Savings USDT deployed strategy positions::USDT",
+    "spUSDT's deployed row is the vault's downstream strategy exposure, not a holding of the USDT token itself, and the strategy framework lacks current constituent weights.",
+  ],
+  [
+    "susds-sky::Sky Savings USDS deployed strategy positions::USDS",
+    "sUSDS's deployed row is projected SSR accrual through Sky protocol accounting, not a separate held USDS token.",
+  ],
+  [
+    "satusd-river::Smart Vault custodial USDT deposits (Ethereum)::USDT",
+    "satUSD's Smart Vault USDT is issuer-dashboard-reported and kept unlinked until the holdings are address-verifiable.",
   ],
   [
     "usda-avalon::FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves::USDC",

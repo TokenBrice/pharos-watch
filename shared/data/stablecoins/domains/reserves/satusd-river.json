@@ -2,47 +2,125 @@
   "id": "satusd-river",
   "reserves": [
     {
-      "name": "River satUSD collateral basket (BTC, ETH, BNB, and liquid staking tokens)",
-      "pct": 100,
-      "risk": "high",
+      "name": "On-chain omni-CDP trove collateral (clBTC on Arbitrum and Base dominant; residual WETH, WBTC, tBTC, SolvBTC, xSolvBTC, HemiBTC, xBTC, BTCB, and ETH branches)",
+      "pct": 27.19,
+      "risk": "medium",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "River protocol user-deposited BTC, ETH, BNB, and liquid-staking-token collateral",
+      "issuerOrObligor": "River SatoshiX trove managers holding user-deposited BTC-LST and ETH collateral; 449.9901 clBTC in the Arbitrum clBTC branch and 100.0021 clBTC in the Base clBTC branch at the pinned blocks, plus de-minimis WETH, WBTC, tBTC, SolvBTC, xSolvBTC, HemiBTC, xBTC, BTCB, and ETH branches",
       "riskFactors": [
         "market",
         "liquidity",
-        "smart-contract",
         "custody",
-        "counterparty"
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Prime Vault custodial BTC collateral (bfBTC on BNB Chain, uniBTC on Base and BOB)",
+      "pct": 62.54,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "River Prime Vault institutional custody partners (custodians undisclosed); 655.00 bfBTC on BNB Chain, 205.00 uniBTC on BOB, and 341.3682 uniBTC on Base per the issuer's Prime Vault page",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Smart Vault custodial USDT deposits (Ethereum)",
+      "pct": 10.27,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT issuer); deposits held in River Smart Vault custodian wallets (10,000,000 USDT capped vault and 7,620,553.57 USDT open-cap vault, both displayed claimable at review time)",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve research (R02 refresh)",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvalonRiver)",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "River satUSD FAQ",
-        "url": "https://docs.riverai.inc/intro/faq.md"
+        "label": "River app overview (per-branch Collaterals panel, satUSD circulation; observed 2026-09-29)",
+        "url": "https://app.riverai.inc/"
       },
       {
-        "label": "River satUSD product overview",
-        "url": "https://riverai.inc/"
+        "label": "River app Prime Vault (bfBTC/uniBTC vault TVLs; observed 2026-09-29)",
+        "url": "https://app.riverai.inc/prime-vault"
+      },
+      {
+        "label": "River app Smart Vault (USDT vault deposits; observed 2026-09-29)",
+        "url": "https://app.riverai.inc/smart-vault"
+      },
+      {
+        "label": "River protocol-info API (TVL 241,107,888.71, circulatingSupply 137,077,438.42, chainCirculating)",
+        "url": "https://api.riverai.inc/protocol-info"
+      },
+      {
+        "label": "Arbitrum clBTC TroveManagerProxy 0xa7B54413129441e872F42C1c4fE7D1984332CA87 (entire system collateral 449.9901 clBTC, debt 9,645,850.28 satUSD at block 510062308)",
+        "url": "https://arbiscan.io/address/0xa7b54413129441e872f42c1c4fe7d1984332ca87"
+      },
+      {
+        "label": "Base clBTC TroveManagerProxy 0x01DF7D28c51639F2f2F95dcF2FdFF374269327B0 (entire system collateral 100.0021 clBTC at block 51952263)",
+        "url": "https://basescan.org/address/0x01df7d28c51639f2f2f95dcf2fdff374269327b0"
+      },
+      {
+        "label": "River deployed contracts (SatoshiXApp and per-collateral TroveManagerProxy addresses)",
+        "url": "https://docs.riverai.inc/outro/deployed-contracts.md"
+      },
+      {
+        "label": "River Smart Vault documentation (deposit assets, internal satUSD minting, custodian wallets)",
+        "url": "https://docs.riverai.inc/products/smart-vault.md"
+      },
+      {
+        "label": "River Prime Vault documentation (custodial lock, internal satUSD mint, staking factors)",
+        "url": "https://docs.riverai.inc/products/prime-vault.md"
       }
     ],
-    "rationale": "Re-opened 2026-08-29: River's FAQ and product material state that satUSD is over-collateralized by BTC, ETH, BNB, and liquid staking tokens, with collateral remaining on source chains. River publishes no current satUSD-specific category weights, vault-level inventory, or reserve attestation. Aggregate protocol TVL pages are not used to infer satUSD composition because they can include non-satUSD positions. The reserve is therefore retained as one explicit cryptoasset basket with a full unresolved composition disposition.",
-    "compositionBasis": "River issuer collateral disclosures; no satUSD-specific dated reserve composition",
+    "rationale": "Refresh 2026-09-29: River's own protocol dashboard now decomposes satUSD backing into product-level collateral lists, so the prior single undisclosed basket is replaced with three evidence-backed slices. (1) On-chain omni-CDP trove collateral of $46,668,112 (clBTC Arbitrum $37,717,472.64, clBTC Base $8,378,524.34, and $572,115 of residual branches): the two material clBTC branches were reconciled to pinned RPC reads of getEntireSystemColl()/getEntireSystemDebt() on the Arbitrum clBTC TroveManagerProxy at block 510062308 (449.9901 clBTC backing 9,645,850.28 satUSD of debt) and the Base clBTC TroveManagerProxy at block 51952263 (100.0021 clBTC); the Base uniBTC trove managers hold zero collateral, proving the dashboard's uniBTC rows are not trove positions. (2) Prime Vault custodial BTC of $107,330,000 (bfBTC on BNB Chain 655.00/$60.87M, uniBTC on BOB 205.00/$17.46M, uniBTC on Base 341.3682/$29.00M, staking factor 20%): uniBTC rows are counted once, in this bucket, because the on-chain troves hold none; custodians are unnamed in River's documentation. (3) Smart Vault custodial USDT of $17,620,553.57 across the two listed Ethereum vaults, both displayed claimable at review time. The three buckets total $171,618,666 against protocol-reported satUSD circulation of $137,077,438.42 (corroborated on-chain: satUSD totalSupply 79,352,049 on BNB Chain, 12,381,309 on Base, 10,801,687 on Arbitrum, 8,432,973 on Ethereum), a 125.2% aggregate collateral coverage. Slice percentages are computed from these same-day issuer-dashboard observations, so they carry the dashboard's pricing and product-scope completeness rather than a third-party aggregate.",
+    "compositionBasis": "Issuer protocol dashboard product-level TVL decomposition observed 2026-09-29 (omni-CDP Collaterals panel, Prime Vault vault list, Smart Vault vault list), with the material Arbitrum and Base clBTC trove branches reconciled to pinned on-chain reads at blocks 510062308 and 51952263",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current weights among BTC, ETH, BNB, and liquid staking tokens, vault-level collateral identity, and custody allocation are undisclosed.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "All collateral locations River publishes are identified, and no undisclosed product surface appears in its documentation or app. Remaining issuer-described facts: Prime Vault and Smart Vault custodian identities, addresses, and segregation terms are undisclosed; vault-level completeness beyond the listed vaults cannot be independently verified; the share of circulation minted internally by vaults versus trove debt is not published; both Smart Vault USDT vaults are displayed claimable, so near-term USDT outflows are possible. The on-chain trove bucket is independently verifiable and was verified for the material branches.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "River satUSD collateral basket (BTC, ETH, BNB, and liquid staking tokens)",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "River identifies the collateral family but publishes no dated satUSD-specific allocation among the supported assets."
+        "reserveName": "On-chain omni-CDP trove collateral (clBTC on Arbitrum and Base dominant; residual WETH, WBTC, tBTC, SolvBTC, xSolvBTC, HemiBTC, xBTC, BTCB, and ETH branches)",
+        "pct": 27.19,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BTC-LST and ETH collateral held by River trove managers is exogenous crypto collateral, not a stablecoin dependency; the branch mix is pinned on-chain and does not create tracked-asset edges."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Prime Vault custodial BTC collateral (bfBTC on BNB Chain, uniBTC on Base and BOB)",
+        "pct": 62.54,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "bfBTC and uniBTC are custodial BTC-collateral positions with undisclosed custodians and no on-chain trove balances; they are treated as an exogenous BTC envelope rather than a splittable or linkable basket."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Smart Vault custodial USDT deposits (Ethereum)",
+        "pct": 10.27,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The USDT vault deposits are issuer-dashboard-reported, not reconciled to published wallet addresses, and both vaults are claimable; USDT remains a candidate upstream rather than a linked dependency until the holdings are address-verifiable.",
+        "candidateCoinIds": [
+          "usdt-tether"
+        ]
       }
     ]
   }

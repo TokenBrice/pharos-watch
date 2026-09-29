@@ -4,7 +4,7 @@
     {
       "sourceKey": "ondo-ousg:position:592c34b5-6d5d-43f9-a4b8-787ab0b88bce",
       "name": "State Street Galaxy Onchain Liquidity Sweep Fund",
-      "pct": 44.52,
+      "pct": 48.3421,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "State Street Galaxy Onchain Liquidity Sweep Fund",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "ondo-ousg:position:07110012-2936-43db-a82c-b486e74e3822",
       "name": "BlackRock USD Institutional Digital Liquidity Fund",
-      "pct": 29.96,
+      "pct": 32.5335,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
@@ -40,7 +40,7 @@
     {
       "sourceKey": "ondo-ousg:position:012efdd9-0b06-48e7-96d6-4a7f2a588850",
       "name": "Franklin OnChain U.S. Government Money Fund",
-      "pct": 14.57,
+      "pct": 11.8559,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Franklin OnChain U.S. Government Money Fund",
@@ -59,7 +59,7 @@
     {
       "sourceKey": "ondo-ousg:position:6e7b5396-27eb-488c-9f9f-9c7b833b0d82",
       "name": "Fidelity Treasury Digital Fund",
-      "pct": 9.05,
+      "pct": 7.0382,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Fidelity Treasury Digital Fund",
@@ -76,7 +76,7 @@
     {
       "sourceKey": "ondo-ousg:position:545bffa5-2de4-4080-a879-1ad11ebfb040",
       "name": "Coinbase - Cash Equivalents",
-      "pct": 1.84,
+      "pct": 0.1598,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle (USDC), held at Coinbase",
@@ -93,7 +93,7 @@
     {
       "sourceKey": "ondo-ousg:position:71e93ded-53e3-4125-a317-2ce6cc55df36",
       "name": "Other Assets \u2074",
-      "pct": 0.03,
+      "pct": 0.0387,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Unspecified funds-in-transit counterparties and net receivables",
@@ -108,7 +108,7 @@
     {
       "sourceKey": "ondo-ousg:position:04bcda43-af66-497e-8064-efe82ca3cb71",
       "name": "Silicon Valley Bank - Bank Deposits",
-      "pct": 0.03,
+      "pct": 0.0318,
       "risk": "medium",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Silicon Valley Bank",
@@ -122,8 +122,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
-    "reviewer": "OpenAI Codex dated OUSG portfolio source review",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (DepDrain)",
     "confidence": "verified",
     "sources": [
       {
@@ -135,38 +135,38 @@
         "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
       }
     ],
-    "rationale": "The issuer-published September 11 portfolio contains seven positions totaling $339,173,302.42. The ondo-ousg adapter reads their dated amounts and stable document IDs directly, replacing the former single NAV envelope. BUIDL, BENJI and USDC are direct collateral dependencies; SWEEP and FYOXX are named untracked fund shares, while bank deposits and Other Assets remain separate. The exact Other Assets amount is $105,398.11 (about 0.0311%); sidecar weights are rounded to two decimals. Low legacy risk for named Treasury/liquidity fund shares follows the conservative tokenized-fund tier; bank deposits are medium and unresolved net receivables high. This is issuer-reported composition, not an independent audit or examination. Existing separate assurance/custody limitations remain unchanged. The published scope excludes OUSG limited partnership interests represented in non-tokenized book-entry form.",
-    "compositionBasis": "Issuer-published seven-position OUSG portfolio table with explicit September 11, 2026 16:00 EDT as-of timestamp and stable position document IDs",
-    "compositionAsOf": "2026-09-11",
+    "rationale": "The issuer-published September 28, 2026 20:00 UTC portfolio contains seven positions totaling $312,910,926.57: State Street Galaxy SWEEP $151,267,661.89 (48.3421%), BlackRock BUIDL $101,801,009.67 (32.5335%), Franklin BENJI $37,098,305.23 (11.8559%), Fidelity FYOXX $22,023,264.78 (7.0382%), Coinbase USDC cash equivalents $500,002.80 (0.1598%), Other Assets $121,045.25 (0.0387%), and Silicon Valley Bank deposits $99,636.95 (0.0318%). The ondo-ousg adapter reads the dated amounts and stable document IDs directly. BUIDL, BENJI and USDC are direct collateral dependencies; SWEEP and FYOXX are named untracked fund shares, while bank deposits and Other Assets remain separate. The Other Assets funds-in-transit line persists in the issuer's own current data, so the residual known-unknown cannot be reconciled to zero from issuer evidence and the exact-0 curated-fallback gate stays blocked. Low legacy risk for named Treasury/liquidity fund shares follows the conservative tokenized-fund tier; bank deposits are medium and unresolved net receivables high. This is issuer-reported composition, not an independent audit or examination; no dated independent attestor report is retrievable from a stable public URL (the former report folder is sign-in-gated), so the audited-fallback path also remains closed. Existing separate assurance/custody limitations are unchanged, and the published scope excludes OUSG limited partnership interests represented in non-tokenized book-entry form.",
+    "compositionBasis": "Issuer-published seven-position OUSG portfolio table with explicit September 28, 2026 20:00 UTC as-of timestamp and stable position document IDs",
+    "compositionAsOf": "2026-09-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Other Assets consists of funds in transit and outstanding receivables less payables; its underlying asset and counterparty allocation remains unresolved.",
-    "knownUnknownExposurePct": 0.03,
+    "knownUnknownExposurePct": 0.0387,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "State Street Galaxy Onchain Liquidity Sweep Fund",
-        "pct": 44.52,
+        "pct": 48.3421,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Named fund share with no matching canonical tracked asset; do not invent an indirect token dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Fidelity Treasury Digital Fund",
-        "pct": 9.05,
+        "pct": 7.0382,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Named fund share with no matching canonical tracked asset; do not invent an indirect token dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "Other Assets \u2074",
-        "pct": 0.03,
+        "pct": 0.0387,
         "disposition": "insufficient-evidence",
         "rationale": "Issuer identifies net receivables and funds in transit but does not identify their counterparties or asset breakdown."
       },
       {
         "reserveIndex": 6,
         "reserveName": "Silicon Valley Bank - Bank Deposits",
-        "pct": 0.03,
+        "pct": 0.0318,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Direct bank deposit, not a tracked stablecoin."
       }

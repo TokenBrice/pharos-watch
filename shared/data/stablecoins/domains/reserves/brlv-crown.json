@@ -21,7 +21,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-05",
+    "reviewedAt": "2026-09-29",
     "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
@@ -30,7 +30,7 @@
         "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_8_2026_1ea3d5e0be.pdf"
       },
       {
-        "label": "Crown BRLV reserve transparency and monthly-report index (observed 2026-09-05)",
+        "label": "Crown BRLV reserve transparency and monthly-report index (observed 2026-09-05; re-observed 2026-09-29 with the August 31 memo still the newest report)",
         "url": "https://www.crown-brlv.com/en/transparency/"
       }
     ],
@@ -38,7 +38,7 @@
     "compositionBasis": "Fact Finance BRLV technical verification memo dated August 31, 2026; category percentages computed from its stated reserve balances and rounded to two decimals; PDF SHA-256 68325f70157b6d549f534900917e84d40bdcbc9bc9348de2a717c11f8e01f8cd",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report identifies the reserve asset categories but does not disclose security identifiers, maturities, custodian names, or provider-level allocation. Its August 31 report date is verified; its posting date is undisclosed (PDF creation metadata is September 1, and public availability was first observed September 5). No structured latestReport publication date is asserted.",
+    "knownUnknownExposure": "The report identifies the reserve asset categories but does not disclose security identifiers, maturities, custodian names, or provider-level allocation. Its August 31 report date is verified; its posting date is undisclosed (PDF creation metadata is September 1, and public availability was first observed September 5; the site CMS records the August memo's publication at 2026-09-02T13:09:33Z). No structured latestReport publication date is asserted. Re-checked 2026-09-29: the transparency index still lists the August 31 memo as the newest monthly report and the reviewed PDF remains byte-identical (SHA-256 prefix 68325f70 unchanged), so no newer primary evidence exists and the composition stays pinned to the verified August 31 evidence; the next monthly report is expected in early October 2026.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

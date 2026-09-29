@@ -19,34 +19,30 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve research (Ethereum block 25862798 refresh)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "Pharos reserve research (Ethereum block 26083711 refresh)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "RAAC pmUSD collateral disclosure",
+        "label": "RAAC pmUSD collateral disclosure (behind a Vercel security checkpoint when re-checked 2026-09-29; last opened 2026-08-29)",
         "url": "https://pmusd.raac.io/collateral"
       },
       {
-        "label": "pmUSD Treasury current TokenBlender holding (Etherscan)",
-        "url": "https://etherscan.io/address/0x51c4348af0c6066a2fd31bd968bc0c039fe27342"
+        "label": "TokenBlender proxy metadata, re-verified 2026-09-29 (EIP-1967 transparent proxy; implementation 0xd38D289dC319311015E6526F56C15DA078E41aaE)",
+        "url": "https://eth.blockscout.com/api/v2/addresses/0x7a7f847fb60b0000e24cce07298dc73df8b8e56a"
       },
       {
         "label": "Verified TokenBlender implementation (Blockscout)",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd38d289dc319311015e6526f56c15da078e41aae"
       },
       {
-        "label": "TokenBlender proxy metadata (Blockscout)",
-        "url": "https://eth.blockscout.com/api/v2/addresses/0x7a7f847fb60b0000e24cce07298dc73df8b8e56a"
-      },
-      {
         "label": "Chainlink ION proof of reserve feed",
         "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por"
       }
     ],
-    "rationale": "Current-block refresh on 2026-08-29: at Ethereum block 25,862,798 (timestamp 2026-08-29T18:47:35Z), the pmUSD Treasury (0x51c4348af0c6066a2fd31bd968bc0c039fe27342) returned TokenBlender (0x7a7f847fb60b0000e24cce07298dc73df8b8e56a) from baseToken(). The verified TokenBlender implementation exposes one supported token; getSupportedTokens() returned only ION.au (0xd051c326c9aef673428e6f01eb65d2c52de95d30). At the same pinned block, Treasury balanceOf(TokenBlender) returned 26,528.7852 TB (matching the current Etherscan and RAAC display rounded to 26,528.79), while getTokenReserveBalance(ION.au) and TokenBlender totalSupply each returned 26,531.98 units. The Treasury's TB holding is therefore an ION.au-backed position; the small difference from aggregate TB supply does not identify another supported token. The direct pmUSD reserve path remains a single 100% TokenBlender position backed solely by ION.au. RAAC identifies ION.au as the pmUSD collateral and the Chainlink feed is corroborative for I-ON's broader reserve, but neither source resolves the legal enforceability, valuation, extraction costs, or recovery liquidity of the underlying in-situ gold claims.",
-    "compositionBasis": "Ethereum TokenBlender proxy enumeration and reserve balance at block 25862798 (2026-08-29), corroborated by RAAC pmUSD collateral disclosure",
-    "compositionAsOf": "2026-08-29",
+    "rationale": "Current-block refresh on 2026-09-29: at Ethereum block 26,083,711 (timestamp 2026-09-29T14:26:11Z, pinned JSON-RPC reads), the pmUSD Treasury (0x51c4348af0c6066a2fd31bd968bc0c039fe27342) returned TokenBlender (0x7a7f847fb60b0000e24cce07298dc73df8b8e56a) from baseToken(). The TokenBlender proxy is a Blockscout-verified EIP-1967 transparent proxy with implementation 0xd38D289dC319311015E6526F56C15DA078E41aaE, and its getSupportedTokens() still returns exactly one token, ION.au (0xd051c326c9aef673428e6f01eb65d2c52de95d30). At the same pinned block, Treasury balanceOf(TokenBlender) returned 26,528.785212665816068303 TB, while getTokenReserveBalance(ION.au) and TokenBlender totalSupply each returned exactly 26,531.98 units of the 18-decimal token; the reserve balance equals total supply, so every TB unit is backed by ION.au, and the Treasury holding is an ION.au-backed position whose gap from aggregate TB supply reflects only units held outside the Treasury. The direct pmUSD reserve path therefore remains a single 100% TokenBlender position backed solely by ION.au, unchanged from the 2026-08-29 enumeration at block 25,862,798. RAAC's pmusd.raac.io collateral page sat behind a Vercel security checkpoint (HTTP 429) on 2026-09-29 and could not be re-opened from the research vantage; the 2026-08-29 reading of that disclosure remains the corroborating issuer statement, and the Chainlink ION proof-of-reserve feed stays corroborative for I-ON's broader reserve. Neither resolves the legal enforceability, valuation, extraction costs, or recovery liquidity of the underlying in-situ gold claims.",
+    "compositionBasis": "Ethereum TokenBlender proxy enumeration and reserve balance at block 26083711 (2026-09-29T14:26:11Z) via pinned JSON-RPC; TokenBlender reserve balance equals total supply, both denominated solely in ION.au",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve asset is fully identified as ION.au; the legal enforceability, valuation, extraction costs, and recovery liquidity of ION.au's underlying in-situ gold claims remain unresolved.",
     "knownUnknownExposurePct": 0,

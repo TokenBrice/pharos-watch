@@ -234,6 +234,11 @@
         "depType": "wrapper",
         "expectedAssetAddress": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
       },
+      "deployedExposure": {
+        "basis": "sfrxUSD vault holds no idle frxUSD at the pinned block-26083895 reads; totalAssets() is deployed across the Frax Benchmark Yield Strategy venues",
+        "reviewedAt": "2026-09-29",
+        "sourceUrl": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      },
       "redemptionLiquidity": {
         "source": "fraxtal-hop-withdrawable",
         "fraxtalRpcUrl": "https://rpc.frax.com",

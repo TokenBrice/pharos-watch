@@ -23,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice2)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvFraxDola)",
     "confidence": "verified",
     "sources": [
       {
@@ -38,10 +38,14 @@
       {
         "label": "Ethereum sfrxUSD verified proxy",
         "url": "https://etherscan.io/address/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6#code"
+      },
+      {
+        "label": "Ethereum block 26083895 (2026-09-29T15:02:59Z), pinned vault identity and balance reads",
+        "url": "https://etherscan.io/block/26083895"
       }
     ],
-    "rationale": "Frax documents sfrxUSD as an ERC-4626-like token fully redeemable for frxUSD and states that the Benchmark Yield Strategy allocates staked frxUSD among carry-trade, DeFi AMO, and short-dated Treasury venues. The live adapter reports the full balance as deployed strategy positions, so the row retains the frxUSD wrapper dependency while classifying the immediate exposure as a protocol position across Frax-approved venues.",
-    "compositionBasis": "Frax sfrxUSD and frxUSD documentation",
+    "rationale": "Frax documents sfrxUSD as an ERC-4626-like token redeemable for frxUSD and describes its Benchmark Yield Strategy across carry-trade, DeFi AMO, and Treasury venues. At Ethereum block 26083895 (2026-09-29T15:02:59Z), vault 0xcf62f905562626cfcdd2261162a51fd02fc9c5b6 returned name Staked Frax USD, symbol sfrxUSD, and asset() 0xcacd6fd266af91b8aed52accc382b4e165586e29 (Frax USD). totalAssets() was 36,108,754.218811420290055171 frxUSD and the underlying balanceOf(vault) was zero. With no idle underlying held, the reviewed deployedExposure attestation on the live adapter config attributes the vault's full deployed share to this reviewed slice, so the producer publishes one reviewed row keyed by the frxUSD underlying address rather than a vault-addressed deployed remainder; the protocol-position classification and frxUSD wrapper dependency are retained, and this review does not establish current strategy allocations or a maximum maturity.",
+    "compositionBasis": "Frax strategy documentation and aggregate vault accounting at Ethereum block 26083895; no venue-level composition refresh",
     "scope": "full-composition",
     "knownUnknownExposure": "The frxUSD dependency and Benchmark Yield Strategy failure domain are identified at 100%, but the current venue and allocation among carry-trade, DeFi AMO, and Treasury strategies are not published.",
     "knownUnknownExposurePct": 0

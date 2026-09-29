@@ -81,6 +81,11 @@
         "depType": "wrapper",
         "expectedAssetAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a"
       },
+      "deployedExposure": {
+        "basis": "sUSDD vault holds no idle USDD at the pinned block-26083816 reads; totalAssets() is deployed through the TRON DAO Reserve Smart Allocator strategy",
+        "reviewedAt": "2026-09-29",
+        "sourceUrl": "https://docs.usdd.io/system-architecture/smart-allocator"
+      },
       "redemptionLiquidity": {
         "source": "atomic-full-backing"
       }

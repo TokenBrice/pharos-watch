@@ -87,6 +87,12 @@ An item is cleared only when its reason code disappears from a fresh replay-gene
 worklist. Do not hand-edit generated rows, date-bump a review without re-verifying its
 composition, or hide an unresolved evidence gap by changing confidence.
 
+A standing-structure composition — one with no dated composition report, whose structure
+was re-verified from current primary sources — may be re-dated only when its rows carry
+conservative (high) risk tiers, so re-dating cannot improve the score through favorable
+tiers. Favorable-tier standing claims are not re-dated; they expire into the `RESV`
+queue until dated evidence exists.
+
 ## 4. Add the 10-day pre-expiry queue
 
 The worklist reports gaps that already affect the replay. It does not list every still

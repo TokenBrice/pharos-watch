@@ -23,7 +23,10 @@ const EXPECTED_MARKET_ORDER = [
 // integration test retains USDT's measured Curve routes and real wrapper facts.
 // All epoch fields (clock, freshness, observations, generation ids) are
 // uniformly shifted forward so the fixture clock stays ahead of the newest
-// reviewedAt dates in shared static data; relative ages are unchanged.
+// reviewedAt dates in shared static data; relative ages are unchanged. The
+// susdt-spark live rows are refreshed to the erc4626-single-asset adapter's
+// current keyed two-slice emission so the capture tracks the 2026-09-29
+// spUSDT re-curation instead of the retired single unkeyed row.
 describe("Safety Score v9 USDT premium production integration", () => {
   it("preserves the serial parent after a reserve non-link without inheriting USDT's asset premium", () => {
     const fixedInput = createReportCardsFixedInput(
@@ -73,15 +76,18 @@ describe("Safety Score v9 USDT premium production integration", () => {
     });
 
     const childFacts = factsById.get("susdt-spark")!;
+    // The 2026-09-29 re-curation measured the spUSDT vault on-chain (block
+    // 26079396): the 19.59% idle USDT slice is a live-mapped wrapper claim,
+    // while only the 80.41% deployed strategy basket stays a non-link.
     expect(childFacts.dependencies).toMatchObject({
       source: "variant",
-      baseSource: "live-unmapped",
+      baseSource: "live-reserve",
       dependencyFromLive: true,
-      mappedLiveReserveWeight: 0,
       fallbackReason: null,
-      rejectionReasons: [{ sliceIndex: 0, reason: "non-link" }],
+      rejectionReasons: [{ sliceIndex: 1, reason: "non-link" }],
       edges: [{ upstreamAssetId: "usdt-tether", dependencyType: "wrapper", economicRole: "serial-claim", weight: 1 }],
     });
+    expect(childFacts.dependencies.mappedLiveReserveWeight).toBeCloseTo(0.19590965651347, 12);
 
     const child = evaluatedById.get("susdt-spark")!;
     expect(child.dependencyInputs.serial).toMatchObject([

@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv07)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM pre-expiry reserve refresh 2026-09-29 (#945)",
     "confidence": "verified",
     "sources": [
       {
@@ -34,7 +34,7 @@
         "url": "https://brale.xyz/stablecoins/USDGLO"
       }
     ],
-    "rationale": "Brale's management assertion dated September 11, 2026 reports $1,039,730 of cash and cash equivalents and $73,461 of U.S. government-backed debt against 1,113,191 USDGLO issued at August 31, 2026. The percentages are normalized from those reported values. The report states that the reserve assets are U.S.-dollar-denominated assets held by Brale in unencumbered accounts segregated from its other accounts, but it does not identify the underlying banks, instruments, maturities, or provider allocations.",
+    "rationale": "Brale's management assertion dated September 11, 2026 reports $1,039,730 of cash and cash equivalents and $73,461 of U.S. government-backed debt against 1,113,191 USDGLO issued at August 31, 2026; the percentages are normalized from those reported values, and the figures were re-verified against the report PDF on 2026-09-29. The report states that the reserve assets are U.S.-dollar-denominated assets held by Brale in unencumbered accounts segregated from its other accounts, but it does not identify the underlying banks, instruments, maturities, or provider allocations. Pre-expiry re-check 2026-09-29: the Brale transparency page (https://brale.xyz/stablecoins/USDGLO) still lists the August 2026 report (period end 2026-08-31, published 2026-09-11) as the newest USDGLO attestation — the 2026 PDF series stops at 08-2026 — and the page publishes no dated live composition breakdown, so no newer primary evidence exists and the composition is left unchanged rather than date-bumped. Under Brale's monthly cadence (the August report shipped 11 days after period end), the September 2026 report covering 2026-09-30 is expected in the second week of October 2026; the next review should promote it once published.",
     "compositionBasis": "Brale USDGLO reserve report as of August 31, 2026",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

@@ -61,29 +61,60 @@
   "governanceQuality": "multisig",
   "dependencies": [
     {
+      "id": "usdc-circle",
+      "weight": 0.999,
+      "type": "collateral"
+    },
+    {
       "id": "usdtb-ethena",
-      "weight": 1,
-      "type": "mechanism"
+      "weight": 0.001,
+      "type": "collateral"
     }
   ],
   "dependencyReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (DepDrain)",
     "confidence": "verified",
     "sources": [
       {
+        "label": "MegaUSD transparency backing-and-supply API (dated current amounts)",
+        "url": "https://app.megausd.money/api/transparency/backing-and-supply/current"
+      },
+      {
         "label": "MegaETH introduces USDm",
         "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
+      },
+      {
+        "label": "Ethena Whitelabel page, retrieved 2026-09-29 (lists USDM as an Ethena-powered whitelabel stablecoin 'backed by USDtb & USDC on launch' with dynamic backing allocation)",
+        "url": "https://whitelabel.ethena.fi/"
+      },
+      {
+        "label": "MegaETH explorer/RPC readback, 2026-09-29 (USDm proxy 0xfafddbb3fc7688494971a79cc65dca3ef82079e7: owner-managed addMinter/removeMinter whitelist; latest mint 2026-09-28 executed through unlabeled proxy contracts, so mint authority is not attributed to Ethena on-chain)",
+        "url": "https://mega.etherscan.io/token/0xfafddbb3fc7688494971a79cc65dca3ef82079e7"
       }
     ],
-    "rationale": "MegaETH documents USDm v1 as issued on Ethena's USDtb rails. The cited approximately 90% BUIDL allocation is USDtb's target reserve mix, not a measured USDm composition, so the reviewed relationship propagates Ethena's issuance-control quality without treating USDm as a mechanically identical wrapper claim or fabricating parallel reserve weights.",
+    "rationale": "MegaUSD's transparency API now publishes dated per-custodian backing amounts; at 2026-09-29T14:53:11Z it showed USDC $17,439,383.81 (99.8803%) and USDtb $20,915.84 (0.1197%) against $17,460,299.65 total backing, which the megausd-custody live adapter publishes as the 99.9/0.1 collateral mix. The reviewed relationships enumerate both collateral exposures exactly as mapped to the live reserve slices. MegaETH's 2025-09-08 launch blog documents USDm v1 as issued on Ethena's USDtb rails, so the USDtb relationship additionally carries the control-operator role for that v1 issuance stack; the claim is historical rather than a present-tense rail — the same blog states the architecture lets the reserve composition change over time, Ethena's whitelabel page (retrieved 2026-09-29) lists USDM as 'backed by USDtb & USDC on launch' under dynamic backing allocation, and the 2026-09-29 transparency snapshot above shows the allocation is now ≈99.9% USDC with USDtb a residual backing asset, while on-chain the USDm mint authority is an owner-managed addMinter/removeMinter whitelist whose active mint path (latest mint 2026-09-28) runs through unlabeled contracts, so no current source confirms USDtb rails as today's operative mint/redeem path. The registry authors dependencies as a single weight budget capped at 1, so a full-basket asset records that role on the USDtb collateral anchor (whose weight is the basket share) rather than as a separate full-weight mechanism entry, following the multi-role encoding used for usdf-astherus; the single ≤1 authoring budget cannot express a full-weight control operator on a 0.1% collateral anchor — a methodology gap flagged for the owner. Role edges are scored on cards and are not part of the serial/basket map projection. The approximately 90% BUIDL allocation cited at launch is USDtb's target reserve mix, not a measured USDm composition.",
     "relationships": [
       {
+        "id": "usdc-circle",
+        "weight": 0.999,
+        "type": "collateral",
+        "economicRole": "basket-exposure",
+        "reason": "USDC backing leg held across the five named MegaUSD custodian addresses; live adapter weight 99.9% from the issuer transparency API."
+      },
+      {
         "id": "usdtb-ethena",
-        "weight": 1,
-        "type": "mechanism",
+        "weight": 0.001,
+        "type": "collateral",
+        "economicRole": "basket-exposure",
+        "reason": "USDtb backing leg held across the same custodian set; live adapter weight 0.1% from the issuer transparency API."
+      },
+      {
+        "id": "usdtb-ethena",
+        "weight": 0.001,
+        "type": "collateral",
         "economicRole": "control-operator",
-        "reason": "USDm v1 issuance operates through Ethena's USDtb stablecoin rails, making the upstream operator a full-weight control dependency."
+        "reason": "USDm v1 was issued on Ethena's USDtb rails at launch (MegaETH blog, 2025-09-08), recording Ethena as the upstream control operator for that v1 issuance stack; current issuer-side sources (retrieved 2026-09-29) still present USDm as Ethena-powered, but with dynamically allocated backing now ≈99.9% USDC / ≈0.1% USDtb, and no current source confirms USDtb rails as today's operative mint/redeem path. The weight carries the anchor's basket share under the registry's single dependency weight budget."
       }
     ]
   },

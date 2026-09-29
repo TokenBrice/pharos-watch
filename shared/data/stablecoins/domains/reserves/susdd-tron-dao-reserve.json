@@ -3,25 +3,25 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a",
-      "name": "USDD savings wrapper shares",
+      "name": "Savings USDD deployed strategy positions",
       "pct": 100,
-      "risk": "medium",
+      "risk": "high",
       "coinId": "usdd-tron-dao-reserve",
       "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "sUSDD savings contracts and USDD",
+      "issuerOrObligor": "USDD savings system (sUSDD vault) and the TRON DAO Reserve Smart Allocator strategy",
       "riskFactors": [
         "smart-contract",
         "liquidity",
         "market",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSolsticeTron)",
     "confidence": "verified",
     "sources": [
       {
@@ -29,19 +29,27 @@
         "url": "https://docs.usdd.io/system-architecture/susdd-mechanism"
       },
       {
+        "label": "USDD Smart Allocator documentation",
+        "url": "https://docs.usdd.io/system-architecture/smart-allocator"
+      },
+      {
         "label": "USDD collateral and contract registry",
         "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses"
       },
       {
         "label": "sUSDD Ethereum contract",
-        "url": "https://etherscan.io/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930#code"
+        "url": "https://etherscan.io/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+      },
+      {
+        "label": "USDD Smart Allocator allocation detail API",
+        "url": "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview"
       }
     ],
-    "rationale": "sUSDD is a savings-wrapper share over USDD rather than a separate collateral portfolio. The exact direct reserve is the wrapper position; USDD reserve, market, governance, and redemption risks remain inherited through the tracked parent dependency.",
-    "compositionBasis": "Exact live single-asset row and USDD's sUSDD mechanism documentation",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Re-keyed 2026-09-29 to the exact reviewed row identity. The previous slice carried the idle-underlying source key from a period when the vault held its USDD idle; pinned reads now show the vault fully deployed, so the reviewed deployedExposure attestation on the live adapter config attributes the full deployed share to this reviewed slice and the producer publishes it keyed by the USDD underlying address rather than a vault-addressed deployed remainder. Pinned Ethereum reads at block 26083816 (2026-09-29T14:47:11Z) confirm the sUSDD vault at 0xc5d6a7b61d18afa11435a889557b068bb9f29930 has asset() returning USDD at 0x4f8e5de400de08b164e7421b3ee387f461becd1a, totalAssets() of 198738616.64 USDD against 186200657.69 sUSDD shares, and a zero idle USDD balance held by the vault, so the full composition is the deployed strategy position. USDD documentation states that deposited USDD accrues returns through the Smart Allocator strategy, which deploys protocol capital onto lending platforms selected by the USDD and JUST DAO teams such as Aave and JustLend, and that each sUSDD remains fully redeemable for USDD at any time with no lock-up. The slice is therefore classified as a high-risk protocol position linked to the tracked parent USDD; venue-level allocation of this vault's deployed USDD inside the protocol-managed reserve is not published per position, and the parent dependency carries USDD reserve, peg, and governance risks.",
+    "compositionBasis": "Exact live ERC-4626 deployed-strategy row, pinned Ethereum reads at block 26083816 (2026-09-29T14:47:11Z), and current USDD issuer documentation",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "No additional direct sUSDD reserve slice is identified; underlying USDD reserve composition is tracked on the parent asset.",
+    "knownUnknownExposure": "The deployed row identifies the sUSDD savings position inside the USDD protocol's Smart Allocator-managed reserve; the issuer does not attribute specific lending venues or platforms to the sUSDD vault's deposited USDD, and the underlying USDD reserve composition is tracked on the parent asset.",
     "knownUnknownExposurePct": 0
   }
 }

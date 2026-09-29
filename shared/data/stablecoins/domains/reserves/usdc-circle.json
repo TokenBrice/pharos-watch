@@ -4,7 +4,7 @@
     {
       "sourceKey": "circle:usdc:treasuries-under-3m",
       "name": "<3-Month U.S. Treasuries",
-      "pct": 71.93275,
+      "pct": 10.6788,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -19,7 +19,7 @@
     {
       "sourceKey": "circle:usdc:sifi-deposits",
       "name": "Deposits at Systemically Important Institutions",
-      "pct": 12.491316,
+      "pct": 7.5851,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Systemically important financial institutions",
@@ -33,7 +33,7 @@
     {
       "sourceKey": "circle:usdc:other-bank-deposits",
       "name": "Other Bank Deposits",
-      "pct": 13.852994,
+      "pct": 8.412,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Other regulated financial institutions",
@@ -47,7 +47,7 @@
     {
       "sourceKey": "circle:usdc:overnight-reverse-treasury-repo",
       "name": "Overnight Reverse Treasury Repo",
-      "pct": 1.72294,
+      "pct": 73.3241,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Leading global banks",
@@ -61,27 +61,28 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (live-adapter alignment: curated rows carry the Circle transparency adapter's exact slice identities so V9 can classify live rows; the Deloitte June 30 examination remains the assurance artefact on proofOfReserves.latestReport)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle) — fallback-composition reconciliation to the Deloitte July 2026 examination (report PDF read directly this pass)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Circle transparency (weekly reserve disclosure, as of Aug 06, 2026)",
-        "url": "https://www.circle.com/transparency"
+        "label": "Deloitte USDC examination report - July 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20July%2026%20(1).pdf"
       },
       {
-        "label": "Deloitte USDC examination report - June 2026",
-        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20June%2026.pdf"
+        "label": "Circle transparency (weekly reserve disclosure)",
+        "url": "https://www.circle.com/transparency"
       },
       {
         "label": "BlackRock Circle Reserve Fund",
         "url": "https://www.blackrock.com/cash/en-us/products/329365/circle-reserve-fund"
       }
     ],
-    "rationale": "Curated rows mirror the live Circle transparency adapter's four slice identities, with weights from the Aug 06, 2026 weekly disclosure ($51.77B <3-month Treasuries, $8.99B deposits at systemically important institutions, $9.97B other bank deposits, $1.24B overnight reverse Treasury repo; $71.97B total). These rows are the classification scaffold for the live adapter and carry the adapter-owned stable source keys, so they intentionally track the weekly-disclosure taxonomy rather than the examined report's fund-holdings cut; the Deloitte June 30, 2026 examination ($73.34B reserves vs $73.27B USDC, read directly this pass) is recorded on the proofOfReserves latestReport and corroborates the same reserve total to within ~2%. compositionAsOf is intentionally absent: the weekly disclosure is a rolling live basis, not the examined balance-sheet date.",
-    "compositionBasis": "Circle weekly USDC reserve composition disclosure (live-adapter classification scaffold)",
+    "rationale": "Rows keep the live Circle transparency adapter's four slice identities (adapter-owned source keys) so V9 keeps classifying live rows, with weights reconciled to the Deloitte examination as of July 31, 2026 (read directly this pass: $71,904,101,332 fair value of USDC reserve assets vs $71,826,453,410 USDC in circulation). Mapping: <3-Month U.S. Treasuries $7,678,498,751 (Circle Reserve Fund U.S. Treasury securities $7,179,080,057, longest maturity 2026-10-15, plus other reserve Treasury securities $499,418,694) = 10.6788%; Overnight Reverse Treasury Repo $52,723,000,000 (report footnote 3: overnight lending to global financial institutions overcollateralized by U.S. Treasuries) = 73.3241%; the two deposit slices carry the examined net cash of $11,502,602,581 (fund cash $1,003,971,911 + cash at regulated financial institutions $10,607,410,596 + settlement/timing net -$108,779,926) = 15.9971%. The examination does not split cash between systemically important and other institutions; the split applies the Aug 06, 2026 weekly-disclosure deposit mix (47.4% SIFI / 52.6% other, from the previously curated $8.99B/$9.97B figures) to the July 31 examined net cash — both slices share the identical bank-deposit classification, so the split does not alter the risk picture. compositionAsOf equals the examination period end, so the curated rows are now the independently examined fallback composition; the 2026-08-08 pass deliberately omitted the date because its weights tracked the rolling weekly disclosure rather than the examined balance sheet.",
+    "compositionBasis": "Deloitte examination of the USDC Reserve Report as of July 31, 2026 (Circle Reserve Fund assets and other USDC reserve assets schedules), mapped onto the Circle transparency adapter's four slice identities",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "No material unclassified reserve exposure is present in Circle's four-category disclosure; individual bank and repo counterparties are not named.",
+    "knownUnknownExposure": "All examined reserve assets are classified (U.S. Treasuries, overnight Treasury repos, cash at regulated financial institutions). The SIFI vs non-SIFI split of the examined cash is not disclosed by the examination and is carried from the Aug 06, 2026 weekly-disclosure deposit mix; individual bank and repo counterparties are not named.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

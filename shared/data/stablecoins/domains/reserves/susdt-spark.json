@@ -3,8 +3,25 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "name": "USDT deposited in Spark Savings vault",
-      "pct": 100,
+      "name": "Spark Savings USDT idle underlying",
+      "pct": 19.590965651347,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT issuer)",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xe2e7a17dff93280dec073c995595155283e3c372:deployed",
+      "name": "Spark Savings USDT deployed strategy positions",
+      "pct": 80.409034348653,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Spark Liquidity Layer / Sky ecosystem",
@@ -18,8 +35,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex reserve curation",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSkySpark)",
     "confidence": "probable",
     "sources": [
       {
@@ -33,22 +50,41 @@
       {
         "label": "Spark Data Hub",
         "url": "https://data.spark.fi/savings/"
+      },
+      {
+        "label": "Pinned Spark Vaults V2 implementation",
+        "url": "https://github.com/sparkdotfi/spark-vaults-v2/blob/51c6d7a1da85944804ba87234f2eac13dba8330e/src/SparkVault.sol"
+      },
+      {
+        "label": "Pinned Spark Ethereum address registry",
+        "url": "https://github.com/sparkdotfi/spark-address-registry/blob/2ec1f5c9b9d6b2f8b94a4a2f063b83d56175f265/src/Ethereum.sol"
+      },
+      {
+        "label": "Spark USDT strategy and May 5, 2026 deployment snapshot",
+        "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy"
+      },
+      {
+        "label": "Ethereum observation block 26079396",
+        "url": "https://etherscan.io/block/26079396"
       }
     ],
-    "rationale": "Spark documents spUSDT as an ERC-4626 Savings V2 position whose permissioned Spark Liquidity Layer taker deploys assets into yield strategies. The 100% slice identifies the vault position, while the current strategy allocation is not published as a spUSDT-specific percentage breakdown.",
-    "compositionBasis": "Spark Savings V2 product and vault documentation",
+    "rationale": "At Ethereum block 26079396 (2026-09-28T23:59:59Z), asset() identifies USDT, totalAssets() is 397809076331145 and USDT balanceOf(spUSDT) is 77934639501976, both in 6-decimal units. This separates measured idle USDT from the 80.409034348653% non-idle accounting exposure. SparkVault permits TAKER_ROLE to withdraw assets and computes totalAssets from shares and accrued chi; the remainder is a Spark protocol position rather than proof of a reconciled downstream portfolio. Its constituent asset, venue and custodian weights remain unknown. No hard maturity maximum is disclosed, so maturityDaysMax is omitted.",
+    "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDT balanceOf(spUSDT) at Ethereum block 26079396; category-level classification from the pinned Spark vault implementation and address registry",
+    "compositionAsOf": "2026-09-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current Spark Liquidity Layer strategy mix and redemption asset allocation are not published for this vault as a percentage table.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "Spark names SparkLend, Morpho, Maple syrupUSDT, Curve and sUSDS in its strategy framework and publishes a May 5, 2026 deployment snapshot. Those historical aggregate amounts do not reconcile the current spUSDT liabilities. The 80.409034348653% non-idle position therefore retains unknown current constituent weights, downstream custody shares and maturity bounds; category-level classification does not admit the live-withheld fallback.",
+    "knownUnknownExposurePct": 80.409034348653,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "USDT deposited in Spark Savings vault",
-        "pct": 100,
+        "reserveIndex": 1,
+        "reserveName": "Spark Savings USDT deployed strategy positions",
+        "pct": 80.409034348653,
         "disposition": "basket-needs-split",
-        "rationale": "Spark confirms the vault and the SLL deployment role, but does not publish a current spUSDT-specific split across lending, RWA, cash, or other strategies.",
+        "rationale": "The disclosed SparkLend, Morpho, Maple, Curve and sUSDS strategy framework lacks a current spUSDT-specific allocation and liability reconciliation. The May 5, 2026 snapshot cannot supply September weights.",
         "candidateCoinIds": [
-          "usdt-tether"
+          "usdt-tether",
+          "susds-sky",
+          "syrupusdt-maple"
         ]
       }
     ]
@@ -56,27 +92,27 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Spark Liquidity Layer",
-        "role": "other",
-        "sharePct": 100
+        "name": "Spark Savings USDT vault and permissioned Spark Liquidity Layer taker",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex reserve curation",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSkySpark)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Spark Vaults V2 source",
-        "url": "https://github.com/sparkdotfi/spark-vaults-v2"
+        "label": "Pinned Spark Vaults V2 implementation",
+        "url": "https://github.com/sparkdotfi/spark-vaults-v2/blob/51c6d7a1da85944804ba87234f2eac13dba8330e/src/SparkVault.sol"
       },
       {
         "label": "Spark Documentation Portal",
         "url": "https://docs.spark.fi/"
       }
     ],
-    "uncertainty": "SLL is explicitly permitted to pull vault liquidity into yield strategies, but the current venue-level custody, segregation, insolvency, and strategy allocation details are not published for spUSDT as a complete portfolio."
+    "uncertainty": "The pinned contract permits the taker to pull vault liquidity. The observed idle USDT remains in the vault, while non-idle accounting exposure has no reconciled spUSDT-specific downstream custody allocation, segregation, insolvency treatment or successor-custody disclosure. No provider percentage is assigned from the accounting remainder.",
+    "knownUnknownExposurePct": 80.409034348653
   }
 }

@@ -3,8 +3,8 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
-      "name": "USDS savings vault shares",
-      "pct": 100,
+      "name": "Sky Savings USDS idle underlying",
+      "pct": 99.999982504839,
       "risk": "low",
       "coinId": "usds-sky",
       "depType": "wrapper",
@@ -17,11 +17,24 @@
         "market"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd:deployed",
+      "name": "Sky Savings USDS deployed strategy positions",
+      "pct": 0.00001749516100346682,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky sUSDS projected SSR accrual funded through Vat, Vow and UsdsJoin",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice3)",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSkySpark)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,13 +48,55 @@
       {
         "label": "Sky USDS source repository",
         "url": "https://github.com/sky-ecosystem/usds"
+      },
+      {
+        "label": "Pinned sUSDS implementation",
+        "url": "https://github.com/sky-ecosystem/sdai/blob/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol"
+      },
+      {
+        "label": "Ethereum observation block 26079396",
+        "url": "https://etherscan.io/block/26079396"
       }
     ],
-    "rationale": "Sky documents sUSDS as an ERC-4626 savings vault whose direct reserve claim is USDS. The reviewed composition therefore remains one parent-linked wrapper row; the negligible totalAssets accounting residual does not establish a separate reserve asset or strategy position.",
-    "compositionBasis": "Sky sUSDS vault and underlying identity verified against protocol documentation and the live ERC-4626 underlying source key",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "At Ethereum block 26079396 (2026-09-28T23:59:59Z), asset() identifies USDS, totalAssets() is 4411049738164593904315517122 and USDS balanceOf(sUSDS) is 4411048966444342796076869286, both in 18-decimal units. The pinned SUsds implementation projects chi in convertToAssets before drip realizes the savings accrual through vat.suck and usdsJoin.exit. The adapter's deployed source key therefore identifies un-dripped SSR accrual. It does not establish an external strategy allocation. No hard maturity maximum is stated, so maturityDaysMax is omitted.",
+    "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDS balanceOf(sUSDS), pinned to Ethereum block 26079396, plus the pinned SUsds accrual implementation",
+    "compositionAsOf": "2026-09-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "No additional direct sUSDS reserve asset is identified; underlying USDS reserve composition is evaluated on the parent record.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "Both direct reserve categories are identified. Underlying USDS collateral, including its unresolved PSM composition, remains evaluated on the parent record.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Sky Savings USDS deployed strategy positions",
+        "pct": 0.00001749516100346682,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Projected SSR accrual is a Sky protocol accounting claim until drip mints the USDS funding. It is not a separate held stablecoin token and creates no additional tracked collateral link."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sky sUSDS Ethereum vault",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSkySpark)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned sUSDS implementation",
+        "url": "https://github.com/sky-ecosystem/sdai/blob/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol"
+      },
+      {
+        "label": "Ethereum observation block 26079396",
+        "url": "https://etherscan.io/block/26079396"
+      }
+    ],
+    "uncertainty": "The contract holds the observed USDS balance and realizes projected accrual through Sky protocol accounting. This technical custody observation does not establish legal segregation, bankruptcy remoteness, or the custody of USDS's own underlying collateral."
   }
 }
