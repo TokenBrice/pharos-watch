@@ -9,6 +9,7 @@
       "display": "tokenbrice.eth",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.1,
       "usd_at_receipt": 219.22,
       "price_note": "coingecko-historical-2026-04-13"
@@ -21,6 +22,7 @@
       "display": "0xc37f82...3517",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.01,
       "usd_at_receipt": 23.28,
       "price_note": "coingecko-historical-2026-04-22"
@@ -33,6 +35,7 @@
       "display": "legac.eth",
       "kind": "community",
       "asset_symbol": "USDGLO",
+      "token_address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
       "amount_decimal": 1.1,
       "usd_at_receipt": 1.1,
       "price_note": "stablecoin-1-to-1"
@@ -45,6 +48,7 @@
       "display": "marketclown.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 13.37,
       "usd_at_receipt": 13.37,
       "price_note": "stablecoin-1-to-1"
@@ -57,6 +61,7 @@
       "display": "0xc6a823...daf6",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -69,6 +74,7 @@
       "display": "sanson.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -81,6 +87,7 @@
       "display": "0xd465b8...f967",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.1,
       "usd_at_receipt": 233.08,
       "price_note": "coingecko-historical-2026-04-24"
@@ -93,6 +100,7 @@
       "display": "0xf18a9f...c06b",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.01,
       "usd_at_receipt": 23.16,
       "price_note": "coingecko-historical-2026-04-25"
@@ -105,6 +113,7 @@
       "display": "paulx.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -117,6 +126,7 @@
       "display": "bkaya.eth",
       "kind": "community",
       "asset_symbol": "GIV",
+      "token_address": "0x528cdc92eab044e1e39fe43b9514bfdab4412b98",
       "amount_decimal": 65,
       "usd_at_receipt": 0.06,
       "price_note": "manual-user-quote-2026-04-26"
@@ -129,6 +139,7 @@
       "display": "0x40c7f5...c8b9",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.005,
       "usd_at_receipt": 11.6,
       "price_note": "coingecko-historical-2026-04-26"
@@ -141,6 +152,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.05,
       "usd_at_receipt": 115.96,
       "price_note": "coingecko-historical-2026-04-26"
@@ -153,6 +165,7 @@
       "display": "0x77b66c...e3da",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -165,6 +178,7 @@
       "display": "0xd2b8d3...971b",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.001,
       "usd_at_receipt": 2.37,
       "price_note": "coingecko-historical-2026-04-27"
@@ -177,6 +191,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.003,
       "usd_at_receipt": 7.11,
       "price_note": "coingecko-historical-2026-04-27"
@@ -189,6 +204,7 @@
       "display": "0x22ea53...a12f",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 5.5,
       "usd_at_receipt": 5.5,
       "price_note": "stablecoin-1-to-1"
@@ -201,6 +217,7 @@
       "display": "0xd7465f...7367",
       "kind": "community",
       "asset_symbol": "FINN",
+      "token_address": "0xb87c3637eb7c28aac2c918ed8ec0c3b3b5e8fb67",
       "amount_decimal": 5,
       "usd_at_receipt": 0,
       "price_note": "manual-token-not-priced"
@@ -213,6 +230,7 @@
       "display": "0xfe1552...4694",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -225,6 +243,7 @@
       "display": "freshelle.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
       "amount_decimal": 1.1,
       "usd_at_receipt": 1.1,
       "price_note": "stablecoin-1-to-1"
@@ -237,6 +256,7 @@
       "display": "bravala.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 1.24,
       "usd_at_receipt": 1.24,
       "price_note": "stablecoin-1-to-1"
@@ -249,6 +269,7 @@
       "display": "sprnodes.eth",
       "kind": "community",
       "asset_symbol": "USDT",
+      "token_address": "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -261,6 +282,7 @@
       "display": "jensei.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 2,
       "usd_at_receipt": 2,
       "price_note": "stablecoin-1-to-1"
@@ -273,6 +295,7 @@
       "display": "kyakka.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -285,6 +308,7 @@
       "display": "0x0a66e2...2c3f",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 19.49,
       "usd_at_receipt": 19.49,
       "price_note": "stablecoin-1-to-1"
@@ -297,6 +321,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.005,
       "usd_at_receipt": 11.81,
       "price_note": "coingecko-historical-2026-05-06"
@@ -309,6 +334,7 @@
       "display": "0x85a729...53f0",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 30,
       "usd_at_receipt": 30,
       "price_note": "stablecoin-1-to-1"
@@ -321,6 +347,7 @@
       "display": "0x06fa6f...9c02",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -333,6 +360,7 @@
       "display": "leuts.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 1.5,
       "usd_at_receipt": 1.5,
       "price_note": "stablecoin-1-to-1"
@@ -345,6 +373,7 @@
       "display": "rozengarden.eth",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.2,
       "usd_at_receipt": 470.1,
       "price_note": "coingecko-historical-2026-05-07"
@@ -357,6 +386,7 @@
       "display": "0xalex0.eth",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.0024,
       "usd_at_receipt": 5.64,
       "price_note": "coingecko-historical-2026-05-07"
@@ -369,6 +399,7 @@
       "display": "0x860714...527a",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.001136,
       "usd_at_receipt": 2.67,
       "price_note": "coingecko-historical-2026-05-07"
@@ -381,6 +412,7 @@
       "display": "0x1841b8...69cb",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -393,6 +425,7 @@
       "display": "marcvlad.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -405,6 +438,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.0055,
       "usd_at_receipt": 12.6,
       "price_note": "coingecko-historical-2026-05-08"
@@ -417,6 +451,7 @@
       "display": "0x4b784a...b07f",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 14,
       "usd_at_receipt": 14,
       "price_note": "stablecoin-1-to-1"
@@ -429,6 +464,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.001,
       "usd_at_receipt": 2.34,
       "price_note": "coingecko-historical-2026-05-12"
@@ -441,6 +477,7 @@
       "display": "0x653146...6501",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 25,
       "usd_at_receipt": 25,
       "price_note": "stablecoin-1-to-1"
@@ -453,6 +490,7 @@
       "display": "0x315efd...1135",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -465,6 +503,7 @@
       "display": "0xef3b89...e171",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -477,6 +516,7 @@
       "display": "0xf3da4a...7bd1",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -489,6 +529,7 @@
       "display": "0xdd8e9c...97efb",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -501,6 +542,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.0007,
       "usd_at_receipt": 1.58,
       "price_note": "coingecko-historical-2026-05-14"
@@ -513,6 +555,7 @@
       "display": "defiadvisoor.eth",
       "kind": "community",
       "asset_symbol": "USDT",
+      "token_address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
       "amount_decimal": 6,
       "usd_at_receipt": 6,
       "price_note": "stablecoin-1-to-1"
@@ -525,6 +568,7 @@
       "display": "ethsec.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -537,6 +581,7 @@
       "display": "0x830da1...a2b0",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.01,
       "usd_at_receipt": 22.58,
       "price_note": "coingecko-historical-2026-05-14"
@@ -549,6 +594,7 @@
       "display": "0xd2117a...72fe7",
       "kind": "community",
       "asset_symbol": "USDT",
+      "token_address": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -561,6 +607,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.00225,
       "usd_at_receipt": 5.08,
       "price_note": "coingecko-historical-2026-05-14"
@@ -573,6 +620,7 @@
       "display": "0x1dd507...34de9",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 15,
       "usd_at_receipt": 15,
       "price_note": "stablecoin-1-to-1"
@@ -585,6 +633,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.01,
       "usd_at_receipt": 22.58,
       "price_note": "coingecko-historical-2026-05-14"
@@ -597,6 +646,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.0015,
       "usd_at_receipt": 3.39,
       "price_note": "coingecko-historical-2026-05-14"
@@ -609,6 +659,7 @@
       "display": "georgeh.eth",
       "kind": "community",
       "asset_symbol": "DAI",
+      "token_address": "0x6b175474e89094c44da98b954eedeac495271d0f",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -621,6 +672,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.0065,
       "usd_at_receipt": 14.67,
       "price_note": "coingecko-historical-2026-05-14"
@@ -633,6 +685,7 @@
       "display": "anamarijab.eth",
       "kind": "community",
       "asset_symbol": "DAI",
+      "token_address": "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
       "amount_decimal": 5,
       "usd_at_receipt": 5,
       "price_note": "stablecoin-1-to-1"
@@ -645,6 +698,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.0277,
       "usd_at_receipt": 63.2,
       "price_note": "coingecko-historical-2026-05-15"
@@ -657,6 +711,7 @@
       "display": "0x799d0d...ae39",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 51.52,
       "usd_at_receipt": 51.52,
       "price_note": "stablecoin-1-to-1"
@@ -669,6 +724,7 @@
       "display": "thedaofund.eth",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.012,
       "usd_at_receipt": 24.05,
       "price_note": "coingecko-historical-2026-06-01"
@@ -681,6 +737,7 @@
       "display": "0x97b2cb...2676",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.0065,
       "usd_at_receipt": 13.02,
       "price_note": "coingecko-historical-2026-06-02"
@@ -693,6 +750,7 @@
       "display": "thedaofund.eth",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 1.064,
       "usd_at_receipt": 1882.41,
       "price_note": "coingecko-historical-2026-06-05"
@@ -705,6 +763,7 @@
       "display": "thedaofund.eth",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.294903535961297,
       "usd_at_receipt": 521.74,
       "price_note": "coingecko-historical-2026-06-05"
@@ -717,6 +776,7 @@
       "display": "0xd68c9d...4802",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 365.84,
       "usd_at_receipt": 365.84,
       "price_note": "stablecoin-1-to-1"
@@ -729,6 +789,7 @@
       "display": "flowcompass.eth",
       "kind": "community",
       "asset_symbol": "ETH",
+      "token_address": null,
       "amount_decimal": 0.030198631603724473,
       "usd_at_receipt": 57.46,
       "price_note": "coingecko-historical-2026-07-21"
@@ -741,6 +802,7 @@
       "display": "0x5417b2...16b9",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -753,6 +815,7 @@
       "display": "tokenbrice.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 50,
       "usd_at_receipt": 50,
       "price_note": "stablecoin-1-to-1"
@@ -765,6 +828,7 @@
       "display": "0xd9ea85...5005",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 15.108181,
       "usd_at_receipt": 15.108181,
       "price_note": "stablecoin-1-to-1"
@@ -777,6 +841,7 @@
       "display": "0xf0cf1e...2a75",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -789,6 +854,7 @@
       "display": "0x830295...a1ce",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 15,
       "usd_at_receipt": 15,
       "price_note": "stablecoin-1-to-1"
@@ -801,6 +867,7 @@
       "display": "0xc4db7c...f335",
       "kind": "community",
       "asset_symbol": "CRVUSD",
+      "token_address": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"
@@ -813,6 +880,7 @@
       "display": "flowcompass.eth",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 14,
       "usd_at_receipt": 14,
       "price_note": "stablecoin-1-to-1"
@@ -825,6 +893,7 @@
       "display": "tokenbrice.eth",
       "kind": "founder",
       "asset_symbol": "USDC",
+      "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "amount_decimal": 10000,
       "usd_at_receipt": 10000,
       "price_note": "stablecoin-1-to-1"
@@ -837,6 +906,7 @@
       "display": "0x74232e...652b",
       "kind": "community",
       "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
       "price_note": "stablecoin-1-to-1"

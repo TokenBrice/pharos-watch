@@ -26,6 +26,14 @@ describe("funding schemas", () => {
     expect(DonationSchema.safeParse(makeDonation({ from_address: "0xabc" })).success).toBe(false);
   });
 
+  it("requires a lowercase token address, or null for native assets", () => {
+    const native = makeDonation({ asset_symbol: "ETH", token_address: null });
+    expect(DonationSchema.parse(native)).toEqual(native);
+    expect(DonationSchema.safeParse(makeDonation({ token_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" })).success).toBe(false);
+    const { token_address: _omitted, ...missing } = DONATION;
+    expect(DonationSchema.safeParse(missing).success).toBe(false);
+  });
+
   it("accepts zero but rejects either negative amount independently", () => {
     const zero = makeDonation({ amount_decimal: 0, usd_at_receipt: 0 });
     expect(DonationSchema.parse(zero)).toEqual(zero);

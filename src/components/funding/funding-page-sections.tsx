@@ -13,7 +13,8 @@ import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-regis
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/schema";
 import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/funding/helpers";
 import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
-import { DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
+import { API_PAGE_ANCHORS, DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
+import { DONOR_KEY_QUALIFYING_STABLECOINS } from "@shared/lib/funding/donor-eligibility";
 import { formatCoveragePct, groupCostsByCategory } from "@shared/lib/funding/helpers";
 
 const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
@@ -27,6 +28,15 @@ const SUPPORTED_CHAINS: FundingChain[] = ["ethereum", "base", "optimism", "arbit
 // Floor to the nearest 10 so the share message reads as a round figure and stays
 // honestly conservative as canonical-order grows.
 const TRACKED_COUNT_FLOOR = Math.floor(CLIENT_TRACKED_STABLECOINS.length / 10) * 10;
+const SUPPORTER_KEY_HREF = `/api/#${API_PAGE_ANCHORS.supporterKey}`;
+const PARTNER_ACCESS_HREF = `/api/#${API_PAGE_ANCHORS.partnerAccess}`;
+const QUALIFYING_LABELS = DONOR_KEY_QUALIFYING_STABLECOINS.map((coin) => coin.label);
+// Past this many coins the inline list crowds the note; link to the full list on /api/ instead.
+const MAX_INLINE_QUALIFYING_COINS = 6;
+const QUALIFYING_COINS_TEXT =
+  QUALIFYING_LABELS.length > 1
+    ? `${QUALIFYING_LABELS.slice(0, -1).join(", ")} or ${QUALIFYING_LABELS[QUALIFYING_LABELS.length - 1]}`
+    : (QUALIFYING_LABELS[0] ?? "");
 const PHAROS_SHARE_MESSAGE = `Stablecoin risk data should be public infrastructure, not a private terminal. Pharos tracks ${TRACKED_COUNT_FLOOR}+ stablecoins with peg, safety, liquidity, depeg, blacklist, flow, yield, and dependency signals. MIT-licensed, practitioner-built, free to use. Help keep it open: https://pharos.watch/funding/`;
 
 // Brand-marked icons matching the footer (lucide has no X/Telegram icons).
@@ -366,7 +376,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
       : null;
 
   return (
-    <Card className="pharos-card-shell">
+    <Card id="supporters" className="pharos-card-shell">
       <CardHeader className="space-y-1">
         <p className="pharos-kicker text-muted-foreground">Supporters</p>
         <CardTitle as="h2">Recent supporters</CardTitle>
@@ -428,12 +438,12 @@ export function SupportCtas() {
             <PrimaryGivethTile />
             <WalletTile />
           </div>
+          <SupporterKeyNote />
           <p className="text-xs text-muted-foreground leading-relaxed">
             Best for long-term sustainability: a recurring Giveth stream on Optimism or Base. Direct wallet support
             works on every supported chain; Base and Gnosis are usually the cheapest gas paths. Giveth donations
             arrive at the wallet and appear on the wall as a single &ldquo;via Giveth&rdquo; entry.
           </p>
-          <SupporterKeyNote />
           <div className="space-y-2">
             <p className="pharos-kicker text-muted-foreground">Other ways to help</p>
             <div className="flex flex-wrap gap-2">
@@ -460,14 +470,22 @@ function SupporterKeyNote() {
       <div className="space-y-1">
         <p className="text-sm font-semibold text-foreground">Supporter API key</p>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Any externally-owned EVM wallet with at least ${DONOR_API_KEY_MIN_USD} in stablecoin donations on this ledger, graded A or B (including +/−) when claiming, can claim one API key for the full Pharos
-          API: {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, no expiry, one per wallet, by signing a
-          message on{" "}
-          <Link href="/api/" className="pharos-prose-link">
-            the API page
+          A direct transfer of ${DONOR_API_KEY_MIN_USD}+ in{" "}
+          {QUALIFYING_LABELS.length > MAX_INLINE_QUALIFYING_COINS ? (
+            <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
+              one of {QUALIFYING_LABELS.length} reviewed stablecoins
+            </Link>
+          ) : (
+            QUALIFYING_COINS_TEXT
+          )}{" "}
+          from a wallet you can sign with
+          (not an exchange withdrawal or a Giveth stream) earns a free key with {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE}{" "}
+          requests per minute and no expiry:{" "}
+          <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
+            claim it on the API page
           </Link>
           . {DONOR_KEY_CLAIMS_OPEN
-            ? "Claims are not instant: the donor list is updated once a week, on Sunday mornings, and a donation can only be claimed once it appears on this wall. Grades are checked at claim time; later grade changes do not affect issued keys."
+            ? "The donor list is updated every Sunday and grades are checked at claim time."
             : "Claims are paused. Eligibility will use Safety Score grades at claim time."}
         </p>
       </div>
@@ -486,6 +504,9 @@ function PrimaryGivethTile() {
       <p className="text-sm text-muted-foreground leading-relaxed">
         The strongest long-term signal: set a recurring donation so Pharos has predictable runway while the website
         stays free for everyone. Recurring streams run on Optimism or Base only.
+      </p>
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        Giveth streams support Pharos but do not unlock the supporter API key.
       </p>
       <div className="mt-auto pt-2">
         <Button
@@ -512,6 +533,13 @@ function WalletTile() {
       <p className="text-xs text-muted-foreground">
         {PHAROS_FUNDING_ENS} resolves to the same address on every supported chain. ETH, stablecoins, and other
         ERC-20s accepted.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Supporter API key: send ${DONOR_API_KEY_MIN_USD}+ in a qualifying stablecoin from this kind of wallet, then{" "}
+        <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
+          claim it on /api/
+        </Link>
+        .
       </p>
       <div className="mt-auto space-y-2 pt-2">
         <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-1.5">
@@ -591,7 +619,7 @@ export function YearEndHorizon() {
 }
 
 export function FundingFaq() {
-  const qa: Array<{ q: string; a: string }> = [
+  const qa: Array<{ q: string; a: React.ReactNode }> = [
     {
       q: "Why does Pharos ask for support?",
       a: "Independent stablecoin analytics has real data, infrastructure, and research costs. Support keeps the website free for everyone instead of making risk analysis available only through private terminals.",
@@ -606,7 +634,21 @@ export function FundingFaq() {
     },
     {
       q: "What do supporters get?",
-      a: `Public recognition on the wall unless you ask for a custom label, and a supporter API key once your externally-owned EVM wallet reaches $${DONOR_API_KEY_MIN_USD} in stablecoin donations graded A or B (including +/−) when claimed: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute on the full API, no expiry, claimed by signing a message on the API page. The key cannot be claimed right after donating: the donor list is updated once a week, on Sunday mornings, and a donation only counts once it appears on this wall. Donation values use receipt-time USD. Grades are checked at claim time, not donation time; later grade changes do not affect issued keys. ETH, other non-stablecoins, lower or missing grades, and pooled payouts do not count. Claims pause if the Safety Score publication is unavailable or held. The public website stays fully free; any future paid surface would be for high-frequency or heavy API usage, not the core dashboards.`,
+      a: (
+        <>
+          Recognition on the supporter wall, and a free supporter API key for ${DONOR_API_KEY_MIN_USD}+ in qualifying
+          stablecoins sent from a wallet you can sign with:{" "}
+          <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
+            see the API page
+          </Link>
+          . The donor list is updated every Sunday and grades are checked at claim time. Teams that need higher limits
+          can ask for a{" "}
+          <Link href={PARTNER_ACCESS_HREF} className="pharos-prose-link">
+            partner key
+          </Link>
+          .
+        </>
+      ),
     },
     {
       q: "Can I help without donating?",
