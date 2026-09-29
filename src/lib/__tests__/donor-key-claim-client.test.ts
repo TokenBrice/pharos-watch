@@ -74,6 +74,15 @@ describe("buildDonorClaimSiweMessage as the page builds it", () => {
 });
 
 describe("claimDonorKey", () => {
+  it.each(["future_reason", undefined, 42])("ignores unknown or absent reasons (%s) and malformed detail", async (reason) => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({
+      error: "Unavailable", reason, qualifyingUsd: "10", countedAssets: ["USDC", 5],
+    }, 503));
+    await expect(claimDonorKey({ message: "siwe", signature: SIGNATURE })).rejects.toMatchObject({
+      status: 503, reason: null, qualifyingUsd: null, countedAssets: null,
+    });
+  });
+
   it("posts the signed message and returns the issued key", async () => {
     const body = issuedPayload();
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse(body, 201));
@@ -90,7 +99,7 @@ describe("claimDonorKey", () => {
 
   it("surfaces the ledger timestamp from a 403 ineligible body", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ error: "Wallet is not eligible.", ledgerUpdatedAt: 1788681300 }, 403),
+      jsonResponse({ error: "Wallet is not eligible.", reason: "ineligible", ledgerUpdatedAt: 1788681300, qualifyingUsd: 4.25, countedAssets: ["USDC"] }, 403),
     );
 
     await expect(claimDonorKey({ message: "siwe", signature: SIGNATURE })).rejects.toMatchObject({
@@ -98,6 +107,9 @@ describe("claimDonorKey", () => {
       status: 403,
       message: "Wallet is not eligible.",
       ledgerUpdatedAt: 1788681300,
+      reason: "ineligible",
+      qualifyingUsd: 4.25,
+      countedAssets: ["USDC"],
     });
   });
 

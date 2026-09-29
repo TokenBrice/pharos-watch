@@ -19,13 +19,14 @@ vi.mock("../../lib/safety-score-active-source", () => ({
   loadActiveSafetyScoreSource: vi.fn(),
 }));
 
+const claimSwitch = vi.hoisted(() => ({ open: true }));
 // Exercise issuance independently from the production pause switch.
 vi.mock("@shared/lib/public-api-contract", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@shared/lib/public-api-contract")>()),
-  DONOR_KEY_CLAIMS_OPEN: true,
+  get DONOR_KEY_CLAIMS_OPEN() { return claimSwitch.open; },
 }));
 
-// $11 across two chains qualifies; exactly $10, ETH, and pool payouts do not.
+// $11 across two chains and exactly $10 qualify; ETH and pool payouts do not.
 vi.mock("@shared/data/funding/donations.json", () => ({
   default: {
     last_updated_at: 1788681300,
@@ -38,6 +39,7 @@ vi.mock("@shared/data/funding/donations.json", () => ({
         display: "donor.eth",
         kind: "community",
         asset_symbol: "USDC",
+        token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         amount_decimal: 5,
         usd_at_receipt: 5,
         price_note: "stablecoin-par",
@@ -50,6 +52,7 @@ vi.mock("@shared/data/funding/donations.json", () => ({
         display: "donor.eth",
         kind: "community",
         asset_symbol: "USDC",
+        token_address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
         amount_decimal: 6,
         usd_at_receipt: 6,
         price_note: "stablecoin-par",
@@ -62,6 +65,7 @@ vi.mock("@shared/data/funding/donations.json", () => ({
         display: "0x3c44cd...93bc",
         kind: "community",
         asset_symbol: "USDC",
+        token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         amount_decimal: 10,
         usd_at_receipt: 10,
         price_note: "stablecoin-par",
@@ -74,6 +78,7 @@ vi.mock("@shared/data/funding/donations.json", () => ({
         display: "0x15d34a...6a65",
         kind: "community",
         asset_symbol: "USDC",
+        token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         amount_decimal: 9.99,
         usd_at_receipt: 9.99,
         price_note: "stablecoin-par",
@@ -86,6 +91,7 @@ vi.mock("@shared/data/funding/donations.json", () => ({
         display: "ETH donor",
         kind: "community",
         asset_symbol: "ETH",
+        token_address: null,
         amount_decimal: 1,
         usd_at_receipt: 2000,
         price_note: "receipt-time price",
@@ -98,6 +104,7 @@ vi.mock("@shared/data/funding/donations.json", () => ({
         display: "via Giveth",
         kind: "pool",
         asset_symbol: "USDC",
+        token_address: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
         amount_decimal: 50,
         usd_at_receipt: 50,
         price_note: "stablecoin-par",
@@ -160,6 +167,7 @@ function countApiKeys(): number {
 }
 
 beforeEach(() => {
+  claimSwitch.open = true;
   resetApiKeyStateForTests();
   vi.mocked(loadActiveSafetyScoreSource).mockReset().mockResolvedValue({
     kind: "v9",
@@ -174,6 +182,44 @@ afterEach(() => {
 });
 
 describe("POST /api/donor-key-claims", () => {
+  it("rejects paused claims before reading the body or spending the limiter", async () => {
+    claimSwitch.open = false;
+    const limit = vi.fn();
+    const response = await handleDonorKeyClaim(db, new Request(CLAIM_URL, { method: "POST", body: "bad" }), {
+      rateLimiter: { limit }, pepper: PEPPER,
+    }, NOW_SEC);
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ reason: "claims_closed" });
+    expect(limit).not.toHaveBeenCalled();
+    expect(countApiKeys()).toBe(0);
+  });
+
+  it.each([
+    [donorAccount, 503, "grade_unavailable"],
+    [belowThresholdAccount, 403, "ineligible"],
+    [poolAccount, 403, "ineligible"],
+  ] as const)("distinguishes unavailable grades from insufficient donations for %s", async (account, status, reason) => {
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue({
+      kind: "v9",
+      snapshot: makeReportCardsV9Response({ cards: [] }),
+    });
+    const response = await claim(claimMessage(account), { signer: account });
+    expect(response.status).toBe(status);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    if (status === 503) expect(response.headers.get("Retry-After")).toBe("60");
+    await expect(response.json()).resolves.toMatchObject({ reason });
+    expect(countApiKeys()).toBe(0);
+  });
+
+  it.each(["not-json", JSON.stringify({ message: "missing signature" })])("rejects an invalid JSON body without issuing a key", async (body) => {
+    const response = await handleDonorKeyClaim(db, new Request(CLAIM_URL, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body,
+    }), { rateLimiter: allowLimiter, pepper: PEPPER }, NOW_SEC);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ reason: "body_invalid" });
+    expect(countApiKeys()).toBe(0);
+  });
+
   it("issues one donor key for an eligible wallet and records the claim", async () => {
     const response = await claim(claimMessage(donorAccount));
 
@@ -217,15 +263,17 @@ describe("POST /api/donor-key-claims", () => {
     expect(auditRow.detail_json).not.toContain(donorAccount.address.slice(2, 12).toLowerCase());
   });
 
-  it.each(["C", "NR", null] as const)("excludes donations when the current grade is %s", async (grade) => {
+  it.each(["C", "NR"] as const)("excludes donations when the current grade is %s", async (grade) => {
     vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue({
       kind: "v9",
       snapshot: makeReportCardsV9Response({
-        cards: grade === null ? [] : [makeWorkerV9Card({ id: "usdc-circle", grade })],
+        cards: [makeWorkerV9Card({ id: "usdc-circle", grade })],
       }),
     });
 
-    expect((await claim(claimMessage(donorAccount))).status).toBe(403);
+    const response = await claim(claimMessage(donorAccount));
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ reason: "ineligible", qualifyingUsd: 0, countedAssets: [] });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -239,6 +287,7 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(claimMessage(donorAccount));
     expect(response.status).toBe(503);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toMatchObject({ reason: "safety_scores_unavailable" });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -347,6 +396,7 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(claimMessage(donorAccount, { nonce: "eeeeeeeeeeeeeeee" }));
 
     expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ reason: "claim_orphaned" });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -394,7 +444,9 @@ describe("POST /api/donor-key-claims", () => {
         }
       },
     });
-    expect((await claim(claimMessage(donorAccount))).status).toBe(503);
+    const failedResponse = await claim(claimMessage(donorAccount));
+    expect(failedResponse.status).toBe(503);
+    await expect(failedResponse.json()).resolves.toMatchObject({ reason: "issue_failed" });
     expect(failed).toBe(true);
     expect(countApiKeys()).toBe(0);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_claims").get()).toEqual({ n: 0 });
@@ -428,7 +480,9 @@ describe("POST /api/donor-key-claims", () => {
   it("answers 503 when the rate limit binding throws", async () => {
     const throwing: RateLimit = { limit: async () => { throw new Error("binding unavailable"); } };
 
-    expect((await claim(claimMessage(donorAccount), { limiter: throwing })).status).toBe(503);
+    const response = await claim(claimMessage(donorAccount), { limiter: throwing });
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ reason: "rate_limit_unavailable" });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -447,7 +501,7 @@ describe("POST /api/donor-key-claims", () => {
     const replay = await claim(message, { signature });
 
     expect(replay.status).toBe(409);
-    await expect(replay.json()).resolves.toMatchObject({ error: expect.stringContaining("already claimed") });
+    await expect(replay.json()).resolves.toMatchObject({ reason: "claim_exists" });
     expect(countApiKeys()).toBe(1);
   });
 
@@ -469,7 +523,8 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(claimMessage(donorAccount, { nonce: "cccccccccccccccc" }));
 
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("revoked") });
+    await expect(response.json()).resolves.toMatchObject({ reason: "claim_revoked" });
+    expect(countApiKeys()).toBe(1);
   });
 
   it("issues a key for a wallet at exactly $10, because the threshold is inclusive", async () => {
@@ -483,7 +538,9 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(claimMessage(belowThresholdAccount), { signer: belowThresholdAccount });
 
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ ledgerUpdatedAt: LEDGER_UPDATED_AT });
+    await expect(response.json()).resolves.toMatchObject({
+      reason: "ineligible", ledgerUpdatedAt: LEDGER_UPDATED_AT, qualifyingUsd: 9.99, countedAssets: ["USDC"],
+    });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -491,6 +548,7 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(claimMessage(strangerAccount), { signer: strangerAccount });
 
     expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ reason: "ineligible", qualifyingUsd: 0, countedAssets: [] });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -498,7 +556,8 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(claimMessage(poolAccount), { signer: poolAccount });
 
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ ledgerUpdatedAt: LEDGER_UPDATED_AT });
+    await expect(response.json()).resolves.toMatchObject({ reason: "ineligible", ledgerUpdatedAt: LEDGER_UPDATED_AT });
+    expect(countApiKeys()).toBe(0);
   });
 
   it.each([
@@ -518,7 +577,7 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(build());
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: "Claim message or signature is invalid" });
+    await expect(response.json()).resolves.toMatchObject({ reason: "siwe_invalid" });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -526,13 +585,16 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(claimMessage(donorAccount), { signer: strangerAccount });
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: "Claim message or signature is invalid" });
+    await expect(response.json()).resolves.toMatchObject({ reason: "signature_invalid" });
+    expect(countApiKeys()).toBe(0);
   });
 
   it("rejects a malformed signature with 400", async () => {
     const response = await claim(claimMessage(donorAccount), { signature: `0x${"00".repeat(65)}` });
 
     expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ reason: "signature_invalid" });
+    expect(countApiKeys()).toBe(0);
   });
 
   it.each(["declared", "streamed"])("rejects a %s body over the 4 KB cap before eligibility or issuance", async (mode) => {
@@ -553,6 +615,7 @@ describe("POST /api/donor-key-claims", () => {
     } as RequestInit & { duplex: "half" });
     const response = await handleDonorKeyClaim(db, request, { rateLimiter: allowLimiter, pepper: PEPPER }, NOW_SEC);
     expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ reason: "body_invalid" });
     expect(countApiKeys()).toBe(0);
     expect(loadActiveSafetyScoreSource).not.toHaveBeenCalled();
   });
@@ -562,18 +625,23 @@ describe("POST /api/donor-key-claims", () => {
 
     expect(response.status).toBe(429);
     expect(response.headers.get("Retry-After")).toBe("60");
+    await expect(response.json()).resolves.toMatchObject({ reason: "rate_limited" });
+    expect(countApiKeys()).toBe(0);
   });
 
   it("answers 503 when the rate limit binding is missing", async () => {
     const response = await claim(claimMessage(donorAccount), { limiter: undefined });
 
     expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ reason: "rate_limiter_missing" });
+    expect(countApiKeys()).toBe(0);
   });
 
   it("answers 503 when the API key pepper is unset", async () => {
     const response = await claim(claimMessage(donorAccount), { pepper: undefined });
 
     expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ reason: "pepper_missing" });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -593,9 +661,8 @@ describe("POST /api/donor-key-claims", () => {
       );
 
       expect(response.status).toBe(503);
-      await expect(response.json()).resolves.toEqual({
-        error: "Supporter key claims are temporarily unavailable",
-      });
+      await expect(response.json()).resolves.toMatchObject({ reason: "donations_ledger_invalid" });
+      expect(countApiKeys()).toBe(0);
       await expect(import("../health")).resolves.toHaveProperty("handleHealth");
     } finally {
       vi.doUnmock("@shared/data/funding/donations.json");

@@ -4,8 +4,9 @@ export const ApiKeyTrafficClassSchema = z.enum(["external", "site"]);
 export type ApiKeyTrafficClass = z.infer<typeof ApiKeyTrafficClassSchema>;
 
 /**
- * Issuance tiers: `standard` for operator-created keys, `self-serve` for the
- * verified public issuance path, `donor` for wallet-signed supporter claims.
+ * Issuance tiers: `standard` for operator-created keys, `self-serve` for keys
+ * issued by the retired email-verified public lane (kept so they authenticate
+ * until they expire), `donor` for wallet-signed supporter claims.
  */
 export const API_KEY_TIER_VALUES = ["standard", "self-serve", "donor"] as const;
 export type ApiKeyTier = (typeof API_KEY_TIER_VALUES)[number];
@@ -20,6 +21,26 @@ export const DonorKeyClaimRequestSchema = z
   })
   .strict();
 export type DonorKeyClaimRequest = z.infer<typeof DonorKeyClaimRequestSchema>;
+
+export const DONOR_KEY_CLAIM_FAILURE_REASONS = [
+  "claims_closed",
+  "rate_limiter_missing",
+  "rate_limit_unavailable",
+  "rate_limited",
+  "donations_ledger_invalid",
+  "body_invalid",
+  "siwe_invalid",
+  "signature_invalid",
+  "claim_exists",
+  "claim_revoked",
+  "claim_orphaned",
+  "safety_scores_unavailable",
+  "grade_unavailable",
+  "ineligible",
+  "pepper_missing",
+  "issue_failed",
+] as const;
+export type DonorKeyClaimFailureReason = (typeof DONOR_KEY_CLAIM_FAILURE_REASONS)[number];
 
 /** `POST /api/donor-key-claims` 201 body. The token is shown once. */
 export const DonorKeyClaimResponseSchema = z
