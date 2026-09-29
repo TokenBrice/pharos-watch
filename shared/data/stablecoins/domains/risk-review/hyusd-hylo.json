@@ -16,13 +16,17 @@
         "url": "https://github.com/solana-program/token/blob/405c9172df3aeb508712142aae1caf0d31ada671/program/src/processor.rs#L423-L512"
       },
       {
-        "label": "Hylo stablecoin documentation",
-        "url": "https://docs.hylo.so/product-guide/stablecoin.md"
+        "label": "Hylo SDK mint-authority PDA derivation",
+        "url": "https://github.com/hylo-so/sdk/blob/main/hylo-idl/src/pda.rs"
+      },
+      {
+        "label": "Hylo SDK exchange account layouts",
+        "url": "https://github.com/hylo-so/sdk/blob/main/hylo-idl/idls/hylo_exchange.json"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 437980139. The sole tracked HYUSD mint remains owned by the legacy SPL Token program with freezeAuthority = null; pinned Token Program source requires the current freeze authority to freeze an account and does not permit a disabled authority to be restored. Hylo identifies no separate issuer transfer-control layer. Current reviewed pool composition includes 5.319864% Circle USDC plus dust cbBTC exposure. Circle can freeze that reserve asset and impair backing or conversions, but cannot freeze HYUSD token accounts; the matched reserve exposure is below the v3.9973 >50% upstream threshold.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "At finalized Solana slot 451632419, the sole tracked HYUSD mint 5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E is an 82-byte legacy SPL Token mint owned by TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA, with freezeAuthority null and mintAuthority CfuSViqf6wvUKEprLhtuCsSanvfAsMbDmkAW92FP95qe. It has no Token-2022 permanent delegate, transfer hook, default-account-state or pausable extension. The SPL program requires holder/delegate authorization for transfers and cannot restore a null freeze authority. Hylo's exchange program HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn remains upgradeable: at slot 451632721 its ProgramData BA5b6FzvZ77m7MZbsMEVSCFW1x86f7jM98wjcecVwzYN names GzyhwK4y7EKPEevAMc2TEpgi1Y3znwj14FUzkHmCMiNP as upgrade authority, last upgraded at slot 447625876. That controls issuance and protocol vaults, not arbitrary holder-owned SPL accounts. The live registry contains only jitoSOL and hyloSOL, both legacy SPL mints with null freezeAuthority. At slot 451632721, vault balances and same-slot Pyth prices timestamped 2026-09-29T11:47:31Z value jitoSOL at 78.22311035%, hyloSOL at 6.87885849%, cbBTC at 8.66189229%, HYPE at 6.23613887%, and USDC at approximately 0.000000000211% of $41,693,494.85 collateral. cbBTC and USDC have non-null freeze authorities, giving 8.66189229% confirmed issuer-controlled collateral; including all HYPE bridge exposure gives 14.89803116%, below the strict >50% upstream threshold. HYPE's local legacy SPL mint also has null freezeAuthority. At slot 451633551, jitoSOL's stake-pool program SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy has upgrade authority dPpFfahSWhm5M2RB3nVaHsXfnh9ooz5bWtR3WeUguDH and hyloSOL's program SPMBzsVUuoHA4Jm6KunbsotaahvVikZs1JyTW6iJvbn has upgrade authority 47SND7bGKvNXrqfP1bjsLCbwTgZhFBzAgmZ42QSkRScz. Those authorities can change staking and reserve logic but cannot replace the holder-facing SPL token program. Whether protocol-governed LST upgradeability alone counts as possible-class upstream exposure remains an owner-level policy question: counting both LSTs gives 93.76386113% exposure before HYPE, implying inherited; excluding those protocol-only controls leaves No. The stored No verdict is retained pending that policy decision. This corrects the obsolete 5.319864% USDC and dust-cbBTC composition.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

@@ -24,9 +24,24 @@ Every stablecoin ID in `CONTRACT_CONFIGS` must resolve to direct `Freezable: Yes
 The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and the same resolved four-state model as Report Cards:
 
 - `yes`: direct issuer blacklist, freeze, seizure, or equivalent holder-facing control.
-- `upstream`: the token has no direct `yes` or `possible` holder-facing freeze control, but strictly more than 50% of its reserve composition is exposed to assets or rails classified `yes`, `upstream`, or `possible`. Tracked parent/wrapper inheritance and full CEX custody still resolve as upstream exposure.
+- `upstream`: the token has no direct `yes` or `possible` holder-facing freeze control, but strictly more than 50% of its reserve composition is exposed to assets or rails classified `yes`, `upstream`, or `possible`. Tracked parent/wrapper inheritance, full CEX custody, and custodial fiat reserves (per the scoping rules below) still resolve as upstream exposure.
 - `possible`: a curated direct pause, blacklist, freeze, or mutable holder-facing control exists but is not confirmed as an active direct blacklist control.
 - `no`: no exposure resolves under the current model.
+
+Review scoping rules (owner ruling, 2026-09-29):
+
+- **Upstream collateral counts only when an issuer or custodian controls it.** Exposed reserve
+  assets or rails are issuer-freezable tokens (for example USDC, USDT, cbBTC, cbETH), custodian-pausable
+  wrappers (WBTC), CEX custody, and custodial fiat reserves held at banks or fund managers. Collateral
+  whose only control is DAO or protocol governance (an upgradeable or DAO-pausable token such as stETH
+  and therefore wstETH, stake-pool LSTs such as jitoSOL) does not count toward the 50% threshold.
+- **Direct controls on the stablecoin itself are not narrowed by that rule.** An admin-upgradeable
+  token proxy, a governor that can authorize new burners or forced-transfer operators, and an
+  issuer-shipped consensus change that has halted holder transfers all remain `possible` or `yes`.
+  A rebase that can only increase balances is not a holder-facing control.
+- **Deployment scope follows the Safety Score V9 materiality threshold**
+  (`semantic.materiality.deploymentMaterialSharePct`). A control on a deployment below that share of
+  circulating supply is recorded in the review evidence but does not set the verdict.
 
 The public buckets read `blacklistabilityReview.reviewedStatus` through the generated client-registry
 `blacklistStatus`. That reviewed registry value is the sole product-level status authority. Safety

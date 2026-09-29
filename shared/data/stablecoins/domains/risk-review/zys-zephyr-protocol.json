@@ -1,7 +1,7 @@
 {
   "id": "zys-zephyr-protocol",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Zephyr native-asset documentation",
@@ -16,17 +16,33 @@
         "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
       },
       {
-        "label": "Zephyr Explorer current HF11 block 837231",
-        "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
+        "label": "Zephyr mandatory HF8 audit and HF9 transfer halt",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.1.0"
+      },
+      {
+        "label": "Zephyr HF10 audit extension disabling ordinary transfers",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.2.0"
+      },
+      {
+        "label": "Zephyr HF11 invalidation of unaudited asset types",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.3.0"
+      },
+      {
+        "label": "Zephyr current consensus audit and pause restrictions",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/blockchain.cpp#L4706-L4723"
+      },
+      {
+        "label": "Zephyr mainnet hardfork activation schedule",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/hardforks/hardforks.cpp#L42-L46"
       },
       {
         "label": "Zephyr reserve snapshot",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 against official Zephyr v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a and native-chain HF11 block 837231 (2026-08-08 19:36:16 UTC; hash 9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d). ZYS is the native Zephyr yield asset, not a production EVM token. Same-asset ZYS sends map to YIELD_TRANSFER, and the reviewed source exposes no separate address-level blacklist, holder freeze, seize, privileged burn, or current issuer transfer-control path. ZYS shares the historical 2025 network-wide audit/hardfork transaction restriction with ZSD; this was a consensus-wide migration rather than a current holder-targeted issuer control. No direct blacklistability established.",
-    "reviewer": "Codex C10 wave1 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "The Zephyr protocol team, which issues ZYS and ships the mandatory consensus implementation, exercised a holder-facing global control in 2025. HF8 at block 481500 (2025-03-31) disabled ordinary transfers and conversions except mandatory per-holder audit migrations; HF9 at 508000 paused all transactions; HF10 at 511000 reopened only audit migrations. HF11 at 536000 restored ordinary transfers of new assets and permanently invalidated non-migrated ZYIELD and ZEPHUSD balances. Current documentation confirms unaudited assets remain unusable. The demonstrated issuer-driven transfer halt and balance invalidation constitute mutable holder-facing control under possible, despite requiring network adoption of consensus releases. The fUSD precedent differs because its rollback was performed by Zano chain developers rather than the fUSD issuer. Current v2.3.0 commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a retains the historical restrictions behind hardfork-version gates; same-asset ZYS maps to YIELD_TRANSFER, with no standing address blacklist, issuer freeze key or privileged holder burn identified, so true is not established. At official snapshot height 874253, HF11, captured 2026-09-29T07:47:36.883Z, the yield reserve held 328,534.7534294861 ZSD against 165,939.6268199358 ZYS. Its reserve is 100% ZSD, now reviewed possible, giving 100% upstream exposed backing; the direct possible control takes precedence over inherited. No material production wrapper was identified; the discovered EVM bridge remains testnet. Precedents: zsd-zephyr-protocol shares the same demonstrated control; usdk-orki establishes possible for mutable holder-facing control without an active blacklist.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

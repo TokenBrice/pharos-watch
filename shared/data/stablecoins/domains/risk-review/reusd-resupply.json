@@ -1,24 +1,32 @@
 {
   "id": "reusd-resupply",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "REUSD verified contract source",
         "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec"
       },
       {
-        "label": "Resupply governance voting",
-        "url": "https://docs.resupply.fi/resupply-governance/governance-voting"
+        "label": "Resupply Core verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
       },
       {
-        "label": "Resupply admin permissions",
-        "url": "https://docs.resupply.fi/faq/multisig-and-admin-permissions"
+        "label": "Resupply Registry live pair enumeration",
+        "url": "https://eth.blockscout.com/address/0x10101010E0C3171D894B71B3400668aF311e7D94?tab=read_contract"
+      },
+      {
+        "label": "Resupply pair accounting verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5184cccf85b81eddc661330acb3e41bd89f34a1"
+      },
+      {
+        "label": "Resupply Voting verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11111111063874ce8dc6232cb5c1c849359476e6"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The exact verified, immutable REUSD Stablecoin deployment exposes owner/operator-controlled mint and allowance-checked burn, while transfer and transferFrom remain standard ERC-20 paths. It has no holder blacklist, freeze, seizure, global pause, arbitrary holder burn, proxy, or upgrade hook. The owner is the Resupply Core governance contract; its execution and operator permissions do not add a token-level holder restriction path. The previous inherited verdict was invalid because REUSD has no stablecoin parent identity: crvUSD and frxUSD lending-market exposure can impair collateral or exits but cannot restrict existing REUSD holder balances.",
-    "reviewer": "OpenAI Codex C04 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-verified at Ethereum block 26082912 (2026-09-29T11:46:23Z). The sole contracts[] deployment, 0x57ab1e0003f623289cd798b1824be09a793e4bec, exactly matches the verified non-proxy Stablecoin runtime bytecode; its EIP-1967 implementation, admin and beacon slots are zero. The source has no non-1967 delegation or upgrade path, transfer override, holder blacklist, global transfer pause or arbitrary-holder burn. Owner is permanently Resupply Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d. Owner/operators can mint; burn(from,amount) requires allowance when caller differs from from. Registry 0x10101010e0c3171d894b71b3400668af311e7d94 is an active mint operator. Core executes calls for its voter or explicitly authorized target/selector operators; voter 0x11111111063874ce8dc6232cb5c1c849359476e6 has executionDelay 86400 seconds and votingPeriod 604800 seconds. These powers cannot replace token code or bypass holder burn allowances. LayerZero OFT peer, delegate and message-inspector configuration controls cross-chain sends, not ordinary ERC-20 transfers; msgInspector is zero. No additional bridged deployment is listed in contracts[]. At the same block, Registry.getAllPairAddresses() returned 22 pairs, 21 with positive totalCollateral. For every pair, underlying() matched collateral().asset(); converting getPairAccounting().totalCollateral through collateral.convertToAssets() yielded 52,119,508.794017 crvUSD and 668,390.539130 frxUSD underlying units, totaling 52,787,899.333147 at the protocol's dollar-par accounting basis. Composition is 98.733819% crvusd-curve (reviewed inherited) and 1.266181% frxusd-frax (reviewed true), giving 100% exposed reserves, strictly above 50%. These are reserve-slice upstreams, not parent identities. The previous no-parent rationale contradicted the public exposure contract: reserve-based Upstream needs no parent asset and does not assert direct seizure of reUSD balances. The inherited classification follows the reserve-exposure precedent of dai-makerdao and the stored crvusd-curve status; crvusd-curve's own prose denying inherited treatment is inconsistent with its stored status and is not relied on as methodology.",
+    "reviewer": "OpenAI GPT FreezeWatch unfreezable-cohort re-audit",
+    "reviewedAt": "2026-09-29"
   },
   "oracleRisk": {
     "tier": "oracleless",
