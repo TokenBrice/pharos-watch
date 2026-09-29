@@ -24,9 +24,7 @@ Machine-readable integration artifacts are also served from the public website f
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations and CI smoke should target `https://api.pharos.watch` and send `X-API-Key` for protected public reads, including `/api/telegram-pulse`; production Pages build-input syncs instead read allowlisted `GET` endpoints through `https://stablecoin-dashboard.pages.dev/_site-data/*` with an allowed site caller header. Each sync command rejects missing or invalid input. A Pages release may retain one failed producer's committed snapshot, but it fails before build when all three producers fail or when a failed public-dataset refresh cannot be rolled back cleanly.
 
-Production Pages does not proxy public self-serve `/api/*` POST requests. The public form at `https://pharos.watch/api/` calls `https://api.pharos.watch/api/api-key-requests` and `https://api.pharos.watch/api/api-key-requests/verify` with normal CORS preflights for JSON `POST` requests.
-
-When self-serve issuance is open (`SELF_SERVE_ISSUANCE_OPEN`), honeypot submissions are intentionally no-op accepted: `POST /api/api-key-requests` returns `200 { "ok": true }` when the optional `website` field is non-empty, without creating an API-key request or sending email, and normal non-honeypot submissions return `202 Accepted` with `pending_verification`. Issuance is currently closed, so the route answers `403` before reading the body (see Public API Auth).
+Production Pages does not proxy public `/api/*` POST requests. `https://pharos.watch/api/` is the API access page: it presents the free grades feed, the supporter-key claim, and the partner-key contact. Its browser POST is the supporter-key claim, which goes cross-origin to `https://api.pharos.watch/api/donor-key-claims` with a normal CORS preflight for the JSON `POST` request.
 
 The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. Pages `/_site-data/*` forwards the upstream cache policy, `Age`, and `Date` without adding a second Cache API lifetime, so it cannot make a nearly expired Worker response fresh again.
 
@@ -43,8 +41,6 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 - `GET /api/health`
 - `GET /api/og/*`
 - `POST /api/feedback`
-- `POST /api/api-key-requests`
-- `POST /api/api-key-requests/verify`
 - `POST /api/donor-key-claims` (the supporter-key claim: a Sign-In-With-Ethereum signature from an eligible donor wallet, rate-limited per IP before the body is read)
 - `POST /api/telegram-webhook`
 - `POST /api/telegram-mini-app/session`
@@ -54,15 +50,32 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 
 `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` are also externally reachable but not anonymous. They require Telegram Mini App `initData` signed for `@PharosWatchBot`; the worker validates the HMAC, `auth_date`, and user payload before any D1-backed state write. These endpoints are denied on the website-internal site-data lane and are intended only for the Mini App at `https://pharos.watch/pharoswatchbot/app/`.
 
-Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The public API host rejects registered admin paths and configured admin-like root families before API-key auth, so a public API key cannot be used to reach registered admin routes or malformed children of configured roots such as `/api/api-keys*` and `/api/api-key-requests-admin*` on `api.pharos.watch`.
+Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The public API host rejects registered admin paths and configured admin-like root families before API-key auth, so a public API key cannot be used to reach registered admin routes or malformed children of configured roots such as `/api/api-keys*` on `api.pharos.watch`.
 
-Self-serve key issuance is closed (`SELF_SERVE_ISSUANCE_OPEN = false` in `shared/lib/public-api-contract.ts`): `POST /api/api-key-requests` returns `403` before reading the body, `/api/` shows a closed notice, and keyed access is operator-issued until the paid tier ships. `POST /api/api-key-requests/verify` keeps working so in-flight verification links can finish, and issued self-serve keys drain through their expiry. When open, the public self-serve request form lives at `https://pharos.watch/api/`. It sends an email verification link, then exchanges that one-time token for a default key after verification. Default self-serve keys are `tier="self-serve"`, `trafficClass="external"`, limited to `30` requests per minute, expire after `60` days, and allow one active/pending self-serve claim per normalized email. Request details are available only in the private `ops.pharos.watch/admin-api/` UI.
+Self-serve key issuance is retired: the lane was removed on 2026-09-29, so `POST /api/api-key-requests` and `POST /api/api-key-requests/verify` are unregistered and respond like any unknown API path on the public host (`401` without a valid `X-API-Key`, `404` with one), while existing `tier="self-serve"` keys keep authenticating until they drain through their `60`-day expiry (about 2026-11-06). The lane's D1 tables (`api_key_requests`, `api_key_request_rate_limit_v2`, `api_key_self_serve_email_claims`, `api_key_self_serve_issuance_limits`) are left in place and dropped in a separate follow-up rollout after this Worker is live; the rate-limit table's daily prune continues until then, and the operator may delete the lane's now-unused Worker secrets with Wrangler (names only, never values): `API_KEY_SELF_SERVE_IP_SALT`, `API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER`, `API_KEY_SELF_SERVE_REQUEST_PEPPER`, `API_KEY_SELF_SERVE_EMAIL_FROM`, `API_KEY_SELF_SERVE_EMAIL_REPLY_TO`, `API_KEY_SELF_SERVE_PUBLIC_BASE_URL`, `RESEND_API_KEY`. Keyed access is a supporter key, claimed by donors on the access page at `https://pharos.watch/api/` through `POST /api/donor-key-claims`, or an operator-issued partner key (internal tier `standard`) requested through the private channel on that page: Telegram DM to `@TokenBrice`, with X DM to `@PharosWatch` as secondary, and a human reply within `PARTNER_KEY_REPLY_BUSINESS_DAYS` (`2`) business days. The reply window and the freshness stamped on every response are service commitments, not a contractual SLA.
 
-`POST /api/donor-key-claims` issues the supporter key and is exempt from `X-API-Key`. A wallet that has donated at least `$10` in stablecoins (receipt-date USD, summed per lowercase address across reconciled stablecoin donations except `kind: "pool"`; founder stablecoin rows count under the same grade rule; the threshold is inclusive, so exactly `$10` qualifies while non-stablecoin assets do not; only A+, A, A-, B+, B, or B- grades in the current non-held canonical accepted V9 publication at claim time count) signs a Sign-In-With-Ethereum message (EIP-4361) with `personal_sign` for domain `pharos.watch` and URI `https://pharos.watch/api/`, valid for 5 minutes, then posts `{ "message", "signature" }`. Responses: `201` returns the plaintext token once with `Cache-Control: no-store`; `400` covers an unreadable body or a message that fails domain, URI, freshness, or signature validation; `403` covers claims being closed, an ineligible wallet, and a wallet whose earlier key an operator deactivated; `409` means the wallet already claimed, because re-signing never rotates a key and a lost key is rotated by an operator through the feedback form; `429` means the per-IP claim limit was exceeded; `503` means the rate-limit binding or the key pepper is unavailable, or the canonical accepted Safety Score publication is missing, unavailable, or held. C/D/F/NR and missing coin grades do not count toward eligibility. Receipt-time USD values are retained, and later grade changes do not alter already-issued keys. Issued keys are `tier="donor"`, exactly `10` requests per minute, with no expiry, and they skip the isolate fast-cache auth path so that ceiling stays global rather than per isolate. The claim stores only the wallet address, the key prefix, and the claim time in `api_key_donor_claims`, alongside the `api_keys` row; signatures, tokens, and addresses are never logged. Claims are switched by `DONOR_KEY_CLAIMS_OPEN` in `shared/lib/public-api-contract.ts`, enabled for this release. Apply migration `0238_api_key_donor_claims.sql` before deploying the enabled Worker and matching Pages build, then verify live claim, quota, replay, and access-gate behavior before external announcement; `docs/api-page.md` owns the acceptance sequence. The Cloudflare rate-limit binding `DONOR_KEY_CLAIM_RATE_LIMIT` (`10` per `60` seconds per client IP) is checked before the request body is read.
+`POST /api/donor-key-claims` issues the supporter key and is exempt from `X-API-Key`. An externally-owned wallet signs an EIP-4361 message with `personal_sign` for domain `pharos.watch` and URI `https://pharos.watch/api/`, valid for 5 minutes, then posts `{ "message", "signature" }`. Eligibility requires at least `$10` in receipt-date USD from qualifying-stablecoin donations whose current grades are A+, A, A-, B+, B, or B-. Qualifying stablecoins are the reviewed `(chain, token contract)` pairs in `DONOR_KEY_QUALIFYING_STABLECOINS` (`shared/lib/funding/donor-eligibility.ts`, 15 coins; the source file wins): each coin counts only on its reviewed contract deployments, so bridged or same-ticker tokens never qualify, and EURC is valued at the ECB EUR/USD reference rate for the receipt date, never 1:1. The threshold is inclusive with floating-point tolerance, addresses are matched case-insensitively, founder rows count, and pool payouts do not. The donor list is updated every Sunday. Smart-contract wallets, Giveth streams, and exchange withdrawals cannot claim.
 
-The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time. Self-serve issuance uses the same storage model and returns the plaintext token only once after verification.
+All claim responses use `Cache-Control: no-store`. `201` returns the plaintext token once, with tier `donor`, `10` requests per minute, and no expiry. Every failure returns `{ "error": "message", "reason": "code" }`; codes are defined once by `DONOR_KEY_CLAIM_FAILURE_REASONS` in `shared/types/api-keys.ts`:
 
-Revoking a self-serve key also writes a durable tombstone into the D1 table `api_key_self_serve_revocations` (`worker/src/api/api-key-requests/admin.ts`), and every self-serve authentication consults it (`worker/src/lib/api-key-auth.ts`). The tombstone is keyed on the key prefix, not on the `api_keys` row id, so it survives deactivating, rotating, or deleting that row: a revoked prefix stays refused until the tombstone itself is removed, and re-issuing a key against the same prefix does not lift the block. Because that check is only answerable from D1, self-serve keys are never served from the isolate-local verified-key cache and fail closed whenever the D1 lookup is unavailable.
+| Status | Reasons |
+| --- | --- |
+| 400 | `body_invalid`, `siwe_invalid`, `signature_invalid` |
+| 413 | `body_invalid` (body exceeds 4096 bytes) |
+| 403 | `claims_closed`, `claim_revoked`, `ineligible` |
+| 409 | `claim_exists`, `claim_orphaned` |
+| 429 | `rate_limited` (`Retry-After: 60`) |
+| 503 | `rate_limiter_missing`, `rate_limit_unavailable`, `donations_ledger_invalid`, `safety_scores_unavailable`, `grade_unavailable`, `pepper_missing`, `issue_failed` |
+
+The `403 ineligible` body additionally returns `ledgerUpdatedAt` (Unix seconds), `qualifyingUsd` (number), and `countedAssets` (string array of counted stablecoin labels). A missing coin grade is unavailable, not a zero observation: if counted donations plus donations with unavailable grades could reach the threshold, the route returns `503 grade_unavailable` with `Retry-After: 60` instead of `403`. Published grades outside A/B do not count. Missing or held canonical accepted V9 publications return `503 safety_scores_unavailable`.
+
+One key is issued per wallet, atomically with its `api_key_donor_claims` row. Existing claim lookup precedes grading; later grade changes do not alter already-issued keys. Re-signing never rotates a key. For a lost key or record removal, message [@TokenBrice on Telegram](https://t.me/TokenBrice), with [@PharosWatch on X](https://x.com/PharosWatch) as secondary. An operator verifies the donating wallet before rotating a lost key. Claim outcome logs contain codes only, not signed messages, signatures, or wallet addresses.
+
+Claims are enabled by `DONOR_KEY_CLAIMS_OPEN` in `shared/lib/public-api-contract.ts`. The `DONOR_KEY_CLAIM_RATE_LIMIT` binding admits `10` attempts per `60` seconds per client IP before reading the body. Donor keys always use D1-backed auth and quotas, not the isolate fast-cache path. Migration `0238_api_key_donor_claims.sql` must precede deployment; `docs/api-page.md` owns the live claim, quota, replay, and access-gate acceptance sequence.
+
+The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
+
+Self-serve authentication also consults durable revocation tombstones in the D1 table `api_key_self_serve_revocations` (`worker/src/lib/api-key-auth.ts`). The tombstone is keyed on the key prefix, not on the `api_keys` row id, so it survives deactivating, rotating, or deleting that row: a revoked prefix stays refused until the tombstone itself is removed. The writer was the retired self-serve admin route, so no new tombstones are written, but existing ones keep blocking their prefixes while self-serve keys drain. Because that check is only answerable from D1, self-serve keys are never served from the isolate-local verified-key cache and fail closed whenever the D1 lookup is unavailable.
 
 For protected cacheable `GET` routes, the worker keeps a bounded isolate-local verified-key cache and a bounded isolate-local limiter. A recently verified standard key can use that local path for hot edge-cache hits, and can continue to read cached routes during a brief D1 auth/limiter outage. Donor, self-serve, unknown, stale-cache, or not-yet-verified keys still fail closed.
 
@@ -194,7 +207,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | reserve-fallback   | `public, s-maxage=300, max-age=60`                             | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                                                                                     |
 | no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `rpc-provider-trial`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`) |
 
-`POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints, the donor key claim, and Telegram Mini App endpoints explicitly return no-store responses so verification tokens, plaintext API keys, and per-chat alert state are never cacheable.
+`POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The donor key claim and Telegram Mini App endpoints explicitly return no-store responses so plaintext API keys and per-chat alert state are never cacheable.
 
 ---
 
@@ -223,7 +236,9 @@ Client best practices:
 
 ## Rate Limits
 
-Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/safety-grades`, `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; Telegram Mini App endpoints are authenticated with signed Telegram `initData`.
+Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/safety-grades`, `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; Telegram Mini App endpoints are authenticated with signed Telegram `initData`.
+
+Missing or invalid keys receive `401` with `Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.` Supporter claims have their own pre-body IP limiter; its `429` response includes `reason: "rate_limited"` and `Retry-After: 60`, separately from the issued key's global `10` requests per minute quota.
 
 ### Per-key limit
 
@@ -233,7 +248,7 @@ Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exem
 
 Per-key overrides are stored in `api_keys.rate_limit_per_minute`.
 
-Self-serve keys are issued with a fixed default of `30` requests per minute and a `60` day expiry. The request workflow has separate abuse limits: initial submissions are throttled by salted IP hash (`5/hour`) and private email hash (`3/day`), verification attempts are throttled by salted IP hash (`20/10 minutes`) and token hash (`5/10 minutes`), and successful issuance allows one self-serve key creation per salted IP hash per 24 hours.
+Existing self-serve keys (retired lane; see Public API Auth) keep their fixed default of `30` requests per minute and `60` day expiry until they drain; the request and verification abuse limiters were removed with the route.
 
 When the per-key limiter is exceeded, the API returns `429 Too Many Requests`:
 
@@ -285,7 +300,7 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints, `GET /api/backfill-dews`, and dry-run repair previews for `GET /api/backfill-dews?repair=...&dry-run=true`).
 - `HEAD` is not accepted as an implicit `GET`; known routes return `405` with the route's `Allow` methods.
-- `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`.
+- `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`.
 - `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
 - `GET` is accepted on `/api/api-keys/lifecycle-summary` for counts-only Triage credential monitoring.
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
@@ -937,26 +952,6 @@ Freshness threshold: 1800 s.
   "methodologyVersion": "6.30"
 }
 ```
-
-### `POST /api/api-key-requests`
-
-Starts the email-verified public API access flow.
-
-- **Registry key:** `api-key-requests`
-- **Path:** `/api/api-key-requests`
-- **Parameters:** See the website client contract; this route is intentionally excluded from the public OpenAPI integration surface.
-- **Success response schema:** Not published in `openapi.json`.
-- **Policy:** authentication exempt; bypass shared endpoint caching (`cacheBypass: true`).
-
-### `POST /api/api-key-requests/verify`
-
-Completes a public API key request with the emailed verification token.
-
-- **Registry key:** `api-key-request-verify`
-- **Path:** `/api/api-key-requests/verify`
-- **Parameters:** See the website client contract; this route is intentionally excluded from the public OpenAPI integration surface.
-- **Success response schema:** Not published in `openapi.json`.
-- **Policy:** authentication exempt; bypass shared endpoint caching (`cacheBypass: true`).
 
 ### `POST /api/donor-key-claims`
 

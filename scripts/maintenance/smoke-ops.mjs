@@ -299,7 +299,7 @@ export async function run() {
     scope === "full"
       ? Promise.all([
           fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers),
-          fetchJson(new URL("/api/api-key-requests-admin?limit=1", opsApiBase).toString(), headers),
+          fetchJson(new URL("/api/api-keys/audit-log?limit=1", opsApiBase).toString(), headers),
           fetchJson(new URL("/api/audit-depeg-history?dry-run=true&limit=1", opsApiBase).toString(), headers),
           fetchJsonWithRetry(
             blacklistBackfillUrl.toString(),
@@ -424,53 +424,53 @@ export async function run() {
   if (directOpsDetails.error) {
     throw directOpsDetails.error;
   }
-  const [history, apiKeyRequestsAdmin, audit, blacklistBackfill] = directOpsDetails.value;
+  const [history, apiKeyAuditLog, audit, blacklistBackfill] = directOpsDetails.value;
 
   assert(
-    apiKeyRequestsAdmin.response.status === 200,
-    `Expected ops API /api/api-key-requests-admin 200, got ${apiKeyRequestsAdmin.response.status}`,
+    apiKeyAuditLog.response.status === 200,
+    `Expected ops API /api/api-keys/audit-log 200, got ${apiKeyAuditLog.response.status}`,
   );
   assert(
-    apiKeyRequestsAdmin.body && Array.isArray(apiKeyRequestsAdmin.body.requests),
-    "Ops API /api/api-key-requests-admin missing requests array",
+    apiKeyAuditLog.body && Array.isArray(apiKeyAuditLog.body.entries),
+    "Ops API /api/api-keys/audit-log missing entries array",
   );
   console.log(
-    `[smoke-ops] OK ops API /api/api-key-requests-admin (${apiKeyRequestsAdmin.body.requests.length} row sample)`,
+    `[smoke-ops] OK ops API /api/api-keys/audit-log (${apiKeyAuditLog.body.entries.length} row sample)`,
   );
 
-  const proxiedAdminUrl = new URL("/api/admin/api-key-requests-admin?limit=1", opsUiOrigin).toString();
+  const proxiedAdminUrl = new URL("/api/admin/api-keys/audit-log?limit=1", opsUiOrigin).toString();
   const proxiedAdminAttempt = await fetchOpsUiProxyStatusWithRetry(proxiedAdminUrl, headers, {
     initialCookieHeader: proxiedAttempt.cookieHeader,
     onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
       console.warn(
-        `[smoke-ops] /api/admin/api-key-requests-admin returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy warmup`,
+        `[smoke-ops] /api/admin/api-keys/audit-log returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy warmup`,
       );
     },
   });
   const proxiedAdmin = proxiedAdminAttempt.proxiedStatus;
   if (shouldSkipOpsUiProxyAssertion(proxiedAdmin.response, proxiedAdminAttempt.cookieHeader)) {
     console.log(
-      "[smoke-ops] SKIP ops UI /api/admin/api-key-requests-admin (Pages proxy still unauthorized under CI Access flow; direct ops-api smoke already passed)",
+      "[smoke-ops] SKIP ops UI /api/admin/api-keys/audit-log (Pages proxy still unauthorized under CI Access flow; direct ops-api smoke already passed)",
     );
   } else {
     if (proxiedAdmin.response.status !== 200) {
       console.error(
-        `[smoke-ops] /api/admin/api-key-requests-admin returned ${proxiedAdmin.response.status}, body: ${proxiedAdmin.bodyText?.slice(0, 500)}`,
+        `[smoke-ops] /api/admin/api-keys/audit-log returned ${proxiedAdmin.response.status}, body: ${proxiedAdmin.bodyText?.slice(0, 500)}`,
       );
       console.error(`[smoke-ops] Response headers:`, Object.fromEntries(proxiedAdmin.response.headers.entries()));
     }
     assert(
       proxiedAdmin.response.status === 200,
-      `Expected ops UI /api/admin/api-key-requests-admin 200, got ${proxiedAdmin.response.status}`,
+      `Expected ops UI /api/admin/api-keys/audit-log 200, got ${proxiedAdmin.response.status}`,
     );
     assert(
-      proxiedAdmin.body && Array.isArray(proxiedAdmin.body.requests),
-      "Ops UI /api/admin/api-key-requests-admin missing requests array",
+      proxiedAdmin.body && Array.isArray(proxiedAdmin.body.entries),
+      "Ops UI /api/admin/api-keys/audit-log missing entries array",
     );
     console.log(
       proxiedAdminAttempt.retriedWithCookie
-        ? `[smoke-ops] OK ops UI /api/admin/api-key-requests-admin (${proxiedAdmin.body.requests.length} row sample) via Access session cookie`
-        : `[smoke-ops] OK ops UI /api/admin/api-key-requests-admin (${proxiedAdmin.body.requests.length} row sample)`,
+        ? `[smoke-ops] OK ops UI /api/admin/api-keys/audit-log (${proxiedAdmin.body.entries.length} row sample) via Access session cookie`
+        : `[smoke-ops] OK ops UI /api/admin/api-keys/audit-log (${proxiedAdmin.body.entries.length} row sample)`,
     );
   }
 

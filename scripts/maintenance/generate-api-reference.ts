@@ -46,8 +46,7 @@ const PUBLIC_OPERATION_ORDER = [
   "yieldRankings", "yieldAdapterManifest", "yieldHistory", "mintBurnFlows", "mintBurnEvents", "stressSignals",
 ] as const;
 const SUPPLEMENTAL_ENDPOINT_ORDER = [
-  "api-key-requests", "api-key-request-verify", "donor-key-claim", "feedback", "telegram-mini-app-session",
-  "telegram-mini-app-mutation", "telegram-webhook",
+  "donor-key-claim", "feedback", "telegram-mini-app-session", "telegram-mini-app-mutation", "telegram-webhook",
 ] as const;
 
 /** Hand-authored context, deliberately keyed by the stable OpenAPI operationId. */
@@ -94,8 +93,6 @@ export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
   stressSignals: "Returns the bounded stress-signal history used by early-warning surfaces.",
 };
 const SUPPLEMENTAL_NOTES: Readonly<Record<(typeof SUPPLEMENTAL_ENDPOINT_ORDER)[number], string>> = {
-  "api-key-requests": "Starts the email-verified public API access flow.",
-  "api-key-request-verify": "Completes a public API key request with the emailed verification token.",
   "donor-key-claim": "Issues one non-expiring supporter API key to a donor wallet that signs a Sign-In-With-Ethereum claim message.",
   feedback: "Accepts the bounded feedback form payload used by the website.",
   "telegram-mini-app-session": "Creates or refreshes a Telegram Mini App session after Telegram init-data validation.",

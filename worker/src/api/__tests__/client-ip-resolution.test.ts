@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { resolveClientIp } from "../api-key-requests/request";
 import { resolveFeedbackClientIp } from "../feedback/request";
 
 // Regression guard for audit Q-307: the rate-limit client IP must come ONLY from the
@@ -10,7 +9,6 @@ import { resolveFeedbackClientIp } from "../feedback/request";
 const make = (headers: Record<string, string>) => new Request("https://pharos.watch/", { headers });
 
 describe.each([
-  ["api-key-requests resolveClientIp", resolveClientIp],
   ["feedback resolveFeedbackClientIp", resolveFeedbackClientIp],
 ])("%s", (_name, resolve) => {
   it("uses CF-Connecting-IP when present", () => {

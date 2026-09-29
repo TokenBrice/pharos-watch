@@ -298,22 +298,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     requiredMarkers: ["AbortSignal.timeout", "drainResponseBody", "GITHUB_PAT", "X-GitHub-Api-Version"],
   },
   {
-    id: "resend-api-key-email",
-    family: "email-provider",
-    description: "Resend email delivery for self-serve API key verification.",
-    files: ["worker/src/api/api-key-requests/email.ts"],
-    tests: ["worker/src/api/__tests__/api-key-requests.test.ts"],
-    allowBareFetch: true,
-    directFetchJustification: "Low-volume user action path with provider-specific redaction and response parsing.",
-    resilience: {
-      transport: "direct-fetch",
-      timeout: "Uses RESEND_SEND_TIMEOUT_MS with AbortSignal.timeout().",
-      body: "Reads bounded redacted failure text and parses success JSON.",
-      circuitSources: [],
-    },
-    requiredMarkers: ["RESEND_SEND_TIMEOUT_MS", "AbortSignal.timeout", "redactProviderBody", "response.json"],
-  },
-  {
     id: "live-reserve-adapter-requests",
     family: "live-reserves",
     description: "Live reserve adapter HTTP helpers and per-coin breaker orchestration.",

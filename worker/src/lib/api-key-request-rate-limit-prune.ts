@@ -3,17 +3,15 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import type { MinimalD1Database } from "./minimal-d1";
 
 /**
- * The two self-serve bucket tables run byte-identical counter logic against
- * different column names. The table names are a closed set because SQLite
- * cannot bind identifiers; `worker/src/api/api-key-requests/rate-limit.ts`
- * validates every limiter target against it, and the daily housekeeping pass
- * prunes exactly these tables.
+ * Retain housekeeping for the retired self-serve request tables until their
+ * separate destructive D1 cleanup rollout. Table names remain a closed set
+ * because SQLite cannot bind identifiers.
  */
-export type ApiKeyRequestBucketedLimitTable =
+type ApiKeyRequestBucketedLimitTable =
   | "api_key_request_rate_limit_v2"
   | "api_key_self_serve_issuance_limits";
 
-export const API_KEY_REQUEST_BUCKETED_LIMIT_TABLE_NAMES = new Set<ApiKeyRequestBucketedLimitTable>([
+const API_KEY_REQUEST_BUCKETED_LIMIT_TABLE_NAMES = new Set<ApiKeyRequestBucketedLimitTable>([
   "api_key_request_rate_limit_v2",
   "api_key_self_serve_issuance_limits",
 ]);

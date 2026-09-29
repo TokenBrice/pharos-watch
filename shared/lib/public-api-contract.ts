@@ -1,23 +1,9 @@
-import {
-  SELF_SERVE_API_KEY_EXPIRY_SEC,
-  SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
-} from "./ops-limits";
-import { API_ORIGIN } from "./runtime-origins";
-import { DAY_SECONDS } from "./time-constants";
+import { API_ORIGIN, SITE_ORIGIN } from "./runtime-origins";
 
 export const PUBLIC_API_HOST = API_ORIGIN;
 export const PUBLIC_API_KEY_HEADER = "X-API-Key";
 export const PUBLIC_API_RETRY_GUIDANCE =
   "Respect Retry-After on 429 responses and add jitter to polling intervals.";
-
-/**
- * Public self-serve key issuance switch. `false` closes `POST /api/api-key-requests`
- * and replaces the `/api/` request form with a closed notice; verification of
- * already-sent links keeps working so in-flight claims can finish. Existing
- * self-serve keys drain through their 60-day expiry. Keys are operator-issued
- * until the paid tier ships.
- */
-export const SELF_SERVE_ISSUANCE_OPEN: boolean = false;
 
 /**
  * Donor (supporter) key claim switch. `false` makes `POST /api/donor-key-claims`
@@ -28,17 +14,44 @@ export const SELF_SERVE_ISSUANCE_OPEN: boolean = false;
  */
 export const DONOR_KEY_CLAIMS_OPEN: boolean = true;
 
-export const SELF_SERVE_API_KEY_RATE_LIMIT_RPM = SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE;
-export const SELF_SERVE_API_KEY_EXPIRY_DAYS = Math.round(SELF_SERVE_API_KEY_EXPIRY_SEC / DAY_SECONDS);
-
 export const PUBLIC_API_ARTIFACTS = {
   openApi: "/openapi.json",
   postmanCollection: "/postman/pharos-api.postman_collection.json",
   postmanEnvironment: "/postman/pharos-api.postman_environment.json",
 } as const;
 
-export const SELF_SERVE_API_KEY_SUMMARY =
-  `email-verified, limited to ${SELF_SERVE_API_KEY_RATE_LIMIT_RPM} requests per minute, and expires after ${SELF_SERVE_API_KEY_EXPIRY_DAYS} days`;
+/** Section anchors on `/api/`; inbound links and Worker messages target them. */
+export const API_PAGE_ANCHORS = {
+  supporterKey: "supporter-key",
+  partnerAccess: "partner-access",
+  claim: "claim",
+  developerResources: "developer-resources",
+} as const;
+
+export const API_PARTNER_ACCESS_URL = `${SITE_ORIGIN}/api/#${API_PAGE_ANCHORS.partnerAccess}`;
+
+/**
+ * Private channel for partner-key requests, lost supporter-key rotation, and
+ * key-record removal. Never the feedback modal: it files public GitHub issues.
+ */
+export const API_ACCESS_TELEGRAM_HANDLE = "TokenBrice";
+export const API_ACCESS_TELEGRAM_URL = `https://t.me/${API_ACCESS_TELEGRAM_HANDLE}`;
+export const API_ACCESS_X_HANDLE = "PharosWatch";
+export const API_ACCESS_X_URL = `https://x.com/${API_ACCESS_X_HANDLE}`;
+
+/** Human reply window promised on the partner key offer; not a contractual SLA. */
+export const PARTNER_KEY_REPLY_BUSINESS_DAYS = 2;
+
+/** Copyable request text for the partner-key DM; fields mirror the ops key-create form. */
+export const PARTNER_KEY_REQUEST_TEMPLATE = [
+  "Pharos partner key request",
+  "Contact (Telegram, X or email):",
+  "Project / organization + URL:",
+  "What you're building and which endpoints:",
+  "Expected peak requests per minute (or polling cadence):",
+  "Free to end users? (yes/no):",
+  "Needed by (optional):",
+].join("\n");
 
 export function buildPublicApiCurlCommand({
   tokenReference = "$PHAROS_API_KEY",

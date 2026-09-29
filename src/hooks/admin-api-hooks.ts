@@ -1,16 +1,11 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import type {
-  ApiKeyAuditLogResponse,
-  ApiKeySelfServeRequestAdminListResponse,
-  StatusHistoryResponse,
-} from "@shared/types";
+import type { ApiKeyAuditLogResponse, StatusHistoryResponse } from "@shared/types";
 import {
   ADMIN_API_QUERY_DESCRIPTORS,
   type AdminApiQueryDescriptor,
   type ApiKeyAuditLogTarget,
-  type ApiKeyRequestsQueryOptions,
   type StatusHistoryWindow,
 } from "@/lib/admin-api-query-descriptors";
 import { useRegisteredAdminQuery } from "./use-admin-polling-query";
@@ -37,12 +32,6 @@ export const useAdminActionLog = bindRegisteredAdminQuery(ADMIN_API_QUERY_DESCRI
 
 export function useApiKeyAuditLog(target: ApiKeyAuditLogTarget): UseQueryResult<ApiKeyAuditLogResponse, Error> {
   return useRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.apiKeyAuditLog(target));
-}
-
-export function useApiKeyRequests(
-  options: ApiKeyRequestsQueryOptions = {},
-): UseQueryResult<ApiKeySelfServeRequestAdminListResponse, Error> {
-  return useRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.apiKeyRequests(options));
 }
 
 export const useApiKeys = bindRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.apiKeys);

@@ -31,8 +31,8 @@ const PUBLIC_ANCHORS = [
   "get-apitelegram-pulse", "get-apistability-index", "get-apiog", "get-apireport-cardsv9", "get-apisafety-grades",
   "get-apiredemption-backstops", "get-apisafety-score-history", "get-apisafety-score-history-v2",
   "get-apiyield-rankings", "get-apiyield-adapter-manifest", "get-apiyield-history", "get-apimint-burn-flows",
-  "get-apimint-burn-events", "get-apistress-signals", "post-apiapi-key-requests",
-  "post-apiapi-key-requestsverify", "post-apidonor-key-claims", "post-apifeedback", "post-apitelegram-mini-appsession",
+  "get-apimint-burn-events", "get-apistress-signals", "post-apidonor-key-claims", "post-apifeedback",
+  "post-apitelegram-mini-appsession",
   "post-apitelegram-mini-appmutate", "post-apitelegram-webhook", "pages-function-endpoints",
   "get-selector-snapshotsid", "post-pharoswatchbot-adoption", "post-selector-snapshot",
 ] as const;

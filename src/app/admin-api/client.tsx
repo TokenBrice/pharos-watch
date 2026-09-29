@@ -2,7 +2,6 @@
 
 import { OpsShell } from "@/components/ops-shell";
 import { ApiKeysPanel } from "@/components/status/api-keys-panel";
-import { ApiKeyRequestsPanel } from "@/components/status/api-key-requests-panel";
 
 export default function AdminApiClient() {
   return (
@@ -13,12 +12,10 @@ export default function AdminApiClient() {
             API Management
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            API key lifecycle controls and self-serve request review. Credential material remains isolated from the
-            operational status workspaces.
+            API key lifecycle controls. Credential material remains isolated from the operational status workspaces.
           </p>
         </div>
         <h2 className="sr-only">API credential operations</h2>
-        <ApiKeyRequestsPanel />
         <ApiKeysPanel />
       </section>
     </OpsShell>

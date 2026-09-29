@@ -292,7 +292,7 @@ Pages proxy code and smoke tooling continue emitting only the current secret thr
 
 ### 9. Maintain the WAF rate-limiting rule
 
-The deployed account posture is owned by `scripts/ci/cloudflare-account-state-manifest.json`, not by the older policy proposals in feature runbooks. The zone's free plan has one rate-limiting slot. It is occupied by `api-rate-limit-ip`, deliberately **disabled**, with no rule-order constraints. It therefore provides no active edge throttling; keyed API limits, self-serve issuance fencing, Telegram pre-auth bindings, webhook deduplication, and Mini App quotas are enforced in the Worker/application layer.
+The deployed account posture is owned by `scripts/ci/cloudflare-account-state-manifest.json`, not by the older policy proposals in feature runbooks. The zone's free plan has one rate-limiting slot. It is occupied by `api-rate-limit-ip`, deliberately **disabled**, with no rule-order constraints. It therefore provides no active edge throttling; keyed API limits, Telegram pre-auth bindings, webhook deduplication, and Mini App quotas are enforced in the Worker/application layer.
 
 The disabled rule is retained with this exact configuration so account drift remains visible:
 

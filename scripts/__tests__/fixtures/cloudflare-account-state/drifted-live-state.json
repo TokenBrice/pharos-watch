@@ -54,18 +54,6 @@
       }
     },
     {
-      "description": "api-self-serve-key-intake-limit",
-      "enabled": true,
-      "action": "block",
-      "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and (http.request.uri.path eq \"/api/api-key-requests\" or http.request.uri.path eq \"/api/api-key-requests/verify\") and not cf.bot_management.verified_bot)",
-      "ratelimit": {
-        "characteristics": ["ip.src"],
-        "requestsPerPeriod": 20,
-        "period": 60,
-        "mitigationTimeout": 600
-      }
-    },
-    {
       "description": "telegram-webhook-ingress-limit",
       "enabled": true,
       "action": "block",

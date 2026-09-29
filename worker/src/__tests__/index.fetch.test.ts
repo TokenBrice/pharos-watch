@@ -12,7 +12,7 @@ import {
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import { DONOR_KEY_CLAIMS_OPEN, SELF_SERVE_ISSUANCE_OPEN } from "@shared/lib/public-api-contract";
+import { DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
 import {
   observeHttpResponse,
   type HttpResponseObservation,
@@ -204,7 +204,7 @@ describe("worker.fetch", () => {
         headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
         bodyKind: "json",
         canonicalBody: {
-          error: "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for keyed access.",
+          error: "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.",
         },
       },
     },
@@ -223,7 +223,7 @@ describe("worker.fetch", () => {
         headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
         bodyKind: "json",
         canonicalBody: {
-          error: "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for keyed access.",
+          error: "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.",
         },
       },
     },
@@ -301,31 +301,6 @@ describe("worker.fetch", () => {
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
     expect(res.headers.get("Access-Control-Allow-Headers")).toContain("X-API-Key");
     expect(res.headers.get("Access-Control-Allow-Headers")).toContain("X-Pharos-Admin");
-    expect(cacheMatch).not.toHaveBeenCalled();
-    expect(cachePut).not.toHaveBeenCalled();
-  });
-
-  it("returns CORS preflight headers for the public self-serve request endpoint", async () => {
-    const env = makeEnv();
-    const { ctx } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/api-key-requests", {
-        method: "OPTIONS",
-        headers: {
-          Origin: "https://pharos.watch",
-          "Access-Control-Request-Method": "POST",
-          "Access-Control-Request-Headers": "content-type",
-        },
-      }),
-      env,
-      ctx,
-    );
-
-    expect(res.status).toBe(204);
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
-    expect(res.headers.get("Access-Control-Allow-Methods")).toContain("POST");
-    expect(res.headers.get("Access-Control-Allow-Headers")).toContain("Content-Type");
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
   });
@@ -539,7 +514,7 @@ describe("worker.fetch", () => {
     const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
-      new Request("https://site-api.pharos.watch/api/api-key-requests-admin?limit=1", {
+      new Request("https://site-api.pharos.watch/api/api-keys?limit=1", {
         method: "GET",
         headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
       }),
@@ -575,19 +550,19 @@ describe("worker.fetch", () => {
     const { ctx } = makeExecutionContext();
 
     const listRes = await worker.fetch(
-      new Request("https://api.pharos.watch/api/api-key-requests-admin", { method: "GET" }),
+      new Request("https://api.pharos.watch/api/api-keys", { method: "GET" }),
       env,
       ctx,
     );
-    const rejectRes = await worker.fetch(
-      new Request("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject", {
+    const deactivateRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-keys/7/deactivate", {
         method: "POST",
       }),
       env,
       ctx,
     );
-    const releaseRes = await worker.fetch(
-      new Request("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/release-claim", {
+    const rotateRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/api-keys/7/rotate", {
         method: "POST",
       }),
       env,
@@ -595,8 +570,8 @@ describe("worker.fetch", () => {
     );
 
     expect(listRes.status).toBe(404);
-    expect(rejectRes.status).toBe(404);
-    expect(releaseRes.status).toBe(404);
+    expect(deactivateRes.status).toBe(404);
+    expect(rotateRes.status).toBe(404);
     expect(env.DB.getHistory()).toEqual([]);
   });
 
@@ -606,11 +581,6 @@ describe("worker.fetch", () => {
     });
     const { ctx } = makeExecutionContext();
 
-    const badRequestIdRes = await worker.fetch(
-      new Request("https://api.pharos.watch/api/api-key-requests-admin/bad!/reject", { method: "POST" }),
-      env,
-      ctx,
-    );
     const badApiKeyIdRes = await worker.fetch(
       new Request("https://api.pharos.watch/api/api-keys/0/rotate", {
         method: "POST",
@@ -620,7 +590,6 @@ describe("worker.fetch", () => {
       ctx,
     );
 
-    expect(badRequestIdRes.status).toBe(404);
     expect(badApiKeyIdRes.status).toBe(404);
     expect(env.DB.getHistory()).toEqual([]);
   });
@@ -1026,31 +995,6 @@ describe("worker.fetch", () => {
     await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
   });
 
-  it("does not require a key on self-serve API key request submissions", async () => {
-    const env = makeEnv();
-    const { ctx, waits } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/api-key-requests", {
-        method: "POST",
-        body: "not-json",
-      }),
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    // The public-API key gate never runs (no 401). While issuance is closed the
-    // handler answers 403 before the body is parsed.
-    if (SELF_SERVE_ISSUANCE_OPEN) {
-      expect(res.status).toBe(400);
-      await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
-    } else {
-      expect(res.status).toBe(403);
-      await expect(res.json()).resolves.toMatchObject({ error: expect.stringContaining("issuance is closed") });
-    }
-  });
-
   it("does not require a key on supporter key claims", async () => {
     const env = makeEnv();
     const { ctx, waits } = makeExecutionContext();
@@ -1076,21 +1020,4 @@ describe("worker.fetch", () => {
     }
   });
 
-  it("does not require a key on self-serve API key verification", async () => {
-    const env = makeEnv();
-    const { ctx, waits } = makeExecutionContext();
-
-    const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/api-key-requests/verify", {
-        method: "POST",
-        body: "not-json",
-      }),
-      env,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
-  });
 });

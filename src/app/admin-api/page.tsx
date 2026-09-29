@@ -4,7 +4,7 @@ import AdminApiClient from "./client";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "API Management",
-  description: "Access-protected API key and self-serve request management for Pharos operators.",
+  description: "Access-protected API key management for Pharos operators.",
   canonical: "/admin-api/",
   robots: { index: false, follow: false },
 });

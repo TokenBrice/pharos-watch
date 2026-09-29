@@ -47,9 +47,6 @@ export const SENSITIVE_COPY_ROOTS: readonly string[] = [
   "src/app/funding",
   "src/app/pharoswatchbot",
   "src/components/funding",
-  "src/components/api-key-request-fields.tsx",
-  "src/components/api-key-request-form.tsx",
-  "src/components/api-key-request-reveal.tsx",
 ];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".css"]);
 

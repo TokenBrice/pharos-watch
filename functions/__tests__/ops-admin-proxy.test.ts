@@ -324,29 +324,29 @@ describe("ops admin proxy", () => {
     warnSpy.mockRestore();
   });
 
-  it("proxies the self-serve request admin list route", async () => {
-    const fetchSpy = opsApi.json("/api/api-key-requests-admin?limit=1", { requests: [] });
+  it("proxies a nested admin list route with its query string", async () => {
+    const fetchSpy = opsApi.json("/api/api-keys/audit-log?limit=1", { entries: [] });
 
     const response = await onRequest(
-      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin?limit=1")),
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/audit-log?limit=1")),
     );
 
     expect(response.status).toBe(200);
     expect(fetchSpy.getHistory()[0]).toMatchObject({
-      url: "https://ops-api.pharos.watch/api/api-key-requests-admin?limit=1",
+      url: "https://ops-api.pharos.watch/api/api-keys/audit-log?limit=1",
       method: "GET",
     });
   });
 
-  it("proxies self-serve reject actions with admin and execution metadata headers", async () => {
-    const fetchSpy = opsApi.json("/api/api-key-requests-admin/akr_abc12345/reject", { status: "rejected" }, 200, {
+  it("proxies dynamic admin mutations with admin and execution metadata headers", async () => {
+    const fetchSpy = opsApi.json("/api/api-keys/7/rotate", { ok: true }, 200, {
       "Idempotency-Key": "idem-123",
       "X-Execution-Certainty": "unknown",
       "X-Idempotent-Replay": "true",
     });
 
     const response = await onRequest(
-      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/reject", {
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/7/rotate", {
         method: "POST",
         headers: {
           Origin: "https://ops.pharos.watch",
@@ -361,23 +361,23 @@ describe("ops admin proxy", () => {
     expect(response.headers.get("X-Execution-Certainty")).toBe("unknown");
     expect(response.headers.get("X-Idempotent-Replay")).toBe("true");
     expect(fetchSpy.getHistory()[0]).toMatchObject({
-      url: "https://ops-api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject",
+      url: "https://ops-api.pharos.watch/api/api-keys/7/rotate",
       method: "POST",
     });
     expect(fetchSpy.getHistory()[0]?.headers["idempotency-key"]).toBe("idem-123");
     expect(fetchSpy.getHistory()[0]?.headers["x-pharos-admin"]).toBe("1");
   });
 
-  it("proxies self-serve release-claim actions and leaves missing admin headers to the Worker", async () => {
+  it("proxies dynamic admin mutations and leaves missing admin headers to the Worker", async () => {
     const fetchSpy = opsApi.json(
-      "/api/api-key-requests-admin/akr_abc12345/release-claim",
+      "/api/api-keys/7/deactivate",
       { error: "Forbidden" },
       403,
     );
 
     const response = await onRequest(
       adminContext(makeAuthedRequest(
-        "https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/release-claim",
+        "https://ops.pharos.watch/api/admin/api-keys/7/deactivate",
         {
           method: "POST",
           headers: { Origin: "https://ops.pharos.watch" },
@@ -387,7 +387,7 @@ describe("ops admin proxy", () => {
 
     expect(response.status).toBe(403);
     expect(fetchSpy.getHistory()[0]).toMatchObject({
-      url: "https://ops-api.pharos.watch/api/api-key-requests-admin/akr_abc12345/release-claim",
+      url: "https://ops-api.pharos.watch/api/api-keys/7/deactivate",
       method: "POST",
     });
     expect(fetchSpy.getHistory()[0]?.headers["x-pharos-admin"]).toBeUndefined();

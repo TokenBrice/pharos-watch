@@ -211,7 +211,7 @@ describe("serve-static-export", () => {
 
   it.each([
     { requestPath: "/api/peg-summary?range=7d", adminHeader: null },
-    { requestPath: "/api/api-key-requests-admin?limit=1", adminHeader: "1" },
+    { requestPath: "/api/api-keys/audit-log?limit=1", adminHeader: "1" },
   ])("proxies nested $requestPath with its admin header", async ({ requestPath, adminHeader }) => {
     const upstreamBaseUrl = await listen(createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -258,7 +258,7 @@ describe("serve-static-export", () => {
     }
   });
 
-  it("proxies POST bodies and headers for self-serve API endpoints", async () => {
+  it("proxies POST bodies and headers for public write endpoints", async () => {
     const upstream = createServer((req, res) => {
       let body = "";
       req.setEncoding("utf8");
@@ -284,28 +284,28 @@ describe("serve-static-export", () => {
 
     const baseUrl = await startExport(await makeRoot(), { apiBaseUrl: upstreamBaseUrl });
 
-    const requestResponse = await fetch(`${baseUrl}/api/api-key-requests`, {
+    const claimResponse = await fetch(`${baseUrl}/api/donor-key-claims`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{not-json",
     });
-    const verifyResponse = await fetch(`${baseUrl}/api/api-key-requests/verify`, {
+    const feedbackResponse = await fetch(`${baseUrl}/api/feedback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{not-json",
     });
 
-    expect(requestResponse.status).toBe(400);
-    await expect(requestResponse.json()).resolves.toEqual({
+    expect(claimResponse.status).toBe(400);
+    await expect(claimResponse.json()).resolves.toEqual({
       method: "POST",
-      url: "/api/api-key-requests",
+      url: "/api/donor-key-claims",
       contentType: "application/json",
       body: "{not-json",
     });
-    expect(verifyResponse.status).toBe(400);
-    await expect(verifyResponse.json()).resolves.toEqual({
+    expect(feedbackResponse.status).toBe(400);
+    await expect(feedbackResponse.json()).resolves.toEqual({
       method: "POST",
-      url: "/api/api-key-requests/verify",
+      url: "/api/feedback",
       contentType: "application/json",
       body: "{not-json",
     });

@@ -112,8 +112,6 @@ describe("api endpoint registry", () => {
     expect(isCacheBypassPath("/api/status")).toBe(true);
     expect(isCacheBypassPath("/api/backfill-dews")).toBe(true);
     expect(isCacheBypassPath("/api/feedback")).toBe(true);
-    expect(isCacheBypassPath("/api/api-key-requests")).toBe(true);
-    expect(isCacheBypassPath("/api/api-key-requests/verify")).toBe(true);
     expect(isCacheBypassPath("/api/telegram-mini-app/session")).toBe(true);
     expect(isCacheBypassPath("/api/telegram-mini-app/mutate")).toBe(true);
     expect(isCacheBypassPath("/api/stablecoins")).toBe(false);
@@ -127,25 +125,12 @@ describe("api endpoint registry", () => {
       apiKeyId: 7,
       methods: ["POST"],
     });
-    expect(matchDynamicAdminEndpoint("/api/api-key-requests-admin/akr_abc12345/reject")).toEqual({
-      key: "api-key-request-reject",
-      path: "/api/api-key-requests-admin/akr_abc12345/reject",
-      requestId: "akr_abc12345",
-      methods: ["POST"],
-    });
-    expect(matchDynamicAdminEndpoint("/api/api-key-requests-admin/akr_abc12345/release-claim")).toEqual({
-      key: "api-key-request-release-claim",
-      path: "/api/api-key-requests-admin/akr_abc12345/release-claim",
-      requestId: "akr_abc12345",
-      methods: ["POST"],
-    });
     expect(matchDynamicAdminEndpoint("/api/api-keys/0/update")).toBeNull();
     expect(matchDynamicAdminEndpoint("/api/api-keys/9007199254740992/update")).toBeNull();
     expect(isAdminPath("/api/status")).toBe(true);
     expect(isAdminPath("/api/api-keys")).toBe(true);
     expect(isAdminPath("/api/request-source-stats")).toBe(true);
-    expect(isAdminPath("/api/api-key-requests-admin")).toBe(true);
-    expect(isAdminPath("/api/api-key-requests-admin/akr_abc12345/reject")).toBe(true);
+    expect(isAdminPath("/api/api-keys/7/rotate")).toBe(true);
     expect(isAdminPath("/api/api-keys/0/update")).toBe(false);
     expect(isAdminPath("/api/stablecoins")).toBe(false);
   });
@@ -156,16 +141,14 @@ describe("api endpoint registry", () => {
     expect(isAdminLikePath("/api/api-keys")).toBe(true);
     expect(isAdminLikePath("/api/api-keys/0/update")).toBe(true);
     expect(isAdminLikePath("/api/api-keys/not-a-number/rotate")).toBe(true);
-    expect(isAdminLikePath("/api/api-key-requests-admin")).toBe(true);
-    expect(isAdminLikePath("/api/api-key-requests-admin/bad!/reject")).toBe(true);
-    expect(isAdminLikePath("/api/api-key-requests")).toBe(false);
-    expect(isAdminLikePath("/api/api-key-requests/verify")).toBe(false);
+    expect(isAdminLikePath("/api/api-keys/bad!/rotate")).toBe(true);
+    expect(isAdminLikePath("/api/donor-key-claims")).toBe(false);
     expect(isAdminLikePath("/api/stablecoins")).toBe(false);
-    expect(isAdminLikePath("/api/api-key-requests-administer")).toBe(false);
+    expect(isAdminLikePath("/api/api-keys-administer")).toBe(false);
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(11);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(9);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",
@@ -204,11 +187,6 @@ describe("api endpoint registry", () => {
       methods: ["POST"],
       adminRequired: true,
       routeDependencies: ["apiKeyHashPepper"],
-    });
-    expect(getDynamicEndpointDescriptorByKey("api-key-request-reject")).toMatchObject({
-      methods: ["POST"],
-      adminRequired: true,
-      routeDependencies: [],
       siteDataAccess: "denied",
     });
     expect(getPublicApiAccess("/api/stablecoin/usdt-tether")).toBe("protected");
@@ -227,11 +205,8 @@ describe("api endpoint registry", () => {
     ["/api/yield-rankings?projection=summary", "GET"],
     ["/api/stablecoins", "GET"],
     ["/api/feedback", "POST"],
-    ["/api/api-key-requests", "POST"],
-    ["/api/api-key-requests/verify", "POST"],
     ["/api/telegram-mini-app/session", "POST"],
     ["/api/telegram-mini-app/mutate", "POST"],
-    ["/api/api-key-requests-admin", "GET"],
     ["/api/api-keys", "GET"],
     ["/api/api-keys", "POST"],
     ["/api/request-source-stats", "GET"],
@@ -240,7 +215,6 @@ describe("api endpoint registry", () => {
     ["/api/api-keys/1/update", "POST"],
     ["/api/api-keys/1/deactivate", "POST"],
     ["/api/api-keys/1/rotate", "POST"],
-    ["/api/api-key-requests-admin/akr_abc12345/reject", "POST"],
     ["/api/audit-depeg-history?dry-run=true", "GET"],
     ["/api/backfill-dews", "GET"],
     ["/api/backfill-dews?repair=refresh-current&dry-run=true", "GET"],
@@ -257,9 +231,8 @@ describe("api endpoint registry", () => {
     ["/api/backfill-dews?repair=refresh-current", "GET", ["POST"]],
     ["/api/audit-depeg-history", "GET", ["POST"]],
     ["/api/feedback", "GET", ["POST"]],
-    ["/api/api-key-requests", "GET", ["POST"]],
     ["/api/telegram-mini-app/session", "GET", ["POST"]],
-    ["/api/api-key-requests-admin", "POST", ["GET"]],
+    ["/api/credential-lifecycle-summary", "POST", ["GET"]],
     ["/api/api-keys/1/rotate", "GET", ["POST"]],
     ["/api/unknown", "POST", ["GET"]],
     ["/api/stablecoins", "DELETE", ["GET", "POST"]],
@@ -273,8 +246,6 @@ describe("api endpoint registry", () => {
     expect(getPublicApiAccess("/api/health")).toBe("exempt");
     expect(getPublicApiAccess("/api/safety-grades")).toBe("exempt");
     expect(getPublicApiAccess("/api/report-cards/v9")).toBe("protected");
-    expect(getPublicApiAccess("/api/api-key-requests")).toBe("exempt");
-    expect(getPublicApiAccess("/api/api-key-requests/verify")).toBe("exempt");
     expect(getPublicApiAccess("/api/donor-key-claims")).toBe("exempt");
     expect(getPublicApiAccess("/api/telegram-mini-app/session")).toBe("exempt");
     expect(getPublicApiAccess("/api/telegram-mini-app/mutate")).toBe("exempt");
@@ -292,11 +263,9 @@ describe("api endpoint registry", () => {
     expect(getSiteDataAccess("/api/public-status-history")).toBe("allowed");
     expect(getSiteDataAccess("/api/events")).toBe("allowed");
     expect(getSiteDataAccess("/api/telegram-pulse")).toBe("allowed");
-    expect(getSiteDataAccess("/api/api-key-requests")).toBe("denied");
-    expect(getSiteDataAccess("/api/api-key-requests/verify")).toBe("denied");
     expect(getSiteDataAccess("/api/telegram-mini-app/session")).toBe("denied");
     expect(getSiteDataAccess("/api/telegram-mini-app/mutate")).toBe("denied");
-    expect(getSiteDataAccess("/api/api-key-requests-admin")).toBe("denied");
+    expect(getSiteDataAccess("/api/api-keys")).toBe("denied");
     expect(getSiteDataAccess("/api/stablecoin-summary/usdt-tether")).toBe("allowed");
     expect(isSiteDataAllowedPath("/api/stablecoins")).toBe(true);
     expect(isSiteDataAllowedPath("/api/stablecoin/usdt-tether")).toBe(true);
