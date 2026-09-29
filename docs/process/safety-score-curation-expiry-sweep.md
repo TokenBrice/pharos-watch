@@ -216,8 +216,10 @@ decision when a task disappears or returns; append another decision. This ledger
 authored review provenance and is not replaced when the generated registry refreshes.
 
 The workflow commits only the compact projection at
-`.github/workflows/artifacts/safety-score-missing-data-registry-summary.json` through
-the existing automated-refresh PR helper. The full multi-megabyte registry stays in
+`.github/artifacts/safety-score-missing-data-registry-summary.json` through
+the existing automated-refresh PR helper. It lives outside `.github/workflows/`
+because the automation token has no `workflow` scope, and GitHub rejects token
+pushes that touch that directory. The full multi-megabyte registry stays in
 the workflow artifact. The compact snapshot is intentionally not `autoStage`: its
 input is a fresh production capture that a pre-commit hook cannot reproduce.
 
