@@ -21,11 +21,11 @@ import { cancelResponseBodyQuietly, readResponseSnippetWithTimeout } from "../li
 
 const DAY_SEC = 86_400;
 /** First poll allowed to dispatch: 1h45m ahead of the 08:05 UTC digest. */
-export const SAFETY_MAP_KICK_WINDOW_START_SEC = 6 * 3600 + 20 * 60;
+const SAFETY_MAP_KICK_WINDOW_START_SEC = 6 * 3600 + 20 * 60;
 /** No dispatch at or after this time: a render could no longer beat the digest. */
-export const SAFETY_MAP_KICK_WINDOW_END_SEC = 8 * 3600;
+const SAFETY_MAP_KICK_WINDOW_END_SEC = 8 * 3600;
 /** Minimum spacing between dispatches; a render takes about three minutes. */
-export const SAFETY_MAP_KICK_RETRY_AFTER_SEC = 15 * 60;
+const SAFETY_MAP_KICK_RETRY_AFTER_SEC = 15 * 60;
 /** Dispatches per UTC day; a persistent render failure needs an operator. */
 export const SAFETY_MAP_KICK_MAX_DISPATCHES = 3;
 /**
