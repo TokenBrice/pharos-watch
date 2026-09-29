@@ -20,7 +20,8 @@ const QUARANTINED_NIGHT_WATCH_OMISSIONS = [
   "cetes-etherfuse",
   "jusd-jusd-stable-token",
   "vndc-jade-labs",
-  "sofid-sofi",
+  // sofid-sofi left this list on 2026-09-29: CoinGecko market cap and the
+  // DefiLlama 430 row restored a positive supply path, so it is active again.
   "gramg-token-teknoloji",
   "grams-token-teknoloji",
 ] as const;

@@ -1,0 +1,23 @@
+{
+  "id": "thgold-theo",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "thGOLD product page (early access, no published contract)",
+        "url": "https://theo.xyz/thgold"
+      },
+      {
+        "label": "Theo thGOLD documentation (undergoing updates)",
+        "url": "https://docs.theo.xyz/products/thgold.md"
+      },
+      {
+        "label": "Theo thBILL blacklistability precedent (pausable institutional design)",
+        "url": "https://docs.theo.xyz/products/thbill.md"
+      }
+    ],
+    "evidence": "thGOLD has no published token contract as of 2026-09-29, so no holder-transfer surface exists to review; the verdict is possible rather than no because Theo's live products are centrally administered with gated access (thBILL pauses transfers through an emergency role under a timelock, and thUSD mints and redeems through a whitelist), making transfer or access controls likely once thGOLD deploys. The verdict will be re-reviewed at launch against the deployed contract.",
+    "reviewer": "Pharos risk review",
+    "reviewedAt": "2026-09-29"
+  }
+}

@@ -1,0 +1,240 @@
+{
+  "id": "thusd-theo",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Theo contract reference: thUSD (plain ERC-20, no pause, no transfer allowlist)",
+        "url": "https://docs.theo.xyz/developers/contract-reference/thusd.md"
+      },
+      {
+        "label": "Theo roles and access control (whitelist does not apply to transfers)",
+        "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
+      },
+      {
+        "label": "Blockscout verified ThUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xCD04F57464d25F257089A286AAb47DF096d300Ad"
+      }
+    ],
+    "evidence": "The verified ThUSD implementation is a plain ERC-20 with permit and burn: transfers, approvals, and balances follow the standard with no hooks, no fees, no pause, and no transfer allowlist, and TheoWhitelist gates only minting and redemption, so no current on-chain path freezes holder transfers. Freeze exposure is possible rather than absent because the token is a UUPS proxy whose owner, the two-day timelock behind Theo's 4-of-6 Safe, can upgrade the implementation to introduce transfer controls after the delay. The Guardian's emergency pause reaches mint, redemption, and sthUSD operations only.",
+    "reviewer": "Pharos risk review",
+    "reviewedAt": "2026-09-29"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "thUSD is Ethereum-native through a plain ERC-20 with a single minter (ThUSDMinter) administered by the Theo two-day timelock, and reaches Stable and Arbitrum through LayerZero v2 OFTs at shared address 0x9aa9aa0530a6af70ee7bc47cf1240100f514b065, with the Ethereum adapter escrowing 50,106,870.73 thUSD (verified 2026-09-29) against representations minted on those chains. Documented lanes use a 3-required plus 1-of-2-optional DVN set (Deutsche Telekom, Horizen, Canary required; P2P, Nethermind optional) with 15 block confirmations; BSC and Mantle OFTs are deployed at the same address but hold zero supply and have no documented live lane.",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "Pharos risk review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "Lock & Mint",
+          "Burn & Mint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Theo deployed addresses (thUSD OFT chains)",
+        "url": "https://docs.theo.xyz/developers/deployed-addresses.md"
+      },
+      {
+        "label": "Theo bridge security (DVN set, confirmations, ownership)",
+        "url": "https://docs.theo.xyz/security-and-transparency/bridge-security.md"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
+        "protocol": "Theo thUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment verified at Ethereum block 26083731: thUSD is an ERC-1967 proxy with verified ThUSD logic 0xcd04f57464d25f257089a286aab47df096d300ad, owner timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 (172800-second minimum delay), and a single minter, the ThUSDMinter contract 0x2d99ac801dc0edadd53f5688fef2317932e8696e. Cross-chain movement runs through the separate thUSD adapter 0x9aa9aa0530a6af70ee7bc47cf1240100f514b065, which held 50,106,870.73 thUSD of escrow on 2026-09-29, bit-for-bit the sum of the Stable (49,916,245.78) and Arbitrum (190,624.95) representations, so Ethereum totalSupply conserves the global supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-29",
+        "observedBlock": 26083731,
+        "sources": [
+          {
+            "label": "Theo contract reference: thUSD token",
+            "url": "https://docs.theo.xyz/developers/contract-reference/thusd.md"
+          },
+          {
+            "label": "Blockscout thUSD ERC1967Proxy",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa3fE5c7596024E6811E14F029937D5bd8Ae485b3"
+          }
+        ]
+      },
+      {
+        "id": "stable:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+        "destinationChain": "stable",
+        "contractAddress": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero v2 OFT representation of Ethereum-native thUSD at the documented shared address (endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b on Stable, read 2026-09-29). totalSupply() read 49,916,245.786914 thUSD (6 decimals) on 2026-09-29, backed by escrow in the Ethereum adapter. The owner() read returned 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02, which Theo documents as the chain-local timelock with an 18-hour delay for peers, send library, and rate limits.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-29",
+        "sourceChain": "ethereum",
+        "controllerChain": "stable",
+        "controllerAddress": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:stable:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065"
+        ],
+        "sources": [
+          {
+            "label": "Theo deployed addresses (thUSD OFT on Stable)",
+            "url": "https://docs.theo.xyz/developers/deployed-addresses.md"
+          },
+          {
+            "label": "Theo bridge security (Stable lane DVN configuration)",
+            "url": "https://docs.theo.xyz/security-and-transparency/bridge-security.md"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero v2 OFT representation of Ethereum-native thUSD at the documented shared address (endpoint() = 0x1a44076050125825900e736c501f859c50fe728c on Arbitrum, read 2026-09-29). totalSupply() read 190,624.946680 thUSD on 2026-09-29, backed by escrow in the Ethereum adapter. The owner() read returned 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02, documented as the chain-local timelock with an 18-hour delay.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-29",
+        "sourceChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:arbitrum:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065"
+        ],
+        "sources": [
+          {
+            "label": "Theo deployed addresses (thUSD OFT on Arbitrum)",
+            "url": "https://docs.theo.xyz/developers/deployed-addresses.md"
+          },
+          {
+            "label": "Theo bridge security (Arbitrum lane DVN configuration, eid 30110)",
+            "url": "https://docs.theo.xyz/security-and-transparency/bridge-security.md"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "thusd-oft-adapter-escrow",
+        "routeRefs": [
+          "stable:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+          "arbitrum:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065"
+        ],
+        "capabilities": [
+          "escrow",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+        "label": "thUSD Ethereum OFT adapter lockbox",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-29",
+        "observedBlock": 26083731,
+        "sources": [
+          {
+            "label": "Theo deployed addresses (thUSD Adapter on Ethereum)",
+            "url": "https://docs.theo.xyz/developers/deployed-addresses.md"
+          },
+          {
+            "label": "Ethereum adapter balanceOf read (50,106,870.73 thUSD escrow)",
+            "url": "https://etherscan.io/address/0x9AA9Aa0530a6AF70EE7BC47cF1240100f514b065"
+          }
+        ],
+        "evidence": "The adapter at 0x9aa9aa0530a6af70ee7bc47cf1240100f514b065 returned token() = the thUSD contract and endpoint() = the LayerZero EndpointV2, and held 50,106,870.731594 thUSD at review, exactly the sum of the remote representations, so it escrows the backing for every minted representation. It has no on-chain rate limit; DVN and peer configuration changes on it flow through the two-day Ethereum timelock."
+      },
+      {
+        "id": "thusd-oft-lane-admin",
+        "routeRefs": [
+          "stable:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+          "arbitrum:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "peer-config",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+        "label": "thUSD OFT lane administration timelocks",
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-29",
+        "observedBlock": 26083731,
+        "sources": [
+          {
+            "label": "Theo roles and access control (thUSD OFT ownership by chain)",
+            "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
+          },
+          {
+            "label": "Theo bridge security (who can change the configuration)",
+            "url": "https://docs.theo.xyz/security-and-transparency/bridge-security.md"
+          }
+        ],
+        "evidence": "owner() on the thUSD contract at the shared OFT address returned 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 on Ethereum, Arbitrum, and Stable at review. Theo documents the Ethereum adapter as governed by the two-day timelock for DVN stack and peer configuration with no on-chain rate limit, and the Arbitrum and Stable OFTs as owned by chain-local timelocks with an 18-hour delay covering peers, send library, and rate limits."
+      },
+      {
+        "id": "thusd-oft-dvn-set",
+        "routeRefs": [
+          "stable:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+          "arbitrum:0x9aa9aa0530a6af70ee7bc47cf1240100f514b065"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x373a6e5c0c4e89e24819f00aa37ea370917aaff4",
+        "label": "LayerZero DVN verification set (3 required, 1-of-2 optional)",
+        "authorityType": "validator-quorum",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-29",
+        "sources": [
+          {
+            "label": "Theo bridge security (DVN set, thresholds, 15 confirmations)",
+            "url": "https://docs.theo.xyz/security-and-transparency/bridge-security.md"
+          },
+          {
+            "label": "LayerZero DVN metadata (operator identity for addresses)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/dvns"
+          }
+        ],
+        "evidence": "Documented live UlnConfig for both the Arbitrum and Stable lanes: 15 block confirmations, three required DVNs (Deutsche Telekom 0x373a6e5c0c4e89e24819f00aa37ea370917aaff4, Horizen 0x380275805876ff19055ea900cdb2b46a94ecf20d, Canary 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd) with no threshold path among them, plus a 1-of-2 optional set (P2P 0x06559ee34d85a88317bf0bfe307444116c631b67, Nethermind 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5). A single required DVN going offline halts the lane rather than weakening it. The same configuration applies to thUSD on both lanes."
+      }
+    ]
+  }
+}

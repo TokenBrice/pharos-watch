@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 328 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 330 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -201,6 +201,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Aave Umbrella stkGHO (stkGHO.v1)](https://pharos.watch/stablecoin/stkgho-umbrella-aave/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [A7A5 (A7A5)](https://pharos.watch/stablecoin/a7a5-old-vector/): centralized stablecoin backed by real-world assets pegged to Russian Ruble.
 - [TrueUSD (TUSD)](https://pharos.watch/stablecoin/tusd-trueusd/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [SoFiUSD (SOFID)](https://pharos.watch/stablecoin/sofid-sofi/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [First Digital USD (FDUSD)](https://pharos.watch/stablecoin/fdusd-first-digital/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Cap cUSD (CUSD)](https://pharos.watch/stablecoin/cusd-cap/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Staked Cap USD (stcUSD)](https://pharos.watch/stablecoin/stcusd-cap/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
@@ -219,6 +220,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Aster Staked USDF (asUSDF)](https://pharos.watch/stablecoin/asusdf-astherus/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [StandX DUSD (DUSD)](https://pharos.watch/stablecoin/dusd-standx/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [River Stablecoin (satUSD)](https://pharos.watch/stablecoin/satusd-river/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Theo thUSD (THUSD)](https://pharos.watch/stablecoin/thusd-theo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Brazilian Digital (BRZ)](https://pharos.watch/stablecoin/brz-transfero/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
 - [Gate USD (GUSD)](https://pharos.watch/stablecoin/gusd-gate/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Frax USD (FRXUSD)](https://pharos.watch/stablecoin/frxusd-frax/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.

@@ -8230,6 +8230,118 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "thusd-theo",
+      "address": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xa3fe5c7596024e6811e14f029937d5bd8ae485b3?tab=contract",
+        "sourceVerified": true,
+        "contractName": "ERC1967Proxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xcd04f57464d25f257089a286aab47df096d300ad",
+          "implementationName": "ThUSD",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "theo-usd",
+            "value": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
+            "matches": true,
+            "decimalPlace": 6
+          },
+          {
+            "source": "issuer-docs",
+            "url": "https://docs.theo.xyz/developers/deployed-addresses.md",
+            "value": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26084482,
+          "blockHash": "0xf3b33bd083c77e7b291e77d9295aefe74ba3bd0d25763aba4bf69a8639acf004",
+          "decimals": 6,
+          "symbol": "thUSD",
+          "totalSupplyRaw": "133670676056526",
+          "hasCode": true,
+          "eip1967Implementation": "0xcd04f57464d25f257089a286aab47df096d300ad",
+          "minter": "0x2d99ac801dc0edadd53f5688fef2317932e8696e"
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "mint -> _mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ThUSD.sol mint is gated by the OnlyMinter check (on-chain minter() reads 0x2d99ac801dc0edadd53f5688fef2317932e8696e, the ThUSDMinter deployed-address entry) and delegates to OZ ERC20Upgradeable._mint -> _update(address(0), to, value): ERC20Storage._totalSupply += value and Transfer(address(0), to, value) is emitted with the same value."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "burn -> _burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC20BurnableUpgradeable.burn destroys the caller's balance through ERC20Upgradeable._burn -> _update(from, address(0), value): ERC20Storage._totalSupply -= value and Transfer(from, address(0), value) is emitted with the same value."
+        },
+        {
+          "function": "burnFrom(address,uint256)",
+          "internal": "burnFrom -> _spendAllowance -> _burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC20BurnableUpgradeable.burnFrom spends allowance then uses the same paired _burn path; per the mint-and-redeem documentation ThUSDMinter mints and burns thUSD 1:1 against USDC/USDT through these canonical token functions."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "ERC20Upgradeable.totalSupply returns the stored ERC20Storage._totalSupply. ThUSD overrides only decimals(), setMinter and _authorizeUpgrade; no other routine mutates supply storage."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "ThUSD is a standard OZ v5 ERC20Upgradeable (plus ERC20BurnableUpgradeable/ERC20PermitUpgradeable/Ownable2StepUpgradeable/UUPSUpgradeable) behind an ERC1967Proxy. Verified source (Blockscout, fully verified with pinned OZ library sources): ThUSD.sol adds only the OnlyMinter-gated mint(address,uint256) and setMinter; ERC20Upgradeable._transfer reverts on both zero endpoints, so zero-address Transfers arise only from paired _mint/_update and _burn/_update, which change _totalSupply by exactly the emitted amount. No fee-on-transfer, no rebasing, no fee shares, and no supply inflation routine exist; the Minter's hard-capped redemption fee is charged in collateral, not by altering token transfer amounts. EIP-1967 implementation slot read on-chain equals the verified 0xcd04f57464d25f257089a286aab47df096d300ad and UUPS _authorizeUpgrade is onlyOwner.",
+      "windows": [
+        {
+          "fromBlock": 26077258,
+          "fromBlockHash": "0xcf641685d83988b8dc0b2188fd5699739ac672b5011abcd416c5f98274b07037",
+          "fromTimestamp": 1790614223,
+          "toBlock": 26084429,
+          "toBlockHash": "0x35583052d6930373dc7c380e8d21f241ea09bfc10229fa966d9f6e35cfbb41f6",
+          "toTimestamp": 1790700623,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "3c62cc736abf9276680ccbc10e1d592f6885b6f924318a05155031f75f9093c7"
+        },
+        {
+          "fromBlock": 26070094,
+          "fromBlockHash": "0x7fd469a969bbff89fb9319a610235cf4884db92848fe5d36174db7ebff8e8264",
+          "fromTimestamp": 1790527823,
+          "toBlock": 26077258,
+          "toBlockHash": "0xcf641685d83988b8dc0b2188fd5699739ac672b5011abcd416c5f98274b07037",
+          "toTimestamp": 1790614223,
+          "mintRaw": "0",
+          "burnRaw": "204541326830",
+          "supplyDeltaRaw": "-204541326830",
+          "residualRaw": "0",
+          "logCount": 3,
+          "journalSha256": "3c62cc736abf9276680ccbc10e1d592f6885b6f924318a05155031f75f9093c7"
+        }
+      ],
+      "reviewedAt": "2026-09-29",
+      "reviewer": "TheoListingConservation"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "tryb-bilira",
       "address": "0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
       "decimals": 6,

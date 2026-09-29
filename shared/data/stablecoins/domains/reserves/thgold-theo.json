@@ -1,0 +1,58 @@
+{
+  "id": "thgold-theo",
+  "reserves": [
+    {
+      "name": "Gold-denominated secured loans to gold retailers (MG999 Onchain Gold Fund)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "MG999 Onchain Gold Fund, a bankruptcy-remote Singapore sub-fund of the Delta Master Trust managed by FundBridge Capital (MAS-regulated), with Libeara (Standard Chartered) tokenization, Vistra as administrator, security over borrower gold inventory, and a 20% first-loss buffer held by the fund sponsor; initial borrower Mustafa Gold",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "market",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "FundBridge Capital (fund manager)",
+        "role": "other",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Libeara (Standard Chartered subsidiary, tokenization)",
+        "role": "custodian",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Vistra (fund administrator)",
+        "role": "other",
+        "jurisdiction": "Singapore"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "Pharos reserve research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Theo: Introducing thGOLD (fund counterparties and structure)",
+        "url": "https://theo.xyz/articles/introducing-thgold-gold-that-works-for-you"
+      },
+      {
+        "label": "Theo: How thUSD Turns Gold Market Carry Into Dollar-Denominated Yield (Delta Master Trust, MAS regulation, trustee, administrator)",
+        "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
+      }
+    ],
+    "uncertainty": "The MG999 fund is a sub-fund of the Delta Master Trust, a Singapore unit trust under MAS regulation managed by FundBridge Capital, with an independent trustee and custodian, Vistra as administrator, and Standard Chartered providing banking and gold-side attestation. The trustee and custodian are not named, provider shares are unknown, and token-holder legal claims have not been documented because the token has not launched. Gold leases are true leases of personal property with title retained by the lessor and gold held outside lessee bankruptcy estates.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -322,6 +322,30 @@ describe("curated on-chain supply paths", () => {
     expect(selected?.find((entry) => entry.config.chain === "stable")?.config.rpcUrl).toBe("https://rpc.stable.xyz");
   });
 
+  // Shape: Theo's second OFT mesh. thUSD conserves its global supply in the
+  // Ethereum totalSupply (the OFTAdapter escrows every remote representation),
+  // so the aggregate reallocates the Stable and Arbitrum legs out of the
+  // Ethereum bucket while CoinGecko still reports a zero market cap.
+  it("reallocates thUSD including its Stable and Arbitrum legs", () => {
+    const oft = "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065";
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "ethereum", address: "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3", decimals: 6 },
+      { chain: "stable", address: oft, decimals: 6 },
+      { chain: "arbitrum", address: oft, decimals: 6 },
+    ], "thusd-theo"));
+
+    const chains = selected?.map((entry) => entry.config.chain) ?? [];
+    expect(chains).toEqual(["ethereum", "stable", "arbitrum"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["thusd-theo"]).toBe("ethereum");
+    expect(hasRuntimeOnchainSupplyPath(makeMeta([
+      { chain: "ethereum", address: "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3", decimals: 6 },
+      { chain: "stable", address: oft, decimals: 6 },
+      { chain: "arbitrum", address: oft, decimals: 6 },
+    ], "thusd-theo"))).toBe(true);
+    // Stable is absent from the worker RPC registry, so the leg pins endpoints.
+    expect(selected?.find((entry) => entry.config.chain === "stable")?.config.rpcUrl).toBe("https://rpc.stable.xyz");
+  });
+
   // Shape: Centrifuge V3 burn/mint share bridge. Every reviewed deployment is
   // configured, including two that read exactly zero today - the Solana leg only
   // became configurable once allowZeroSupply started governing Solana reads.

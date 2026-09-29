@@ -17,8 +17,8 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.sofi.com/crypto/sofiusd/",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": true,
-    "notes": "Reserve-report date recorded as of 2026-06-18 review: 2026-04-09 (date kind unspecified).",
+    "monthlyAttestationPresent": false,
+    "notes": "Re-checked 2026-09-29: no SoFiUSD reserve attestation is publicly filed. EDGAR full-text search returns no SoFiUSD attestation, and SoFi Bank N.A. ABS-15G filings (March–September 2026) are Deloitte agreed-upon-procedures reports for consumer-loan securitization trusts, not stablecoin reserve attestations. The May 27, 2026 retail-launch release cites regular attestations by an independent U.S.-licensed CPA without naming cadence or attestor; monthlyAttestationPresent stays false pending a published report.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -36,11 +36,16 @@
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Deloitte April 2026 attestation (SEC ABS-15G filing, SoFi Bank N.A., filed 2026-04-24)",
+        "label": "SEC ABS-15G, SoFi Consumer Loan Program 2026-2 Trust AUP report (Deloitte) — verified 2026-09-29 to be consumer-loan securitization due diligence, not a SoFiUSD reserve attestation",
         "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm",
         "sourceKind": "auditor-report",
         "sourceDate": "2026-04-09",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-09-29"
+      },
+      {
+        "label": "SoFiUSD retail-launch press release (May 27, 2026) — cites regular attestations by an independent U.S.-licensed CPA",
+        "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx",
+        "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
@@ -62,6 +67,6 @@
       "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-09-29"
   }
 }

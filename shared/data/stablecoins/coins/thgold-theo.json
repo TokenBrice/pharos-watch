@@ -1,0 +1,70 @@
+{
+  "id": "thgold-theo",
+  "name": "Theo thGOLD",
+  "symbol": "THGOLD",
+  "oneLiner": "thGOLD is Theo's pre-launch yield-bearing tokenized gold product, tracking the MG999 fund of gold-denominated loans to retailers run by FundBridge and Libeara.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Gold-denominated secured loans to established gold retailers through the MG999 Onchain Gold Fund, a bankruptcy-remote Singapore sub-fund of the Delta Master Trust operated by FundBridge Capital with Libeara (Standard Chartered) tokenization, security over gold inventory, and a 20% first-loss buffer held by the fund sponsor",
+  "pegMechanism": "Announced delta-one spot gold exposure with yield of roughly 2% per year from gold leasing, tracking the MG999 Onchain Gold Fund whose loan principal is denominated in grams of gold against the LBMA Gold Price AM; no public token contract or redemption path has been published yet",
+  "detailProvider": "coingecko",
+  "geckoId": "thgold",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://theo.xyz"
+    },
+    {
+      "label": "thGOLD product page",
+      "url": "https://theo.xyz/thgold"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Theo_Network"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.theo.xyz/products/thgold.md"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "status": "pre-launch",
+  "announcedDate": "2026-01-27",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Theo announced thGOLD on January 27 2026 as a tokenized yield-bearing gold product tracking the MG999 Onchain Gold Fund, a Singapore private credit fund operated by FundBridge Capital with Libeara tokenization, whose initial borrower is the Singapore gold retailer Mustafa. The gold-leasing fund itself is already operational and backs thUSD's carry strategy, but the thGOLD token has no published contract address or redemption path: the product page runs a waitlist with early access for institutional partners and accredited investors, the documentation page is marked as undergoing updates, and the CoinGecko listing carries no contract or price. No expected launch date has been announced.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://theo.xyz/articles/introducing-thgold-gold-that-works-for-you",
+      "title": "Introducing thGOLD: Gold That Works for You",
+      "source": "Theo"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-01-27",
+      "type": "announcement",
+      "title": "Theo introduces thGOLD, tokenized yield-bearing gold tracking the MG999 fund",
+      "description": "Announcement describes gold-denominated loans to retailers through the MG999 Onchain Gold Fund operated by FundBridge Capital with Libeara tokenization, approximately 2% annual yield, a phased launch, and Phase 1 early access open to institutional partners and accredited investors.",
+      "sourceUrl": "https://theo.xyz/articles/introducing-thgold-gold-that-works-for-you"
+    },
+    {
+      "date": "2026-04-27",
+      "type": "milestone",
+      "title": "thUSD launches with MG999 gold leasing as its primary yield source",
+      "description": "The thUSD launch states that its gold carry strategy is powered by thGOLD and that gold is leased to retailers through the MG999 fund, confirming the underlying gold-lending fund is operational ahead of standalone thGOLD availability.",
+      "sourceUrl": "https://theo.xyz/articles/thusd-is-live"
+    }
+  ]
+}

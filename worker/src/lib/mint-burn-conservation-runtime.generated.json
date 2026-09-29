@@ -832,6 +832,15 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "thusd-theo",
+      "address": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "tryb-bilira",
       "address": "0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
       "decimals": 6,

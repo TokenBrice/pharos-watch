@@ -1,0 +1,85 @@
+{
+  "id": "thusd-theo",
+  "name": "Theo thUSD",
+  "symbol": "THUSD",
+  "oneLiner": "thUSD is Theo's dollar stablecoin, minted and redeemed 1:1 in USDC or USDT by whitelisted parties and backed by a delta-neutral gold carry trade and thBILL.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "collateral": "Delta-neutral gold carry position (long leased physical gold, short CME gold futures, Treasury-bill margin) plus thBILL tokenized Treasuries and USDC/USDT redemption liquidity; per the live transparency dashboard the reserve is roughly three-quarters gold carry and one-quarter thBILL",
+  "pegMechanism": "1:1 mint and redemption against USDC or USDT through the whitelisted ThUSDMinter contract using EIP-712 signed backend orders with per-block caps and on-chain collateral invariants; unstaked backing sits in cash equivalents and T-bills while staked thUSD (sthUSD) receives the gold carry yield; secondary liquidity on Uniswap and Curve",
+  "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-09-29",
+    "reviewer": "Pharos stablecoin addition (Theo listings)",
+    "rationale": "thUSD is minted 1:1 against USDC/USDT, but the backing is deployed into a managed delta-neutral position: long leased physical gold (including through the MG999 fund) hedged by short CME gold futures with T-bill margin, supplemented by thBILL and stablecoin liquidity. The hedged short-futures structure matches the synthetic-delta-neutral archetype that drives the hedged-position schematic even though the long leg is commodity RWA rather than crypto collateral.",
+    "sources": [
+      {
+        "label": "Theo thUSD documentation (delta-neutral gold strategy, 1:1 mint/redeem)",
+        "url": "https://docs.theo.xyz/products/thusd.md"
+      },
+      {
+        "label": "Theo: How thUSD Turns Gold Market Carry Into Dollar-Denominated Yield",
+        "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "theo-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.theo.xyz/transparency",
+    "provider": "Theo Protocol Corp real-time attestation dashboard with custodian corroborations (Libeara thBILL holdings attestation, Standard Chartered gold-side attestation, clearing-FCM CME account attestation, Wellington T-bill NAV); an independent reserve auditor is listed as in progress",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://theo.xyz"
+    },
+    {
+      "label": "App",
+      "url": "https://app.theo.xyz"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Theo_Network"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.theo.xyz/products/thusd.md"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://app.theo.xyz/transparency"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
+      "decimals": 6
+    },
+    {
+      "chain": "stable",
+      "address": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "launchDate": "2026-04-27"
+}

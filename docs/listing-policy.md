@@ -99,6 +99,8 @@ An incumbent with a price-pipeline failure remains active while the failure is i
 
 Re-admission is exceptional. It requires new evidence that the instrument changed, not merely that a provider relisted it. The same reviewed change updates the catalog lifecycle and listing class so historical scope decisions and active publication cannot disagree.
 
+The recorded application is the 2026-09-29 `sofid-sofi` re-admission. The 2026-07 quarantine reason — no positive market cap on any permitted source — no longer held: CoinGecko `sofiusd` began publishing a positive price and market cap (0.999461 USD and ≈328.75M USD cap with ≈12.3M USD daily volume, observed 2026-09-29), DefiLlama carries the asset (`llamaId = 430`, ≈328.81M `peggedUSD`), and the tracked deployments corroborate the circulating figure (Ethereum `totalSupply` 100,077,224 plus Solana mint supply 228,886,850.23 = 328,964,074.23). Publication runs through CoinGecko detail admission (`geckoId: sofiusd`), so no curated on-chain aggregate is admitted, and the scoped `protocol-par` reference stays a no-trusted-quote fallback only (see [Pricing Pipeline](./pricing-pipeline.md)).
+
 ## Change Procedure
 
 For an addition or promotion:

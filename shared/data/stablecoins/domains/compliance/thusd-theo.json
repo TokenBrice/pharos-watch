@@ -1,0 +1,104 @@
+{
+  "id": "thusd-theo",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Theo terms: company not registered or licensed by any authority; prohibited jurisdictions are sanctions-list only",
+        "url": "https://docs.theo.xyz/legal/terms.md"
+      },
+      {
+        "label": "Theo announcement: gold-backed stablecoin opened in 200 countries (April 2026)",
+        "url": "https://www.prnewswire.com/news-releases/theos-gold-backed-stablecoin-held-steady-through-global-disruption-now-targets-1b-in-deposits-302745928.html"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "thUSD is marketed and used as a 1:1 USD-pegged stablecoin for payments and transfers, minted and redeemed against USDC/USDT, which places it in the GENIUS payment-stablecoin perimeter even though yield is distributed through the separate sthUSD staking wrapper rather than on the token itself.",
+      "references": [
+        {
+          "label": "GENIUS Act: payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-09-29"
+        },
+        {
+          "label": "Theo thUSD documentation (1:1 USD stablecoin, payments and transfers)",
+          "url": "https://docs.theo.xyz/products/thusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-09-29"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Theo Protocol Corporation",
+    "issuerDomicile": "Panama",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.theo.xyz/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Theo Protocol Corporation is a Panama-registered company operating from New York. Its terms state the company, platform, and services are not registered or licensed by any governmental or regulatory authority, and no OCC, Federal Reserve, or state payment-stablecoin application for Theo appears in regulator directories reviewed on 2026-09-29. As a foreign issuer with no US authorization and no foreign-exception registration evidence, the pathway and foreign-exception posture stay unknown. The transparency dashboard publishes real-time reserve data with a self protocol attestation and custodian attestations, but no monthly independent reserve attestation of the aggregate exists yet (an independent auditor is listed as in progress).",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-09-29"
+      },
+      {
+        "label": "OCC digital assets licensing applications: no Theo application identified",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-09-29"
+      },
+      {
+        "label": "Theo terms (Theo Protocol Corporation, Panama registration; no license claim)",
+        "url": "https://docs.theo.xyz/legal/terms.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-09-29"
+      },
+      {
+        "label": "Theo transparency dashboard (real-time reserves, self attestation)",
+        "url": "https://app.theo.xyz/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-09-29"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC digital assets licensing applications directory (re-checked 2026-09-29; no Theo or thUSD application)",
+        "Theo legal terms (no registration or license claim; Panama entity)",
+        "Theo documentation, blog, and transparency dashboard (no GENIUS pathway statements)",
+        "Web search for Theo GENIUS Act or payment-stablecoin license statements (2026-09-29, no results)"
+      ],
+      "summary": "No US federal or state payment-stablecoin authorization, application, or foreign-issuer registration for Theo Protocol Corporation or thUSD was found in the reviewed regulator and issuer sources on 2026-09-29.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-09-29",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-09-29"
+        },
+        {
+          "label": "Theo terms of use",
+          "url": "https://docs.theo.xyz/legal/terms.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-09-29"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-09-29"
+  }
+}

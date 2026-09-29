@@ -2931,6 +2931,58 @@
       }
     ]
   },
+  "thusd-theo": {
+    "title": "A Dollar Running a Gold Carry Trade",
+    "text": "thUSD is Theo's dollar stablecoin, minted and redeemed 1:1 against USDC or USDT by whitelisted parties through a backend-signed minter contract, while most users buy it on Uniswap or Curve. The central trade-off sits in the backing: per Theo's transparency dashboard on 29 September 2026, 73.3% of reserves ran a delta-neutral gold carry (leased physical gold hedged with short CME futures and Treasury margin) and 26.6% sat in thBILL, so a dollar peg rests on gold-lease credit, futures basis, and margin risk rather than bank deposits. Yield accrues only to sthUSD stakers, leaving the token itself non-yield-bearing. {{term:redemption}}redemption{{/term}} is issuer-gated rather than open, and the whitelist, per-block caps, and two-day timelock governing mint-logic changes are the durable constraints on exit. The coin carries a {{grade}} report-card verdict.",
+    "updatedAt": "2026-09-29",
+    "authoredBy": "ai",
+    "model": "glm-5.3",
+    "factsAsOf": "2026-09-29",
+    "claimTokens": [
+      {
+        "token": "grade",
+        "placeholder": "{{grade}}",
+        "source": "report-card.grade",
+        "factsAsOf": "2026-09-29"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Theo thUSD documentation (delta-neutral gold strategy, 1:1 mint/redeem)",
+        "url": "https://docs.theo.xyz/products/thusd.md"
+      },
+      {
+        "label": "Theo transparency dashboard (reserve composition, Sep 29 2026)",
+        "url": "https://app.theo.xyz/transparency"
+      },
+      {
+        "label": "Theo roles and access control (whitelist, timelock, caps)",
+        "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
+      }
+    ]
+  },
+  "thgold-theo": {
+    "title": "Gold-Lending Fund Share Awaiting Launch",
+    "text": "thGOLD is Theo's announced yield-bearing tokenized gold product, introduced on 27 January 2026. It is designed to track the MG999 Onchain Gold Fund, a bankruptcy-remote Singapore sub-fund managed by FundBridge Capital with Libeara (Standard Chartered) tokenization, which lends gold to retailers such as Mustafa against inventory security and a 20% first-loss buffer, targeting roughly 2% annual yield. The lending fund is already operational and backs thUSD's gold carry strategy, but the token itself has no published contract, redemption path, or launch date: the product page runs a waitlist for institutional partners and accredited investors, and the documentation is marked as undergoing updates. Pharos tracks thGOLD as pre-launch and will re-review the design and controls when a contract deploys.",
+    "updatedAt": "2026-09-29",
+    "authoredBy": "ai",
+    "model": "glm-5.3",
+    "factsAsOf": "2026-09-29",
+    "sources": [
+      {
+        "label": "Theo: Introducing thGOLD (MG999 fund, phased launch)",
+        "url": "https://theo.xyz/articles/introducing-thgold-gold-that-works-for-you"
+      },
+      {
+        "label": "thGOLD product page (early access waitlist)",
+        "url": "https://theo.xyz/thgold"
+      },
+      {
+        "label": "Theo thUSD launch (thGOLD powers the gold carry)",
+        "url": "https://theo.xyz/articles/thusd-is-live"
+      }
+    ]
+  },
   "usdp-parallel": {
     "title": "Parallelizer Basket Dollar",
     "text": "Parallel USDp is the liquid base dollar for a system built around the Parallelizer, a governed basket module rather than a single issuer bank account. The collateral list is a greatest-hits compilation of other stablecoin risks: frxUSD and sfrxUSD, USDe and sUSDe, USDS and sUSDS, plus USDC-linked Avalanche exposure. That makes the peg mechanics elegant and dependency analysis ugly, because overcollateralized basket issuance does not erase the fact that several upstream coins have their own governance, custody, and collateral assumptions. sPRL governance sets accepted collateral and exposure limits, so the real safety control is parameter discipline. USDp is useful as a liquid routing token, but it is a committee-managed index of other people's dollars rather than a clean dollar.",

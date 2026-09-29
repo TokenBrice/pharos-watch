@@ -434,6 +434,34 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRefFull("TrueUSD mint and redeem", "https://www.tusd.io/"),
     ],
   },
+  "thusd-theo": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-09-29"),
+    executionModel: "deterministic-onchain",
+    costModel: documentedVariableFee(
+      "1:1 redemption in USDC or USDT through the whitelisted ThUSDMinter using backend-signed EIP-712 orders with per-block caps; the redemption fee is hard-capped on-chain but the rate is not published",
+    ),
+    docs: [
+      sourceRef("Theo thUSD mint and redeem documentation", "https://docs.theo.xyz/products/thusd/mint-and-redeem.md", [
+        "route",
+        "capacity",
+        "access",
+        "settlement",
+        "fees",
+      ]),
+      sourceRef(
+        "Theo contract reference: Mint and Redeem (EIP-712 orders, caps, hard-capped redemption fee)",
+        "https://docs.theo.xyz/developers/contract-reference/mint-and-redeem.md",
+        ["route", "fees"],
+      ),
+      sourceRef("Theo roles and access control (TheoWhitelist gates mint and redeem)", "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md", [
+        "access",
+      ]),
+    ],
+    notes: [
+      "Minting and redemption are limited to KYC-whitelisted entities and settle from the thUSD Cash Wallet's USDC/USDT balances, so the route is an institutional primary-market exit; ordinary holders exit through Uniswap or Curve liquidity",
+    ],
+  },
   "eurs-stasis": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
