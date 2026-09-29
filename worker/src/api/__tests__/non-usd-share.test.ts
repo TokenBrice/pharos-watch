@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { handleNonUsdShare } from "../non-usd-share";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/market";
+
+const fixtures = createLatestSchemaFixtureTracker();
+const COIN_HISTORY_GAPS = { match: "LAG(snapshot_date)", rows: [] };
 
 
 function unix(iso: string): number {
@@ -18,9 +22,11 @@ const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => COMMODITY_
 const FIAT_NON_USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter(
   (c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency),
 ).map((c) => c.id);
+const USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => c.flags.pegCurrency === "USD").map((c) => c.id);
 
 describe("handleNonUsdShare", () => {
   afterEach(() => {
+    fixtures.closeAll();
     vi.restoreAllMocks();
   });
 
@@ -37,6 +43,7 @@ describe("handleNonUsdShare", () => {
   it.each(["commodity", "fiat_non_usd"])("rejects a missing %s cohort instead of publishing a zero share", async (field) => {
     const db = mockD1([
       { match: "FROM cache", rows: [] },
+      COIN_HISTORY_GAPS,
       { match: "FROM supply_history", rows: [
         { snapshot_date: Math.floor(Date.now() / 1000), total: 100, commodity: 0, fiat_non_usd: 0, [field]: null },
       ] },
@@ -51,6 +58,7 @@ describe("handleNonUsdShare", () => {
     const date = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "FROM cache", rows: [] },
+      COIN_HISTORY_GAPS,
       { match: "FROM supply_history", rows: [
         { snapshot_date: date, total: 100, commodity: 0, fiat_non_usd: 0 },
       ] },
@@ -85,6 +93,7 @@ describe("handleNonUsdShare", () => {
             updated_at: Math.floor(nowMs / 1000) - 600,
           },
         },
+        COIN_HISTORY_GAPS,
         {
           match: "FROM supply_history",
           matchBinds: [
@@ -185,6 +194,7 @@ describe("handleNonUsdShare", () => {
             updated_at: unix("2026-04-08T08:00:00Z"),
           },
         },
+        COIN_HISTORY_GAPS,
         {
           match: "FROM supply_history",
           matchBinds: [
@@ -217,5 +227,53 @@ describe("handleNonUsdShare", () => {
     ]);
     expect(body.map((point) => point.commodityShare + point.fiatNonUsdShare)).toEqual([15, 17, 19]);
     db.assertAllMatchesUsed();
+  });
+
+  describe("partial snapshot days", () => {
+    const [largeUsdId, smallUsdId] = USD_IDS;
+    const commodityId = COMMODITY_IDS[0]!;
+    const fiatId = FIAT_NON_USD_IDS[0]!;
+    const completeDay: Record<string, number> = {
+      [largeUsdId!]: 940,
+      [smallUsdId!]: 10,
+      [commodityId]: 20,
+      [fiatId]: 30,
+    };
+    const before = unix("2026-08-05T00:00:00Z");
+    const partial = unix("2026-08-06T00:00:00Z");
+    const after = unix("2026-08-07T00:00:00Z");
+
+    it.each([
+      { name: "a small asset's hole", missing: [smallUsdId!], published: true },
+      { name: "every asset but one small row", missing: [largeUsdId!, commodityId, fiatId], published: false },
+      { name: "the dominant asset", missing: [largeUsdId!], published: false },
+      { name: "a whole commodity cohort", missing: [commodityId], published: false },
+      { name: "a whole fiat non-USD cohort", missing: [fiatId], published: false },
+    ])("publishes a day missing $name only while coverage floors hold", async ({ missing, published }) => {
+      vi.spyOn(Date, "now").mockReturnValue((after + 12 * 3600) * 1000);
+      const { db, sqlite } = fixtures.open();
+      const insert = sqlite.prepare(
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, 1)",
+      );
+      for (const date of [before, partial, after]) {
+        for (const [stablecoinId, circulatingUsd] of Object.entries(completeDay)) {
+          if (date === partial && missing.includes(stablecoinId)) continue;
+          insert.run(stablecoinId, date, circulatingUsd);
+        }
+      }
+
+      const response = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share"));
+      const body = NonUsdShareResponseSchema.parse(await response.json());
+
+      expect(body.map((point) => point.date)).toEqual(published ? [before, partial, after] : [before, after]);
+      expect(body.find((point) => point.date === before)).toEqual({
+        date: before,
+        total: 1000,
+        commodity: 20,
+        fiatNonUsd: 30,
+        commodityShare: 2,
+        fiatNonUsdShare: 3,
+      });
+    });
   });
 });
