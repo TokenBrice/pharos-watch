@@ -9,7 +9,13 @@ export interface DependencyHubCard {
   isDefunct?: boolean;
   sharedBookId?: string | null;
 }
-export interface DependencyHub extends HubExposure {
+export interface DependencyWrapperSplit {
+  unknownFormUsd: number | null;
+  unknownFormCount: number;
+  passThroughCount: number;
+  vaultClaimCount: number;
+}
+export interface DependencyHub extends HubExposure, DependencyWrapperSplit {
   id: string;
   label: string;
   symbol: string;
@@ -22,7 +28,7 @@ export interface DependencyHubsModel {
   upstreamHubCount: number;
   directEdgeCount: number;
   uniqueDirectDependentCount: number;
-  mappedSupply: ExposureTotals & { passThroughUsd: number; vaultClaimUsd: number };
+  mappedSupply: ExposureTotals & DependencyWrapperSplit & { passThroughUsd: number; vaultClaimUsd: number };
   marketCapAsOf: number | null;
 }
 
@@ -63,11 +69,34 @@ export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf 
       return form == null ? "unknown" : form === "pure" || form === "native-staked" ? "pass-through" : "vault-claim";
     },
   };
+  // Serial supply is counted once per dependent, just like the exposure aggregates.
+  // A missing published form is unavailable classification, not a zero-dollar category.
+  const wrapperSplit = (relationships: readonly ReportCardsV9DependencyEdge[]) => {
+    const split: DependencyWrapperSplit & { classifiedOwnFamilyUsd: number } = { unknownFormUsd: null, unknownFormCount: 0, passThroughCount: 0, vaultClaimCount: 0, classifiedOwnFamilyUsd: 0 };
+    const seen = new Set<string>();
+    for (const edge of relationships) {
+      if (edge.kind !== "serial" || seen.has(edge.to)) continue;
+      seen.add(edge.to);
+      const form = opts.wrapperFormOf(edge.to);
+      const usd = supplyOf(edge.to)?.usd;
+      if (form === "unknown") {
+        split.unknownFormCount++;
+        if (usd !== undefined) split.unknownFormUsd = (split.unknownFormUsd ?? 0) + usd;
+      } else if (usd !== undefined) {
+        if (form === "pass-through") split.passThroughCount++;
+        else split.vaultClaimCount++;
+        const family = opts.familyOf(edge.from);
+        if (family !== null && family === opts.familyOf(edge.to)) split.classifiedOwnFamilyUsd += usd;
+      }
+    }
+    return split;
+  };
   const hubs = buildDirectHubExposures(liveEdges, supplyOf, opts).map(exposure => {
     const card = cardById.get(exposure.hubId)!;
     const hubEdges = liveEdges.filter(edge => edge.from === exposure.hubId);
     const serialCount = hubEdges.filter(edge => edge.kind === "serial").length;
-    return { ...exposure, id: exposure.hubId, label: card.name, symbol: card.symbol,
+    const split = wrapperSplit(hubEdges);
+    return { ...exposure, ...split, ownFamilyUsd: split.classifiedOwnFamilyUsd, id: exposure.hubId, label: card.name, symbol: card.symbol,
       hubMcapUsd: supplyOf(card.id)?.usd ?? null,
       topDependentSymbol: exposure.topDependent ? cardById.get(exposure.topDependent.id)?.symbol ?? exposure.topDependent.id : null,
       edgeTypeBreakdown: [
@@ -78,5 +107,5 @@ export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf 
   });
   return { hubs, upstreamHubCount: hubs.length, directEdgeCount: liveEdges.length,
     uniqueDirectDependentCount: new Set(liveEdges.map(edge => edge.to)).size,
-    mappedSupply: mappedDependentSupply(liveEdges, supplyOf, opts), marketCapAsOf };
+    mappedSupply: { ...mappedDependentSupply(liveEdges, supplyOf, opts), ...wrapperSplit(liveEdges) }, marketCapAsOf };
 }
