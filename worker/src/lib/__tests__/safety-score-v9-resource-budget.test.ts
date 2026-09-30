@@ -17,6 +17,8 @@ import {
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const TEST_DIRECTORY = resolve(import.meta.dirname);
 const HEAP_LIMIT_MIB = 128;
+// Node regression bound only. Gate 0 does not establish 128 MB Worker-isolate safety.
+const CONTAGION_HEAP_LIMIT_MIB = 256;
 let temporaryDirectory = "";
 let bundledProbe = "";
 
@@ -36,9 +38,39 @@ describe("Safety Score V9 canonical publication resource budget", {
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
           import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
           import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
+          import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";
+          import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
+          import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 
           const input = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
           let extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input);
+          if (process.env.CONTAGION_MATRIX === "1") {
+            const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(input, extension);
+            const { v9FactSetDigest, ...rawCompileInput } = compiled;
+            extension = null;
+            const policy = loadV9CandidateMethodologyPolicy(input.clockSec);
+            const counts = [];
+            const started = performance.now();
+            for (const assetId of ["usdc-circle", "usdt-tether", "usds-sky"]) {
+              for (const shock of [
+                { kind: "score-limit", assetId, dimension: "final", limit: 40 },
+                { kind: "depeg", assetId, activeDepegBps: 1000, template: "one-day-history-and-exit-held" },
+                { kind: "mint-control-compromise", assetId },
+              ]) {
+                const result = evaluateV9ContagionScenario({
+                  rawCompileInput, policy, clock: input.clockSec,
+                  publicationGenerationId: "resource-fixture",
+                }, { id: assetId + ":" + shock.kind, shocks: [shock] });
+                counts.push(result.manifest);
+                globalThis.gc?.();
+              }
+            }
+            process.stdout.write(JSON.stringify({
+              expected: input.activeAssetIds.length, counts,
+              wallMs: performance.now() - started,
+            }));
+            process.exit(0);
+          }
           const fixtureMetrics = {
             extensionAssets: extension.assets.length,
             extensionBytes: stableJsonStringifyV1(extension).length,
@@ -150,5 +182,26 @@ describe("Safety Score V9 canonical publication resource budget", {
     expect(output.candidateBytes).toBeLessThan(8_000_000);
     expect(output.compressedBytes).toBeLessThan(1_350_000);
     expect(output.storedBytes).toBeGreaterThan(0);
+  });
+
+  it(`evaluates a bounded nine-scenario matrix within ${CONTAGION_HEAP_LIMIT_MIB} MiB of old-space`, () => {
+    const result = spawnSync(process.execPath, [
+      `--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc", bundledProbe,
+    ], {
+      cwd: ROOT, encoding: "utf8", timeout: 45_000,
+      env: { ...process.env, CONTAGION_MATRIX: "1" },
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+    const output = JSON.parse(result.stdout) as {
+      expected: number; wallMs: number;
+      counts: Array<{ evaluated: number; failed: number }>;
+    };
+    expect(output.counts).toHaveLength(9);
+    for (const count of output.counts) {
+      expect(count.evaluated).toBe(output.expected);
+      expect(count.failed).toBe(0);
+    }
+    expect(output.wallMs).toBeLessThan(45_000);
   });
 });
