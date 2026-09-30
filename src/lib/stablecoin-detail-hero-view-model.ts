@@ -85,7 +85,7 @@ export interface HeroCardViewModel {
     limitedDepegCoverageNote: string | null;
   };
   market: {
-    mcap: number;
+    mcap: number | null;
     supply: number | null;
     safePrevDay: number | null;
     prevDayTrendClass: string;
@@ -117,7 +117,7 @@ export interface BuildHeroCardViewModelParams {
   coinData: StablecoinData;
   logoSrc?: string;
   isNavToken: boolean;
-  mcap: number;
+  mcap: number | null;
   supply: number | null;
   prevDay: number | null;
   nativeSupply: NativeSupplyCheckpoints | null;
@@ -322,7 +322,7 @@ export function buildStablecoinDetailHeroViewModel({
       mcap,
       supply,
       safePrevDay,
-      prevDayTrendClass: getTrendClass(safePrevDay !== null, mcap, safePrevDay ?? 0),
+      prevDayTrendClass: getTrendClass(mcap !== null && safePrevDay !== null, mcap ?? 0, safePrevDay ?? 0),
       supplyTrend: buildSupplyTrend(nativeSupply),
     },
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },

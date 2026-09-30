@@ -108,25 +108,13 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...documentedBoundSupplyFull("2026-09-30"),
     holderEligibility: "verified-customer",
     settlementModel: "days",
-    routeStatus: "unknown",
-    costModel: fixedFee(
-      0,
-      "Open Standard states businesses mint and redeem OUSD at no cost; this issuer fee excludes unreviewed bank, partner, and network charges",
+    routeStatus: "open",
+    costModel: undisclosedReviewedFee(
+      "Open Standard and Tempo document zero OUSD issuer mint/redemption fees; bank, partner, and network charges have no reviewed all-in bound",
     ),
-    v9RouteReviewTerms: {
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["settlement", "cost"],
-      rationale:
-        "Bridge promises order processing within two business days only after compliance acceptance, without a bounded OUSD bank-receipt SLA. Open Standard publishes a zero issuer redemption fee, but no OUSD-specific all-in bank or partner payout fee bound was verified.",
-      reviewedAt: "2026-09-30",
-      docs: [
-        sourceRef("Bridge stablecoin terms", "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc", ["route", "access", "settlement", "fees"]),
-        sourceRef("Bridge US user terms", "https://www.bridge.xyz/legal/us-terms/bridge-building-inc", ["access", "settlement", "fees"]),
-        sourceRef("Open Standard introduces Open USD", "https://joinopenstandard.com/blog/introducing-open-usd", ["route", "capacity", "fees"]),
-      ],
-    },
     docs: [
       sourceRef("Open Standard introduces Open USD", "https://joinopenstandard.com/blog/introducing-open-usd", ["route", "capacity", "fees"]),
+      sourceRef("Tempo OUSD partner redemption (reviewed 2026-09-30)", "https://tempo.xyz/developers/docs/guide/ousd", ["route", "capacity", "access", "fees"]),
       sourceRef("Bridge stablecoin terms", "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc", ["route", "capacity", "access", "settlement"]),
       sourceRef("Bridge US user terms", "https://www.bridge.xyz/legal/us-terms/bridge-building-inc", ["access", "settlement", "fees"]),
       sourceRef("Bridge minting and burning", "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning", ["route"]),
@@ -140,7 +128,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Bridge burns received tokens and releases equivalent fiat value through its API. Its OUSD reserve page lists Tempo, Ethereum, Base, and Solana deployments; a chain-specific redemption intake/burn rail list was not verified. The public redemption portal lists USDH, DKUSD, and EURR, not OUSD.",
       "Capacity follows Bridge precedents as documented full-supply eventual redeemability. Live cash and Treasury reserve balances establish backing, not an executable same-day payout buffer, and no reserve-sync capacity claim is made.",
       "Open Standard states no artificial volume limits; Bridge user terms still permit risk-based amount and frequency limits. No numeric OUSD minimum or daily cap was verified.",
-      "Settlement remains days and route status unknown: contractual processing starts after compliance acceptance, and neither live route openness nor an OUSD-specific final payout SLA was verified.",
+      "Settlement remains days, matching the conservative USDsui Bridge model: processing within two business days starts after compliance acceptance and does not establish final bank receipt. Open status records Tempo's documented current partner redemption route, not public-portal support or live telemetry. Unbounded all-in fees use the existing reviewed-undisclosed-fee policy rather than a zero-cost assumption.",
       "Tempo DEX exchange liquidity is secondary-market liquidity, outside this direct-redemption registry; no OUSD/pathUSD protocol redemption or PSM is modeled.",
     ],
   },

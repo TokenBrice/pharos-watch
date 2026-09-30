@@ -10,10 +10,9 @@ export function humanizeSafetyScoreV9Value(value: string): string {
     "eligibility-gated": "Eligibility gated",
     "issuer-discretionary": "Issuer discretionary",
     "single-entity": "Single entity",
-    // An undisclosed primary exit is an absence of evidence, not a reviewed
-    // absence of an exit. It keeps its row (only "unknown" drops out) and reads
-    // as a gap rather than as the "None" assertion it used to publish.
-    undisclosed: "Not disclosed",
+    // No credited route on an incomplete or unintegrated exit surface.
+    // This is not a finding that the issuer failed to disclose its policy.
+    undisclosed: "Incomplete exit surface",
   };
   const explicit = explicitLabels[value];
   if (explicit) return explicit;

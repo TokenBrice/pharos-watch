@@ -23,6 +23,25 @@ const USDC_LIKE_PROFILE: CustodyProfile = {
 };
 
 describe("projectCustodyClientSummary", () => {
+  it("does not invent a custody leader from unknown shares or array order", () => {
+    const unknown = projectCustodyClientSummary(coinWith({
+      ...USDC_LIKE_PROFILE,
+      providers: [{ name: "First bank", role: "bank" }, { name: "Second bank", role: "bank" }],
+    }));
+    expect(unknown!.summary).toContain("spans 2 counterparties;");
+    expect(unknown!.summary).not.toContain("led by");
+    const known = projectCustodyClientSummary(coinWith({
+      ...USDC_LIKE_PROFILE,
+      providers: [{ name: "Minor bank", role: "bank", sharePct: 20 }, { name: "Major bank", role: "bank", sharePct: 80 }],
+    }));
+    expect(known!.summary).toContain("led by Major bank");
+    const partial = projectCustodyClientSummary(coinWith({
+      ...USDC_LIKE_PROFILE,
+      providers: [{ name: "Known minor bank", role: "bank", sharePct: 20 }, { name: "Unallocated bank", role: "bank" }],
+    }));
+    expect(partial!.summary).not.toContain("led by");
+  });
+
   it("returns null without a custody profile", () => {
     expect(projectCustodyClientSummary(coinWith(undefined))).toBeNull();
   });

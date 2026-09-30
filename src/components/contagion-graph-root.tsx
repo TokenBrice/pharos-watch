@@ -8,6 +8,7 @@ import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9"
 import type { ReactNode } from "react";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
 import type { ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
+import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
 
 interface ContagionGraphProps {
   cards: readonly ContagionGraphCard[];
@@ -22,6 +23,7 @@ interface ContagionGraphProps {
   onUseAsExposureRoot?: (coinId: string) => void;
   hubExposures?: readonly HubExposure[];
   modeControls?: ReactNode;
+  commonModeGroups?: SharedFailureDomainGroups | null;
 }
 
 export function ContagionGraph({
@@ -37,12 +39,13 @@ export function ContagionGraph({
   onUseAsExposureRoot,
   hubExposures,
   modeControls,
+  commonModeGroups,
 }: ContagionGraphProps) {
   const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId, maxNodes, exposureOverlay, onUseAsExposureRoot, hubExposures, syncUrlState: syncUrlState && !minimalChrome, trackActions: !minimalChrome });
 
 
-  const stage = graph.nodes.length > 0
-    ? <ContagionGraphBody graph={graph} logos={logos} detailNodePresentation={Boolean(minimalChrome)} />
+  const stage = graph.nodes.length > 0 || graph.emptyFocusCoin
+    ? <ContagionGraphBody graph={graph} logos={logos} detailNodePresentation={Boolean(minimalChrome)} commonModeGroups={commonModeGroups} />
     : <p role="status" className="p-4 text-sm text-muted-foreground">No mapped graph nodes are available for this selection.</p>;
 
   if (minimalChrome) {

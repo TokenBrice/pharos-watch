@@ -161,7 +161,7 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   isVariant: boolean;
   hasVariants: boolean;
   coinData: StablecoinData;
-  mcap: number;
+  mcap: number | null;
   supply: number | null;
   prevDay: number | null;
   nativeSupply: NativeSupplyCheckpoints | null;

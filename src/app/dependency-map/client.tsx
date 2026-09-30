@@ -128,6 +128,7 @@ export function DependencyMapClient() {
         mcapMap={mcapMap}
         logos={logos}
         workspace={exposureWorkspace}
+        commonModeGroups={reportData.commonModeGroups ?? null}
       />
       <section className="pharos-card-shell space-y-2 p-4" aria-label="Dependency coverage">
         <h2 className="font-semibold">Known, not in the scored graph</h2>

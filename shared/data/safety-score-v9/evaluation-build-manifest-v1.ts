@@ -146,7 +146,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
-      "sha256": "3bd26f78a29ed57620eb848cfeb04d9b3fdee7de45b3c4525330a79b8c347831"
+      "sha256": "4899b1483846c10c094947a84b169797f948976e1e2ed8c24e91b3ecf8428524"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
@@ -390,7 +390,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "a3855d94cb1ad0e68a805c6226b718a21886ba83b4ee8e44b4972a08045fd00e"
+      "sha256": "8261322b7bc0027002ad9dd0c5399518af3932c601d6815ac4e68f01b397a518"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -639,7 +639,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-09-29-block-26082345-shock-coverage.json.gz"
     }
   ],
-  "digest": "ad6c4abb92711be29dd01db43a23b696bbb07af0a6074e27ad6d12398f3a6446"
+  "digest": "a34549fdf76a273f61ff76e8c170bd818c911f3e1ee077b93203c423d6eab564"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

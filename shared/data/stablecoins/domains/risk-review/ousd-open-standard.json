@@ -179,6 +179,7 @@
         "controllerAddress": "0x5176dfcab18ff5519bc1cfa4c6ef2d8008371d5f",
         "failureDomainKeys": [
           "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+          "tempo:0xd440e868ceb9aee13034e329d3c7a8d18c9150d2",
           "tempo:0x251d2711ebeb0a09fdb8992f5506f3d949175246"
         ],
         "observedAt": "2026-09-30",
@@ -223,7 +224,7 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0x1767c61c9ec15126de4eb02cd9a91474584a1873",
         "failureDomainKeys": [
-          "ethereum:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+          "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
           "ethereum:0x251d2711ebeb0a09fdb8992f5506f3d949175246"
         ],
         "observedAt": "2026-09-30",
@@ -264,7 +265,8 @@
         "controllerChain": "base",
         "controllerAddress": "0x4787ad0324a68152834f150326fe2357af8993cc",
         "failureDomainKeys": [
-          "base:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+          "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+          "tempo:0xd440e868ceb9aee13034e329d3c7a8d18c9150d2",
           "base:0x251d2711ebeb0a09fdb8992f5506f3d949175246"
         ],
         "observedAt": "2026-09-30",

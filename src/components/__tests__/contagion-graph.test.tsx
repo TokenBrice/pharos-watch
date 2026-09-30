@@ -265,8 +265,8 @@ describe("ContagionGraph", () => {
       { id: "dusd-dialectic", symbol: "DUSD", grade: "B" },
     ];
     render(<ContagionGraph cards={cards} dependencyEdges={[{ ...DEPENDENCY_EDGES[1], from: "dusd-alto", to: "dusd-dialectic" }]} mcapMap={new Map()} />);
-    expect(screen.getByRole("option", { name: "DUSD (Alto DUSD)" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "DUSD (Dialectic USD)" })).toBeTruthy();
+    expect(within(getTraceCoinPicker()).getByRole("option", { name: "DUSD (Alto DUSD)" })).toBeTruthy();
+    expect(within(getTraceCoinPicker()).getByRole("option", { name: "DUSD (Dialectic USD)" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /DUSD \(Alto DUSD\), Grade B/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /DUSD \(Dialectic USD\), Grade B/ })).toBeTruthy();
   });
@@ -279,6 +279,32 @@ describe("ContagionGraph", () => {
     const visible = new Set(["usdtb-ethena", "usde-ethena"]);
     const expected = nodes.filter((node) => visible.has(node.id) && (tiers.get(node.id) ?? 0) > 0).length;
     expect(screen.getAllByText("Hubs").find((element) => element.tagName === "P")?.nextElementSibling?.textContent).toBe(String(expected));
+  });
+
+  it("retains a tracked edge-free focus and offers an honest empty neighborhood", () => {
+    window.history.replaceState(null, "", "/dependency-map/?focus=ousd-open-standard");
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} syncUrlState />);
+    expect(getTraceCoinPicker().value).toBe("ousd-open-standard");
+    expect(new URLSearchParams(window.location.search).get("focus")).toBe("ousd-open-standard");
+    expect(screen.getAllByText("Open USD has no published dependency links in this publication.")).toHaveLength(2);
+    expect(screen.getByText("Showing 0 of 4 dependency-linked stablecoins with 0 visible edges.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /USDC, Grade/ })).toBeNull();
+    fireEvent.change(getTraceCoinPicker(), { target: { value: "usde-ethena" } });
+    expect(screen.queryByText("Open USD has no published dependency links in this publication.")).toBeNull();
+    expect(screen.getByRole("button", { name: /USDC, Grade/ })).toBeTruthy();
+  });
+
+  it("shows publication memberships for an edge-free focus even when the whole graph has no edges", () => {
+    window.history.replaceState(null, "", "/dependency-map/?focus=ousd-open-standard");
+    render(<ContagionGraph cards={CARDS} dependencyEdges={[]} mcapMap={MCAP_MAP} syncUrlState commonModeGroups={[
+      { id: "mint-control:bridge", kind: "mint-control", key: "bridge", memberAssetIds: ["ousd-open-standard", "pathusd-bridge"] },
+      { id: "mint-control:other", kind: "mint-control", key: "unrelated", memberAssetIds: ["usdc-circle", "dai-makerdao"] },
+    ]} />);
+    expect(screen.getByText("Published shared failure-domain memberships:")).toBeTruthy();
+    expect(screen.getByText(/: bridge$/)).toBeTruthy();
+    expect(screen.queryByText(/: unrelated$/)).toBeNull();
+    expect(screen.queryByText("Shared failure-domain memberships were not published for this generation.")).toBeNull();
+    expect(new URLSearchParams(window.location.search).get("focus")).toBe("ousd-open-standard");
   });
 
   it("round-trips URL controls and keeps unrelated parameters", async () => {

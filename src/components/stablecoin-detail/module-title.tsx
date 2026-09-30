@@ -43,11 +43,11 @@ export function StablecoinModuleTitle({
   const resolvedLogoSrc = logoSrc ?? contextIdentity?.logoSrc;
 
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       {resolvedSymbol ? (
         <>
           <StablecoinLogo src={resolvedLogoSrc} name={resolvedSymbol} size={26} />
-          <span className="truncate text-sm font-semibold text-foreground">
+          <span className="shrink-0 text-sm font-semibold text-foreground">
             {resolvedSymbol}
           </span>
           <span className="text-muted-foreground/50" aria-hidden="true">

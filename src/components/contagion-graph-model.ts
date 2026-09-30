@@ -2,17 +2,7 @@ import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 import { gradeRange } from "@shared/lib/report-card-core";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import type { ContagionEdgeRelationship } from "@/lib/contagion-layout";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-
-const SYMBOL_COUNTS: Record<string, number> = {};
-for (const coin of CLIENT_TRACKED_META_BY_ID.values()) {
-  SYMBOL_COUNTS[coin.symbol] = (SYMBOL_COUNTS[coin.symbol] ?? 0) + 1;
-}
-
-export function graphNodeLabel(node: { id: string; symbol: string }): string {
-  const meta = CLIENT_TRACKED_META_BY_ID.get(node.id);
-  return meta && SYMBOL_COUNTS[node.symbol] > 1 ? `${node.symbol} (${meta.name})` : node.symbol;
-}
+export { stablecoinLabel as graphNodeLabel } from "@/lib/stablecoin-label";
 
 // ---------------------------------------------------------------------------
 // Constants

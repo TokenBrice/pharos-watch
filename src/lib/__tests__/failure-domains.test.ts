@@ -76,6 +76,14 @@ describe("describeFailureDomain", () => {
 });
 
 describe("buildFailureDomainsView", () => {
+  it("publishes nominal exposure rather than the capped scoring contribution", () => {
+    const view = buildFailureDomainsView(cardWithDeploymentRisk({
+      adjustments: [adjustment({ nominalExposureShare: 0.9097, exposureShare: 0.5 })],
+    }));
+    expect(view!.rows[0]!.exposureShare).toBe(0.9097);
+    expect(view!.rows[0]!.modeledExposureShare).toBe(0.5);
+  });
+
   it("hides itself when the asset has no shared domains", () => {
     expect(buildFailureDomainsView(makeV9Card())).toBeNull();
     expect(buildFailureDomainsView(null)).toBeNull();

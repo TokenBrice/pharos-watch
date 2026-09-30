@@ -36,6 +36,7 @@ import { MethodologyHint } from "@/components/methodology-hint";
 import { FlowSignedNetValue, FlowVolumeValue } from "@/components/flow-valuation-value";
 import { resolveCoinNetFlow, resolvePressureUnavailableNote } from "@/lib/mint-burn-coin-helpers";
 import type { MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+import { stablecoinLabel } from "@/lib/stablecoin-label";
 
 interface FlowTableProps {
   coins: MintBurnCoinFlow[];
@@ -149,6 +150,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
       {sorted.map((coin) => {
             const meta = TRACKED_META_BY_ID.get(coin.stablecoinId);
             const name = meta?.name ?? coin.symbol;
+            const label = stablecoinLabel({ id: coin.stablecoinId, symbol: coin.symbol });
             const pressureScore = getPressureScore(coin);
             const pressureState = getPressureState(coin);
             const pressureUnavailableNote = resolvePressureUnavailableNote(coin);
@@ -163,19 +165,19 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 onActivate={() => router.push(buildStablecoinUrl(coin.stablecoinId))}
                 onHover={() => prefetch(coin.stablecoinId)}
                 role="link"
-                ariaLabel={`Open ${coin.symbol} flow detail`}
+                ariaLabel={`Open ${label} flow detail`}
                 className="h-11 sm:h-auto"
               >
                 <TableCell className="w-[126px] max-w-[126px] overflow-hidden sm:w-[150px] sm:max-w-[150px]">
                   <StablecoinIdentity
                     logoSrc={logos?.[coin.stablecoinId]}
                     name={name}
-                    symbol={coin.symbol}
+                    symbol={label}
                     logoSize={24}
                     className="min-w-0"
                     textClassName="flex min-w-0 flex-col items-start gap-0.5"
                     symbolRowClassName="min-w-0 gap-1.5"
-                    symbolClassName="truncate"
+                    symbolClassName="whitespace-normal break-words"
                     details={
                       coverageBadge ? (
                         <span

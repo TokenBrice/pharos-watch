@@ -160,7 +160,7 @@ describe("ReserveQualitySection", () => {
         }}
       />,
     );
-    expect(html).not.toContain("Unidentified obligors");
+    expect(html).not.toContain("Unresolved reserve exposure");
     expect(html).not.toContain("Self-exposure");
     expect(html).not.toContain("As of");
     expect(html).not.toContain("Confidence");
@@ -169,16 +169,28 @@ describe("ReserveQualitySection", () => {
 
   it("renders a zero unidentified-obligor share without an amber tone", () => {
     const html = renderToStaticMarkup(<ReserveQualitySection summary={SUMMARY} />);
-    const unidentified = factCell(html, "Unidentified obligors");
+    const unidentified = factCell(html, "Unresolved reserve exposure");
     expect(unidentified.value).toBe("0%");
     expect(unidentified.valueClass).not.toContain(AMBER_VALUE_CLASS);
   });
+  it("exposes recorded obligor classes without implying individual counterparties are identified", () => {
+    const html = renderToStaticMarkup(<ReserveQualitySection summary={{
+      ...SUMMARY,
+      slices: [{ ...SUMMARY.slices[0]!, obligor: "Bridge-approved bank counterparties" }],
+    }} />);
+    const visible = html.split("<details")[0]!;
+    expect(visible).toContain("Bridge-approved bank counterparties");
+    expect(visible).toContain("a class does not identify its individual counterparties");
+    expect(visible).toContain("Unresolved reserve exposure");
+    expect(visible).not.toContain("Unidentified obligors");
+  });
+
 
   it("tones a non-zero unidentified-obligor share and self-exposure amber, per fact", () => {
     const html = renderToStaticMarkup(
       <ReserveQualitySection summary={{ ...SUMMARY, unidentifiedObligorsPct: 12.6, selfExposurePct: 8.8 }} />,
     );
-    const unidentified = factCell(html, "Unidentified obligors");
+    const unidentified = factCell(html, "Unresolved reserve exposure");
     expect(unidentified.value).toBe("12.6%");
     expect(unidentified.valueClass).toContain(AMBER_VALUE_CLASS);
 

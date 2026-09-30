@@ -2,23 +2,24 @@
   "id": "ousd-open-standard",
   "name": "Open USD",
   "symbol": "OUSD",
-  "oneLiner": "OUSD is Bridge's dollar for Open Standard, backed by cash and short Treasuries, with fee-free 1:1 business minting and redemption.",
+  "oneLiner": "OUSD is Bridge's dollar for Open Standard, backed by cash and short Treasuries, with 1:1 business minting and redemption and no issuer fee.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
   "collateral": "Cash and short-dated U.S. Treasuries, including government money-market funds with T-bill ladders under three months. Open Standard names BlackRock, Lead Bank and BNY as reserve institutions; their allocation shares are not disclosed.",
-  "pegMechanism": "Bridge Building Inc. issues OUSD for the Open Standard programme, natively on Tempo, Ethereum, Base and Solana. Businesses mint and redeem at a 1:1 USD conversion rate with no fees or artificial volume limits. Direct redemption requires eligibility and onboarding as a Bridge User; binding terms provide processing within two business days after compliance acceptance and give holders no property interest in reserve assets.",
+  "pegMechanism": "Bridge Building Inc. issues OUSD for the Open Standard programme, natively on Tempo, Ethereum, Base and Solana. Eligible businesses onboarded as Bridge Users mint and redeem at 1:1 USD with no issuer fee or artificial volume limits. Under the binding terms, any other holder can redeem directly only if eligible and onboarded as a Bridge User, with processing within two business days after compliance acceptance, subject to delays outside Bridge's reasonable control; holders have no property interest in reserve assets.",
   "mechanismArchetype": "fiat-cash",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserves.bridge.xyz/ousd",
-    "provider": "Bridge's self-reported live reserves dashboard; Open Standard announces monthly attestations, but no independent report is published yet",
+    "provider": "Bridge's self-reported live reserves dashboard; Open Standard announces monthly attestations, but the dashboard does not yet link an independent report",
     "attestorTier": "self",
     "cadence": "real-time",
     "attestorJurisdiction": "United States"
   },
   "llamaId": "443",
+  "geckoId": "open-usd",
   "detailProvider": "defillama",
   "links": [
     {
@@ -28,6 +29,14 @@
     {
       "label": "Twitter",
       "url": "https://x.com/openstandard"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/open-usd"
+    },
+    {
+      "label": "DefiLlama",
+      "url": "https://stablecoins.llama.fi/stablecoin/443"
     },
     {
       "label": "Launch Announcement",
@@ -110,6 +119,12 @@
   "featuredContent": [
     {
       "type": "blog",
+      "url": "https://joinopenstandard.com/blog/ousd-is-live",
+      "title": "OUSD is live.",
+      "source": "Open Standard"
+    },
+    {
+      "type": "blog",
       "url": "https://joinopenstandard.com/blog/introducing-open-usd",
       "title": "Introducing Open USD",
       "source": "Open Standard"
@@ -138,40 +153,40 @@
       "date": "2026-06-30",
       "type": "announcement",
       "title": "Open Standard unveils Open USD (OUSD), a partner-governed consortium stablecoin",
-      "description": "140+ businesses back a fully-reserved dollar that shares most reserve earnings with partners, with zero mint/redeem fees and no volume limits. Circle shares fell ~15-17% on the news.",
+      "description": "Open Standard said more than 140 businesses had signed up to use OUSD, with launch set for later in 2026. The announcement set out no-cost minting and redemption for businesses with no artificial volume limits, and reserve earnings paid to partners less a small management fee.",
       "sourceUrl": "https://joinopenstandard.com/blog/introducing-open-usd"
     },
     {
       "date": "2026-06-30",
       "type": "partnership",
       "title": "140+ launch partners including Visa, Mastercard, American Express, Stripe, BlackRock, Coinbase, and PayPay Corporation",
-      "sourceUrl": "https://www.theblock.co/post/406736/visa-stripe-coinbase-join-open-usd-stablecoin-shares-reserve-revenue"
+      "sourceUrl": "https://joinopenstandard.com/blog/introducing-open-usd"
     },
     {
       "date": "2026-06-30",
       "type": "milestone",
-      "title": "Zach Abrams (Bridge co-founder) named interim CEO; Fireblocks selected for settlement; OUSD to launch natively on Solana",
-      "sourceUrl": "https://thedefiant.io/converge/tradfi-and-fintech/open-standard-open-usd-ousd-stablecoin-consortium-blackrock-visa-mastercard"
+      "title": "Bridge co-founder Zach Abrams named interim CEO; OUSD to launch on Base, Ethereum, Solana and Tempo",
+      "sourceUrl": "https://www.americanbanker.com/payments/news/open-standards-stablecoin-draws-stripe-visa-and-mastercard"
     },
     {
       "date": "2026-09-09",
       "type": "announcement",
       "title": "Open Standard CEO essay sets OUSD economics: 'incentivize utility, not AUM'",
-      "description": "Zach Abrams's post described the business model: fee-free minting and redemption, a small per-transaction developer fee, and shared reserve revenue structured to reward transaction utility over assets under management. No launch date or contracts were given.",
+      "description": "Zach Abrams's post described the business model: no burn fees, a small per-transaction developer fee, and as much reserve revenue as possible shared with participating businesses, structured to reward transaction utility over assets under management. No launch date or contracts were given.",
       "sourceUrl": "https://joinopenstandard.com/blog/stablecoins-are-better-dollars"
     },
     {
       "date": "2026-09-24",
       "type": "partnership",
       "title": "Coinbase, Mastercard, Shopify, Stripe, and Visa named initial founding partners with $1B+ launch liquidity commitment",
-      "description": "Open Standard named its five initial founding partners, each investing in the company and helping establish OUSD supply for more than $1 billion of near-term launch liquidity, and Zach Abrams moved from interim to full-time CEO. Open Standard publishes no contract address and the site still describes OUSD as not yet live; CoinGecko carries only a preview placeholder.",
+      "description": "Open Standard named its five initial founding partners, each investing in the company and helping establish OUSD supply for more than $1 billion of near-term launch liquidity, and Zach Abrams moved from interim to full-time CEO. The announcement described equity opportunities for founders and participating partners once OUSD went live.",
       "sourceUrl": "https://joinopenstandard.com/blog/company-structure-and-leadership"
     },
     {
       "date": "2026-09-30",
       "type": "milestone",
       "title": "Open USD launches on Tempo, Ethereum, Base and Solana",
-      "description": "Open Standard publishes the four official contracts and names Bridge as issuer. Businesses can mint and burn at a 1:1 USD conversion rate without fees; reserves are held at BlackRock, Lead Bank and BNY. Monthly attestations are announced, with no independent report published at launch.",
+      "description": "Open Standard publishes the four official contracts and names Bridge as issuer. Businesses can mint and burn at a 1:1 USD conversion rate without fees; reserves are held at BlackRock, Lead Bank and BNY. Monthly attestations are announced; the launch-day reserves dashboard links no independent report.",
       "sourceUrl": "https://joinopenstandard.com/blog/ousd-is-live"
     }
   ]

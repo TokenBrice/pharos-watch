@@ -27,7 +27,7 @@ function canonicalCoin(overrides: Record<string, unknown> = {}) {
     price: 0.997, priceSource: "coingecko+defillama-list", priceConfidence: "high",
     priceUpdatedAt: NOW - 70, priceObservedAt: NOW - 90, priceObservedAtMode: "upstream",
     priceSyncedAt: NOW - 60, consensusSources: ["coingecko", "defillama-list"], agreeSources: ["coingecko"],
-    circulating: { peggedUSD: 999_999 }, chainCirculating: {}, chains: ["Ethereum"],
+    circulating: {}, chainCirculating: {}, chains: ["Ethereum"],
     ...overrides,
   };
 }
@@ -54,6 +54,42 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("missing detail price enrichment", () => {
+  it("publishes admitted current list supply without rewriting the older native history", async () => {
+    const nativeHistory = [{ date: NOW - 86_400, totalCirculating: { peggedUSD: 454_459_687.73 } }];
+    const result = await enrichMissingDetailPrice(makeDb({
+      circulating: { peggedUSD: 477_309_888.38 }, circulatingPrevDay: {},
+    }), "usdt-tether", makeResponse(JSON.stringify({ tokens: nativeHistory, price: null })));
+    const body = await result.json() as Record<string, unknown>;
+    expect(body.currentCirculatingUSD).toEqual({ peggedUSD: 477_309_888.38 });
+    expect(body.currentCirculatingPrevDayUSD).toEqual({});
+    expect(body.currentSupplyObservedAt).toBe(NOW - 60);
+    expect(body.tokens).toEqual(nativeHistory);
+    expect(body.price).toBe(0.997);
+  });
+
+  it("publishes observed zero supply independently of withheld price", async () => {
+    const result = await enrichMissingDetailPrice(makeDb({
+      circulating: { peggedUSD: 0 }, price: null,
+    }), "usdt-tether", makeResponse());
+    const body = await result.json() as Record<string, unknown>;
+    expect(body.currentCirculatingUSD).toEqual({ peggedUSD: 0 });
+    expect(body.price).toBeUndefined();
+  });
+
+  it("overlays current supply even when provider price needs no enrichment and bounds stale reuse", async () => {
+    const result = await enrichMissingDetailPrice(makeDb({
+      circulating: { peggedUSD: 477_309_888.38 }, supplyObservedAt: NOW - 7000,
+    }, NOW - 6000), "usdt-tether", makeResponse(JSON.stringify({ tokens, price: 0.98 })));
+    const body = await result.json() as Record<string, unknown>;
+    expect(body.currentCirculatingUSD).toEqual({ peggedUSD: 477_309_888.38 });
+    expect(body.currentSupplyObservedAt).toBe(NOW - 7000);
+    expect(body.price).toBe(0.98);
+    expect(body.tokens).toEqual(tokens);
+    expect(result.headers.get("Cache-Control")).toBe("no-store");
+    expect(result.headers.get("Warning")).toContain("Response is stale");
+  });
+
+
   it("forwards a nominal reference without inventing an observed price", async () => {
     const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" };
     const result = await enrichMissingDetailPrice(makeDb({

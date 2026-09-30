@@ -13,7 +13,7 @@ import type {
   StablecoinDetailViewModelQueryInputs,
   StablecoinDetailViewModelSupplementalInputs,
 } from "@/lib/stablecoin-detail-view-model-types";
-import { getCirculatingRaw, getPrevDayRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type {
   BlacklistStablecoin,
@@ -31,7 +31,7 @@ const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
 
 export interface DetailMarketSnapshot {
-  mcap: number;
+  mcap: number | null;
   supply: number | null;
   prevDay: number | null;
   /** Token-count checkpoints for the hero Supply trend; USD market-cap history never feeds it. */
@@ -104,7 +104,7 @@ export function buildDetailMarketSnapshot(
   supplyHistory: SupplyHistoryPoint[],
   nowMs: number,
 ): DetailMarketSnapshot {
-  const mcap = getCirculatingRaw(coinData);
+  const mcap = getCirculatingRawOrNull(coinData);
   const observedPrice = isObservedPrice(coinData) ? coinData.price : null;
   return {
     mcap,
