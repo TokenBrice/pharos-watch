@@ -145,7 +145,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "reservoir",
-    "version": 1,
+    "version": 2,
     "semantics": "protocol-reserve",
     "scoring": {
       "allowedDegradedWarningCodes": [

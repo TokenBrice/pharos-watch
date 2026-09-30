@@ -44,19 +44,47 @@
         "Money Markets": "medium",
         "Cash & Equivalents": "medium",
         "Delta-Neutral Equity Arbitrage": "high",
-        "On-chain Liquidity": "medium"
+        "On-chain Liquidity/Ethereum/USDC - Morpho": "medium",
+        "On-chain Liquidity/Ethereum/USDC": "low",
+        "On-chain Liquidity/Ethereum/USDT": "low",
+        "On-chain Liquidity/Ethereum/ETH": "high",
+        "On-chain Liquidity/Ethereum/AUSD": "high",
+        "On-chain Liquidity/Base/ETH": "high",
+        "On-chain Liquidity/Base/USDC - Morpho": "medium"
       },
       "renameMap": {
         "Money Markets": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
         "Delta-Neutral Equity Arbitrage": "Delta-neutral equity arbitrage: long listed-equity book hedged with short single-stock futures",
         "Cash & Equivalents": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
-        "On-chain Liquidity": "On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum"
+        "On-chain Liquidity/Ethereum/USDC - Morpho": "USDC supplied to Morpho on Ethereum",
+        "On-chain Liquidity/Ethereum/USDC": "USDC held on Ethereum",
+        "On-chain Liquidity/Ethereum/USDT": "USDT held on Ethereum",
+        "On-chain Liquidity/Ethereum/ETH": "ETH held on Ethereum",
+        "On-chain Liquidity/Ethereum/AUSD": "Unverified AUSD dust on Ethereum",
+        "On-chain Liquidity/Base/ETH": "ETH held on Base",
+        "On-chain Liquidity/Base/USDC - Morpho": "Unverified USDC Morpho dust on Base"
       },
       "sourceKeyMap": {
         "Money Markets": "accountable:tori:deployment:money-markets",
         "Cash & Equivalents": "accountable:tori:deployment:cash-equivalents",
         "Delta-Neutral Equity Arbitrage": "accountable:tori:deployment:delta-neutral-equity-arbitrage",
-        "On-chain Liquidity": "accountable:tori:deployment:on-chain-liquidity"
+        "On-chain Liquidity/Ethereum/USDC - Morpho": "accountable:tori:ethereum:usdc-morpho",
+        "On-chain Liquidity/Ethereum/USDC": "accountable:tori:ethereum:usdc",
+        "On-chain Liquidity/Ethereum/USDT": "accountable:tori:ethereum:usdt",
+        "On-chain Liquidity/Ethereum/ETH": "accountable:tori:ethereum:eth",
+        "On-chain Liquidity/Ethereum/AUSD": "accountable:tori:ethereum:ausd-unverified",
+        "On-chain Liquidity/Base/ETH": "accountable:tori:base:eth",
+        "On-chain Liquidity/Base/USDC - Morpho": "accountable:tori:base:usdc-morpho-unverified"
+      },
+      "coinIdMap": {
+        "On-chain Liquidity/Ethereum/USDC - Morpho": "usdc-circle",
+        "On-chain Liquidity/Ethereum/USDC": "usdc-circle",
+        "On-chain Liquidity/Ethereum/USDT": "usdt-tether"
+      },
+      "depTypeMap": {
+        "On-chain Liquidity/Ethereum/USDC - Morpho": "collateral",
+        "On-chain Liquidity/Ethereum/USDC": "collateral",
+        "On-chain Liquidity/Ethereum/USDT": "collateral"
       }
     }
   },

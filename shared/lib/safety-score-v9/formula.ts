@@ -282,7 +282,7 @@ function scopedRiskSignal(
   };
 }
 
-function structuralSignalNeedsHardCap(signal: V9StructuralSignal): boolean {
+export function structuralSignalNeedsHardCap(signal: V9StructuralSignal): boolean {
   // Retained V2 signals predate explicit loss scope and keep their legacy cap.
   if (signal.economicLossScope === undefined) {
     return signal.responsibility === undefined || signal.responsibility === "measured-adverse";

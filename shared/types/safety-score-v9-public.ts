@@ -49,6 +49,52 @@ const SafetyScoreV9DependencyCoverageSchema = z.object({
   }
 });
 
+/**
+ * Planner groups with at least two distinct assets. Optional pricedEffects
+ * contain only nonempty references to prices already published on the card.
+ * pricedEffectsIncomplete marks an evaluated cap/adjustment missing its reference.
+ */
+export const SafetyScoreV9CommonModeGroupsSchema = z.array(z.object({
+  id: z.string().min(1),
+  kind: V9FailureDomainRefSchema.shape.kind,
+  key: V9FailureDomainRefSchema.shape.key,
+  memberAssetIds: z.array(z.string().min(1)).min(2),
+  pricedEffectsIncomplete: z.literal(true).optional(),
+  pricedEffects: z.array(z.object({
+    assetId: z.string().min(1),
+    capIndices: z.array(z.number().int().nonnegative()),
+    deploymentAdjustmentIndices: z.array(z.number().int().nonnegative()),
+  }).strict()).min(1).optional(),
+}).strict().superRefine((group, ctx) => {
+  if (group.id !== `${group.kind}:${group.key}`) {
+    ctx.addIssue({ code: "custom", path: ["id"], message: "Common-mode ID must match its canonical failure domain" });
+  }
+  if (!isUniqueSorted(group.memberAssetIds)) {
+    ctx.addIssue({ code: "custom", path: ["memberAssetIds"], message: "Common-mode member IDs must be unique and sorted" });
+  }
+  if (!isUniqueSorted((group.pricedEffects ?? []).map((effect) => effect.assetId))) {
+    ctx.addIssue({ code: "custom", path: ["pricedEffects"], message: "Common-mode effects must have unique, sorted asset IDs" });
+  }
+  group.pricedEffects?.forEach((effect, index) => {
+    if (!group.memberAssetIds.includes(effect.assetId)) {
+      ctx.addIssue({ code: "custom", path: ["pricedEffects", index], message: "Common-mode effects must belong to group members" });
+    }
+    for (const field of ["capIndices", "deploymentAdjustmentIndices"] as const) {
+      if (!effect[field].every((value, i, values) => i === 0 || values[i - 1]! < value)) {
+        ctx.addIssue({ code: "custom", path: ["pricedEffects", index, field], message: "Common-mode effect references must be unique and sorted" });
+      }
+    }
+    if (effect.capIndices.length === 0 && effect.deploymentAdjustmentIndices.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["pricedEffects", index], message: "Common-mode priced effects require a nonempty reference list" });
+    }
+  });
+})).superRefine((groups, ctx) => {
+  if (!isUniqueSorted(groups.map((group) => group.id))) {
+    ctx.addIssue({ code: "custom", message: "Common-mode groups must have unique, sorted IDs" });
+  }
+});
+export type SafetyScoreV9CommonModeGroups = z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
+
 export {
   findSafetyScoreV9ParentAttributionIssues,
 } from "./safety-score-v9-public-attribution";
@@ -368,6 +414,7 @@ const SafetyScoreV9ResponseShape = {
   asOfSec: z.number().int().nonnegative(),
   publishedAtSec: z.number().int().nonnegative(),
   completeness: SafetyScoreV9CompletenessSchema,
+  commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
 } as const;
 function refineResponse(
   response: {

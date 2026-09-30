@@ -1,0 +1,580 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-29T00:00:00Z -->",
+  "_provenance": "Saved issuer positions from net-shard-05; price fields and timestamps reconstructed from same-date saved Pharos metadata. Cross-observation replay, not an atomic live refresh.",
+  "vaults": [
+    {
+      "id": "nopal-nest",
+      "positions": {
+        "data": {
+          "vaultAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+          "positions": {
+            "liquidAssets": [
+              {
+                "tokenAddress": "0x222365ef19f7947e5484218551b56bb3965aa7af",
+                "chainId": 98866,
+                "symbol": "USDC",
+                "position": {
+                  "value": 91992.28
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x3600000000000000000000000000000000000000",
+                "chainId": 5042,
+                "symbol": "USDC",
+                "position": {
+                  "value": 8.300809
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x55d398326f99059ff775485246999027b3197955",
+                "chainId": 56,
+                "symbol": "USDT",
+                "position": {
+                  "value": 91125.93
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x78add880a697070c1e765ac44d65323a0dcce913",
+                "chainId": 98866,
+                "symbol": "USDC.e",
+                "position": {
+                  "value": 0
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x79a02482a880bce3f13e09da970dc34db4cd24d1",
+                "chainId": 480,
+                "symbol": "USDC",
+                "position": {
+                  "value": 10.734614
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "chainId": 1,
+                "symbol": "USDC",
+                "position": {
+                  "value": 136207.95
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+                "chainId": 9745,
+                "symbol": "USDT0",
+                "position": {
+                  "value": 1.543246
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+                "chainId": 43114,
+                "symbol": "USDC",
+                "position": {
+                  "value": 45.287476
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                "chainId": 1,
+                "symbol": "USDT",
+                "position": {
+                  "value": 0.857266
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+                "chainId": 98866,
+                "symbol": "pUSD",
+                "position": {
+                  "value": 39692.85
+                },
+                "pendingTransactions": []
+              }
+            ],
+            "yieldAssets": [
+              {
+                "slug": "liquid-stone",
+                "tokens": [
+                  {
+                    "tokenAddress": "0x04e5a6f7ee9977d38f57945c31b72178c9cf1c06",
+                    "chainId": 98866,
+                    "symbol": "OALS2T",
+                    "position": {
+                      "amount": 44798501.538607605,
+                      "price": 1.1483665308048483,
+                      "value": 51445099.79714648,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  },
+                  {
+                    "tokenAddress": "0xe594bb8368c553698e2a781914ab1fba10315008",
+                    "chainId": 1,
+                    "symbol": "OALS2T",
+                    "position": {
+                      "amount": 32632481.844260573,
+                      "price": 1.0331984537913432,
+                      "value": 33715829.784864105,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  },
+                  {
+                    "tokenAddress": "0xcb2c612e5082fce55d159f8edb6d495545b74882",
+                    "chainId": 56,
+                    "symbol": "OALS2T",
+                    "position": {
+                      "amount": 15237217.303010998,
+                      "price": 1.013014942520618,
+                      "value": 15435528.810383854,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  },
+                  {
+                    "tokenAddress": "0x832da527446ba53d13b9ae83be2e5bef86110ee0",
+                    "chainId": 43114,
+                    "symbol": "OALS2T",
+                    "position": {
+                      "amount": 4424404.3608423555,
+                      "price": 1.1483715974371025,
+                      "value": 5080860.303568218,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  }
+                ]
+              },
+              {
+                "slug": "nest-treasury-vault",
+                "tokens": [
+                  {
+                    "tokenAddress": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+                    "chainId": 98866,
+                    "symbol": "nTBILL",
+                    "position": {
+                      "amount": 3532422.045402,
+                      "price": 1.05836,
+                      "value": 3738574.195971661,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  }
+                ]
+              },
+              {
+                "slug": "nest-basis-vault",
+                "tokens": [
+                  {
+                    "tokenAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+                    "chainId": 98866,
+                    "symbol": "nBASIS",
+                    "position": {
+                      "amount": 0,
+                      "price": 1.076303,
+                      "value": 0,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "supplyByChain": {
+            "1": {
+              "supply": 27578644,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "56": {
+              "supply": 28931850,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "480": {
+              "supply": 11.380243,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "5042": {
+              "supply": 63761.8,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "9745": {
+              "supply": 0,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "43114": {
+              "supply": 4801689.5,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "98866": {
+              "supply": 20984198,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "9999999": {
+              "supply": 17346560,
+              "supplyRaw": null,
+              "decimals": 6
+            }
+          }
+        }
+      },
+      "price": {
+        "data": {
+          "nav": 109771441.21029854,
+          "price": 1.1009734622176086,
+          "totalSupply": 99703984.680243
+        }
+      },
+      "lastPriceUpdate": {
+        "data": {
+          "lastPriceUpdates": [
+            {
+              "updatedAt": 1790699178
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "nbasis-nest",
+      "positions": {
+        "data": {
+          "vaultAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+          "positions": {
+            "liquidAssets": [
+              {
+                "tokenAddress": "0x222365ef19f7947e5484218551b56bb3965aa7af",
+                "chainId": 98866,
+                "symbol": "USDC",
+                "position": {
+                  "value": 12.479566
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x55d398326f99059ff775485246999027b3197955",
+                "chainId": 56,
+                "symbol": "USDT",
+                "position": {
+                  "value": 5.944678
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x78add880a697070c1e765ac44d65323a0dcce913",
+                "chainId": 98866,
+                "symbol": "USDC.e",
+                "position": {
+                  "value": 0
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x79a02482a880bce3f13e09da970dc34db4cd24d1",
+                "chainId": 480,
+                "symbol": "USDC",
+                "position": {
+                  "value": 28.575354
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "chainId": 1,
+                "symbol": "USDC",
+                "position": {
+                  "value": 394.92163
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+                "chainId": 9745,
+                "symbol": "USDT0",
+                "position": {
+                  "value": 16.404741
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+                "chainId": 1,
+                "symbol": "pUSD",
+                "position": {
+                  "value": 0
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+                "chainId": 98866,
+                "symbol": "pUSD",
+                "position": {
+                  "value": 240.47325
+                },
+                "pendingTransactions": []
+              }
+            ],
+            "yieldAssets": [
+              {
+                "slug": "superstate-ustb",
+                "tokens": [
+                  {
+                    "tokenAddress": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+                    "chainId": 1,
+                    "symbol": "USTB",
+                    "position": {
+                      "amount": 0,
+                      "price": 11.228915,
+                      "value": 0,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  },
+                  {
+                    "tokenAddress": "0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
+                    "chainId": 98866,
+                    "symbol": "USTB",
+                    "position": {
+                      "amount": 1369.447129,
+                      "price": 11.22777,
+                      "value": 15375.837391572328,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  }
+                ]
+              },
+              {
+                "slug": "superstate-uscc",
+                "tokens": [
+                  {
+                    "tokenAddress": "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf",
+                    "chainId": 98866,
+                    "symbol": "USCC",
+                    "position": {
+                      "amount": 10429.38545,
+                      "price": 11.768165,
+                      "value": 122734.72882419925,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "supplyByChain": {
+            "1": {
+              "supply": 82534.63,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "56": {
+              "supply": 34.27855,
+              "supplyRaw": null,
+              "decimals": 18
+            },
+            "480": {
+              "supply": 27.708876,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "9745": {
+              "supply": 4.449153,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "98866": {
+              "supply": 46135.656,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "9999999": {
+              "supply": 184.69647,
+              "supplyRaw": null,
+              "decimals": 6
+            }
+          }
+        }
+      },
+      "price": {
+        "data": {
+          "nav": 138780.09964857282,
+          "price": 1.0763029999999998,
+          "totalSupply": 128941.478049
+        }
+      },
+      "lastPriceUpdate": {
+        "data": {
+          "lastPriceUpdates": [
+            {
+              "updatedAt": 1790705945
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "nwisdom-nest",
+      "positions": {
+        "data": {
+          "vaultAddress": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+          "positions": {
+            "liquidAssets": [
+              {
+                "tokenAddress": "0x222365ef19f7947e5484218551b56bb3965aa7af",
+                "chainId": 98866,
+                "symbol": "USDC",
+                "position": {
+                  "value": 1849.1592
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x55d398326f99059ff775485246999027b3197955",
+                "chainId": 56,
+                "symbol": "USDT",
+                "position": {
+                  "value": 42.660927
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0x78add880a697070c1e765ac44d65323a0dcce913",
+                "chainId": 98866,
+                "symbol": "USDC.e",
+                "position": {
+                  "value": 0
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "chainId": 1,
+                "symbol": "USDC",
+                "position": {
+                  "value": 401.41837
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+                "chainId": 9745,
+                "symbol": "USDT0",
+                "position": {
+                  "value": 7.079017
+                },
+                "pendingTransactions": []
+              },
+              {
+                "tokenAddress": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+                "chainId": 98866,
+                "symbol": "pUSD",
+                "position": {
+                  "value": 3366.9812
+                },
+                "pendingTransactions": []
+              }
+            ],
+            "yieldAssets": [
+              {
+                "slug": "wisdomtree-crdyx",
+                "tokens": [
+                  {
+                    "tokenAddress": "0xf4816ec5f0552b77cf62efd8926aef42961efebf",
+                    "chainId": 98866,
+                    "symbol": "xCRDYX",
+                    "position": {
+                      "amount": 2882633.601931,
+                      "price": 0.903602980829391,
+                      "value": 2604756.315343816,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  }
+                ]
+              },
+              {
+                "slug": "nest-treasury-vault",
+                "tokens": [
+                  {
+                    "tokenAddress": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+                    "chainId": 98866,
+                    "symbol": "nTBILL",
+                    "position": {
+                      "amount": 972.03551,
+                      "price": 1.05836,
+                      "value": 1028.7635023636,
+                      "yield": null
+                    },
+                    "pendingTransactions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "supplyByChain": {
+            "1": {
+              "supply": 14561.809,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "56": {
+              "supply": 39.753117,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "9745": {
+              "supply": 1,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "98866": {
+              "supply": 2922365,
+              "supplyRaw": null,
+              "decimals": 6
+            },
+            "9999999": {
+              "supply": 1028.6339,
+              "supplyRaw": null,
+              "decimals": 6
+            }
+          }
+        }
+      },
+      "price": {
+        "data": {
+          "nav": 2724142.3909051185,
+          "price": 0.927211,
+          "totalSupply": 2937996.196017
+        }
+      },
+      "lastPriceUpdate": {
+        "data": {
+          "lastPriceUpdates": [
+            {
+              "updatedAt": 1790706651
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

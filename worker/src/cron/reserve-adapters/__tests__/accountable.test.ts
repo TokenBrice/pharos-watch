@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { adaptAccountableDashboard } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getReserveAdapter } from "../index";
@@ -12,6 +12,7 @@ import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 import trusd from "@shared/data/stablecoins/coins/trusd-tori.json";
+import toriPayload from "./fixtures/accountable-tori-2026-09-30.json";
 import {
   ACCOUNTABLE_MAPPING_CASES,
   makeTimestampedYuzuPayload,
@@ -22,6 +23,14 @@ import {
 } from "./accountable.test-support";
 import { adapterCoins, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
+
+const toriCapture = { ...toriPayload, data: { ...toriPayload.data, ts: String(toriPayload.data.ts) } };
+const toriParams = {
+  ...trusd.liveReservesConfig.params,
+  layout: "asset-breakdown" as const,
+  riskMap: trusd.liveReservesConfig.params.riskMap as Record<string, ReserveSlice["risk"]>,
+  depTypeMap: trusd.liveReservesConfig.params.depTypeMap as Record<string, ReserveSlice["depType"]>,
+};
 
 // Production removed NUSD's live config after its endpoint stopped resolving.
 // Keep this inline mapping fixture to exercise the reviewed historical
@@ -974,58 +983,72 @@ describe("adaptAccountableDashboard", () => {
     expect(result.warnings).toBeUndefined();
   });
 
-  it("maps Tori's current equity-arbitrage and on-chain liquidity buckets through the catalog config", async () => {
-    // Captured 2026-09-28 from https://cache.accountable.capital/dashboard/tori (data.ts
-    // 1790626560152): the futures-arbitrage and on-chain-buffer categories were replaced.
-    const result = await runAccountablePayload(trusd.liveReservesConfig as LiveReservesConfig, {
-      collateralization: 1.006913,
-      ts: "1790626560152",
-      reserves: {
-        total_reserves: { name: "Total Reserves", value: 78_223_339.4 },
-        total_supply: { name: "Total Supply", value: 77_686_300.16, fx: 1 },
-      },
-      assetBreakdown: {
-        "Money Markets": { "Money Market Instruments": { status: "private", value: 53_001_491.97 } },
-        "On-chain Liquidity": { Ethereum: 11_362_191.014722636, Base: 6.652095881991734 },
-        "Delta-Neutral Equity Arbitrage": {
-          "Delta-Neutral Equity Arbitrage": { status: "private", value: 6_637_734.1 },
-        },
-        "Cash & Equivalents": {
-          "OTC & Exchange Reserve": 0,
-          "Bank Cash": { status: "private", value: 100_183.74226732111 },
-          "FX Collateral": { status: "private", value: 7_121_731.92 },
-        },
-      },
-    });
-
-    expect(result.slices).toEqual([
-      {
-        sourceKey: "accountable:tori:deployment:money-markets",
-        name: "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
-        pct: 67.8,
-        risk: "medium",
-      },
-      {
-        sourceKey: "accountable:tori:deployment:on-chain-liquidity",
-        name: "On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum",
-        pct: 14.5,
-        risk: "medium",
-      },
-      {
-        sourceKey: "accountable:tori:deployment:cash-equivalents",
-        name: "Cash and equivalents held as FX collateral at investment banks and exchange venues",
-        pct: 9.2,
-        risk: "medium",
-      },
-      {
-        sourceKey: "accountable:tori:deployment:delta-neutral-equity-arbitrage",
-        name: "Delta-neutral equity arbitrage: long listed-equity book hedged with short single-stock futures",
-        pct: 8.5,
-        risk: "high",
-      },
+  it("replays Tori nested holdings without losing the idle buffer or dust", () => {
+    const result = adaptAccountableDashboard(toriCapture, toriParams);
+    const usdc = result.slices.filter((slice) => slice.coinId === "usdc-circle");
+    expect(usdc.map((slice) => slice.sourceKey).sort()).toEqual([
+      "accountable:tori:ethereum:usdc", "accountable:tori:ethereum:usdc-morpho",
     ]);
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({ breakdownCount: 4, mappedBucketCount: 4 });
+    expect(usdc.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(14.59744500315145, 10);
+    expect(result.slices.find((slice) => slice.coinId === "usdt-tether")?.pct).toBeCloseTo(0.13569110007170007, 10);
+    for (const slice of result.slices.filter((slice) => slice.coinId)) expect(slice.depType).toBe("collateral");
+    const dust = result.slices.find((slice) => slice.sourceKey === "accountable:tori:base:usdc-morpho-unverified")!;
+    expect(dust.pct).toBeGreaterThan(0);
+    expect(dust.coinId).toBeUndefined();
+    expect(result.slices.find((slice) => slice.sourceKey === "accountable:tori:ethereum:ausd-unverified")?.coinId).toBeUndefined();
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+  });
+
+  it("rejects missing or inconsistent nested constituents instead of restoring an aggregate link", () => {
+    const missing = structuredClone(toriCapture);
+    delete (missing.data.reserves.nested_split as Record<string, unknown>).Ethereum;
+    expect(() => adaptAccountableDashboard(missing, toriParams)).toThrow("nested holdings unavailable");
+    const inconsistent = structuredClone(toriCapture);
+    inconsistent.data.reserves.nested_split.Ethereum.USDC += 1;
+    expect(() => adaptAccountableDashboard(inconsistent, toriParams)).toThrow("nested holdings do not reconcile");
+  });
+
+  it("preserves large-parent constituents within relative rounding tolerance and rejects larger drift", () => {
+    const payload = {
+      res: "ok",
+      data: {
+        collateralization: 1,
+        ts: "1790752560155",
+        reserves: {
+          total_reserves: 1_000_000_000,
+          total_supply: 1_000_000_000,
+          nested_split: { Liquidity: { USDC: 600_000_000.125, ETH: 400_000_000 } },
+        },
+        assetBreakdown: { Liquidity: 1_000_000_000 },
+      },
+    };
+    const params = {
+      layout: "asset-breakdown" as const,
+      riskMap: { "Liquidity/USDC": "low" as const, "Liquidity/ETH": "high" as const },
+      sourceKeyMap: { "Liquidity/USDC": "accountable:liquidity:usdc", "Liquidity/ETH": "accountable:liquidity:eth" },
+      coinIdMap: { "Liquidity/USDC": "usdc-circle" },
+      depTypeMap: { "Liquidity/USDC": "collateral" as const },
+    };
+    const result = adaptAccountableDashboard(payload, params);
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct)
+      .toBeCloseTo(600_000_000.125 / 1_000_000_000.125 * 100, 10);
+    expect(result.slices.find((slice) => slice.sourceKey === "accountable:liquidity:eth")?.pct)
+      .toBeCloseTo(400_000_000 / 1_000_000_000.125 * 100, 10);
+    payload.data.reserves.nested_split.Liquidity.USDC += 2;
+    expect(() => adaptAccountableDashboard(payload, params)).toThrow("nested holdings do not reconcile");
+  });
+
+  it("preserves a new unreviewed nested holding without inferring its token identity", () => {
+    const changed = structuredClone(toriCapture);
+    const ethereum = changed.data.reserves.nested_split.Ethereum as Record<string, number>;
+    ethereum["NEW USD"] = 100;
+    ethereum.USDC -= 100;
+    const result = adaptAccountableDashboard(changed, toriParams);
+    const unreviewed = result.slices.find((slice) => slice.name.endsWith("/NEW USD"))!;
+    expect(unreviewed.pct).toBeCloseTo(100 / 78485841.65 * 100, 10);
+    expect(unreviewed.coinId).toBeUndefined();
+    expect(unreviewed.sourceKey).toMatch(/^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._:/-]*$/);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "unmapped-nested-holding", effect: "info" }));
   });
 
   it("records unknownExposurePct for unmapped asset-breakdown categories", () => {

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { encodeUint256, PAUSED_SELECTOR } from "../../../lib/evm-selectors";
@@ -238,6 +241,23 @@ function protocolBufferResponse() {
 }
 
 describe("adaptInfiniFi", () => {
+  it("retains both tiny saved PYUSD farms and a sub-six-decimal positive farm", () => {
+    const payload = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "infinifi-precision-2026-09-29.json"), "utf8")) as InfiniFiProtocolData;
+    const result = adaptInfiniFi(payload);
+    for (const name of ["morpho-v2-sentora-pyusd", "morpho-v2-sentora-prime"]) {
+      const farm = payload.data.farms.find((row) => row.name === name)!;
+      const slice = result.slices.find((row) => row.name === farm.label)!;
+      expect(slice.coinId).toBe("pyusd-paypal");
+      expect(slice.depType).toBe("collateral");
+      expect(slice.pct).toBe(farm.assetsNormalized / payload.data.stats.asset.totalTVLAssetNormalized * 100);
+    }
+    const tiny = structuredClone(payload);
+    tiny.data.farms.find((row) => row.name === "morpho-v2-sentora-prime")!.assetsNormalized = 1e-6;
+    const farm = tiny.data.farms.find((row) => row.name === "morpho-v2-sentora-prime")!;
+    expect(adaptInfiniFi(tiny).slices.find((row) => row.name === farm.label)?.pct)
+      .toBe(1e-6 / tiny.data.stats.asset.totalTVLAssetNormalized * 100);
+  });
+
 
   it("allows verified freshness (rate-history probe) with unverified fallback", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.infinifi.validation.allowedFreshnessModes).toEqual([
@@ -265,10 +285,6 @@ describe("adaptInfiniFi", () => {
     expect(supplyUsd).toBeUndefined();
   });
 
-  it("sums to 100 after rounding", () => {
-    const total = adaptInfiniFi(SAMPLE_RESPONSE).slices.reduce((acc, s) => acc + s.pct, 0);
-    expect(total).toBe(100);
-  });
 
   it("drops farms where assetsNormalized is 0", () => {
     const { slices } = adaptInfiniFi(SAMPLE_RESPONSE);
@@ -340,7 +356,7 @@ describe("adaptInfiniFi", () => {
     ]);
   });
 
-  it("flags dust unknown farms and preserves them in final slices when they remain material at one-decimal precision", () => {
+  it("flags and preserves unknown positive farms", () => {
     const response = farmResponse([
       ...SAMPLE_RESPONSE.data.farms,
       { name: "dust-farm", label: "Dust Farm", assetsNormalized: 0.4, type: "LIQUID", underlyingAssetSymbol: "USDC" },
@@ -378,8 +394,7 @@ describe("adaptInfiniFi", () => {
     expect(slices.find((s) => s.name === "Fasanara mGLOBAL (GDADF)")).toMatchObject({ coinId: "mglobal-midas-fasanara", depType: "collateral" });
   });
 
-  it("preserves small farms above 0.05% before normalizeSlices rounding", () => {
-    // A farm with 0.5% of TVL should pass the pct threshold and reach normalizeSlices
+  it("preserves a small tracked farm", () => {
     const response: InfiniFiProtocolData = {
       code: "OK",
       data: {
@@ -392,7 +407,6 @@ describe("adaptInfiniFi", () => {
     };
 
     const { slices } = adaptInfiniFi(response);
-    // Both farms should be present (0.5% passes the >=0.05 threshold)
     expect(slices).toHaveLength(2);
     expect(slices.reduce((acc, s) => acc + s.pct, 0)).toBe(100);
   });

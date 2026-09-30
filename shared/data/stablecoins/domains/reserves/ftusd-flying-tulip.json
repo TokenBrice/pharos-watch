@@ -2,8 +2,9 @@
   "id": "ftusd-flying-tulip",
   "reserves": [
     {
-      "name": "USDC strategy wrappers (Ethereum and Sonic)",
-      "pct": 63.6667,
+      "sourceKey": "flying-tulip-ftusd:collateral:usdc",
+      "name": "USDC strategy wrappers (Ethereum, Sonic, and BNB Smart Chain)",
+      "pct": 66.36903180891656,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -18,8 +19,9 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "USDT strategy wrapper (Ethereum)",
-      "pct": 36.0801,
+      "sourceKey": "flying-tulip-ftusd:collateral:usdt",
+      "name": "USDT strategy wrappers (Ethereum and BNB Smart Chain)",
+      "pct": 33.39421400428466,
       "risk": "medium",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -34,8 +36,9 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "flying-tulip-ftusd:collateral:ussd",
       "name": "USSD strategy wrapper (Sonic)",
-      "pct": 0.2532,
+      "pct": 0.23410757307492752,
       "risk": "medium",
       "coinId": "ussd-sonic-labs",
       "depType": "collateral",
@@ -49,11 +52,59 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "flying-tulip-ftusd:collateral:usde",
+      "name": "USDe strategy wrapper (Ethereum)",
+      "pct": 0.002646613723862462,
+      "risk": "medium",
+      "coinId": "usde-ethena",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Flying Tulip strategy and Ethena USDe",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "flying-tulip-ftusd:collateral:crvusd",
+      "name": "crvUSD strategy wrapper (Ethereum)",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "crvusd-curve",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Flying Tulip strategy and Curve crvUSD",
+      "riskFactors": ["smart-contract", "liquidity"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "flying-tulip-ftusd:collateral:usdg",
+      "name": "USDG strategy wrapper (Ethereum)",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Flying Tulip strategy and Paxos USDG",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "flying-tulip-ftusd:collateral:fdusd",
+      "name": "FDUSD strategy wrapper (BNB Smart Chain)",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "fdusd-first-digital",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Flying Tulip strategy and First Digital FDUSD",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv10)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map campaign 2026-09-30 (FtusdB4)",
     "confidence": "verified",
     "sources": [
       {
@@ -65,11 +116,11 @@
         "url": "https://docs.flyingtulip.com/product-suite/ft-usd/#how-ftusd-works"
       }
     ],
-    "rationale": "The issuer dashboard API snapshot lastUpdated 2026-09-21T08:31:55Z reports $2,360,372.0169 of Ethereum USDC collateral, $396,815.0600 of Sonic USDC collateral, $1,562,508.1699 of Ethereum USDT collateral, and $10,963.9202 of Sonic USSD collateral. Normalizing the complete $4,330,659.1671 active Ethereum and Sonic collateral set produces the authored 63.6667%, 36.0801%, and 0.2532% shares. The API also carries an inactive Binance Smart Chain placeholder with zero TVL and zero supply, so it contributes no reserve slice.",
+    "rationale": "The official dashboard API captured at 2026-09-30T07:28:33Z reports $3,107,626.6069017975 of cross-chain USDC, $1,563,632.090567056 of cross-chain USDT, $10,961.72270614788 of Sonic USSD and $123.923568 of Ethereum USDe. These measured collateral rows reconcile to $4,682,344.343743001 across active Ethereum, Sonic and BNB Smart Chain. Ethereum crvUSD and USDG are explicit zero rows; the previously reviewed zero-capital BNB Smart Chain FDUSD slot is absent and contributes no exposure. New Ethereum rows were matched by exact underlying contract address to the tracked USDe, crvUSD and USDG identities. Zero-percent keyed rows retain reviewed identities for later positive balances without fabricating current exposure.",
     "compositionBasis": "Cross-chain collateral wrapper TVL in the official ftUSD dashboard API, aggregated by collateral token across active chains",
-    "compositionAsOf": "2026-09-21",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The dashboard API identifies every collateral wrapper and underlying token address on the active Ethereum and Sonic chains; its Binance Smart Chain placeholder has zero TVL and zero supply.",
+    "knownUnknownExposure": "All positive collateral rows in the captured issuer dashboard have reviewed underlying identities. Future unreviewed positive rows remain unlinked with a named informational warning and measured unknown exposure; zero rows contribute no exposure.",
     "knownUnknownExposurePct": 0
   }
 }

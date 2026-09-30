@@ -1,0 +1,255 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-30T07:28:43.197Z -->",
+  "assets": [
+    {
+      "rollupKey": "USDC-1",
+      "chainId": 1,
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "label": "USDC",
+      "description": "",
+      "iconPath": "/USDC.svg",
+      "adapters": [
+        "0x4809010926aec940b550D34a46A52739f996D75D"
+      ],
+      "category": "Stables",
+      "type": "ERC20",
+      "totalBalanceValue": "76154.139945"
+    },
+    {
+      "rollupKey": "aPlaGHO-9745",
+      "chainId": 9745,
+      "address": "0xAd571979b4245E163A7E2119EB4dFd94AfDaebC5",
+      "label": "Aave - GHO (Plasma)",
+      "description": "Supply GHO on Aave Plasma",
+      "iconPath": "/sgho.svg",
+      "adapters": [
+        "0x3063C5907FAa10c01B242181Aa689bEb23D2BD65"
+      ],
+      "sourceLink": "https://app.aave.com/reserve-overview/?underlyingAsset=0xb77e872a68c62cfc0dfb02c067ecc3da23b4bbf3&marketName=proto_plasma_v3",
+      "category": "Lending markets",
+      "type": "ERC20",
+      "totalBalanceValue": "2320277.866130824474411781"
+    },
+    {
+      "rollupKey": "aMonGHO-143",
+      "chainId": 143,
+      "address": "0x4586face17B0e3D4d51EcABb4B4EBC2354b61b0D",
+      "label": "Aave - GHO (Monad)",
+      "description": "Supply GHO on Aave Monad",
+      "iconPath": "/sgho.svg",
+      "adapters": [
+        "0x3063C5907FAa10c01B242181Aa689bEb23D2BD65"
+      ],
+      "sourceLink": "https://app.aave.com/reserve-overview/?underlyingAsset=0xfc421ad3c883bf9e7c4f42de845c4e4405799e73&marketName=proto_monad_v3",
+      "category": "Lending markets",
+      "type": "ERC20",
+      "totalBalanceValue": "1001286.632471187661979623"
+    },
+    {
+      "rollupKey": "redacted-1",
+      "chainId": 143,
+      "address": "0x35a73bacb179d3740395a3cecc87ff2e581d6042",
+      "label": "Aave - USDC",
+      "description": "Supply USDC on Aave Monad",
+      "iconPath": "/USDC.svg",
+      "adapters": [
+        "0x3063C5907FAa10c01B242181Aa689bEb23D2BD65"
+      ],
+      "sourceLink": "https://app.aave.com/reserve-overview/?underlyingAsset=0x754704bc059f8c67012fed69bc8a327a5aafb603&marketName=proto_monad_v3",
+      "category": "Lending markets",
+      "type": "ERC20",
+      "totalBalanceValue": "4340239.761347"
+    },
+    {
+      "rollupKey": "aguaUSDCgc-1",
+      "chainId": 1,
+      "address": "0xa98b4a70e17e55045cde4972b95bc2e8cec22a0f",
+      "label": "Agua - Global Carry Vault",
+      "description": "Targets maximum yield through multiple strategies, built for varying market conditions and opportunistic strategies across lending markets, protocols, and chains.",
+      "iconPath": "/Agualogo.svg",
+      "adapters": [
+        "0x3063C5907FAa10c01B242181Aa689bEb23D2BD65"
+      ],
+      "sourceLink": "https://app.reservoir.xyz/vaults/aguaUSDCgc",
+      "category": "Vaults",
+      "type": "ERC4626",
+      "totalBalanceValue": "13961.035535"
+    },
+    {
+      "rollupKey": "USD1-1",
+      "chainId": 1,
+      "address": "0x003Ca23Fd5F0ca87D01F6eC6CD14A8AE60c2b97D",
+      "label": "Dolomite - USD1",
+      "description": "USD1",
+      "iconPath": "/usd1-logo.svg",
+      "adapters": [
+        "0x289C204B35859bFb924B9C0759A4FE80f610671c"
+      ],
+      "sourceLink": "https://app.dolomite.io/stats/token/1/0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
+      "category": "Lending markets",
+      "type": "ERC20",
+      "totalBalanceValue": "36570224.992755193223198665"
+    },
+    {
+      "rollupKey": "cUSDC-143",
+      "chainId": 143,
+      "address": "0x9891178A1178E4C740Fa61Fd6e30A9D92D897590",
+      "label": "Curvance - USDC",
+      "description": "Supply USDC on Curvance",
+      "iconPath": "/USDC.svg",
+      "adapters": [
+        "0x289C204B35859bFb924B9C0759A4FE80f610671c"
+      ],
+      "sourceLink": "https://app.curvance.com/",
+      "category": "Lending markets",
+      "type": "ERC4626",
+      "totalBalanceValue": "1160056.733078"
+    },
+    {
+      "rollupKey": "cUSDC-143",
+      "chainId": 143,
+      "address": "0x207340d15f4e3c63ae610429f34b87c73a5d55e5",
+      "label": "Curvance - USDC",
+      "description": "Supply USDC on Curvance",
+      "iconPath": "/USDC.svg",
+      "adapters": [
+        "0x289C204B35859bFb924B9C0759A4FE80f610671c"
+      ],
+      "sourceLink": "https://app.curvance.com/",
+      "category": "Lending markets",
+      "type": "ERC4626",
+      "totalBalanceValue": "6761979.015766"
+    },
+    {
+      "rollupKey": "cUSDC-143",
+      "chainId": 143,
+      "address": "0x7f779f7F5316F6164dC5a25422A5ee51504B284A",
+      "label": "Curvance - USDC",
+      "description": "Supply USDC on Curvance",
+      "iconPath": "/USDC.svg",
+      "adapters": [
+        "0x289C204B35859bFb924B9C0759A4FE80f610671c"
+      ],
+      "sourceLink": "https://app.curvance.com/",
+      "category": "Lending markets",
+      "type": "ERC4626",
+      "totalBalanceValue": "31445685.842897"
+    },
+    {
+      "rollupKey": "cAUSD-143",
+      "chainId": 143,
+      "address": "0x88e0994E8130EF72bf614CBBcF722839B167c8d1",
+      "label": "Curvance - AUSD",
+      "description": "Supply AUSD on Curvance",
+      "iconPath": "/ausd.svg",
+      "adapters": [
+        "0x289C204B35859bFb924B9C0759A4FE80f610671c"
+      ],
+      "sourceLink": "https://app.curvance.com/",
+      "category": "Lending markets",
+      "type": "ERC4626",
+      "totalBalanceValue": "19216543.528169"
+    },
+    {
+      "rollupKey": "cAUSD-143",
+      "chainId": 143,
+      "address": "0xD1BFEA1728ffe98F515f26082fACfcc3341691D4",
+      "label": "Curvance - AUSD",
+      "description": "Supply AUSD on Curvance",
+      "iconPath": "/ausd.svg",
+      "adapters": [
+        "0x289C204B35859bFb924B9C0759A4FE80f610671c"
+      ],
+      "sourceLink": "https://app.curvance.com/",
+      "category": "Lending markets",
+      "type": "ERC4626",
+      "totalBalanceValue": "480378.213698"
+    },
+    {
+      "rollupKey": "steakUSDC-1",
+      "chainId": 1,
+      "address": "0xbeef088055857739C12CD3765F20b7679Def0f51",
+      "label": "Morpho - Steakhouse Prime USDC",
+      "description": "Steakhouse Prime Instant vault aims to optimize yields by lending USDC against blue chip crypto and real world asset RWA collateral markets depending on market conditions. We call this the dual engine.",
+      "iconPath": "/USDC.svg",
+      "adapters": [
+        "0x65078cfef8f7c07441661393eab6cb93b31db0dd"
+      ],
+      "sourceLink": "https://app.morpho.org/ethereum/vault/0xbeef088055857739C12CD3765F20b7679Def0f51/steakhouse-prime-instant",
+      "category": "Lending markets",
+      "type": "ERC4626",
+      "totalBalanceValue": "1732354.89216"
+    },
+    {
+      "rollupKey": "redacted-2",
+      "chainId": 1,
+      "address": "0xC21b08C16458202593D4D9B26b9984Ee67b38BbD",
+      "label": "Morpho - Sentora PRIME",
+      "description": "Sentora PRIME Main allows users to earn risk-adjusted returns by lending against PRIME",
+      "iconPath": "/aEthPYUSD.svg",
+      "adapters": [
+        "0x289C204B35859bFb924B9C0759A4FE80f610671c"
+      ],
+      "sourceLink": "https://app.morpho.org/ethereum/vault/0xC21b08C16458202593D4D9B26b9984Ee67b38BbD/sentora-prime-main",
+      "category": "Lending markets",
+      "type": "ERC4626",
+      "totalBalanceValue": "3976535.057229"
+    },
+    {
+      "rollupKey": "mmUSDC-1672",
+      "chainId": 1672,
+      "address": "0x047cD0a91E9B92ED979189a6C8A120bf280f02E5",
+      "label": "Morpho - Rockaway USDC",
+      "description": "Supply USDC to the Rockaway USDC Vault",
+      "iconPath": "/USDC.svg",
+      "adapters": [
+        "0x289C204B35859bFb924B9C0759A4FE80f610671c"
+      ],
+      "sourceLink": "https://oku.trade/morpho/analytics?chainId=1672&vaultId=0x047cd0a91e9b92ed979189a6c8a120bf280f02e5&chainFilter=%5B1672%5D",
+      "category": "Lending markets",
+      "type": "ERC4626",
+      "totalBalanceValue": "3905256.670268"
+    }
+  ],
+  "liabilities": [
+    {
+      "rollupKey": "rUSD",
+      "chainId": 1,
+      "address": "0x09D4214C03D01F49544C0448DBE3A27f768F2b34",
+      "label": "rUSD",
+      "description": "Reservoir's stablecoin minted in circulation",
+      "iconPath": "/rusd-logo.svg",
+      "adapters": [],
+      "category": "Other",
+      "type": "",
+      "totalBalanceValue": "119533.439221207003430111"
+    },
+    {
+      "rollupKey": "srUSD",
+      "chainId": 1,
+      "address": "0x738d1115B90efa71AE468F1287fc864775e23a31",
+      "label": "srUSD",
+      "description": "Reservoir's yield bearing stablecoin minted in circulation",
+      "iconPath": "/srusd-logo.svg",
+      "adapters": [],
+      "category": "Other",
+      "type": "",
+      "totalBalanceValue": "620801.402392869508032468"
+    },
+    {
+      "rollupKey": "srUSDv2",
+      "chainId": 1,
+      "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+      "label": "wsrUSD",
+      "description": "Reservoir's yield bearing stablecoin minted in circulation",
+      "iconPath": "/srusdv2-logo.svg",
+      "adapters": [],
+      "category": "Other",
+      "type": "",
+      "totalBalanceValue": "112002486.492782553751024881"
+    }
+  ],
+  "totalAssets": "113000934.381449205359590069",
+  "totalLiabilities": "112742821.33439663026248746",
+  "equity": "258113.047052575097102609"
+}

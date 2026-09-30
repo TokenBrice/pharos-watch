@@ -109,6 +109,14 @@ export function SafetyScoresOverview() {
         final score: Spark&apos;s native-asset and USDS parents both apply, so the weaker parent limits the claim.
       </p>
       <p>
+        Since methodology v9.97, reserve producers reconcile reviewed nested holdings, correct immediate claim
+        identities, and preserve positive measured dust without display rounding. Pooled holdings do not create
+        token-specific dependencies without attributable backing and tranche loss allocation. Producer recovery
+        does not bypass evidence admission: weak probes, unverified freshness, and reconciliation failures retain
+        their existing gates. Optional report-v6 multi-asset common-mode groups reference existing priced effects
+        without adding a penalty. Scoring weights and materiality thresholds are unchanged.
+      </p>
+      <p>
         Reviewed curated compositions require verified, complete evidence. An unresolved reserve disposition or known
         unknown exposure withholds the whole curated reserve envelope, not just the disputed link. That can change
         backing scores and downstream parent limits even when the unresolved share is tiny.

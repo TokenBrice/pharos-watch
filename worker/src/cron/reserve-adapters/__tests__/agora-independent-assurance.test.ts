@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { AGORA_INDEPENDENT_ASSURANCE_PROFILE } from "../agora-independent-assurance";
+import { collectPdfAnchors } from "../helpers";
+import { indexFixture, verifyFixtureIndex } from "./independent-assurance.test-support";
 
 const manifest = getIndependentAssuranceManifest("AUSD");
 const prepareIndexHtml = AGORA_INDEPENDENT_ASSURANCE_PROFILE.prepareIndexHtml!;
@@ -11,6 +13,8 @@ const REVIEWED_HASH = manifest.reportSha256.toLowerCase();
 const S3_JULY = `https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com/agora.docs.buildwithfern.com/${REVIEWED_HASH}/docs/assets/2026%20Jul%20-%20Agora%20Dollar%20Reserve%20Report.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Signature=abcd`;
 const S3_JUNE = "https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com/agora.docs.buildwithfern.com/a7e3e708ecba5f1826066cb1ba633eb231ceb1765bb76a54cb6994be07eaf34c/docs/assets/2026%20Jun%20-%20Agora%20Dollar%20Reserve%20Report.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Signature=efgh";
 const OLD_MIRROR = "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf";
+const FIXTURE = "agora-transparency-2026-09-30.html";
+const FERN_JULY = `/_fern-files${new URL(manifest.reportUrl).pathname}`;
 
 function indexHtml(...links: string[]) {
   return `<html><body>${links.map((href) => `<a href="${href}">report</a>`).join("\n")}</body></html>`;
@@ -26,10 +30,46 @@ describe("Agora reviewed index link verification", () => {
     expect(prepared).toContain(S3_JUNE);
   });
 
-  it("passes through an already-stable reviewed link without double counting", async () => {
-    const prepared = await prepareIndexHtml(indexHtml(S3_JULY, manifest.reportUrl), new AbortController().signal);
-    expect(prepared).toContain(`href="${manifest.reportUrl}"`);
-    expect(prepared).not.toContain("fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com/" + REVIEWED_HASH);
+  it("accepts a single already-stable reviewed link", async () => {
+    const prepared = await prepareIndexHtml(indexHtml(manifest.reportUrl), new AbortController().signal);
+    expect(collectPdfAnchors(prepared)).toEqual([{ href: manifest.reportUrl, text: "report" }]);
+  });
+
+  it("resolves July from the current official Fern index fixture", async () => {
+    const prepared = await prepareIndexHtml(indexFixture(FIXTURE), new AbortController().signal);
+    const reports = collectPdfAnchors(prepared).filter((anchor) =>
+      /\.pdf(?:[?#]|$)/i.test(anchor.href) && isReportCandidate(anchor.href, anchor.text));
+    const july = reports.filter((anchor) => reportDateFromCandidate(anchor.href, anchor.text) === manifest.reportDate);
+    expect(july).toEqual([{ href: manifest.reportUrl, text: "2026 Jul - Agora Dollar Reserve Report" }]);
+    expect(reports.every((anchor) => reportDateFromCandidate(anchor.href, anchor.text) != null)).toBe(true);
+  });
+
+  it("fails closed on a duplicate reviewed link across transport aliases", async () => {
+    await expect(prepareIndexHtml(indexHtml(FERN_JULY, manifest.reportUrl), new AbortController().signal))
+      .rejects.toThrow("reviewed July report link missing or ambiguous");
+  });
+
+  it("fails closed on an ambiguous second July report in the fixture", async () => {
+    const duplicate = `<a href="${FERN_JULY.replace(REVIEWED_HASH, "0".repeat(64))}">2026 Jul - Agora Dollar Reserve Report</a>`;
+    await expect(verifyFixtureIndex("AUSD", AGORA_INDEPENDENT_ASSURANCE_PROFILE, FIXTURE, indexFixture(FIXTURE) + duplicate))
+      .rejects.toThrow("reviewed report URL is missing or duplicated");
+  });
+
+  it("fails closed when the reviewed month is missing from the fixture", async () => {
+    const missingJuly = indexFixture(FIXTURE).replace(FERN_JULY, FERN_JULY.replace("2026%20Jul", "undated"));
+    await expect(prepareIndexHtml(missingJuly, new AbortController().signal))
+      .rejects.toThrow("reviewed July report link missing or ambiguous");
+  });
+
+  it("fails closed when another report candidate has no month", async () => {
+    const undated = '<a href="/Agora%20Dollar%20Reserve%20Report.pdf">Agora Dollar Reserve Report</a>';
+    await expect(verifyFixtureIndex("AUSD", AGORA_INDEPENDENT_ASSURANCE_PROFILE, FIXTURE, indexFixture(FIXTURE) + undated))
+      .rejects.toThrow("ambiguous report date");
+  });
+
+  it("rejects an unreviewed host even with the exact reviewed path", async () => {
+    await expect(prepareIndexHtml(indexHtml(manifest.reportUrl.replace("files.buildwithfern.com", "example.com")), new AbortController().signal))
+      .rejects.toThrow("reviewed July report link missing or ambiguous");
   });
 
   it("fails closed when the reviewed July link is missing", async () => {

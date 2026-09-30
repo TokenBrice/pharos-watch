@@ -135,6 +135,18 @@ const SLICE_META: Record<string, SliceMeta> = {
     assetClass: "stablecoin",
     issuerOrObligor: "Circle Internet Financial",
   },
+  // Schedule proof account EbzMwZPsJvgQ6juq7EJhkbmRwEkDBijXn9CWnYCiYxKR
+  // resolves to this replacement mint at finalized slot 451897337 (2026-09-30).
+  // Never map the USDv symbol to the legacy Solomon token.
+  usdv: {
+    sourceKey: "onre-holdings-csv:usdv-solomon-v2",
+    name: "USDv (Solomon replacement mint)",
+    risk: "medium",
+    coinId: "usdv-solomon-v2",
+    depType: "collateral",
+    assetClass: "stablecoin",
+    issuerOrObligor: "Solomon USDv; Solana mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk",
+  },
   "usd-cash": {
     sourceKey: "onre-holdings-csv:usd-cash",
     name: "USD cash",
@@ -157,6 +169,7 @@ const ROW_TO_BUCKET: Record<string, string> = {
   "USDC (Lending)": "usdc-kamino-lending",
   USYC: "usyc",
   USDC: "usdc",
+  USDv: "usdv",
   USD: "usd-cash",
 };
 
@@ -401,7 +414,7 @@ export function adaptOnReSchedule(schedule: OnReSchedule): AdapterResult {
     });
   }
 
-  const slices = slicesFromValues(values, 1);
+  const slices = slicesFromValues(values, null);
   const unknownExposurePct = amountSum > 0 ? (unmappedValueUsd / amountSum) * 100 : 0;
 
   const details: Record<string, unknown> = {

@@ -4,6 +4,7 @@ import {
   SafetyScoreV9CompletenessSchema,
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9DependencyProvenanceSchema,
+  SafetyScoreV9CommonModeGroupsSchema,
   findSafetyScoreV9ParentAttributionIssues,
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
@@ -11,6 +12,7 @@ import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText } from "./safety-score-v9-fact-primitives";
 import { Sha256Schema } from "./safety-schema-primitives";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
+import { stableJsonStringifyV1 } from "../lib/stable-json";
 import { DependencyTypeSchema } from "./dependency-types";
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 6;
@@ -215,7 +217,7 @@ export function buildReportCardsV9DependencyGraph(
 }
 
 function sameJson(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return stableJsonStringifyV1(left) === stableJsonStringifyV1(right);
 }
 
 function isUniqueSorted(values: readonly string[]): boolean {
@@ -252,6 +254,7 @@ const ReportCardsV9ResponseShape = {
     })
     .strict(),
   dependencyGraph: ReportCardsV9DependencyGraphSchema,
+  commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
 } as const;
 
 function refineReportCardsV9Response(
@@ -265,10 +268,31 @@ function refineReportCardsV9Response(
     updatedAt: number;
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
     cards: readonly SafetyScoreV9CurrentCard[];
+    schemaVersion?: number;
+    commonModeGroups?: z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
     dependencyGraph: ReportCardsV9DependencyGraph;
   },
   ctx: z.RefinementCtx,
 ): void {
+  if (response.schemaVersion === 5 && response.commonModeGroups !== undefined) {
+    ctx.addIssue({ code: "custom", path: ["commonModeGroups"], message: "Report v5 does not publish common-mode groups" });
+  }
+  const cardsById = new Map(response.cards.map((card) => [card.id, card]));
+  response.commonModeGroups?.forEach((group, groupIndex) => {
+    if (group.memberAssetIds.some((id) => !cardsById.has(id))) {
+      ctx.addIssue({ code: "custom", path: ["commonModeGroups", groupIndex, "memberAssetIds"], message: "Common-mode members must have public cards" });
+    }
+    group.pricedEffects?.forEach((effect, effectIndex) => {
+      const card = cardsById.get(effect.assetId);
+      if (!card || effect.capIndices.some((index) => {
+        const cap = card.caps[index];
+        return !cap || cap.source !== "structural";
+      }) || effect.deploymentAdjustmentIndices.some((index) =>
+        card.scoreTrace.deploymentRisk.adjustments[index]?.failureDomainKey !== group.id)) {
+        ctx.addIssue({ code: "custom", path: ["commonModeGroups", groupIndex, "pricedEffects", effectIndex], message: "Common-mode effects must reference existing priced card effects" });
+      }
+    });
+  });
   const identity = response.safetyScoreIdentity;
   if (
     identity.methodologyVersion !== response.methodology.version ||

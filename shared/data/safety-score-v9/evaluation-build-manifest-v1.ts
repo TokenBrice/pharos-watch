@@ -18,7 +18,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "5576864cdbe3b85474e77b76d3297e3ba047676a85fe6d5cd1dad736ec0ec47f"
+      "sha256": "04946df7a1eaf3eb04100992ce82dcbfee780f3892d1d05c3f7122bc631a6d3e"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -86,7 +86,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "3c6711168c461500d02939407df9d8597b506146f319b8a9187a27f0df044340"
+      "sha256": "c28fb92a7c6056ab63175138081d3eb89848a516758cd56ac22d60be6ce7da04"
     },
     {
       "path": "shared/lib/p4-exit-route-amm-simulation.ts",
@@ -306,7 +306,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/formula.ts",
-      "sha256": "d1b48f62c5f2a394bc299a07404b54570f8d77ee2a7784eabfcbc0d71072e7bb"
+      "sha256": "ad9e90a1a1601a21681cb69ef70a5975e72b6aa5db73fde5ed9d955ce6fe0132"
     },
     {
       "path": "shared/lib/safety-score-v9/gap-index.ts",
@@ -462,7 +462,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public.ts",
-      "sha256": "6ade6cef77896a95fe21f9b9f29754e53b1a5a78f0fe0f23f6e5357f4a05ec16"
+      "sha256": "2bba65273de7cbf570cf7a8e201329ba54c6dc3534fc16c36a82d0c13f5d9269"
     },
     {
       "path": "shared/types/safety-score-v9-transfer-overlays.ts",
@@ -639,7 +639,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-09-29-block-26082345-shock-coverage.json.gz"
     }
   ],
-  "digest": "f15d10c560999336b58803ed8b3d00ae2d223e9ad518aa37920eb26702b8dbc3"
+  "digest": "0ac696517a6fa0f6bf095cdcadce3d568e6a875875388b14ce6eb2fb1699368f"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

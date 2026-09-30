@@ -57,6 +57,8 @@ The public Safety Score dependency explanation in `src/app/methodology/sections/
 
 The public Safety Score exit explanation in `src/app/methodology/sections/core/safety-scores-overview.tsx` covers v9.96 explicit issuer stablecoin payouts, captured output-price admission, conservative basket quality, and exact Uniswap V4 PoolId admission independent of indexed TVL; thUSD's executed rail is curation context, and producer-driven effects are distinguished from the frozen replay.
 
+The public Safety Score dependency explanation also covers v9.97 measured nested-leaf reconciliation, corrected immediate claim identities, positive reserve dust preservation, and withholding token-specific links from pooled holdings without attributable backing and tranche loss allocation. Producer recovery does not bypass evidence admission. Optional report-v6 multi-asset common-mode groups reference existing priced effects and add no penalty; weights and materiality thresholds remain unchanged.
+
 ---
 
 ## Update Rules

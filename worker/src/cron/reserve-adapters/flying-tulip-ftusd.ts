@@ -8,7 +8,7 @@ import {
   requireJsonInput,
   sameRunRenderClockFreshnessMetadata,
 } from "./helpers";
-import { reserveDegradedWarning } from "./warnings";
+import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 
 interface FlyingTulipCollateral {
   address?: string;
@@ -58,6 +58,9 @@ const EXPECTED_CHAINS: ReadonlyMap<number, ExpectedChainProfile> = new Map([
     collaterals: new Map([
       ["USDC", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"],
       ["USDT", "0xdac17f958d2ee523a2206206994597c13d831ec7"],
+      ["USDe", "0x4c9edd5852cd905f086c759e8383e09bff1e68b3"],
+      ["crvUSD", "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"],
+      ["USDG", "0xe343167631d89b6ffc58b88d6b7fb0228795491d"],
     ]),
     borrow: "WETH",
     stake: "wstETH",
@@ -108,6 +111,24 @@ const SLICE_META: Record<string, Pick<ReserveSlice, "name" | "risk" | "coinId" |
     coinId: "fdusd-first-digital",
     depType: "collateral",
   },
+  USDe: {
+    name: "USDe strategy wrapper (Ethereum)",
+    risk: "medium",
+    coinId: "usde-ethena",
+    depType: "collateral",
+  },
+  crvUSD: {
+    name: "crvUSD strategy wrapper (Ethereum)",
+    risk: "medium",
+    coinId: "crvusd-curve",
+    depType: "collateral",
+  },
+  USDG: {
+    name: "USDG strategy wrapper (Ethereum)",
+    risk: "medium",
+    coinId: "usdg-paxos",
+    depType: "collateral",
+  },
 };
 
 function requirePositiveFinite(value: unknown, label: string): number {
@@ -145,13 +166,14 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     chain.tvlUsd !== 0 || chain.metrics?.totalSupplyUsd !== 0;
 
   const collateralUsd = new Map<string, number>();
+  const unreviewedCollateralUsd = new Map<string, { name: string; value: number }>();
   const diagnostics: Array<Record<string, unknown>> = [];
   const warnings: LiveReserveWarning[] = [];
   let totalReserveUsd = 0;
   let supplyUsd = 0;
 
-  // Every reviewed chain must be present in the payload. Each present chain is pinned
-  // to its reviewed name and exact collateral addresses once it carries any activity.
+  // Every reviewed chain must be present. Present collateral rows retain exact
+  // identity pins, but zero-capital slots may be added or omitted.
   for (const [chainId, expected] of EXPECTED_CHAINS) {
     const chain = payloadChains.find((candidate) => candidate.chainId === chainId);
     if (!chain) {
@@ -167,20 +189,33 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     totalReserveUsd += chainTvlUsd;
     supplyUsd += chainSupplyUsd;
 
-    const collaterals = chain.collaterals ?? [];
-    if (collaterals.length !== expected.collaterals.size) {
-      throw new Error(`flying-tulip-ftusd ${expected.name} collateral set changed`);
-    }
-    for (const [symbol, expectedAddress] of expected.collaterals) {
-      const collateral = collaterals.find((candidate) => candidate.symbol === symbol);
-      if (!collateral || collateral.address?.toLowerCase() !== expectedAddress) {
+    const seenCollaterals = new Set<string>();
+    for (const collateral of chain.collaterals ?? []) {
+      const symbol = collateral.symbol;
+      const address = collateral.address?.toLowerCase();
+      const value = requireNonNegativeFinite(collateral.tvlAmountUsd, `${expected.name} ${symbol} tvlAmountUsd`);
+      if (!symbol || !address || !/^0x[0-9a-f]{40}$/.test(address)) {
+        throw new Error(`flying-tulip-ftusd ${expected.name} collateral identity is missing or invalid`);
+      }
+      if (seenCollaterals.has(address)) {
+        throw new Error(`flying-tulip-ftusd ${expected.name} duplicate collateral address`);
+      }
+      seenCollaterals.add(address);
+      const expectedAddress = expected.collaterals.get(symbol);
+      if (expectedAddress && address !== expectedAddress) {
         throw new Error(`flying-tulip-ftusd ${expected.name} ${symbol} address changed or disappeared`);
       }
-      // A reviewed collateral slot may legitimately publish zero capital (FDUSD on
-      // BNB Smart Chain at its 2026-09-24 launch); the row and its pinned address
-      // stay required, and normalizeSlices drops the resulting 0% slice.
-      const value = requireNonNegativeFinite(collateral.tvlAmountUsd, `${expected.name} ${symbol} tvlAmountUsd`);
-      collateralUsd.set(symbol, (collateralUsd.get(symbol) ?? 0) + value);
+      if (value === 0) continue;
+      if (expectedAddress) {
+        collateralUsd.set(symbol, (collateralUsd.get(symbol) ?? 0) + value);
+      } else {
+        const sourceKey = `flying-tulip-ftusd:unreviewed:${chainId}:${address}`;
+        unreviewedCollateralUsd.set(sourceKey, { name: `Unreviewed ${symbol} collateral (${expected.name})`, value });
+        warnings.push(reserveInfoWarning(
+          "flying-tulip-ftusd-unreviewed-collateral",
+          `Unreviewed positive collateral retained without a dependency link: ${expected.name} ${symbol} ${address}`,
+        ));
+      }
     }
 
     // Only chains with a reviewed borrow-and-stake profile pin a strategy and emit
@@ -223,7 +258,9 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     );
   }
 
-  const classifiedCollateralUsd = [...collateralUsd.values()].reduce((sum, value) => sum + value, 0);
+  const unknownCollateralUsd = [...unreviewedCollateralUsd.values()].reduce((sum, row) => sum + row.value, 0);
+  const classifiedCollateralUsd = [...collateralUsd.values()].reduce((sum, value) => sum + value, 0) + unknownCollateralUsd;
+  requirePositiveFinite(classifiedCollateralUsd, "total collateral USD");
   if (Math.abs(classifiedCollateralUsd - totalReserveUsd) / totalReserveUsd > 0.001) {
     throw new Error("flying-tulip-ftusd collateral rows do not reconcile to cross-chain TVL");
   }
@@ -233,17 +270,26 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
   const freshness = sameRunRenderClockFreshnessMetadata(sourceTimestamp);
 
   return {
-    slices: normalizeSlices([...collateralUsd.entries()].map(([symbol, value]) => ({
-      ...SLICE_META[symbol],
-      pct: (value / classifiedCollateralUsd) * 100,
-    }))),
+    slices: normalizeSlices([
+      ...[...collateralUsd.entries()].map(([symbol, value]) => ({
+        ...SLICE_META[symbol],
+        sourceKey: `flying-tulip-ftusd:collateral:${symbol.toLowerCase()}`,
+        pct: (value / classifiedCollateralUsd) * 100,
+      })),
+      ...[...unreviewedCollateralUsd.entries()].map(([sourceKey, row]) => ({
+        sourceKey,
+        name: row.name,
+        risk: "high" as const,
+        pct: (row.value / classifiedCollateralUsd) * 100,
+      })),
+    ], null),
     warnings,
     metadata: {
       ...freshness,
       totalReserveUsd,
       supplyUsd,
       collateralizationRatio: totalReserveUsd / supplyUsd,
-      unknownExposurePct: 0,
+      unknownExposurePct: (unknownCollateralUsd / classifiedCollateralUsd) * 100,
       details: {
         ...freshness.details,
         sourceOperator: "Flying Tulip",

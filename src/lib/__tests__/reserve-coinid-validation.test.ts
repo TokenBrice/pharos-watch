@@ -49,14 +49,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "WS1.B7: the DOLA leg is subject self exposure within undecomposed LP-secured debt, not an upstream token reserve.",
   ],
   [
-    "trusd-tori::On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum::USDC",
-    "Tori's Accountable 'On-chain Liquidity' bucket is an unsplit Morpho-USDC/USDC/USDT basket (basket-needs-split disposition), so a USDC coinId would overstate the dependency.",
-  ],
-  [
-    "trusd-tori::On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum::USDT",
-    "Tori's Accountable 'On-chain Liquidity' bucket is an unsplit Morpho-USDC/USDC/USDT basket (basket-needs-split disposition), so a USDT coinId would overstate the dependency.",
-  ],
-  [
     "susd1plus-lorenzo::Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)::USDC",
     "Lorenzo reports a mixed USD1/USDT/USDC and strategy portfolio without current constituent weights, so a USDC coinId would overstate the dependency.",
   ],
@@ -126,7 +118,27 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   ],
   [
     "reusd-re-protocol::reUSD / sUSDe LP position::USDe",
-    "Re documents a reUSD/sUSDe LP position; the sUSDe leg is a mixed LP claim without a current reconciled per-asset split.",
+    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+  ],
+  [
+    "reusd-re-protocol::sUSDe (delta-neutral ETH basis)::USDe",
+    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+  ],
+  [
+    "reusd-re-protocol::USDC reserves::USDC",
+    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+  ],
+  [
+    "reusd-re-protocol::USDT reserves::USDT",
+    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+  ],
+  [
+    "reusd-re-protocol::USDe (delta-neutral ETH basis)::USDe",
+    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+  ],
+  [
+    "reusd-re-protocol::sUSDS (Sky savings USDS)::USDS",
+    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
   ],
   [
     "usdu-usdu-finance::USDU constituent of Curve USDU/USDC LP backing::USDC",
@@ -167,6 +179,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "usdh-hubble::kUSDH-USDC Orca kToken CDP collateral::USDC",
     "Kamino kToken position over an Orca USDH-USDC LP; a protocol position whose USDC leg is not separable as a direct USDC holding.",
+  ],
+  [
+    "trusd-tori::Unverified USDC Morpho dust on Base::USDC",
+    "The Base Morpho vault and token representation are unverified, so the dust remains unlinked with its measured share preserved.",
   ],
 ]);
 

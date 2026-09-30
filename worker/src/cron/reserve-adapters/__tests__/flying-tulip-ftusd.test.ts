@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { adaptFlyingTulipFtUsd } from "../flying-tulip-ftusd";
 import { getReserveAdapter } from "../index";
 import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
+import dashboardCapture from "./fixtures/flying-tulip-ftusd-dashboard-2026-09-30.json";
+
+type DashboardChain = NonNullable<Parameters<typeof adaptFlyingTulipFtUsd>[0]["chains"]>[number];
+type DashboardCollateral = Required<NonNullable<DashboardChain["collaterals"]>[number]>;
 
 const BSC_USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
 const BSC_USDT = "0x55d398326f99059fF775485246999027B3197955";
@@ -72,11 +76,13 @@ describe("adaptFlyingTulipFtUsd", () => {
   it("aggregates collateral across all three active chains and preserves issuer diagnostics", () => {
     const result = adaptFlyingTulipFtUsd(payload());
     expect(result.warnings).toEqual([]);
-    expect(result.slices).toEqual([
-      expect.objectContaining({ name: "USDC strategy wrappers (Ethereum, Sonic, and BNB Smart Chain)", coinId: "usdc-circle", pct: 68.7 }),
-      expect.objectContaining({ name: "USDT strategy wrappers (Ethereum and BNB Smart Chain)", coinId: "usdt-tether", pct: 31.1 }),
-      expect.objectContaining({ name: "USSD strategy wrapper (Sonic)", coinId: "ussd-sonic-labs", pct: 0.2 }),
-    ]);
+    const total = 4_686_906.138325936;
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct)
+      .toBeCloseTo((2_907_689.4549 + 313_539.0625 + 44.04782812867962) / total * 100, 10);
+    expect(result.slices.find((slice) => slice.coinId === "usdt-tether")?.pct)
+      .toBeCloseTo((1_457_656.8216 + 50.18059780734) / total * 100, 10);
+    expect(result.slices.find((slice) => slice.coinId === "ussd-sonic-labs")?.pct)
+      .toBeCloseTo(7_926.5709 / total * 100, 10);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: 1786310565,
@@ -131,8 +137,10 @@ describe("adaptFlyingTulipFtUsd", () => {
       }),
     );
     // USDC and USDT from BNB Smart Chain aggregate into the cross-chain symbol slices.
-    expect(result.slices.find((s) => s.name === "USDC strategy wrappers (Ethereum, Sonic, and BNB Smart Chain)")?.pct).toBeCloseTo(68.1, 1);
-    expect(result.slices.find((s) => s.name === "FDUSD strategy wrapper (BNB Smart Chain)")?.pct).toBeCloseTo(0.4, 1);
+    expect(result.slices.find((s) => s.coinId === "usdc-circle")?.pct)
+      .toBeCloseTo((2_907_689.4549 + 313_539.0625 + 40_000) / 4_786_811.9099 * 100, 8);
+    expect(result.slices.find((s) => s.coinId === "fdusd-first-digital")?.pct)
+      .toBeCloseTo(20_000 / 4_786_811.9099 * 100, 8);
     expect(result.metadata?.details).toMatchObject({
       strategies: [
         expect.objectContaining({ chainName: "Ethereum" }),
@@ -218,6 +226,81 @@ describe("adaptFlyingTulipFtUsd", () => {
         message: expect.stringContaining("Polygon"),
       }),
     );
+  });
+
+  it("replays the current dashboard with new reviewed tokens and omitted zero FDUSD", () => {
+    const result = adaptFlyingTulipFtUsd(dashboardCapture);
+    expectValidAdapterOutput("flying-tulip-ftusd", result, {
+      now: Date.parse(dashboardCapture.lastUpdated) / 1000,
+    });
+    expect(result.warnings).toEqual([]);
+    expect(result.metadata?.unknownExposurePct).toBe(0);
+    const total = dashboardCapture.chains.reduce((sum, chain) => sum + chain.tvlUsd, 0);
+    for (const [symbol, coinId] of [
+      ["USDC", "usdc-circle"], ["USDT", "usdt-tether"],
+      ["USSD", "ussd-sonic-labs"], ["USDe", "usde-ethena"],
+    ]) {
+      const value = dashboardCapture.chains.flatMap<DashboardCollateral>((chain) => chain.collaterals)
+        .filter((row) => row.symbol === symbol).reduce((sum, row) => sum + row.tvlAmountUsd, 0);
+      expect(result.slices.find((slice) => slice.coinId === coinId)).toMatchObject({
+        sourceKey: `flying-tulip-ftusd:collateral:${symbol.toLowerCase()}`,
+        depType: "collateral",
+        pct: expect.closeTo(value / total * 100, 10),
+      });
+    }
+    expect(result.slices.some((slice) => ["crvusd-curve", "usdg-paxos", "fdusd-first-digital"].includes(slice.coinId ?? ""))).toBe(false);
+  });
+
+  it("ignores new zero-capital rows without requiring the old zero slots", () => {
+    const changed = payload();
+    changed.chains[2].collaterals = changed.chains[2].collaterals.filter((row) => row.symbol !== "FDUSD");
+    changed.chains[0].collaterals.push({
+      symbol: "NEW", address: "0x0000000000000000000000000000000000000001", tvlAmountUsd: 0,
+    });
+    expect(adaptFlyingTulipFtUsd(changed).slices).toEqual(adaptFlyingTulipFtUsd(payload()).slices);
+  });
+
+  it("retains unknown positive collateral in the denominator without a dependency link", () => {
+    const changed = payload();
+    changed.chains[0].collaterals.push({
+      symbol: "NEW", address: "0x0000000000000000000000000000000000000001", tvlAmountUsd: 1_000,
+    });
+    changed.chains[0].tvlUsd += 1_000;
+    const result = adaptFlyingTulipFtUsd(changed);
+    const unknown = result.slices.find((slice) => slice.sourceKey?.includes(":unreviewed:"));
+    expect(unknown?.coinId).toBeUndefined();
+    expect(unknown?.depType).toBeUndefined();
+    expect(unknown?.risk).toBe("high");
+    expect(unknown?.pct).toBeCloseTo(1_000 / 4_687_906.138325936 * 100, 10);
+    expect(result.metadata?.unknownExposurePct).toBe(unknown?.pct);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "flying-tulip-ftusd-unreviewed-collateral", effect: "info",
+    }));
+  });
+
+  it.each([
+    ["crvUSD", "crvusd-curve"],
+    ["USDG", "usdg-paxos"],
+  ])("links reviewed %s capital even when its positive share is below six-decimal rounding", (symbol, coinId) => {
+    const changed = structuredClone(dashboardCapture);
+    const row = changed.chains[0].collaterals.find((collateral) => collateral.symbol === symbol)!;
+    row.tvlAmountUsd = 0.000001;
+    changed.chains[0].tvlUsd += row.tvlAmountUsd;
+    const result = adaptFlyingTulipFtUsd(changed);
+    const slice = result.slices.find((candidate) => candidate.coinId === coinId);
+    expect(slice).toMatchObject({
+      sourceKey: `flying-tulip-ftusd:collateral:${symbol.toLowerCase()}`,
+      depType: "collateral",
+    });
+    expect(slice?.pct).toBeGreaterThan(0);
+    expect(slice?.pct).toBeLessThan(0.000001);
+    expect(result.metadata?.unknownExposurePct).toBe(0);
+  });
+
+  it("rejects duplicate collateral rows rather than counting the same claim twice", () => {
+    const changed = payload();
+    changed.chains[0].collaterals.push({ ...changed.chains[0].collaterals[0] });
+    expect(() => adaptFlyingTulipFtUsd(changed)).toThrow("duplicate collateral address");
   });
 });
 

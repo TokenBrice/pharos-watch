@@ -26,7 +26,7 @@ interface ClassifyBucketedValuesOptions<Item, Bucket extends string> {
   getValue: (item: Item) => number;
   getUnknownLabel: (item: Item) => string;
   totalValue?: number;
-  decimals?: number;
+  decimals?: number | null;
   unknownSliceName?: string;
   unknownSourceKey?: string;
   unknownRisk?: ReserveSlice["risk"];

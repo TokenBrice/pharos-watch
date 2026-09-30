@@ -735,6 +735,7 @@ function buildSafetyScoreV9CandidatePipeline(
     policyVersion,
     publicationGenerationId,
     publishedAtSec: input.publishedAtSec,
+    commonModeGroups: evaluatedSet.dependencyPlan.commonModeGroups,
     results: evaluatedSet.assets.map((asset) => ({
       trace: asset.trace,
       backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),

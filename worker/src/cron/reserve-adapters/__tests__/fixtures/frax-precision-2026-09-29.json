@@ -1,0 +1,1098 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-29T21:43:47Z -->",
+  "_source": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+  "asOfTimestamp": "2026-09-29T21:43:47.000Z",
+  "totalAssets": 276522135.4093,
+  "assets": [
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 68671.76327357539,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 512037.5191413046,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 86196.09922782257,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 30551.498020314688,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 313797.52539999865,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 112343.96422350458,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 296349.4176920845,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 945.7997430116708,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 10081.927019168466,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 10849.059311239656,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 8611.331940060047,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 206332.6936347192,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 419046.9302637284,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 7030.630942376207,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 5559.808367521031,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 966579.6616952788,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 279589.8552037442,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 349951.14540358353,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 223916.21951048236,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "sfrxETH",
+      "totalValueUsd": 90516.1096072434,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "sfrxETH",
+      "totalValueUsd": 41229.93343025355,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 11860.032194069452,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FPI",
+      "totalValueUsd": 39575.48726834278,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 254564.99613707024,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 3829039.659631964,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 6013178.867566658,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 5874980.170031727,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 156171.73441781703,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "reUSD",
+      "totalValueUsd": 512520.3930908124,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 99558.31890652698,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "crvUSD",
+      "totalValueUsd": 88085.42109001483,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 199768.41285037657,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "USDT",
+      "totalValueUsd": 805033.0325455819,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 396434.8881200175,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "USDS",
+      "totalValueUsd": 333884.4344245567,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 136944.5955488847,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 45648.198516294906,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "DAI",
+      "totalValueUsd": 15729.256846644015,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "DAI",
+      "totalValueUsd": 5243.085615548006,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 25827402.656516884,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "USDe",
+      "totalValueUsd": 8107526.591495678,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "cvxCRV",
+      "totalValueUsd": 273781.4713789304,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "CRV",
+      "totalValueUsd": 810213.9617502409,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "CVX",
+      "totalValueUsd": 2040821.432,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 9.9221767e-19,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 16796.85218333421,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 25.248217428235627,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 20613.14401171134,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 26.406557695811067,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 331517.7132452173,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 65100.65626478896,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 125230.81288304276,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 12135.833256408938,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 74905.24391954162,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 143296.18850241514,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 95885.95322702212,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 85586.0360121035,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 44631.33244800599,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 49853.14304034129,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 15156.636853330678,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "USDC",
+      "totalValueUsd": 29.9988771,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 0.0005366279414820015,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "USDC",
+      "totalValueUsd": 10.92745297012534,
+      "category": "asset:lent:usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 23017.63804706523,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "sFRAX",
+      "totalValueUsd": 37487656.065248005,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 11.739573724423098,
+      "category": "asset:lent:frax"
+    },
+    {
+      "tokenSymbol": "USDC",
+      "totalValueUsd": 0.45032714362408,
+      "category": "asset:lent:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 4341793.877077129,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 624325.3976156451,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 75781.02958061098,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 452261.9807206559,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 101321.56832890876,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 999987.0427912418,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "FPI",
+      "totalValueUsd": 15413.919007046554,
+      "category": "asset:owned:fxs_volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 23.53258205170245,
+      "category": "asset:owned:unknown"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 8.26170117657956,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FPI",
+      "totalValueUsd": 8.787296800178465,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 11.996483165803248,
+      "category": "asset:owned:frax_fxs"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 12807.933249043352,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FPI",
+      "totalValueUsd": 13622.752560364792,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 3527.443758754564,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 618631.9719586053,
+      "category": "asset:owned:frax_fxs"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 5461.6144548245165,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "sfrxETH",
+      "totalValueUsd": 5462.970461664671,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 1128694.8331473365,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "frxETH",
+      "totalValueUsd": 1128600.6567129458,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 0.00004735656530971809,
+      "category": "asset:owned:frax_fxs"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 150867.49224316017,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "WBNB",
+      "totalValueUsd": 150458.3028241401,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 1008539.2307872608,
+      "category": "asset:owned:unknown"
+    },
+    {
+      "tokenSymbol": "frxETH",
+      "totalValueUsd": 28232.831081821412,
+      "category": "asset:owned:fxs_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 90401.289989742,
+      "category": "asset:owned:frax_fxs"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 346551.3707644864,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "WETH",
+      "totalValueUsd": 345715.01627161034,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 277.32232930636206,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "ZZ",
+      "totalValueUsd": 277.3223293063598,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 47723.46576882693,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "WETH",
+      "totalValueUsd": 47869.87058695839,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "WPOL",
+      "totalValueUsd": 66933.39794123273,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 66933.39794123273,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "WAVAX",
+      "totalValueUsd": 123585.93309197658,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 122106.47275035582,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 574061.2708611919,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "wfrxETH",
+      "totalValueUsd": 574061.2708611919,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "ETH",
+      "totalValueUsd": 11209.785157704706,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 99221.767,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 121.28571761723738,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "wfrxETH",
+      "totalValueUsd": 0.00004018656640519848,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "sfrxETH",
+      "totalValueUsd": 826221.820520984,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 6.01644341958372e-7,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "LFRAX",
+      "totalValueUsd": 1940863.980200251,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 6935.742291047905,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 7448.0154100414065,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "LFRAX",
+      "totalValueUsd": 96.741222825,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "sDAI",
+      "totalValueUsd": 17.713267980426828,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 2218458.7135916874,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 1.0476224384890025,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "ETH",
+      "totalValueUsd": 1550735.6836624611,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "wfrxETH",
+      "totalValueUsd": 6649.006374730803,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 17338477.816594422,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FPI",
+      "totalValueUsd": 1758.8598429061028,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "ZK",
+      "totalValueUsd": 16.5106325286,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "ETH",
+      "totalValueUsd": 220.184141426983,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "WBNB",
+      "totalValueUsd": 8022.387116483739,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 2480.544175,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 1785.991806,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "ETH",
+      "totalValueUsd": 2676.5827943917852,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "OP",
+      "totalValueUsd": 112022.1191601804,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "ETH",
+      "totalValueUsd": 14734.845523890635,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 1392.718172879676,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "BNB",
+      "totalValueUsd": 2268.52426017,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "MATIC",
+      "totalValueUsd": 354.18070387606446,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "lzsfrxETH",
+      "totalValueUsd": 625683.2688806349,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "MATIC",
+      "totalValueUsd": 29.52849,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 9535.15460144288,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 135425.9128823473,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 83384.36912197269,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 2075968.813038465,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 133447.69119504374,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "USCC",
+      "totalValueUsd": 110.75464918137,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "FPI",
+      "totalValueUsd": 1.3953147468067488,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 7.937229111368658e-7,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 49610.88428222122,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 0.00001317135377247624,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 776953.7778378837,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "CVX",
+      "totalValueUsd": 175.97549086240434,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 91.73524937093585,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "sfrxETH",
+      "totalValueUsd": 1409606.343409937,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 9.9221767e-8,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "USDC",
+      "totalValueUsd": 20.00347324197054,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 1.2007286044106502,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "sFRAX",
+      "totalValueUsd": 1057.761021006599,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "USTB",
+      "totalValueUsd": 21131274.327685155,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "AUSD",
+      "totalValueUsd": 4020.9240275418697,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "WETH",
+      "totalValueUsd": 78.97259747163977,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "USTB",
+      "totalValueUsd": 26984.36332377272,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "WTGXX",
+      "totalValueUsd": 65963.73373141576,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "WTGXX",
+      "totalValueUsd": 14554635.827896992,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "USDT",
+      "totalValueUsd": 1790.5069398712176,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "FPI",
+      "totalValueUsd": 138.90337813416423,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "BUIDL",
+      "totalValueUsd": 15828560.07,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "WTGXX",
+      "totalValueUsd": 52733089.52227135,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "USDC",
+      "totalValueUsd": 2955.0706145666736,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "BUIDL",
+      "totalValueUsd": 10000,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "PYUSD",
+      "totalValueUsd": 0.0045107616939,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 9922.1767,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 895.6534498158526,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 15225.984632281306,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "WETH",
+      "totalValueUsd": 1068.393815,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "AUSD",
+      "totalValueUsd": 35323.43475834884,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "ETH",
+      "totalValueUsd": 7604.3035844757715,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "WETH",
+      "totalValueUsd": 13.903644849349435,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "lzfrxETH",
+      "totalValueUsd": 881405.9681951189,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 49610.8835,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 17838.41219074703,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "ETH",
+      "totalValueUsd": 401.484665,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "AVAX",
+      "totalValueUsd": 572.626651244407,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 94.26067865,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FPI",
+      "totalValueUsd": 141527.8645679677,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 141289.03858804595,
+      "category": "asset:owned:frax"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 13286.88990409105,
+      "category": "asset:owned:frax_fxs"
+    },
+    {
+      "tokenSymbol": "WETH",
+      "totalValueUsd": 16643.23992463591,
+      "category": "asset:owned:fxs_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 221064.0650939323,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "USDC",
+      "totalValueUsd": 220933.12359764375,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 196284.9844056511,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "USDC",
+      "totalValueUsd": 196083.7709917272,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "stkAAVE",
+      "totalValueUsd": 1373.1471270012703,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 7362.124551236639,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "frxETH",
+      "totalValueUsd": 853549.4766773158,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 860412.6908784838,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 992217.67,
+      "category": "asset:owned:frax_volatile"
+    },
+    {
+      "tokenSymbol": "axlUSDC",
+      "totalValueUsd": 75270.93392548428,
+      "category": "asset:owned:unknown"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 233498.5190817478,
+      "category": "asset:owned:unknown"
+    },
+    {
+      "tokenSymbol": "axlfrxETH",
+      "totalValueUsd": 85483.8443482506,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "frxETH",
+      "totalValueUsd": 115354.03658130836,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 39853.14386342646,
+      "category": "asset:owned:unknown"
+    },
+    {
+      "tokenSymbol": "frxETH",
+      "totalValueUsd": 280388.94455719076,
+      "category": "asset:owned:unknown"
+    },
+    {
+      "tokenSymbol": "DAI",
+      "totalValueUsd": 1.5846838545694788,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "USDe",
+      "totalValueUsd": 2.7193175454222813,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "sfrxUSD",
+      "totalValueUsd": 1.0852774807812289,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "USDe",
+      "totalValueUsd": 5.2257706880554355,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "FRAX",
+      "totalValueUsd": 4.812755623125908,
+      "category": "asset:owned:frax_usd"
+    },
+    {
+      "tokenSymbol": "USDB",
+      "totalValueUsd": 3.7,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 182485.0165833219,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 13739482.788015038,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 2516376.2920278534,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 6471198.072133146,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "CHR",
+      "totalValueUsd": 35.001700103406385,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "CHR",
+      "totalValueUsd": 2.375019601185581,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "MULTI",
+      "totalValueUsd": 142.1587279019611,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "RAM",
+      "totalValueUsd": 4696.589515249434,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "RAM",
+      "totalValueUsd": 59.85859883259796,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "SDL",
+      "totalValueUsd": 0,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "SDT",
+      "totalValueUsd": 20762.6734455266,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "THE",
+      "totalValueUsd": 56410.87832480436,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "VELO",
+      "totalValueUsd": 219269.6867403727,
+      "category": "asset:owned:volatile"
+    },
+    {
+      "tokenSymbol": "EREBOR_USD",
+      "totalValueUsd": 2002337.93,
+      "category": "asset:owned:usd"
+    },
+    {
+      "tokenSymbol": "frxUSD",
+      "totalValueUsd": 225.76223247966,
+      "category": "asset:owned:frax"
+    }
+  ]
+}

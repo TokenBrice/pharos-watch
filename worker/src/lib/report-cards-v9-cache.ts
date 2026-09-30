@@ -109,6 +109,7 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
       sourceGenerations: publication.sourceGenerations,
     },
     cards: publication.cards,
+    ...(publication.commonModeGroups === undefined ? {} : { commonModeGroups: publication.commonModeGroups }),
     dependencyGraph: buildReportCardsV9DependencyGraph(
       publication.cards,
     ),

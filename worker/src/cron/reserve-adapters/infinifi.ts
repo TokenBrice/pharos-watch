@@ -317,7 +317,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
   }
 
   return {
-    slices: normalizeSlices(rawSlices),
+    slices: normalizeSlices(rawSlices, null),
     unknownFarms,
     unknownExposurePct,
     sourceTotalGapPct,

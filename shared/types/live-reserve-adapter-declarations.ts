@@ -2741,7 +2741,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V2,
+    configValidation: configPolicy(["collateral-mix"], [3]),
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: DASHBOARD_VALIDATION,
   },
@@ -2776,7 +2776,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // and wsrUSD exit through the SavingModule), while the shared-source cache
     // key deliberately omits the coin id.
     sharedSourceMode: "none",
-    configValidation: CONFIG_PROTOCOL_V1,
+    configValidation: configPolicy(["protocol-reserve"], [2]),
     // Capacity comes from a same-run read of the terminal USDC PSM balance, not
     // from the balance-sheet payload; the adapter withholds the redemption
     // block entirely when that read fails. The fee is the SavingModule's

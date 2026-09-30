@@ -7,10 +7,10 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.96`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.97`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `f15d10c560999336b58803ed8b3d00ae2d223e9ad518aa37920eb26702b8dbc3` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `0ac696517a6fa0f6bf095cdcadce3d568e6a875875388b14ce6eb2fb1699368f` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -172,6 +172,8 @@ Keyed zero-percent categories retain their captured provenance and consume match
 
 Reserve-derived basket exposure can coexist with an independently reviewed non-default role to the same upstream. A subset role review must explicitly name a non-default role and match an exact authored identity, type, and weight anchor in the sourced derivation. Reserve weights remain basket exposures; the role uses its own authored anchor. An unanchored subset remains a dependency-review mismatch. Relationships merge by identity, type, and role, so a reviewed default replaces rather than duplicates the same edge.
 
+Methodology **9.97** retains scoring weights, materiality thresholds, and evidence admission rules while correcting reserve attribution and precision. Accountable reconciles reviewed nested leaves; OnRe identifies Solomon's replacement USDv mint; Reservoir identifies the high-risk Sentora PRIME PYUSD claim; Re keeps protocol-pooled holdings unlinked without an attributable off-chain denominator and tranche waterfall. Frax, Nest, and InfiniFi preserve positive measured dust, and ftUSD validates present exact collateral identities without a fixed row count. Producer recovery does not establish scoring admission: weak probes, unverified freshness, and reconciliation failures retain their existing gates. Agora's Fern discovery repair preserves the exact reviewed July report and integrity checks.
+
 ### Report schema v6
 
 Report v6 is additive. New publications carry `card.supply` with `circulatingUsdAtEvaluation`, `asOfSec`, and `generationId`. The amount is the evaluated compiled supply fact, not a current market-cap lookup. Unknown supply remains null, including its unavailable clock and identity. Observed zero remains zero. The supply clock is the fingerprint whose generation matches that fact; it is distinct from the publication clock.
@@ -185,6 +187,12 @@ Serial and basket summaries, and their exact graph projection, carry optional `d
 `dependencyCoverage` is an optional disclosure list, separate from scoring admission and graph edges. Rows carry `upstreamLabel`, nullable `upstreamAssetId`, nullable fractional `share`, an existing producer rejection or admission `reason`, nullable `sourceAsOf`, and `identityVerified`. Unverified identity never publishes a tracked upstream ID. Reasons retain producer codes such as `no-match`, `expired`, `non-link`, native reviewed identity/type conflicts, `manual-collateral-not-in-reserves`, `outside-active-set:<id>`, and compiled reserve-envelope gaps. These relationships never contribute to graph totals. An absent list means this generation did not publish coverage, not that no relationships were withheld.
 
 Coverage deduplication uses source-key identity and reason, or upstream identity, label, and reason for unkeyed rows. Distinct withheld slices or reasons sharing a display label remain visible.
+
+Top-level `commonModeGroups` optionally projects the evaluated V9 dependency plan as compact `{ id, kind, key, memberAssetIds, pricedEffects? }` rows. The canonical ID is `kind:key`, using the existing failure-domain vocabulary. Groups and member IDs are unique and sorted. Only groups with at least two distinct assets publish; several paths on one asset do not qualify. All qualifying groups remain visible, even without a referenced priced effect.
+
+Optional `pricedEffects` contains sorted unique receiving `assetId` rows with zero-based `capIndices` into that card's `caps` and `deploymentAdjustmentIndices` into `scoreTrace.deploymentRisk.adjustments`. Each row has at least one nonempty reference list; the field is omitted when none exist. Consumers resolve the existing prices through those references. Membership is not an additive loss estimate, a counterfactual score change, or a new penalty, and an omitted effect list does not prove no risk. Report v5 omits `commonModeGroups`; absence means not published, while `[]` means a published census with no qualifying multi-asset groups. The coin-to-coin graph is unchanged.
+
+A group carries `pricedEffectsIncomplete: true` when a member has an evaluated structural signal for that failure domain that the evaluator prices through a hard cap (`structuralSignalNeedsHardCap`), but no matching cap or deployment-adjustment reference can be joined. Evaluator cap deduplication keeps one domain's reason when several domains produce the same source, kind and limit, so the other domains cannot be referenced; on the 2026-09-29 capture this affects 6 of 519 groups. The flag is presentation-only: it never withholds the publication or changes a score, and each affected group also emits a `safety_score_v9_common_mode_priced_effects_incomplete` warning naming the group and member assets.
 
 Pre-field v5 payloads still parse without fabricated defaults or rewritten graph edges. New producers emit schema version 6. Graph validation requires unique edges sorted by `(from, to, kind)` and continues to require exactly the serial/basket card projection; coverage cannot introduce external graph nodes.
 

@@ -327,6 +327,7 @@ export function makeReportCardsV9Response(
     },
     cards,
     dependencyGraph: buildReportCardsV9DependencyGraph(cards),
+    ...(overrides.schemaVersion === 5 ? {} : { commonModeGroups: [] }),
     ...overrides,
   };
 }

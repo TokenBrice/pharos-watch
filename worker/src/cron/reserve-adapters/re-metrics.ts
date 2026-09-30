@@ -64,45 +64,34 @@ const ESCAPED_REDEMPTION_ROWS_KEY = "\\\"redemptionRows\\\":";
 const SYMBOL_CONFIG: Record<string, {
   name: string;
   risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
 }> = {
   susde: {
     name: "sUSDe (delta-neutral ETH basis)",
     risk: "high",
-    coinId: "susde-ethena",
-    depType: "collateral",
   },
   usde: {
     name: "USDe (delta-neutral ETH basis)",
     risk: "high",
-    coinId: "usde-ethena",
   },
   usdc: {
     name: "USDC reserves",
     risk: "low",
-    coinId: "usdc-circle",
   },
   usdt: {
     name: "USDT reserves",
     risk: "low",
-    coinId: "usdt-tether",
   },
   susds: {
     name: "sUSDS (Sky savings USDS)",
     risk: "low",
-    coinId: "susds-sky",
-    depType: "collateral",
   },
   dai: {
     name: "DAI reserves",
     risk: "low",
-    coinId: "dai-makerdao",
   },
   frax: {
     name: "FRAX reserves",
     risk: "low",
-    coinId: "frax-frax",
   },
   "reusd/susde": {
     name: "reUSD / sUSDe LP position",
@@ -283,6 +272,13 @@ export function adaptReMetrics(html: string): AdapterResult {
   const breakdowns = parseInitialChainBreakdowns(html);
   const { offchainCapitalUsd, offchainTimestamp } = extractOffchainCapitalContext(html, warnings);
   const instantRedemptionCapacity = extractInstantRedemptionCapacity(html, warnings);
+  // byAsset token numerators do not allocate pooled off-chain capital or
+  // establish the senior/junior loss waterfall. Keep the measured protocol
+  // composition, but never project it as a token-specific dependency basket.
+  warnings.push(reserveInfoWarning(
+    "re-metrics-token-attribution-withheld",
+    "Protocol-pooled composition remains unlinked: token-attributed off-chain backing and tranche waterfall are unavailable",
+  ));
 
   const tokenValues = new Map<string, number>();
   const componentTimestamps: number[] = [];
@@ -339,8 +335,6 @@ export function adaptReMetrics(html: string): AdapterResult {
         sourceKey: `re-metrics:token:${symbol}`,
         name: config?.name ?? symbol,
         risk: config?.risk ?? "medium",
-        ...(config?.coinId ? { coinId: config.coinId } : {}),
-        ...(config?.depType ? { depType: config.depType } : {}),
       };
     }),
     ...(offchainCapitalUsd != null && Number.isFinite(offchainCapitalUsd) && offchainCapitalUsd > 0
@@ -351,7 +345,7 @@ export function adaptReMetrics(html: string): AdapterResult {
           risk: "medium" as const,
         }]
       : []),
-  ].sort((left, right) => right.value - left.value));
+  ].sort((left, right) => right.value - left.value), null);
 
   if (!incompleteComposition && slices.length === 0) {
     throw htmlLayoutChangedError("re-metrics", "no reserve composition entries found");
@@ -377,6 +371,8 @@ export function adaptReMetrics(html: string): AdapterResult {
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       chainBreakdownCount: Object.keys(breakdowns).length,
+      compositionScope: "protocol-pooled",
+      tokenAttribution: "withheld-offchain-denominator-and-tranche-waterfall",
       ...(typeof offchainCapitalUsd === "number" && Number.isFinite(offchainCapitalUsd) && offchainCapitalUsd >= 0
         ? { offchainCapitalUsd } : {}),
       ...(offchainTimestamp != null ? { offchainAsOf: offchainTimestamp } : {}),
