@@ -118,7 +118,7 @@ function DetailNavigation({
 }) {
   return (
     <LongformScrollspyNav
-      sections={DETAIL_SECTIONS}
+      sections={DETAIL_SECTIONS.filter((section) => section.id !== "activity" || viewModel.hasYieldSection || viewModel.hasBlacklist)}
       railLabel="Jump to"
       navAriaLabel="Stablecoin detail section navigation"
       emphasis="pill-tabs"

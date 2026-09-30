@@ -19,6 +19,8 @@ export interface FailureDomainRow {
   kind: FailureDomainKind;
   /** Share of reviewed supply behind this domain; null when unquantified. */
   exposureShare: number | null;
+  /** Modeled scoring share, including any methodology cap; never the exposure statistic. */
+  modeledExposureShare: number | null;
   /** Points the domain actually cost the score. Zero is common and meaningful. */
   adjustmentPoints: number;
   resolved: boolean;
@@ -79,7 +81,8 @@ export function buildFailureDomainsView(
       key: `resolved:${adjustment.exposureKey}:${adjustment.failureDomainKey}`,
       label,
       kind,
-      exposureShare: adjustment.exposureShare,
+      exposureShare: adjustment.nominalExposureShare,
+      modeledExposureShare: adjustment.exposureShare,
       adjustmentPoints: adjustment.adjustmentPoints,
       resolved: true,
       reason: adjustment.reason,
@@ -92,6 +95,7 @@ export function buildFailureDomainsView(
       label,
       kind,
       exposureShare: null,
+      modeledExposureShare: null,
       adjustmentPoints: 0,
       resolved: false,
       reason: exposure.reason,

@@ -65,7 +65,7 @@ export function ReserveQualitySection({ summary }: { summary?: ReserveQualityCli
       ? [
           {
             key: "unidentified",
-            label: "Unidentified obligors",
+            label: "Unresolved reserve exposure",
             value: formatReserveQualityPct(summary.unidentifiedObligorsPct),
             ...(summary.unidentifiedObligorsPct > 0 ? { valueClassName: AMBER_VALUE_CLASS } : {}),
           },
@@ -157,6 +157,18 @@ export function ReserveQualitySection({ summary }: { summary?: ReserveQualityCli
           </div>
         ) : null}
         <FactGrid aria-label="Reserve quality facts" items={facts} />
+        {summary.unidentifiedObligorsPct != null ? (
+          <div className="space-y-1 text-xs leading-relaxed text-muted-foreground">
+            <p>Obligor names or classes recorded in the reserve slices; a class does not identify its individual counterparties.</p>
+            <ul aria-label="Recorded reserve obligors">
+              {summary.slices.map((slice) => (
+                <li key={slice.key}>
+                  {slice.name}: {slice.obligor ?? "Not recorded"} ({formatReserveQualityPct(slice.pct)})
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <ModuleDisclosure label="Slice detail & risk factors">
           <div className="mt-3 space-y-3">
             {summary.compositionBasis ? (

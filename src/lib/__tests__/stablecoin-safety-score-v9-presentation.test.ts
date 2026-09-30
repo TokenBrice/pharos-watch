@@ -163,7 +163,7 @@ describe("stablecoin V9 safety presentation", () => {
     expect(presentation.accessRows).toContainEqual({
       key: "primaryExit",
       label: "Primary exit",
-      value: "Not disclosed",
+      value: "Incomplete exit surface",
     });
   });
 

@@ -58,7 +58,7 @@ export interface ReserveQualityClientSummary {
   ladder: ReserveQualityLadderClientRow[];
   liquidWithinOneDayPct: number;
   unknownHorizonPct: number;
-  /** `reserveReview.knownUnknownExposurePct` — basket share with no identified obligor. */
+  /** `reserveReview.knownUnknownExposurePct` — total share of unresolved reserve dispositions. */
   unidentifiedObligorsPct: number | null;
   /** Share of the basket the review marks as self-reserve (issuer's own assets). */
   selfExposurePct: number | null;
@@ -244,7 +244,7 @@ function buildLede(
   const sliceNoun = sliceCount === 1 ? "reviewed reserve slice" : "reviewed reserve slices";
   let lede = `${sliceCount} ${sliceNoun} — ${buildConvertibilityClause(liquidWithinOneDayPct, unknownHorizonPct)}`;
   if (unidentifiedObligorsPct != null && unidentifiedObligorsPct > 0) {
-    lede += ` ${formatReserveQualityPct(unidentifiedObligorsPct)} of the basket has no identified obligor.`;
+    lede += ` ${formatReserveQualityPct(unidentifiedObligorsPct)} of the basket has unresolved reserve exposure.`;
   }
   if (selfExposurePct != null && selfExposurePct > 0) {
     lede += ` ${formatReserveQualityPct(selfExposurePct)} is issuer self-exposure rather than independent collateral.`;

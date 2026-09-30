@@ -34,6 +34,11 @@ function DomainRow({ row, open }: { row: FailureDomainRow; open: boolean }) {
           <span className="font-mono text-xs tabular-nums text-muted-foreground">{shareLabel(row)}</span>
         </div>
       </div>
+      {row.modeledExposureShare != null && row.modeledExposureShare !== row.exposureShare ? (
+        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+          Modeled contribution (capped): {Math.round(row.modeledExposureShare * 100)}%
+        </p>
+      ) : null}
       {open ? <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{row.reason}</p> : null}
     </li>
   );
