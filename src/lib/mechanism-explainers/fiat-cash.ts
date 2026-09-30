@@ -120,6 +120,13 @@ export const content: ArchetypeContent = {
   ],
   decommissioned: [
     {
+      name: "Cashio Dollar",
+      date: "2022-03",
+      obituary:
+        "Solana-native dollar backed by interest-bearing Saber USDC/USDT LP tokens, rather than a reflexive algorithmic peg. An infinite-mint exploit let an attacker forge a fake collateral account, mint 2B CASH, and drain ~$48M of USDC and UST from the protocol within hours.",
+      coinId: "cash-cashio-dollar-2022-03",
+    },
+    {
       name: "Binance USD",
       date: "2023-02",
       obituary:
@@ -152,7 +159,7 @@ export const content: ArchetypeContent = {
       date: "2025-05",
       obituary:
         "One of the first MiCA-compliant euro stablecoins from Membrane Finance: FIN-FSA regulated, KPMG-audited, ring-fenced euro reserves. Never broke $2M in circulation. Acquired by Paxos in January 2025 and wound down two months later to make room for USDG in Europe.",
-      coinId: "euroe-euroe-2025-05",
+      coinId: "euroe-membrane",
     },
     {
       name: "Tether CNH",

@@ -2,8 +2,12 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { CAUSE_META } from "@shared/lib/cause-of-death";
+import { sortCemeteryCoins } from "@shared/lib/cemetery";
+import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { selectStaticDepegEventPages } from "@/lib/depeg-event-config";
 import { readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
+import { escapeXml } from "@/lib/rss";
 
 interface RssRouteModule {
   GET: () => Promise<Response>;
@@ -137,6 +141,21 @@ describe("feed routes smoke", () => {
       if (guidPrefix) expect(xml).toContain(guidPrefix);
       if (expectItems) expect(xml).toContain("<item>");
     }
+  });
+
+  it("cemetery feed lists the newest 50 records in the shared order with cause labels and record anchors", async () => {
+    const { cemetery } = await loadRoutes();
+    const items = parseItems(await (await cemetery.GET()).text());
+    const expected = sortCemeteryCoins(CEMETERY_ENTRIES, "newest").slice(0, 50);
+
+    expect(items.map((item) => item.guid)).toEqual(expected.map((coin) => `pharos:cemetery:${coin.id}`));
+    // Titles carry the human cause label ("Name (SYMBOL): Cause label"), never the raw enum.
+    expect(items.map((item) => item.title)).toEqual(
+      expected.map((coin) => escapeXml(`${coin.name} (${coin.symbol}): ${CAUSE_META[coin.causeOfDeath].label}`)),
+    );
+    expect(items.map((item) => item.link)).toEqual(
+      expected.map((coin) => `https://pharos.watch/cemetery/#${coin.id}`),
+    );
   });
 
   it("depeg route emits the seeded events archive", async () => {

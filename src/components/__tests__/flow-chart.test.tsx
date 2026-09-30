@@ -22,6 +22,9 @@ vi.mock("@/components/chart-primitives/axes", () => ({
   TimeXAxis: () => null,
   MonoYAxis: () => null,
   TimeGrid: () => null,
+}));
+
+vi.mock("@/components/chart-primitives/legend", () => ({
   ChartLegendChip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
 

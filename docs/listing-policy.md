@@ -121,4 +121,11 @@ For quarantine or delisting:
 
 For a full cemetery removal authorized by the lifecycle owner, remove the catalog source and its active-universe projections, add the cemetery record, and retain the prior listing ID as `excluded`. This keeps the scope decision auditable even though the asset is no longer part of the tracked catalog.
 
+A curated cemetery record in `shared/data/dead-stablecoins.json` follows the cemetery's owner-approved rules:
+
+- **Inclusion.** A new record needs a public market and a primary public source that documents its failure or discontinuation (an issuer or protocol announcement, governance record, official docs or status page, regulator, court or registry filing, or on-chain record); reputable press may be linked only when it documents the same event, and market-data listings, provider "ended" markers, launch or fundraising articles and general wikis never qualify. There is no size floor; peak market cap is recorded when known. Records curated before 2026-10 do not all meet this bar; [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record) describes what the page claims for the archive as a whole.
+- **Primary cause.** Each record carries one primary cause: the root reason the coin failed or its issuance and operation ended, whether or not it lost its peg. Triggers such as runs, exploits or orders are described in the obituary.
+
+Every new curated record carries `recordedAt`, the UTC `YYYY-MM-DD` date on which it entered Pharos (not the death date), and a `mechanismArchetype` describing how the coin was designed to hold its peg. [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record) owns the full field contract.
+
 The complete implementation procedure for new assets is [Adding a Stablecoin](./process/adding-a-stablecoin.md). Catalog structure and generated artifacts are documented in [Stablecoin Data Registry](./stablecoin-data.md).

@@ -1,4 +1,6 @@
 import { createRssRoute, escapeXml, toRfc822, type RssItem } from "@/lib/rss";
+import { CAUSE_META } from "@shared/lib/cause-of-death";
+import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
@@ -23,14 +25,13 @@ function deathDateToMs(deathDate: string): number {
 }
 
 function cemeteryItems(): RssItem[] {
-  return CEMETERY_ENTRIES.slice()
-    .sort((a, b) => deathDateToMs(b.deathDate) - deathDateToMs(a.deathDate))
+  return sortCemeteryCoins(CEMETERY_ENTRIES, "newest")
     .slice(0, MAX_ITEMS)
     .map((coin) => {
       const obituaryHtml = `<p>${escapeXml(coin.obituary)}</p>`;
       const description = coin.epitaph ? `<p><em>${escapeXml(coin.epitaph)}</em></p>${obituaryHtml}` : obituaryHtml;
       return {
-        title: `${coin.name} (${coin.symbol}) — ${coin.causeOfDeath}`,
+        title: `${coin.name} (${coin.symbol}): ${CAUSE_META[coin.causeOfDeath].label}`,
         link: `${SITE_URL}/cemetery/#${coin.id}`,
         description,
         guid: `pharos:cemetery:${coin.id}`,

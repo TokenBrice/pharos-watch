@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
-import { ChartLegendChip } from "@/components/chart-primitives/axes";
+import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import type { FlowSeriesEntry } from "@/lib/compare-derive";

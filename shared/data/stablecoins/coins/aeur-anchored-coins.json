@@ -61,7 +61,7 @@
     "epitaph": "A solvent euro was retired by its license boundary",
     "obituary": "Anchored Coins stopped issuing new AEUR after MiCAR made an EU issuer license necessary for the Swiss company to continue a EUR stablecoin business. The issuer moved reserves to Swissquote and kept a high-minimum redemption route for existing holders, but announced an orderly withdrawal from stablecoins rather than a relaunch. With issuance permanently closed and the product in a regulatory wind-down, Pharos freezes AEUR as an archived legacy asset while preserving its historical market record.",
     "peakMcap": 81031853,
-    "sourceUrl": "https://www.anchoredcoins.com/en/landing/aeur",
-    "sourceLabel": "Anchored Coins AEUR wind-down notice"
+    "sourceUrl": "https://web.archive.org/web/20260118114459/https://www.anchoredcoins.com/en/landing",
+    "sourceLabel": "Anchored Coins AEUR wind-down notice (archived)"
   }
 }

@@ -42,6 +42,7 @@ const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
   { path: "/chains", tier: "analytics" },
   { path: "/pharoswatchbot", tier: "discovery" },
   { path: "/pharoswatchbot/app", tier: "mini-app" },
+  { path: "/cemetery", tier: "editorial" },
 ];
 
 // Layered surfaces (drawers, palettes, sheets) never render in the default

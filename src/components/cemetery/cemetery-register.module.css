@@ -1,0 +1,362 @@
+/*
+ * Autopsy Register. Classes here replace long utility strings repeated on
+ * every row, so the server HTML stays small.
+ */
+
+/*
+ * The section and every record anchor clear the sticky chrome: the 3px status
+ * strip, plus the 3.5rem nav from md, plus the 46px tape from lg. Below md the
+ * root `scroll-padding-top` (`--table-header-top`) already covers the nav.
+ */
+.register,
+.register tr[id] {
+  scroll-margin-top: calc(3px + 0.75rem);
+}
+
+@media (min-width: 768px) {
+  .register,
+  .register tr[id] {
+    scroll-margin-top: calc(3px + 3.5rem + 0.75rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .register,
+  .register tr[id] {
+    scroll-margin-top: calc(3px + 3.5rem + 46px + 0.75rem);
+  }
+}
+
+/*
+ * The register sits well below the fold, so the browser skips its rendering
+ * until it nears the viewport; it stays in the DOM, the accessibility tree,
+ * find-in-page and fragment navigation. Until the first render the section
+ * reserves the folded register's measured height (tallest common width in each
+ * band); `auto` then keeps the last rendered height. Paint containment clips to
+ * the section box: nothing inside draws outside it (the table shell has no
+ * shadow and clips its own focus rings).
+ */
+.register {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 1980px;
+}
+
+@media (min-width: 640px) {
+  .register {
+    contain-intrinsic-block-size: auto 1750px;
+  }
+}
+
+@media (min-width: 768px) {
+  .register {
+    contain-intrinsic-block-size: auto 1440px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .register {
+    contain-intrinsic-block-size: auto 1410px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .register {
+    contain-intrinsic-block-size: auto 1370px;
+  }
+}
+
+/*
+ * Folding without JS. The server renders every record; rows past the first 25
+ * are compact `data-folded` rows that carry their own obituary and source, so
+ * `/cemetery/#<id>` shows the record through `:target` alone.
+ */
+.register tr[data-folded]:not(:target) {
+  display: none;
+}
+
+/*
+ * The first 25 rows keep their obituary in a separate `hidden` autopsy row.
+ * Tailwind's preflight hides `[hidden]` with an important declaration inside
+ * `@layer base`, which beats any unlayered rule; only an important declaration
+ * in that same layer with a more specific selector can show the linked
+ * obituary. Once the client has hydrated (`data-enhanced`) it owns expansion:
+ * the provider rewrites the hash with `replaceState`, which never moves
+ * `:target`, so this rule must not pin a collapsed row open.
+ */
+@layer base {
+  .register:not([data-enhanced]) tr:target + tr[data-detail] {
+    display: table-row !important;
+  }
+}
+
+/* Cause mark: the row (or the element itself) sets `--cause-hex` / `--cause-hex-dark` via `causeColorVars`. */
+.dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--cause-hex);
+}
+
+:global(.dark) .dot {
+  background-color: var(--cause-hex-dark);
+}
+
+/* Below sm the logo yields its width to the name, which tells the duplicate tickers apart. */
+.logo {
+  display: none;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  filter: grayscale(1);
+}
+
+@media (min-width: 640px) {
+  .logo {
+    display: block;
+  }
+}
+
+.symbol {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+}
+
+/* Cause as line 2 of the Coin cell below md, where the Cause column is hidden. */
+.mobileCause {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--muted-foreground);
+}
+
+@media (min-width: 768px) {
+  .mobileCause {
+    display: none;
+  }
+}
+
+/*
+ * Died cell on narrow phones: a day-precision date wraps after the day
+ * ("Aug 27," over "2026", a month-precision one after the month), matching the
+ * two-line Coin cell and leaving the name the width. The minimum width (7ch of
+ * the mono figures, half a ch of rounding slack, and the cell padding) holds
+ * "Aug 27," on one line.
+ */
+.died {
+  min-width: calc(7.5ch + 1rem);
+  white-space: normal;
+}
+
+@media (min-width: 480px) {
+  .died {
+    min-width: 0;
+    white-space: nowrap;
+  }
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.epitaphCell {
+  display: block;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+
+@media (min-width: 1536px) {
+  .epitaphCell {
+    max-width: 20rem;
+  }
+}
+
+/* Disclosure button with a CSS chevron (no per-row SVG); 44px touch target below md. */
+.disclosure {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--muted-foreground);
+  transition: color 150ms;
+}
+
+.disclosure:hover {
+  color: var(--foreground);
+}
+
+.disclosure::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-25%) rotate(45deg);
+  transition: transform 150ms;
+}
+
+.disclosure[aria-expanded="true"]::before {
+  transform: translateY(25%) rotate(-135deg);
+}
+
+@media (min-width: 768px) {
+  .disclosure {
+    min-width: 2rem;
+    min-height: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure::before {
+    transition: none;
+  }
+}
+
+:global(:root[data-motion="reduced"]) .disclosure::before {
+  transition: none;
+}
+
+/* Autopsy (the detail row of the first 25 and every unfolded row). */
+.autopsy {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .autopsy {
+    padding-inline: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .autopsy {
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
+    gap: 2.5rem;
+  }
+}
+
+/* The epitaph pull line; the Newsreader family comes from `digestDisplay`. */
+.epitaph {
+  font-size: 1.125rem;
+  font-style: italic;
+  line-height: 1.375;
+  color: var(--foreground);
+  text-wrap: balance;
+}
+
+@media (min-width: 640px) {
+  .epitaph {
+    font-size: 1.25rem;
+  }
+}
+
+.obituary {
+  max-width: 68ch;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: color-mix(in oklab, var(--foreground) 90%, transparent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--muted-foreground);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  text-align: left;
+}
+
+@media (min-width: 768px) {
+  .action {
+    min-height: 0;
+  }
+}
+
+/*
+ * Contract links keep a 44px touch target below md; the list rises by one row
+ * gap so the first address sits level with its "Contracts" label.
+ */
+.contracts {
+  margin-top: -0.5rem;
+}
+
+@media (min-width: 768px) {
+  .contracts {
+    margin-top: 0;
+  }
+}
+
+/* Compact folded record: one full-width cell, shown only as the `:target` of a `#<id>` link. */
+.folded {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.folded > * + * {
+  margin-top: 0.375rem;
+}
+
+.folded > a {
+  display: inline-block;
+}
+
+.folded .dot {
+  margin-inline: 0.125rem 0.25rem;
+  vertical-align: 0.05em;
+}
+
+.foldedEpitaph {
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+
+/* Brief highlight after a reveal; reduced motion gets the static outline instead. */
+.flash {
+  animation: register-flash 2.4s ease-out both;
+}
+
+.outlined {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 45%, transparent);
+  outline-offset: -2px;
+}
+
+@keyframes register-flash {
+  from {
+    background-color: color-mix(in oklab, var(--foreground) 12%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}

@@ -1,4 +1,5 @@
 import type { DeadStablecoin } from "../types";
+import { isValidIsoDateOnly } from "../types/date-primitives";
 import logosByStablecoinId from "../../data/logos.json";
 import { DEAD_STABLECOINS } from "./dead-stablecoins";
 // Cemetery rendering needs obituary prose, contracts, and peak market cap —
@@ -11,6 +12,12 @@ export type CemeteryEntry = DeadStablecoin & { archivedDataAvailable?: boolean }
 
 type FrozenStablecoin = (typeof FROZEN_STABLECOINS)[number];
 
+/** The cemetery UI's logo rule: absolute paths as-is, bare names under /logos/cemetery/. */
+export function resolveCemeteryLogoUrl(logo?: string): string | undefined {
+  if (!logo) return undefined;
+  return logo.startsWith("/") ? logo : `/logos/cemetery/${logo}`;
+}
+
 function frozenLogoPath(coin: FrozenStablecoin): string {
   const registeredLogo = (logosByStablecoinId as Record<string, string | undefined>)[coin.id];
   if (registeredLogo) {
@@ -18,6 +25,24 @@ function frozenLogoPath(coin: FrozenStablecoin): string {
   }
   const symbolSlug = coin.symbol.toLowerCase();
   return coin.llamaId ? `/logos/${coin.llamaId}-${symbolSlug}.png` : `${symbolSlug}.png`;
+}
+
+/**
+ * A frozen row normally entered the cemetery at `frozenAt`; an obituary
+ * override separates the entry date from historical death-date freezes.
+ * Invalid dates fail loudly rather than publishing fabricated ones.
+ */
+function frozenRecordedAt(coin: FrozenStablecoin): string | undefined {
+  const date = coin.obituary?.recordedAt ?? coin.frozenAt;
+  if (date === undefined) {
+    return undefined;
+  }
+  const recordedAt = date.slice(0, 10);
+  if (!isValidIsoDateOnly(recordedAt)) {
+    const field = coin.obituary?.recordedAt !== undefined ? "recordedAt" : "frozenAt";
+    throw new Error(`Frozen coin ${coin.id} has an invalid ${field}: ${date}`);
+  }
+  return recordedAt;
 }
 
 export function frozenToDeadShape(coin: FrozenStablecoin): CemeteryEntry {
@@ -39,6 +64,8 @@ export function frozenToDeadShape(coin: FrozenStablecoin): CemeteryEntry {
     sourceUrl: coin.obituary.sourceUrl,
     sourceLabel: coin.obituary.sourceLabel,
     contracts: coin.contracts,
+    mechanismArchetype: coin.mechanismArchetype,
+    recordedAt: frozenRecordedAt(coin),
     archivedDataAvailable: true,
   };
 }

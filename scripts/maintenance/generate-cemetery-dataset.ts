@@ -9,6 +9,7 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { DeadStablecoin } from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -57,6 +58,8 @@ interface CemeteryDatasetRow {
   contracts: { chain: string; address: string }[];
   archivedDataAvailable: boolean;
   pharosUrl: string;
+  mechanismArchetype: NonNullable<DeadStablecoin["mechanismArchetype"]> | null;
+  recordedAt: string | null;
 }
 
 const CSV_COLUMNS = [
@@ -78,6 +81,8 @@ const CSV_COLUMNS = [
   "archivedDataAvailable",
   "contracts",
   "pharosUrl",
+  "mechanismArchetype",
+  "recordedAt",
 ] as const satisfies readonly (keyof CemeteryDatasetRow)[];
 
 function getDeathDatePrecision(deathDate: string): CemeteryDatasetRow["deathDatePrecision"] {
@@ -117,6 +122,8 @@ function coinToRow(coin: CemeteryEntry): CemeteryDatasetRow {
     pharosUrl: archivedDataAvailable
       ? `${SITE_ORIGIN}${buildStablecoinUrl(coin.id)}`
       : `${SITE_ORIGIN}/cemetery/#${coin.id}`,
+    mechanismArchetype: coin.mechanismArchetype ?? null,
+    recordedAt: coin.recordedAt ?? null,
   };
 }
 
@@ -181,9 +188,14 @@ function getCombinedSourceChecksum(sources: CemeteryDatasetSource[]): string {
 
 function renderJson(rows: CemeteryDatasetRow[]): string {
   const sourceData = getSourceDataProvenance();
+  // YYYY-MM-DD strings order chronologically as text.
+  const updatedAt = rows.reduce<string | null>(
+    (latest, row) => (row.recordedAt !== null && (latest === null || row.recordedAt > latest) ? row.recordedAt : latest),
+    null,
+  );
 
   return `${JSON.stringify({
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     name: "Pharos Stablecoin Cemetery Dataset",
     description:
       "Curated dataset of defunct, depegged, discontinued, and abandoned stablecoins documented by Pharos.",
@@ -194,13 +206,24 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
     sourceDataPath: SOURCE_REPO_PATH,
     sourceChecksum: getCombinedSourceChecksum(sourceData),
     sourceData,
-    recordsOrderedBy: "deathDate descending, then peakMcapUsd descending, then symbol ascending",
+    // Mirrors sortCemeteryCoins (shared/lib/cemetery.ts); change both together.
+    recordsOrderedBy:
+      "deathDate descending by year, month, then day (a month-precision date sorts as the start of its month, "
+      + "after that month's day-precision rows; an unparseable date sorts last), then peakMcapUsd descending "
+      + "(rows without a peak after rows with one), then symbol ascending, then id ascending "
+      + "(symbol and id compared by UTF-16 code unit)",
     rowCount: rows.length,
+    updatedAt,
     limitations: [
       "Death dates are month-level unless a row explicitly uses a day-level date.",
       "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
       "Each row includes one primary source link; the export is an incident index, not a complete bibliography.",
     ],
+    datasetFields: {
+      updatedAt:
+        "Latest recordedAt across all rows (UTC YYYY-MM-DD): when the newest record entered Pharos. "
+        + "Tracks documentation, not deaths; null when no row carries a recordedAt.",
+    },
     fields: {
       id: "Stable export row identifier from curated dead-stablecoin metadata.",
       name: "Stablecoin or protocol display name.",
@@ -220,6 +243,12 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
       archivedDataAvailable: "True when Pharos preserves a frozen detail page with archived data for this entry.",
       contracts: "Known historical token contracts when available.",
       pharosUrl: "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor.",
+      mechanismArchetype:
+        `Pharos mechanism archetype: how the stablecoin was designed to hold its peg (${MECHANISM_ARCHETYPE_VALUES.join(", ")}). `
+        + "Independent of causeOfDeath; null when not yet classified.",
+      recordedAt:
+        "UTC date (YYYY-MM-DD) on which the record entered Pharos; for tracked-archive rows, the date the coin was frozen. "
+        + "Distinct from deathDate; null when not recorded.",
     },
     rows,
   }, null, 2)}\n`;

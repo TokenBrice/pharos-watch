@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import { CAUSE_LABEL_LIST } from "@shared/lib/cause-of-death";
 
 export interface StartHereGoal {
   title: string;
@@ -435,8 +436,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Cemetery",
-        description:
-          "Retrospective ledger of dead, discontinued, and frozen stablecoins — algorithmic failures, rug pulls, regulatory shutdowns, quiet abandonments. The validation track for the methodology, not a museum.",
+        description: `Retrospective ledger of dead, discontinued, and frozen stablecoins, each filed under one cause of death: ${CAUSE_LABEL_LIST}. The validation track for the methodology, not a museum.`,
         href: "/cemetery/",
         icon: Skull,
       },

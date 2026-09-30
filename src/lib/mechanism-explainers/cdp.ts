@@ -131,11 +131,25 @@ export const content: ArchetypeContent = {
   ],
   decommissioned: [
     {
+      name: "Fantom USD",
+      date: "2022-06",
+      obituary:
+        "Fantom-native CDP dollar minted as debt against overcollateralized FTM deposits through fMint. The peg unwound as FTM lost the majority of its market cap during the 2022 bear market; the protocol never restored convertibility.",
+      coinId: "fusd-fantom-usd-2022-06",
+    },
+    {
       name: "Kava USDX",
       date: "2022-06",
       obituary:
         "Cosmos-native multi-collateral CDP minting USDX against BTC, XRP, BNB, or KAVA. Peaked at $176M before UST's implosion exposed the design flaw: USDX had on-boarded UST as collateral. The peg cracked to $0.55 and never healed. The textbook example of collateral on-boarding rewriting solvency overnight.",
       coinId: "usdx-kava-usdx-2022-06",
+    },
+    {
+      name: "Acala USD",
+      date: "2023-07",
+      obituary:
+        "Polkadot's flagship CDP dollar, minted against overcollateralized assets through Acala's Honzon module. A misconfigured iBTC/aUSD liquidity pool minted 1.28B aUSD out of thin air in August 2022. The chain forked to burn most of the minted supply; aUSD never regained credibility and was officially decommissioned in 2023.",
+      coinId: "ausd-acala-usd-2023-07",
     },
     {
       name: "Raft R",

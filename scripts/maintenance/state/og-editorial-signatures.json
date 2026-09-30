@@ -28,13 +28,6 @@
       "pngSha256": "35abbd82af2de6d6831c5fb3fc4e063526b65c4f379b8f17225a1a9c1597dc3b"
     },
     {
-      "file": "og-editorial-cemetery.png",
-      "kicker": "Cemetery",
-      "title": "A record of failure",
-      "svgSha256": "bd6cb529f7f8a55a0ebbb0d379f1e30f1ac196a0fb92f91673e639ecaadaba10",
-      "pngSha256": "027dc22424b4583aa307dd115291bd843e2f53c6f736f1c5a144ad0fe8a703b8"
-    },
-    {
       "file": "og-editorial-about.png",
       "kicker": "About",
       "title": "About Pharos",

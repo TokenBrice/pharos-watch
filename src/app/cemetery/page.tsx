@@ -1,37 +1,47 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { CemeteryClient } from "@/components/cemetery-client";
-import { CemeteryCharts } from "@/components/cemetery-charts";
+import { CemeteryAnalysis } from "@/components/cemetery/cemetery-analysis";
+import { CemeteryCauses } from "@/components/cemetery/cemetery-causes";
+import { buildCemeteryCaseStudyLinks, CemeteryContext } from "@/components/cemetery/cemetery-context";
+import { CemeteryDataset } from "@/components/cemetery/cemetery-dataset";
+import { CemeteryHero } from "@/components/cemetery/cemetery-hero";
+import { CemeteryKeyFacts } from "@/components/cemetery/cemetery-key-facts";
+import { CemeteryRegister } from "@/components/cemetery/cemetery-register";
+import { CemeterySelectionProvider } from "@/components/cemetery/cemetery-selection-context";
+import { getPortraitAspectRatio } from "@/components/cemetery/plot-map-portrait-aspect";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { CEMETERY_DATASET_META } from "@/lib/cemetery-dataset-meta";
+import { getObituaryLead } from "@/lib/cemetery-editorial";
 import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
+import atlasManifest from "@/lib/cemetery-logo-atlas.generated.json";
+import { toPlotLogoAtlas } from "@/lib/cemetery-plot-map-input";
+import { buildCemeteryRegisterRows, buildRegisterFilterOptions } from "@/lib/cemetery-register";
+import { buildCemeteryFaq, buildCemeteryStats } from "@/lib/cemetery-stats";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
-import type { FaqItem } from "@/lib/faq";
+import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
-const cemeteryMetadataDescription = `${DEAD_STABLECOINS.length} failed and defunct stablecoins documented by Pharos, with collapse dates, causes, obituaries, archived data, and lessons from TerraUSD to HUSD.`;
+const PAGE_URL = `${SITE_URL}/cemetery/`;
+
+const cemeteryMetadataDescription = `${CEMETERY_ENTRIES.length} failed or discontinued stablecoins documented by Pharos: end dates, causes of death, obituaries, sources, and archived data, from TerraUSD to Binance USD.`;
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Cemetery: Failed & Defunct Stablecoins",
   description: cemeteryMetadataDescription,
   canonical: "/cemetery/",
-  ogImage: `${SITE_URL}/og-editorial-cemetery.png`,
+  ogImage: `${SITE_URL}/og-cemetery.png`,
+  ogHeight: 630,
 });
 
-const FAQ_ITEMS = [
-  {
-    question: "What causes stablecoins to fail?",
-    answer:
-      "Stablecoins fail for several recurring reasons: algorithmic designs that rely on reflexive token mechanics (like TerraUSD), custodial failures where the issuer loses or mismanages reserves, liquidity drains where redemptions outpace available collateral, regulatory shutdowns that freeze operations, and simple abandonment when the team stops maintaining the peg. Most failures share a common pattern: loss of market confidence triggers a bank-run dynamic that the stabilization mechanism cannot absorb.",
-  },
-] as const satisfies readonly FaqItem[];
-
 export default function CemeteryPage() {
-  const schemaCoins = sortCemeteryCoins(DEAD_STABLECOINS, "newest");
+  const stats = buildCemeteryStats(CEMETERY_ENTRIES);
+  // One array for the hero and the register: React Flight serialises a shared reference once.
+  const rows = buildCemeteryRegisterRows(CEMETERY_ENTRIES);
+  const asOf = stats.asOf.date;
+  const schemaCoins = sortCemeteryCoins(CEMETERY_ENTRIES, "newest");
 
   return (
     <div className="space-y-6">
@@ -43,55 +53,44 @@ export default function CemeteryPage() {
       />
       <JsonLdScript
         json={safeJsonLd([
-            ...buildCollectionItemListJsonLd({
-              url: `${SITE_URL}/cemetery/`,
-              name: "Stablecoin Cemetery",
-              description: `${DEAD_STABLECOINS.length} defunct stablecoins documented.`,
-              itemListDescription: `${DEAD_STABLECOINS.length} defunct, depegged, and discontinued stablecoins documented with cause of death and obituaries.`,
-              numberOfItems: DEAD_STABLECOINS.length,
-              entries: schemaCoins.map((coin) => ({
-                item: {
-                  "@type": "Thing",
-                  name: `${coin.name} (${coin.symbol})`,
-                  description: coin.obituary,
-                },
-              })),
-            }),
-            buildCemeteryDatasetJsonLd(),
-          ])}
+          ...buildCollectionItemListJsonLd({
+            url: PAGE_URL,
+            name: "Stablecoin Cemetery",
+            description: `${CEMETERY_ENTRIES.length} defunct stablecoins documented.`,
+            itemListDescription: `${CEMETERY_ENTRIES.length} defunct, depegged, and discontinued stablecoins documented with cause of death and obituaries.`,
+            numberOfItems: CEMETERY_ENTRIES.length,
+            entries: schemaCoins.map((coin) => ({
+              item: {
+                "@type": "Thing",
+                name: `${coin.name} (${coin.symbol})`,
+                // The lead sentence, not the whole obituary: the full text already ships in the register and this
+                // script is serialised twice (HTML and RSC flight) ahead of the streamed body reveal.
+                description: getObituaryLead(coin.obituary),
+                url: `${PAGE_URL}#${coin.id}`,
+              },
+            })),
+          }),
+          buildCemeteryDatasetJsonLd(),
+        ])}
       />
-      <div className="space-y-2">
-        <h1 className="pharos-page-title">Stablecoin Cemetery</h1>
-        <p className="pharos-page-lead max-w-4xl">
-          Defunct, depegged, and discontinued. Logos mark each grave, biggest collapses stand tallest, and hover plaques surface the autopsy context.{" "}
-          <span className="hidden md:inline">Press F on hover to pay respects.</span>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Read the explainer:{" "}
-          <Link
-            href="/learn/mechanisms/algorithmic/"
-            className="pharos-focus-ring text-foreground underline-offset-4 hover:underline"
-          >
-            how algorithmic stablecoin designs fail &rarr;
-          </Link>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Download the citation-ready dataset as{" "}
-          <a className="pharos-focus-ring text-foreground underline-offset-4 hover:underline" href="/datasets/stablecoin-cemetery.json">
-            JSON
-          </a>{" "}
-          or{" "}
-          <a className="pharos-focus-ring text-foreground underline-offset-4 hover:underline" href="/datasets/stablecoin-cemetery.csv">
-            CSV
-          </a>
-          .
-        </p>
+      <CemeterySelectionProvider knownIds={rows.map((row) => row.id)}>
+        <CemeteryHero
+          rows={rows}
+          stats={stats}
+          asOf={asOf}
+          atlas={toPlotLogoAtlas(atlasManifest)}
+          portraitAspectRatio={getPortraitAspectRatio(rows, asOf)}
+        />
+        <CemeteryKeyFacts stats={stats} datasetMeta={CEMETERY_DATASET_META} />
+        <CemeteryCauses stats={stats} />
+        <CemeteryRegister rows={rows} filterOptions={buildRegisterFilterOptions(stats, rows)} />
+        <CemeteryAnalysis stats={stats} />
+        <CemeteryContext stats={stats} caseStudies={buildCemeteryCaseStudyLinks(CEMETERY_ENTRIES)} />
+        <CemeteryDataset />
+      </CemeterySelectionProvider>
+      <div id="faq" className="scroll-mt-24">
+        <FaqSection items={buildCemeteryFaq(stats)} includeJsonLd />
       </div>
-
-      <CemeteryClient entries={DEAD_STABLECOINS} />
-      <CemeteryCharts entries={DEAD_STABLECOINS} />
-
-      <FaqSection items={FAQ_ITEMS} includeJsonLd />
     </div>
   );
 }

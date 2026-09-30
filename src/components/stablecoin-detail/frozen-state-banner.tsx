@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CAUSE_HEX, CAUSE_META } from "@shared/lib/cause-of-death";
+import { CAUSE_HEX, CAUSE_HEX_DARK, CAUSE_META } from "@shared/lib/cause-of-death";
 import type { StablecoinObituary } from "@shared/types";
 
 interface FrozenStateBannerProps {
@@ -18,7 +18,10 @@ export function FrozenStateBanner({ symbol, frozenAt, obituary }: FrozenStateBan
   // to collapse afterwards.
   const [expanded, setExpanded] = useState(true);
   const cause = CAUSE_META[obituary.causeOfDeath];
-  const causeColor = CAUSE_HEX[obituary.causeOfDeath];
+  const causeColorVars = {
+    "--cause-hex": CAUSE_HEX[obituary.causeOfDeath],
+    "--cause-hex-dark": CAUSE_HEX_DARK[obituary.causeOfDeath],
+  } as CSSProperties;
   const epitaphId = `${symbol}-frozen-epitaph`;
   return (
     <section
@@ -27,8 +30,8 @@ export function FrozenStateBanner({ symbol, frozenAt, obituary }: FrozenStateBan
     >
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-[3px]"
-        style={{ backgroundColor: causeColor }}
+        className="absolute inset-x-0 top-0 h-[3px] bg-[var(--cause-hex)] dark:bg-[var(--cause-hex-dark)]"
+        style={causeColorVars}
       />
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
         <span aria-hidden="true">In Memoriam</span>

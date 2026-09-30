@@ -1,9 +1,8 @@
 "use client";
 
-import { useId, useMemo, type ComponentProps, type CSSProperties, type ReactNode } from "react";
+import { useId, useMemo, type ComponentProps } from "react";
 import { CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
-import { cn } from "@/lib/utils";
 
 const MONO_AXIS_TICK = {
   fontSize: 12,
@@ -118,25 +117,6 @@ export function DateTooltip({
   const resolvedLabelFormatter = labelFormatter ?? ((value: unknown) => formatDateLabel(value, locale, dateFormat));
 
   return <Tooltip {...RECHARTS_TOOLTIP_STYLES} labelFormatter={resolvedLabelFormatter} {...props} />;
-}
-
-export function ChartLegendChip({
-  children,
-  markerClassName = "inline-block h-2.5 w-2.5 rounded-full",
-  markerStyle,
-  className,
-}: {
-  children: ReactNode;
-  markerClassName?: string;
-  markerStyle?: CSSProperties;
-  className?: string;
-}) {
-  return (
-    <div className={cn("pharos-chart-legend-chip", className)}>
-      <span aria-hidden className={markerClassName} style={markerStyle} />
-      {children}
-    </div>
-  );
 }
 
 type TimeGridProps = ComponentProps<typeof CartesianGrid>;

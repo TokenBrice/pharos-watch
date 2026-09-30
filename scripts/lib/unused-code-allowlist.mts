@@ -35,8 +35,6 @@ export const SCANNER_BLIND_SPOT_MODULES: Record<string, string> = {
 
 /** Exports whose only consumers are invisible to the static scan. */
 export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
-  "src/components/chart-primitives/data-table.tsx::ChartDataTable":
-    "scripts/ci/check-table-primitives.ts matches the exported component name as a string, not through an import.",
   "shared/lib/telegram-mini-app-contract.ts::TelegramDewsBand":
     "Public Mini App typing contract; external Mini App code consumes this surface, which the src/app/pharoswatchbot/app/types.ts barrel re-exports for it.",
   "shared/lib/telegram-mini-app-contract.ts::TelegramSafetyMode":

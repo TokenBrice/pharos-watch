@@ -8,7 +8,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { ChartLegendChip } from "@/components/chart-primitives/axes";
+import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import {
   QuarterlyStackedBarChart,
   type QuarterlyStackedBarSeries,

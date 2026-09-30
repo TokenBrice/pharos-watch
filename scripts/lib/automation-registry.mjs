@@ -1,9 +1,22 @@
 import { V9_EVALUATION_BUILD_SOURCE_PATHS } from "./safety-score-v9-evaluation-inputs.mts";
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./sitemap-source-paths.mts";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { CliUsageError } from "./cli-args.mjs";
 
 const PUBLIC_DOC_SOURCE_FILES = createRequire(import.meta.url)("../../shared/lib/public-doc-manifest.json");
+
+// The cemetery logo atlas reads only the few top-level public/logos files that
+// tracked-archive (frozen) rows use, never the tracked-coin logo set as a whole.
+// The generator records those exact files in its signature. A new frozen row
+// arrives through a catalog or data/logos.json change, which already selects the
+// atlas; the regeneration then adds the new file to this list.
+const CEMETERY_ATLAS_SIGNATURE_URL = new URL("../maintenance/state/cemetery-logo-atlas-signature.json", import.meta.url);
+const CEMETERY_ATLAS_TOP_LEVEL_LOGO_PATHS = existsSync(CEMETERY_ATLAS_SIGNATURE_URL)
+  ? JSON.parse(readFileSync(CEMETERY_ATLAS_SIGNATURE_URL, "utf8")).sources
+    .map((source) => `public${source.logo}`)
+    .filter((path) => !path.startsWith("public/logos/cemetery/"))
+  : [];
 
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
@@ -400,7 +413,38 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-cemetery-dataset.ts",
-    sourcePaths: ["shared/data/dead-stablecoins.json", "shared/lib/cemetery*.ts", "data/logos.json"],
+    sourcePaths: [
+      "data/logos.json",
+      "shared/data/dead-stablecoins.json",
+      "shared/lib/cause-of-death.ts",
+      "shared/lib/cemetery*.ts",
+    ],
+  }),
+  generatedArtifact({
+    id: "cemetery-logo-atlas",
+    buildLifecycle: "maintenance-only",
+    autoStage: true,
+    checkCommand: "node --import tsx scripts/maintenance/build-cemetery-logo-atlas.ts --check",
+    command: "node --import tsx scripts/maintenance/build-cemetery-logo-atlas.ts",
+    // Frozen cemetery rows come from the generated catalog projection.
+    dependsOn: ["stablecoin-catalog"],
+    outputPaths: [
+      "public/logos/atlas/cemetery-atlas.webp",
+      "scripts/maintenance/state/cemetery-logo-atlas-signature.json",
+      "src/lib/cemetery-logo-atlas.generated.json",
+    ],
+    phase: 2,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/build-cemetery-logo-atlas.ts",
+    sourcePaths: [
+      "data/logos.json",
+      ...CEMETERY_ATLAS_TOP_LEVEL_LOGO_PATHS,
+      "public/logos/cemetery/**",
+      "scripts/maintenance/state/cemetery-logo-atlas-signature.json",
+      "shared/data/dead-stablecoins.json",
+      "shared/data/stablecoins/coins.generated.json",
+      "shared/lib/cemetery*.ts",
+    ],
   }),
   generatedArtifact({
     id: "public-datasets",
@@ -531,6 +575,42 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "scripts/maintenance/state/og-case-study-signatures.json",
       "src/assets/fonts/*.woff2",
       "src/lib/case-studies/**",
+    ],
+  }),
+  generatedArtifact({
+    id: "og-cemetery",
+    buildLifecycle: "maintenance-only",
+    autoStage: true,
+    checkCommand: "node --import tsx scripts/maintenance/build-og-cemetery.ts --check",
+    command: "node --import tsx scripts/maintenance/build-og-cemetery.ts",
+    // The card embeds the committed logo atlas, so it regenerates after the atlas does. Freshness is an input
+    // signature (the rendered document's hash), so the check needs no browser and a no-change run writes nothing.
+    dependsOn: ["cemetery-logo-atlas"],
+    outputPaths: ["public/og-cemetery.png", "scripts/maintenance/state/og-cemetery-signature.json"],
+    phase: 3,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/build-og-cemetery.ts",
+    sourcePaths: [
+      "public/logos/atlas/cemetery-atlas.webp",
+      "scripts/maintenance/state/og-cemetery-signature.json",
+      "shared/data/dead-stablecoins.json",
+      "shared/data/stablecoins/coins.generated.json",
+      "shared/lib/cause-of-death.ts",
+      "shared/lib/cemetery*.ts",
+      "shared/lib/format.ts",
+      "src/app/globals.css",
+      "src/assets/fonts/*.woff2",
+      "src/components/cemetery/cemetery-register-model.ts",
+      "src/components/cemetery/plot-map-scene.tsx",
+      "src/components/cemetery/plot-map-shapes.tsx",
+      "src/components/cemetery/plot-map.module.css",
+      "src/lib/cemetery-logo-atlas.generated.json",
+      "src/lib/cemetery-plot-geometry.ts",
+      "src/lib/cemetery-plot-map-input.ts",
+      "src/lib/cemetery-plot-map.ts",
+      "src/lib/cemetery-register.ts",
+      "src/lib/cemetery-stats.ts",
+      "src/styles/tokens/*.css",
     ],
   }),
   generatedArtifact({

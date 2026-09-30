@@ -1,0 +1,1005 @@
+{
+  "generatedBy": "scripts/maintenance/build-cemetery-logo-atlas.ts",
+  "generatorVersion": 1,
+  "cellSize": 48,
+  "gutter": 2,
+  "webp": {
+    "quality": 70,
+    "alphaQuality": 80,
+    "effort": 6
+  },
+  "grayscaleWeights": [
+    0.2126,
+    0.7152,
+    0.0722
+  ],
+  "inputSha256": "5ea065ecfb799148de5f7c1d567c393d2079723cf1054136ba16c0853e5f0341",
+  "image": {
+    "sha256": "9146907d188f957f8a35baaac52335326ea086c00b7dbb5baf54ec0473f33ee8",
+    "bytes": 135636,
+    "width": 798,
+    "height": 698
+  },
+  "sources": [
+    {
+      "logo": "/logos/147-aeur.png",
+      "sha256": "8888b083e1ff493d0e39e99c822a4d900e9c2cf435be236e32e61bffbc315e4d",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/ausd.png",
+      "sha256": "274b4866a67b766c7bd7a462e062ae603adbf64659823d2763d7180ecc23496e",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/ausdt-tether-alloy.png",
+      "sha256": "4dbc08512ff98d73dddcac109e9ec54fe6a1abf6f32f1f69bd64c5346607521e",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/327-aznd.png",
+      "sha256": "8094c90384312508abc229e7496705b2a9ad8bbad1d8596a4889c6c0187de715",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/bac.png",
+      "sha256": "ead51e23f8138b5138fd1d539270afefd1d4a8316f101a8f43a420f2110aed27",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/bean.png",
+      "sha256": "dbf71a6694605e9496f163e7433a1ecc133ebe84ac7f80de4cd165adf7531765",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/bob.png",
+      "sha256": "26e5c85e3cee23a6af6591fb62236447c84dc79cd7e959a3d127f1b45fc1b551",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/buck-buck-assets.png",
+      "sha256": "dc5220d007e238978a5b92958b5251bce810a51e1cd6220f5a0f4b859f666589",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/busd.png",
+      "sha256": "09846bd3e206d70932267005a072ce92e9a41340ee0d8a39aa5c275b1258c704",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/cash-cashio.png",
+      "sha256": "216038e357130605ea8eec2f17caa5018ce439217ceabc54780a26b38cc9d6ad",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/cash-stablfi.png",
+      "sha256": "1eac6ba12a7fa67c111bfd2ebfc02cfcfc6b1db63349c42b9cb3558fdd42ec04",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cdxusd-cod3x.png",
+      "sha256": "8cf232723a730c04c38baf4192847b8a9d452c157871e4a8e3a499dd610ba143",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/cnht.png",
+      "sha256": "ad1d42dbd4e6a48f9587678adf72c1092cdf99a553ffc34e8a4d21d97291575d",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/csusdl.png",
+      "sha256": "f6e4ee2bc0542bdd313d29379dd02917fbb8ecd1124fc1ada5ace154352cb4ad",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/saga-dollar.svg",
+      "sha256": "7412eb3d8a484a9d7a7f3770f7fb57f23742d9b11abdc96af45a8d7d49c14553",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/dai-plus.png",
+      "sha256": "8b3f7b712136aeb6d4f5a2c4f3af2b2c91eb2af4939ac11e73520d461adb115c",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/dei.png",
+      "sha256": "3e09dec9c06873e8ba7e11a6d3ba2603489bd1552de34bdee39da34b361f5e92",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/deusd.png",
+      "sha256": "685581ab17a6581b2b6fd2a217eda5166afb7a81489b7d765958cd45c9f66df8",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/dsd.png",
+      "sha256": "6261ca2697b10a37a608872cf7f7ed9943eee028d3751c4e37b0037d2d9a438f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/dusd-fluid.png",
+      "sha256": "281a4a734afd5dce9b11f41618a154e7b776ba0380e0f764437a793e7ed8af83",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/dyad.png",
+      "sha256": "09f2945be4851cf5fc3656c58a6f3647b037f92d1f6dcefa1ec8e2ad19f4293c",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cg-ebusd.png",
+      "sha256": "09b838ce1589ff1a5caff652b1c9b834f0eb6b3ff2e6f1334d1bc5270422268e",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/esd.png",
+      "sha256": "9f5c80f755a4613184582cdf15bd9fa52f93fe2d56096f9217b898fb01e631c2",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/eura.png",
+      "sha256": "f93b2caa7dc2fed936b08d919c392000f770b972b87999a6cffd0f2f219f153b",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/98-euroe.png",
+      "sha256": "5f9cc71980c4ca4d3067e9da375b12cbee9961062ca7b88c6aa2e97c5c7aaa5b",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/239-eurr.png",
+      "sha256": "c2da01b23c36cdfa036c626040d495bf881680e45a692e87fcb283f3b376f21c",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/eurt.png",
+      "sha256": "c4cf122cb0cfee72ae93900dd99c263bd9479fe55f0e72dc1cbc7c38e6fee123",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/eusd.png",
+      "sha256": "a1faa84ad35f24fc41d403c61f6ee4ae62d024b8469a0c0d9500618caaba1509",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/fei.png",
+      "sha256": "b002c7ace2510cdcc1abd4343b8aae38a41787d1f5515be9da5a6aba23391222",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/fiat.png",
+      "sha256": "ba182055c0812a70b2765c7dc688619761a100bda10c3fee337489c4cc64a3a9",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/flexusd.png",
+      "sha256": "378075a7df67b6c29cc676ecb20a8db0bb679e39b7b3c69110cf62be673e6259",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/float.png",
+      "sha256": "25f29d69f50e9f9570eebc24b73298c932072abea120db427d5e6bd683ff0ec5",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/fusd.png",
+      "sha256": "2ed7505520e4c7488babb4d2991c14588582d6549a147704fe711d7ce8f6a9f3",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/grai.png",
+      "sha256": "9fe557ef4ef911b1bdfdfda9e6ee607af86899b563cf852210dd439f2bf7e774",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/gyd.png",
+      "sha256": "658eda1437911d871876fb13ec4fa6b2d321f941495ba253469402dd694dee25",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/122-gyen.png",
+      "sha256": "f8bd35941429c38b343913af3cca18403da37120074dca3f21439af6aea72d3f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/husd.jpg",
+      "sha256": "bd2f35c699dc721efa36a904abfca66e242521fe9c22dc4d8bb9773281ecbfd2",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/hyusd.png",
+      "sha256": "8bebdbaf71cf6e1a55ee2d32270f5ca49d735505fe37dab04ffe799fdfb8a28f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/ibeur.png",
+      "sha256": "e403517cb9f97d9ffdf04cae4b807ff7625dfd33bfe8dcb05faabc6e6568108b",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/iron.png",
+      "sha256": "281331f518ed4d0d650079350115fa2aefeb2712e3691a22d4d5f0f1af894d18",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/135-ist.png",
+      "sha256": "e9ee8cc2b68542c22246a3144f7c9a25086ed9a40664f6a2eb5f9096b1db64f2",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/jpyc-jpyc-v1.png",
+      "sha256": "9ec0ae1e9f16de1a2a1ded12dae9ccfb1fc9b04948a39920b72b33a5faf6b24c",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/krt.png",
+      "sha256": "f8ef2d4324cba9c4114e1c1f99c5e60815e336f898b61896a0c3e9149cbdca31",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/lbold.png",
+      "sha256": "b022e55b8f25ec7412157d45840f376b41c27da98374e0b0a0623fd12365abe6",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/lvlusd.png",
+      "sha256": "d890694c06e30d078b1981499f70978bc71c01cfc9da3ac9560cef09167dfdcf",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/10-mim.png",
+      "sha256": "6b62705a0f4ae64a2866d59ffcfdfe84ac7f97500aef1c341124b176570f516d",
+      "kernel": "nearest"
+    },
+    {
+      "logo": "/logos/cemetery/mkusd.png",
+      "sha256": "fc03fc14523e672eea4874f6551b96a5432aa63dac3476b115692456a974c6ca",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/mod.png",
+      "sha256": "8d19f8288a75345e1ff451b0f8316949586c8d0796ed2ecd2d5239a62cddabb7",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/297-msusd.png",
+      "sha256": "fd5e8b9b9ee0e9763ab763e86ba715abe92a63abeeeba93ada6c26041dc14457",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/msy-main-street.png",
+      "sha256": "15d1923011d1ce4af16182719bc2455d16688a62f7ce27a5876273542fa150d8",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/musd.png",
+      "sha256": "5b12cb8ea6feb6ba1bef25e791b081a172a2ee5d3a1acd8c2449c64906e84039",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/mustang.webp",
+      "sha256": "0d12540cfb720c97808b48a8733a408825de799e75d434fd78bb1de845ad3797",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/note.png",
+      "sha256": "27544236b2b87d4f0b02e04477ed8ee97937b8fd6cf7ad0e7be4a41f070a7b5c",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/pai.png",
+      "sha256": "5f9d92c3635766ba51a382cf24836bb018a52b59e8fdf4a86c908a21877e6d04",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/par.png",
+      "sha256": "3150d108629ab4b38aaf84966970a0bcf31c52817b359acd15924fee48ce7771",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/pinto.png",
+      "sha256": "bc9ebd68766a7752cd509861ec4c14ccc0fe38bb03aab4e2f1672232ec6a201d",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/pusd.jpg",
+      "sha256": "f18733c389b815e47de3246151aef5f5deafbfd75c6a17b4ed6d1bbcc8722f41",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/pusd-palm.png",
+      "sha256": "07de68f8ed91c356d8b42b47e3662b6cd2977347d2b28f4015518c55452503ed",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/r-raft.png",
+      "sha256": "f07ee487d17a0a5830dba878567b4cfcde03e7517e52458134d10b2d14105d26",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/rai.png",
+      "sha256": "eabb12bcf41f92bf3b6ccf57a8a3f18a472e5d88135eb0eaa4334450a2667032",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/rsv.png",
+      "sha256": "750144d7f2fcee78d06b7076b68d53413846815b32dd29e51617cbb9b9833d48",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/seur.png",
+      "sha256": "0a39cda506295d1599002ec19c9c567bec1aea4916f9a2bf875f40917868d07e",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/star.png",
+      "sha256": "d4eb1f61ac51695f987d368a8d8f42c824edd9dd1e6d82a15f74b4f2521f84f6",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/22-susd.png",
+      "sha256": "f90d5e697f91d33c0eaf81ce4f177e8783d0dfc9df6bd16f34127365f1e28844",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/syusd.png",
+      "sha256": "949dcfafe31f4b5bee044ab48fae603f6ab6769ec2f95124d2f80997e9f130c7",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/tor.png",
+      "sha256": "4cc0944f40733ae38455d51a933a2669dd3f90402e60a146b051a3e89477ed23",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/uno.png",
+      "sha256": "691cf7ce8374a5d1404cc1f63c961113bb1ed10240763142d6f7b0dd9ccfdf3e",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usd-plus.png",
+      "sha256": "096603455dcb24d8722d3636ce08b3c80c0225eb416169b265ff6c3096f73587",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usda-angle.png",
+      "sha256": "5475749da37412bbb15f88b73b8768813d9c0badc59bcd133d031745ed447579",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdc-multichain.png",
+      "sha256": "5a55b4177a3711276a6adcc01aaa527098d4f5bd0b8011dfbf387888bfbd251c",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/321-usdh.png",
+      "sha256": "ea578a77d52a4f0a92eaa0c9703ed40364fa8657c3f5671e89c5005409248963",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdi.png",
+      "sha256": "8e78dcd2b710e14b94e114a8e7f1e9c0e6c922c0d82af504f750e6d260388ae8",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdj.png",
+      "sha256": "eaeda27ddbc459009fa05edaa19fa00ed38208df53bd681055b53b83e77c85a3",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/usdk-orki.jpg",
+      "sha256": "e399ffc46e93146bd51b68c0cc8adc396efa8d418b3768a29accb453dc96e931",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdk.png",
+      "sha256": "15bde948eb6f536f5f0ada54f3de21ab23ad4fcb9e173e535af335c0870f31c0",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdl.png",
+      "sha256": "b9ae962ec5d14c12454cdd318eea683a97415c03c22a8ffc22295aab1d7a063c",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdm-mountain.png",
+      "sha256": "9bede4a39a98cbfa29bc8eef7bd946ba1d52c8d04aff802432a5ed5070330613",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdn.png",
+      "sha256": "a5d71c26ead8199777ad4af3d7beae70ae8c12ff009b8cf78b144b1968b6d234",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdp.png",
+      "sha256": "967f5afda5c2d4c04052b47a83d69cf8230d6ab39e1451ccca25b8765b8cff6f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdr.png",
+      "sha256": "22977df9807ad913814a595af158dc8cf41eea287d9c7a9f88cb483018ab06ea",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/240-usdr.png",
+      "sha256": "50944f682048e5e0652bc9dc6f31baf78790bd37a4dc3b139ff0db6f8a7ae287",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usds-sperax.png",
+      "sha256": "6bdad55518e57f902673eebfbcf197f1daef28d4d0d47161743509efb13de6b6",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usds-spiceusd.png",
+      "sha256": "f799c9b0eca24f93a46cac63e2f9a84b68b6af88dafc4f77e2e63b71e7de6e31",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdv.png",
+      "sha256": "b3e50587dcafd56d3bd2c9ae93b78f5ef16d55d448867763dc3477e3daff8c7a",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdx-kava.png",
+      "sha256": "7af99a7af31b17201b2f0cb4ff2f6ddd26ae94578ec8f2815ab44e38cc0fb7ef",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usdx-stableslabs.png",
+      "sha256": "2c4019aeabc887ff1d3d305c7f83bc2ccec16bb68e063a6fa664ef55f32596f4",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/ush.png",
+      "sha256": "13a38f35dba2b98f631fece1d76de234a1e11823e6e802b72deb5dae9ae73431",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usn.png",
+      "sha256": "059432a94666a88a5acc04db6043f96720118e8fb2c6d1081e463c796b1510c8",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/nubits.png",
+      "sha256": "e486955da323417df1fa5f966e73dd3d347a52b6440ad4e95aa7d7735ca4d05d",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/287-usnd.png",
+      "sha256": "e18d46a0cbd54077538b3c852c28583ad2d1b44c6f83416bdbe0957cbad0fb31",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/usp.png",
+      "sha256": "44d84c716dbdee8c11652025258bc58e6e7b8f52be91a58f4254c5b02e9c368f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/uspd.png",
+      "sha256": "b75433404602fd1a490de294e2593962344c9ce2a9fba5e0e7f81d683d07196f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/197-usr.png",
+      "sha256": "e063e4a33ce3a7b03886e3bbf7d31995d3144b38fd7a77613f6e8e53fa660ceb",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/ust.png",
+      "sha256": "96b8c904fffe3309fa11f727373dc6f76764dcb78dcb137b1b0c2d7338dea2f9",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/usx-dforce.png",
+      "sha256": "5c6fcd163f50e398f0b91386067b9ce71f5f730bb4fa7bddec66a5838c98c4b2",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/uxd.png",
+      "sha256": "0ea9df2c7fb95565ddcc85f44ff8953d4861b64d0f9f4dfa329a8cd81f1a9909",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/vai.png",
+      "sha256": "2effd8b6adb5a93eb2a63eb50ec9bf847208cb289cddb4d9125c161c077f6bd3",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/volt.png",
+      "sha256": "8bc24507b3ac9805374621e416c1db710b4588a99f62dcf4cd717419722e30c7",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/vst.png",
+      "sha256": "ceb671fffce2c5ea5b7c67c6b83fc368457c720709d8a3aec69f90ba2a850ccd",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/wemix-dollar-wemix.png",
+      "sha256": "4960dceb071e7c2b8d4dfa9b41adc354a7d7a0e250bd72f4754444140b0a7d5c",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/xai-silo-finance.svg",
+      "sha256": "096d47a2e3140735ee02dc3c77c66c7bf7c22164aa6fea8e12b48c7eae76350a",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/xtusd-xt.png",
+      "sha256": "a7562c01b86e4deea3f51d60e70ac0bb6f05fd6131c69d2b96529bfc685e4eb0",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/xusd.png",
+      "sha256": "52037be252d507459d9dd20c19ba1ba366183a176e822ef4a987f4aa43ef9902",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/yu.png",
+      "sha256": "9b664345246b9da0c897d34ec6007250f7f00d5ff1f614ab045b40f56110fb49",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/yusd.png",
+      "sha256": "6627b4ad1a95010c5fcd99ddb9932791aa095c4917cd2db0e8f54b1522e59419",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cemetery/zusd.png",
+      "sha256": "72e6a322d73c76d303899701d154a90f738697318737156c31caaa8e03b66159",
+      "kernel": "lanczos3"
+    }
+  ],
+  "entries": [
+    {
+      "id": "aeur-anchored-coins",
+      "logo": "/logos/147-aeur.png"
+    },
+    {
+      "id": "ausd-acala-usd-2023-07",
+      "logo": "/logos/cemetery/ausd.png"
+    },
+    {
+      "id": "ausdt-tether-alloy",
+      "logo": "/logos/ausdt-tether-alloy.png"
+    },
+    {
+      "id": "aznd-mu-digital",
+      "logo": "/logos/327-aznd.png"
+    },
+    {
+      "id": "bac-basis-cash-2021-01",
+      "logo": "/logos/cemetery/bac.png"
+    },
+    {
+      "id": "bean-bean-2024-05",
+      "logo": "/logos/cemetery/bean.png"
+    },
+    {
+      "id": "bean-beanstalk-v1-2022-04",
+      "logo": "/logos/cemetery/bean.png"
+    },
+    {
+      "id": "bob-zkbob-bob-2024-10",
+      "logo": "/logos/cemetery/bob.png"
+    },
+    {
+      "id": "buck-buck-assets",
+      "logo": "/logos/buck-buck-assets.png"
+    },
+    {
+      "id": "busd-binance-usd-2023-02",
+      "logo": "/logos/cemetery/busd.png"
+    },
+    {
+      "id": "cash-cashio-dollar-2022-03",
+      "logo": "/logos/cemetery/cash-cashio.png"
+    },
+    {
+      "id": "cash-stabl-fi-cash-2024-06",
+      "logo": "/logos/cemetery/cash-stablfi.png"
+    },
+    {
+      "id": "cdxusd-cod3x",
+      "logo": "/logos/cdxusd-cod3x.png"
+    },
+    {
+      "id": "cnht-tether-cnh-2026-02",
+      "logo": "/logos/cemetery/cnht.png"
+    },
+    {
+      "id": "csusdl-coinshift-csusdl-2025-10",
+      "logo": "/logos/cemetery/csusdl.png"
+    },
+    {
+      "id": "d-saga-dollar-2026-01",
+      "logo": "/logos/cemetery/saga-dollar.svg"
+    },
+    {
+      "id": "dai-overnight-dai-2024-12",
+      "logo": "/logos/cemetery/dai-plus.png"
+    },
+    {
+      "id": "dei-dei-2022-05",
+      "logo": "/logos/cemetery/dei.png"
+    },
+    {
+      "id": "deusd-elixir-deusd-2025-11",
+      "logo": "/logos/cemetery/deusd.png"
+    },
+    {
+      "id": "dsd-dynamic-set-dollar-2021-01",
+      "logo": "/logos/cemetery/dsd.png"
+    },
+    {
+      "id": "dusd-fluid",
+      "logo": "/logos/dusd-fluid.png"
+    },
+    {
+      "id": "dyad-dyad-v2-2025-06",
+      "logo": "/logos/cemetery/dyad.png"
+    },
+    {
+      "id": "dyadv1-dyad-v1-2024-06",
+      "logo": "/logos/cemetery/dyad.png"
+    },
+    {
+      "id": "ebusd-ebisu",
+      "logo": "/logos/cg-ebusd.png"
+    },
+    {
+      "id": "esd-empty-set-dollar-2021-01",
+      "logo": "/logos/cemetery/esd.png"
+    },
+    {
+      "id": "eura-angle-eura-2026-03",
+      "logo": "/logos/cemetery/eura.png"
+    },
+    {
+      "id": "euroe-membrane",
+      "logo": "/logos/98-euroe.png"
+    },
+    {
+      "id": "eurr-stablr",
+      "logo": "/logos/239-eurr.png"
+    },
+    {
+      "id": "eurt-euro-tether-2024-11",
+      "logo": "/logos/cemetery/eurt.png"
+    },
+    {
+      "id": "eusd-lybra-eusd-2024-06",
+      "logo": "/logos/cemetery/eusd.png"
+    },
+    {
+      "id": "fei-fei-usd-2022-08",
+      "logo": "/logos/cemetery/fei.png"
+    },
+    {
+      "id": "fiat-fiat-i-2023-07",
+      "logo": "/logos/cemetery/fiat.png"
+    },
+    {
+      "id": "flexusd-flexusd-2022-06",
+      "logo": "/logos/cemetery/flexusd.png"
+    },
+    {
+      "id": "float-float-protocol-2025-07",
+      "logo": "/logos/cemetery/float.png"
+    },
+    {
+      "id": "fusd-fantom-usd-2022-06",
+      "logo": "/logos/cemetery/fusd.png"
+    },
+    {
+      "id": "grai-gravita-grai-2025-06",
+      "logo": "/logos/cemetery/grai.png"
+    },
+    {
+      "id": "gyd-gyroscope-gyd-2026-02",
+      "logo": "/logos/cemetery/gyd.png"
+    },
+    {
+      "id": "gyen-gyen",
+      "logo": "/logos/122-gyen.png"
+    },
+    {
+      "id": "husd-husd-2022-10",
+      "logo": "/logos/cemetery/husd.jpg"
+    },
+    {
+      "id": "hyusd-high-yield-usd-2025-06",
+      "logo": "/logos/cemetery/hyusd.png"
+    },
+    {
+      "id": "ibeur-iron-bank-euro-2023-12",
+      "logo": "/logos/cemetery/ibeur.png"
+    },
+    {
+      "id": "iron-iron-2021-06",
+      "logo": "/logos/cemetery/iron.png"
+    },
+    {
+      "id": "ist-agoric",
+      "logo": "/logos/135-ist.png"
+    },
+    {
+      "id": "jpyc-jpyc-v1",
+      "logo": "/logos/jpyc-jpyc-v1.png"
+    },
+    {
+      "id": "krt-terrakrw-2022-05",
+      "logo": "/logos/cemetery/krt.png"
+    },
+    {
+      "id": "l-bold-legacy-bold-2025-02",
+      "logo": "/logos/cemetery/lbold.png"
+    },
+    {
+      "id": "lvlusd-level-usd-2025-10",
+      "logo": "/logos/cemetery/lvlusd.png"
+    },
+    {
+      "id": "mim-abracadabra",
+      "logo": "/logos/10-mim.png"
+    },
+    {
+      "id": "mkusd-prisma-mkusd-2024-11",
+      "logo": "/logos/cemetery/mkusd.png"
+    },
+    {
+      "id": "mod-move-dollar-2025-06",
+      "logo": "/logos/cemetery/mod.png"
+    },
+    {
+      "id": "msusd-main-street",
+      "logo": "/logos/297-msusd.png"
+    },
+    {
+      "id": "msy-main-street",
+      "logo": "/logos/msy-main-street.png"
+    },
+    {
+      "id": "musd-mstable-usd-2023-04",
+      "logo": "/logos/cemetery/musd.png"
+    },
+    {
+      "id": "must-mustang-2026-01",
+      "logo": "/logos/cemetery/mustang.webp"
+    },
+    {
+      "id": "note-note-2024-06",
+      "logo": "/logos/cemetery/note.png"
+    },
+    {
+      "id": "pai-parrot-usd-2023-07",
+      "logo": "/logos/cemetery/pai.png"
+    },
+    {
+      "id": "par-parallel-2024-09",
+      "logo": "/logos/cemetery/par.png"
+    },
+    {
+      "id": "peusd-lybra-peusd-2024-06",
+      "logo": "/logos/cemetery/peusd.png"
+    },
+    {
+      "id": "pinto-pinto-2025-10",
+      "logo": "/logos/cemetery/pinto.png"
+    },
+    {
+      "id": "pusd-jpeg-d-pusd-2024-06",
+      "logo": "/logos/cemetery/pusd.jpg"
+    },
+    {
+      "id": "pusd-palm-usd-2026-01",
+      "logo": "/logos/cemetery/pusd-palm.png"
+    },
+    {
+      "id": "r-raft-r-2023-11",
+      "logo": "/logos/cemetery/r-raft.png"
+    },
+    {
+      "id": "rai-rai-reflex-index-2024-02",
+      "logo": "/logos/cemetery/rai.png"
+    },
+    {
+      "id": "rsv-reserve-2023-03",
+      "logo": "/logos/cemetery/rsv.png"
+    },
+    {
+      "id": "seur-synthetix-seur-2024-07",
+      "logo": "/logos/cemetery/seur.png"
+    },
+    {
+      "id": "star-preon-star-2024-06",
+      "logo": "/logos/cemetery/star.png"
+    },
+    {
+      "id": "susd-synthetix",
+      "logo": "/logos/22-susd.png"
+    },
+    {
+      "id": "syusd-synnax-stablecoin-2026-01",
+      "logo": "/logos/cemetery/syusd.png"
+    },
+    {
+      "id": "tor-tor-2023-07",
+      "logo": "/logos/cemetery/tor.png"
+    },
+    {
+      "id": "ultra-prismalrt-ultra-2024-11",
+      "logo": "/logos/cemetery/ultra.png"
+    },
+    {
+      "id": "uno-nostra-uno-2024-07",
+      "logo": "/logos/cemetery/uno.png"
+    },
+    {
+      "id": "usd-usd-2025-01",
+      "logo": "/logos/cemetery/usd-plus.png"
+    },
+    {
+      "id": "usda-angle-usda-2026-03",
+      "logo": "/logos/cemetery/usda-angle.png"
+    },
+    {
+      "id": "usdc-m-multichain-usdc-2023-07",
+      "logo": "/logos/cemetery/usdc-multichain.png"
+    },
+    {
+      "id": "usdh-native-markets",
+      "logo": "/logos/321-usdh.png"
+    },
+    {
+      "id": "usdi-interest-protocol-2023-06",
+      "logo": "/logos/cemetery/usdi.png"
+    },
+    {
+      "id": "usdj-just-usdj-2025-08",
+      "logo": "/logos/cemetery/usdj.png"
+    },
+    {
+      "id": "usdk-orki",
+      "logo": "/logos/usdk-orki.jpg"
+    },
+    {
+      "id": "usdk-usdk-2023-06",
+      "logo": "/logos/cemetery/usdk.png"
+    },
+    {
+      "id": "usdl-lift-dollar-2025-12",
+      "logo": "/logos/cemetery/usdl.png"
+    },
+    {
+      "id": "usdl-liquid-loans-usdl-2025-06",
+      "logo": "/logos/cemetery/liquid-loans-usdl.png"
+    },
+    {
+      "id": "usdm-mountain-protocol-usdm-2025-08",
+      "logo": "/logos/cemetery/usdm-mountain.png"
+    },
+    {
+      "id": "usdn-neutrino-usd-2022-04",
+      "logo": "/logos/cemetery/usdn.png"
+    },
+    {
+      "id": "usdp-usdp-stablecoin-2023-06",
+      "logo": "/logos/cemetery/usdp.png"
+    },
+    {
+      "id": "usdr-real-usd-2023-10",
+      "logo": "/logos/cemetery/usdr.png"
+    },
+    {
+      "id": "usdr-stablr",
+      "logo": "/logos/240-usdr.png"
+    },
+    {
+      "id": "usds-sperax-usd-2023-02",
+      "logo": "/logos/cemetery/usds-sperax.png"
+    },
+    {
+      "id": "usds-spiceusd-2022-09",
+      "logo": "/logos/cemetery/usds-spiceusd.png"
+    },
+    {
+      "id": "usdv-verified-usd-2024-12",
+      "logo": "/logos/cemetery/usdv.png"
+    },
+    {
+      "id": "usdx-kava-usdx-2022-06",
+      "logo": "/logos/cemetery/usdx-kava.png"
+    },
+    {
+      "id": "usdx-stables-labs-usdx-2025-11",
+      "logo": "/logos/cemetery/usdx-stableslabs.png"
+    },
+    {
+      "id": "ush-hedge-usd-2024-06",
+      "logo": "/logos/cemetery/ush.png"
+    },
+    {
+      "id": "usn-usn-2022-10",
+      "logo": "/logos/cemetery/usn.png"
+    },
+    {
+      "id": "usnbt-nubits-2018-03",
+      "logo": "/logos/cemetery/nubits.png"
+    },
+    {
+      "id": "usnd-nerite",
+      "logo": "/logos/287-usnd.png"
+    },
+    {
+      "id": "usp-usp-stablecoin-2023-02",
+      "logo": "/logos/cemetery/usp.png"
+    },
+    {
+      "id": "uspd-us-permissionless-dollar-2025-12",
+      "logo": "/logos/cemetery/uspd.png"
+    },
+    {
+      "id": "usr-resolv",
+      "logo": "/logos/197-usr.png"
+    },
+    {
+      "id": "ust-terrausd-2022-05",
+      "logo": "/logos/cemetery/ust.png"
+    },
+    {
+      "id": "usx-dforce",
+      "logo": "/logos/usx-dforce.png"
+    },
+    {
+      "id": "uxd-uxd-stablecoin-2024-08",
+      "logo": "/logos/cemetery/uxd.png"
+    },
+    {
+      "id": "vai-vai-2021-09",
+      "logo": "/logos/cemetery/vai.png"
+    },
+    {
+      "id": "volt-volt-protocol-2022-08",
+      "logo": "/logos/cemetery/volt.png"
+    },
+    {
+      "id": "vst-vesta-stable-2023-09",
+      "logo": "/logos/cemetery/vst.png"
+    },
+    {
+      "id": "wemix-dollar-wemix",
+      "logo": "/logos/wemix-dollar-wemix.png"
+    },
+    {
+      "id": "xai-silo-finance",
+      "logo": "/logos/xai-silo-finance.svg"
+    },
+    {
+      "id": "xtusd-xt",
+      "logo": "/logos/xtusd-xt.png"
+    },
+    {
+      "id": "xusd-stream-finance-xusd-2025-11",
+      "logo": "/logos/cemetery/xusd.png"
+    },
+    {
+      "id": "yu-yu-2025-11",
+      "logo": "/logos/cemetery/yu.png"
+    },
+    {
+      "id": "yusd-yusd-stablecoin-2023-12",
+      "logo": "/logos/cemetery/yusd.png"
+    },
+    {
+      "id": "zusd-gmo-zusd-2025-06",
+      "logo": "/logos/cemetery/zusd.png"
+    }
+  ],
+  "missing": [
+    "fusd-fedz-2026-05",
+    "usdh-hubble-2026-05"
+  ]
+}

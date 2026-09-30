@@ -30,9 +30,10 @@ The script prints two artifacts:
 ### 2. Apply the JSON edits
 
 - Append the snapshot entry to `frozen-snapshots.json`.
-- In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy.
+- In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy. The obituary must satisfy the cemetery inclusion and primary-cause rules in [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record).
+- The cemetery row's `recordedAt` (the UTC date the record entered Pharos) is `frozenAt` unless `obituary.recordedAt` overrides it. Set `obituary.recordedAt` to the strict UTC `YYYY-MM-DD` on which the coin enters the cemetery only when `frozenAt` preserves an earlier historical freeze date. The row also takes the coin's `mechanismArchetype`, so keep that field.
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
-- Run `npm run bootstrap:generated`, then `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts`, then `npm run check:generated-artifacts`, to refresh and verify the gitignored aggregate, report-card registry fingerprint, legacy redirect map, and client registry projections. Do not edit generated projections by hand.
+- Run `npm run bootstrap:generated`, then `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts`, `npm run logos:cemetery-atlas` and `npm run build:og-cemetery`, then `npm run check:generated-artifacts`, to refresh and verify the gitignored aggregate, report-card registry fingerprint, legacy redirect map, client registry projections, cemetery dataset exports, cemetery logo atlas and cemetery OG image. The pre-commit hook also regenerates and stages the three cemetery artifacts. Do not edit generated projections by hand.
 
 The schema enforces the invariant: both `frozenAt` and `obituary` are required when `status === "frozen"`, and both fields are disallowed when `status` is anything else.
 
@@ -61,7 +62,9 @@ rg '"<coin-id>"' data/logos.json
 test -f "public/logos/<registered-logo-file>"
 ```
 
-If no canonical tracked logo is registered, add one — or place the file where `frozenToDeadShape()`'s fallback resolves: `public/logos/<llamaId>-<symbol>.png` when the coin has a `llamaId`, and `public/logos/cemetery/<symbol>.png` only when it does not (the cemetery renderers prefix `/logos/cemetery/` solely for non-absolute paths). `frozenToDeadShape()` always resolves a non-empty logo path, and the tombstone renders it through `next/image` with no file-existence check — so a missing PNG shows a broken image, not a glyph. The `test -f` check above is load-bearing.
+If no canonical tracked logo is registered, add one, or place the file where `frozenToDeadShape()`'s fallback resolves: `public/logos/<llamaId>-<symbol>.png` when the coin has a `llamaId`, and `public/logos/cemetery/<symbol>.png` only when it does not (`resolveCemeteryLogoUrl` prefixes `/logos/cemetery/` solely for non-absolute paths). `frozenToDeadShape()` always resolves a non-empty logo path. The plot map's grave medallions draw the logo from the cemetery logo atlas below, never from that path, and show the symbol's first letter only for a row the atlas lists as having no logo. The Autopsy Register's Coin column renders the resolved path as a plain `<img>` with no file-existence check, so a missing PNG shows a broken image there. The `test -f` check above is load-bearing.
+
+The cemetery logo atlas (the `cemetery-logo-atlas` generated artifact) packs every resolved cemetery logo into `public/logos/atlas/cemetery-atlas.webp`. Its generator fails when a resolved logo file does not exist, so regenerate it with `npm run logos:cemetery-atlas` once the file is in place; the pre-commit hook also regenerates and stages it when the coin file or `data/logos.json` is staged.
 
 ### 4. Validate
 
@@ -74,6 +77,8 @@ npm test -- --run
 cd worker && npx tsc --noEmit && cd ..
 npm run prebuild  # regenerates compile-input artifacts only
 npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts  # regenerates the maintenance-only cemetery dataset
+npm run logos:cemetery-atlas  # regenerates the maintenance-only cemetery logo atlas
+npm run build:og-cemetery  # regenerates the /cemetery/ OG card (plot map; no-op when current)
 ```
 
 ### 5. Update docs
@@ -92,7 +97,7 @@ Commit/push according to current repo guidance. Open a PR only when explicitly r
 
 ### 7. Post-deploy verification (within 24h)
 
-- Visit `/cemetery/` — confirm the coin appears with a "View archived data →" link.
+- Visit `/cemetery/#<id>`: confirm the coin's register row opens, its autopsy reads "Tracked archive: frozen detail page" with an "Archived data →" link to `/stablecoin/<id>/`, and the key-facts "Latest record added" date reflects its `recordedAt` when it is the newest record. On the plot map, confirm its grave stands in its cause's section and death year with a bronze plaque and its logo on the medallion.
 - Visit `/stablecoin/<id>/` — confirm the frozen banner below the hero (within the identity zone), and the "Data frozen on YYYY-MM-DD" footer above each chart section.
 - Inspect Worker logs — confirm no INSERT/UPDATE for the coin's id from any cron.
 - Confirm the next daily Telegram digest fires a **Newly Frozen Stablecoins** appendix section for the coin (`frozenDetected` in the digest appendix metadata). The cemetery appendix diffs `DEAD_STABLECOINS` only and stays silent on a freeze.

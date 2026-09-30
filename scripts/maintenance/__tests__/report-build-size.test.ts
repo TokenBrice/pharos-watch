@@ -25,6 +25,9 @@ const JS_BYTES = ZOD_CHUNK_BYTES + PAGE_CHUNK_BYTES;
 const HTML_BYTES = SHELL_HTML.length + DETAIL_HTML.length;
 const TXT_BYTES = SHELL_TXT_BYTES + DETAIL_TXT_BYTES;
 const DETAIL_ROUTE_BYTES = DETAIL_HTML.length + DETAIL_TXT_BYTES;
+// Highly compressible, so its gzip size sits far below its raw size.
+const CEMETERY_HTML = `<!doctype html><html><body>${"x".repeat(2_000)}</body></html>`;
+const CEMETERY_FLIGHT_BYTES = 400;
 
 const tempDirs: string[] = [];
 
@@ -33,7 +36,10 @@ const tempDirs: string[] = [];
  * chunk), a CSS bundle, a media asset, RSC helpers, and one representative
  * stablecoin detail route with its `__PAGE__` payload.
  */
-function syntheticBuild({ css = SEARCH_WIDTH_UTILITY.padEnd(CSS_BYTES, "\n") } = {}): string {
+function syntheticBuild({
+  css = SEARCH_WIDTH_UTILITY.padEnd(CSS_BYTES, "\n"),
+  extraFiles = {},
+}: { css?: string; extraFiles?: Record<string, string> } = {}): string {
   const buildRoot = mkdtempSync(join(tmpdir(), "report-build-size-"));
   tempDirs.push(buildRoot);
   const files: Record<string, string> = {
@@ -48,6 +54,7 @@ function syntheticBuild({ css = SEARCH_WIDTH_UTILITY.padEnd(CSS_BYTES, "\n") } =
     [ZOD_CHUNK]: "globalThis._zod={};/* _zod.traits */".padEnd(ZOD_CHUNK_BYTES, "x"),
     [`${DETAIL_ROUTE}/index.html`]: DETAIL_HTML,
     [`${DETAIL_ROUTE}/usdc-circle.__PAGE__.txt`]: "detail-payload".padEnd(DETAIL_TXT_BYTES, "0"),
+    ...extraFiles,
   };
 
   for (const [relativePath, content] of Object.entries(files)) {
@@ -154,6 +161,32 @@ describe("report-build-size", () => {
     );
     expect(result.stepSummary).toContain(
       "| classic Zod HTML references | 50.0% | 75.0% | -25.0% (-33.3%) | advisory |  |",
+    );
+  });
+
+  it("gates /cemetery/ on its own raw HTML, gzip HTML and RSC flight ceilings", () => {
+    const build = syntheticBuild({
+      extraFiles: {
+        "out/cemetery/index.html": CEMETERY_HTML,
+        "out/cemetery/index.txt": "cemetery-flight".padEnd(CEMETERY_FLIGHT_BYTES, "0"),
+      },
+    });
+    const result = runReport(build, {
+      budgets: {
+        PHAROS_SIZE_BUDGET_CEMETERY_HTML_BYTES: "1000",
+        PHAROS_SIZE_BUDGET_CEMETERY_HTML_GZIP_BYTES: "1000",
+        PHAROS_SIZE_BUDGET_CEMETERY_FLIGHT_BYTES: "100",
+      },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("- cemetery html exceeds its byte ceiling");
+    expect(result.stderr).toContain("responsible: out/cemetery/index.html (html)");
+    expect(result.stdout).toContain("  ok cemetery html gzip:");
+    expect(result.stderr).not.toContain("cemetery html gzip exceeds");
+    expect(result.stderr).toContain(
+      `- cemetery RSC flight exceeds its byte ceiling (${CEMETERY_FLIGHT_BYTES} B / 100 B); `
+      + "responsible: out/cemetery/index.txt (RSC flight)",
     );
   });
 

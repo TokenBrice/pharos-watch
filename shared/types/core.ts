@@ -631,7 +631,9 @@ export interface StablecoinObituary {
   causeOfDeath: CauseOfDeath;
   /** YYYY-MM or YYYY-MM-DD; precision must match `dead-stablecoins.json` entries. */
   deathDate: string;
-  /** Headline shown in detail-page banner and cemetery tombstone. */
+  /** UTC YYYY-MM-DD cemetery entry date when it differs from frozenAt. */
+  recordedAt?: string;
+  /** Headline shown in the detail-page banner and on the cemetery's grave record card and register row. */
   epitaph: string;
   /** Full obituary paragraph — collapsible in the banner. */
   obituary: string;
@@ -713,7 +715,7 @@ export interface StablecoinMeta {
   windDownSourceUrl?: string;
   /** YYYY-MM-DD; required when status === "frozen". */
   frozenAt?: string;
-  /** Obituary content surfaced on the detail page banner and cemetery tombstone; required when status === "frozen". */
+  /** Obituary content surfaced on the detail page banner and the cemetery plot map and register; required when status === "frozen". */
   obituary?: StablecoinObituary;
   launchDate?: string;
   /** Reviewed lower bound for depeg-event coverage used as the PegScore denominator. */

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import cemeteryDatasetExport from "../../../public/datasets/stablecoin-cemetery.json";
 import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
 
 describe("buildCemeteryDatasetJsonLd", () => {
@@ -61,5 +62,18 @@ describe("buildCemeteryDatasetJsonLd", () => {
       ]),
     );
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
+  });
+
+  it("dates the dataset by the export's updatedAt, and omits dateModified without one", () => {
+    const jsonLd: Record<string, unknown> = buildCemeteryDatasetJsonLd();
+    const exported: { updatedAt?: string | null } = cemeteryDatasetExport;
+    const updatedAt = exported.updatedAt ?? null;
+
+    if (updatedAt === null) {
+      expect(jsonLd).not.toHaveProperty("dateModified");
+    } else {
+      expect(jsonLd.dateModified).toBe(updatedAt);
+      expect(jsonLd.dateModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
   });
 });

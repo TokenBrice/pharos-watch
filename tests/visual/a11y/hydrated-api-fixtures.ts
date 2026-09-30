@@ -209,7 +209,16 @@ const yieldRankings = YieldRankingsSummaryResponseSchema.parse({
     updatedAt: FIXTURE_NOW,
     warnings: [],
   }),
-  _meta: { updatedAt: FIXTURE_NOW, ageSeconds: 0, status: "fresh" },
+  // The full freshness assessment `buildFreshnessMeta` attaches to a just-published summary.
+  _meta: {
+    updatedAt: FIXTURE_NOW,
+    ageSeconds: 0,
+    status: "fresh",
+    reason: null,
+    assessedAt: FIXTURE_NOW,
+    freshBudgetSec: 7_200,
+    degradedBudgetSec: 14_400,
+  },
 });
 
 const yieldAdapterManifest = YieldAdapterManifestResponseSchema.parse({

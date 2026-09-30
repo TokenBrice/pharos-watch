@@ -6,7 +6,7 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { ChartLegendChip } from "@/components/chart-primitives/axes";
+import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
 import { formatChartDate, formatChartPercent } from "@shared/lib/format";
 import type { SupplySeriesEntry } from "@/lib/compare-derive";

@@ -154,13 +154,6 @@ export const content: ArchetypeContent = {
       coinId: "iron-iron-2021-06",
     },
     {
-      name: "Cashio Dollar",
-      date: "2022-03",
-      obituary:
-        "Solana-native algorithmic dollar killed by an infinite-mint exploit: an attacker forged a fake collateral account, minted 2B CASH, and drained ~$48M of USDC and UST from the protocol within hours.",
-      coinId: "cash-cashio-dollar-2022-03",
-    },
-    {
       name: "Neutrino USD",
       date: "2022-04",
       obituary:
@@ -196,13 +189,6 @@ export const content: ArchetypeContent = {
       coinId: "dei-dei-2022-05",
     },
     {
-      name: "Fantom USD",
-      date: "2022-06",
-      obituary:
-        "Fantom-native algorithmic dollar chained to the FTM price. The peg unwound as FTM lost the majority of its market cap during the 2022 bear market; the protocol never restored convertibility.",
-      coinId: "fusd-fantom-usd-2022-06",
-    },
-    {
       name: "SpiceUSD",
       date: "2022-09",
       obituary:
@@ -215,13 +201,6 @@ export const content: ArchetypeContent = {
       obituary:
         "Near Protocol's algorithmic dollar. A double-mint bug left the protocol roughly $40M short of its claimed backing; the Near Foundation eventually wound USN down rather than recapitalize.",
       coinId: "usn-usn-2022-10",
-    },
-    {
-      name: "Acala USD",
-      date: "2023-07",
-      obituary:
-        "Polkadot's flagship algorithmic dollar, killed in August 2022 by a misconfigured iBTC/aUSD liquidity pool that minted 1.28B aUSD out of thin air. The chain forked to burn most of the minted supply; aUSD never regained credibility and was officially decommissioned in 2023.",
-      coinId: "ausd-acala-usd-2023-07",
     },
     {
       name: "Bean (v2)",

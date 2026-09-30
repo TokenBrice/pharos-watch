@@ -75,6 +75,17 @@ const ROUTES: ReadonlyArray<{
       });
     },
   },
+  {
+    path: "/cemetery",
+    tier: "editorial",
+    ready: async (page) => {
+      // The plot map marks its root ready once hydration has chosen the
+      // desktop or phone layout; before that the interactive layer is absent.
+      await expect(page.locator('[data-plot-root][data-ready="true"]')).toBeVisible({
+        timeout: HYDRATION_TIMEOUT_MS,
+      });
+    },
+  },
 ];
 
 for (const route of ROUTES) {
