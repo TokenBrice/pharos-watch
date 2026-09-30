@@ -58,7 +58,7 @@ The page is organized into these sections, in order:
 - `/about/` remains a top-level route in the `Resources` menu's `About Pharos` column (the `NAV_GROUPS` entry keyed `"more"`).
 - `/about/` is the reference hub for low-frequency reference surfaces. `Start Here`, `Funding`, and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, `Changelog`, and `Blog` fill the `Updates` column; `Methodology`, `Coverage`, and `System Status` fill the `Transparency` column; and the Learn surfaces fill the `Research` column. `Upcoming` lives in the `Markets` menu; `Alert Bot` and `API Access` live in the `Tools` menu. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
-- `Dependency Map` must link to `/dependency-map/` and describe direct collateral and wrapper links. The computed-feature roster has no failure-scenario scoreboard or stress panel.
+- `Dependency Map` must link to `/dependency-map/` and describe mapped collateral and wrapper links. Exposure mode traces linked coins using publication-bound supply and does not estimate losses or changes in Safety Scores. The computed-feature roster has no failure-scenario scoreboard or stress panel.
 - `Methodology`, broadcast, Telegram, GitHub, and profile links are explicit CTAs; `Funding` and the public `/docs/listing-policy/` reference are inline prose links.
 - Trust-policy links use `/about/#principles`, `/about/#editorial-ai-policy`, and `/about/#corrections-policy`.
 

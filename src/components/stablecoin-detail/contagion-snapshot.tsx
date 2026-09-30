@@ -137,10 +137,11 @@ export function ContagionSnapshot({
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency Context</StablecoinModuleTitle>
         <Link
           href={`/dependency-map/?focus=${encodeURIComponent(stablecoinId)}`}
-          className="pharos-focus-ring text-sm text-muted-foreground hover:text-foreground"
+          className="pharos-focus-ring inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"
         >
           Open in Dependency Map
         </Link>
+        <p className="text-xs text-muted-foreground sm:hidden">Open the map for the neighborhood list, fullscreen Graph tab, Fit and Zoom controls.</p>
       </div>
       <div className={DETAIL_MODULE_BODY_CLASS}>
         {sourceError ? (

@@ -81,6 +81,21 @@ Reviewed incidents are routed into the control, wrapper-local, operational, or p
 Publication is fail-closed. Stale or unavailable score-bearing producers and material infrastructure-attributed deterioration hold the last accepted V9 ratings. Isolated producer failures do not freeze the publication while at least 90% of active assets remain unaffected. Active consumers expose held status and never recompute or fall back to V8. V8.17 remains documented as historical methodology.
 
 
+## Dependency Exposure Lookup
+
+Exposure mode on the [Dependency Map](/dependency-map/?mode=exposure) finds coins linked to selected upstream assets through mapped collateral and wrapper relationships. Linked coins; not a loss forecast. It does not estimate losses or changes in Safety Scores.
+
+The lookup uses the full published edge set, regardless of Explore Focus, Type, Limit, or small-link visibility. Selected roots are listed separately and excluded from dependent counts and USD totals. Direct dependents are one link away; indirect dependents are reached through longer chains.
+
+Each root starts with a share of 100%. Basket relationships sum mapped weights multiplied by their upstream look-through shares. Serial relationships take the maximum upstream share, not a sum. When both channels apply, the lookup takes the larger of the serial maximum and the basket sum. Each dependent appears once across selected roots. A published shared backing book counts once in USD totals; direct and indirect totals can still include the same underlying value at several layers, so the headline states that overlap. These gross layer totals are not additive independent holdings.
+
+USD equals the mapped share multiplied by circulating USD at evaluation from the accepted publication. The result names its generation, methodology version, publication time, and supply clock, and labels held snapshots. It never silently substitutes current market cap. When evaluation supply was not published, USD remains unknown with the reason 'Supply at evaluation not published for this generation'. Unknown supply is not zero: the row remains visible and known-USD totals exclude its unavailable amount.
+
+Coverage is limited to published relationships and their measured or reviewed weights, which may differ from current composition. Unknown weights and cycles leave shares unresolved rather than guessed or clamped. Role dependencies are listed as 'Role dependencies (not drawn)'; 'Known, not in the scored graph' relationships are outside the lookup and totals. An absent coverage field means not published, not no gaps. Peg, liquidity, confidence, and other transmission channels are not modeled. No mapped downstream exposure found does not establish that other dependencies are absent.
+
+History examples are [case-study links](/learn/case-studies/), not runnable presets or a historical replay. Tier 2 exact V9 scenarios are separate, modeled offline in Node with the production evaluator and bound to a publication. They are not yet shipped. Exposure lookup adds no scoring payload field or scoring override and needs no scoring methodology version bump.
+
+
 ## Mint Authority Score
 
 Mint authority measures how much durable stablecoin supply can be created, authorized, or expanded on the canonical native-issuance deployment or deployments.

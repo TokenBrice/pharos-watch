@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
@@ -14,6 +15,7 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
 import { DependencyHero } from "./dependency-hero";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
 import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import { useDependencyExposureWorkspace } from "./dependency-exposure-workspace";
 
 export function DependencyMapClient() {
   const reportCardsQuery = useReportCardsV9();
@@ -36,12 +38,12 @@ export function DependencyMapClient() {
     return new Map(stablecoinsData.peggedAssets.map((asset) => [asset.id, getCirculatingRawOrNull(asset)]));
   }, [stablecoinsData, stablecoinsError]);
 
-  const dependencyEdges = useMemo(() => reportData?.dependencyGraph?.edges ?? [], [reportData]);
+  const dependencyEdges = useMemo(() => (reportData?.dependencyGraph?.edges ?? []).filter(edge => edge && typeof edge.from === "string" && typeof edge.to === "string"), [reportData]);
 
   // One projection feeds both the hub board (name/symbol) and the graph (symbol/grade).
   const cards = useMemo(
     () =>
-      (reportData?.cards ?? []).map((card) => {
+      (reportData?.cards ?? []).filter(card => card && typeof card.id === "string").map((card) => {
         const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
         return {
           id: card.id,
@@ -59,6 +61,9 @@ export function DependencyMapClient() {
     () => buildDependencyHubsModel({ cards, edges: dependencyEdges, mcapMap, marketCapAsOf: stablecoinsError ? null : stablecoinsQuery.meta?.updatedAt ?? null }),
     [cards, dependencyEdges, mcapMap, stablecoinsError, stablecoinsQuery.meta?.updatedAt],
   );
+  const exposureWorkspace = useDependencyExposureWorkspace(reportData);
+  const coveragePublished = (reportData?.cards ?? []).filter(card => Array.isArray(card?.dependencyCoverage));
+  const knownNotInGraphCount = coveragePublished.reduce((count, card) => count + (card.dependencyCoverage?.length ?? 0), 0);
 
   if (isLoadingCards && !reportData?.cards?.length) {
     return (
@@ -110,9 +115,14 @@ export function DependencyMapClient() {
         dependencyEdges={dependencyEdges}
         mcapMap={mcapMap}
         logos={logos}
+        workspace={exposureWorkspace}
       />
-      <DependencyHubsBoard model={dependencyHubsModel} logos={logos} />
-      <DependencyMapMobileSummary model={dependencyHubsModel} logos={logos} />
+      <section className="pharos-card-shell space-y-2 p-4" aria-label="Dependency coverage">
+        <h2 className="font-semibold">Known, not in the scored graph</h2>
+        <p className="text-sm text-muted-foreground">{coveragePublished.length ? `${knownNotInGraphCount} known relationships excluded from scored graph totals.` : "Not published for this generation."}{coveragePublished.length > 0 && coveragePublished.length < reportData.cards.length ? ` Coverage not published for ${reportData.cards.length - coveragePublished.length} coins.` : ""} <Link href="/coverage/" className="underline">Coverage Matrix gaps</Link> (use the dependency Gaps filter).</p>
+      </section>
+      <DependencyHubsBoard model={dependencyHubsModel} logos={logos} onExposure={exposureWorkspace.addRoot} />
+      <DependencyMapMobileSummary model={dependencyHubsModel} logos={logos} onExposure={exposureWorkspace.addRoot} />
     </div>
   );
 }

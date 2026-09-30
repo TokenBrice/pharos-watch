@@ -37,6 +37,11 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation }: Con
 
   return (
     <>
+      {graph.exposureOverlay && (
+        <p className="px-3 py-2 text-xs" role="status">
+          Showing {Array.from(graph.exposureOverlay.rows.keys()).filter(id => graph.visibleNodeIds.has(id)).length} of {graph.exposureOverlay.rows.size} linked coins
+        </p>
+      )}
       <ContagionGraphStage
         graph={graph}
         logos={logos}
@@ -52,6 +57,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation }: Con
             nodeMap={graph.nodeMap}
             logos={logos}
             onTraceNode={graph.handleTraceNodeChange}
+            onUseAsExposureRoot={graph.onUseAsExposureRoot}
             variant="overlay"
           />
         }
@@ -66,6 +72,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation }: Con
             nodeMap={graph.nodeMap}
             logos={logos}
             onTraceNode={graph.handleTraceNodeChange}
+            onUseAsExposureRoot={graph.onUseAsExposureRoot}
             variant="panel"
           />
         ) : (
@@ -78,7 +85,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation }: Con
         {graph.smallLinkCount > 0 && (
           <button
             type="button"
-            className="pharos-focus-ring rounded-sm border px-2 py-1"
+            className="pharos-focus-ring min-h-11 rounded-sm border px-2 py-1"
             aria-pressed={graph.showSmallLinks}
             onClick={() => graph.setShowSmallLinks(value => !value)}
           >
@@ -88,7 +95,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation }: Con
         <label className="flex items-center gap-2">
           Inspect dependency
           <select
-            className="pharos-focus-ring min-w-0 rounded-sm border bg-background px-2 py-1"
+            className="pharos-focus-ring min-h-11 min-w-0 rounded-sm border bg-background px-2 py-1"
             value={graph.activeHoveredEdge ?? ""}
             onChange={event => {
               graph.handleNodeMouseLeave();

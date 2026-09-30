@@ -256,7 +256,7 @@ export function lookThroughShares(
   return values;
 }
 
-type ExposureBand = "material" | "minor" | "trace" | "unknown";
+export type ExposureBand = "material" | "minor" | "trace" | "unknown";
 interface ExposureRow {
   id: string;
   minHop: number;

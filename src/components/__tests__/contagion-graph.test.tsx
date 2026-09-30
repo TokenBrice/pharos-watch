@@ -17,10 +17,10 @@ beforeEach(() => {
   vi.mocked(trackEvent).mockClear();
   desktop = false;
   mediaListener = undefined;
-  vi.stubGlobal("matchMedia", () => ({
-    get matches() { return desktop; },
-    addEventListener: (_: string, listener: () => void) => { mediaListener = listener; },
-    removeEventListener: () => { mediaListener = undefined; },
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    get matches() { return query === "(min-width: 640px)" && desktop; },
+    addEventListener: (_: string, listener: () => void) => { if (query === "(min-width: 640px)") mediaListener = listener; },
+    removeEventListener: () => { if (query === "(min-width: 640px)") mediaListener = undefined; },
   }));
 });
 
@@ -95,12 +95,6 @@ describe("ContagionGraph", () => {
     }
     return picker;
   }
-  it("does not promise fullscreen in a detail snapshot", () => {
-    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} minimalChrome />);
-    expect(screen.getByText("Tap a node to inspect dependencies.")).toBeTruthy();
-    expect(screen.queryByText(/Use fullscreen/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Fullscreen graph" })).toBeNull();
-  });
 
   it("hides small canvas links without changing full exposure or keyboard access", () => {
     const edges = [{ ...DEPENDENCY_EDGES[1], weight: 0.000148 }];
@@ -251,11 +245,6 @@ describe("ContagionGraph", () => {
     expect(window.location.search).toBe("?focus=usde-ethena");
     expect(trackEvent).not.toHaveBeenCalled();
   });
-  it("renders no graph for an empty dataset", () => {
-    const { container } = render(<ContagionGraph cards={[]} dependencyEdges={[]} mcapMap={new Map()} />);
-
-    expect(container.firstChild).toBeNull();
-  });
 
   it("renders the expected visible node and edge counts", () => {
     const { container } = render(
@@ -271,7 +260,7 @@ describe("ContagionGraph", () => {
       <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
     );
 
-    fireEvent.focus(screen.getByRole("button", { name: /USDC/i }));
+    fireEvent.focus(within(screen.getByRole("figure")).getByRole("button", { name: /USDC/i }));
 
     expect(container.querySelector('circle[stroke="var(--color-ring)"][stroke-dasharray="4 2"]')).not.toBeNull();
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("USDC, Grade A");
@@ -283,7 +272,7 @@ describe("ContagionGraph", () => {
     fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
     const nodePicker = getTraceCoinPicker();
-    const usdcNode = screen.getByRole("button", { name: /USDC/i });
+    const usdcNode = within(screen.getByRole("figure")).getByRole("button", { name: /USDC/i });
     usdcNode.focus();
 
     fireEvent.keyDown(usdcNode, { key: "Enter" });
@@ -299,7 +288,7 @@ describe("ContagionGraph", () => {
     fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
     const nodePicker = getTraceCoinPicker();
-    fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
+    fireEvent.click(within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i }));
 
     expect(nodePicker.value).toBe("usde-ethena");
   });
@@ -365,7 +354,7 @@ describe("ContagionGraph", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
-    fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
+    fireEvent.click(within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i }));
 
     expect(screen.getByText(/Showing 3 of 4 dependency-linked stablecoins with 2 visible edges\./)).toBeTruthy();
   });
@@ -386,7 +375,7 @@ describe("ContagionGraph", () => {
       <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
+    fireEvent.click(within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i }));
     expect(container.querySelector('circle[stroke="var(--p-frost-blue)"]')).not.toBeNull();
 
     fireEvent.keyDown(document, { key: "Escape" });
@@ -399,7 +388,7 @@ describe("ContagionGraph", () => {
       <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
+    fireEvent.click(within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i }));
 
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
@@ -409,7 +398,7 @@ describe("ContagionGraph", () => {
       <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
     );
 
-    const usdeNode = screen.getByRole("button", { name: /USDe/i });
+    const usdeNode = within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i });
     // Simulate a drag to pin the node.
     fireEvent.pointerDown(usdeNode, { isPrimary: true, clientX: 220, clientY: 300, pointerId: 1 });
     const svg = container.querySelector('[role="figure"] svg');

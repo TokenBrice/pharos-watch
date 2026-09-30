@@ -8,7 +8,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { trackEvent } from "@/lib/analytics";
 import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
 
-export function DependencyMapMobileSummary({ model, logos }: { model: DependencyHubsModel; logos?: Record<string, string> }) {
+export function DependencyMapMobileSummary({ model, logos, onExposure }: { model: DependencyHubsModel; logos?: Record<string, string>; onExposure?: (id: string) => void }) {
   const hubs = model.hubs.slice(0, 6);
   if (hubs.length === 0) return null;
   const asOf = model.marketCapAsOf === null ? "an unknown market-cap date" : new Date(model.marketCapAsOf * 1000).toISOString();
@@ -34,7 +34,7 @@ export function DependencyMapMobileSummary({ model, logos }: { model: Dependency
               <p className="text-xs text-muted-foreground">{hub.topDependent ? `${Math.round(hub.topDependent.shareOfHubExposure * 100)}% from ${hub.topDependentSymbol}` : "Top dependent share unavailable"}</p>
               <p className="text-xs text-muted-foreground">{hub.edgeTypeBreakdown.map(entry => `${entry.type} ${entry.edgeCount}`).join(" · ")}. {hub.hubMcapUsd === null ? "mcap n/a" : `Own market cap ${formatCurrency(hub.hubMcapUsd, 2)}`}</p>
               {!hub.direct.complete && <p className="text-xs text-muted-foreground">{hub.direct.excludedSupplyUnknownIds.length} supplies unavailable; {hub.direct.unknownShareEdgeCount} shares unknown{hub.direct.integrityFlag ? "; basket shares require review" : ""}.</p>}
-              <Link href={buildStablecoinUrl(hub.id)} className="pharos-focus-ring rounded-sm text-xs text-frost-blue" aria-label={`Open coin ${hub.label}`} onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: hub.id })}>Open coin</Link>
+              <div className="flex gap-3"><Link href={buildStablecoinUrl(hub.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs text-frost-blue" aria-label={`Open coin ${hub.label}`} onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: hub.id })}>Open coin</Link>{onExposure && <button type="button" aria-label={`Trace exposure from ${hub.label}`} className="pharos-focus-ring min-h-11 rounded px-2 text-sm underline" onClick={() => onExposure(hub.id)}>Exposure</button>}</div>
             </div>
           </div>
         ))}

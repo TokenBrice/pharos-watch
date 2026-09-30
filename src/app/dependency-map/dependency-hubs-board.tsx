@@ -9,7 +9,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
 
-export function DependencyHubsBoard({ model, logos }: { model: DependencyHubsModel; logos?: Record<string, string> }) {
+export function DependencyHubsBoard({ model, logos, onExposure }: { model: DependencyHubsModel; logos?: Record<string, string>; onExposure?: (id: string) => void }) {
   const hubs = model.hubs.slice(0, 6);
   if (hubs.length === 0) return null;
   const maxExposure = model.hubs[0].direct.knownUsd;
@@ -41,7 +41,7 @@ export function DependencyHubsBoard({ model, logos }: { model: DependencyHubsMod
               <TableCell className="pharos-numeric">{formatCurrency(hub.vaultClaimUsd, 2)}</TableCell>
               <TableCell className="pharos-numeric">{hub.dependentCount}</TableCell>
               <TableCell>{hub.topDependent ? `${Math.round(hub.topDependent.shareOfHubExposure * 100)}% from ${hub.topDependentSymbol}` : "n/a"}</TableCell>
-              <TableCell><Link href={buildStablecoinUrl(hub.id)} className="pharos-focus-ring rounded-sm text-xs text-frost-blue hover:text-foreground" aria-label={`Open coin ${hub.label}`} onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: hub.id })}>Open coin</Link></TableCell>
+              <TableCell><div className="flex gap-2"><Link href={buildStablecoinUrl(hub.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs text-frost-blue hover:text-foreground" aria-label={`Open coin ${hub.label}`} onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: hub.id })}>Open coin</Link>{onExposure && <button type="button" aria-label={`Trace exposure from ${hub.label}`} className="pharos-focus-ring min-h-11 rounded px-2 text-xs underline" onClick={() => onExposure(hub.id)}>Exposure</button>}</div></TableCell>
             </TableRow>
           ))}</TableBody>
         </TableFrame>

@@ -38,6 +38,8 @@ export function ContagionGraphLegend() {
           {DEPENDENCY_TYPE_PRESENTATION[type].label}
         </span>
       ))}
+      <span className="w-full text-[10px] text-muted-foreground">Arrows point to the asset a coin depends on</span>
+      <span className="w-full text-[10px] text-muted-foreground">Exposure halo: linked coin. Hatched halo: unknown supply.</span>
     </div>
   );
 }

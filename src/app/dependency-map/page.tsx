@@ -17,7 +17,7 @@ const DEPENDENCY_MAP_FAQ_ITEMS = [
   {
     question: "Why can dependency risk matter even when a coin holds its peg?",
     answer:
-      "A stablecoin can look calm until an upstream collateral asset, bridge, issuer, or shared contract fails. Dependency mapping helps identify where a shock can travel before it appears as a direct price depeg.",
+      "An upstream collateral asset, bridge, issuer, or shared contract can transmit changes to a dependent coin before a price depeg appears. Exposure mode traces mapped relationships, not the outcome of a failure.",
   },
   {
     question: "How should I combine this with Safety Scores?",
@@ -52,8 +52,8 @@ const DEPENDENCY_MAP_STATIC_SECTION = (
         for per-coin data availability.
       </p>
       <p>
-        Node size reflects market cap, not safety or a forecast of losses. A dependency link identifies a relationship,
-        not the outcome of an upstream failure.
+        Node size reflects market cap, not a forecast of losses. Exposure mode finds mapped downstream dependents
+        using supply at publication evaluation. A dependency link identifies a relationship, not an outcome.
       </p>
     </div>
   </section>
@@ -77,7 +77,7 @@ const route = createClientFeaturePage({
     headerSupplement: (
       <p className="pharos-lead hidden sm:block">
         This graph maps direct collateral and wrapper dependencies between stablecoins. Select a coin to inspect
-        its upstream assets and direct dependents, then read its grade and dependency inputs on Safety Scores.
+        its upstream assets and direct dependents, or use it as an Exposure root to trace linked coins.
       </p>
     ),
   },

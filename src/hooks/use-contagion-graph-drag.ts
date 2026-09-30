@@ -81,6 +81,8 @@ export function useContagionGraphDrag({
   // Resolve coordinates against the event's SVG, including after fullscreen remounts.
   const handlePointerDown = useCallback((event: React.PointerEvent<SVGGElement>, nodeId: string) => {
     if (event.isPrimary === false) return;
+    // Touch selects coins; only background gestures pan the viewport.
+    if (event.pointerType === "touch") return;
     event.preventDefault();
     const svgPoint = projectClientPoint(event.currentTarget.ownerSVGElement, event.clientX, event.clientY);
     if (!svgPoint) return;

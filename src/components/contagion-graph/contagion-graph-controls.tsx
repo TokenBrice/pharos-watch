@@ -53,7 +53,7 @@ function ControlPill({
       aria-label={ariaLabel}
       title={title}
       className={cn(
-        "pharos-focus-ring pharos-control-pill px-3 py-1",
+        "pharos-focus-ring pharos-control-pill min-h-11 min-w-11 px-3 py-1 md:min-h-0 md:min-w-0",
         isActive ? "pharos-control-pill-active" : "",
       )}
     >
@@ -119,7 +119,7 @@ export function ContagionGraphControls({
             value={nodeLimit}
             onChange={onNodeLimitChange}
             formatLabel={formatNodeLimitLabel}
-            buttonClassName="px-3 py-1"
+            buttonClassName="min-h-11 min-w-11 px-3 py-1 md:min-h-0 md:min-w-0"
           />
         </div>
 

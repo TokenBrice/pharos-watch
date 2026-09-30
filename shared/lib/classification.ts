@@ -42,6 +42,13 @@ export const DEPENDENCY_ROLE_LABELS = {
   "oracle-nav": "Oracle / NAV",
 } as const satisfies Readonly<Record<V9DependencyEconomicRole, string>>;
 
+export const EXPOSURE_BAND_LABELS = {
+  material: "Material",
+  minor: "Minor",
+  trace: "Trace",
+  unknown: "Unknown",
+} as const satisfies Readonly<Record<"material" | "minor" | "trace" | "unknown", string>>;
+
 export { PEG_TAXONOMY } from "./peg-taxonomy";
 
 export function getProfilePegLabel(

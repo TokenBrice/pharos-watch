@@ -15,6 +15,7 @@ interface ContagionGraphInsightsProps {
   nodeMap: ReadonlyMap<string, GraphNode>;
   logos?: Record<string, string>;
   onTraceNode: (nodeId: string) => void;
+  onUseAsExposureRoot?: (coinId: string) => void;
   variant?: "overlay" | "panel";
 }
 
@@ -74,6 +75,7 @@ export function ContagionGraphInsights({
   nodeMap,
   logos,
   onTraceNode,
+  onUseAsExposureRoot,
   variant = "overlay",
 }: ContagionGraphInsightsProps) {
   if (!inspectedNode) return null;
@@ -156,12 +158,17 @@ export function ContagionGraphInsights({
 
         <button
           type="button"
-          className="pharos-focus-ring inline-flex h-8 w-full items-center justify-center rounded-sm border font-mono text-[10px] uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-muted/40"
+          className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border font-mono text-[10px] uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-muted/40"
           style={{ borderColor: "var(--graph-grid-line)" }}
           onClick={() => onTraceNode(inspectedNode.id)}
         >
           Trace neighborhood
         </button>
+        {onUseAsExposureRoot && (
+          <button type="button" data-use-exposure-root className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border text-xs" onClick={() => onUseAsExposureRoot(inspectedNode.id)}>
+            Use as exposure root
+          </button>
+        )}
       </div>
     </aside>
   );

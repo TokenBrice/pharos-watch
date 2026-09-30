@@ -154,7 +154,7 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
   {
     title: "Dependency Map",
     description:
-      "A live graph of direct collateral and wrapper dependencies between stablecoins with published Safety Scores.",
+      "Explore mapped collateral and wrapper dependencies. Exposure mode traces linked coins using publication-bound supply, without estimating losses or changes in Safety Scores.",
     icon: Network,
     href: "/dependency-map/",
     linkLabel: "Open dependency map",

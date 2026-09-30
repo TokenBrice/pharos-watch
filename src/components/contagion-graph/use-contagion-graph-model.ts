@@ -15,6 +15,7 @@ import {
   buildGraphData,
   buildSupernodeState,
   DEFAULT_NODE_LIMIT,
+  MIN_RADIUS,
   HEIGHT,
   runSimulation,
   WIDTH,
@@ -30,6 +31,8 @@ import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9"
 import { trackEvent } from "@/lib/analytics";
 import { NODE_LIMIT_OPTIONS } from "@/lib/contagion-layout";
 import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import type { HubExposure } from "@shared/lib/dependency-exposure";
+import { highlightedExposureEdges, type ExposureOverlay } from "./contagion-graph-exposure";
 
 interface UseContagionGraphModelOptions {
   cards: readonly ContagionGraphCard[];
@@ -39,6 +42,9 @@ interface UseContagionGraphModelOptions {
   maxNodes?: number;
   syncUrlState?: boolean;
   trackActions?: boolean;
+  exposureOverlay?: ExposureOverlay | null;
+  onUseAsExposureRoot?: (coinId: string) => void;
+  hubExposures?: readonly HubExposure[];
 }
 
 const FOCUS_NEIGHBOR_RADIUS_X = 240;
@@ -141,29 +147,38 @@ function buildSimulationKey(
 
 export function useContagionGraphModel({
   cards,
-  dependencyEdges,
+  dependencyEdges: publishedDependencyEdges,
   mcapMap,
   focusCoinId,
   maxNodes,
   syncUrlState = false,
   trackActions = true,
+  exposureOverlay: controlledExposureOverlay = null,
+  onUseAsExposureRoot,
+  hubExposures,
 }: UseContagionGraphModelOptions) {
+  const exposureOverlay = controlledExposureOverlay?.roots.length ? controlledExposureOverlay : null;
+  // Quarantine malformed edges individually; identifiable unknown basket shares stay drawable.
+  const dependencyEdges = useMemo(() => publishedDependencyEdges
+    .filter(edge => edge && typeof edge.from === "string" && typeof edge.to === "string" && (edge.kind === "serial" || edge.kind === "basket"))
+    .map(edge => edge.kind === "basket" && edge.weight !== null && (!Number.isFinite(edge.weight) || edge.weight < 0 || edge.weight > 1)
+      ? { ...edge, weight: null } : edge), [publishedDependencyEdges]);
   const fullGraph = useMemo(
     () => buildGraphData(cards, mcapMap, dependencyEdges, "all"),
     [cards, dependencyEdges, mcapMap],
   );
-  const fullExposure = useMemo(() => buildDependencyHubsModel({
+  const fullExposure = useMemo(() => hubExposures ?? buildDependencyHubsModel({
     cards: cards.map(card => ({ ...card, name: card.symbol })),
     edges: dependencyEdges,
     mcapMap,
-  }), [cards, dependencyEdges, mcapMap]);
+  }).hubs, [hubExposures, cards, dependencyEdges, mcapMap]);
   const directExposureById = useMemo(
-    () => new Map(fullExposure.hubs.map(hub => [hub.id, hub])),
+    () => new Map(fullExposure.map(hub => [hub.hubId, hub])),
     [fullExposure],
   );
   const fullSupernodeState = useMemo(
     () => buildSupernodeState(fullGraph.nodes, fullGraph.links,
-      new Map(fullExposure.hubs.map(hub => [hub.id, hub.direct.knownUsd]))),
+      new Map(fullExposure.map(hub => [hub.hubId, hub.direct.knownUsd]))),
     [fullGraph, fullExposure],
   );
   const fullResolvedLinks = useMemo(
@@ -173,12 +188,27 @@ export function useContagionGraphModel({
 
   const [nodeLimit, setNodeLimit] = useState<NodeLimitOption>(DEFAULT_NODE_LIMIT);
   const effectiveNodeLimit = maxNodes ?? nodeLimit;
+  const exposureRoots = exposureOverlay?.roots;
+  const exposureRows = exposureOverlay?.rows;
 
   const { nodes, links } = useMemo(() => {
+    if (exposureRoots && exposureRows) {
+      const roots = new Set(exposureRoots);
+      const footprint = fullGraph.nodes.filter(node => roots.has(node.id) || exposureRows.has(node.id));
+      for (const card of cards) {
+        if (!card.isDefunct && roots.has(card.id) && !footprint.some(node => node.id === card.id)) {
+          footprint.push({ id: card.id, symbol: card.symbol, grade: card.grade, mcap: mcapMap.get(card.id) ?? null, r: MIN_RADIUS });
+        }
+      }
+      footprint.sort((a, b) => (roots.has(a.id) ? 0 : exposureRows.get(a.id)?.minHop ?? Infinity) - (roots.has(b.id) ? 0 : exposureRows.get(b.id)?.minHop ?? Infinity) || (b.mcap ?? -1) - (a.mcap ?? -1));
+      const nodes = effectiveNodeLimit === "all" ? footprint : footprint.slice(0, effectiveNodeLimit);
+      const ids = new Set(nodes.map(node => node.id));
+      return { nodes, links: fullGraph.links.filter(link => ids.has(resolveLinkEndpointId(link.source)) && ids.has(resolveLinkEndpointId(link.target))) };
+    }
     const built = buildGraphData(cards, mcapMap, dependencyEdges, effectiveNodeLimit);
     if (!focusCoinId) return built;
     return filterToFocusNeighborhood(built.nodes, built.links, focusCoinId);
-  }, [cards, dependencyEdges, mcapMap, effectiveNodeLimit, focusCoinId]);
+  }, [cards, dependencyEdges, mcapMap, effectiveNodeLimit, focusCoinId, exposureRoots, exposureRows, fullGraph]);
 
   const supernodeState = useMemo<SupernodeState>(() => {
     const base = fullSupernodeState;
@@ -279,22 +309,28 @@ export function useContagionGraphModel({
     () =>
       computeVisibleGraph({
         resolvedLinks,
-        focusMode,
-        edgeTypeFilter,
+        focusMode: exposureOverlay ? "all" : focusMode,
+        edgeTypeFilter: exposureOverlay ? "all" : edgeTypeFilter,
         neighborhoodFocusId,
         nodes,
         hubIdsByScore,
       }),
-    [edgeTypeFilter, focusMode, hubIdsByScore, neighborhoodFocusId, nodes, resolvedLinks],
+    [edgeTypeFilter, focusMode, hubIdsByScore, neighborhoodFocusId, nodes, resolvedLinks, exposureOverlay],
   );
   const smallLinkCount = visibleLinks.filter(link => !link.shareUnknown && link.weight < SMALL_LINK_SHARE_THRESHOLD).length;
-  const canvasLinks = useMemo(
-    () => showSmallLinks ? visibleLinks : visibleLinks.filter(link => link.shareUnknown || link.weight >= SMALL_LINK_SHARE_THRESHOLD),
-    [showSmallLinks, visibleLinks],
-  );
+  const canvasLinks = useMemo(() => {
+    const highlighted = highlightedExposureEdges(exposureOverlay?.highlightedPaths ?? []);
+    return showSmallLinks ? visibleLinks : visibleLinks.filter(link => highlighted.has(`${link.srcId}\0${link.tgtId}`) || link.shareUnknown || link.weight >= SMALL_LINK_SHARE_THRESHOLD);
+  }, [showSmallLinks, visibleLinks, exposureOverlay]);
   const activeHoveredEdge = hoveredEdge !== null && visibleLinkIndices.has(hoveredEdge) ? hoveredEdge : null;
   const activeHoveredId = hoveredId !== null && visibleNodeIds.has(hoveredId) ? hoveredId : null;
   const rippleState = useMemo(() => computeRippleState(activeHoveredId, visibleLinks), [activeHoveredId, visibleLinks]);
+  const exposureNodeIds = useMemo(() => new Set([
+    ...(exposureOverlay?.roots ?? []), ...(exposureOverlay?.rows.keys() ?? []),
+  ]), [exposureOverlay]);
+  const highlightedPathEdges = useMemo(
+    () => highlightedExposureEdges(exposureOverlay?.highlightedPaths ?? []), [exposureOverlay],
+  );
 
   const handleTraceNodeChange = useCallback((nodeId: string | null) => {
     setSelectedNeighborhoodId(nodeId);
@@ -374,6 +410,7 @@ export function useContagionGraphModel({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       const target = event.target as HTMLElement | null;
+      if (target instanceof Element && target.closest('[role="dialog"]')) return;
       const tag = target?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
       handleClearSelection();
@@ -405,6 +442,10 @@ export function useContagionGraphModel({
     setShowSmallLinks,
     directExposureById,
     fullResolvedLinks,
+    exposureOverlay,
+    exposureNodeIds,
+    highlightedPathEdges,
+    onUseAsExposureRoot,
     visibleNodeIds,
     activeHoveredEdge,
     activeHoveredId,
