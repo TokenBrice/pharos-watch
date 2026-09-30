@@ -39,11 +39,11 @@ export function buildCemeteryCaseStudyLinks(
   }));
 }
 
-/** The owner-approved rules (D11), printed verbatim. */
+/** The rules the methodology prints for the archive as a whole; new records meet the stricter source bar in docs/cemetery-and-compare.md#curating-a-record. */
 export const CEMETERY_INCLUSION_RULE =
-  "A stablecoin is included when it had a public market and at least one primary public source documents its failure or discontinuation. There is no size floor; peak market cap is recorded when known.";
+  "A stablecoin is included when it had a public market and public sources show it failed or was discontinued: an announcement, filing, governance record or press report, or, for a coin that faded without one, market data showing its collapse. There is no size floor; peak market cap is recorded when known.";
 export const CEMETERY_PRIMARY_CAUSE_RULE =
-  "Each record carries one primary cause: the root cause, meaning the design or party whose failure made the peg unrecoverable. Triggers such as runs, exploits or orders are described in the obituary.";
+  "Each record carries one primary cause: the root reason the coin failed or its issuance and operation ended, whether or not it lost its peg. Triggers such as runs, exploits or orders are described in the obituary.";
 
 /**
  * Records whose obituaries document a holder exit: BUSD balances were
@@ -131,7 +131,10 @@ function fieldsAndLimits(stats: CemeteryStats): { key: string; text: string }[] 
       text: `Death dates are precise to the day for ${plural(day, "record")} and to the month for ${month}.`,
     },
     { key: "peak", text: peak.join(" ") },
-    { key: "source", text: "One primary source per record." },
+    {
+      key: "source",
+      text: "Each record links one public source. Most document the failure or discontinuation directly; a coin that faded without an announcement links the best public context Pharos found.",
+    },
     { key: "catalog", text: catalogSentence(stats) },
   ];
   if (stats.mechanisms.unmappedCount > 0) {
@@ -166,7 +169,7 @@ export function CemeteryContext({ stats, caseStudies }: CemeteryContextProps) {
     .sort((a, b) => b.count - a.count);
 
   return (
-    <section id="methodology" aria-labelledby="methodology-heading" className="scroll-mt-24 space-y-4">
+    <section id="methodology" aria-labelledby="methodology-heading" className="scroll-mt-24 space-y-3">
       <CemeterySectionHeader id="methodology-heading" kicker="Methodology" title="What counts as dead" />
 
       <div className="pharos-card-shell overflow-hidden">
@@ -242,7 +245,7 @@ export function CemeteryContext({ stats, caseStudies }: CemeteryContextProps) {
                       <Link href={`/learn/case-studies/${study.slug}/`} className="pharos-prose-link min-w-0 text-sm">
                         {study.title}
                       </Link>
-                      <span className="pharos-numeric shrink-0 font-mono text-[11px] text-muted-foreground">
+                      <span className="pharos-numeric shrink-0 text-[11px] text-muted-foreground">
                         {study.symbol} · {formatDeathDate(study.deathDate)}
                       </span>
                     </li>
@@ -258,7 +261,7 @@ export function CemeteryContext({ stats, caseStudies }: CemeteryContextProps) {
                       <Link href={getMechanismExplainerPath(archetype)} className="pharos-prose-link min-w-0 text-sm">
                         {MECHANISM_EXPLAINER_TITLES[archetype]}
                       </Link>
-                      <span className="pharos-numeric shrink-0 text-xs text-muted-foreground">
+                      <span className="pharos-numeric shrink-0 text-[11px] text-muted-foreground">
                         {plural(count, "linked death")}
                       </span>
                     </li>

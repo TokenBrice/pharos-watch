@@ -93,11 +93,14 @@ export function PlotMarks({ marks, face = null }: { marks: readonly PlotMark[]; 
   return <>{marks.map((m, k) => markElement(m, k, face))}</>;
 }
 
-/** A grave's drawn body (plinth, stone, medallion) inside the `.stone` group the island lifts; leaning stones rotate. */
+/**
+ * A grave's drawn body (plinth, stone, medallion) inside the `.stone` group the island lifts; leaning stones rotate.
+ * Decorative (`aria-hidden`): the grave button carries the full name, so the logo window and glyphs stay out of the tree.
+ */
 export function PlotGraveBody({ geometry, face }: { geometry: PlotGraveGeometry; face: PlotMedallionFace }): ReactElement {
   const { lean } = geometry;
   return (
-    <g className={styles.stone} transform={lean ? `rotate(${lean.deg} ${lean.x} ${lean.y})` : undefined}>
+    <g className={styles.stone} transform={lean ? `rotate(${lean.deg} ${lean.x} ${lean.y})` : undefined} aria-hidden="true">
       <PlotMarks marks={geometry.body} face={face} />
     </g>
   );

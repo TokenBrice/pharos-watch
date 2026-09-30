@@ -7,6 +7,7 @@ import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
 import { CAUSE_BG_CLASS, CAUSE_TEXT_FILL_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
 import { cn } from "@/lib/utils";
+import styles from "./cemetery-below-fold.module.css";
 
 /** One year of chart B. Arrays follow `CAUSE_ORDER`. */
 export interface DeathsByYearDatum {
@@ -284,18 +285,18 @@ export function DeathsByYearChart({
                         {datum.total}
                       </text>
                     ) : (
-                      <text
-                        data-empty-year={datum.year}
-                        x={pct(bar.center)}
-                        y={BASELINE - 22}
-                        textAnchor="middle"
-                        className="fill-muted-foreground font-mono text-[10px]"
-                      >
-                        <tspan x={pct(bar.center)}>none</tspan>{" "}
-                        <tspan x={pct(bar.center)} dy="1.2em" className="hidden sm:inline">
-                          recorded
-                        </tspan>
-                      </text>
+                      <g data-empty-year={datum.year} className="fill-muted-foreground font-mono text-[10px]">
+                        {/* Phones: a dash, since "none" would touch its neighbour in the narrow columns; the footnote names the years. */}
+                        <text x={pct(bar.center)} y={BASELINE - 7} textAnchor="middle" className="sm:hidden">
+                          –
+                        </text>
+                        <text x={pct(bar.center)} y={BASELINE - 22} textAnchor="middle" className="hidden sm:inline">
+                          <tspan x={pct(bar.center)}>none</tspan>{" "}
+                          <tspan x={pct(bar.center)} dy="1.2em">
+                            recorded
+                          </tspan>
+                        </text>
+                      </g>
                     )}
                     <rect
                       x={pct(bar.columnX)}
@@ -399,7 +400,7 @@ export function DeathsByYearChart({
           </summary>
           <ChartDataTable
             srOnly={false}
-            className="mt-2 overflow-x-auto"
+            className={cn(styles.dataTable, "mt-2 overflow-x-auto")}
             caption={`Documented deaths per year by cause, ${first} to ${last}, with tracked-archive records and the median recorded peak market cap.`}
             data={years}
             columns={columns}

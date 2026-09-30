@@ -352,6 +352,34 @@ describe("pattern: top-two-concentration", () => {
   });
 });
 
+describe("pattern: largest-not-collapse", () => {
+  it("names the largest peak when a discontinued cause holds it, and the largest collapse", () => {
+    const stats = buildCemeteryStats([
+      row("regulatory", "2023-02", { id: "ended", peakMcap: 600 }),
+      row("algorithmic-failure", "2022-05", { id: "crashed", peakMcap: 300 }),
+      row("abandoned", "2024-01", { peakMcap: 100 }),
+    ]);
+    const pattern = stats.patterns.find((p) => p.key === "largest-not-collapse");
+    expect(pattern?.headline).toBe("The largest coins did not all collapse");
+    expect(pattern?.body).toBe(
+      `The largest recorded peak, ENDED (${formatCemeteryPeak(600)}), was ended by a regulator or licensing regime; the largest collapse was CRASHED (${formatCemeteryPeak(300)}).`,
+    );
+  });
+
+  it("is omitted when a collapse holds the largest peak or no collapse has a recorded peak", () => {
+    const collapseLargest = buildCemeteryStats([
+      row("regulatory", "2023-02", { peakMcap: 300 }),
+      row("liquidity-drain", "2022-05", { peakMcap: 600 }),
+    ]);
+    expect(patternKeys(collapseLargest)).not.toContain("largest-not-collapse");
+    const noCollapsePeak = buildCemeteryStats([
+      row("abandoned", "2023-02", { peakMcap: 300 }),
+      row("counterparty-failure", "2022-05", { peakMcap: null }),
+    ]);
+    expect(patternKeys(noCollapsePeak)).not.toContain("largest-not-collapse");
+  });
+});
+
 describe("buildCemeteryStats: ordering and series", () => {
   const stats = buildCemeteryStats([
     row("regulatory", "2023-02", { id: "r1", peakMcap: 7000 }),

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import type { ComponentType } from "react";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
@@ -9,6 +10,7 @@ import { toPlotLogoAtlas, toPlotMapInput } from "@/lib/cemetery-plot-map-input";
 import { buildCemeteryRegisterRows } from "@/lib/cemetery-register";
 import { buildCemeteryStats } from "@/lib/cemetery-stats";
 import type { CemeterySelectionHandler } from "../cemetery/cemetery-selection-context";
+import type { PlotMapPortraitSlotProps } from "../cemetery/plot-map-portrait-slot";
 import { PLOT_BEAM_DWELL_MS, PlotMapHero } from "../cemetery/plot-map-hero";
 import { desktopPlotLayout } from "../cemetery/plot-map-scene";
 
@@ -18,8 +20,13 @@ vi.mock("next/link", async () => {
   return createNextLinkMock();
 });
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font" } }));
-// The phone layer has its own suite; here it must not register a pin handler of its own.
-vi.mock("../cemetery/plot-map-portrait-slot", () => ({ PlotMapPortraitSlot: () => null }));
+// The phone layer has its own suite; here it must not register a pin handler of its own, except in the phone
+// hand-off test, which mounts the real layer inside the hero.
+const portrait = vi.hoisted(() => ({ real: false }));
+vi.mock("../cemetery/plot-map-portrait-slot", async (importOriginal) => {
+  const actual = (await importOriginal()) as { PlotMapPortraitSlot: ComponentType<PlotMapPortraitSlotProps> };
+  return { PlotMapPortraitSlot: (props: PlotMapPortraitSlotProps) => (portrait.real ? <actual.PlotMapPortraitSlot {...props} /> : null) };
+});
 
 const motion = vi.hoisted(() => ({ reduced: false }));
 vi.mock("@/hooks/use-prefers-reduced-motion", () => ({ usePrefersReducedMotion: () => motion.reduced }));
@@ -52,6 +59,7 @@ const unregister = vi.fn();
 
 beforeEach(() => {
   phone = false;
+  portrait.real = false;
   motion.reduced = false;
   pinHandler = null;
   mediaListeners.clear();
@@ -175,6 +183,26 @@ describe("PlotMapHero pinning", () => {
     phone = true;
     renderHero();
     expect(selection.registerPinGrave).not.toHaveBeenCalled();
+  });
+
+  it("leaves the phone layer's graves and sheet to the portrait: Enter and taps open the sheet, Esc in it closes it", () => {
+    phone = true;
+    portrait.real = true;
+    const { grave } = renderHero();
+    const walk = document.getElementById("walk-ust-terrausd-2022-05") as HTMLElement;
+    act(() => walk.focus());
+    // Enter must reach the anchor's native activation (the click below), not be taken by the hidden desktop plan
+    expect(fireEvent.keyDown(walk, { key: "Enter" })).toBe(true);
+    fireEvent.click(walk);
+    const sheet = screen.getByRole("dialog");
+    expect(sheet.getAttribute("data-open")).toBe("true");
+    expect(selection.setRecordHash).toHaveBeenCalledTimes(1);
+    expect(grave("ust-terrausd-2022-05").getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    expect(sheet.getAttribute("data-open")).toBe("false");
+    expect(selection.setRecordHash).toHaveBeenLastCalledWith(null);
+    expect(document.activeElement).toBe(walk);
   });
 
   it("keeps the flower count hidden until the first flower, then counts the button and F", () => {

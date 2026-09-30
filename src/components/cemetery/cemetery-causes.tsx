@@ -1,9 +1,10 @@
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { CAUSE_META, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { CAUSE_BG_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
 import { buildRegisterHref, cemeteryCauseAnchor } from "@/lib/cemetery-selection";
 import { formatCemeteryPeak, type CemeteryCauseStats, type CemeteryStats } from "@/lib/cemetery-stats";
+import styles from "./cemetery-below-fold.module.css";
 import { CemeterySectionHeader } from "./cemetery-section-header";
 
 export interface CemeteryCausesProps {
@@ -133,19 +134,28 @@ function PairedShareStrip({ stats }: { stats: CemeteryStats }) {
   );
 }
 
-function sharesLine(c: CemeteryCauseStats): string {
-  if (c.count === 0) return "0% of deaths";
-  const peakPart = c.peakShare === null ? "peak not recorded" : `${formatShare(c.peakShare)} of recorded peak`;
-  return `${formatShare(c.share)} of deaths · ${peakPart}`;
+function sharesParts(c: CemeteryCauseStats): string[] {
+  if (c.count === 0) return ["0% of deaths"];
+  return [`${formatShare(c.share)} of deaths`, c.peakShare === null ? "peak not recorded" : `${formatShare(c.peakShare)} of recorded peak`];
 }
 
-function peakLine(c: CemeteryCauseStats): string {
-  if (c.count === 0) return "No records";
-  if (c.knownCount === 0) return `No recorded peak · ${c.unrecordedCount} not recorded`;
+function peakParts(c: CemeteryCauseStats): string[] {
+  if (c.count === 0) return ["No records"];
+  if (c.knownCount === 0) return ["No recorded peak", `${c.unrecordedCount} not recorded`];
   const parts = [c.medianPeak === null ? "Median peak not recorded" : `Median peak ${formatCemeteryPeak(c.medianPeak)}`];
   if (c.largest) parts.push(`largest ${c.largest.symbol} ${formatCemeteryPeak(c.largest.peak)}`);
   if (c.unrecordedCount > 0) parts.push(`${c.unrecordedCount} not recorded`);
-  return parts.join(" · ");
+  return parts;
+}
+
+/** " · "-joined phrases that wrap only after a separator, never inside a figure. */
+function PhraseList({ parts }: { parts: string[] }) {
+  return parts.map((part, index) => (
+    <Fragment key={part}>
+      {index > 0 ? <span className={styles.phraseSeparator}>{"\u00a0· "}</span> : null}
+      <span className={`${styles.phrase} whitespace-nowrap`}>{part}</span>
+    </Fragment>
+  ));
 }
 
 function CauseColumn({ causeStats }: { causeStats: CemeteryCauseStats }) {
@@ -154,7 +164,7 @@ function CauseColumn({ causeStats }: { causeStats: CemeteryCauseStats }) {
   return (
     <li
       id={cemeteryCauseAnchor(cause)}
-      className="relative min-w-0 scroll-mt-24 px-4 pb-5 pt-5 md:px-5 lg:border-l lg:border-border/60 lg:first:border-l-0"
+      className={`${styles.causeColumn} relative min-w-0 scroll-mt-24 px-4 pb-5 pt-5 md:px-5 lg:border-l lg:border-border/60 lg:first:border-l-0`}
       style={causeColorVars(cause)}
     >
       <div aria-hidden="true" className={`absolute inset-x-0 top-0 h-[3px] ${CAUSE_BG_CLASS}`} />
@@ -162,7 +172,9 @@ function CauseColumn({ causeStats }: { causeStats: CemeteryCauseStats }) {
       <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="pharos-numeric text-xl font-semibold leading-none text-foreground">{count}</span>
         <span className="sr-only"> {count === 1 ? "record" : "records"}, </span>
-        <span className="pharos-numeric text-[11px] text-muted-foreground">{sharesLine(causeStats)}</span>
+        <span className="pharos-numeric text-[11px] text-muted-foreground">
+          <PhraseList parts={sharesParts(causeStats)} />
+        </span>
       </p>
       <p className="mt-2 hidden text-[13px] leading-relaxed text-foreground/80 md:block">{meta.definition}</p>
       <details className="group mt-2 md:hidden">
@@ -171,7 +183,9 @@ function CauseColumn({ causeStats }: { causeStats: CemeteryCauseStats }) {
         </summary>
         <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/80">{meta.definition}</p>
       </details>
-      <p className="pharos-numeric mt-2 text-[11px] leading-relaxed text-muted-foreground">{peakLine(causeStats)}</p>
+      <p className="pharos-numeric mt-2 text-[11px] leading-relaxed text-muted-foreground">
+        <PhraseList parts={peakParts(causeStats)} />
+      </p>
       {count > 0 || cause === "algorithmic-failure" ? (
         <p className="mt-3 flex flex-col items-start gap-1.5 text-[13px]">
           {count > 0 ? (

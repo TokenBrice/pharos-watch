@@ -493,7 +493,20 @@ export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, chil
     <div className={styles.stage} data-plot-stage>
       <div className={styles.frame} style={{ aspectRatio: `${vbW} / ${vbH}` }} data-plot-frame data-zoomed={zoom ? "true" : undefined}>
         {toolbar}
-        <svg className={styles.map} viewBox={map.viewBox.join(" ")} role="group" aria-labelledby="cem-map-title" aria-describedby="cem-map-desc" data-plot-svg data-dim={dim?.kind}>
+        {/* the plan's keyboard contract, read when focus enters the group (a hidden description target) */}
+        <p id="cem-map-keys" hidden>
+          One grave takes Tab; the arrow keys walk the rest: left and right through a section by date of death, up and down to the nearest date in the
+          next section, Home and End to a section&apos;s first and last. Enter or Space pins a grave&apos;s record; Escape closes it.
+        </p>
+        <svg
+          className={styles.map}
+          viewBox={map.viewBox.join(" ")}
+          role="group"
+          aria-labelledby="cem-map-title"
+          aria-describedby="cem-map-keys cem-map-desc"
+          data-plot-svg
+          data-dim={dim?.kind}
+        >
           <title id="cem-map-title">Stablecoin Cemetery plot map</title>
           <desc id="cem-map-desc">
             {`${map.counts.total} graves in five sections by cause of death, from Abandoned at the front to Regulatory under the sea wall. ` +
@@ -617,8 +630,15 @@ export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, chil
               ),
             } as CSSProperties;
             return [
-              <span key={`${c.id}-leader`} className={styles.leader} style={vars} aria-hidden="true" />,
-              <span key={c.id} className={`${styles.chip} ${plotCauseClass(c.cause)}`} style={vars} aria-hidden="true" data-plot-chip={c.id}>
+              <span key={`${c.id}-leader`} className={styles.leader} style={vars} aria-hidden="true" data-plot-leader={c.id} />,
+              <span
+                key={c.id}
+                className={`${styles.chip} ${plotCauseClass(c.cause)}`}
+                style={vars}
+                aria-hidden="true"
+                data-plot-chip={c.id}
+                data-hot={state.hotId === c.id ? "true" : undefined}
+              >
                 <span className={styles.sw} />
                 {c.name} · peak <span className={styles.mono}>{c.peak}</span> · {c.month}
               </span>,

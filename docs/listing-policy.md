@@ -123,8 +123,8 @@ For a full cemetery removal authorized by the lifecycle owner, remove the catalo
 
 A curated cemetery record in `shared/data/dead-stablecoins.json` follows the cemetery's owner-approved rules:
 
-- **Inclusion.** A stablecoin is included when it had a public market and at least one primary public source documents its failure or discontinuation. There is no size floor; peak market cap is recorded when known.
-- **Primary cause.** Each record carries one primary cause: the root cause, meaning the design or party whose failure made the peg unrecoverable. Triggers such as runs, exploits or orders are described in the obituary.
+- **Inclusion.** A new record needs a public market and a primary public source that documents its failure or discontinuation (an issuer or protocol announcement, governance record, official docs or status page, regulator, court or registry filing, or on-chain record); reputable press may be linked only when it documents the same event, and market-data listings, provider "ended" markers, launch or fundraising articles and general wikis never qualify. There is no size floor; peak market cap is recorded when known. Records curated before 2026-10 do not all meet this bar; [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record) describes what the page claims for the archive as a whole.
+- **Primary cause.** Each record carries one primary cause: the root reason the coin failed or its issuance and operation ended, whether or not it lost its peg. Triggers such as runs, exploits or orders are described in the obituary.
 
 Every new curated record carries `recordedAt`, the UTC `YYYY-MM-DD` date on which it entered Pharos (not the death date), and a `mechanismArchetype` describing how the coin was designed to hold its peg. [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record) owns the full field contract.
 

@@ -13,8 +13,8 @@
     "epitaph": "Overcollateralized on paper, unredeemable in practice",
     "obituary": "USX was dForce's CDP-style stablecoin, launched in 2021 and peaking above $205M in mid-2022. It never fully recovered the peg after the 2022 bear market: legacy debt positions on the dForce/Unitus lending protocol left circulating USX without a credible par-redemption route, and the discount widened from cents to a chasm. The terminal slide came in early 2026: below $0.75 in February, below $0.45 by April, and roughly $0.39 by July, with on-chain liquidity measured in tens of thousands of dollars and daily volume under $10. With the DF governance token near zero, no published remediation plan, and no redemption at par, Pharos froze USX as a collapsed archive asset.",
     "peakMcap": 205982075,
-    "sourceUrl": "https://www.coingecko.com/en/coins/dforce-usd",
-    "sourceLabel": "CoinGecko USX market data"
+    "sourceUrl": "https://snapshot.org/#/s:dforcenet.eth/proposal/0x74b65a80e978de700bba1845669772c16963ecb44075b1699c37fecd19eeecb6",
+    "sourceLabel": "dForce DIP079 USX wind-down vote"
   },
   "flags": {
     "backing": "crypto-backed",

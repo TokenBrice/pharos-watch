@@ -74,7 +74,7 @@
     "epitaph": "A Hyperliquid native made way for USDC",
     "obituary": "Native Markets and Bridge announced USDH's sunset in May 2026 as Hyperliquid markets migrated to USDC. New issuance ended except to support migration liquidity; the USDH dashboard was scheduled to close on July 17, while Bridge continued USDH-to-USDC and fiat redemption for onboarded holders. USDH remained fully backed during the transition, but its role as an active stablecoin product ended, so Pharos freezes it as an archived migration asset.",
     "peakMcap": 106412008,
-    "sourceUrl": "https://usdh.com/migration",
-    "sourceLabel": "USDH migration and sunset notice"
+    "sourceUrl": "https://www.bridge.xyz/blog/an-update-on-usdh",
+    "sourceLabel": "Bridge USDH sunset update"
   }
 }

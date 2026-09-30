@@ -62,7 +62,7 @@ rg '"<coin-id>"' data/logos.json
 test -f "public/logos/<registered-logo-file>"
 ```
 
-If no canonical tracked logo is registered, add one, or place the file where `frozenToDeadShape()`'s fallback resolves: `public/logos/<llamaId>-<symbol>.png` when the coin has a `llamaId`, and `public/logos/cemetery/<symbol>.png` only when it does not (`resolveCemeteryLogoUrl` prefixes `/logos/cemetery/` solely for non-absolute paths). `frozenToDeadShape()` always resolves a non-empty logo path. The plot map's grave medallions draw the logo from the cemetery logo atlas below, never from that path, and show the symbol's first letter only for a row the atlas lists as having no logo. The Autopsy Register's Coin column renders the resolved path through `next/image` with no file-existence check, so a missing PNG shows a broken image there. The `test -f` check above is load-bearing.
+If no canonical tracked logo is registered, add one, or place the file where `frozenToDeadShape()`'s fallback resolves: `public/logos/<llamaId>-<symbol>.png` when the coin has a `llamaId`, and `public/logos/cemetery/<symbol>.png` only when it does not (`resolveCemeteryLogoUrl` prefixes `/logos/cemetery/` solely for non-absolute paths). `frozenToDeadShape()` always resolves a non-empty logo path. The plot map's grave medallions draw the logo from the cemetery logo atlas below, never from that path, and show the symbol's first letter only for a row the atlas lists as having no logo. The Autopsy Register's Coin column renders the resolved path as a plain `<img>` with no file-existence check, so a missing PNG shows a broken image there. The `test -f` check above is load-bearing.
 
 The cemetery logo atlas (the `cemetery-logo-atlas` generated artifact) packs every resolved cemetery logo into `public/logos/atlas/cemetery-atlas.webp`. Its generator fails when a resolved logo file does not exist, so regenerate it with `npm run logos:cemetery-atlas` once the file is in place; the pre-commit hook also regenerates and stages it when the coin file or `data/logos.json` is staged.
 
@@ -97,7 +97,7 @@ Commit/push according to current repo guidance. Open a PR only when explicitly r
 
 ### 7. Post-deploy verification (within 24h)
 
-- Visit `/cemetery/#<id>`: confirm the coin's register row opens, its autopsy reads "Tracked archive: frozen detail page" with an "Archived data →" link to `/stablecoin/<id>/`, and the key-facts "Updated" date reflects its `recordedAt` when it is the newest record. On the plot map, confirm its grave stands in its cause's section and death year with a bronze plaque and its logo on the medallion.
+- Visit `/cemetery/#<id>`: confirm the coin's register row opens, its autopsy reads "Tracked archive: frozen detail page" with an "Archived data →" link to `/stablecoin/<id>/`, and the key-facts "Latest record added" date reflects its `recordedAt` when it is the newest record. On the plot map, confirm its grave stands in its cause's section and death year with a bronze plaque and its logo on the medallion.
 - Visit `/stablecoin/<id>/` — confirm the frozen banner below the hero (within the identity zone), and the "Data frozen on YYYY-MM-DD" footer above each chart section.
 - Inspect Worker logs — confirm no INSERT/UPDATE for the coin's id from any cron.
 - Confirm the next daily Telegram digest fires a **Newly Frozen Stablecoins** appendix section for the coin (`frozenDetected` in the digest appendix metadata). The cemetery appendix diffs `DEAD_STABLECOINS` only and stays silent on a freeze.

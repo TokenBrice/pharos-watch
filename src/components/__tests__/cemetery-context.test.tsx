@@ -2,7 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { CauseOfDeath } from "@shared/lib/cause-of-death";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
-import { buildCemeteryCaseStudyLinks, CemeteryContext } from "@/components/cemetery/cemetery-context";
+import {
+  buildCemeteryCaseStudyLinks,
+  CEMETERY_INCLUSION_RULE,
+  CEMETERY_PRIMARY_CAUSE_RULE,
+  CemeteryContext,
+} from "@/components/cemetery/cemetery-context";
 import type { CaseStudyClientSummary } from "@/lib/case-study-client-index";
 import { buildCemeteryStats } from "@/lib/cemetery-stats";
 
@@ -56,14 +61,10 @@ describe("CemeteryContext", () => {
     expect(renderContext()).toMatch(/<section[^>]*id="methodology"/);
   });
 
-  it("prints the owner-approved inclusion and primary-cause rules verbatim", () => {
+  it("prints the owner-approved inclusion and primary-cause rules from their single constants", () => {
     const body = text(renderContext());
-    expect(body).toContain(
-      "A stablecoin is included when it had a public market and at least one primary public source documents its failure or discontinuation. There is no size floor; peak market cap is recorded when known.",
-    );
-    expect(body).toContain(
-      "Each record carries one primary cause: the root cause, meaning the design or party whose failure made the peg unrecoverable. Triggers such as runs, exploits or orders are described in the obituary.",
-    );
+    expect(body).toContain(CEMETERY_INCLUSION_RULE);
+    expect(body).toContain(CEMETERY_PRIMARY_CAUSE_RULE);
   });
 
   it("templates route, precision, peak and catalog figures from the stats", () => {

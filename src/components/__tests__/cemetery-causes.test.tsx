@@ -57,13 +57,15 @@ describe("CemeteryCauses", () => {
     for (const cause of CAUSE_ORDER) {
       expect(within(column(container, cause)).getAllByText(CAUSE_META[cause].definition).length).toBeGreaterThan(0);
     }
+    // Phrases are separate nowrap runs joined by a non-breaking space and a middle dot.
+    const text = (element: HTMLElement) => element.textContent?.replace(/\u00a0/g, " ") ?? "";
     const abandoned = column(container, "abandoned");
-    expect(abandoned.textContent).toContain("40% of deaths · 5% of recorded peak");
-    expect(within(abandoned).getByText("Median peak $60.0M · largest ABN1 $60.0M · 1 not recorded")).toBeTruthy();
+    expect(text(abandoned)).toContain("40% of deaths · 5% of recorded peak");
+    expect(text(abandoned)).toContain("Median peak $60.0M · largest ABN1 $60.0M · 1 not recorded");
 
     const regulatory = column(container, "regulatory");
-    expect(regulatory.textContent).toContain("20% of deaths · peak not recorded");
-    expect(within(regulatory).getByText("No recorded peak · 1 not recorded")).toBeTruthy();
+    expect(text(regulatory)).toContain("20% of deaths · peak not recorded");
+    expect(text(regulatory)).toContain("No recorded peak · 1 not recorded");
   });
 
   it("links each cause with records to its register filter", () => {

@@ -65,6 +65,8 @@ const DOCKED_QUERY = "(min-width: 1280px)";
 const CHROME_TOP = PLOT_LAYOUT.chromeTop;
 /** A section-zoom pan keeps the focused grave this far inside the visible band (frame px). */
 const PAN_MARGIN = 40;
+/** Plan labels a docked card may cover, hidden while covered: signpost plates, colossus chips and their leaders, year stamps. */
+const PLOT_COVERABLE = "[data-plot-signpost], [data-plot-chip], [data-plot-leader], [data-plot-overlay] > [data-year]";
 /** The scene's only motion besides the flower bloom (plan §5.4): the beam swing and the section-zoom glide. */
 const PLOT_MOTION: readonly (readonly [selector: string, transition: string])[] = [
   ["[data-plot-beam] > g", "transform 460ms var(--ease)"],
@@ -109,6 +111,28 @@ function drawLine(el: HTMLElement, x1: number, y1: number, x2: number, y2: numbe
   el.style.top = `${y1}px`;
   el.style.width = `${Math.hypot(x2 - x1, y2 - y1)}px`;
   el.style.transform = `rotate(${Math.atan2(y2 - y1, x2 - x1)}rad)`;
+}
+
+/**
+ * The viewport band the plan can use, measured down the middle of the viewport: its top sits 8 px under the sticky
+ * chrome (105 px of bars at 1024 px and wider, 60 px below), its bottom above any fixed bottom bar (the phone nav below
+ * 1024 px). Without hit testing (jsdom) it falls back to the desktop chrome and the full viewport.
+ */
+function visibleBand(): { top: number; bottom: number } {
+  if (typeof document.elementFromPoint !== "function") return { top: CHROME_TOP, bottom: window.innerHeight };
+  const x = window.innerWidth / 2;
+  const pinned = (y: number) => {
+    for (let el = document.elementFromPoint(x, y); el && el !== document.body; el = el.parentElement) {
+      const position = getComputedStyle(el).position;
+      if (position === "fixed" || position === "sticky") return true;
+    }
+    return false;
+  };
+  let top = 0;
+  while (top < 240 && pinned(top)) top += 2;
+  let bottom = window.innerHeight - 1;
+  while (bottom > top + 120 && pinned(bottom)) bottom -= 2;
+  return { top: top + 8, bottom: bottom + 1 };
 }
 
 export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, children }: PlotMapHeroProps): ReactElement {
@@ -246,12 +270,14 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     (cause: CauseOfDeath) => {
       const frame = query<HTMLElement>("[data-plot-frame]");
       if (!frame?.clientWidth) return; // the desktop stage is hidden (phone layout)
+      const band = visibleBand();
       const top = frame.getBoundingClientRect().top;
       // bring the frame top under the sticky chrome so the toolbar row and the whole fit are in view
-      if (Math.abs(top - CHROME_TOP) > 4) window.scrollBy({ top: top - CHROME_TOP, behavior: "auto" });
-      const camera = fitSectionCamera(map, cause, { frameWidth: frame.clientWidth, viewportHeight: window.innerHeight });
+      if (Math.abs(top - band.top) > 4) window.scrollBy({ top: top - band.top, behavior: "auto" });
+      // the camera measures its band from the desktop chrome offset: hand it the viewport height that leaves this band
+      const camera = fitSectionCamera(map, cause, { frameWidth: frame.clientWidth, viewportHeight: band.bottom - band.top + CHROME_TOP });
       if (!camera) return;
-      const bottom = Math.min(frame.clientHeight, window.innerHeight - CHROME_TOP) - PLOT_LAYOUT.zoomBottomGap;
+      const bottom = Math.min(frame.clientHeight, band.bottom - band.top) - PLOT_LAYOUT.zoomBottomGap;
       setZoom({ cause, camera, pan: [0, 0], band: { width: frame.clientWidth, bottom } });
       setHoverDim(null);
       setHot(null);
@@ -365,9 +391,10 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     return false;
   }, [pinnedId, zoom, unpin, zoomReset]);
 
-  // Esc and F also work with focus outside the hero (page body) while a grave is pinned or hovered.
+  // Esc and F also work with focus outside the hero (page body) while a grave is pinned or hovered, on the desktop plan
+  // only (the phone layer's sheet owns Esc there).
   useEffect(() => {
-    if (!pinnedId && !zoom && !hot) return;
+    if (plotLayout !== "desktop" || (!pinnedId && !zoom && !hot)) return;
     const onKey = (event: globalThis.KeyboardEvent) => {
       const target = event.target as Element | null;
       if (event.defaultPrevented || rootRef.current?.contains(target)) return;
@@ -380,15 +407,21 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [pinnedId, zoom, hot, escape, leaveFlower]);
+  }, [plotLayout, pinnedId, zoom, hot, escape, leaveFlower]);
 
   // ------------------------------------------------------------------ delegated events
 
-  const graveOf = (target: EventTarget | null) => (target instanceof Element ? target.closest<SVGAElement>("a[data-grave-id]") : null);
+  // The hero root also holds the phone layer (the portrait slot, whose graves are `walk-<id>` anchors) and, through
+  // React's tree, the portalled phone sheet: the desktop plan reacts only to events from its own DOM, and only while
+  // it is the live layer.
+  const ownsEvent = (target: EventTarget | null) =>
+    plotLayout === "desktop" && target instanceof Element && !!rootRef.current?.contains(target) && !target.closest("[data-plot-portrait-slot]");
+  const graveOf = (target: EventTarget | null) => (target instanceof Element ? target.closest<SVGAElement>('a[id^="grave-"]') : null);
   const signpostOf = (target: EventTarget | null) => (target instanceof Element ? target.closest<HTMLElement>("[data-plot-signpost]") : null);
   const yearOf = (target: EventTarget | null) => (target instanceof Element ? target.closest<Element>("[data-plot-year]") : null);
 
   const onPointerOver = (event: PointerEvent) => {
+    if (!ownsEvent(event.target)) return;
     keyboardRef.current = false;
     const grave = graveOf(event.target);
     if (grave?.dataset.graveId && grave.dataset.graveId !== hot?.id) enterGrave(grave.dataset.graveId, "pointer");
@@ -398,6 +431,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     if (year && !zoom) setHoverDim({ kind: "year", year: Number(year.getAttribute("data-plot-year")) });
   };
   const onPointerOut = (event: PointerEvent) => {
+    if (!ownsEvent(event.target)) return;
     const related = event.relatedTarget as Node | null;
     const grave = graveOf(event.target);
     if (grave && !grave.contains(related) && !graveOf(related) && document.activeElement !== grave) leaveGrave("pointer");
@@ -407,6 +441,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     if (year && !year.contains(related) && !zoom) setHoverDim(null);
   };
   const onClick = (event: MouseEvent) => {
+    if (!ownsEvent(event.target)) return;
     const grave = graveOf(event.target);
     if (grave?.dataset.graveId) {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -422,6 +457,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     if (event.target instanceof Element && event.target.closest("[data-plot-svg]")) escape();
   };
   const onFocus = (event: FocusEvent) => {
+    if (!ownsEvent(event.target)) return;
     const grave = graveOf(event.target);
     if (grave?.dataset.graveId) {
       setTabId(grave.dataset.graveId);
@@ -432,10 +468,12 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     if (post && !zoom) setHoverDim({ kind: "lane", cause: post.dataset.plotSignpost as CauseOfDeath });
   };
   const onBlur = (event: FocusEvent) => {
+    if (!ownsEvent(event.target)) return;
     if (graveOf(event.target) && !graveOf(event.relatedTarget)) leaveGrave("focus");
     if (signpostOf(event.target) && !zoom) setHoverDim(null);
   };
   const onKeyDown = (event: KeyboardEvent) => {
+    if (!ownsEvent(event.target)) return;
     keyboardRef.current = true;
     const grave = graveOf(event.target);
     if (event.key === "Escape") {
@@ -461,8 +499,9 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       setZoom((current) => {
         const frame = rootRef.current?.querySelector<HTMLElement>("[data-plot-frame]");
         if (!current || !frame?.clientWidth) return current;
-        const camera = fitSectionCamera(map, current.cause, { frameWidth: frame.clientWidth, viewportHeight: window.innerHeight });
-        const bottom = Math.min(frame.clientHeight, window.innerHeight - CHROME_TOP) - PLOT_LAYOUT.zoomBottomGap;
+        const band = visibleBand();
+        const camera = fitSectionCamera(map, current.cause, { frameWidth: frame.clientWidth, viewportHeight: band.bottom - band.top + CHROME_TOP });
+        const bottom = Math.min(frame.clientHeight, band.bottom - band.top) - PLOT_LAYOUT.zoomBottomGap;
         return camera ? { ...current, camera, pan: [0, 0], band: { width: frame.clientWidth, bottom } } : null;
       });
     };
@@ -532,36 +571,38 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     rot.style.setProperty("--bs", (Math.hypot(target[0] - ox, target[1] - oy) / 1000).toFixed(4));
   }, [beamTargetId, viewportTick, query, nav, map.beamOrigin, vbX, vbY, vbW]);
 
-  // Tag: the hot grave's "symbol · date · peak", or the highlighted year's count over its cypress.
-  const hotRow = hot ? rowById.get(hot.id) : undefined;
+  // Tag: the hot grave's "symbol · date · peak", or the highlighted year's count over its cypress. The card (docked
+  // preview or pin at ≥ 1280 px, the in-flow pin below, which the pin scrolls to) says all of it for the grave it
+  // shows, so that grave gets no tag.
+  const cardId = pinnedId ?? (docked && hot ? hot.id : null);
+  const hotRow = hot && cardId !== hot.id ? rowById.get(hot.id) : undefined;
   const cypress = hoverDim?.kind === "year" ? map.cypress.find((c) => c.year === hoverDim.year) : undefined;
   const tagText = hotRow
     ? `${hotRow.symbol} · ${formatRegisterDeathDate(hotRow.deathDate)} · ${hotRow.peak === null ? "peak not recorded" : formatCemeteryPeak(hotRow.peak)}`
     : cypress
       ? `${cypress.year} · ${cypress.count} ${cypress.count === 1 ? "death" : "deaths"}`
       : null;
-  const cardId = pinnedId ?? (docked && hot ? hot.id : null);
 
   // Inspector: docked beside its grave (≥ 1280 px), clamped to the band below the chrome, clear of the Feedback
-  // button, of the route head and the `113` figure, and never over the colossi (BUSD's mausoleum, UST's column) while
-  // an ordinary grave is read. A colossus's own card may overlap the other colossus (the v2 placement the owner
-  // accepted): squeezing the most-read obituaries into the gaps left beside them would cut them short.
+  // button, of the route head and the `113` figure (of the zoom toolbar while zoomed), and never over the colossi
+  // (BUSD's mausoleum, UST's column) while an ordinary grave is read. A colossus's own card may overlap the other
+  // colossus (the v2 placement the owner accepted): squeezing the most-read obituaries into the gaps left beside them
+  // would cut them short. Signpost plates, colossus chips and year stamps stay uncovered where a spot holds the whole
+  // card; any label the card still covers hides with its leader (`data-covered`), so no label shows cut in half.
   const placeCard = useCallback(() => {
     const insp = inspectorRef.current;
     const connector = connectorRef.current;
+    const labels = [...(rootRef.current?.querySelectorAll<HTMLElement>(PLOT_COVERABLE) ?? [])];
     if (!connector) return;
-    if (!insp) {
-      connector.hidden = true;
-      return;
-    }
     const stage = query<HTMLElement>("[data-plot-stage]");
     const frame = query<HTMLElement>("[data-plot-frame]");
     const g = cardId ? nav.graves.get(cardId) : undefined;
-    if (!docked || !stage || !frame || !g || getComputedStyle(insp).position !== "absolute") {
-      insp.style.removeProperty("left");
-      insp.style.removeProperty("top");
-      insp.style.removeProperty("max-height");
+    if (!insp || !docked || !stage || !frame || !g || getComputedStyle(insp).position !== "absolute") {
+      insp?.style.removeProperty("left");
+      insp?.style.removeProperty("top");
+      insp?.style.removeProperty("max-height");
       connector.hidden = true;
+      for (const el of labels) el.removeAttribute("data-covered");
       return;
     }
     const fr = frame.getBoundingClientRect();
@@ -578,7 +619,9 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
           const box = map.obstacles.find((o) => o.key === `grave:${c.id}`);
           return box ? [toViewport(box)] : [];
         });
-    const text = zoom ? [] : [...(rootRef.current?.querySelectorAll("[data-plot-head], [data-plot-figure]") ?? [])].map((el) => el.getBoundingClientRect());
+    const text = [...(rootRef.current?.querySelectorAll(zoom ? "[data-plot-zoombar]" : "[data-plot-head], [data-plot-figure]") ?? [])].map((el) => el.getBoundingClientRect());
+    // labels hide while zoomed; chips below 1024 px have no box
+    const soft = zoom ? [] : labels.filter((el) => el.getClientRects().length > 0 && !el.hasAttribute("data-plot-leader")).map((el) => el.getBoundingClientRect());
     insp.style.removeProperty("max-height");
     const p = placeInspectorCard({
       stone: toViewport(g.screen.box),
@@ -587,12 +630,21 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       card: { width: insp.offsetWidth, height: insp.scrollHeight },
       viewport: { width: window.innerWidth, height: window.innerHeight },
       avoid: [...colossi, ...text],
+      soft,
     });
     insp.style.left = `${p.x - sr.left}px`;
     insp.style.top = `${p.y - sr.top}px`;
     insp.style.maxHeight = `${p.maxHeight}px`;
     drawLine(connector, p.connector.x1 - sr.left, p.connector.y1 - sr.top, p.connector.x2 - sr.left, p.connector.y2 - sr.top);
     connector.hidden = false;
+    const card = { left: p.x, top: p.y, right: p.x + insp.offsetWidth, bottom: p.y + p.maxHeight };
+    const under = labels.map((el) => {
+      const r = el.getBoundingClientRect();
+      return !zoom && r.width + r.height > 0 && r.left < card.right && r.right > card.left && r.top < card.bottom && r.bottom > card.top;
+    });
+    const covered = new Set(labels.flatMap((el, k) => (under[k] && el.dataset.plotChip ? [el.dataset.plotChip] : [])));
+    // a chip's leader goes with its chip, and also hides wherever the card would cut it
+    labels.forEach((el, k) => el.toggleAttribute("data-covered", under[k] || covered.has(el.dataset.plotLeader ?? "")));
   }, [cardId, docked, zoom, query, nav, map, frameRectOf, vbW]);
 
   // re-place whenever the card's content can change height: preview → pinned, a flower count, a resize
@@ -614,15 +666,21 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
         const r = el.getBoundingClientRect();
         return { left: r.left - fr.left, top: r.top - fr.top, right: r.right - fr.left, bottom: r.bottom - fr.top };
       };
-      const obstacles = [...(rootRef.current?.querySelectorAll("[data-plot-signpost], [data-plot-chip], [data-plot-figure], [data-plot-zoombar], [data-plot-inspector]") ?? [])]
+      const obstacles = [
+        ...(rootRef.current?.querySelectorAll("[data-plot-signpost], [data-plot-chip], [data-plot-leader], [data-plot-figure], [data-plot-zoombar], [data-plot-inspector]") ?? []),
+      ]
         .filter((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden")
         .map(within);
-      const p = placePlotTag({ stone: frameRectOf(g.screen.box, scale), tag: size, frame: { width: fr.width, height: fr.height }, obstacles });
+      // never under the sticky chrome when the frame top is scrolled beneath it; a tag with no clear spot stays out
+      // (the ring, the colour logo and the beam still mark the grave) rather than cover a label
+      const p = placePlotTag({ stone: frameRectOf(g.screen.box, scale), tag: size, frame: { width: fr.width, height: fr.height }, obstacles, top: CHROME_TOP - fr.top });
       tag.style.left = `${p.x}px`;
       tag.style.top = `${p.y}px`;
+      tag.toggleAttribute("data-blocked", p.collisions !== 0);
     } else if (cypress) {
       tag.style.left = `${(cypress.top[0] - vbX) * scale - size.width / 2}px`;
       tag.style.top = `${(cypress.top[1] - vbY) * scale - size.height - 6}px`;
+      tag.removeAttribute("data-blocked");
     }
   }, [tagText, hot, cypress, cardId, pinnedId, viewportTick, query, nav, frameRectOf, vbX, vbY, vbW]);
 

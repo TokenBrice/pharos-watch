@@ -61,7 +61,12 @@ export function PlotMapPortraitSlot({ rows, asOf, atlas, aspectRatio, flowers, o
   );
 }
 
-/** The legend's second disclosure folds once on phones (hero budget) and is always open on the desktop. */
+/**
+ * The legend's disclosure folds once on phones (hero budget) and is always open on the desktop. Folding shrinks the
+ * page below the legend by several hundred px, so it never happens under the reader: not when the page opened on a
+ * fragment (the browser's fragment scroll would land at the pre-fold offset) and not once the legend's top has
+ * scrolled above the viewport.
+ */
 function useLegendFold(layout: "desktop" | "portrait" | null): void {
   const folded = useRef(false);
   useEffect(() => {
@@ -71,6 +76,7 @@ function useLegendFold(layout: "desktop" | "portrait" | null): void {
     if (layout === "desktop") details.open = true;
     else if (!folded.current) {
       folded.current = true;
+      if (window.location.hash.length > 1 || details.getBoundingClientRect().top < 0) return;
       details.open = false;
     }
   }, [layout]);
@@ -134,6 +140,30 @@ function cssPx(name: string, fallback: number): number {
   return Number.isFinite(v) ? v : fallback;
 }
 
+/** Space kept between neighbouring margin year labels (px). */
+const YEAR_LABEL_GAP = 3;
+
+/**
+ * Vertical shift (px, + down / − up) per margin year label (DOM order = `map.blocks` order) so no two labels overlap
+ * and the last stays inside the plan. Each label is centred on its block (`top` in %); thin blocks (a one-row year,
+ * the empty strip) sit closer than two labels are tall, so labels first push down, then the stack is pulled back up
+ * from the plan's bottom edge. Measured, so it holds at every plan width and label height.
+ */
+function measureYearPushes(plan: HTMLElement): number[] {
+  const height = plan.clientHeight;
+  const labels = Array.from(plan.querySelectorAll<HTMLElement>("[data-plot-year-label]"));
+  const heights = labels.map((label) => label.offsetHeight);
+  const natural = labels.map((label, k) => (parseFloat(label.style.top) / 100) * height - heights[k] / 2);
+  const tops = [...natural];
+  for (let k = 1; k < tops.length; k++) tops[k] = Math.max(tops[k], tops[k - 1] + heights[k - 1] + YEAR_LABEL_GAP);
+  let limit = height;
+  for (let k = tops.length - 1; k >= 0; k--) {
+    tops[k] = Math.min(tops[k], limit - heights[k]);
+    limit = tops[k] - YEAR_LABEL_GAP;
+  }
+  return tops.map((top, k) => Math.round(top - natural[k]));
+}
+
 /**
  * Scrolls the page so the grave's hit box sits in the band between the sticky chrome and the open sheet (upper
  * third where possible). The sheet's resting top is computed from its size, not its rect: it may still be sliding.
@@ -170,6 +200,28 @@ function PortraitLayer({
   /** Bumped on every open so re-opening the same grave re-runs the scroll/focus effect. */
   const [openSeq, setOpenSeq] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const planRef = useRef<HTMLDivElement>(null);
+  const [yearPushes, setYearPushes] = useState<readonly number[]>([]);
+
+  // Margin year labels: measured before the first paint and again whenever the plan (hence every block) resizes.
+  useLayoutEffect(() => {
+    const plan = planRef.current;
+    if (!plan) return;
+    let live = true;
+    const update = () => {
+      if (!live) return;
+      const next = measureYearPushes(plan);
+      setYearPushes((prev) => (prev.length === next.length && prev.every((v, i) => v === next[i]) ? prev : next));
+    };
+    update();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(plan);
+    void document.fonts?.ready.then(update);
+    return () => {
+      live = false;
+      observer?.disconnect();
+    };
+  }, [map]);
 
   const openSheet = useCallback(
     (id: string) => {
@@ -294,6 +346,8 @@ function PortraitLayer({
         flowers={flowers}
         onHitsClick={onHitsClick}
         onHitsKeyDown={onHitsKeyDown}
+        yearPushes={yearPushes}
+        planRef={planRef}
       />
       <PlotMapSheet
         row={shownRow}

@@ -26,7 +26,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const PAGE_URL = `${SITE_URL}/cemetery/`;
 
-const cemeteryMetadataDescription = `${CEMETERY_ENTRIES.length} failed and defunct stablecoins documented by Pharos, with collapse dates, causes, obituaries, archived data, and lessons from TerraUSD to HUSD.`;
+const cemeteryMetadataDescription = `${CEMETERY_ENTRIES.length} failed or discontinued stablecoins documented by Pharos: end dates, causes of death, obituaries, sources, and archived data, from TerraUSD to Binance USD.`;
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Cemetery: Failed & Defunct Stablecoins",

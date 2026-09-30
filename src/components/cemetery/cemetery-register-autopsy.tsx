@@ -150,7 +150,7 @@ export function CemeteryRegisterAutopsy({ row, expanded, onShowOnField }: Cemete
               <span className="text-muted-foreground">Not recorded</span>
             ) : (
               <>
-                <ul className="space-y-1">
+                <ul className={`${styles.contracts} space-y-1`}>
                   {contracts.map((contract) => (
                     <li key={`${contract.chainName}:${contract.address}`} className="font-mono text-xs">
                       {contract.explorerUrl ? (
@@ -159,14 +159,14 @@ export function CemeteryRegisterAutopsy({ row, expanded, onShowOnField }: Cemete
                           target="_blank"
                           rel="noopener noreferrer"
                           title={contract.address}
-                          className="pharos-prose-link inline-flex min-h-11 items-center gap-1.5 md:min-h-0"
+                          className="pharos-prose-link inline-flex min-h-11 flex-wrap items-center gap-x-1.5 md:min-h-0"
                         >
                           <span className="text-muted-foreground">{contract.chainName}</span>
                           {formatAddress(contract.address)}
                           <span className="sr-only"> (opens in a new tab)</span>
                         </a>
                       ) : (
-                        <span title={contract.address} className="inline-flex gap-1.5">
+                        <span title={contract.address} className="inline-flex flex-wrap gap-x-1.5">
                           <span className="text-muted-foreground">{contract.chainName}</span>
                           {formatAddress(contract.address)}
                         </span>

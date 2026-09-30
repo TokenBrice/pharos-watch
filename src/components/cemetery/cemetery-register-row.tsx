@@ -93,7 +93,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
             {causeLabel}
           </span>
         </TableCell>
-        <TableCell className="pharos-numeric px-2 text-xs sm:px-3 sm:text-sm">{formatRegisterDeathDate(row.deathDate)}</TableCell>
+        <TableCell className={cn(styles.died, "pharos-numeric px-2 text-xs sm:px-3 sm:text-sm")}>{formatRegisterDeathDate(row.deathDate)}</TableCell>
         <TableCell className="pharos-numeric px-2 text-right text-xs sm:px-3 sm:text-sm">
           {row.peak === null ? NOT_RECORDED : formatCemeteryPeak(row.peak)}
         </TableCell>

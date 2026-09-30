@@ -51,7 +51,7 @@ const GENERATED_BY = "scripts/maintenance/build-og-cemetery.ts";
 const REFRESH_COMMAND = "npm run build:og-cemetery";
 
 /** Bump when the composition, crop or rendering pipeline changes so the signature rotates. */
-export const OG_CEMETERY_GENERATOR_VERSION = 1;
+export const OG_CEMETERY_GENERATOR_VERSION = 2;
 
 export const OG_CEMETERY_WIDTH = 1200;
 export const OG_CEMETERY_HEIGHT = 630;
@@ -66,6 +66,19 @@ export const OG_CEMETERY_RENDER = {
   deviceScaleFactor: 2,
   /** CSS px kept above the route head's top edge. */
   cropAboveHead: 30,
+} as const;
+
+/**
+ * 256-colour palette PNG with full Floyd–Steinberg dither: 141 KB instead of 531 KB lossless (measured 2026-09-30:
+ * mean |Δ| 0.42 per channel, 0.06 % of pixels off by more than 8), indistinguishable at 100 %.
+ */
+export const OG_CEMETERY_PNG_OPTIONS = {
+  palette: true,
+  colours: 256,
+  quality: 100,
+  dither: 1,
+  effort: 10,
+  compressionLevel: 9,
 } as const;
 
 /** Repo-relative inputs the document is built from (besides the TypeScript modules it imports). */
@@ -324,6 +337,7 @@ export interface OgCemeterySignature {
   generatedBy: string;
   generatorVersion: number;
   render: typeof OG_CEMETERY_RENDER;
+  png: typeof OG_CEMETERY_PNG_OPTIONS;
   documentSha256: string;
   summary: OgCemeteryDocument["summary"];
   image: OgCemeteryImageRecord & { width: number; height: number };
@@ -339,6 +353,7 @@ export function buildOgCemeterySignature(document: OgCemeteryDocument, image: Og
     generatedBy: GENERATED_BY,
     generatorVersion: OG_CEMETERY_GENERATOR_VERSION,
     render: { ...OG_CEMETERY_RENDER },
+    png: { ...OG_CEMETERY_PNG_OPTIONS },
     documentSha256: sha256Hex(document.html),
     summary: { ...document.summary },
     image: { sha256: image.sha256, bytes: image.bytes, width: OG_CEMETERY_WIDTH, height: OG_CEMETERY_HEIGHT },
@@ -422,7 +437,7 @@ export async function renderOgCemeteryPng(html: string): Promise<Buffer> {
     });
     return await sharp(capture)
       .resize(OG_CEMETERY_WIDTH, OG_CEMETERY_HEIGHT, { fit: "fill", kernel: "lanczos3" })
-      .png({ compressionLevel: 9, adaptiveFiltering: true })
+      .png(OG_CEMETERY_PNG_OPTIONS)
       .toBuffer();
   } finally {
     await browser.close();

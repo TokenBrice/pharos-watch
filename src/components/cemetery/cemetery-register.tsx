@@ -248,7 +248,9 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
       id="register"
       aria-labelledby="register-heading"
       data-enhanced={hydrated ? "" : undefined}
-      className={cn(styles.register, "min-w-0 space-y-4")}
+      // Gap, not child margins: the section is a layout-containment boundary (content-visibility), so a
+      // trailing child margin would no longer collapse through it and would add space below the register.
+      className={cn(styles.register, "flex min-w-0 flex-col gap-3")}
     >
       <CemeterySectionHeader
         id="register-heading"

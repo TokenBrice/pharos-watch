@@ -349,6 +349,12 @@ describe("hover tag placement", () => {
     const everywhere = placePlotTag({ stone, tag, frame, obstacles: [{ left: 0, top: 0, right: 400, bottom: 300 }] });
     expect(everywhere.collisions).toBe(1);
   });
+
+  it("keeps the tag below the sticky chrome's edge when the frame top is scrolled under it", () => {
+    const p = placePlotTag({ stone: { left: 100, top: 100, right: 120, bottom: 130 }, tag: { width: 60, height: 16 }, frame: { width: 400, height: 300 }, obstacles: [], top: 90 });
+    expect(p.y).toBeGreaterThanOrEqual(90);
+    expect(p.collisions).toBe(0);
+  });
 });
 
 describe("inspector docking", () => {
@@ -369,6 +375,17 @@ describe("inspector docking", () => {
     const p = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport, avoid: [colossus] });
     expect(p.x + card.width).toBeLessThanOrEqual(stone.left);
     expect(overlaps({ left: p.x, top: p.y, right: p.x + card.width, bottom: p.y + p.maxHeight }, colossus)).toBe(false);
+  });
+
+  it("slides along its run to leave labels uncovered, never shortening for them", () => {
+    // a plate the centred card (y 270–570) would cover: the card moves below it at full height
+    const plate = { left: 700, top: 250, right: 820, bottom: 274 };
+    const p = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport, soft: [plate] });
+    expect(p.maxHeight).toBe(card.height);
+    expect(overlaps({ left: p.x, top: p.y, right: p.x + card.width, bottom: p.y + p.maxHeight }, plate)).toBe(false);
+    // a band-high label wider than the 48 px slide cannot be escaped: the card keeps its full height by the grave
+    const tall = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport, soft: [{ left: 660, top: 0, right: 760, bottom: 800 }] });
+    expect(tall).toMatchObject({ x: stone.right + 28, y: 270, maxHeight: 300 });
   });
 
   it("never docks under the sticky chrome or over the Feedback button's corner", () => {

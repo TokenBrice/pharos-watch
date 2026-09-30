@@ -1,8 +1,9 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { formatPercentFromRatio, formatUtcDayLabel } from "@shared/lib/format";
 import { buildRegisterHref, CEMETERY_PEAK_BUCKET_LABELS } from "@/lib/cemetery-selection";
 import { formatCemeteryPeak, type CemeteryStats } from "@/lib/cemetery-stats";
+import styles from "./cemetery-below-fold.module.css";
 
 /** The dataset fields the footer rail prints; `CEMETERY_DATASET_META` satisfies it. */
 export interface CemeteryKeyFactsDatasetMeta {
@@ -113,8 +114,9 @@ function buildCells(stats: CemeteryStats): FactCell[] {
 /** Four neutral figures under the hero; each fact here has no other home on the page. */
 export function CemeteryKeyFacts({ stats, datasetMeta }: CemeteryKeyFactsProps) {
   const cells = buildCells(stats);
+  // `updatedAt` is the latest record's `recordedAt`, when a record was last added; the checksum identifies the revision.
   const rail = [
-    stats.updatedAt ? `Updated ${formatRecordedAt(stats.updatedAt)}` : null,
+    stats.updatedAt ? `Latest record added ${formatRecordedAt(stats.updatedAt)}` : null,
     `Latest recorded death ${stats.asOf.label}`,
     `Dataset schema ${datasetMeta.schemaVersion}`,
   ].filter((part): part is string => part !== null);
@@ -129,7 +131,7 @@ export function CemeteryKeyFacts({ stats, datasetMeta }: CemeteryKeyFactsProps) 
           {cells.map((cell, index) => (
             <div
               key={cell.key}
-              className={`min-w-0 space-y-1.5 border-border/60 px-4 py-4 md:px-5 md:py-5 ${CELL_POSITION_CLASSES[index]} ${cells.length === 3 && index === 2 ? "col-span-2 md:col-span-1" : ""}`}
+              className={`${styles.fact} min-w-0 border-border/60 px-4 py-4 md:px-5 md:py-5 ${CELL_POSITION_CLASSES[index]} ${cells.length === 3 && index === 2 ? "col-span-2 md:col-span-1" : ""}`}
             >
               <dt className="pharos-kicker">{cell.label}</dt>
               <dd className="pharos-numeric text-[1.35rem] font-semibold leading-tight text-foreground md:text-[1.75rem]">
@@ -140,7 +142,16 @@ export function CemeteryKeyFacts({ stats, datasetMeta }: CemeteryKeyFactsProps) 
           ))}
         </dl>
         <p className="pharos-numeric border-t border-border/60 px-4 py-2.5 text-[11px] uppercase tracking-[0.08em] text-muted-foreground md:px-5">
-          {rail.join(" · ")} · checksum <span className="normal-case">{datasetMeta.sourceChecksumShort}</span>
+          {/* Each fact stays on one line; a wrap falls only after a separator. */}
+          {rail.map((part) => (
+            <Fragment key={part}>
+              <span className="whitespace-nowrap">{part}</span>
+              {"\u00a0· "}
+            </Fragment>
+          ))}
+          <span className="whitespace-nowrap">
+            checksum <span className="normal-case">{datasetMeta.sourceChecksumShort}</span>
+          </span>
         </p>
       </div>
     </section>

@@ -65,10 +65,14 @@ describe("CemeteryHero", () => {
     expect(tabbable.map((g) => g.id)).toEqual([`grave-${map.newestId}`]);
   });
 
-  it("teaches the reading rules in the plan's description and lets keyboard users skip it", () => {
+  it("describes the plan's keyboard contract and reading rules, and lets keyboard users skip it", () => {
     const { container, plan } = renderHero();
-    const desc = document.getElementById(plan.getAttribute("aria-describedby") ?? "");
-    expect(desc?.textContent).toMatch(/cause of death.*newest.*oldest.*plinth steps/i);
+    const description = (plan.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map((id) => document.getElementById(id)?.textContent ?? "")
+      .join(" ");
+    expect(description).toMatch(/arrow keys.*Enter or Space pins.*Escape closes/i);
+    expect(description).toMatch(/cause of death.*newest.*oldest.*plinth steps/i);
     const skip = screen.getByRole("link", { name: "Skip the cemetery map" });
     expect(skip.getAttribute("href")).toBe("#register");
     expect(skip.compareDocumentPosition(plan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

@@ -63,11 +63,14 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
       </span>
       {preview ? (
         <p className={styles.cardObituary}>{getObituaryLead(row.obituary)}</p>
-      ) : (
+      ) : variant === "inspector" ? (
         // A scrollable region must be reachable by keyboard (focusable) to be scrolled without a pointer.
         <p className={`${styles.cardObituary} ${styles.cardObituaryFull}`} tabIndex={0} aria-label={`Obituary of ${row.name}`}>
           {row.obituary}
         </p>
+      ) : (
+        // the phone sheet scrolls as a whole: its obituary runs in full, no nested scroller
+        <p className={styles.cardObituary}>{row.obituary}</p>
       )}
       <dl className={styles.cardGrid}>
         <div>

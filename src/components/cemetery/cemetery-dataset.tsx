@@ -15,14 +15,15 @@ const TIMELINE_CEMETERY_HREF = "/timeline/?type=cemetery.*&window=alltime";
 
 const LINK_BUTTON_CLASS = buttonVariants({ variant: "outline", size: "sm", className: "pharos-focus-ring" });
 
-function formatUpdatedAt(date: string): string {
+/** `updatedAt` is the latest record's `recordedAt`: when a record was last added, not a last-edit time. */
+function formatLatestRecordAdded(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
   return formatUtcDayLabel(new Date(Date.UTC(year, month - 1, day)));
 }
 
 export function buildCemeteryDatasetCitation(meta: CemeteryDatasetMeta = CEMETERY_DATASET_META): string {
-  const updated = meta.updatedAt ? `, updated ${formatUpdatedAt(meta.updatedAt)}` : "";
-  return `Pharos, "Stablecoin Cemetery Dataset," schema ${meta.schemaVersion}, ${meta.rowCount} records${updated}. ${SITE_ORIGIN}${meta.jsonUrl} (${meta.license}).`;
+  const latest = meta.updatedAt ? `, latest record added ${formatLatestRecordAdded(meta.updatedAt)}` : "";
+  return `Pharos, "Stablecoin Cemetery Dataset," schema ${meta.schemaVersion}, ${meta.rowCount} records${latest}. ${SITE_ORIGIN}${meta.jsonUrl} (${meta.license}).`;
 }
 
 function DatasetLink({ href, children, external = false }: { href: string; children: ReactNode; external?: boolean }) {
@@ -50,12 +51,12 @@ export function CemeteryDataset() {
     `${meta.rowCount} records`,
     `schema ${meta.schemaVersion}`,
     `${meta.license} license`,
-    meta.updatedAt ? `updated ${formatUpdatedAt(meta.updatedAt)}` : null,
+    meta.updatedAt ? `latest record added ${formatLatestRecordAdded(meta.updatedAt)}` : null,
   ].filter((part): part is string => part !== null);
 
   return (
-    <section id="dataset" aria-labelledby="dataset-heading" className="scroll-mt-24 space-y-4">
-      <CemeterySectionHeader id="dataset-heading" kicker="Dataset" title="Download and cite" />
+    <section id="dataset" aria-labelledby="dataset-heading" className="scroll-mt-24 space-y-3">
+      <CemeterySectionHeader id="dataset-heading" kicker="Dataset" title="Download and cite" meta="Each coin ended. Its record stays." />
 
       <div className="pharos-card-shell overflow-hidden">
         <div className="grid lg:grid-cols-2">

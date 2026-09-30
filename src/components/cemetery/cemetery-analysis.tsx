@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { CAUSE_META, CAUSE_ORDER } from "@shared/lib/cause-of-death";
 import { formatDeathDate } from "@shared/lib/format";
 import { ChartLegendChip } from "@/components/chart-primitives/legend";
@@ -11,7 +11,11 @@ import { DeathsByYearChart, type DeathsByYearDatum } from "./deaths-by-year-char
 import { PeakByCauseChart, type PeakLaneDatum } from "./peak-by-cause-chart";
 
 const YEAR_HEADLINE_KEYS: readonly CemeteryPatternKey[] = ["algorithmic-early", "counterparty-rising"];
-const PEAK_HEADLINE_KEYS: readonly CemeteryPatternKey[] = ["top-two-concentration"];
+/**
+ * The size chart prints one headline: the discontinued-largest contrast, else the two-coin concentration
+ * (key facts already print the two-coin share, so the contrast is preferred).
+ */
+const PEAK_HEADLINE_KEYS: readonly CemeteryPatternKey[] = ["largest-not-collapse", "top-two-concentration"];
 /** Footnote order: smallest bucket first. */
 const FOOTNOTE_BUCKETS: readonly CemeteryPeakBucket[] = ["under-10m", "10m-100m", "100m-1b", "1b-plus"];
 const YEAR_LIST = new Intl.ListFormat("en", { type: "conjunction" });
@@ -109,18 +113,21 @@ export function CemeteryAnalysis({ stats }: { stats: CemeteryStats }) {
     .join(" ");
 
   const unplotted = stats.peakByCause.unplottedCount;
-  const peakFootnote = [
+  const unplottedNote =
     unplotted === 1
-      ? "1 record has no recorded peak and is not plotted."
+      ? "1 record has no recorded peak and is not plotted. "
       : unplotted > 1
-        ? `${unplotted} records have no recorded peak and are not plotted.`
-        : null,
-    `Size buckets: ${FOOTNOTE_BUCKETS.map(
-      (key) => `${CEMETERY_PEAK_BUCKET_LABELS[key]} ${stats.peakBuckets.find((bucket) => bucket.key === key)?.count ?? 0}`,
-    ).join(" · ")}.`,
-  ]
-    .filter(Boolean)
-    .join(" ");
+        ? `${unplotted} records have no recorded peak and are not plotted. `
+        : "";
+  // Each bucket stays on one line; a wrap falls only between buckets.
+  const bucketList = FOOTNOTE_BUCKETS.map((key, index) => (
+    <Fragment key={key}>
+      {index > 0 ? "\u00a0· " : null}
+      <span className="whitespace-nowrap">
+        {`${CEMETERY_PEAK_BUCKET_LABELS[key]} ${stats.peakBuckets.find((bucket) => bucket.key === key)?.count ?? 0}`}
+      </span>
+    </Fragment>
+  ));
 
   return (
     <section id="analysis" aria-labelledby="analysis-heading" className="scroll-mt-24 space-y-3">
@@ -172,7 +179,7 @@ export function CemeteryAnalysis({ stats }: { stats: CemeteryStats }) {
               titleId="analysis-peak-by-cause-title"
               kicker="Size"
               title="Peak market cap by cause"
-              headlines={headlinesFor(PEAK_HEADLINE_KEYS)}
+              headlines={headlinesFor(PEAK_HEADLINE_KEYS).slice(0, 1)}
               description="Each dot is one death with a recorded peak, on a log scale. The vertical tick marks each cause's median. Select a dot to open its row in the register."
               legend={
                 <>
@@ -189,7 +196,11 @@ export function CemeteryAnalysis({ stats }: { stats: CemeteryStats }) {
               }
             />
           }
-          footnote={<p className="pharos-meta">{peakFootnote}</p>}
+          footnote={
+            <p className="pharos-meta">
+              {unplottedNote}Size buckets: {bucketList}.
+            </p>
+          }
         />
       </div>
     </section>

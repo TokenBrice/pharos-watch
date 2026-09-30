@@ -95,12 +95,14 @@ describe("CemeteryAnalysis", () => {
     expect(container.textContent).toContain("1 of 2 records in 2024 come from Pharos's own tracked archive.");
   });
 
-  it("labels empty years 'none recorded' and names them as a catalog gap", () => {
+  it("labels empty years 'none recorded' (a dash on phones) and names them as a catalog gap", () => {
     const { container } = renderAnalysis();
 
-    const empty = Array.from(container.querySelectorAll<SVGTextElement>("[data-empty-year]"));
+    const empty = Array.from(container.querySelectorAll<SVGGElement>("[data-empty-year]"));
     expect(empty.map((node) => node.dataset.emptyYear)).toEqual(["2022"]);
-    expect(empty[0].textContent?.replace(/\s+/g, " ").trim()).toBe("none recorded");
+    const [phone, wide] = Array.from(empty[0].querySelectorAll("text"));
+    expect(phone.textContent?.trim()).toBe("–");
+    expect(wide.textContent?.replace(/\s+/g, " ").trim()).toBe("none recorded");
     expect(container.textContent).toContain("No records exist for 2022; that is a gap in the catalog");
   });
 

@@ -196,6 +196,21 @@ describe("PlotMapPortraitSlot", () => {
       details.remove();
     }
   });
+
+  it("leaves the legend open when the page opened on a fragment, so the fragment scroll lands where it aimed", () => {
+    const details = document.createElement("details");
+    details.setAttribute("data-plot-legend-more", "");
+    details.open = true;
+    document.body.append(details);
+    window.history.replaceState(null, "", "#faq");
+    try {
+      renderSlot();
+      expect(details.open).toBe(true);
+    } finally {
+      window.history.replaceState(null, "", window.location.pathname);
+      details.remove();
+    }
+  });
 });
 
 describe("getPortraitAspectRatio", () => {

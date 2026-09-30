@@ -7,16 +7,16 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:55a1b47814bee24cea172522470f408d4a504329fa9bfa837db473c64ac9186c",
+  "sourceChecksum": "sha256:158aa70359436d4122dcf739a25f5f0cdab746182ee53c415aca0dfbeff7a40e",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
-      "checksum": "sha256:6d1b27e599b097c4b37efa8f8b9210445b3e3f5c3ca78e0e91a7cde711fc785b",
+      "checksum": "sha256:9e25b10eda2f91f32e500b182495515cd06027f57335cfafeb7d1695d42b97b7",
       "role": "Curated dead-stablecoin metadata."
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:e64c16722ef905b0c2f09c885e970638bb886199e3244d12d8401c20825383fd",
+      "checksum": "sha256:2d37f72954c8afb42e05192ebae734499d9a6dd34e40959cc05f2d077e78c622",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     }
   ],
@@ -96,8 +96,8 @@
       "peakMcapUsd": 171786044,
       "epitaph": "The only market went quiet",
       "obituary": "XT.com's official xtusd_usdt market stopped updating on July 18, 2026: the exchange ticker froze at that timestamp, the order book emptied, and the pair no longer appears in the exchange's symbol list. CoinGecko ended the feed on July 20 with an implausible tail near $0.04, and CoinMarketCap lists the asset inactive. XTUSD circulates on XSC, which Pharos does not index, so no contracts are configured and no identity-safe DEX route can be expressed. With the last admissible price at 0.93205 on July 20 and roughly $1.25M still circulating, Pharos freezes XTUSD as an archived market-ended asset rather than an active stablecoin.",
-      "sourceUrl": "https://sapi.xt.com/v4/public/ticker?symbol=xtusd_usdt",
-      "sourceLabel": "XT.com public ticker for xtusd_usdt (stale since 2026-07-18)",
+      "sourceUrl": "https://xtsupport.zendesk.com/hc/en-us/articles/60110894718105-XT-COM-Announcement-on-the-Delisting-of-Selected-Spot-Trading-Pairs-2026-7-18",
+      "sourceLabel": "XT.COM XTUSD delisting announcement",
       "archivedDataAvailable": true,
       "contracts": [],
       "pharosUrl": "https://pharos.watch/stablecoin/xtusd-xt/",
@@ -437,8 +437,8 @@
       "peakMcapUsd": 106412008,
       "epitaph": "A Hyperliquid native made way for USDC",
       "obituary": "Native Markets and Bridge announced USDH's sunset in May 2026 as Hyperliquid markets migrated to USDC. New issuance ended except to support migration liquidity; the USDH dashboard was scheduled to close on July 17, while Bridge continued USDH-to-USDC and fiat redemption for onboarded holders. USDH remained fully backed during the transition, but its role as an active stablecoin product ended, so Pharos freezes it as an archived migration asset.",
-      "sourceUrl": "https://usdh.com/migration",
-      "sourceLabel": "USDH migration and sunset notice",
+      "sourceUrl": "https://www.bridge.xyz/blog/an-update-on-usdh",
+      "sourceLabel": "Bridge USDH sunset update",
       "archivedDataAvailable": true,
       "contracts": [
         {
@@ -861,8 +861,8 @@
       "peakMcapUsd": 205982075,
       "epitaph": "Overcollateralized on paper, unredeemable in practice",
       "obituary": "USX was dForce's CDP-style stablecoin, launched in 2021 and peaking above $205M in mid-2022. It never fully recovered the peg after the 2022 bear market: legacy debt positions on the dForce/Unitus lending protocol left circulating USX without a credible par-redemption route, and the discount widened from cents to a chasm. The terminal slide came in early 2026: below $0.75 in February, below $0.45 by April, and roughly $0.39 by July, with on-chain liquidity measured in tens of thousands of dollars and daily volume under $10. With the DF governance token near zero, no published remediation plan, and no redemption at par, Pharos froze USX as a collapsed archive asset.",
-      "sourceUrl": "https://www.coingecko.com/en/coins/dforce-usd",
-      "sourceLabel": "CoinGecko USX market data",
+      "sourceUrl": "https://snapshot.org/#/s:dforcenet.eth/proposal/0x74b65a80e978de700bba1845669772c16963ecb44075b1699c37fecd19eeecb6",
+      "sourceLabel": "dForce DIP079 USX wind-down vote",
       "archivedDataAvailable": true,
       "contracts": [
         {
@@ -1377,8 +1377,8 @@
       "peakMcapUsd": 4950000,
       "epitaph": "The golden ratio experiment",
       "obituary": "Float Protocol launched in 2021 with an ambitious vision: a floating-rate stablecoin backed by ETH, with a target price initialized at $1.618 (the golden ratio). Supply expanded and contracted via Dutch auctions using ETH and the BANK governance token. The protocol peaked at ~$5M market cap but never gained meaningful adoption. By 2025, the anonymous team had vanished, the website went dark, GitHub fell dormant, and supply froze at ~$654K. The contracts remain on Ethereum, an immutable monument to the idea that stability doesn't require a peg.",
-      "sourceUrl": "https://web.archive.org/web/2021*/floatprotocol.com",
-      "sourceLabel": "Wayback Machine",
+      "sourceUrl": "https://www.onchainatlas.org/float-protocol/history/",
+      "sourceLabel": "Onchain Atlas",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -1551,8 +1551,8 @@
       "peakMcapUsd": 19075074,
       "epitaph": "Zero users, zero supply",
       "obituary": "GMO Trust's NYDFS-regulated stablecoin failed to gain market share despite expansions to Solana and Bitstamp listing. Supply dwindled to essentially zero while GMO's JPY stablecoin (GYEN) continues.",
-      "sourceUrl": "https://www.coingecko.com/en/coins/zusd",
-      "sourceLabel": "CoinGecko",
+      "sourceUrl": "https://support.stablecoin.z.com/hc/en-us/articles/57881757618969-Wind-down-of-GYEN-and-ZUSD-stablecoin-issuance",
+      "sourceLabel": "GMO Trust",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -1605,8 +1605,8 @@
       "peakMcapUsd": 11268731,
       "epitaph": "Higher yields beckoned",
       "obituary": "An RToken built on Reserve Protocol for yield-bearing exposure on Base. The Reserve platform thrives, but this individual RToken lost adoption as users moved to higher-yield alternatives.",
-      "sourceUrl": "https://defillama.com/stablecoin/high-yield-usd",
-      "sourceLabel": "DefiLlama",
+      "sourceUrl": "https://forum.reserve.org/t/rfc-formal-deprecation-of-abandoned-dtfs/1464",
+      "sourceLabel": "Reserve Forum",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -1659,8 +1659,8 @@
       "peakMcapUsd": 73665779,
       "epitaph": "Quietly wound down",
       "obituary": "Overnight Finance quietly wound down operations, leaving USD+ without active management or yield strategies.",
-      "sourceUrl": "https://overnight.fi/",
-      "sourceLabel": "Overnight.fi",
+      "sourceUrl": "https://docs.overnight.fi/core-concept/withdraw",
+      "sourceLabel": "Overnight Docs",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -1821,8 +1821,8 @@
       "peakMcapUsd": 16000251,
       "epitaph": "Too private to notice",
       "obituary": "zkBob's privacy-focused stablecoin was deliberately sunset as the protocol switched to USDC, USDT, and ETH. The team noted BOB \"did not receive enough consumer usage to justify ongoing support.\"",
-      "sourceUrl": "https://blog.zkbob.com/tron-pool-closes-october-29-2024/",
-      "sourceLabel": "zkBob Blog",
+      "sourceUrl": "https://github.com/zkBob/docs/blob/main/zkbob-overview/zkbob-pools/usdc-pool-on-polygon.md",
+      "sourceLabel": "zkBob Docs",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -1848,8 +1848,8 @@
       "peakMcapUsd": 25000000,
       "epitaph": "Mimo went quiet",
       "obituary": "Born from the ashes of TenX, Mimo Protocol launched PAR as one of the first decentralized Euro stablecoins in early 2021, peaking at $25M during DeFi summer. But the euro-pegged CDP model never found product-market fit, and the team quietly pivoted to KUMA Protocol, tokenizing Swiss government bonds instead of minting synthetic euros. By late 2024, PAR's supply had cratered 90%, the governance forum went dark, and the MIMO token flatlined at $0.003 with zero daily volume.",
-      "sourceUrl": "https://decrypt.co/146349/mimo-dao-launches-interest-paying-stablecoins-through-kuma-protocol",
-      "sourceLabel": "Decrypt",
+      "sourceUrl": "https://gov.parallel.best/t/pip-66-l-sunset-par-the-parallel-v2-eur-stablecoin-phase-i/535",
+      "sourceLabel": "Parallel Forum",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -1929,8 +1929,8 @@
       "peakMcapUsd": 81031853,
       "epitaph": "A solvent euro was retired by its license boundary",
       "obituary": "Anchored Coins stopped issuing new AEUR after MiCAR made an EU issuer license necessary for the Swiss company to continue a EUR stablecoin business. The issuer moved reserves to Swissquote and kept a high-minimum redemption route for existing holders, but announced an orderly withdrawal from stablecoins rather than a relaunch. With issuance permanently closed and the product in a regulatory wind-down, Pharos freezes AEUR as an archived legacy asset while preserving its historical market record.",
-      "sourceUrl": "https://www.anchoredcoins.com/en/landing/aeur",
-      "sourceLabel": "Anchored Coins AEUR wind-down notice",
+      "sourceUrl": "https://web.archive.org/web/20260118114459/https://www.anchoredcoins.com/en/landing",
+      "sourceLabel": "Anchored Coins AEUR wind-down notice (archived)",
       "archivedDataAvailable": true,
       "contracts": [
         {
@@ -1989,8 +1989,8 @@
       "peakMcapUsd": 128139157,
       "epitaph": "Yield compressed to zero",
       "obituary": "Lybra Finance V2's LST-backed yield-bearing stablecoin peaked at $128M. After mining incentives ended in June 2024 and development stalled, supply collapsed. The protocol is technically live but abandoned by its team.",
-      "sourceUrl": "https://beincrypto.com/lybra-finance-lbr-defi-fall/",
-      "sourceLabel": "BeInCrypto",
+      "sourceUrl": "https://web.archive.org/web/20250831120035id_/https://twitter.com/LybraFinance/status/1962123349037101158",
+      "sourceLabel": "Lybra Finance on X (archived)",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2038,8 +2038,8 @@
       "peakMcapUsd": 43983623,
       "epitaph": "Omnichain to no-chain",
       "obituary": "Lybra's omnichain version of eUSD, designed for cross-chain use. Died alongside eUSD V2 when the team abandoned the protocol.",
-      "sourceUrl": "https://beincrypto.com/lybra-finance-lbr-defi-fall/",
-      "sourceLabel": "BeInCrypto",
+      "sourceUrl": "https://web.archive.org/web/20250831120035id_/https://twitter.com/LybraFinance/status/1962123349037101158",
+      "sourceLabel": "Lybra Finance on X (archived)",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2092,8 +2092,8 @@
       "peakMcapUsd": 13967554,
       "epitaph": "NFT floor pulled out",
       "obituary": "JPEG'd's stablecoin minted against NFT collateral declined alongside the broader NFT market collapse. The protocol token stopped trading and the project was effectively abandoned.",
-      "sourceUrl": "https://defillama.com/protocol/jpegd",
-      "sourceLabel": "DefiLlama",
+      "sourceUrl": "https://snapshot.box/#/s:jpeg%E2%80%99d.eth/proposal/0x5e63fc56d5939644164e5e99339b02c7fce3c9b51db4639b42dcc4bdf9fe8f31",
+      "sourceLabel": "JPEG'd Snapshot",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2200,8 +2200,8 @@
       "peakMcapUsd": 50493989,
       "epitaph": "Second planting failed too",
       "obituary": "The original Beanstalk was drained of $182M in a flash-loan governance attack in April 2022. Undeterred, the team relaunched on Arbitrum with a credit-based model where soil demand and adjustable interest rates (Temperature) were supposed to keep BEAN at $1. It didn't. BEAN slipped below peg in mid-2024 and never came back, proving the design flaw was in the algorithm, not the security. Even Pinto, the community fork that tried the same model on Base, met the same fate.",
-      "sourceUrl": "https://defillama.com/stablecoin/bean",
-      "sourceLabel": "DefiLlama",
+      "sourceUrl": "https://medium.com/@pintodotmoney/gm-7a97943c0336",
+      "sourceLabel": "Pinto Blog",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2277,8 +2277,8 @@
       "peakMcapUsd": 48700000,
       "epitaph": "Too pure for this world",
       "obituary": "The idealist's stablecoin: RAI rejected the dollar peg, embraced 'ungovernance,' and floated freely on pure math and ETH collateral. The team achieved their goal of removing all human governance, then did what the protocol couldn't: moved on to build HAI on Optimism.",
-      "sourceUrl": "https://www.dlnews.com/articles/defi/defi-developer-ameen-soleimani-back-with-new-stablecoin-hai/",
-      "sourceLabel": "DL News",
+      "sourceUrl": "https://x.com/reflexerfinance/status/1932138402130141248",
+      "sourceLabel": "Reflexer on X",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2412,8 +2412,8 @@
       "peakMcapUsd": 32044597,
       "epitaph": "Cultural differences",
       "obituary": "Vesta Finance dissolved after founders proposed to exit citing \"cultural differences.\" Community voted 96% for dissolution; VSTA holders received pro-rata treasury redemptions in USDC and ARB.",
-      "sourceUrl": "https://golden.com/wiki/Vesta_Finance-EKWBMZW",
-      "sourceLabel": "Golden",
+      "sourceUrl": "https://snapshot.org/#/vestafinance.eth/proposal/0x6186acbae6a1b7291a31cf62ee80b07a95ec1de287a0b83a283e16028d421cd8",
+      "sourceLabel": "Vesta Snapshot",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2493,8 +2493,8 @@
       "peakMcapUsd": 23100000,
       "epitaph": "$85M in. A dime back",
       "obituary": "Parrot Protocol raised $85M during Solana's DeFi summer, backed by Alameda Research. Two years and one FTX collapse later, the team held a governance vote to liquidate the $74M treasury and go tokenless. The vote passed 99.8%, allegedly stuffed with insider wallets, and IDO investors got back a dime on the dollar.",
-      "sourceUrl": "https://www.coindesk.com/markets/2023/07/21/defi-project-parrot-puts-fate-of-over-70m-treasury-prt-token-to-vote",
-      "sourceLabel": "CoinDesk",
+      "sourceUrl": "https://www.dlnews.com/articles/defi/parrot-protocol-team-rage-quits-and-wait-for-big-payday/",
+      "sourceLabel": "DL News",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2520,8 +2520,8 @@
       "peakMcapUsd": 11088350,
       "epitaph": "One exploit. 1.28B minted",
       "obituary": "Acala's aUSD lost its peg after a catastrophic exploit in August 2022 minted 1.28 billion unauthorized tokens. Converted to aSEED in July 2023, ceasing to function as a stablecoin.",
-      "sourceUrl": "https://www.coindesk.com/tech/2022/08/15/acalas-stablecoin-falls-99-percent-after-hackers-issue-13-billion-tokens/",
-      "sourceLabel": "CoinDesk",
+      "sourceUrl": "https://wiki.acala.network/acala-exodus-upgrade/ausd-seed-aseed",
+      "sourceLabel": "Acala Wiki",
       "archivedDataAvailable": false,
       "contracts": [],
       "pharosUrl": "https://pharos.watch/cemetery/#ausd-acala-usd-2023-07",
@@ -2596,8 +2596,8 @@
       "peakMcapUsd": 42500000,
       "epitaph": "Prime Trust was neither",
       "obituary": "USDK did everything right on paper: regulated US trust company, ERC-20 standard, clean audits. But its custodian Prime Trust was secretly gambling client funds on algorithmic stablecoins. When Prime Trust collapsed into receivership (revealed to be $82M short on customer fiat), USDK's 'fully backed' promise became just another line in a bankruptcy filing.",
-      "sourceUrl": "https://www.coindesk.com/policy/2023/06/27/nevada-places-crypto-custodian-prime-trust-into-receivership",
-      "sourceLabel": "CoinDesk",
+      "sourceUrl": "https://www.okx.com/en-us/help/okx-will-delist-btc-usdk-eth-usdk-usdt-usdk-and-support-usdk-to-usdt-token-migration",
+      "sourceLabel": "OKX",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2645,8 +2645,8 @@
       "peakMcapUsd": 171000000,
       "epitaph": "mStable unstable",
       "obituary": "mStable dreamed of unifying the fragmented stablecoin landscape: one meta-stablecoin to swap them all, with built-in yield. It touched $171M, but frictionless stablecoin swaps couldn't compete with DEX aggregators and simple USDC. When the co-founder walked away in early 2023, the DAO chose an honorable death: acquisition by dHedge.",
-      "sourceUrl": "https://www.coindesk.com/business/2023/03/15/defi-exchange-mstable-mulls-over-acquisition-merger-offers",
-      "sourceLabel": "CoinDesk",
+      "sourceUrl": "https://medium.com/mstable/deprecation-of-musd-and-imusd-4ad43275af6c",
+      "sourceLabel": "mStable Blog",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2730,8 +2730,8 @@
       "peakMcapUsd": 30000000,
       "epitaph": "Flash loan, lights out",
       "obituary": "Platypus Finance's stablecoin was backed by LP tokens from its stableswap pools. A flash loan exploit in February 2023 drained $8.5M, collapsing USP's peg. The protocol never recovered and ceased operations.",
-      "sourceUrl": "https://rekt.news/platypus-rekt/",
-      "sourceLabel": "Rekt News",
+      "sourceUrl": "https://www.coindesk.com/markets/2023/02/16/usp-stablecoin-loses-dollar-peg-as-defi-protocol-platypus-suffers-85m-attack",
+      "sourceLabel": "CoinDesk",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2887,8 +2887,8 @@
       "peakMcapUsd": 20100000,
       "epitaph": "Inflation-proof wasn't",
       "obituary": "The first CPI-pegged stablecoin promised inflation protection via yields from Rari Fuse lending markets. When the $80M Fuse exploit wiped out those markets, VOLT lost its yield engine. The Tribe DAO dissolution four months later removed the last collateral backstop; the team pivoted to Ethereum Credit Guild.",
-      "sourceUrl": "https://decrypt.co/97365/volt-protocol-raises-2-million-inflation-resistant-stablecoin",
-      "sourceLabel": "Decrypt",
+      "sourceUrl": "https://medium.com/volt-protocol/volt-floating-rate-update-8ac996782425",
+      "sourceLabel": "Volt Protocol Blog",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -2963,8 +2963,8 @@
       "peakMcapUsd": 61000000,
       "epitaph": "Chained to a falling chain",
       "obituary": "Fantom's native overcollateralized stablecoin required 300-500% FTM collateral ratios, but collapsed alongside the broader DeFi crisis in 2022. Traders exploited the gap between its market price and collateral value, devastating protocols like Scream. The peg broke to $0.50-$0.70 and never recovered, sliding to under $0.10. With the Fantom network itself migrating to Sonic, fUSD became a zombie token, still in wallets but functionally dead.",
-      "sourceUrl": "https://www.reddit.com/r/FantomFoundation/comments/vl97k6/what_has_happened_to_fantom/",
-      "sourceLabel": "Reddit",
+      "sourceUrl": "https://www.theblock.co/news/markets/2022-05-16-defi-lender-left-with-35-million-bad-debt-after-quoting-depegged-stablecoins-at-1-147046",
+      "sourceLabel": "The Block",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -3017,8 +3017,8 @@
       "peakMcapUsd": 80000000,
       "epitaph": "Swept away with Terra",
       "obituary": "The most-used non-USD stablecoin in the Terra ecosystem, powering real Korean e-commerce payments via the CHAI app with millions of transactions. Destroyed alongside UST and LUNA in the May 2022 death spiral. All Terra stablecoins died simultaneously, but KRT was the only alternative peg with meaningful market cap.",
-      "sourceUrl": "https://en.wikipedia.org/wiki/Terra_(blockchain)",
-      "sourceLabel": "Wikipedia",
+      "sourceUrl": "https://docs.terra.money/migration/exchange-migration/",
+      "sourceLabel": "Terra Docs",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -3233,8 +3233,8 @@
       "peakMcapUsd": 300000000,
       "epitaph": "Forked ESD. Same fate",
       "obituary": "A fork of ESD with faster epoch cycles (2 hours vs 8 hours), designed to stabilize more quickly. Instead, the shorter cycles amplified volatility. DSD spiked to $3 during expansion then collapsed to $0.24 in the same month, proving that faster reflexivity cuts both ways.",
-      "sourceUrl": "https://cointelegraph.com/news/dynamic-set-dollar-faces-massive-test-as-stablecoin-falls-as-low-as-27",
-      "sourceLabel": "CoinTelegraph",
+      "sourceUrl": "https://thedailyeconomy.org/article/algorithmic-stablecoins/",
+      "sourceLabel": "The Daily Economy",
       "archivedDataAvailable": false,
       "contracts": [
         {
@@ -3287,8 +3287,8 @@
       "peakMcapUsd": null,
       "epitaph": "The first to try",
       "obituary": "One of the first stablecoins ever created (2014), NuBits held its peg for two years before collapsing when holders dumped it to chase Bitcoin gains. A pioneering cautionary tale about algorithmic pegs backed by volatile assets. (Excluded from timeline view due to early date.)",
-      "sourceUrl": "https://medium.com/reserve-currency/the-end-of-a-stablecoin-the-case-of-nubits-dd1f0fb427a9",
-      "sourceLabel": "Reserve Research",
+      "sourceUrl": "https://www.ecb.europa.eu/pub/pdf/scpops/ecb.op230~d57946be3b.en.pdf",
+      "sourceLabel": "ECB Occasional Paper",
       "archivedDataAvailable": false,
       "contracts": [],
       "pharosUrl": "https://pharos.watch/cemetery/#usnbt-nubits-2018-03",

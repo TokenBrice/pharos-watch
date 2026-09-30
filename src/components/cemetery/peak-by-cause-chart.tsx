@@ -7,6 +7,7 @@ import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tool
 import { useCemeterySelection } from "@/components/cemetery/cemetery-selection-context";
 import { CAUSE_BG_CLASS, CAUSE_TEXT_FILL_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
 import { cn } from "@/lib/utils";
+import styles from "./cemetery-below-fold.module.css";
 
 export interface PeakDotDatum {
   id: string;
@@ -68,8 +69,11 @@ function tickLabel(value: number): string {
 }
 
 function gutterLabel(lane: PeakLaneDatum): string {
-  const unrecorded = lane.unrecordedCount > 0 ? ` (+${lane.unrecordedCount} n/r)` : "";
-  return `med ${lane.medianLabel ?? "n/r"} · n=${lane.n}${unrecorded}`;
+  return `med ${lane.medianLabel ?? "n/r"} · n=${lane.n}${unrecordedLabel(lane)}`;
+}
+
+function unrecordedLabel(lane: PeakLaneDatum): string {
+  return lane.unrecordedCount > 0 ? ` (+${lane.unrecordedCount} n/r)` : "";
 }
 
 interface PlacedDot {
@@ -108,13 +112,15 @@ function buildGeometry(lanes: readonly PeakLaneDatum[]) {
     laneStart.push(dots.length);
     const center = laneIndex * LANE_HEIGHT + LANE_CENTER;
     lane.dots.forEach((dot, indexInLane) => {
+      const unit = jitterUnit(dot.id);
       dots.push({
         dot,
         cause: lane.cause,
         laneIndex,
         indexInLane,
         x: x(dot.peak),
-        y: center + jitterUnit(dot.id) * (dot.labelled ? LABELLED_JITTER : JITTER),
+        // Labelled dots only drop below the lane line: their symbol above the dot stays clear of the lane label.
+        y: center + (dot.labelled ? Math.abs(unit) * LABELLED_JITTER : unit * JITTER),
         r: dot.labelled ? LABELLED_RADIUS : DOT_RADIUS,
       });
     });
@@ -279,7 +285,9 @@ export function PeakByCauseChart({
                   <text key={lane.cause} x={0} y={laneIndex * LANE_HEIGHT + 12} className="lg:hidden">
                     <tspan className="fill-foreground text-xs font-medium">{CAUSE_META[lane.cause].label}</tspan>
                     <tspan dx={6} className="fill-muted-foreground font-mono text-[10.5px]">
-                      {gutterLabel(lane)}
+                      {`med ${lane.medianLabel ?? "n/r"} · n=${lane.n}`}
+                      {/* The unrecorded count would run past the plot on phones; the footnote and data table carry it. */}
+                      {lane.unrecordedCount > 0 ? <tspan className="hidden sm:inline">{unrecordedLabel(lane)}</tspan> : null}
                     </tspan>
                   </text>
                 ))}
@@ -446,7 +454,7 @@ export function PeakByCauseChart({
           </summary>
           <ChartDataTable
             srOnly={false}
-            className="mt-2 overflow-x-auto"
+            className={cn(styles.dataTable, "mt-2 overflow-x-auto")}
             caption="Recorded peak market cap by cause: records with and without a recorded peak, the median and the largest."
             data={lanes}
             columns={COLUMNS}

@@ -1,0 +1,59 @@
+/*
+ * Layout rules for the cemetery sections below the hero that utilities cannot
+ * express: subgrid alignment across fact cells and cause columns, and the
+ * chart data tables' caption.
+ */
+
+/*
+ * Key facts: every cell spans three rows of the parent grid (label, figure,
+ * detail), so the figures in a row of cells line up even when one label wraps.
+ */
+.fact {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0.375rem;
+  align-content: start;
+}
+
+.fact > dt {
+  align-self: end;
+}
+
+/*
+ * Cause columns from `lg`, where they sit side by side: heading, counts,
+ * definition, peak line and links share rows across the five columns, and
+ * each " · " phrase takes its own line so every column wraps the same way.
+ */
+@media (min-width: 1024px) {
+  .causeColumn {
+    display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    align-content: start;
+  }
+
+  .causeColumn .phrase {
+    display: block;
+  }
+
+  .causeColumn .phraseSeparator {
+    display: none;
+  }
+}
+
+/*
+ * A visible chart data table scrolls sideways on narrow screens; its caption
+ * stays as wide as the visible scroller and in view instead of running on one
+ * line across the whole table.
+ */
+.dataTable {
+  container-type: inline-size;
+}
+
+.dataTable caption {
+  position: sticky;
+  left: 0;
+  width: 100cqi;
+}

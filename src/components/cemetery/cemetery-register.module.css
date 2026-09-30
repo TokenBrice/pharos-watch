@@ -28,6 +28,44 @@
 }
 
 /*
+ * The register sits well below the fold, so the browser skips its rendering
+ * until it nears the viewport; it stays in the DOM, the accessibility tree,
+ * find-in-page and fragment navigation. Until the first render the section
+ * reserves the folded register's measured height (tallest common width in each
+ * band); `auto` then keeps the last rendered height. Paint containment clips to
+ * the section box: nothing inside draws outside it (the table shell has no
+ * shadow and clips its own focus rings).
+ */
+.register {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 1980px;
+}
+
+@media (min-width: 640px) {
+  .register {
+    contain-intrinsic-block-size: auto 1750px;
+  }
+}
+
+@media (min-width: 768px) {
+  .register {
+    contain-intrinsic-block-size: auto 1440px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .register {
+    contain-intrinsic-block-size: auto 1410px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .register {
+    contain-intrinsic-block-size: auto 1370px;
+  }
+}
+
+/*
  * Folding without JS. The server renders every record; rows past the first 25
  * are compact `data-folded` rows that carry their own obituary and source, so
  * `/cemetery/#<id>` shows the record through `:target` alone.
@@ -103,6 +141,25 @@
 @media (min-width: 768px) {
   .mobileCause {
     display: none;
+  }
+}
+
+/*
+ * Died cell on narrow phones: a day-precision date wraps after the day
+ * ("Aug 27," over "2026", a month-precision one after the month), matching the
+ * two-line Coin cell and leaving the name the width. The minimum width (7ch of
+ * the mono figures, half a ch of rounding slack, and the cell padding) holds
+ * "Aug 27," on one line.
+ */
+.died {
+  min-width: calc(7.5ch + 1rem);
+  white-space: normal;
+}
+
+@media (min-width: 480px) {
+  .died {
+    min-width: 0;
+    white-space: nowrap;
   }
 }
 
@@ -244,6 +301,20 @@
 @media (min-width: 768px) {
   .action {
     min-height: 0;
+  }
+}
+
+/*
+ * Contract links keep a 44px touch target below md; the list rises by one row
+ * gap so the first address sits level with its "Contracts" label.
+ */
+.contracts {
+  margin-top: -0.5rem;
+}
+
+@media (min-width: 768px) {
+  .contracts {
+    margin-top: 0;
   }
 }
 

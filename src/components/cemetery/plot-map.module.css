@@ -192,6 +192,13 @@
   bottom: 0;
   background: linear-gradient(180deg, var(--sky-0) 0%, var(--sky-1) 58%, var(--sky-0) 100%);
 }
+/* past the 120 rem main column (> 1920 px) the page margins show beside the sky: fade its sides through the page
+   padding instead of ending on a hard edge */
+@media (min-width: 1921px) {
+  .hero::before {
+    mask-image: linear-gradient(90deg, transparent, #000 var(--page-pad), #000 calc(100% - var(--page-pad)), transparent);
+  }
+}
 .head {
   position: relative;
   z-index: 3;
@@ -416,9 +423,15 @@
 .yearStamp small {
   font-size: 10.5px;
 }
-/* the empty strip's stamp hangs left of its anchor, clear of the thin oldest block's stamp beside it */
+/* the empty strip's stamp hangs left of its anchor, clear of the thin oldest block's stamp beside it; below 1024 px
+   the two anchors stand ~20 px apart, so it hangs 12 px off (clear with a classic scrollbar at 761 px too) */
 .yearStamp[data-empty="true"] {
   transform: translate(calc(-100% - 4px), 7px);
+}
+@media (max-width: 1023px) {
+  .yearStamp[data-empty="true"] {
+    transform: translate(calc(-100% - 12px), 7px);
+  }
 }
 /* figures inside sans text (stamps, chips, at-rest line, margin labels) */
 .mono {
@@ -505,6 +518,24 @@
 .tag[data-on="true"] {
   opacity: 1;
 }
+/* no candidate spot clear of the labels, the figure, the toolbar or the card: the tag stays out */
+.tag[data-blocked] {
+  opacity: 0;
+}
+/* a hovered or focused colossus: its chip (shown from 1024 px, not while zoomed or under the card) lifts and already
+   says what the tag would, so the tag stays out */
+.chip[data-hot="true"] {
+  border-color: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+@media (min-width: 1024px) {
+  .hero:not([data-zooming="true"]) .overlay:has(> .chip[data-hot="true"]:not([data-covered])) > .tag {
+    opacity: 0;
+  }
+}
+/* a label the docked card covers hides whole (with its leader) instead of showing cut in half */
+.overlay > [data-covered] {
+  visibility: hidden;
+}
 
 /* zoom (fix E): while a section is zoomed the header block, figure, signposts, stamps and chips hide (visibility, so
    they also leave the tab order) and the toolbar row takes the frame top; the beam fades out */
@@ -570,16 +601,35 @@
 }
 
 /* ------------------------------------------------------------------ inspector + record card */
-/* 761–1279 px: in flow below the plan (pinned only). ≥ 1280 px: docked beside its grave; the island sets left, top
-   and max-height from `placeInspectorCard` and draws the hairline connector. A hover preview never takes the pointer. */
+/* 761–1279 px: in flow below the plan (pinned only), scrolled into view clear of the fixed bottom nav (< 1024 px) and
+   the Feedback button. ≥ 1280 px: docked beside its grave; the island sets left, top and max-height from
+   `placeInspectorCard` and draws the hairline connector. A hover preview never takes the pointer. */
 .inspector {
   position: relative;
   z-index: 6;
   max-width: 720px;
   margin: 8px 0 0;
+  scroll-margin-top: 120px;
+  scroll-margin-bottom: calc(var(--mobile-bottom-nav-safe-height, 4rem) + 16px);
 }
 .inspector[data-preview="true"] {
   pointer-events: none;
+}
+/* landscape phones (desktop layer, < 1024 px wide, ≤ 500 px tall): the in-flow card fits the band between the 60 px
+   sticky header and the bottom nav and scrolls as a whole (its obituary no longer scrolls on its own inside it) */
+@media (max-width: 1023px) and (max-height: 500px) {
+  .inspector {
+    max-height: calc(100dvh - 68px - var(--mobile-bottom-nav-safe-height, 4rem) - 8px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 10px;
+    scroll-margin-top: 68px;
+    scroll-margin-bottom: calc(var(--mobile-bottom-nav-safe-height, 4rem) + 8px);
+  }
+  .inspector .cardObituaryFull {
+    max-height: none;
+    overflow: visible;
+  }
 }
 @media (min-width: 1280px) {
   .inspector {
@@ -919,9 +969,13 @@
 .map .rock-s {
   fill: var(--rock-s);
 }
+/* Footstone glyphs (€ ¥ ∿ ◇). No font in the mono stack draws the VAR peg's "∿", so every browser falls back to a
+   system font for it; on macOS that platform fallback search took ~12 ms of the first layout (~48 ms at 4× CPU) and
+   lands on Apple Symbols anyway. Naming it after the stack resolves "∿" by a plain family lookup: same font, same
+   pixels on macOS, no effect where the family is absent. */
 .map .glyph {
   fill: var(--inscr);
-  font-family: var(--plot-mono);
+  font-family: var(--plot-mono), "Apple Symbols";
   font-weight: 700;
 }
 
@@ -1336,14 +1390,27 @@
   }
 }
 
-/* ------------------------------------------------------------------ legend: encoding = field, drawn examples */
+/* ------------------------------------------------------------------ legend: key, then encoding = field, drawn examples */
 .legend {
   margin: 18px 0 0;
   padding: 16px 0 0;
   border-top: 1px solid var(--border);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: 18px 36px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1.35fr);
+  gap: 16px 36px;
+}
+/* the two-line reading key across the columns: quiet sans, the zoom hint one step softer */
+.legendKey {
+  grid-column: 1 / -1;
+  margin: 0;
+  max-width: 110ch;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+.zoomHint {
+  display: block;
+  color: var(--muted-foreground);
 }
 .legend .grave {
   cursor: default;
@@ -1426,21 +1493,37 @@
 .legend .afterSteps {
   margin-top: 8px;
 }
-/* the second and third columns: a disclosure on phones, always open and summary-less above them */
+/* the finer marks: a disclosure on phones, always open and summary-less above them */
 .legendMore > summary {
   display: none;
-}
-.moreGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 36px;
 }
 @media (max-width: 1023px) {
   .legend {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .moreGrid {
-    grid-template-columns: 1fr;
+  .legendMore {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 761px) and (max-width: 1023px) {
+  .legendMore ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 36px;
+  }
+}
+/* the legend describes the plan the reader sees: the desktop geography (gate, lighthouse, cypresses, hover) above
+   760 px, the portrait's columns, rows and taps below; phones also have no signposts to select (the portrait column
+   heads do not zoom). `display: none` keeps the other wording out of the accessibility tree too. */
+.onPhone {
+  display: none;
+}
+@media (max-width: 760px) {
+  .zoomHint,
+  .onWide {
+    display: none;
+  }
+  .onPhone {
+    display: inline;
   }
 }
 
@@ -1452,15 +1535,28 @@
   position: relative;
   margin: 4px 0 0 36px;
 }
-.colHead {
+/* each slot is exactly its column; the plate inside spans it, and a plate whose label is wider than its column
+   (one-slot Regulatory: 16–20 px on phones; "Counter-" at 320 px) grows to the label's min-content (soft hyphens
+   still break) centred on the column, the last column rightwards into the plan's free top-right corner */
+.colSlot {
   position: absolute;
   bottom: 0;
+  display: flex;
+  justify-content: center;
+}
+.colSlot:last-child {
+  justify-content: flex-start;
+}
+.colHead {
+  flex: none;
+  width: 100%;
+  min-width: min-content;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   gap: 1px;
-  padding: 3px 1px 4px;
+  padding: 2px 1px 3px;
   border-radius: 3px 3px 0 0;
   border: 1px solid var(--plate-border);
   border-bottom: 0;
@@ -1489,9 +1585,17 @@
   font-size: 12.5px;
   font-weight: 600;
 }
+/* two-line labels ("Counter-party") set solid so the tallest plate fits the 40 px header row */
 .colHead .lb {
   font-size: 9.5px;
+  line-height: 1;
   hyphens: manual;
+}
+/* below 360 px the columns are ~13 % narrower: untracked labels keep the widened plates apart */
+@media (max-width: 359px) {
+  .colHead .lb {
+    letter-spacing: 0;
+  }
 }
 .portraitPlan {
   position: relative;
@@ -1524,7 +1628,11 @@
   font-size: 10.5px;
   color: var(--muted-foreground);
 }
+/* the empty strip's label is the longest ("2019–20" over "none recorded"): it takes 12 px of the page padding so
+   the range stays on one line and every word fits its box */
 .yr[data-empty="true"] {
+  left: -48px;
+  width: 44px;
   font-size: 10px;
 }
 .yr[data-empty="true"] small {
@@ -1608,17 +1716,41 @@
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  .legend > div:first-child ul {
+  .legend > div:first-of-type ul {
     grid-template-columns: 1fr 1fr;
     gap: 2px 10px;
   }
+  /* a disclosure that looks like one: foreground label and a chevron (the native marker goes with display: flex) */
   .legendMore > summary {
     display: flex;
     align-items: center;
+    gap: 8px;
     min-height: 44px;
     cursor: pointer;
+    font-weight: 600;
     font-size: 12.5px;
-    color: var(--muted-foreground);
+    color: var(--foreground);
+    list-style: none;
+  }
+  .legendMore > summary::-webkit-details-marker {
+    display: none;
+  }
+  .legendMore > summary::after {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+  }
+  .legendMore[open] > summary::after {
+    transform: translateY(2px) rotate(-135deg);
+  }
+  .legendMore > summary:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--foreground) 60%, transparent);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
   .legend li {
     grid-template-columns: 44px 1fr;

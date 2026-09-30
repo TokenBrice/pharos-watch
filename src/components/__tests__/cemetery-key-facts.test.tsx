@@ -104,17 +104,17 @@ describe("CemeteryKeyFacts", () => {
     const { container } = render(<CemeteryKeyFacts stats={makeStats()} datasetMeta={DATASET_META} />);
 
     const rail = container.querySelector("#key-facts p");
-    expect(rail?.textContent).toBe(
-      "Updated Sep 23, 2026 · Latest recorded death Aug 27, 2026 · Dataset schema 1.1 · checksum 55a1b478",
+    expect(rail?.textContent?.replace(/\u00a0/g, " ")).toBe(
+      "Latest record added Sep 23, 2026 · Latest recorded death Aug 27, 2026 · Dataset schema 1.1 · checksum 55a1b478",
     );
     expect(container.textContent).not.toMatch(/through/i);
   });
 
-  it("omits the Updated clause when no record carries a recordedAt", () => {
+  it("omits the latest-record-added clause when no record carries a recordedAt", () => {
     const { container } = render(<CemeteryKeyFacts stats={makeStats({ updatedAt: null })} datasetMeta={DATASET_META} />);
 
     const rail = container.querySelector("#key-facts p");
-    expect(rail?.textContent).toBe("Latest recorded death Aug 27, 2026 · Dataset schema 1.1 · checksum 55a1b478");
+    expect(rail?.textContent?.replace(/\u00a0/g, " ")).toBe("Latest recorded death Aug 27, 2026 · Dataset schema 1.1 · checksum 55a1b478");
     expect(container.textContent).not.toMatch(/through/i);
   });
 });

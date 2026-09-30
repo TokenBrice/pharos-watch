@@ -227,6 +227,7 @@ export type CemeteryPatternKey =
   | "abandoned-most-common"
   | "counterparty-rising"
   | "top-two-concentration"
+  | "largest-not-collapse"
   | "deaths-more-frequent";
 
 export interface CemeteryPattern {
@@ -434,6 +435,18 @@ function buildPatterns(stats: Omit<CemeteryStats, "patterns" | "heroSubline">): 
       key: "top-two-concentration",
       headline: "Two coins hold most of the recorded peak",
       body: `${topTwo.symbols[0]} (${formatCemeteryPeak(topTwo.peaks[0])}) and ${topTwo.symbols[1]} (${formatCemeteryPeak(topTwo.peaks[1])}) account for ${formatPercentFromRatio(topTwo.share, 1)} of the ${formatCemeteryPeak(topTwo.recordedTotal)} combined peak market cap, recorded for ${topTwo.knownCount} of ${topTwo.total} records.${medianSentence}`,
+      registerFilter: { sort: "peak", dir: "desc" },
+    });
+  }
+
+  // The largest recorded peak was discontinued rather than collapsed: size at the top is not a measure of failure.
+  const largestEnded = largestAmong(stats, true);
+  const largestCollapse = largestAmong(stats, false);
+  if (largestEnded && largestCollapse && largestEnded.peak > largestCollapse.peak) {
+    patterns.push({
+      key: "largest-not-collapse",
+      headline: "The largest coins did not all collapse",
+      body: `The largest recorded peak, ${largestEnded.symbol} (${formatCemeteryPeak(largestEnded.peak)}), was ended by ${DISCONTINUED_BY[largestEnded.cause]}; the largest collapse was ${largestCollapse.symbol} (${formatCemeteryPeak(largestCollapse.peak)}).`,
       registerFilter: { sort: "peak", dir: "desc" },
     });
   }
@@ -688,7 +701,10 @@ const DISCONTINUED_BY: Partial<Record<CauseOfDeath, string>> = {
 };
 
 /** Largest recorded peak among discontinued (or collapsed) causes; lanes are already peak-descending. */
-function largestAmong(stats: CemeteryStats, discontinued: boolean): (CemeteryPeakDot & { cause: CauseOfDeath }) | null {
+function largestAmong(
+  stats: Pick<CemeteryStats, "peakByCause">,
+  discontinued: boolean,
+): (CemeteryPeakDot & { cause: CauseOfDeath }) | null {
   let best: (CemeteryPeakDot & { cause: CauseOfDeath }) | null = null;
   for (const lane of stats.peakByCause.lanes) {
     if ((DISCONTINUED_BY[lane.cause] !== undefined) !== discontinued) continue;
@@ -757,7 +773,7 @@ export function buildCemeteryFaq(stats: CemeteryStats): CemeteryFaqItem[] {
 
   items.push({
     question: "How does a stablecoin enter the cemetery?",
-    answer: `A stablecoin is included when it had a public market and at least one primary public source documents its failure or discontinuation. There is no size floor; peak market cap is recorded when known. Records arrive two ways: ${stats.trackedCount} coins Pharos tracked live and froze after they ended, and ${stats.curatedCount} curated records documented from public sources.`,
+    answer: `A stablecoin is included when it had a public market and public sources show it failed or was discontinued: an announcement, filing, governance record or press report, or, for a coin that faded without one, market data showing its collapse. There is no size floor; peak market cap is recorded when known. Records arrive two ways: ${stats.trackedCount} coins Pharos tracked live and froze after they ended, and ${stats.curatedCount} curated records documented from public sources.`,
   });
 
   items.push({

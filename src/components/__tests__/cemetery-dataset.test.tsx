@@ -52,13 +52,13 @@ describe("CemeteryDataset", () => {
 describe("buildCemeteryDatasetCitation", () => {
   const meta = { ...CEMETERY_DATASET_META, schemaVersion: "2.0", rowCount: 7, license: "MIT", updatedAt: "2026-01-05" };
 
-  it("cites schema, record count, update day and the absolute JSON URL", () => {
+  it("cites schema, record count, latest-record day and the absolute JSON URL", () => {
     expect(buildCemeteryDatasetCitation(meta)).toBe(
-      `Pharos, "Stablecoin Cemetery Dataset," schema 2.0, 7 records, updated Jan 5, 2026. ${SITE_ORIGIN}/datasets/stablecoin-cemetery.json (MIT).`,
+      `Pharos, "Stablecoin Cemetery Dataset," schema 2.0, 7 records, latest record added Jan 5, 2026. ${SITE_ORIGIN}/datasets/stablecoin-cemetery.json (MIT).`,
     );
   });
 
-  it("drops the update clause when the export has no updatedAt", () => {
+  it("drops the latest-record clause when the export has no updatedAt", () => {
     expect(buildCemeteryDatasetCitation({ ...meta, updatedAt: null })).toBe(
       `Pharos, "Stablecoin Cemetery Dataset," schema 2.0, 7 records. ${SITE_ORIGIN}/datasets/stablecoin-cemetery.json (MIT).`,
     );

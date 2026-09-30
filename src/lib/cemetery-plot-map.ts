@@ -1276,14 +1276,21 @@ export function plotBoxToFrameRect(box: PlotBox, viewBox: readonly number[], sca
 /**
  * Hover tag (R6): tries above, above-right, above-left, right, left, below the stone and takes the first
  * position clear of every obstacle (signposts, figure, plaque, zoom button, inspector; padded 3 px) inside the
- * frame, else the one with the fewest hits. `collisions` is −1 when no candidate fits the frame.
+ * frame and below `top` (the sticky chrome's edge in frame px, when the frame is scrolled under it), else the one
+ * with the fewest hits. `collisions` is −1 when no candidate fits.
  */
-export function placePlotTag(input: { stone: PlotRect; tag: { width: number; height: number }; frame: { width: number; height: number }; obstacles: readonly PlotRect[] }): {
+export function placePlotTag(input: {
+  stone: PlotRect;
+  tag: { width: number; height: number };
+  frame: { width: number; height: number };
+  obstacles: readonly PlotRect[];
+  top?: number;
+}): {
   x: number;
   y: number;
   collisions: number;
 } {
-  const { stone, tag, frame } = input;
+  const { stone, tag, frame, top = 0 } = input;
   const tw = tag.width;
   const th = tag.height;
   const cx = (stone.left + stone.right) / 2;
@@ -1300,7 +1307,7 @@ export function placePlotTag(input: { stone: PlotRect; tag: { width: number; hei
   let chosen = cands[0];
   let bestHits = Infinity;
   for (const [x, y] of cands) {
-    if (x < 0 || y < 0 || x + tw > frame.width || y + th > frame.height) continue;
+    if (x < 0 || y < Math.max(0, top) || x + tw > frame.width || y + th > frame.height) continue;
     const hits = obstacles.filter((o) => x < o.x1 && x + tw > o.x0 && y < o.y1 && y + th > o.y0).length;
     if (hits < bestHits) {
       bestHits = hits;
@@ -1411,9 +1418,11 @@ export function skyTopLeftOf(map: DesktopPlotMap, x: number): number {
  * is visible below the sticky chrome, clear of the Feedback button, joined to the medallion by a hairline connector.
  * `avoid` lists volumes and text the card must not cover (the colossi when another grave is read, the route head): on
  * either side the card takes the free run of the band nearest the grave (the side with more room wins a tie),
- * shortening (it scrolls) down to 220 px; if no run is tall enough it keeps the plain placement. With the frame
- * scrolled (nearly) out of view the card stays by its grave inside the frame instead of following the viewport.
- * Viewport px.
+ * shortening (it scrolls) down to 220 px; if no run is tall enough it keeps the plain placement. `soft` lists labels
+ * (signpost plates, colossus chips, year stamps): side, run and height stay as found, but within its run (and up to
+ * 48 px further from the grave) the card slides to cover as few labels as it can, nearest the grave on a tie; a
+ * label never costs the card height (the caller hides whatever the card still covers). With the frame scrolled
+ * (nearly) out of view the card stays by its grave inside the frame instead of following the viewport. Viewport px.
  */
 export function placeInspectorCard(input: {
   stone: PlotRect;
@@ -1422,8 +1431,9 @@ export function placeInspectorCard(input: {
   card: { width: number; height: number };
   viewport: { width: number; height: number };
   avoid?: readonly PlotRect[];
+  soft?: readonly PlotRect[];
 }): { x: number; y: number; maxHeight: number; connector: { x1: number; y1: number; x2: number; y2: number } } {
-  const { stone, frame, medal, card, viewport, avoid = [] } = input;
+  const { stone, frame, medal, card, viewport, avoid = [], soft = [] } = input;
   const w = card.width;
   const minH = Math.min(card.height, 220);
   const visibleTop = Math.max(PLOT_LAYOUT.chromeTop, frame.top);
@@ -1459,9 +1469,33 @@ export function placeInspectorCard(input: {
       spot = { x, top: run[0], bottom: run[1], gap: gap(run) };
     }
   }
-  const { x, top, bottom } = spot ?? { x: sides[0], top: topMin, bottom: bottomOf(sides[0]) };
+  const { x: x0, top, bottom } = spot ?? { x: sides[0], top: topMin, bottom: bottomOf(sides[0]) };
   const h = Math.min(card.height, bottom - top);
-  const y = Math.min(Math.max(mid - h / 2, top), bottom - h);
+  const centred = Math.min(Math.max(mid - h / 2, top), bottom - h);
+  // labels: slide along the run (and away from the grave) to the spot covering the fewest, nearest the grave on a tie
+  let x = x0;
+  let y = centred;
+  if (soft.length) {
+    const away = x0 >= stone.right ? 1 : -1;
+    let best = { covered: Infinity, cost: Infinity };
+    for (let dx = 0; dx <= 48; dx += 12) {
+      const cx = x0 + away * dx;
+      if (dx && (cx < frame.left + 4 || cx + w > frame.right - 4)) break;
+      const ys = [centred, top, bottom - h, ...soft.flatMap((r) => [r.bottom + 8, r.top - 8 - h])].map((v) => Math.min(Math.max(v, top), bottom - h));
+      for (const cy of ys) {
+        const rect = { left: cx, top: cy, right: cx + w, bottom: cy + h };
+        // the run already keeps the unshifted column clear; a shifted one re-checks the hard obstacles and the band
+        if (dx && (cy + h > bottomOf(cx) || avoid.some((r) => rectsHit(rect, r, 8)))) continue;
+        const covered = soft.filter((r) => rectsHit(rect, r, 0)).length;
+        const cost = Math.abs(cy - centred) + dx;
+        if (covered < best.covered || (covered === best.covered && cost < best.cost)) {
+          best = { covered, cost };
+          x = cx;
+          y = cy;
+        }
+      }
+    }
+  }
   const ex = x > medal[0] ? x : x + w;
   const ey = Math.min(Math.max(medal[1], y + 14), y + h - 14);
   return { x, y, maxHeight: h, connector: { x1: medal[0], y1: medal[1], x2: ex, y2: ey } };
