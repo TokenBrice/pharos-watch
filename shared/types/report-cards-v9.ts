@@ -232,7 +232,7 @@ function sameJson(left: unknown, right: unknown): boolean {
   const leftKeys = Object.keys(leftRecord).filter((key) => leftRecord[key] !== undefined);
   const rightKeys = Object.keys(rightRecord).filter((key) => rightRecord[key] !== undefined);
   if (leftKeys.length !== rightKeys.length) return false;
-  return leftKeys.every((key) => Object.hasOwn(rightRecord, key) && sameJson(leftRecord[key], rightRecord[key]));
+  return leftKeys.every((key) => Object.prototype.hasOwnProperty.call(rightRecord, key) && sameJson(leftRecord[key], rightRecord[key]));
 }
 
 function isUniqueSorted(values: readonly string[]): boolean {
