@@ -60,8 +60,8 @@ function formatSupplyTrendPercent(current: number | null, previous: number | nul
   return current == null || previous == null ? "—" : formatTrendPercent(current, previous);
 }
 
-function formatTrendPercent(current: number, previous: number | null): string {
-  return previous == null ? "—" : formatPercentChange(current, previous);
+function formatTrendPercent(current: number | null, previous: number | null): string {
+  return current == null || previous == null ? "—" : formatPercentChange(current, previous);
 }
 
 function formatSupplyRestoredAsOf(coinData?: StablecoinData): string | null {
@@ -171,7 +171,7 @@ interface HeroMarketCapMetricProps {
   variant: HeroMetricVariant;
   coin: StablecoinMeta;
   coinData?: StablecoinData;
-  mcap: number;
+  mcap: number | null;
   safePrevDay: number | null;
   prevDayTrendClass: string;
 }
@@ -194,7 +194,7 @@ function HeroMarketCapMetric({
           </span>
         }
       >
-        <p className="pharos-numeric text-[2rem] font-semibold leading-none tracking-tight">{formatCurrency(mcap)}</p>
+        <p className="pharos-numeric text-[2rem] font-semibold leading-none tracking-tight">{mcap != null ? formatCurrency(mcap) : "—"}</p>
         {coin.flags.pegCurrency !== "USD" ? (
           <p className="mt-2 text-[11px] text-muted-foreground">USD-normalized</p>
         ) : null}
@@ -206,7 +206,7 @@ function HeroMarketCapMetric({
   return (
     <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>Market Cap</p>
-      <p className="font-bold pharos-numeric tracking-tight text-lg">{formatCurrency(mcap)}</p>
+      <p className="font-bold pharos-numeric tracking-tight text-lg">{mcap != null ? formatCurrency(mcap) : "—"}</p>
       {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-[11px] text-muted-foreground">USD-normalized</p>}
       <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400" />
       <p className={`mt-1 text-xs pharos-numeric ${prevDayTrendClass}`}>
@@ -363,7 +363,7 @@ function MetricChip({
     // reserved for interactive controls; accentClass stays a data-driven
     // severity border (allowed carve-out).
     <div
-      className={`rounded-lg border border-border/60 bg-background/45 flex w-full min-w-0 items-center justify-start gap-1.5 px-2.5 py-1.5 ${accentClass ?? ""}`}
+      className={`rounded-lg border border-border/60 bg-background/45 flex w-full min-w-0 flex-wrap items-center justify-start gap-1.5 px-2.5 py-1.5 ${accentClass ?? ""}`}
     >
       {label ? (
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
@@ -376,7 +376,7 @@ function MetricChip({
       </span>
       {isEmpty && <span className="sr-only">data unavailable</span>}
       {subValue && !mobileHideSub && (
-        <span className="min-w-0 truncate text-[11px] text-muted-foreground">{subValue}</span>
+        <span className="shrink-0 whitespace-nowrap text-[11px] text-muted-foreground">{subValue}</span>
       )}
     </div>
   );

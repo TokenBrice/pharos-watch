@@ -39,6 +39,52 @@ function resolveEntry(entry: unknown, key: string): FrontendAnyApiQueryDescripto
 }
 
 describe("frontend API query descriptors", () => {
+  it("prefers current admitted USD supply over a new listing's native-only history", () => {
+    const summary = projectStablecoinLiveSummary({
+      price: 0.99985, priceSource: "coingecko", priceConfidence: "single-source",
+      currentCirculatingUSD: { peggedUSD: 477_309_888.38 },
+      currentCirculatingPrevDayUSD: {}, currentSupplyObservedAt: 1_790_793_000,
+      tokens: [{ date: 1_790_726_400, totalCirculating: { peggedUSD: 454_459_687.73 } }],
+    });
+    expect(summary.circulating).toEqual({ peggedUSD: 477_309_888.38 });
+    expect(summary.circulatingPrevDay).toEqual({});
+    expect(summary.supplyObservedAt).toBe(1_790_793_000);
+    expect(summary.nativeSupply).toEqual({ current: 454_459_687.73, prevWeek: null, prevMonth: null });
+  });
+
+  it.each([null, 0, -1])("does not value missing USD buckets at an unavailable price %s", (price) => {
+    const summary = projectStablecoinLiveSummary({
+      price, priceSource: "coingecko",
+      tokens: [{ date: 1_790_726_400, totalCirculating: { peggedUSD: 100 } }],
+    });
+    expect(summary.circulating).toEqual({});
+  });
+
+  it("falls back to native supply valued only at a finite positive observed price", () => {
+    const summary = projectStablecoinLiveSummary({
+      price: 2, priceSource: "coingecko", priceConfidence: "high",
+      tokens: [{ date: 1_790_726_400, totalCirculating: { peggedEUR: 100 } }],
+    });
+    expect(summary.circulating).toEqual({ peggedEUR: 200 });
+  });
+
+  it("keeps explicit current zero ahead of older USD history", () => {
+    const summary = projectStablecoinLiveSummary({
+      currentCirculatingUSD: { peggedUSD: 0 },
+      tokens: [{ date: 1_790_726_400, totalCirculatingUSD: { peggedUSD: 100 } }],
+    });
+    expect(summary.circulating).toEqual({ peggedUSD: 0 });
+  });
+
+  it("does not value native-only history at nominal par", () => {
+    const summary = projectStablecoinLiveSummary({
+      price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+      tokens: [{ date: 1_790_726_400, totalCirculating: { peggedUSD: 100 } }],
+    });
+    expect(summary.circulating).toEqual({});
+  });
+
+
   it("withholds nominal observations while retaining the separate reference", () => {
     const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" as const };
     const summary = projectStablecoinLiveSummary({

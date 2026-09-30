@@ -285,6 +285,19 @@ function renderHero(overrides: HeroBuilderOverrides = {}): string {
 }
 
 describe("HeroCard", () => {
+  it("renders unavailable market cap and supply without a false zero in static markup", () => {
+    const html = renderHero({
+      coinData: { circulating: {}, circulatingPrevDay: {} },
+      mcap: null,
+      supply: null,
+      prevDay: null,
+      nativeSupply: null,
+    });
+    expect(html).not.toContain("$0.00");
+    expect(html).toMatch(/Market Cap<\/p><p[^>]*>—<\/p>/);
+    expect(html).toMatch(/Supply<\/p><p[^>]*>—/);
+  });
+
   it.each([
     { score: null, pools: 0, value: "—" },
     { score: null, pools: 3, value: "—" },

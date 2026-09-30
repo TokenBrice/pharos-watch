@@ -4,7 +4,7 @@ import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/dat
 import type { ChainsResponse } from "@shared/types/chains";
 import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { sumPegBucketsOrNull } from "@shared/lib/supply";
+import { admitSupplyBuckets, sumPegBucketsOrNull } from "@shared/lib/supply";
 import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
@@ -157,6 +157,18 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     undefined,
   );
   const latestDate = latest?.date ?? null;
+  const hasCurrentSupply = admitSupplyBuckets(detail.currentCirculatingUSD).status === "observed";
+  let circulating = hasCurrentSupply ? detail.currentCirculatingUSD! : latest?.totalCirculatingUSD ?? {};
+  // Older detail responses may have only native history. Never assume a $1 peg.
+  if (admitSupplyBuckets(circulating).status !== "observed") {
+    const native = latest?.totalCirculating;
+    const price = isObservedPrice(detail) ? detail.price : null;
+    circulating = native && admitSupplyBuckets(native).status === "observed" &&
+      typeof price === "number" && Number.isFinite(price) && price > 0
+      ? Object.fromEntries(Object.entries(native).map(([peg, amount]) => [peg, amount * price]))
+      : {};
+    if (admitSupplyBuckets(circulating).status !== "observed") circulating = {};
+  }
 
   return StablecoinLiveSummarySchema.parse({
     price: detail.price ?? null,
@@ -169,9 +181,10 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     ...(detail.nominalPriceReference ? { nominalPriceReference: detail.nominalPriceReference } : {}),
     consensusSources: detail.consensusSources,
     agreeSources: detail.agreeSources,
-    supplyObservedAt: latestDate,
-    circulating: latest?.totalCirculatingUSD ?? {},
-    circulatingPrevDay: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
+    supplyObservedAt: hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : latestDate,
+    circulating,
+    circulatingPrevDay: hasCurrentSupply ? detail.currentCirculatingPrevDayUSD ?? {}
+      : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
     circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculatingUSD"),
     circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400, "totalCirculatingUSD"),
     nativeSupply: {
