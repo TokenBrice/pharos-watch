@@ -72,6 +72,8 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "captured 2026-09-11 from the live GLDT swap canister's get_swap_configs candid reply; JSON cannot carry an HTML-comment capture header",
   "accountable-captures.json":
     "verbatim Apyx dashboard scalars captured 2026-07-27T22:45:43Z (payload ts 1785192343737), moved out of accountable.test.ts; JSON cannot carry an HTML-comment capture header",
+  "ripio-wfiat-june-2026.json":
+    "captured 2026-09-30 from Ripio's official HubSpot attestation index (payload capturedAt 2026-09-30, June 30 reports); JSON cannot carry an HTML-comment capture header",
 };
 
 /**
