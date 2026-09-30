@@ -173,7 +173,7 @@ export function CemeteryAnalysis({ stats }: { stats: CemeteryStats }) {
               kicker="Size"
               title="Peak market cap by cause"
               headlines={headlinesFor(PEAK_HEADLINE_KEYS)}
-              description="Each dot is one death with a recorded peak, on a log scale. The dark tick marks each cause's median. Select a dot to open its row in the register."
+              description="Each dot is one death with a recorded peak, on a log scale. The vertical tick marks each cause's median. Select a dot to open its row in the register."
               legend={
                 <>
                   <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-full bg-muted-foreground">
