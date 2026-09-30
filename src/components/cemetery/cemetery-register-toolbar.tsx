@@ -1,66 +1,11 @@
 import { useState } from "react";
 import { CAUSE_META, type CauseOfDeath } from "@shared/lib/cause-of-death";
-import { MECHANISM_ARCHETYPE_SHORT_LABELS } from "@shared/lib/classification";
 import { FilterSearchInput } from "@/components/filter-search-input";
-import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
-import {
-  CEMETERY_PEAK_BUCKET_LABELS,
-  CEMETERY_RECORD_FILTER_LABELS,
-  type CemeteryRegisterFilters,
-} from "@/lib/cemetery-selection";
-import type { CemeteryStats } from "@/lib/cemetery-stats";
+import { causeColorVars } from "@/lib/cemetery-cause-style";
+import type { RegisterFacetKey, RegisterFilterOptions } from "@/lib/cemetery-register";
+import type { CemeteryRegisterFilters } from "@/lib/cemetery-selection";
 import { cn } from "@/lib/utils";
-import { CemeteryRegisterCauseDot } from "./cemetery-register-cause-dot";
-
-export type RegisterFacetKey = "year" | "peg" | "mechanism" | "record" | "peak";
-
-interface FacetOption {
-  value: string;
-  label: string;
-  /** Global count across every record, so the numbers stay stable while filtering. */
-  count: number;
-}
-
-export interface RegisterFilterOptions {
-  total: number;
-  causes: { cause: CauseOfDeath; count: number }[];
-  facets: Record<RegisterFacetKey, FacetOption[]>;
-}
-
-/** Filter choices with global counts, from the page stats plus the projected rows. */
-export function buildRegisterFilterOptions(stats: CemeteryStats, rows: readonly CemeteryRegisterRow[]): RegisterFilterOptions {
-  const pegCounts = new Map<string, number>();
-  for (const row of rows) pegCounts.set(row.pegCurrency, (pegCounts.get(row.pegCurrency) ?? 0) + 1);
-
-  return {
-    total: stats.total,
-    causes: stats.causes.map(({ cause, count }) => ({ cause, count })),
-    facets: {
-      year: stats.years
-        .filter((year) => year.total > 0)
-        .map((year) => ({ value: String(year.year), label: String(year.year), count: year.total }))
-        .reverse(),
-      peg: [...pegCounts]
-        .sort(([a, countA], [b, countB]) => countB - countA || (a < b ? -1 : a > b ? 1 : 0))
-        .map(([peg, count]) => ({ value: peg, label: peg, count })),
-      mechanism: stats.mechanisms.counts.map(({ archetype, count }) => ({
-        value: archetype,
-        label: MECHANISM_ARCHETYPE_SHORT_LABELS[archetype],
-        count,
-      })),
-      record: [
-        { value: "tracked", label: CEMETERY_RECORD_FILTER_LABELS.tracked, count: stats.trackedCount },
-        { value: "curated", label: CEMETERY_RECORD_FILTER_LABELS.curated, count: stats.curatedCount },
-        {
-          value: "case-study",
-          label: CEMETERY_RECORD_FILTER_LABELS["case-study"],
-          count: rows.filter((row) => row.caseStudy !== null).length,
-        },
-      ],
-      peak: stats.peakBuckets.map(({ key, count }) => ({ value: key, label: CEMETERY_PEAK_BUCKET_LABELS[key], count })),
-    },
-  };
-}
+import styles from "./cemetery-register.module.css";
 
 const FACETS: readonly { key: RegisterFacetKey; label: string; allLabel: string }[] = [
   { key: "year", label: "Year", allLabel: "All years" },
@@ -139,7 +84,7 @@ export function CemeteryRegisterToolbar({
             onClick={() => onCauseChange(cause)}
             className={cn(PILL_CLASS, filters.cause === cause && "pharos-control-pill-active")}
           >
-            <CemeteryRegisterCauseDot cause={cause} />
+            <span aria-hidden="true" className={styles.dot} style={causeColorVars(cause)} />
             {CAUSE_META[cause].label} <span className="pharos-numeric text-[11px] opacity-75">{count}</span>
           </button>
         ))}

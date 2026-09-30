@@ -47,7 +47,7 @@ The gradient runs Discovery → Analytics → Power-user. Drift between adjacent
 - **Theme**: Light theme by default, with the same dense financial-dashboard hierarchy preserved in dark mode
 - **References**: DeFi-native research products with strong data density and practical crypto analytics, but Pharos should not collapse into looking like another interchangeable dashboard
 - **Brand accent**: Frost-blue `#4BC4DE`, sampled from the Figma Market Pulse frame — used sparingly for navigation active states, homepage metrics, and brand touches
-- **Fonts**: the system UI stack for core UI, JetBrains Mono for data figures, and the tracked Bricolage Grotesque face for display. The retained `--font-geist-*` variable names are legacy tokens, not loaded Geist webfonts. Intentional non-core carve-outs include Newsreader serif for editorial/tombstone surfaces, Georgia serif for `AiSummary` and route error treatments, Courier New for Digest/depeg editorial body copy, and the Tape `/timeline/` mono-token wire-service stream.
+- **Fonts**: the system UI stack for core UI, JetBrains Mono for data figures, and the tracked Bricolage Grotesque face for display. The retained `--font-geist-*` variable names are legacy tokens, not loaded Geist webfonts. Intentional non-core carve-outs include Newsreader serif for editorial surfaces and the Cemetery (its `h1`, epitaphs and record cards), Georgia serif for `AiSummary` and route error treatments, Courier New for Digest/depeg editorial body copy, and the Tape `/timeline/` mono-token wire-service stream.
 - **Color use**: Semantic first — color communicates state (health, risk, trend direction), not empty decoration
 - **Design bar**: Avoid generic SaaS sameness; every major surface should feel authored and recognizably Pharos
 
@@ -67,7 +67,7 @@ The gradient runs Discovery → Analytics → Power-user. Drift between adjacent
 4. **Precision as personality** — monospace numbers, exact percentages, named bands — trust through specificity
 5. **Semantic color only** — color communicates state (health, risk, trend), never decoration
 6. **Soften the funnel, not the product**: Onboarding and discovery can welcome with warmer framing and roomier layouts; data surfaces remain crypto-native and practitioner-grade.
-7. **Distinctive, not generic** — Pharos should feel authored and memorable, never like a template or a clone. When a page introduces a metaphor, _draw it_ (Cemetery, Alt-Peg Atlas, Chains Harbor) — but every shape must encode a data field
+7. **Distinctive, not generic** — Pharos should feel authored and memorable, never like a template or a clone. When a page introduces a metaphor, _draw it_ (the Cemetery plot map, Alt-Peg Atlas, Chains Harbor) — but every shape must encode a data field: on the plot map, section is cause of death, plinth steps are peak market cap, weathering is age and a bronze plaque is an archived data page
 8. **Consistency is polish** — premium feel comes from repeated precision in spacing, shell treatment, controls, and empty/error states, not from adding decorative novelty
 
 ### Stablecoin Detail Module Contract
@@ -95,6 +95,7 @@ The lighthouse metaphor is useful only when it communicates data. Decorative nov
 - Page titles use `.pharos-page-title`; compact panel headings use `.pharos-section-title` rather than hero-scale type.
 - `.pharos-kicker` introduces a short category or section label. It is supporting hierarchy, not body copy.
 - Serif and unusually mono-heavy treatments are route-owned exceptions for editorial surfaces, Cemetery, error treatments, AI narrative, and `/timeline/`. Do not spread them into general analytics UI.
+- The Cemetery's Newsreader scope is the route `h1`, epitaphs and the plot-map record card (name, editorial title, epitaph); the register's autopsy epitaph shares it. The drawn plan itself stays sans: signposts and colossus chips use sans small caps, and figures and footstone glyphs use mono.
 - Letter spacing remains neutral for ordinary text. Do not scale font size continuously with viewport width.
 
 ## Color And State
@@ -102,6 +103,7 @@ The lighthouse metaphor is useful only when it communicates data. Decorative nov
 - Use semantic tokens and shared classification/status helpers. Classification labels and colors belong in `shared/lib/classification.ts`.
 - Freeze-event badges, overview seismograph, and per-asset charts share the event descriptor in `shared/lib/classification/badges.ts`, exposed through the classification facade: Freeze/red, Release/emerald, Wipe/amber. Legends and tooltips use `EVENT_LABELS`; chart fills use `EVENT_CHART_COLORS` in both themes. API event keys and chart stacking order are not display labels.
 - Frost blue is the brand accent and a selective point of emphasis, not the default color for every metric.
+- Frost never paints a gradient or a background, with one exception: the Cemetery plot map's drawn beam is a frost gradient from the lantern. On that page frost appears only on the One Beam figure and that beam, which rests on the figure and moves only on interaction.
 - Health, warning, error, freshness, and score colors must represent state consistently in both themes.
 - Never rely on color alone. Pair it with text, position, shape, iconography, or another redundant channel.
 - JavaScript chart colors normally come from the shared runtime maps described in [design-tokens.md](./design-tokens.md), not local hex constants. Intentional local canonical palettes are the market-cap delta colors in `src/components/mcap-chart.tsx`, `PEG_BAND_HEX` in `src/components/peg-deviation-chart.tsx`, and `ANNOTATION_HEX_COLORS` in `src/components/chart-primitives/annotations.tsx`.
@@ -117,6 +119,8 @@ The lighthouse metaphor is useful only when it communicates data. Decorative nov
 ### Feature-page heroes
 
 Feature and reference routes use one signature full-width hero with one frost-blue **One Beam** metric; supporting figures stay neutral unless they encode semantic state. The route owner defines the drawn metaphor and any explicit exception. Learn routes use the light-editorial treatment; Coverage and Funding use the reference treatment. Their route docs own only those route-specific calls.
+
+The Cemetery is the drawn-hero exception. Its hero is the full-width plot map under one sky that runs full-bleed through the page padding; the route head, including the Newsreader `h1`, sits over the plan's empty sky rather than in a separate band, and the One Beam metric is the count of recorded deaths, which the drawn beam rests on. [Cemetery and Compare](./cemetery-and-compare.md#ui-behavior) owns the details.
 
 ## Shared Utility Classes
 

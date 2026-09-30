@@ -9,11 +9,15 @@
  */
 import Link from "next/link";
 import type { ReactElement } from "react";
+import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { getMechanismExplainerPath } from "@shared/lib/classification";
 import { formatDeathDate } from "@shared/lib/format";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getObituaryLead } from "@/lib/cemetery-editorial";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
+import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { digestDisplay } from "@/lib/fonts/digest";
+import { formatRegisterDeathDate } from "./cemetery-register-model";
 import { plotCauseClass } from "./plot-map-shapes";
 import styles from "./plot-map.module.css";
 
@@ -35,10 +39,12 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
   const titleId = `plot-card-title-${variant}`;
   const serif = digestDisplay.className;
   const flowerLine = flowers > 0 ? `${flowers} ${flowers === 1 ? "flower" : "flowers"} left this session` : null;
+  const causeLabel = CAUSE_META[row.cause].label;
+  const deathDateLabel = formatRegisterDeathDate(row.deathDate);
   return (
     <article className={`${styles.card} ${plotCauseClass(row.cause)}`} aria-labelledby={titleId} data-plot-card={variant} data-preview={preview || undefined}>
       <p className={styles.cardKicker}>
-        <span>{preview ? `${row.causeLabel} · ${row.deathDateLabel}` : `Pinned · ${formatDeathDate(row.deathDate.slice(0, 7))}`}</span>
+        <span>{preview ? `${causeLabel} · ${deathDateLabel}` : `Pinned · ${formatDeathDate(row.deathDate.slice(0, 7))}`}</span>
         {preview ? null : (
           <button type="button" className={styles.cardClose} aria-label={`Unpin ${row.name}`} onClick={onClose} data-plot-card-close>
             <span aria-hidden="true">✕</span>
@@ -53,7 +59,7 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
       {row.epitaph ? <p className={`${styles.cardEpitaph} ${serif}`}>“{row.epitaph}”</p> : null}
       <span className={styles.cardChip}>
         <span className={styles.cardDot} aria-hidden="true" />
-        {row.causeLabel}
+        {causeLabel}
       </span>
       {preview ? (
         <p className={styles.cardObituary}>{getObituaryLead(row.obituary)}</p>
@@ -66,11 +72,11 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
       <dl className={styles.cardGrid}>
         <div>
           <dt>Died</dt>
-          <dd>{row.deathDateLabel}</dd>
+          <dd>{deathDateLabel}</dd>
         </div>
         <div>
           <dt>Peak</dt>
-          <dd>{row.peakLabel ?? <span title="Peak market cap not recorded">not recorded</span>}</dd>
+          <dd>{row.peak === null ? <span title="Peak market cap not recorded">not recorded</span> : formatCemeteryPeak(row.peak)}</dd>
         </div>
         <div>
           <dt>Peg</dt>
@@ -94,9 +100,9 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
-            {row.archivedUrl ? (
+            {row.tracked ? (
               <li>
-                <Link href={row.archivedUrl}>
+                <Link href={buildStablecoinUrl(row.id)}>
                   Archived data<span aria-hidden="true">&nbsp;→</span>
                 </Link>
               </li>

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { formatDeathDate, formatUtcDayLabel } from "@shared/lib/format";
 import { CASE_STUDY_CLIENT_BY_CEMETERY_ID } from "@/lib/case-study-client-index";
-import { buildCemeteryRegisterRows, type CemeteryRegisterRow } from "@/lib/cemetery-register";
+import { buildCemeteryRegisterRows, buildRegisterFilterOptions } from "@/lib/cemetery-register";
+import { buildCemeteryStats } from "@/lib/cemetery-stats";
+import { formatRegisterDeathDate, sortRegisterRows } from "@/components/cemetery/cemetery-register-model";
 
 function entry(id: string, deathDate: string, overrides: Partial<CemeteryEntry> = {}): CemeteryEntry {
   return {
@@ -19,12 +22,6 @@ function entry(id: string, deathDate: string, overrides: Partial<CemeteryEntry> 
   };
 }
 
-function byId(rows: CemeteryRegisterRow[], id: string): CemeteryRegisterRow {
-  const row = rows.find((candidate) => candidate.id === id);
-  if (!row) throw new Error(`no row ${id}`);
-  return row;
-}
-
 describe("buildCemeteryRegisterRows", () => {
   const rows = buildCemeteryRegisterRows([
     entry("old", "2023-01"),
@@ -33,24 +30,22 @@ describe("buildCemeteryRegisterRows", () => {
     entry("may-day-known", "2024-05-10", { peakMcap: 5_000_000 }),
   ]);
 
-  it("keeps the day-aware newest-first order and ranks both directions", () => {
+  it("returns the day-aware newest-first order, and the register derives oldest-first from the same authority", () => {
     // Day-precise May 10 rows precede the bare May row; a known peak precedes an unknown one on the same day.
     expect(rows.map((row) => row.id)).toEqual(["may-day-known", "may-day-unknown", "may-month", "old"]);
-    expect(rows.map((row) => row.defaultRank)).toEqual([0, 1, 2, 3]);
-    const oldestFirst = [...rows].sort((a, b) => a.oldestRank - b.oldestRank).map((row) => row.id);
-    expect(oldestFirst).toEqual(["old", "may-month", "may-day-known", "may-day-unknown"]);
-  });
-
-  it("labels the death date at its recorded precision", () => {
-    expect(byId(rows, "may-day-known")).toMatchObject({ deathDateLabel: "May 10, 2024", precision: "day" });
-    expect(byId(rows, "may-month")).toMatchObject({ deathDateLabel: "May 2024", precision: "month" });
+    // Oldest first is not the reverse: the peak tie-break keeps its direction.
+    expect(sortRegisterRows(rows, { key: "died", dir: "asc" }).map((row) => row.id)).toEqual([
+      "old",
+      "may-month",
+      "may-day-known",
+      "may-day-unknown",
+    ]);
   });
 
   it("keeps an unrecorded peak null instead of zero", () => {
-    expect(byId(rows, "may-day-unknown")).toMatchObject({ peak: null, peakLabel: null });
-    expect(byId(rows, "may-month")).toMatchObject({ peak: 90_000_000, peakLabel: "$90.0M" });
+    expect(rows.find((row) => row.id === "may-day-unknown")?.peak).toBeNull();
     const [zero] = buildCemeteryRegisterRows([entry("zero", "2024-01", { peakMcap: 0 })]);
-    expect(zero).toMatchObject({ peak: null, peakLabel: null });
+    expect(zero.peak).toBeNull();
   });
 
   it("separates the tracked archive from curated records", () => {
@@ -58,8 +53,8 @@ describe("buildCemeteryRegisterRows", () => {
       entry("tracked", "2024-02", { archivedDataAvailable: true }),
       entry("curated", "2024-01"),
     ]);
-    expect(tracked).toMatchObject({ tracked: true, archivedUrl: "/stablecoin/tracked/" });
-    expect(curated).toMatchObject({ tracked: false, archivedUrl: null });
+    expect(tracked.tracked).toBe(true);
+    expect(curated.tracked).toBe(false);
   });
 
   it("links the case study written about the record, and only that record", () => {
@@ -89,13 +84,63 @@ describe("buildCemeteryRegisterRows", () => {
     expect(row.contracts).toEqual([{ chainName: "not-a-chain", address: "0xabc", explorerUrl: null }]);
   });
 
-  it("rejects a death date it cannot place", () => {
+  it("rejects a death date it cannot place at month precision", () => {
     expect(() => buildCemeteryRegisterRows([entry("bad", "2024-13")])).toThrow(/invalid deathDate/);
+    expect(() => buildCemeteryRegisterRows([entry("year-only", "2024")])).toThrow(/invalid deathDate/);
   });
 
   it("projects every real record exactly once", () => {
     const real = buildCemeteryRegisterRows(CEMETERY_ENTRIES);
     expect(new Set(real.map((row) => row.id)).size).toBe(CEMETERY_ENTRIES.length);
-    expect(new Set(real.map((row) => row.oldestRank)).size).toBe(CEMETERY_ENTRIES.length);
+  });
+});
+
+describe("formatRegisterDeathDate", () => {
+  it("labels a date at its recorded precision", () => {
+    expect(formatRegisterDeathDate("2024-05-10")).toBe("May 10, 2024");
+    expect(formatRegisterDeathDate("2024-09")).toBe("Sep 2024");
+    expect(formatRegisterDeathDate("not a date")).toBe("not a date");
+  });
+
+  it("prints what the shared date formatters print for every real record", () => {
+    for (const { deathDate } of CEMETERY_ENTRIES) {
+      const [year, month, day] = deathDate.split("-").map(Number);
+      const expected = day === undefined ? formatDeathDate(deathDate) : formatUtcDayLabel(new Date(Date.UTC(year, month - 1, day)));
+      expect(formatRegisterDeathDate(deathDate)).toBe(expected);
+    }
+  });
+});
+
+describe("buildRegisterFilterOptions", () => {
+  const entries = [
+    entry("a", "2026-03", { pegCurrency: "EUR", archivedDataAvailable: true }),
+    entry("b", "2026-01", { pegCurrency: "EUR", causeOfDeath: "regulatory" }),
+    entry("c", "2024-06", { peakMcap: undefined }),
+    entry(Object.keys(CASE_STUDY_CLIENT_BY_CEMETERY_ID)[0], "2024-02"),
+  ];
+  const options = buildRegisterFilterOptions(buildCemeteryStats(entries), buildCemeteryRegisterRows(entries));
+
+  it("offers only years with records, newest first, with global counts", () => {
+    expect(options.facets.year).toEqual([
+      { value: "2026", label: "2026", count: 2 },
+      { value: "2024", label: "2024", count: 2 },
+    ]);
+  });
+
+  it("orders pegs by count, then code", () => {
+    expect(options.facets.peg.map(({ value, count }) => [value, count])).toEqual([
+      ["EUR", 2],
+      ["USD", 2],
+    ]);
+  });
+
+  it("counts the record kinds, including case studies, across every record", () => {
+    expect(Object.fromEntries(options.facets.record.map(({ value, count }) => [value, count]))).toEqual({
+      tracked: 1,
+      curated: 3,
+      "case-study": 1,
+    });
+    expect(options.facets.peak.find(({ value }) => value === "not-recorded")?.count).toBe(1);
+    expect(options.total).toBe(4);
   });
 });

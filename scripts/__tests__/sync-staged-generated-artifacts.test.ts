@@ -104,6 +104,7 @@ describe("staged artifact sync", () => {
       "report-card-registry-fingerprint",
       "cemetery-dataset",
       "cemetery-logo-atlas",
+      "og-cemetery",
     ]);
     expect(runCommand.mock.calls.map(([command]) => command)).toEqual(
       result.regenerated.map((id) => GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === id)!.command),
@@ -113,6 +114,8 @@ describe("staged artifact sync", () => {
       "public/logos/atlas/cemetery-atlas.webp",
       "scripts/maintenance/state/cemetery-logo-atlas-signature.json",
       "src/lib/cemetery-logo-atlas.generated.json",
+      "public/og-cemetery.png",
+      "scripts/maintenance/state/og-cemetery-signature.json",
     ], expect.anything());
     expect(runCommand.mock.calls.some(([command]) => command.includes("detail-snapshots"))).toBe(false);
   });

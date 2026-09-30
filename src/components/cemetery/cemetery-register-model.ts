@@ -1,7 +1,11 @@
 /**
- * Client-safe filter and sort rules for the Autopsy Register. Pure functions
- * over the server-projected rows; imports only types from the server builder.
+ * Client-safe rules for the Autopsy Register and the labels derived from its
+ * rows: pure functions over the server-projected rows (type-only import from
+ * the server builder). Every label here is locale- and timezone-independent
+ * string arithmetic, so server and client render byte-identical text.
  */
+import { CAUSE_META } from "@shared/lib/cause-of-death";
+import { parseCemeteryDeathDate, sortCemeteryCoins } from "@shared/lib/cemetery";
 import {
   peakBucketOf,
   type CemeteryRegisterFilters,
@@ -13,13 +17,19 @@ import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 /** Rows shown before "Show all" while no filter is active. */
 export const REGISTER_FOLD_COUNT = 25;
 
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
 /**
- * Clears the sticky chrome for `#<id>` fragments and reveals: the 3px status
- * strip plus the 3.5rem nav, plus the 46px tape from `lg`. Below `md` the root
- * `scroll-padding-top` (`--table-header-top`) already covers the nav.
+ * The cemetery's death-date label at its recorded precision: "Aug 27, 2026"
+ * (day) or "Jul 2026" (month). The one formatting authority for register and
+ * hero date labels; an unparseable value prints verbatim.
  */
-export const REGISTER_SCROLL_MARGIN_CLASS =
-  "scroll-mt-[calc(3px+0.75rem)] md:scroll-mt-[calc(3px+3.5rem+0.75rem)] lg:scroll-mt-[calc(3px+3.5rem+46px+0.75rem)]";
+export function formatRegisterDeathDate(deathDate: string): string {
+  const parsed = parseCemeteryDeathDate(deathDate);
+  if (parsed?.month == null) return deathDate;
+  const month = SHORT_MONTHS[parsed.month - 1];
+  return parsed.day === null ? `${month} ${parsed.year}` : `${month} ${parsed.day}, ${parsed.year}`;
+}
 
 /** URL filters that narrow the rows; `sort` and `dir` only reorder them. */
 const REGISTER_FILTER_KEYS = ["cause", "year", "peg", "mechanism", "record", "peak", "q"] as const;
@@ -93,29 +103,48 @@ export function nextRegisterSort(current: RegisterSort, key: CemeteryRegisterSor
 const TEXT_COLLATOR = new Intl.Collator("en", { sensitivity: "base", numeric: true });
 
 /**
- * Register order. "Died" follows the single cemetery order authority
- * (`sortCemeteryCoins`, projected as `defaultRank`/`oldestRank`). Rows with no
- * recorded peak sort after every recorded peak in both directions. Ties fall
- * back to the default order so the result is deterministic.
+ * The rows in register order. `rows` must arrive in the default order
+ * (`buildCemeteryRegisterRows`, newest first). "Died, oldest first" asks the
+ * single cemetery order authority (`sortCemeteryCoins`) rather than reversing,
+ * since its tie-breakers do not flip with the direction. Rows with no recorded
+ * peak sort after every recorded peak in both directions. Every other tie keeps
+ * the default order, so the result is deterministic.
  */
-export function compareRegisterRows(a: CemeteryRegisterRow, b: CemeteryRegisterRow, sort: RegisterSort): number {
-  const sign = sort.dir === "asc" ? 1 : -1;
-  switch (sort.key) {
-    case "died":
-      return sort.dir === "desc" ? a.defaultRank - b.defaultRank : a.oldestRank - b.oldestRank;
-    case "peak":
-      if (a.peak === null || b.peak === null) {
-        return Number(a.peak === null) - Number(b.peak === null) || a.defaultRank - b.defaultRank;
-      }
-      return (a.peak - b.peak) * sign || a.defaultRank - b.defaultRank;
-    case "name":
-      return (
-        (TEXT_COLLATOR.compare(a.symbol, b.symbol) || TEXT_COLLATOR.compare(a.name, b.name)) * sign ||
-        a.defaultRank - b.defaultRank
-      );
-    case "cause":
-      return TEXT_COLLATOR.compare(a.causeLabel, b.causeLabel) * sign || a.defaultRank - b.defaultRank;
+export function sortRegisterRows(rows: readonly CemeteryRegisterRow[], sort: RegisterSort): CemeteryRegisterRow[] {
+  if (sort.key === "died") {
+    if (sort.dir === "desc") return [...rows];
+    const records = rows.map((row) => ({
+      row,
+      id: row.id,
+      name: row.name,
+      symbol: row.symbol,
+      pegCurrency: row.pegCurrency,
+      causeOfDeath: row.cause,
+      deathDate: row.deathDate,
+      peakMcap: row.peak ?? undefined,
+      obituary: row.obituary,
+      sourceUrl: row.sourceUrl,
+      sourceLabel: row.sourceLabel,
+    }));
+    return sortCemeteryCoins(records, "oldest").map((record) => record.row);
   }
+
+  const defaultRank = new Map(rows.map((row, index) => [row.id, index]));
+  const sign = sort.dir === "asc" ? 1 : -1;
+  const compare = (a: CemeteryRegisterRow, b: CemeteryRegisterRow): number => {
+    switch (sort.key) {
+      case "peak":
+        if (a.peak === null || b.peak === null) return Number(a.peak === null) - Number(b.peak === null);
+        return (a.peak - b.peak) * sign;
+      case "name":
+        return (TEXT_COLLATOR.compare(a.symbol, b.symbol) || TEXT_COLLATOR.compare(a.name, b.name)) * sign;
+      case "cause":
+        return TEXT_COLLATOR.compare(CAUSE_META[a.cause].label, CAUSE_META[b.cause].label) * sign;
+      default:
+        return 0;
+    }
+  };
+  return [...rows].sort((a, b) => compare(a, b) || defaultRank.get(a.id)! - defaultRank.get(b.id)!);
 }
 
 const SORT_CAPTION: Readonly<Record<CemeteryRegisterSortKey, { column: string; asc: string; desc: string }>> = {

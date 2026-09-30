@@ -5,8 +5,9 @@ import { join, relative, sep } from "node:path";
 /**
  * Design invariants guarded at the repo level so a future commit cannot
  * silently introduce Newsreader serif or Tailwind's `font-serif` into a
- * non-editorial surface. The Daily Digest and the detail-page AI summary
- * are the only two intentional carve-outs per docs/design-language.md.
+ * non-editorial surface. The Daily Digest, the detail-page AI summary and the
+ * Stablecoin Cemetery (h1, epitaphs, record card) are the intentional
+ * carve-outs per docs/design-language.md.
  */
 
 const ROOT = process.cwd();
@@ -18,10 +19,8 @@ const ALLOWED_SERIF_FILES = new Set<string>([
   // The clamped-prose client half of the AI summary carries the same serif
   // editorial carve-out as its parent.
   "src/components/ai-summary-prose.tsx",
-  // Cemetery obituaries use Newsreader display titles as an intentional
+  // Cemetery Autopsy Register epitaph pull line: Newsreader as an intentional
   // editorial carve-out (Design Council B11), matching the Digest register.
-  "src/components/cemetery-tombstones.tsx",
-  // Autopsy Register epitaph pull line: the same sanctioned cemetery carve-out.
   "src/components/cemetery/cemetery-register-autopsy.tsx",
   // Cemetery hero h1 (plot map redesign): the same sanctioned cemetery carve-out.
   "src/components/cemetery/cemetery-hero.tsx",

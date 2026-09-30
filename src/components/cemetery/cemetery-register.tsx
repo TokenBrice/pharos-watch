@@ -6,21 +6,18 @@ import { TableCell, TableRow } from "@/components/table";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
+import type { CemeteryRegisterRow, RegisterFilterOptions } from "@/lib/cemetery-register";
 import {
   buildRegisterHref,
   parseRegisterFilters,
   type CemeteryRegisterFilters,
   type CemeteryRegisterSortKey,
 } from "@/lib/cemetery-selection";
-import type { CemeteryStats } from "@/lib/cemetery-stats";
 import { cn } from "@/lib/utils";
 import { CemeterySectionHeader } from "./cemetery-section-header";
 import { useCemeterySelection, type CemeterySelectionHandler } from "./cemetery-selection-context";
 import {
   REGISTER_FOLD_COUNT,
-  REGISTER_SCROLL_MARGIN_CLASS,
-  compareRegisterRows,
   hasActiveRegisterFilters,
   matchesRegisterFilters,
   nextRegisterSort,
@@ -28,10 +25,11 @@ import {
   registerSearchText,
   registerSortParams,
   resolveRegisterSort,
+  sortRegisterRows,
   withoutRegisterFilters,
 } from "./cemetery-register-model";
-import { CemeteryRegisterRowPair } from "./cemetery-register-row";
-import { buildRegisterFilterOptions, CemeteryRegisterToolbar } from "./cemetery-register-toolbar";
+import { CemeteryRegisterFoldedRow, CemeteryRegisterRowPair } from "./cemetery-register-row";
+import { CemeteryRegisterToolbar } from "./cemetery-register-toolbar";
 import styles from "./cemetery-register.module.css";
 
 const REGISTER_COLUMNS: readonly DataTableColumn<CemeteryRegisterSortKey>[] = [
@@ -65,18 +63,24 @@ interface FocusRequest extends RowRequest {
 }
 
 export interface CemeteryRegisterProps {
-  /** Server-projected by `buildCemeteryRegisterRows`, in the default newest-first order. */
+  /**
+   * Server-projected by `buildCemeteryRegisterRows`. Must arrive in the default
+   * "Died, newest first" order: the register sorts from it and treats it as
+   * the tie-break order.
+   */
   rows: readonly CemeteryRegisterRow[];
-  stats: CemeteryStats;
+  /** `buildRegisterFilterOptions(stats, rows)`, built on the server. */
+  filterOptions: RegisterFilterOptions;
 }
 
 /**
  * Autopsy Register (`#register`): every record, searchable, filterable and
- * sortable, with URL-backed filters. The server renders every main and
- * autopsy row; folding and `#<id>` fragments work before hydration through
- * CSS, then `revealRecord` takes over. The selection provider owns the hash.
+ * sortable, with URL-backed filters. The server renders every record: the
+ * first 25 as full rows with a hidden autopsy row, the rest as compact folded
+ * rows. Folding and `#<id>` fragments work before hydration through CSS, then
+ * `revealRecord` takes over. The selection provider owns the hash.
  */
-export function CemeteryRegister({ rows, stats }: CemeteryRegisterProps) {
+export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps) {
   const { registerRevealRecord, setRecordHash, pinGrave } = useCemeterySelection();
   const { searchParams, isReady, replaceParams } = useUrlFilters();
   const hydrated = useHydrated();
@@ -99,9 +103,8 @@ export function CemeteryRegister({ rows, stats }: CemeteryRegisterProps) {
 
   const rowById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
   const searchTextById = useMemo(() => new Map(rows.map((row) => [row.id, registerSearchText(row)])), [rows]);
-  const filterOptions = useMemo(() => buildRegisterFilterOptions(stats, rows), [stats, rows]);
 
-  const sortedRows = useMemo(() => [...rows].sort((a, b) => compareRegisterRows(a, b, sort)), [rows, sort]);
+  const sortedRows = useMemo(() => sortRegisterRows(rows, sort), [rows, sort]);
   const matchingRows = useMemo(
     () =>
       filtersActive
@@ -111,6 +114,9 @@ export function CemeteryRegister({ rows, stats }: CemeteryRegisterProps) {
   );
 
   const foldActive = !filtersActive && !showAll;
+  // Folded rows render compact only in the pristine view the server also renders (so hydration matches);
+  // once the reader sorts, filters, shows all or reveals a folded row, every row is a full row again.
+  const compactFolds = sort.key === "died" && sort.dir === "desc";
   const view = matchingRows.map((row, index) => ({
     row,
     folded: foldActive && index >= REGISTER_FOLD_COUNT && !expandedIds.has(row.id),
@@ -242,7 +248,7 @@ export function CemeteryRegister({ rows, stats }: CemeteryRegisterProps) {
       id="register"
       aria-labelledby="register-heading"
       data-enhanced={hydrated ? "" : undefined}
-      className={cn(styles.register, REGISTER_SCROLL_MARGIN_CLASS, "min-w-0 space-y-4")}
+      className={cn(styles.register, "min-w-0 space-y-4")}
     >
       <CemeterySectionHeader
         id="register-heading"
@@ -279,18 +285,22 @@ export function CemeteryRegister({ rows, stats }: CemeteryRegisterProps) {
           />
         }
       >
-        {view.map(({ row, folded }) => (
-          <CemeteryRegisterRowPair
-            key={row.id}
-            row={row}
-            folded={folded}
-            expanded={expandedIds.has(row.id)}
-            highlightClassName={highlight?.id === row.id ? highlightClassName : undefined}
-            columnCount={COLUMN_COUNT}
-            onToggle={handleToggle}
-            onShowOnField={handleShowOnField}
-          />
-        ))}
+        {view.map(({ row, folded }) =>
+          folded && compactFolds ? (
+            <CemeteryRegisterFoldedRow key={row.id} row={row} columnCount={COLUMN_COUNT} />
+          ) : (
+            <CemeteryRegisterRowPair
+              key={row.id}
+              row={row}
+              folded={folded}
+              expanded={expandedIds.has(row.id)}
+              highlightClassName={highlight?.id === row.id ? highlightClassName : undefined}
+              columnCount={COLUMN_COUNT}
+              onToggle={handleToggle}
+              onShowOnField={handleShowOnField}
+            />
+          ),
+        )}
         {view.length === 0 ? (
           <DataTableEmptyRow colSpan={COLUMN_COUNT} className="whitespace-normal px-4 py-6">
             <div className="pharos-empty-note mx-auto flex max-w-md flex-col items-center gap-2">

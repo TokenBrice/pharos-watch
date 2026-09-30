@@ -169,6 +169,7 @@
     "publish:daily-social": "tsx scripts/maintenance/publish-daily-social.ts",
     "build:safety-score-map:monthly": "tsx scripts/maintenance/build-safety-score-map.ts --edition=monthly",
     "build:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts",
+    "build:og-cemetery": "node --import tsx scripts/maintenance/build-og-cemetery.ts",
     "prepare": "node --import tsx scripts/maintenance/prepare-workspace.ts",
     "check:runtime-reachability": "node --import tsx scripts/ci/check-runtime-reachability.ts"
   },

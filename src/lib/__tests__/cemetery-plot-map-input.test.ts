@@ -12,24 +12,17 @@ function registerRow(overrides: Partial<CemeteryRegisterRow>): CemeteryRegisterR
     symbol: "CNA",
     logoUrl: null,
     cause: "abandoned",
-    causeLabel: "Abandoned",
     deathDate: "2024-03",
-    deathDateLabel: "Mar 2024",
-    precision: "month",
     peak: 25_000_000,
-    peakLabel: "$25.0M",
     pegCurrency: "USD",
     mechanismArchetype: null,
     tracked: false,
-    archivedUrl: null,
     caseStudy: null,
     epitaph: null,
     obituary: "Coin A stopped.",
     sourceUrl: "https://example.com/a",
     sourceLabel: "Example",
     contracts: [],
-    defaultRank: 0,
-    oldestRank: 0,
     ...overrides,
   };
 }
@@ -42,7 +35,7 @@ describe("toPlotMapInput", () => {
   });
 
   it("keeps an unrecorded peak unrecorded (never a $0 peak) and an untracked record without a bronze plaque", () => {
-    const rows = [registerRow({ id: "coin-a", peak: null, peakLabel: null }), registerRow({ id: "coin-b", deathDate: "2024-05", peak: 3e9 })];
+    const rows = [registerRow({ id: "coin-a", peak: null }), registerRow({ id: "coin-b", deathDate: "2024-05", peak: 3e9 })];
     const [input] = toPlotMapInput(rows);
     expect(input.peakMcap).toBeUndefined();
     expect(input.archivedDataAvailable).toBe(false);

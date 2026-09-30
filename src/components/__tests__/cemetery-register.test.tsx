@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { useEffect, type ImgHTMLAttributes } from "react";
+import { useEffect } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -8,22 +8,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { copyText } from "@/lib/clipboard";
-import { buildCemeteryRegisterRows, type CemeteryRegisterRow } from "@/lib/cemetery-register";
-import { buildCemeteryStats, type CemeteryStats } from "@/lib/cemetery-stats";
+import { buildCemeteryRegisterRows, buildRegisterFilterOptions, type CemeteryRegisterRow } from "@/lib/cemetery-register";
+import { buildCemeteryStats } from "@/lib/cemetery-stats";
 import { CemeteryRegister } from "../cemetery/cemetery-register";
-import { compareRegisterRows, REGISTER_FOLD_COUNT } from "../cemetery/cemetery-register-model";
+import { REGISTER_FOLD_COUNT, sortRegisterRows } from "../cemetery/cemetery-register-model";
 import {
   CemeterySelectionProvider,
   useCemeterySelection,
   type CemeterySelectionContextValue,
 } from "../cemetery/cemetery-selection-context";
-
-vi.mock("next/image", () => ({
-  default: ({ alt, ...props }: ImgHTMLAttributes<HTMLImageElement> & { unoptimized?: boolean }) => {
-    const { unoptimized: _unoptimized, ...imgProps } = props;
-    return <img alt={alt} {...imgProps} />;
-  },
-}));
 
 // vi.mock factories are hoisted above the imports, so the helper loads lazily inside it.
 vi.mock("next/link", async () => {
@@ -70,7 +63,6 @@ const ENTRIES: CemeteryEntry[] = Array.from({ length: FIXTURE_COUNT }, (_, index
   ...OVERRIDES[index],
 }));
 const ROWS = buildCemeteryRegisterRows(ENTRIES);
-const STATS = buildCemeteryStats(ENTRIES);
 const IDS = ROWS.map((row) => row.id);
 
 let selection: CemeterySelectionContextValue | null = null;
@@ -83,10 +75,10 @@ function Probe() {
   return null;
 }
 
-function Harness({ rows = ROWS, stats = STATS, ids = IDS }: { rows?: CemeteryRegisterRow[]; stats?: CemeteryStats; ids?: string[] }) {
+function Harness({ entries = ENTRIES, rows = ROWS }: { entries?: CemeteryEntry[]; rows?: CemeteryRegisterRow[] }) {
   return (
-    <CemeterySelectionProvider knownIds={ids}>
-      <CemeteryRegister rows={rows} stats={stats} />
+    <CemeterySelectionProvider knownIds={rows.map((row) => row.id)}>
+      <CemeteryRegister rows={rows} filterOptions={buildRegisterFilterOptions(buildCemeteryStats(entries), rows)} />
       <Probe />
     </CemeterySelectionProvider>
   );
@@ -129,30 +121,33 @@ afterEach(() => {
 
 describe("CemeteryRegister server render", () => {
   const realRows = buildCemeteryRegisterRows(CEMETERY_ENTRIES);
-  const realStats = buildCemeteryStats(CEMETERY_ENTRIES);
 
-  it("renders every record and every autopsy, folding rows past the first 25 without JS", () => {
+  it("renders every record, the first 25 in full and the rest as compact folded rows that work without JS", () => {
     const host = document.createElement("div");
-    host.innerHTML = renderToString(
-      <Harness rows={realRows} stats={realStats} ids={realRows.map((row) => row.id)} />,
-    );
+    host.innerHTML = renderToString(<Harness entries={CEMETERY_ENTRIES} rows={realRows} />);
 
     const main = [...host.querySelectorAll<HTMLTableRowElement>("tr[id]:not([data-detail])")];
     expect(main.map((row) => row.id)).toEqual(realRows.map((row) => row.id));
-    expect(main.slice(0, REGISTER_FOLD_COUNT).some((row) => row.hasAttribute("data-folded"))).toBe(false);
-    expect(main.slice(REGISTER_FOLD_COUNT).every((row) => row.hasAttribute("data-folded"))).toBe(true);
+
+    const [full, folded] = [main.slice(0, REGISTER_FOLD_COUNT), main.slice(REGISTER_FOLD_COUNT)];
+    expect(full.some((row) => row.hasAttribute("data-folded"))).toBe(false);
+    for (const row of full) {
+      const detail = row.nextElementSibling as HTMLTableRowElement;
+      expect(detail.id).toBe(`autopsy-${row.id}`);
+      expect(detail.hasAttribute("data-detail") && detail.hidden).toBe(true);
+    }
+    expect(host.querySelectorAll("tr[data-detail]")).toHaveLength(REGISTER_FOLD_COUNT);
+
+    expect(folded.every((row) => row.hasAttribute("data-folded"))).toBe(true);
     expect(host.querySelectorAll("tr[data-folded]")).toHaveLength(CEMETERY_ENTRIES.length - REGISTER_FOLD_COUNT);
-
-    const details = [...host.querySelectorAll<HTMLTableRowElement>("tr[data-detail]")];
-    expect(details).toHaveLength(CEMETERY_ENTRIES.length);
-    expect(details.every((row) => row.hidden)).toBe(true);
-    for (const row of main) expect(row.nextElementSibling?.id).toBe(`autopsy-${row.id}`);
-
-    // A folded record keeps its obituary and source in the HTML (crawlable, and shown by `#<id>`).
-    const last = realRows.at(-1)!;
-    const lastDetail = host.querySelector(`[id="autopsy-${last.id}"]`)!;
-    expect(lastDetail.textContent).toContain(last.obituary);
-    expect(lastDetail.querySelector(`a[href="${last.sourceUrl}"]`)).not.toBeNull();
+    // A folded record carries its own obituary and source, so `#<id>` shows it through `:target` alone.
+    realRows.slice(REGISTER_FOLD_COUNT).forEach((record, index) => {
+      const row = folded[index];
+      expect(row.querySelectorAll("td")).toHaveLength(1);
+      expect(row.textContent).toContain(record.name);
+      expect(row.textContent).toContain(record.obituary);
+      expect(row.querySelector(`a[href="${record.sourceUrl}"]`)).not.toBeNull();
+    });
 
     expect(host.querySelector("#register")?.hasAttribute("data-enhanced")).toBe(false);
   });
@@ -218,19 +213,21 @@ describe("CemeteryRegister", () => {
     expect(statusText()).toBe("Filters cleared to show C28.");
   });
 
-  it("reveals a folded record without filters by showing every record", () => {
+  it("reveals a compact folded record without filters by showing every record in full", () => {
     render(<Harness />);
     expect(mainRow("coin-27").hasAttribute("data-folded")).toBe(true);
+    expect(document.getElementById("autopsy-coin-27")).toBeNull();
 
     act(() => selection!.revealRecord("coin-27", "chart"));
 
     expect(document.querySelectorAll("#register tr[data-folded]")).toHaveLength(0);
     expect(screen.getByText(`All ${FIXTURE_COUNT} records shown.`, { exact: false })).toBeTruthy();
     expect((document.getElementById("autopsy-coin-27") as HTMLTableRowElement).hidden).toBe(false);
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Close autopsy for Coin 27 (C27)");
     expect(statusText()).toBe("Opened autopsy for Coin 27 (C27).");
   });
 
-  it("shows every record from the fold row", () => {
+  it("shows every record from the fold row and moves focus to the first one it revealed", () => {
     render(<Harness />);
     expect(screen.getByText(`${FIXTURE_COUNT - REGISTER_FOLD_COUNT} more records below the first 25.`)).toBeTruthy();
 
@@ -238,6 +235,7 @@ describe("CemeteryRegister", () => {
 
     expect(document.querySelectorAll("#register tr[data-folded]")).toHaveLength(0);
     expect(screen.getByText(`Showing ${FIXTURE_COUNT} of ${FIXTURE_COUNT}`)).toBeTruthy();
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Open autopsy for Coin 25 (C25)");
   });
 
   it("names both coins that share a ticker", () => {
@@ -282,11 +280,23 @@ describe("CemeteryRegister", () => {
     expect(within(autopsy).getByRole("button", { name: "Link copied" })).toBeTruthy();
     expect(within(autopsy).getByRole("status").textContent).toBe("Link copied.");
   });
+
+  it("prints the derived facts in an expanded autopsy", () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Open autopsy for Coin 2 (C2)" }));
+    const autopsy = document.getElementById("autopsy-coin-2") as HTMLTableRowElement;
+
+    expect(within(autopsy).getByText("Regulatory")).toBeTruthy();
+    expect(within(autopsy).getByText("Oct 2025")).toBeTruthy();
+    expect(within(autopsy).getByText("(month precision)")).toBeTruthy();
+    expect(within(autopsy).getByText("$3.0M")).toBeTruthy();
+    expect(within(autopsy).getByText("Tracked archive: frozen detail page")).toBeTruthy();
+    expect(within(autopsy).getByRole("link", { name: /Archived data/ }).getAttribute("href")).toBe("/stablecoin/coin-2/");
+  });
 });
 
-describe("compareRegisterRows", () => {
-  const byPeak = (dir: "asc" | "desc") =>
-    [...ROWS].sort((a, b) => compareRegisterRows(a, b, { key: "peak", dir })).map((row) => row.peak);
+describe("sortRegisterRows", () => {
+  const byPeak = (dir: "asc" | "desc") => sortRegisterRows(ROWS, { key: "peak", dir }).map((row) => row.peak);
 
   it("sorts unrecorded peaks after every recorded peak in both directions", () => {
     for (const dir of ["asc", "desc"] as const) {
@@ -298,7 +308,7 @@ describe("compareRegisterRows", () => {
   });
 
   it("orders Died by the shared cemetery order in each direction", () => {
-    const oldestFirst = [...ROWS].sort((a, b) => compareRegisterRows(a, b, { key: "died", dir: "asc" }));
-    expect(oldestFirst.map((row) => row.id)).toEqual([...IDS].reverse());
+    expect(sortRegisterRows(ROWS, { key: "died", dir: "desc" }).map((row) => row.id)).toEqual(IDS);
+    expect(sortRegisterRows(ROWS, { key: "died", dir: "asc" }).map((row) => row.id)).toEqual([...IDS].reverse());
   });
 });

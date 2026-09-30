@@ -1,0 +1,24 @@
+{
+  "generatedBy": "scripts/maintenance/build-og-cemetery.ts",
+  "generatorVersion": 1,
+  "render": {
+    "viewportWidth": 1440,
+    "pagePad": 36,
+    "deviceScaleFactor": 2,
+    "cropAboveHead": 30
+  },
+  "documentSha256": "812e9ebd506d327ea7b054349f65c21ac318b25ac3ec5a11fbebc2b98ee1b663",
+  "summary": {
+    "total": 113,
+    "firstYear": 2018,
+    "latestYear": 2026,
+    "asOf": "2026-08-27",
+    "atlasImageSha256": "9146907d188f957f8a35baaac52335326ea086c00b7dbb5baf54ec0473f33ee8"
+  },
+  "image": {
+    "sha256": "7c90beaf65c97e9996423369581a0fa12737bfdf8835a0e10e1a579de70ba4bc",
+    "bytes": 530735,
+    "width": 1200,
+    "height": 630
+  }
+}

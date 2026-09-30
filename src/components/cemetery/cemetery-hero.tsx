@@ -12,6 +12,7 @@ import { toPlotMapInput, type PlotLogoAtlas } from "@/lib/cemetery-plot-map-inpu
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import type { CemeteryStats } from "@/lib/cemetery-stats";
 import { digestDisplay } from "@/lib/fonts/digest";
+import { formatRegisterDeathDate } from "./cemetery-register-model";
 import { PlotMapHero } from "./plot-map-hero";
 import { PlotMapLegend } from "./plot-map-legend";
 import { desktopPlotLayout } from "./plot-map-scene";
@@ -22,7 +23,7 @@ import styles from "./plot-map.module.css";
 const BEAM_VALUE_CLASS = "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]";
 
 export interface CemeteryHeroProps {
-  /** Register rows, newest first (`buildCemeteryRegisterRows`): pass the array the register receives. */
+  /** Register rows in their default newest-first order (`buildCemeteryRegisterRows`): pass the array the register receives. */
   rows: readonly CemeteryRegisterRow[];
   stats: Pick<CemeteryStats, "total" | "firstYear" | "latestYear" | "heroSubline">;
   /** Latest recorded death (`stats.asOf.date`). */
@@ -34,7 +35,8 @@ export interface CemeteryHeroProps {
 
 export function CemeteryHero({ rows, stats, asOf, atlas, portraitAspectRatio }: CemeteryHeroProps): ReactElement {
   const layout = desktopPlotLayout(buildCemeteryPlotMap(toPlotMapInput(rows), { asOf, preset: "desktop" }));
-  const latest = rows.find((row) => row.defaultRank === 0) ?? rows[0];
+  // Rows arrive newest first, so the first row is the latest recorded death.
+  const latest = rows[0];
   return (
     <div className={styles.tokens} style={plotTokenStyle(atlas)}>
       <PlotMapDefs />
@@ -59,7 +61,8 @@ export function CemeteryHero({ rows, stats, asOf, atlas, portraitAspectRatio }: 
               <p className={styles.beamPlaque}>{`${stats.total} interred · first recorded death ${stats.firstYear}`}</p>
               {latest ? (
                 <p className={styles.beamRest}>
-                  Latest recorded death · <b>{latest.name}</b> · <span className={styles.mono}>{latest.deathDateLabel}</span>
+                  Latest recorded death · <b>{latest.name}</b> ·{" "}
+                  <span className={styles.mono}>{formatRegisterDeathDate(latest.deathDate)}</span>
                 </p>
               ) : null}
             </div>

@@ -33,6 +33,7 @@ import { CAUSE_META, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { useMediaQuery } from "@/hooks/use-is-mobile";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { EDITORIAL_TITLES } from "@/lib/cemetery-editorial";
+import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import {
   PLOT_LAYOUT,
   buildCemeteryPlotMap,
@@ -47,6 +48,7 @@ import {
 import { toPlotMapInput, type PlotLogoAtlas } from "@/lib/cemetery-plot-map-input";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import type { PlotBox } from "@/lib/cemetery-plot-geometry";
+import { formatRegisterDeathDate } from "./cemetery-register-model";
 import { useCemeterySelection, type CemeterySelectionSource } from "./cemetery-selection-context";
 import { PlotMapPortraitSlot } from "./plot-map-portrait-slot";
 import { PlotMapRecordCard } from "./plot-map-record-card";
@@ -534,7 +536,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   const hotRow = hot ? rowById.get(hot.id) : undefined;
   const cypress = hoverDim?.kind === "year" ? map.cypress.find((c) => c.year === hoverDim.year) : undefined;
   const tagText = hotRow
-    ? `${hotRow.symbol} · ${hotRow.deathDateLabel} · ${hotRow.peakLabel ?? "peak not recorded"}`
+    ? `${hotRow.symbol} · ${formatRegisterDeathDate(hotRow.deathDate)} · ${hotRow.peak === null ? "peak not recorded" : formatCemeteryPeak(hotRow.peak)}`
     : cypress
       ? `${cypress.year} · ${cypress.count} ${cypress.count === 1 ? "death" : "deaths"}`
       : null;

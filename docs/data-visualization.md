@@ -18,6 +18,8 @@ For new visualizations, and for existing visualizations being brought into compl
 
 Runtime-neutral thresholds, labels, and palettes belong in `shared/lib/` when both frontend and Worker code consume them. Route-local geometry can remain beside the route or component.
 
+The Cemetery plot map is the reference split for a metaphor scene. `buildCemeteryPlotMap` in `src/lib/cemetery-plot-map.ts` is the pure, deterministic view model: lanes, shared year blocks, lot packing, peak classes, clamped stone heights, weathering classes, depth order and section-zoom cameras, all seeded by id and dated against the latest recorded death rather than the clock. `src/lib/cemetery-plot-geometry.ts` turns graves into drawn marks, and the components in `src/components/cemetery/` render them and own focus, pointer, zoom and selection. `validatePlotMapCapacity` checks the layout constants against the current data (overlapping lots, lane overflow, empty runs, the plain-stone and zoom legibility floors), so growth that breaks the plan fails a test instead of drawing badly.
+
 Existing exceptions are documented rather than treated as the standard: `HomeAltHeroChart` still computes sampling, scales, and SVG geometry in the component (`src/components/home-alt-hero-chart.tsx`), and `BlacklistChart` still derives peak quarters and chart series in-component (`src/components/blacklist-chart.tsx`).
 
 Selection shared with sibling panels belongs in the route client, not hidden inside the scene.
@@ -56,6 +58,8 @@ Interactive marks need a semantic role or native interactive element, an accessi
 
 Every data-reading visualization requires an equivalent accessible data surface. This may be an adjacent table, an always-present summary, a detail panel, a screen-reader-only structure, or a small-screen list. It does not have to be a duplicated fallback list, but it must expose the same decision-relevant facts when the graphic cannot be perceived or operated. Decorative-summary visualizations may be exceptions when they are not intended to be a complete data-reading surface. The homepage hero cohort chart (`HomeAltHeroChart`) is the current decorative-summary exception: it exposes an SVG role/name and a pointer tooltip (`src/components/home-alt-hero-chart.tsx`), but no equivalent accessible data surface; do not use this exception as a model for data-reading charts.
 
+The Cemetery's Autopsy Register is the plot map's equivalent surface: every grave's cause, death date, peak market cap, peg, record type, epitaph and obituary are server-rendered in the register, which the plan's "Skip the cemetery map" link reaches directly and whose rows each grave's `#<id>` link resolves to.
+
 Do not announce decorative labels or duplicate the same data through several live regions. Inline text placed over complex graphics needs sufficient contrast or a stable backing surface.
 
 ## Interaction
@@ -89,7 +93,7 @@ A visualization may own local atmospheric colors when those colors do not encode
 
 ## Labels And Context
 
-Keep labels concise and concrete. Tickers and compact values may use mono; explanatory prose stays in the core sans face. Avoid serif inside analytical scenes.
+Keep labels concise and concrete. Tickers and compact values may use mono; explanatory prose stays in the core sans face. Avoid serif inside analytical scenes: the Cemetery plot map sets its signposts and colossus chips in sans small caps and its figures and footstone glyphs in mono, and keeps Newsreader to the route heading and the HTML record card, never inside the drawn SVG.
 
 Supply the context needed to avoid misreading:
 

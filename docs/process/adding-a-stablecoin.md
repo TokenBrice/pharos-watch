@@ -494,7 +494,7 @@ value; do not weaken the assertion.
 These read the tracked catalog, so a coin addition selects them for regeneration. The complete
 artifact inventory and each unit's command live in `GENERATED_ARTIFACT_REGISTRY`
 (`scripts/lib/automation-registry.mjs`). Only `public/llms.txt` normally moves on an addition, and
-`npm run check:generated-artifacts` fails until it is regenerated and committed. The two cemetery
+`npm run check:generated-artifacts` fails until it is regenerated and committed. The three cemetery
 units read only cemetery rows, so an addition leaves them byte-identical; the pre-commit hook
 regenerates and stages them whenever they are selected.
 
@@ -503,6 +503,7 @@ regenerates and stages them whenever they are selected.
 | `public/llms.txt` | `npx tsx scripts/maintenance/generate-llms-txt.ts` | Active-stablecoin count in the summary line plus one per-coin entry |
 | `public/datasets/stablecoin-cemetery.json` + `.csv` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Provenance pins the curated dead-stablecoin file and the frozen-row projection, so a live addition leaves it byte-identical; it moves only when a frozen or dead row changes |
 | `public/logos/atlas/cemetery-atlas.webp` + `src/lib/cemetery-logo-atlas.generated.json` (`cemetery-logo-atlas`) | `npm run logos:cemetery-atlas` | Selected by catalog and `data/logos.json` changes, but its input signature covers only cemetery rows' logos, so a live addition leaves it byte-identical; it moves only when a cemetery row or its logo changes |
+| `public/og-cemetery.png` (`og-cemetery`) | `npm run build:og-cemetery` | Selected with the atlas it embeds; its input signature is the rendered plot-map card, so a live addition leaves it byte-identical; it moves only when a cemetery row, the atlas or the plot map changes |
 
 Also regenerate the gitignored projections, including the client constants and command-palette
 tuples, which are not committed but which the build, the

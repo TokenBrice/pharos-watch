@@ -13,8 +13,22 @@ This document covers two frontend-only feature surfaces that are not backed by d
 Primary files:
 
 - `src/app/cemetery/page.tsx`
-- `src/components/cemetery-client.tsx`
-- `src/components/cemetery-tombstones.tsx`
+- `src/components/cemetery/cemetery-hero.tsx`: `CemeteryHero`, the server half of the hero (route head, One Beam figure, legend, desktop rest pose)
+- `src/components/cemetery/plot-map-hero.tsx`: `PlotMapHero`, the hero's only client entry and its desktop interaction state
+- `src/components/cemetery/plot-map-scene.tsx`: `PlotMapScene` and `desktopPlotLayout`
+- `src/components/cemetery/plot-map-shapes.tsx`: shared SVG defs, grave bodies, medallions and flowers
+- `src/components/cemetery/plot-map-legend.tsx`: `PlotMapLegend`
+- `src/components/cemetery/plot-map-record-card.tsx`: `PlotMapRecordCard`, the preview and pinned record card
+- `src/components/cemetery/plot-map-portrait-slot.tsx`: `PlotMapPortraitSlot`, the phone layer and its interaction
+- `src/components/cemetery/plot-map-portrait.tsx`
+- `src/components/cemetery/plot-map-portrait-aspect.ts`: `getPortraitAspectRatio`
+- `src/components/cemetery/plot-map-sheet.tsx`: `PlotMapSheet`, the phone bottom sheet
+- `src/components/cemetery/use-plot-layout.ts`: `usePlotLayout`, which layer is live
+- `src/components/cemetery/plot-map.module.css`
+- `src/components/cemetery/plot-map-mobile.module.css`
+- `src/lib/cemetery-plot-map.ts`: `buildCemeteryPlotMap`, the plot-map view model, plus camera, tag, chip and card placement
+- `src/lib/cemetery-plot-geometry.ts`: projections and drawn shape geometry
+- `src/lib/cemetery-plot-map-input.ts`: `toPlotMapInput` and `toPlotLogoAtlas`, what crosses the server/client boundary
 - `src/components/cemetery/cemetery-selection-context.tsx`: `CemeterySelectionProvider`, the only owner of the URL hash
 - `src/lib/cemetery-selection.ts`: section and record anchors, hash parsing, peak buckets and the register URL filters
 - `src/lib/cemetery-stats.ts`: `buildCemeteryStats`, the below-the-hero view model, and `buildCemeteryFaq`
@@ -42,10 +56,12 @@ Primary files:
 - `shared/data/dead-stablecoins.json`
 - `scripts/maintenance/generate-cemetery-dataset.ts`
 - `scripts/maintenance/build-cemetery-logo-atlas.ts`
+- `scripts/maintenance/build-og-cemetery.ts`
 - `public/datasets/stablecoin-cemetery.json`
 - `public/datasets/stablecoin-cemetery.csv`
 - `public/logos/atlas/cemetery-atlas.webp`
 - `src/lib/cemetery-logo-atlas.generated.json`
+- `public/og-cemetery.png`
 
 ### Data model
 
@@ -113,6 +129,10 @@ The `/cemetery/` page emits a `Dataset` JSON-LD node (`buildCemeteryDatasetJsonL
 
 It is the registered `cemetery-logo-atlas` generated artifact, auto-staged by the pre-commit hook when a staged change touches its sources: the cemetery logos, `data/logos.json`, the dead-coin data, the catalog or the cemetery modules. Freshness is judged on an input signature (`scripts/maintenance/state/cemetery-logo-atlas-signature.json`) rather than by re-encoding, because WebP bytes differ across platforms. `npm run logos:cemetery-atlas` regenerates it by hand, and `npm run check:generated-artifacts -- --only=cemetery-logo-atlas` verifies it.
 
+### OG image
+
+`/cemetery/` selects `public/og-cemetery.png`, a 1200×630 card rendered from the real plot map by `scripts/maintenance/build-og-cemetery.ts`: the light-theme desktop plan at rest under the route head and the frost recorded-deaths figure. It is the registered `og-cemetery` generated artifact. It depends on `cemetery-logo-atlas` and is auto-staged by the pre-commit hook, so a new death regenerates it. Freshness is an input signature (`scripts/maintenance/state/og-cemetery-signature.json`). [OG Images](./og-images.md) documents the pipeline.
+
 ### Frozen entries in the cemetery
 
 Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into the cemetery alongside curated `DEAD_STABLECOINS` through `shared/lib/cemetery-merged.ts`:
@@ -136,12 +156,34 @@ Each appendix includes the epitaph (when present) for every newly added coin plu
 
 ### UI behavior
 
-- `CemeteryClient` maintains an `expanded` coin-id set for obituary panels plus a local sort toggle (`newest` default, `oldest` fallback).
-- Tombstones render newest death-year first by default. Source-file order is non-contractual; the UI sort helper owns newest/oldest presentation.
-- `CemeteryTombstones` renders all year sections inside one continuous atmospheric cemetery scene with shared ground, horizon, fog, and a central path; size still reflects peak market cap.
-- Tombstone logos come from each row's `logo` field and render both on the grave marker and in the hover/focus memorial plaque. Curated dead-coin rows usually point under `public/logos/cemetery/`; frozen tracked rows prefer the canonical `data/logos.json` path, and otherwise derive `/logos/<llamaId>-<symbol>.png` — falling back to the bare `<symbol>.png` cemetery filename only for rows with no `llamaId`.
-- Tombstone hover and keyboard focus reveal an over-grave plaque with the stablecoin name, symbol, cause, death date, peak market cap, peg currency, archive status, and obituary lead (or up to the first two sentences, capped at 380 characters, for the top-20 entries by peak market cap).
-- Tombstone selection auto-expands the matching obituary and scrolls into view.
+The hero (`#cemetery`) is an isometric plot map: a walled cemetery on a headland, drawn in 2:1 dimetric with one light from the east-north-east, the lighthouse on the north-east rocks and the gate to the west. `buildCemeteryPlotMap` in `src/lib/cemetery-plot-map.ts` is its pure view model: no DOM, clock or randomness (every seed is an FNV-1a hash of the id), plain serialisable output, identical for identical input in any order. Every drawn element encodes a field; walls, paths, slab and sea play the role of chart axes. `PlotMapLegend` states each encoding with examples drawn by the same geometry.
+
+Encodings:
+
+- **Sections are causes of death** in `CAUSE_ORDER`, from Abandoned in the front lane to Regulatory under the sea wall. Each signpost prints the `CAUSE_META` label and count in sans small caps. Stone shape repeats the cause: a plain pillow marker (abandoned), an arched headstone split from the crown (counterparty failure), an emptied urn (liquidity drain), a broken column (algorithmic failure) and a sealed tablet with a "closed by order" seal plate (regulatory). Beds, curbs and stones carry a light cause tint from `CAUSE_HEX` and `CAUSE_HEX_DARK`.
+- **Time runs through shared year blocks** aligned across every section: the newest year stands at the gate and the oldest under the lighthouse. Years with no recorded death share one strip (for example `2019-2020`). The model anchors world positions at the oldest end, so a new death extends the plan toward the gate without moving an existing grave.
+- **Plinth steps are powers of ten of peak market cap**: `clamp(floor(log10(peak)) - 6, 0, 4)`, one step each at $10M, $100M, $1B and $10B (`PLOT_STEP_THRESHOLDS_USD`). Stone height follows a clamped log scale with an explicit floor and ceiling (`PLOT_HEIGHT`).
+- **Lots grow with the class.** A peak of $1B or more takes a 2×2 lot (an abandoned coin becomes a chest tomb); $10B or more takes a 3×3 lot, where architecture carries the class instead of height. The algorithmic colossus is TerraUSD's snapped fluted column, the tallest element in the scene; any other cause at that size is a sealed mausoleum with a barred door and a gavel carved flat into the tympanum (Binance USD). Chips name both colossi.
+- **Orderly exits read intact.** Only counterparty-failure headstones are cracked. Regulatory tablets and the Binance USD mausoleum stay whole at every weathering class, because the stone encodes the cause of death, not what holders recovered. The legend says so, and adds that peak market cap is not what holders lost.
+- **Unrecorded peaks** stand at a neutral height (the lower median of the $10M to $100M class, never the floor) with a hatched face, an outlined plinth and their own legend swatch.
+- **Age is measured against `asOf`**, the latest recorded `deathDate`, never the clock. Weathering is quantised into five classes at 0.5, 1.5, 3 and 5 years (`PLOT_WEATHER_BOUNDS_YEARS`): grime deepens, lichen appears from the third class and a moss band from the fourth, the oldest 1×1 stones lean, and the medallion logo fades. Fresh soil marks a death within `PLOT_FRESH_DAYS` (90) days of `asOf`.
+- **Marks.** A bronze plaque means Pharos holds a frozen data page (`archivedDataAvailable`, the register's tracked archive). A footstone glyph marks a non-USD peg (`PLOT_PEG_GLYPHS`: € and ¥, ∿ for a variable peg, ◇ for any other), set in mono. The cypress verge outside the front railing carries one cypress per year, its height the number of deaths that year.
+- **Logos** are cells of the logo atlas (see [Logo atlas](#logo-atlas)): grey at rest, fading with weathering, with the colour cell sliding in on hover, focus or pin. A row with no logo shows the first letter of its symbol.
+- **One Beam.** The count of recorded deaths (`stats.total`) is the page's only frost figure, with the year span, the "interred" plaque and a one-line "Latest recorded death" under it. The drawn frost beam from the lantern rests on that figure and moves only on interaction.
+
+Desktop interaction (above 760 px), owned by `PlotMapHero`:
+
+- **Keyboard.** The plan is one tab stop (roving tabindex) that lands on the newest grave. ←/→ move to the previous or next death in the section, ↑/↓ to the adjacent section at the nearest date, and Home/End to the ends. A "Skip the cemetery map" link to `#register` precedes the plan and the signposts follow it. Graves are `<a id="grave-<id>" href="#<id>" role="button" aria-pressed>` with a full accessible name (`plotGraveLabel`); scenery is `aria-hidden`.
+- **Hover and focus** light a grave: a ground ring, the colour logo, a collision-aware tag (`placePlotTag`) and a preview card with the cause, name, epitaph, obituary lead and facts. The beam swings to a hovered grave after a `PLOT_BEAM_DWELL_MS` (180 ms) dwell and to a focused grave at once.
+- **Pin.** A click, Enter or Space pins the grave. `PlotMapRecordCard` then shows the full obituary (scrollable), the Died, Peak, Peg and Record grid, and the Source, Archived data, Case study, Mechanism explainer and "Read in the register ↓" links. At 1280 px and wider the card docks beside the grave with a hairline to its medallion (`placeInspectorCard`), clear of the sticky chrome, the Feedback button, the route head and, while an ordinary grave is read, the colossi. From 761 to 1279 px it sits in flow below the plan. A pin writes `#<id>` and is announced once through a polite status region. Escape or a click on empty ground unpins; the next Escape leaves a section zoom. While a grave is pinned or hovered, or a section is zoomed, Escape and F also work with focus elsewhere on the page.
+- **Section zoom.** Hovering or focusing a signpost dims the other sections; clicking it zooms the section (`fitSectionCamera`) so a plain stone reaches the 28 px floor, under a "← Whole cemetery" toolbar. When the whole section cannot reach the floor, the camera frames the contiguous run of years with the most graves and the chip reads "showing <years>, <n> of <total> (← → keys reach the rest)"; ←/→ pan to the graves outside it. At the 1440×800 reference viewport only Algorithmic failure opens in this partial window.
+- **Year highlight.** Hovering a cypress or a year stamp lights that year across the plan.
+- **Flowers.** Pressing F on a hovered or pinned grave, or the pinned card's "Leave a flower" button, leaves a flower for the session (at most `PLOT_FLOWER_MAX` per grave). The count stays hidden until the first flower, and the page lead does not mention the key.
+- **Motion** is limited to the beam swing, the zoom glide and the flower bloom, all triggered by the reader. Under reduced motion (`usePrefersReducedMotion`, which honours the `data-motion` override) the beam jumps and the zoom cuts.
+
+Phones (760 px and narrower, `PLOT_PORTRAIT_QUERY`) get a portrait plan from `PlotMapPortraitSlot`: sections become columns in `CAUSE_ORDER` and years run down the page. It mounts after hydration, built from the same register rows, into a box the server reserves from `getPortraitAspectRatio(rows, asOf)` plus the header row, so it lands without layout shift. It keeps one roving tab stop (↑/↓ along the column, ←/→ to the adjacent column at the nearest date) and resolves a tap to the nearest grave centre. Opening a grave scrolls it clear of the `PlotMapSheet` bottom sheet, which sits above the mobile bottom nav and carries the same record card; Escape or a tap on empty ground closes it. The One Beam figure folds into one row under the route head, and the legend folds its second and third columns into a disclosure.
+
+Render boundary. `CemeteryHero` is a server component: it renders the route head (the Newsreader h1, a one-sentence lead and the Methodology, Register and Dataset links), the One Beam figure and the legend, and solves the desktop rest pose with `desktopPlotLayout` (how far the plan slides under the header into its empty sky, where the colossus chips hang, and the beam's rest angle for each viewport band), which reaches CSS as custom properties. `PlotMapHero` is the hero's only client entry. It receives the same `buildCemeteryRegisterRows` array the register receives, the slim atlas from `toPlotLogoAtlas` and that layout, and builds the desktop model in a `useMemo`; the model never crosses the boundary, and client modules import no `CEMETERY_ENTRIES`. The portrait plan is client-only inside its reserved box. Without JavaScript a `<noscript>` rule hides the empty phone slot and shows the desktop plan at every width, and each grave link still resolves `#<id>` to its register row through the `:target` fold.
 
 ### Selection and deep links
 
@@ -151,12 +193,21 @@ Anchors:
 
 - `#<id>` is the canonical public record anchor. RSS items, dataset `pharosUrl` values for curated rows, and the register's "Copy link" all use it. The register's main row carries `id="<id>"` and a scroll margin that clears the sticky chrome.
 - `#obituary-<id>` is a legacy alias. `parseCemeteryHash` resolves it to the record, and the provider rewrites the hash to `#<id>`.
-- Section anchors are `CEMETERY_SECTION_ANCHORS` (`cemetery`, `key-facts`, `causes`, `register`, `analysis`, `methodology`, `dataset`, `faq`) plus `#cause-<cause>` for each cause column. The autopsy row takes `autopsy-<id>`.
+- Section anchors are `CEMETERY_SECTION_ANCHORS` (`cemetery`, `key-facts`, `causes`, `register`, `analysis`, `methodology`, `dataset`, `faq`) plus `#cause-<cause>` for each cause column. The autopsy row takes `autopsy-<id>`, a desktop grave `grave-<id>` and a phone grave `walk-<id>`; grave links point at `#<id>`.
 - Unknown ids, unknown cause slugs and malformed encodings resolve to nothing.
 
 `/cemetery/#<id>` works without JavaScript. The server renders every register row. Rows past the first 25 (`REGISTER_FOLD_COUNT`) carry `data-folded` and are hidden by `tr[data-folded]:not(:target)`, so the targeted row still shows. Every autopsy row renders with `hidden`, and a `@layer base` rule in `cemetery-register.module.css` shows the autopsy row after a `:target` row until the register hydrates (`data-enhanced`). From then on the client owns expansion, because `replaceState` never moves `:target`.
 
 `revealRecord` in the register runs these steps in order: it clears any filters that exclude the row (keeping the sort) and announces that; unfolds the list; expands the row; scrolls it into view (instantly under reduced motion) and focuses its disclosure; highlights it (a static outline under reduced motion); and writes `#<id>`. The register registers its reveal handler only once the URL filters are readable, so a hash reveal queued during hydration judges the real filters. The peak chart's dots call `revealRecord` with the source `chart`, and the register's "Show on the field ↑" calls `pinGrave` with the source `register`.
+
+Round trips between the surfaces:
+
+- **Hero to register.** A hero pin writes `#<id>` through `setRecordHash`, and unpinning clears the hash. "Read in the register ↓" on the pinned card or the phone sheet calls `revealRecord` with the source `hero`.
+- **Register to hero.** "Show on the field ↑" calls `pinGrave` with the source `register`. On the desktop plan the hero pins the grave, scrolls up to it (smoothly unless reduced motion applies) and hands it keyboard focus; on phones the portrait slot opens the sheet for it.
+- **Chart to register.** A peak-chart dot calls `revealRecord` with the source `chart`.
+- **Hash to both.** A record hash pins the grave without scrolling it (the register's reveal owns scrolling; on phones it only moves the tab stop, because a sheet would cover the revealed row) and reveals the register row.
+
+The desktop hero registers the `pinGrave` handler while the desktop plan is live and the portrait slot registers it at 760 px and narrower (`usePlotLayout`), so exactly one layer answers a pin.
 
 ### Below the hero
 
@@ -237,7 +288,7 @@ Primary files:
 - Three existing briefs (USDC/USDG, USDe/sUSDe and PAXG/XAUT) have pair-specific editorial introductions, short answers and practical comparison sections in `src/lib/compare-pages.ts`. Each section links its issuer sources; the visible sources-checked date describes source verification, not human review, an independent audit or live reserve freshness. The first FAQ answer uses the same short-answer copy. Other pairs retain the metadata-derived fallback. Coin-profile comparison lists prioritize these enriched briefs while preserving relative order within both groups.
 - Static comparison pages emit route-specific `WebPage` + `ItemList` JSON-LD from `buildStaticComparisonJsonLd(...)`, including the two compared stablecoins as `Thing` nodes and the visible comparison rows as `PropertyValue` items.
 - `src/app/sitemap.ts` includes both the `/compare/` hub and `/compare/[slug]/` pair pages. Pair-page `lastModified` uses the newest of the two compared stablecoin detail-page `LAST_EDITED` dates and any editorial `updatedAt`, because dynamic comparison slugs are not generated into `sitemap-dates.json`. Advance editorial `updatedAt` for substantive brief changes, not a build or a source recheck alone.
-- `src/app/cemetery/page.tsx` emits `CollectionPage` and `ItemList` JSON-LD for the defunct-stablecoin archive. Dead coins intentionally use `Thing` items rather than fabricated internal detail URLs.
+- `src/app/cemetery/page.tsx` emits `CollectionPage` and `ItemList` JSON-LD for the defunct-stablecoin archive. Dead coins stay `Thing` items rather than fabricated internal detail pages, and each item's `url` is its canonical `/cemetery/#<id>` record anchor, the same URL the RSS feed and the register's "Copy link" publish.
 
 ### Selection and URL contract
 

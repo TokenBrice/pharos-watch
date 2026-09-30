@@ -154,7 +154,7 @@ One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue
 
 ### Named Rules
 
-**The One Beam Rule.** Frost-blue lights live data and the drawn lighthouse metaphor — not chrome, not the global nav, never a gradient or background. Its rarity is what makes it read as a signal.
+**The One Beam Rule.** Frost-blue lights live data and the drawn lighthouse metaphor — not chrome, not the global nav, never a gradient or background. Its rarity is what makes it read as a signal. One explicit exception: the Cemetery plot map's drawn beam is a frost gradient from the lantern, and on that page frost appears only on the recorded-deaths figure and that beam.
 
 **The Semantic-Color Rule.** Color encodes state, never identity or decoration. If a color isn't carrying a risk band, a data series, or the beam, it shouldn't be saturated. Inactive states never take a full-saturation accent.
 
@@ -164,7 +164,7 @@ One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue
 **Body / UI Font:** system-ui stack (the `--font-geist-sans` token name is retained from a prior Geist iteration; no Geist webfont is loaded).
 **Data Font:** JetBrains Mono (variable; fallback `SFMono-Regular, ui-monospace`) — folded into `--font-geist-mono`, so every existing mono consumer (tables, `.pharos-numeric`, peg hero) inherits it.
 
-**Character:** A three-face system on a clear contrast axis — an ink-trap grotesque for editorial display weight, a neutral humanist sans for the dense UI, and a precise mono for figures. The authored-editorial serif register (Newsreader / Georgia / Courier) is a deliberate carve-out (the `/digest/` broadsheet, the homepage Daily Digest card, Cemetery obituary plaques, detail-page AI summaries, `/depeg/[event]` incident briefings, the `/blog/` article bodies) — never general analytics.
+**Character:** A three-face system on a clear contrast axis — an ink-trap grotesque for editorial display weight, a neutral humanist sans for the dense UI, and a precise mono for figures. The authored-editorial serif register (Newsreader / Georgia / Courier) is a deliberate carve-out (the `/digest/` broadsheet, the homepage Daily Digest card, the Cemetery `h1`, epitaphs and plot-map record cards, detail-page AI summaries, `/depeg/[event]` incident briefings, the `/blog/` article bodies) — never general analytics. Inside the Cemetery plot map itself, signposts stay sans small caps and figures stay mono.
 
 ### Hierarchy
 
@@ -239,7 +239,7 @@ The primary interactive control on data surfaces is the pill, not a heavy CTA. F
 Pharos draws its metaphors rather than naming them (every shape encodes a data field; inline JSX SVG, semantic vars, reduced-motion-gated keyframes):
 
 - **Market Pulse hero:** split panel — Total Market Cap as the frost-blue `hero-metric` + cohort breakdown + live area chart.
-- **The lighthouse/nautical identity (kept):** Chains "harbor chart" (ships, wakes, depth lines), the `/stability-index/` PSI lighthouse scene, the On-The-Horizon constellation with its brightening beam, the Alt-Peg Atlas starfield, the Cemetery tombstones, the `/depeg/` DDR forecast timeline.
+- **The lighthouse/nautical identity (kept):** Chains "harbor chart" (ships, wakes, depth lines), the `/stability-index/` PSI lighthouse scene, the On-The-Horizon constellation with its brightening beam, the Alt-Peg Atlas starfield, the Cemetery plot map (an isometric walled cemetery under the lighthouse: sections by cause, year blocks, plinth steps for peak market cap), the `/depeg/` DDR forecast timeline.
 
 ### Homepage Composition (signature surface — the locked layout)
 
