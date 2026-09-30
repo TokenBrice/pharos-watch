@@ -510,6 +510,8 @@ The optional `sync` object exposes the last operational state:
 | `uncertainWrite`  | `true` when the latest attempt hit the D1 write-timeout / finalize-rejection path and authoritative state could not be proven       |
 | `freshness`       | The budgets, clock, and generation behind `stale` (table below)                                                                     |
 
+The detail page treats a live-enabled coin with `status: "skipped"`, `bootstrap: true`, and no `lastAttemptedAt`, `lastError`, `failureCategory`, `uncertainWrite`, or warnings as awaiting its first scheduled sync. This is the state of a newly configured adapter before its first `sync-live-reserves` run. It shows a neutral **Live reserve sync pending** notice and "Live sync pending first run" in the fallback footnote. It does not show the amber degraded notice. Any attempt or failure evidence keeps the degraded or error presentation.
+
 `sync.freshness` fields (added 2026-09-27; additive and optional in `StablecoinReservesResponseSchema`, so older payloads still parse):
 
 | Field                | Meaning |
