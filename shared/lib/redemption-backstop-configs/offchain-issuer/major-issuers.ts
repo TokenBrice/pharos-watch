@@ -103,6 +103,47 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Bridge reserve docs describe API-gated issuer redemption and reserve management; Pharos models current support as documented eventual primary-market redeemability, not an independently measured instant buffer",
     ],
   },
+  "ousd-open-standard": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-09-30"),
+    holderEligibility: "verified-customer",
+    settlementModel: "days",
+    routeStatus: "unknown",
+    costModel: fixedFee(
+      0,
+      "Open Standard states businesses mint and redeem OUSD at no cost; this issuer fee excludes unreviewed bank, partner, and network charges",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement", "cost"],
+      rationale:
+        "Bridge promises order processing within two business days only after compliance acceptance, without a bounded OUSD bank-receipt SLA. Open Standard publishes a zero issuer redemption fee, but no OUSD-specific all-in bank or partner payout fee bound was verified.",
+      reviewedAt: "2026-09-30",
+      docs: [
+        sourceRef("Bridge stablecoin terms", "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc", ["route", "access", "settlement", "fees"]),
+        sourceRef("Bridge US user terms", "https://www.bridge.xyz/legal/us-terms/bridge-building-inc", ["access", "settlement", "fees"]),
+        sourceRef("Open Standard introduces Open USD", "https://joinopenstandard.com/blog/introducing-open-usd", ["route", "capacity", "fees"]),
+      ],
+    },
+    docs: [
+      sourceRef("Open Standard introduces Open USD", "https://joinopenstandard.com/blog/introducing-open-usd", ["route", "capacity", "fees"]),
+      sourceRef("Bridge stablecoin terms", "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc", ["route", "capacity", "access", "settlement"]),
+      sourceRef("Bridge US user terms", "https://www.bridge.xyz/legal/us-terms/bridge-building-inc", ["access", "settlement", "fees"]),
+      sourceRef("Bridge minting and burning", "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning", ["route"]),
+      sourceRef("Bridge stablecoins FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", ["route", "capacity"]),
+      sourceRef("Bridge OUSD reserves", "https://reserves.bridge.xyz/ousd", ["capacity"]),
+      sourceRef("Bridge redemption portal", "https://redeem.bridge.xyz/", ["access", "settlement"]),
+    ],
+    notes: [
+      "Reviewed 2026-09-30: businesses redeem through Bridge-integrated partners subject to account onboarding, identity verification, jurisdiction restrictions, and compliance approval. Bridge terms extend redemption rights to subsequent holders only if they become eligible Users; permissionless retail access is not established.",
+      "The modeled terminal output is USD under Bridge stablecoin terms. Generic Bridge docs also allow applicable stablecoin payouts, but no complete OUSD-specific crypto output set was verified, so USDC or USDT is not assumed.",
+      "Bridge burns received tokens and releases equivalent fiat value through its API. Its OUSD reserve page lists Tempo, Ethereum, Base, and Solana deployments; a chain-specific redemption intake/burn rail list was not verified. The public redemption portal lists USDH, DKUSD, and EURR, not OUSD.",
+      "Capacity follows Bridge precedents as documented full-supply eventual redeemability. Live cash and Treasury reserve balances establish backing, not an executable same-day payout buffer, and no reserve-sync capacity claim is made.",
+      "Open Standard states no artificial volume limits; Bridge user terms still permit risk-based amount and frequency limits. No numeric OUSD minimum or daily cap was verified.",
+      "Settlement remains days and route status unknown: contractual processing starts after compliance acceptance, and neither live route openness nor an OUSD-specific final payout SLA was verified.",
+      "Tempo DEX exchange liquidity is secondary-market liquidity, outside this direct-redemption registry; no OUSD/pathUSD protocol redemption or PSM is modeled.",
+    ],
+  },
   "brlv-crown": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-20"),

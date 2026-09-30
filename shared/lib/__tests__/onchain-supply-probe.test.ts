@@ -115,6 +115,18 @@ describe("selectSingleOnchainSupplyProbeContract", () => {
 });
 
 describe("curated on-chain supply paths", () => {
+  it("requires all four Open USD deployments for its zero-list-supply repair", () => {
+    const meta = TRACKED_META_BY_ID.get("ousd-open-standard")!;
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    expect(selected?.map(({ contract }) => contract.chain)).toEqual(["tempo", "ethereum", "base", "solana"]);
+    expect(selected?.map(({ contract }) => contract.decimals)).toEqual([6, 6, 6, 6]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]).toBeUndefined();
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+      ...meta,
+      contracts: meta.contracts?.filter(({ chain }) => chain !== "solana"),
+    })).toBeNull();
+  });
+
   it("admits savUSD's full registry only with its explicit CCIP residual policy", () => {
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get("savusd-avant")!);
     expect(selected).toHaveLength(10);

@@ -3,6 +3,101 @@
   "note": "V9-only reviewed transfer-posture facts. Rows are added only after deployment-scoped primary-source review.",
   "reviews": [
     {
+      "assetId": "ousd-open-standard",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Claude OUSD promotion review",
+      "deployments": [
+        {
+          "chainId": "tempo",
+          "contractOrTokenId": "0x20c0000000000000000000006a37da5c996874be",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "RPC https://rpc.tempo.xyz at block 41972876, observed 2026-09-30T16:24:40.633Z: the native TIP-20 token is unpaused and selects TIP-403 blacklist policy 2, administered by 0x251d2711ebeb0a09fdb8992f5506f3d949175246. Token DEFAULT_ADMIN_ROLE holder 0x79c6631fa15cda38777fb9dd7a6348baee794a4e can replace that policy and grant PAUSE_ROLE or BURN_BLOCKED_ROLE. The TIP-20 specification permits global pause and burns from policy-blocked accounts. Those two inspected issuer/admin addresses do not currently hold the operating roles, but mutable policy membership already provides direct holder restrictions. Current unpaused state does not imply permissionless transfer posture.",
+          "sources": [
+            {
+              "label": "Tempo pinned RPC reads",
+              "url": "https://rpc.tempo.xyz"
+            },
+            {
+              "label": "TIP-20 holder controls",
+              "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+            },
+            {
+              "label": "TIP-403 transfer policy",
+              "url": "https://tempo.xyz/developers/docs/protocol/tip403/spec"
+            }
+          ]
+        },
+        {
+          "chainId": "solana",
+          "contractOrTokenId": "ousd2mJsPEckLHcSCDxyKD7NDGARZcfLbDZkKiatYHB",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Finalized RPC https://api.mainnet-beta.solana.com at slot 452017685, observed 2026-09-30T16:25:21.719Z: Token-2022 freeze authority is H2UbwLLJAen1W2z6oRCYqZCFo6BidkU4QFDw2eWxL9W4 and permanent delegate is Aj2gxCSQ7A7eTnUL2VnyT3KQa79AcZi5x15rPRSnw6RA. A permanent delegate can transfer or burn any holder's tokens without their revocable allowance. Mint-close, confidential-transfer, pausable, transfer-hook, metadata-pointer and metadata-update authorities are E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw. The mint is currently unpaused, default accounts initialize unfrozen, and transferHook programId is null; the retained authorities can still pause transfers or install a hook. ProgramData at finalized slot 452020311, observed 2026-09-30T16:37:02.331Z, also names E7Jd as the Bridge issuance program upgrader. The separate freeze/delegate PDA controlling-program linkage remains unresolved and is not guessed.",
+          "sources": [
+            {
+              "label": "Finalized Solana mint and ProgramData reads",
+              "url": "https://api.mainnet-beta.solana.com"
+            },
+            {
+              "label": "Permanent delegate transfer and burn powers",
+              "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+            },
+            {
+              "label": "Solana program upgrade semantics",
+              "url": "https://solana.com/docs/core/programs"
+            }
+          ]
+        },
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0xb2000000000000000000002feb517dfec7415344",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "RPC https://mainnet.base.org at block 51998067, observed 2026-09-30T16:24:41.414Z: native B20 token code is 0xef and EIP-1967 slots are zero. Additional mainnet.base.org reads at block 51998562, observed 2026-09-30T16:41:11.954Z, show pausedFeatures empty, TRANSFER_SENDER_POLICY 122 and receiver/executor policies zero. Policy 122 administrator is 0x251d2711ebeb0a09fdb8992f5506f3d949175246. At block 51998343, observed 2026-09-30T16:33:54.998Z, empty-code account 0x79c6631fa15cda38777fb9dd7a6348baee794a4e is a DEFAULT_ADMIN_ROLE holder. Base B20 documentation establishes mutable transfer-policy, pause and role administration. The existing mutable sender-policy gate makes holder transfers restrictable. The newer seize surface is not asserted because its policy scopes were unsupported in the inspected deployment.",
+          "sources": [
+            {
+              "label": "Base pinned RPC reads",
+              "url": "https://mainnet.base.org"
+            },
+            {
+              "label": "Base native B20 constants",
+              "url": "https://docs.base.org/specifications/b20/reference/constants"
+            },
+            {
+              "label": "B20 roles and pause",
+              "url": "https://docs.base.org/specifications/b20/concepts/roles-and-pause"
+            },
+            {
+              "label": "B20 policy enforcement",
+              "url": "https://docs.base.org/specifications/b20/concepts/policies"
+            }
+          ]
+        },
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "RPC https://ethereum-rpc.publicnode.com at block 26091471, observed 2026-09-30T16:24:41.114Z: minimal ERC-1967 proxy delegates to verified Bridge StablecoinTemplateV3 0x264048239dd1b5939599fae8e6000df40248d524. Its transfer path checks both sender and recipient against AuthRegistry transfer policy 7, a blacklist administered by 0x251d2711ebeb0a09fdb8992f5506f3d949175246. Sole DEFAULT_ADMIN_ROLE holder and owner 0x79c6631fa15cda38777fb9dd7a6348baee794a4e has empty Ethereum code and can replace the policy, grant pause or blocked-address-burn roles, and authorize UUPS upgrades without a contract delay. PAUSER_ROLE, UNPAUSER_ROLE and BLOCKED_ADDRESS_BURNER_ROLE currently have zero members; paused is false. Mutable active blacklist membership establishes direct restrictions independently of those unassigned operating roles.",
+          "sources": [
+            {
+              "label": "Ethereum pinned RPC reads",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Verified Bridge V3 implementation and bundled source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x264048239dd1b5939599fae8e6000df40248d524"
+            },
+            {
+              "label": "Ethereum policy registry",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x69026c540cda3d42a1530d0fa3feb092d0bc944d"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "assetId": "bd-basedollar",
       "reviewedAt": "2026-08-21",
       "reviewer": "Codex Base Dollar transfer review",

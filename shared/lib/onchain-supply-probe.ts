@@ -71,6 +71,16 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // zero supply row. Use only verified live deployments and fail closed if any
   // configured chain cannot be read, so this cannot silently undercount.
   "cadd-cad-digital": [{ chain: "ethereum" }, { chain: "base" }],
+  // Bridge's OUSD reserve page binds these four issuer deployments. Reviewed
+  // 2026-09-30: their combined totalSupply/getTokenSupply reconciles to the
+  // Bridge ousd transparency total (~$477.31M), so sum rather than reallocate.
+  // This repairs a zero DefiLlama row only; it never replaces positive list supply.
+  "ousd-open-standard": [
+    supplyProbeChain("tempo"),
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "solana" },
+  ],
   // AllUnity lists CHFAU as issuer-native on Ethereum, Polygon, Base, and Tempo.
   // DefiLlama does not list it and CoinGecko exposes no usable market cap, so
   // aggregate the reviewed deployments and allow live zero-supply legs.
