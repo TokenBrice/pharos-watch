@@ -21,6 +21,8 @@ const ALLOWED_SERIF_FILES = new Set<string>([
   // Cemetery obituaries use Newsreader display titles as an intentional
   // editorial carve-out (Design Council B11), matching the Digest register.
   "src/components/cemetery-tombstones.tsx",
+  // Autopsy Register epitaph pull line: the same sanctioned cemetery carve-out.
+  "src/components/cemetery/cemetery-register-autopsy.tsx",
   // Root error boundary keeps its editorial register in Georgia
   // (`font-serif`), deliberately not Newsreader: error.tsx is in every
   // route's preload graph, and importing digestDisplay from it preloaded

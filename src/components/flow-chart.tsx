@@ -11,7 +11,8 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { TimeXAxis, MonoYAxis, TimeGrid, ChartLegendChip } from "@/components/chart-primitives/axes";
+import { TimeXAxis, MonoYAxis, TimeGrid } from "@/components/chart-primitives/axes";
+import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import { ChartFigure } from "@/components/chart-primitives/figure";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";

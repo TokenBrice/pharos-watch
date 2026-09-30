@@ -17,7 +17,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
-import { CategoricalXAxis, ChartAreaGradient, ChartLegendChip, useSvgId } from "@/components/chart-primitives/axes";
+import { CategoricalXAxis, ChartAreaGradient, useSvgId } from "@/components/chart-primitives/axes";
+import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";

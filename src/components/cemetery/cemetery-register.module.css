@@ -1,0 +1,41 @@
+/*
+ * Autopsy Register folding without JS. The server renders every row; rows past
+ * the first 25 carry `data-folded` and every obituary row carries `hidden`, yet
+ * `/cemetery/#<id>` must still show that record and its obituary.
+ */
+.register tr[data-folded]:not(:target) {
+  display: none;
+}
+
+/*
+ * Tailwind's preflight hides `[hidden]` with an important declaration inside
+ * `@layer base`, which beats any unlayered rule. Only an important declaration
+ * in that same layer with a more specific selector can show the linked
+ * obituary. Once the client has hydrated (`data-enhanced`) it owns expansion:
+ * the provider rewrites the hash with `replaceState`, which never moves
+ * `:target`, so this rule must not pin a collapsed row open.
+ */
+@layer base {
+  .register:not([data-enhanced]) tr:target + tr[data-detail] {
+    display: table-row !important;
+  }
+}
+
+/* Brief highlight after a reveal; reduced motion gets the static outline instead. */
+.flash {
+  animation: register-flash 2.4s ease-out both;
+}
+
+.outlined {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 45%, transparent);
+  outline-offset: -2px;
+}
+
+@keyframes register-flash {
+  from {
+    background-color: color-mix(in oklab, var(--foreground) 12%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
