@@ -46,12 +46,8 @@ export function DependencyExposureMethodologySection() {
           </Link>
         </div>
         <div className="space-y-2">
-          <h3 className="text-foreground font-medium">Separate future modeling</h3>
-          <p>
-            Tier 2 exact V9 scenarios are separate, modeled offline in Node with the production
-            evaluator and bound to a publication. They are not yet shipped. Exposure lookup adds
-            no scoring payload field or scoring override and needs no scoring methodology version bump.
-          </p>
+          <h3 className="text-foreground font-medium">Separate offline modeled scenarios</h3>
+          <p>{markdownParagraphs[6]}</p>
         </div>
       </MethodologyDetails>
       <MethodologyDetails summary="History examples">

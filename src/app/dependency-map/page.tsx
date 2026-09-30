@@ -31,8 +31,8 @@ const DEPENDENCY_MAP_STATIC_SECTION = (
     <p className="pharos-kicker">Dependency Lens</p>
     <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
       <p>
-        The graph shows direct collateral and wrapper links between stablecoins. Bridges, custodians, and shared
-        issuance frameworks can also create common exposures, but are not drawn as separate nodes here.
+        The graph shows direct collateral and wrapper links between stablecoins. The shared failure domains board
+        lists published shared control or custody identities without drawing them as separate graph nodes.
       </p>
       <p>
         Start with the graph, then open{" "}

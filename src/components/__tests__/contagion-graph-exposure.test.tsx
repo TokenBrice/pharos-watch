@@ -14,7 +14,10 @@ import { installSvgCoordinateShim } from "./contagion-graph-test-support";
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/lib/contagion-layout", async () => {
   const actual = await vi.importActual<typeof ContagionLayout>("@/lib/contagion-layout");
-  return { ...actual, runSimulation: () => new Map(Array.from({ length: 8 }, (_, i) => [`coin-${i}`, { x: 100 + i * 75, y: 300 }])) };
+  return { ...actual, runSimulationInChunks: (_nodes: unknown, _links: unknown, _state: unknown, complete: (positions: Map<string, { x: number; y: number }>) => void) => {
+    complete(new Map(Array.from({ length: 8 }, (_, i) => [`coin-${i}`, { x: 100 + i * 75, y: 300 }])));
+    return () => {};
+  } };
 });
 const cards: ContagionGraphCard[] = Array.from({ length: 8 }, (_, i) => ({ id: `coin-${i}`, symbol: `C${i}`, grade: "B" }));
 const dependencyEdges: ReportCardsV9DependencyEdge[] = cards.slice(1).map((card, i) => ({ from: cards[i].id, to: card.id, kind: "serial", materiality: "serial", weight: null, upstreamScore: 50 }));

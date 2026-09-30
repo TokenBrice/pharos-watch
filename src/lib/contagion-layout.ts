@@ -495,11 +495,11 @@ export function buildSupernodeState(
 // runSimulation
 // ---------------------------------------------------------------------------
 
-export function runSimulation(
+function* simulationSteps(
   nodes: GraphNode[],
   links: GraphLink[],
   supernodeState: SupernodeState,
-): Map<string, { x: number; y: number }> {
+): Generator<void, Map<string, { x: number; y: number }>> {
   if (nodes.length === 0) return new Map();
 
   const simNodes = nodes.map((n) => ({ ...n }));
@@ -545,7 +545,10 @@ export function runSimulation(
     )
     .stop();
 
-  for (let i = 0; i < 300; i++) sim.tick();
+  for (let i = 0; i < 300; i++) {
+    sim.tick();
+    yield;
+  }
 
   const MAX_PASSES = 100;
   const xMin = PAD;
@@ -590,6 +593,7 @@ export function runSimulation(
           }
         }
       }
+      yield;
     }
 
     for (const n of simNodes) {
@@ -610,4 +614,53 @@ export function runSimulation(
   }
 
   return posMap;
+}
+
+export function runSimulation(
+  nodes: GraphNode[],
+  links: GraphLink[],
+  supernodeState: SupernodeState,
+): Map<string, { x: number; y: number }> {
+  const steps = simulationSteps(nodes, links, supernodeState);
+  let result = steps.next();
+  while (!result.done) result = steps.next();
+  return result.value;
+}
+
+/** Same deterministic solver, with bounded work slices and cancellation between slices. */
+export function runSimulationInChunks(
+  nodes: GraphNode[],
+  links: GraphLink[],
+  supernodeState: SupernodeState,
+  onComplete: (positions: Map<string, { x: number; y: number }>) => void,
+): () => void {
+  const steps = simulationSteps(nodes, links, supernodeState);
+  let cancelled = false;
+  let timer: number | NodeJS.Timeout | undefined;
+  let idle: number | undefined;
+  const schedule = () => {
+    if (typeof requestIdleCallback === "function") {
+      idle = requestIdleCallback(slice, { timeout: 100 });
+    } else {
+      timer = setTimeout(slice, 0);
+    }
+  };
+  const slice = () => {
+    if (cancelled) return;
+    const start = performance.now();
+    do {
+      const result = steps.next();
+      if (result.done) {
+        onComplete(result.value);
+        return;
+      }
+    } while (performance.now() - start < 8);
+    schedule();
+  };
+  schedule();
+  return () => {
+    cancelled = true;
+    clearTimeout(timer);
+    if (idle !== undefined) cancelIdleCallback(idle);
+  };
 }

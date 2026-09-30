@@ -17,11 +17,10 @@ import {
   DEFAULT_NODE_LIMIT,
   MIN_RADIUS,
   HEIGHT,
-  runSimulation,
+  runSimulationInChunks,
   WIDTH,
   type GraphLink,
   type GraphNode,
-  type HubTier,
   type LayoutTarget,
   type NodeLimitOption,
   type SupernodeState,
@@ -135,13 +134,14 @@ function resolveSelectedNeighborhoodId(params: {
 
 function buildSimulationKey(
   nodes: readonly GraphNode[],
-  linksLength: number,
-  tierById: ReadonlyMap<string, HubTier>,
+  links: readonly GraphLink[],
+  focusCoinId?: string,
 ): string {
   return [
-    nodes.map((node) => node.id).join("|"),
-    linksLength,
-    [...tierById.entries()].map(([id, tier]) => `${id}:${tier}`).join("|"),
+    nodes.map((node) => node.id).sort().join("|"),
+    // Coarse topology version, independent of market-cap ranks, radii and tiers.
+    links.map(link => `${resolveLinkEndpointId(link.source)}>${resolveLinkEndpointId(link.target)}:${link.type}:${Math.round(link.weight * 100)}`).sort().join("|"),
+    focusCoinId ?? "",
   ].join("::");
 }
 
@@ -286,15 +286,25 @@ export function useContagionGraphModel({
     [hubIdsByScore, nodes, selectedNeighborhoodId],
   );
   const nodeMap = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
-  const basePositions = useMemo(
-    () =>
-      nodes.length === 0 ? new Map<string, { x: number; y: number }>() : runSimulation(nodes, links, supernodeState),
-    [links, nodes, supernodeState],
-  );
   const simulationKey = useMemo(
-    () => buildSimulationKey(nodes, links.length, supernodeState.tierById),
-    [links.length, nodes, supernodeState.tierById],
+    () => buildSimulationKey(nodes, links, focusCoinId),
+    [nodes, links, focusCoinId],
   );
+  const layoutInput = useRef({ nodes, links, supernodeState });
+  useEffect(() => { layoutInput.current = { nodes, links, supernodeState }; }, [nodes, links, supernodeState]);
+  const [settledPositions, setSettledPositions] = useState<Map<string, { x: number; y: number }>>(() => new Map());
+  useEffect(() => {
+    const input = layoutInput.current;
+    return runSimulationInChunks(input.nodes, input.links, input.supernodeState, setSettledPositions);
+  }, [simulationKey]);
+  const basePositions = useMemo(() => {
+    const positions = new Map<string, { x: number; y: number }>();
+    for (const node of nodes) {
+      positions.set(node.id, settledPositions.get(node.id)
+        ?? supernodeState.layoutTargetById.get(node.id) ?? { x: WIDTH / 2, y: HEIGHT / 2 });
+    }
+    return positions;
+  }, [nodes, settledPositions, supernodeState.layoutTargetById]);
   const drag = useContagionGraphDrag({ nodeMap, basePositions, simulationKey });
   const resolvedLinks = useMemo(
     () => resolveGraphLinks(links, supernodeState.tierById),

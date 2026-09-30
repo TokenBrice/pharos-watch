@@ -1,4 +1,4 @@
-import type { ReportCardsV9DependencyEdge, ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { buildDirectHubExposures, mappedDependentSupply, type ExposureTotals, type HubExposure, type SupplyOf, type WrapperClaimForm } from "@shared/lib/dependency-exposure";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
@@ -7,7 +7,6 @@ export interface DependencyHubCard {
   name: string;
   symbol: string;
   isDefunct?: boolean;
-  scoreTrace?: ReportCardsV9Response["cards"][number]["scoreTrace"];
   sharedBookId?: string | null;
 }
 export interface DependencyHub extends HubExposure {
@@ -55,9 +54,13 @@ export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf 
       return null;
     },
     wrapperFormOf: (id: string): WrapperClaimForm => {
-      const form = cardById.get(id)?.scoreTrace?.wrapperParentLimit?.form;
-      if (!form) return "unknown";
-      return form === "pure" || form === "native-staked" || (form as string) === "staked" ? "pass-through" : "vault-claim";
+      let form: ReportCardsV9DependencyEdge["wrapperForm"];
+      for (const edge of liveEdges) {
+        if (edge.to !== id || edge.kind !== "serial") continue;
+        if (edge.wrapperForm == null || (form !== undefined && form !== edge.wrapperForm)) return "unknown";
+        form = edge.wrapperForm;
+      }
+      return form == null ? "unknown" : form === "pure" || form === "native-staked" ? "pass-through" : "vault-claim";
     },
   };
   const hubs = buildDirectHubExposures(liveEdges, supplyOf, opts).map(exposure => {

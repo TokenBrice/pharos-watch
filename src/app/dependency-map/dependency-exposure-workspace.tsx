@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import { useDependencyExposureMode, type DependencyExposureResult, type DependencyExposureRow } from "@/hooks/use-dependency-exposure-mode";
 import { readDependencyExposureUrl, writeDependencyExposureUrl, type DependencyExposureUrlState } from "@/lib/dependency-exposure-url";
 import { trackEvent } from "@/lib/analytics";
 import { DependencyExposureControls, type ExposureRootOption } from "./dependency-exposure-controls";
 import { DependencyExposureResults } from "./dependency-exposure-results";
 
-export function useDependencyExposureWorkspace(publication: ReportCardsV9Response | undefined) {
+export function useDependencyExposureWorkspace(publication: DependencyGraphResponse | undefined) {
   const [state, setState] = useState<DependencyExposureUrlState>({ mode: "explore", roots: [] });
   const [inspectedId, setInspectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<"setup" | "results" | "graph">("setup");
@@ -68,7 +68,7 @@ export function useDependencyExposureWorkspace(publication: ReportCardsV9Respons
 
 export interface DependencyExposureWorkspaceState {
   state: DependencyExposureUrlState;
-  exposure: { result: DependencyExposureResult | null; publication: ReportCardsV9Response | undefined; networkUpdated: boolean; held: boolean };
+  exposure: { result: DependencyExposureResult | null; publication: DependencyGraphResponse | undefined; networkUpdated: boolean; held: boolean };
   overlay: { roots: readonly string[]; rows: ReadonlyMap<string, DependencyExposureRow>; highlightedPaths: readonly (readonly string[])[] } | null;
   modeControls: ReactNode;
   addRoot: (id: string) => void;

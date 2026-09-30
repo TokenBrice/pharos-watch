@@ -4,7 +4,7 @@
 
 ## Overview
 
-The dependency map route (`/dependency-map`) presents the canonical Safety Score V9 dependency graph two ways: an interactive force-directed graph of the coins that carry at least one live dependency edge, and ranked upstream hubs with direct dependent exposure. The same graph component renders a focused, single-asset view inside the Dependency Context section of each stablecoin detail page.
+The dependency map route (`/dependency-map`) presents the canonical Safety Score V9 dependency graph as an interactive force-directed graph and ranked upstream hubs with direct dependent exposure. Exposure mode adds structural look-through results and separate offline modeled scenarios; the shared failure domains board displays publication groups and existing priced effects. The same graph component renders a focused, single-asset view inside the Dependency Context section of each stablecoin detail page.
 
 Primary files:
 
@@ -32,13 +32,13 @@ Primary files:
 
 The page combines:
 
-1. `useReportCardsV9()` (`GET /api/report-cards/v9`) for current cards and canonical dependency edges.
+1. `useDependencyGraph()` (`GET /api/dependency-graph/v1`) for accepted nodes, canonical dependency edges, and common-mode groups. Its registered `dependencyGraph` descriptor uses 30-minute `staleTime` and 60-minute `refetchInterval`.
 2. `useStablecoins()` (`GET /api/stablecoins`) for nullable circulating USD context through `getCirculatingRawOrNull()`.
 3. Static `logosById` for token logos.
 
-A held V9 publication is shown with the shared status notice. Missing or invalid V9 data renders unavailable; the page never falls back to V8 or reconstructs dependency edges from a retired card model. The graph takes its edge set only from `dependencyGraph.edges`; it has no static fallback source.
+A held V9 publication is shown with the shared status notice. Missing or invalid V9 data renders unavailable; the page never falls back to V8 or reconstructs dependency edges from a retired card model. The standalone graph takes its edge set only from the slim response's `edges`; it has no static fallback source.
 
-`GET /api/dependency-graph/v1` is the free, no-key slim projection planned for the W4 data-source switch. W3 does not consume it: the page still reads the full V9 report and the stablecoin market-cap query. The endpoint projects only the accepted publication, with generation id, methodology version, evaluation/publication clocks, current or held health, nodes, unchanged published edges, and optional common-mode groups. Nodes carry grade, nullable score, publication-bound supply and clock, shared-book id, role dependencies, and nullable coverage count. Retained v5 data leaves unpublished supply and coverage fields null. Held responses use `Cache-Control: no-store` and expose `X-Safety-Score-Status`.
+`GET /api/dependency-graph/v1` is the free, no-key slim projection consumed by the standalone map and Exposure mode. Detail pages retain the full V9 report. The endpoint projects only the accepted publication, with generation id, methodology version, evaluation/publication clocks, current or held health, nodes, unchanged published edges, and optional common-mode groups. Nodes carry grade, nullable score, publication-bound supply and clock, shared-book id, role dependencies, and nullable coverage count. Retained v5 data leaves unpublished supply and coverage fields null. Held responses use `Cache-Control: no-store` and expose `X-Safety-Score-Status`. Static metadata supplies names and symbols; the separate stablecoins query remains for Explore sizing and explicitly labelled market-cap proxy totals.
 
 Missing market caps remain `null`, never measured zero. Explore nodes without supply use `MIN_RADIUS` and display `mcap n/a`; direct hub USD totals exclude them and disclose the excluded count. If the market-cap query fails, the map client discards its market-cap projection even if cached data exists, keeps the published graph available with default node sizes and unknown Explore USD exposure, and shows a retry notice. Exposure mode retains its separate publication-bound supply source. V9 publication failure without cards renders unavailable; failure with cards retains the graph with a notice.
 
@@ -89,7 +89,7 @@ Two different unknowns must not be conflated here. An unknown **weight** means t
 
 Because an edge with no weight models to no magnitude, `contagion-graph-svg.tsx` floors stroke geometry at `MIN_EDGE_DISPLAY_WEIGHT` so the relationship still reads as a drawn edge, and the tooltip omits the percentage rather than showing a misleading `0%`.
 
-Report-v6 edges also publish `dependencyType`, nullable serial `wrapperForm`, and `provenance` with source, evidence date, and an optional bridge, wrapper-token, or vault-share intermediary. The detail-page Used by labels consume `dependencyType`. The map's graph still draws from `kind` and `materiality`, not these richer annotations, and its exposure claim split reads `scoreTrace.wrapperParentLimit.form`, not edge `wrapperForm`. Edge provenance and intermediary annotations are not currently rendered by the graph tooltip.
+Report-v6 edges also publish `dependencyType`, nullable serial `wrapperForm`, and `provenance` with source, evidence date, and an optional bridge, wrapper-token, or vault-share intermediary. The detail-page Used by labels consume `dependencyType`. The map's graph still draws from `kind` and `materiality`, not these richer annotations, while its exposure claim split uses only published edge `wrapperForm`. Edge provenance and intermediary annotations are not currently rendered by the graph tooltip.
 
 ## Direct Exposure And Shared Books
 
@@ -113,11 +113,11 @@ Cycles produce unknown shares and integrity flags. Null-weight basket edges are 
 
 The graph card switches between **Explore** and **Exposure**. Add upstream roots with **Use as exposure root** in the selected-node rail or mobile list, **Exposure** on a hub row, or the upstream picker. Roots are listed separately and excluded from dependent rows. Shared links use `?mode=exposure&root=<id>` with repeatable `root` parameters.
 
-`useDependencyExposureMode` calls `exposureFootprint(roots, fullEdges, supplyOf, opts)` over the full published edge set. Focus, Type, Limit, and small-link visibility never restrict lookup totals. USD uses only `card.supply.circulatingUsdAtEvaluation` with basis `publication-circulating`, not the Explore market-cap proxy. Missing publication-bound supply remains an unknown row and displays **Supply at evaluation not published for this generation**. Malformed identifiable relationships become unknown-share rows rather than invalidating unrelated dependents.
+`useDependencyExposureMode` calls `exposureFootprint(roots, fullEdges, supplyOf, opts)` over the full published edge set. Focus, Type, Limit, and small-link visibility never restrict lookup totals. USD uses only slim-node `circulatingUsdAtEvaluation` with basis `publication-circulating`, not the Explore market-cap proxy. Missing publication-bound supply remains an unknown row and displays **Supply at evaluation not published for this generation**. Malformed identifiable relationships become unknown-share rows rather than invalidating unrelated dependents.
 
-The headline reports **N mapped dependents · direct $X · indirect $Y (includes $Z counted in more than one layer)** beside **Linked coins; not a loss forecast**. Results default to known USD descending, offer a mapped-share sort, and retain unknown values after known values. Counts use the engine's policy bands. The **Unknown supply** filter is reversible; unavailable rows are never removed from the underlying result. Each row has **Inspect path**, which shows bounded top paths and highlights them on the graph, plus a coin-detail action. Roots' published role dependencies appear under **Role dependencies (not drawn)**, and their coverage metadata supplies the **Known, not in the scored graph** count. Absent coverage means not published, not zero. An empty footprint warns that other dependencies and transmission channels may be missing.
+The headline reports **N mapped dependents · direct $X · indirect $Y (includes $Z counted in more than one layer)** beside **Linked coins; not a loss forecast**. Results default to known USD descending, offer a mapped-share sort, and retain unknown values after known values. Counts use the engine's policy bands. The **Unknown supply** filter is reversible; unavailable rows are never removed from the underlying result. Each row has **Inspect path**, which shows bounded top paths and highlights them on the graph, plus a coin-detail action. Roots' published role dependencies appear under **Role dependencies (not drawn)**, and their nullable coverage counts supply the **Known, not in the scored graph** count. Absent coverage means not published, not zero. An empty footprint warns that other dependencies and transmission channels may be missing.
 
-Results identify the publication generation, methodology version, `asOfSec`, and supply generations/clocks. Same-identity polls retain the computation snapshot; changes to publication generation or per-card supply generation/clock replace it and show **Network updated. Results now use the latest publication.** Root changes also recompute the lookup. Held results are labeled and retain the accepted publication's supply clock.
+Results identify the publication generation, methodology version, `asOfSec`, and node supply clocks. Same-identity polls retain the computation snapshot; changes to `publicationGenerationId` or per-node `supplyAsOfSec` replace it and show **Network updated. Results now use the latest publication.** Root changes also recompute the lookup. Held results are labeled and retain the accepted publication's supply clock.
 
 URL updates preserve unrelated parameters and Explore's `focus`, `type`, `limit`, and `trace`. Reset removes only `mode` and `root`. Loading a shared URL never opens the fullscreen dialog automatically. Mobile Exposure provides keyboard-operable **Setup**, **Results**, and **Graph** tabs; adding a root selects Results, and closing or resetting restores the initiating control when it remains mounted. Analytics use `dependency_map_action` with `mode_switch`, `root_change`, `share`, and `inspect_path`.
 
@@ -125,7 +125,21 @@ URL updates preserve unrelated parameters and Explore's `focus`, `type`, `limit`
 
 The optional `hubExposures?: readonly HubExposure[]` contract lets the page pass the board's full-graph direct-exposure computation into the graph for hub tiers and inspection totals. The graph computes the same model itself only when the prop is absent; the map supplies `model.hubs` rather than computing it twice.
 
-The map also summarizes **Known, not in the scored graph** across all cards with published `dependencyCoverage`, explicitly identifies partial publication coverage, and links to `/coverage/` with instructions to use the dependency **Gaps** filter. These known relationships remain outside scored graph and exposure totals.
+The map also summarizes **Known, not in the scored graph** across nodes with non-null published `dependencyCoverageCount`, explicitly identifies partial publication coverage, and links to `/coverage/` with instructions to use the dependency **Gaps** filter. These known relationships remain outside scored graph and exposure totals.
+
+### Offline modeled scenarios
+
+Exposure mode separately reads `GET /api/dependency-scenarios/v1`. Selected roots with stored scenarios offer a scenario selector, stated assumptions, **Published → modeled grade** view, and **Modeled Safety Score change** column. Each choice models one root, not a combined multi-root shock. The offline Node producer uses the production evaluator, including role dependencies, for up to 15 hubs ranked by A1 direct exposure USD from publication-bound supply and published edges, with shared books counted once. Its three D1b shocks are a downstream-consumed final score limit of 40, a 1,000 bps one-day depeg with historical peg and exit facts held fixed, and mint-control compromise.
+
+Stored rows are changed coins plus the upstream root. A missing row means **No modeled change stored**, not a numeric estimate. NR stays NR with no invented score or delta. Modeled provenance names publication generation, artifact age, and the shared 7,200-second freshness budget beside **Modeled with the production Safety Score evaluator ... not a forecast**. These artifacts never change canonical cards, journals, or publication identity.
+
+Freshness is `current` only for matching accepted/source generations within budget. `earlier-generation` results can display only with the modeled publication and age explicitly labelled; only this endpoint status claims the accepted publication is newer. A current artifact that differs from the displayed map instead says **The displayed map publication differs from the modeled publication &lt;id&gt;**, without an ordering claim. `stale`, `unavailable`, failed reads, future artifact clocks, and client-side expiration beyond budget withhold numbers. The hook uses hourly stale time and two-hour refetch, and expires cached results at their artifact deadline without waiting for the next fetch.
+
+## Shared Failure Domains Board
+
+`shared-failure-domains-board.tsx` consumes slim `commonModeGroups` and ranks groups with at least two distinct members by known member supply. It prefers publication-bound supply and labels any market-cap fallback per row. Unavailable supply produces a known subtotal with an excluded count or an unavailable state, never zero. The initial ten rows and native disclosure for all remaining groups name full census counts.
+
+Absent groups mean not published; `[]` means a published empty census. Published resolved cap kind/limit and deployment before/after/points are displayed. Unresolved references and `pricedEffectsIncomplete` are separate disclosures. Member totals overlap across groups and must not be added; membership is not a loss estimate or a new score penalty.
 
 ## Graph Construction
 
@@ -195,6 +209,10 @@ The layout uses `d3-force` with deterministic post-processing:
 - Simulation ticks: a fixed 300 ticks, then explicit overlap and boundary passes (up to 100).
 
 The post-simulation overlap pass is O(n²), so it is bounded to the top `MAX_COLLISION_PASS_NODES = 200` ranked nodes. The 50/100/200 limit selections are therefore unaffected, and only the `All` view is capped; its long tail keeps the `forceCollide` positions. Node placement is seeded from `deterministicJitter()` rather than `Math.random()`, so the same input graph always lays out the same way.
+
+The runtime invokes this same solver after render in cancellable idle chunks with an 8 ms work budget, using `requestIdleCallback` with a `setTimeout` fallback. A solver tick is indivisible, so the budget is not a hard upper bound on individual slices. Previous positions remain until the new layout lands; new nodes use layout targets meanwhile. The layout identity combines sorted membership, sorted endpoint/type/rounded-weight signatures, and the detail focus id, not market-cap rank, radii, or hub tiers. Unchanged membership/topology preserves layout and pins across market-cap refreshes; Focus and Type only affect presentation.
+
+SVG nodes and edges are memoized by per-item presentation. Dragging updates node transforms, logo clips, and incident arrow geometry directly; pinned coordinates commit on pointer release rather than on every pointer move. During an active node drag, the position snapshot is held until pointerup/cancel so settled layout coordinates cannot move the drag frame.
 
 ## Detail-Page Snapshot
 

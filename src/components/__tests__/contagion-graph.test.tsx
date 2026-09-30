@@ -5,7 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { installSvgCoordinateShim } from "./contagion-graph-test-support";
-import { buildGraphData, buildSupernodeState } from "@/lib/contagion-layout";
+import { buildGraphData, buildSupernodeState, runSimulationInChunks } from "@/lib/contagion-layout";
 import { trackEvent } from "@/lib/analytics";
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
@@ -29,7 +29,8 @@ vi.mock("@/lib/contagion-layout", async () => {
 
   return {
     ...actual,
-    runSimulation: () =>
+    runSimulationInChunks: vi.fn((_nodes, _links, _state, complete) => {
+      complete(
       new Map([
         ["usde-ethena", { x: 220, y: 300 }],
         ["usdtb-ethena", { x: 320, y: 300 }],
@@ -37,7 +38,9 @@ vi.mock("@/lib/contagion-layout", async () => {
         ["dai-makerdao", { x: 560, y: 300 }],
         ["dusd-alto", { x: 160, y: 240 }],
         ["dusd-dialectic", { x: 340, y: 240 }],
-      ]),
+      ]));
+      return () => {};
+    }),
   };
 });
 
@@ -95,6 +98,69 @@ describe("ContagionGraph", () => {
     }
     return picker;
   }
+
+  it.each(["pointerUp", "pointerCancel"] as const)("defers a layout settle during drag until %s and commits the dragged pin", (finish) => {
+    let settle: ((positions: Map<string, { x: number; y: number }>) => void) | undefined;
+    vi.mocked(runSimulationInChunks).mockImplementationOnce((_nodes, _links, _state, complete) => {
+      settle = complete;
+      return () => {};
+    });
+    const { container } = render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
+    const node = container.querySelector('[data-node-id="usde-ethena"]')!;
+    const circle = node.querySelector("circle")!;
+    const svg = node.closest("svg")!;
+    const x = Number(circle.getAttribute("cx"));
+    const y = Number(circle.getAttribute("cy"));
+    fireEvent.pointerDown(node, { isPrimary: true, clientX: x, clientY: y, pointerId: 1 });
+    fireEvent.pointerMove(svg, { clientX: x + 20, clientY: y + 10, pointerId: 1 });
+    const wrapper = node.closest("[data-drag-node]")!;
+    const line = svg.querySelector('[data-edge-source="usde-ethena"] line[marker-end]')!;
+    const draggedLineX = line.getAttribute("x1");
+    act(() => settle?.(new Map([
+      ["usde-ethena", { x: 220, y: 300 }],
+      ["usdtb-ethena", { x: 320, y: 300 }],
+      ["usdc-circle", { x: 440, y: 300 }],
+      ["dai-makerdao", { x: 560, y: 300 }],
+    ])));
+    expect(Number(circle.getAttribute("cx"))).toBe(x);
+    expect(Number(circle.getAttribute("cy"))).toBe(y);
+    expect(wrapper.getAttribute("transform")).toBe("translate(20 10)");
+    expect(line.getAttribute("x1")).toBe(draggedLineX);
+    fireEvent.pointerMove(svg, { clientX: x + 30, clientY: y + 15, pointerId: 1 });
+    expect(wrapper.getAttribute("transform")).toBe("translate(30 15)");
+    fireEvent[finish](svg, { pointerId: 1 });
+    expect(wrapper.getAttribute("transform")).toBeNull();
+    expect(Number(circle.getAttribute("cx"))).toBe(x + 30);
+    expect(Number(circle.getAttribute("cy"))).toBe(y + 15);
+    expect(node.getAttribute("data-pinned")).toBe("true");
+    // The rest of the graph consumes the new layout once the active drag ends.
+    expect(Number(container.querySelector('[data-node-id="usdc-circle"] circle')?.getAttribute("cx"))).toBe(440);
+  });
+
+  it("keeps layout and pins through filters and a market-cap rank refresh", () => {
+    const { container, rerender } = render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
+    const initialRuns = vi.mocked(runSimulationInChunks).mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Wrapper" }));
+    fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
+    expect(vi.mocked(runSimulationInChunks).mock.calls.length).toBe(initialRuns);
+    fireEvent.click(within(screen.getByRole("group", { name: "Graph focus mode" })).getByRole("button", { name: "All" }));
+    fireEvent.click(within(screen.getByRole("group", { name: "Dependency type filter" })).getByRole("button", { name: "All" }));
+    const node = container.querySelector('[data-node-id="usde-ethena"]')!;
+    const svg = node.closest("svg")!;
+    fireEvent.pointerDown(node, { isPrimary: true, clientX: 220, clientY: 300, pointerId: 1 });
+    fireEvent.pointerMove(svg, { clientX: 260, clientY: 320, pointerId: 1 });
+    expect(node.closest("[data-drag-node]")?.getAttribute("transform")).toBe("translate(40 20)");
+    expect(node.querySelector("circle")?.getAttribute("cx")).toBe("220");
+    expect(svg.querySelector('[data-edge-source="usde-ethena"] line[marker-end]')?.getAttribute("x1")).toBe("260");
+    fireEvent.pointerUp(svg, { pointerId: 1 });
+    const refreshed = new Map(MCAP_MAP);
+    refreshed.set("usde-ethena", 80_000_000_000);
+    rerender(<ContagionGraph cards={[...CARDS]} dependencyEdges={[...DEPENDENCY_EDGES]} mcapMap={refreshed} />);
+    expect(vi.mocked(runSimulationInChunks).mock.calls.length).toBe(initialRuns);
+    expect(node.getAttribute("data-pinned")).toBe("true");
+    expect(node.querySelector("circle")?.getAttribute("cx")).toBe("260");
+    expect(node.querySelector("circle")?.getAttribute("cy")).toBe("320");
+  });
 
   it("hides small canvas links without changing full exposure or keyboard access", () => {
     const edges = [{ ...DEPENDENCY_EDGES[1], weight: 0.000148 }];

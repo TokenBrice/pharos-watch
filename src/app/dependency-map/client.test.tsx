@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
-import { useReportCardsV9 } from "@/hooks/api-hooks";
+import { useDependencyGraph } from "@/hooks/use-dependency-graph";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { projectDependencyGraph } from "@shared/types/dependency-graph";
 
-vi.mock("@/hooks/api-hooks", () => ({
-  useReportCardsV9: vi.fn(),
+vi.mock("@/hooks/use-dependency-graph", () => ({
+  useDependencyGraph: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
@@ -28,7 +29,7 @@ vi.mock("./dependency-hubs-board", () => ({
 
 const { DependencyMapClient } = await import("@/app/dependency-map/client");
 
-const mockUseReportCardsV9 = vi.mocked(useReportCardsV9);
+const mockUseDependencyGraph = vi.mocked(useDependencyGraph);
 const mockUseStablecoins = vi.mocked(useStablecoins);
 
 function makeQueryResult(data: unknown) {
@@ -40,13 +41,14 @@ function makeQueryResult(data: unknown) {
   };
 }
 
+afterEach(cleanup);
 describe("DependencyMapClient", () => {
   beforeEach(() => {
-    mockUseReportCardsV9.mockReset();
+    mockUseDependencyGraph.mockReset();
     mockUseStablecoins.mockReset();
 
-    mockUseReportCardsV9.mockReturnValue(
-      makeQueryResult(makeReportCardsV9Response({
+    mockUseDependencyGraph.mockReturnValue(
+      makeQueryResult(projectDependencyGraph(makeReportCardsV9Response({
         cards: [
           makeV9Card({ id: "usdc-circle" }),
           makeV9Card({ id: "usdt-tether" }),
@@ -62,7 +64,7 @@ describe("DependencyMapClient", () => {
             },
           }),
         ],
-      })) as unknown as ReturnType<typeof useReportCardsV9>,
+      }))) as unknown as ReturnType<typeof useDependencyGraph>,
     );
     mockUseStablecoins.mockReturnValue(
       makeQueryResult({
@@ -103,6 +105,20 @@ describe("DependencyMapClient", () => {
       isLoading: true,
     } as unknown as ReturnType<typeof useStablecoins>);
     render(<DependencyMapClient />);
+    expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
+  });
+
+  it("retains the held notice and unpublished v5 coverage and supply facts", () => {
+    const full = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", supply: undefined, dependencyCoverage: undefined }), makeV9Card({ id: "dai-makerdao", supply: undefined, dependencyCoverage: undefined })],
+      dependencyGraph: { edges: [{ from: "usdc-circle", to: "dai-makerdao", kind: "basket", materiality: "basket-weighted", weight: 0.4, upstreamScore: 80 }] } });
+    full.publicationHealth.status = "held";
+    full.publicationHealth.heldSinceSec = 1790710000;
+    const slim = projectDependencyGraph(full);
+    expect(slim.nodes.every(node => node.circulatingUsdAtEvaluation === null && node.supplyAsOfSec === null && node.dependencyCoverageCount === null)).toBe(true);
+    mockUseDependencyGraph.mockReturnValue(makeQueryResult(slim) as unknown as ReturnType<typeof useDependencyGraph>);
+    render(<DependencyMapClient />);
+    expect(screen.getByRole("status").textContent).toContain("Ratings are held at the last verified snapshot");
+    expect(screen.getByText(/Not published for this generation/)).toBeTruthy();
     expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
   });
 });

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
-import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 const cards = [
   { id: "usds-sky", name: "USDS", symbol: "USDS" },
@@ -33,9 +32,8 @@ describe("buildDependencyHubsModel", () => {
     expect(model.mappedSupply.knownUsd).toBe(400);
   });
   it("uses published wrapper forms to separate vault and pass-through amounts", () => {
-    const vault = makeV9Card({ id: "susds-sky" });
-    const trace = { ...vault.scoreTrace, wrapperParentLimit: { ...vault.scoreTrace?.wrapperParentLimit, form: "strategy-vault" } } as typeof vault.scoreTrace;
-    const model = buildDependencyHubsModel({ cards: cards.map(card => card.id === vault.id ? { ...card, scoreTrace: trace } : card), edges, mcapMap: new Map([["susds-sky", 500], ["dai-makerdao", 1000]]) });
+    const publishedEdges = edges.map(edge => edge.to === "susds-sky" ? { ...edge, wrapperForm: "strategy-vault" as const } : edge);
+    const model = buildDependencyHubsModel({ cards, edges: publishedEdges, mcapMap: new Map([["susds-sky", 500], ["dai-makerdao", 1000]]) });
     expect(model.hubs[0].vaultClaimUsd).toBe(500);
     expect(model.hubs[0].passThroughUsd).toBe(0);
   });

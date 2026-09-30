@@ -1,7 +1,7 @@
 "use client";
 
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode } from "react";
-import { useId, useRef, useState } from "react";
+import { memo, useId, useRef, useState } from "react";
 import { footprintViewBox, upstreamArrowPoint } from "./contagion-graph-exposure";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { gradeColor, graphNodeLabel, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
@@ -116,7 +116,7 @@ function ContagionGraphClipPaths({
         const innerR = Math.max(node.r * nodeScale - RING_WIDTH, 3);
         return (
           <clipPath key={node.id} id={`clip-n-${node.id}`}>
-            <circle cx={pos.x} cy={pos.y} r={innerR} />
+            <circle data-clip-node={node.id} cx={pos.x} cy={pos.y} r={innerR} />
           </clipPath>
         );
       })}
@@ -172,7 +172,7 @@ function getEdgePresentation({
   };
 }
 
-function ContagionGraphEdge({
+const ContagionGraphEdge = memo(function ContagionGraphEdge({
   link,
   positions,
   activeHoveredId,
@@ -201,7 +201,7 @@ function ContagionGraphEdge({
   const arrowTip = upstreamArrowPoint(posA, posB, targetRadius);
 
   return (
-    <g key={`${link.srcId}-${link.tgtId}-${link.index}`} data-exposure-edge={revealHop !== null || undefined} className={revealHop !== null ? "graph-exposure-halo" : undefined} style={revealHop !== null ? { animation: reducedMotion ? "none" : undefined, animationDelay: `${revealHop * GRAPH_RIPPLE_HOP_DELAY_MS}ms` } : undefined}>
+    <g key={`${link.srcId}-${link.tgtId}-${link.index}`} data-edge-source={link.srcId} data-edge-target={link.tgtId} data-target-radius={targetRadius} data-exposure-edge={revealHop !== null || undefined} className={revealHop !== null ? "graph-exposure-halo" : undefined} style={revealHop !== null ? { animation: reducedMotion ? "none" : undefined, animationDelay: `${revealHop * GRAPH_RIPPLE_HOP_DELAY_MS}ms` } : undefined}>
       <line
         x1={posA.x} y1={posA.y} x2={posB.x} y2={posB.y}
         stroke="transparent" strokeWidth={14}
@@ -225,7 +225,20 @@ function ContagionGraphEdge({
       />
     </g>
   );
-}
+}, (previous, next) => {
+  const id = next.link.index;
+  return previous.link === next.link
+    && previous.positions.get(next.link.srcId) === next.positions.get(next.link.srcId)
+    && previous.positions.get(next.link.tgtId) === next.positions.get(next.link.tgtId)
+    && (previous.activeHoveredId === null) === (next.activeHoveredId === null)
+    && (previous.activeHoveredEdge === id) === (next.activeHoveredEdge === id)
+    && previous.connectedEdges.has(id) === next.connectedEdges.has(id)
+    && previous.edgeDistance.get(id) === next.edgeDistance.get(id)
+    && previous.onMouseEnter === next.onMouseEnter && previous.onMouseLeave === next.onMouseLeave
+    && previous.arrowId === next.arrowId && previous.targetRadius === next.targetRadius
+    && previous.highlighted === next.highlighted && previous.revealHop === next.revealHop
+    && previous.reducedMotion === next.reducedMotion;
+});
 
 function getNodePresentation({
   node,
@@ -258,7 +271,7 @@ function getNodePresentation({
   return { isHovered, isHub, isCoreHub, color, nodeDelay, nodeOpacity };
 }
 
-function ContagionGraphNode({
+const ContagionGraphNode = memo(function ContagionGraphNode({
   node,
   position,
   focusMode,
@@ -424,7 +437,25 @@ function ContagionGraphNode({
       )}
     </g>
   );
-}
+}, (previous, next) => {
+  const id = next.node.id;
+  return previous.node === next.node && previous.position === next.position
+    && previous.focusMode === next.focusMode && previous.logos === next.logos
+    && (previous.activeHoveredId === null) === (next.activeHoveredId === null)
+    && (previous.activeHoveredId === id) === (next.activeHoveredId === id)
+    && (previous.focusedId === id) === (next.focusedId === id)
+    && (previous.pinnedSelectionId === id) === (next.pinnedSelectionId === id)
+    && previous.isPinnedPosition === next.isPinnedPosition
+    && previous.connectedNodes.has(id) === next.connectedNodes.has(id)
+    && previous.nodeDistance.get(id) === next.nodeDistance.get(id)
+    && previous.tierById.get(id) === next.tierById.get(id)
+    && previous.logoZoom === next.logoZoom && previous.nodeScale === next.nodeScale
+    && previous.suppressHubLabels === next.suppressHubLabels && previous.showTickerLabels === next.showTickerLabels
+    && previous.onPointerDown === next.onPointerDown && previous.onKeyDown === next.onKeyDown
+    && previous.onMouseEnter === next.onMouseEnter && previous.onMouseLeave === next.onMouseLeave
+    && previous.onFocus === next.onFocus && previous.onBlur === next.onBlur
+    && previous.onClick === next.onClick && previous.onDoubleClick === next.onDoubleClick;
+});
 
 export function ContagionGraphSvg({
   graph,
@@ -543,7 +574,7 @@ export function ContagionGraphSvg({
         const position = positions.get(node.id);
         if (!position) return null;
         return (
-          <g key={node.id} className={graph.exposureNodeIds.has(node.id) ? "graph-exposure-halo" : undefined} style={graph.exposureNodeIds.has(node.id) ? { animation: reducedMotion ? "none" : undefined, animationDelay: `${(graph.exposureOverlay?.rows.get(node.id)?.minHop ?? 0) * GRAPH_RIPPLE_HOP_DELAY_MS}ms` } : undefined}>
+          <g key={node.id} data-drag-node={node.id} className={graph.exposureNodeIds.has(node.id) ? "graph-exposure-halo" : undefined} style={graph.exposureNodeIds.has(node.id) ? { animation: reducedMotion ? "none" : undefined, animationDelay: `${(graph.exposureOverlay?.rows.get(node.id)?.minHop ?? 0) * GRAPH_RIPPLE_HOP_DELAY_MS}ms` } : undefined}>
           {graph.exposureNodeIds.has(node.id) && (
             <circle
               data-exposure-halo={node.id}
