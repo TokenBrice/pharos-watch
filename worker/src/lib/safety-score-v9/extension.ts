@@ -567,7 +567,7 @@ function prepareDependency(
     !hasAdmissibleCuratedReserveComposition(meta, clockSec);
   const issueCodes: string[] = [];
   issueCodes.push(...derived.rejectionReasons
-    .filter((rejection) => rejection.reason === "reviewed-dependency-type-conflict" || rejection.reason === "reviewed-dependency-identity-conflict" || rejection.reason === "manual-collateral-not-in-reserves")
+    .filter((rejection) => rejection.reason === "coinId-without-depType" || rejection.reason === "reviewed-dependency-type-conflict" || rejection.reason === "reviewed-dependency-identity-conflict" || rejection.reason === "manual-collateral-not-in-reserves")
     .map((rejection) => rejection.reason));
   const expectedRelationships = derived.dependencies
     .map((dependency) => ({

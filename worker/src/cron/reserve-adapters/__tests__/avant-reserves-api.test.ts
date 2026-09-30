@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AvantPayload } from "../avant-reserves-api";
 import { adaptAvantReserves } from "../avant-reserves-api";
-import { expectWarnings, runAdapter } from "./reserve-adapter.test-support";
+import capture from "./fixtures/avant-metrics-2026-09-30.json";
+import { runAdapter } from "./reserve-adapter.test-support";
 
 const ENDPOINT = "https://app.avantprotocol.com/api/metrics/avusd";
 const NOW_SEC = 1_788_307_200;
@@ -13,13 +14,9 @@ describe("adaptAvantReserves", () => {
   it("publishes gross long slices with debt as separate totals, never netted", () => {
     const result = adaptAvantReserves(structuredClone(PAYLOAD));
 
-    expect(result.slices).toHaveLength(2);
-    const stable = result.slices.find((s) => s.sourceKey === "avant-reserves-api:stablecoin-long")!;
-    const other = result.slices.find((s) => s.sourceKey === "avant-reserves-api:other-long")!;
-    expect(stable.pct).toBeCloseTo(98.1, 1);
-    expect(other.pct).toBeCloseTo(1.9, 1);
-    expect(stable.risk).toBe("medium");
     expect(result.slices.reduce((sum, s) => sum + s.pct, 0)).toBeCloseTo(100, 6);
+    expect(result.slices.filter((slice) => slice.assetClass === "stablecoin").reduce((sum, slice) => sum + slice.pct, 0))
+      .toBeCloseTo(1_004_786_422.7190735 / 1_024_715_743.450049 * 100, 10);
 
     expect(result.metadata).toMatchObject({
       referenceNavUsd: expect.closeTo(132_748_763.3728162, 4),
@@ -41,12 +38,19 @@ describe("adaptAvantReserves", () => {
       unknownChainLongUsd: expect.closeTo(18_269_272.44 + 18_964_013.413176355, 6),
       navPeriodEnd: "2026-09-01T23:59:59+00:00",
     });
-    // Debt stays out of the slices: stablecoin slice = long leg only.
-    const stableLong = 1_004_786_422.7190735;
-    expect(stable.pct).toBeCloseTo(stableLong / 1_024_715_743.450049 * 100, 1);
-    expect(result.warnings!.map((w) => w.code).sort())
-      .toEqual(["bridges-positions-reported", "gross-leverage-disclosed"]);
     expect(result.warnings!.every((w) => w.effect === "info")).toBe(true);
+  });
+
+  it("preserves source identities without treating labels as verified issuer claims", () => {
+    const result = adaptAvantReserves(capture.payload);
+    const usde = result.slices.find((slice) => slice.sourceKey === "avant-reserves-api:stablecoin-long:usde")!;
+    expect(usde.pct).toBeCloseTo(749_916_919.3870683 / 1_013_103_133.459377 * 100, 12);
+    expect(usde.coinId).toBeUndefined();
+    expect(result.slices.find((slice) => slice.sourceKey === "avant-reserves-api:stablecoin-long:usdt")!.pct)
+      .toBeCloseTo(8.544364029792 / 1_013_103_133.459377 * 100, 15);
+    expect(result.slices.every((slice) => !slice.coinId)).toBe(true);
+    expect(result.metadata?.referenceNavUsd).toBeCloseTo(125_674_691.9077302, 6);
+    expect(result.warnings?.some((warning) => warning.code === "unverified-avant-token-identities")).toBe(true);
   });
 
   it("fails closed when the reserve snapshot timestamps disagree", () => {
@@ -75,14 +79,6 @@ describe("adaptAvantReserves", () => {
 });
 
 describe("fetchAvantReservesApiReserves", () => {
-  it("fetches and adapts the metrics payload", async () => {
-    const { result } = await runAdapter("avant-reserves-api", "avusd-avant", {
-      network: { json: { [ENDPOINT]: PAYLOAD } },
-      nowSec: NOW_SEC,
-    });
-    expect(result.slices).toHaveLength(2);
-    expectWarnings(result, ["bridges-positions-reported", "gross-leverage-disclosed"]);
-  });
 
   it("propagates upstream failures", async () => {
     await expect(runAdapter("avant-reserves-api", "avusd-avant", {

@@ -255,7 +255,7 @@ export function adaptUsdAiProofOfReserves(
     name: bucket.name,
     pct: weightToPct(share),
     risk: bucket.risk,
-    ...(bucket.coinId ? { coinId: bucket.coinId } : {}),
+    ...(bucket.coinId ? { coinId: bucket.coinId, depType: "collateral" as const } : {}),
   }));
 
   if (dealShare > 0n) {

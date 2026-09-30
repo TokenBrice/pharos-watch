@@ -54,6 +54,7 @@ interface ReportCardInput {
   score?: number | null;
   overallScore?: number | null;
   backingFromLiveReserves?: boolean;
+  dependencyCoverage?: SafetyScoreV9CurrentCard["dependencyCoverage"];
 }
 
 interface ReportCardEdgeInput {
@@ -96,6 +97,7 @@ function reportCardFixture(input: {
         id: inputCard.id,
         score,
         backingFromLiveReserves: inputCard.backingFromLiveReserves,
+        dependencyCoverage: inputCard.dependencyCoverage,
         ...(unrated ? {
           grade: "NR",
           qualityScore: null,
@@ -131,7 +133,7 @@ const activeCoins: StablecoinMeta[] = [
   coin({
     id: "wrap-usdc",
     symbol: "wUSDC",
-    reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
+    reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" }],
   }),
   coin({
     id: "manual-usdt",
@@ -244,7 +246,7 @@ describe("generate-dependency-coverage-audit", () => {
     expect(audit.subMaterialActiveUnlinkedReserveSymbolLeads).toEqual([]);
   });
 
-  it("counts missing authored types as advisory and gates published kind disagreements", () => {
+  it("gates missing authored types and published kind disagreements", () => {
     const upstream = coin({ id: "upstream" });
     const dependent = coin({ id: "dependent", reserves: [
       { name: "Legacy untyped", pct: 20, risk: "low", coinId: "upstream" },
@@ -259,12 +261,45 @@ describe("generate-dependency-coverage-audit", () => {
     expect(audit.summary.publishedKindMismatchCount).toBe(1);
     expect(evaluateDependencyCoverageStructure(audit, { publishedOnly: true })).toEqual([
       "published kind mismatch invariant failed with 1 finding",
+      "coinId without depType invariant failed with 1 finding",
     ]);
     const staticAudit = buildDependencyCoverageAudit({ activeCoins: [upstream, dependent] });
     expect(staticAudit.summary.publishedKindMismatchCount).toBeNull();
     expect(evaluateDependencyCoverageStructure(staticAudit)).toEqual([
       "invalid serial dependency weight invariant failed with 1 finding",
+      "coinId without depType invariant failed with 1 finding",
     ]);
+  });
+
+  it("gates untyped published runtime coverage even when authored reserves are typed", () => {
+    const activeCoins = [
+      coin({ id: "upstream" }),
+      coin({ id: "dependent", reserves: [
+        { name: "USDC", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" },
+      ] }),
+    ];
+    const cards: ReportCardInput[] = [{ id: "upstream", score: 80 }, {
+      id: "dependent", score: 70, dependencyCoverage: [{
+        upstreamLabel: "USDC", upstreamAssetId: "upstream", share: 1,
+        reason: "coinId-without-depType", sourceAsOf: null, identityVerified: true,
+      }],
+    }];
+    const audit = buildDependencyCoverageAudit({
+      activeCoins, reportCards: reportCardFixture({ cards, dependencyGraph: { edges: [] } }),
+    });
+    expect(audit.summary.coinIdWithoutDepTypeCount).toBe(0);
+    expect(audit.summary.publishedCoinIdWithoutDepTypeCount).toBe(1);
+    expect(evaluateDependencyCoverageStructure(audit, { publishedOnly: true })).toEqual([
+      "published runtime coinId without depType invariant failed with 1 finding",
+    ]);
+    const skewedAudit = buildDependencyCoverageAudit({
+      activeCoins, reportCards: reportCardFixture({
+        cards, dependencyGraph: { edges: [] }, methodologyVersion: "0.0",
+      }),
+    });
+    expect(skewedAudit.summary.publicationComparisonStatus).toBe("checkout-production-skew");
+    expect(skewedAudit.summary.publishedCoinIdWithoutDepTypeCount).toBe(1);
+    expect(evaluateDependencyCoverageStructure(skewedAudit, { publishedOnly: true })).toEqual([]);
   });
 
   it("counts manual collateral omitted by the linked reserve identity set", () => {
@@ -500,8 +535,8 @@ describe("generate-dependency-coverage-audit", () => {
       coin({
         id: "split-reserve",
         reserves: [
-          { name: "Route one", pct: 40, risk: "low", coinId: "target-a" },
-          { name: "Route two", pct: 30, risk: "medium", coinId: "target-a" },
+          { name: "Route one", pct: 40, risk: "low", coinId: "target-a", depType: "collateral" },
+          { name: "Route two", pct: 30, risk: "medium", coinId: "target-a", depType: "collateral" },
         ],
       }),
     ];
@@ -816,7 +851,7 @@ describe("generate-dependency-coverage-audit", () => {
     const upstream = coin({ id: "upstream" });
     const dependent = coin({
       id: "dependent",
-      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream" }],
+      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" }],
     });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [upstream, dependent],
@@ -836,7 +871,7 @@ describe("generate-dependency-coverage-audit", () => {
     const upstream = coin({ id: "upstream" });
     const mapped = coin({
       id: "mapped",
-      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream" }],
+      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" }],
       liveReservesConfig: liveConfig("accountable"),
     });
     const reportCards = reportCardFixture({
@@ -956,7 +991,7 @@ describe("generate-dependency-coverage-audit", () => {
     const withEdge = buildDependencyCoverageAudit({
       activeCoins: [
         coin({ id: "upstream", symbol: "UP" }),
-        coin({ id: "dependent", symbol: "DEP", reserves: [{ name: "UP", pct: 100, risk: "low", coinId: "upstream" }] }),
+        coin({ id: "dependent", symbol: "DEP", reserves: [{ name: "UP", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" }] }),
       ],
     });
     const withoutWrongEdge = buildDependencyCoverageAudit({

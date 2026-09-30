@@ -265,6 +265,7 @@ export interface DependencyCoverageAudit {
     reserveSlicesMissingCoinId: number;
     depTypeWithoutCoinIdWarnings: number;
     coinIdWithoutDepTypeCount: number;
+    publishedCoinIdWithoutDepTypeCount: number | null;
     publishedKindMismatchCount: number | null;
     mixedSourceGuardCount: number;
     staticSelfEdgeCount: number;
@@ -1213,6 +1214,10 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   const coinIdWithoutDepTypeCount = activeCoins.reduce((count, coin) => (
     count + (coin.reserves ?? []).filter((slice) => slice.coinId && slice.depType == null).length
   ), 0);
+  const publishedCoinIdWithoutDepTypeCount = parsedReportCards == null ? null
+    : [...parsedReportCards.cardsById.values()].reduce((count, card) => (
+        count + (card.dependencyCoverage ?? []).filter((row) => row.reason === "coinId-without-depType").length
+      ), 0);
   const publishedKindMismatchCount = parsedReportCards == null ? null : activeCoins.reduce((count, coin) => (
     count + (coin.reserves ?? []).filter((slice) => {
       if (!slice.coinId || !slice.depType) return false;
@@ -1319,6 +1324,7 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
       reserveSlicesMissingCoinId: reserveMissing.length,
       depTypeWithoutCoinIdWarnings: depTypeWithoutCoinIdWarnings.length,
       coinIdWithoutDepTypeCount,
+      publishedCoinIdWithoutDepTypeCount,
       publishedKindMismatchCount,
       mixedSourceGuardCount,
       staticSelfEdgeCount: staticGraphDiagnostics.selfEdges.length,
@@ -1574,7 +1580,8 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     `- Manual-only dependency entries: ${audit.summary.manualOnlyDependencyCount}`,
     `- Reserve slices missing coinId: ${audit.summary.reserveSlicesMissingCoinId}`,
     `- depType without coinId warnings: ${audit.summary.depTypeWithoutCoinIdWarnings}`,
-    `- coinId without depType (advisory): ${audit.summary.coinIdWithoutDepTypeCount}`,
+    `- coinId without depType (zero tolerance): ${audit.summary.coinIdWithoutDepTypeCount}`,
+    `- Published runtime coinId without depType: ${audit.summary.publishedCoinIdWithoutDepTypeCount ?? "not supplied"}`,
     `- Published kind mismatches: ${audit.summary.publishedKindMismatchCount ?? "not supplied"}`,
     `- Mixed-source authoring guard findings: ${audit.summary.mixedSourceGuardCount}`,
     `- Static self / duplicate / SCC findings: ${audit.summary.staticSelfEdgeCount} / ${audit.summary.staticDuplicateEdgeCount} / ${audit.summary.staticStronglyConnectedComponentCount}`,
@@ -1717,6 +1724,8 @@ export function evaluateDependencyCoverageStructure(
         )).length
       : audit.summary.adapterMappingReviewGapCount],
     ["published kind mismatch", publicationSkew ? 0 : audit.summary.publishedKindMismatchCount ?? 0],
+    ["coinId without depType", audit.summary.coinIdWithoutDepTypeCount],
+    ["published runtime coinId without depType", publicationSkew ? 0 : audit.summary.publishedCoinIdWithoutDepTypeCount ?? 0],
   ];
   if (options.publishedOnly && audit.reportCardGraph == null) {
     failures.push("published dependency graph was not supplied");
@@ -1732,6 +1741,8 @@ export function evaluateDependencyCoverageStructure(
     ["invalid serial dependency weight", audit.summary.invalidSerialDependencyWeightCount],
     ["unknown dependency target edge", audit.summary.unknownTargetEdgeCount],
     ["depType without coinId", audit.summary.depTypeWithoutCoinIdWarnings],
+    ["coinId without depType", audit.summary.coinIdWithoutDepTypeCount],
+    ["published runtime coinId without depType", audit.summary.publishedCoinIdWithoutDepTypeCount ?? 0],
     ["manual dependency review gap", audit.summary.manualDependencyReviewGapCount],
     ["stale reserve disposition", audit.summary.staleReserveDispositionCount],
     ["unavailable target disposition gap", audit.summary.unavailableTargetDispositionGapCount],

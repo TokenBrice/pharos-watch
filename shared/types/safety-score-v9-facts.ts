@@ -230,7 +230,7 @@ const V9EffectiveDependencyEdgeV2Schema = V9EffectiveDependencyEdgeBaseSchema.ex
 
 export const V9DependencyRejectionReasonsSchema = z.array(z.object({
   sliceIndex: z.number().int().min(-1),
-  reason: z.enum(["no-match", "expired", "non-link", "manual-collateral-not-in-reserves", "reviewed-dependency-type-conflict", "reviewed-dependency-identity-conflict"]),
+  reason: z.enum(["no-match", "expired", "non-link", "coinId-without-depType", "manual-collateral-not-in-reserves", "reviewed-dependency-type-conflict", "reviewed-dependency-identity-conflict"]),
   manualDependencyIndex: z.number().int().nonnegative().optional(),
   upstreamAssetId: z.string().min(1).optional(),
   reviewedUpstreamAssetId: z.string().min(1).optional(),

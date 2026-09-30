@@ -1,6 +1,6 @@
 # Methodology Page Contract
 
-`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/sections/methodology-sections.tsx` composes the authored long-form section bodies from `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`.
+`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems and dependency exposure lookup. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/sections/methodology-sections.tsx` composes the authored long-form section bodies under `src/app/methodology/sections/`.
 
 > **Agent navigation** — Start at [Methodology editing entry](#methodology-editing-entry), then follow the affected section's runtime source and owning explainer.
 
@@ -19,7 +19,7 @@ For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-c
 - **Section composition module:** `src/app/methodology/sections/methodology-sections.tsx` (single ordered `MethodologySections` list)
 - **Composite section body:** `src/app/methodology/sections/core-sections-pricing.tsx`
 - **Shared section summary/markdown registry:** `src/lib/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
-- **Per-section body modules:** `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`
+- **Per-section body modules:** `src/app/methodology/sections/core/*.tsx`, `src/app/methodology/sections/monitoring/*.tsx`, and `src/app/methodology/sections/dependency-exposure-section.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail. It and the inline `ShowYourWorkToggle` adopt the `pharos-toggle-pill` control language (design-canon grammar alignment, 2026-07-01); `ShowYourWorkToggle` is shared, so the pill classes are passed additively from `page.tsx` and its other consumers are unchanged.
 - **Design carve-out:** `/methodology/` stays a longform reference page — no signature hero and no frost "One Beam". This is an explicit exception to [Feature-page heroes](./design-language.md#feature-page-heroes); the 76rem measure and `MethodologySectionShell` layout are unchanged. Only the control + numeric *grammar* is aligned to canon: the toggles use the pill language and figures/version badges use `.pharos-numeric` (semantic badge colors preserved).
@@ -42,6 +42,7 @@ For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-c
 | Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/methodology-versions/registry.ts`                              |
 | Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                                                                         |
 | Safety Scores         | `shared/lib/safety-score-v9/`, `shared/lib/safety-score-v9/policy.ts`, `worker/src/cron/compute-safety-score-v9.ts`, `shared/lib/methodology-versions/registry.ts`                                                   |
+| Dependency Exposure Lookup | `shared/lib/dependency-exposure.ts`, `shared/lib/safety-score-v9/policy.ts`, `shared/types/report-cards-v9.ts`, `src/app/methodology/sections/dependency-exposure-section.tsx` |
 | Mint Authority / V9 mint component | `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/methodology-versions/mint-authority.ts`, `shared/data/stablecoins/domains/mint-authority/*.json` |
 | Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/methodology-versions/registry.ts` |
 | Redemption Backstop Route Score | `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-configs/`, `worker/src/lib/redemption-backstop/sources.ts`, `shared/lib/methodology-versions/registry.ts` |
@@ -58,6 +59,23 @@ The public Safety Score dependency explanation in `src/app/methodology/sections/
 The public Safety Score exit explanation in `src/app/methodology/sections/core/safety-scores-overview.tsx` covers v9.96 explicit issuer stablecoin payouts, captured output-price admission, conservative basket quality, and exact Uniswap V4 PoolId admission independent of indexed TVL; thUSD's executed rail is curation context, and producer-driven effects are distinguished from the frozen replay.
 
 The public Safety Score dependency explanation also covers v9.97 measured nested-leaf reconciliation, corrected immediate claim identities, positive reserve dust preservation, and withholding token-specific links from pooled holdings without attributable backing and tranche loss allocation. Producer recovery does not bypass evidence admission. Optional report-v6 multi-asset common-mode groups reference existing priced effects and add no penalty; weights and materiality thresholds remain unchanged.
+
+The public Safety Score dependency explanation also covers v9.98 explicit authored linked-row kinds and unique reviewed-kind inheritance for the same live coin identity. Unresolved or conflicting legacy kinds withhold only that row's link, never silently become collateral, and can transiently affect backing and downstream scores until typed producer rows arrive. Adding a kind does not refresh historical reserve evidence. Mento's native and bridged holdings retain canonical parents; PYUSDx and ysyBOLD remain intermediary annotations, not additional holdings or independent bridge solvency assurance. Avant discloses measured gross-positive-long holdings with debt and NAV separate, but withholds tracked links until exact token, receipt, and bridge claims are joined. Labels do not establish identities, gross shares are not leveraged net-NAV loss coefficients, and diagnostic fixture replacements are not production freshness evidence or score forecasts.
+
+### Exposure mode lookup
+
+The public subsection at `/methodology/#dependency-exposure-methodology` follows Safety Scores in the section composition and navigation rail. Its id, title, and markdown summary live in `DEPENDENCY_EXPOSURE_SECTION_CONTENT` in `src/lib/methodology-content.ts`; `scripts/lib/methodology-to-markdown.ts` automatically exports it through `METHODOLOGY_INDEX_SECTION_CONTENT`.
+
+Exposure mode is a structural lookup over the full published collateral and wrapper edge set. Explore Focus, Type, Limit, and small-link visibility do not restrict results. Selected upstream roots are listed separately and excluded from dependent counts and USD totals. Direct dependents are one hop away; indirect dependents follow longer chains.
+
+Roots begin with share 1. Basket contributions sum each mapped weight multiplied by its upstream look-through share. Serial contributions use the maximum upstream share. When both apply, the lookup uses the larger of the serial maximum and basket sum, not their addition. A dependent appears once across roots. Published shared backing books count once in USD totals, while underlying value can still appear in several dependent layers. The headline states this layer overlap; direct and indirect gross totals must not be presented as independent additive holdings.
+
+USD uses the accepted publication's `circulatingUsdAtEvaluation`, never a silent current-market-cap fallback. Results name generation id, methodology version, `asOfSec`, supply clock, and held status. Missing publication-bound supply leaves the row visible with unknown USD and the reason `Supply at evaluation not published for this generation`. Unknown supply is not zero, and known-USD totals exclude unavailable amounts.
+
+The subsection explains unresolved weights and cycles, measured/reviewed composition that may differ from current ratios, role dependencies listed but not drawn, and known relationships excluded from the scored graph and lookup totals. Missing coverage metadata means not published, not an empty gap list. Peg, liquidity, confidence, and other transmission channels are outside the lookup. An empty mapped result does not establish absence of other dependencies.
+
+History examples are case-study links only, with no runnable presets or historical replay. The subsection distinguishes the separate Tier 2 exact V9 scenarios, modeled offline in Node with the production evaluator and publication identity, which are not yet shipped. Exposure lookup adds no scoring payload field or scoring override, so it does not require a scoring methodology version bump.
+
 
 ---
 
@@ -109,7 +127,7 @@ For the safety-score changelog specifically, update both:
 
 ## Methodology-Context Anchors
 
-`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form page exposes the 14 top-level `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. The `blacklistTracker` context key maps to `#blacklist-tracker-methodology`, while `bluechip` and `proofOfReserves` both map to `#safety-scores-methodology`; there are no separate single-topic methodology sub-anchors:
+`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form page exposes the 15 top-level `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`, including `#dependency-exposure-methodology`. The `blacklistTracker` context key maps to `#blacklist-tracker-methodology`, while `bluechip` and `proofOfReserves` both map to `#safety-scores-methodology`; there are no separate single-topic anchors for those contexts:
 
 Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, and the V9 mint component) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which routes the badge through the unified `MethodologyHint` tooltip and appends the inline `vX.Y` methodology version as a small superscript only when that badge's `METHODOLOGY_CONTEXT` entry carries a `versionLabel`. The `safetyScore` entry deliberately carries none — the active Safety Score methodology is identity-based — so Safety Score badges get the tooltip but no inline version superscript. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip. The mint component keeps a terminal `v1.3` version badge and closing note for context — its section passes no `changelogPath`, so there is no "Version history" link, and in-app mint tooltips carry the Safety Score version and scoring-changelog path instead; it is not a live standalone scoring lane.
 

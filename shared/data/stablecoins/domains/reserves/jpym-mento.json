@@ -2,6 +2,7 @@
   "id": "jpym-mento",
   "reserves": [
     {
+      "sourceKey": "mento:cdp:usdm",
       "name": "USDm (Mento Dollar) CDP collateral",
       "pct": 100,
       "risk": "low",

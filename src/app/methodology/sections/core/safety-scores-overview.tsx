@@ -117,6 +117,19 @@ export function SafetyScoresOverview() {
         without adding a penalty. Scoring weights and materiality thresholds are unchanged.
       </p>
       <p>
+        Since methodology v9.98, authored linked reserve rows require an explicit relationship kind. Legacy live
+        rows may inherit only a unique reviewed kind for the same coin identity; unresolved or conflicting kinds
+        withhold that row&apos;s link rather than silently treating it as collateral. Other rows remain available,
+        but cached legacy withholding can change backing and downstream scores until typed producer rows arrive.
+        Historical reserve evidence is not refreshed by adding a kind. Mento separates native and bridged holdings
+        while retaining their canonical parents; USDat&apos;s PYUSDx and Frankencoin&apos;s ysyBOLD are intermediary
+        annotations, not additional holdings. Representation identity verification does not establish independent
+        bridge solvency assurance. Avant discloses measured gross-positive-long holdings and separate debt and NAV,
+        but withholds tracked links until exact token, receipt, and bridge claims are joined. Labels do not establish
+        identities, and gross shares are not leveraged net-NAV loss coefficients. Diagnostic fixture replacements
+        are not production freshness evidence or score forecasts.
+      </p>
+      <p>
         Reviewed curated compositions require verified, complete evidence. An unresolved reserve disposition or known
         unknown exposure withholds the whole curated reserve envelope, not just the disputed link. That can change
         backing scores and downstream parent limits even when the unresolved share is tiny.

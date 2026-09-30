@@ -98,7 +98,8 @@
             "decimals": 6
           },
           "risk": "low",
-          "coinId": "usyc-hashnote"
+          "coinId": "usyc-hashnote",
+          "depType": "collateral"
         },
         {
           "name": "M by M^0 (via UsualM wrapper)",

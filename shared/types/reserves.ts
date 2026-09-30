@@ -108,6 +108,18 @@ export const ReserveSliceSchema = z.object({
 });
 export type ReserveSlice = z.infer<typeof ReserveSliceSchema>;
 
+// Authored evidence must classify every linked identity. Runtime snapshots
+// remain readable so derivation can quarantine an untyped link row by row.
+export const AuthoredReserveSliceSchema = ReserveSliceSchema.superRefine((slice, ctx) => {
+  if (slice.coinId && !slice.depType) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "linked reserve slices require depType",
+      path: ["depType"],
+    });
+  }
+});
+
 export type ReserveCompositionValidationMode = "full" | "partial-known-exposure";
 
 export const RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT = 0.5;
@@ -129,8 +141,9 @@ export function validateReserveCompositionTotal(
 
 function createReserveCompositionSchema(
   mode: ReserveCompositionValidationMode,
+  sliceSchema: z.ZodType<ReserveSlice> = ReserveSliceSchema,
 ): z.ZodType<ReserveSlice[]> {
-  return z.array(ReserveSliceSchema).superRefine((reserves, ctx) => {
+  return z.array(sliceSchema).superRefine((reserves, ctx) => {
     if (validateReserveCompositionTotal(reserves, mode)) return;
 
     const totalPct = getReserveCompositionTotalPct(reserves);
@@ -145,5 +158,6 @@ function createReserveCompositionSchema(
 }
 
 export const FullReserveCompositionSchema = createReserveCompositionSchema("full");
+export const FullAuthoredReserveCompositionSchema = createReserveCompositionSchema("full", AuthoredReserveSliceSchema);
 export const PartialKnownExposureReserveCompositionSchema =
   createReserveCompositionSchema("partial-known-exposure");

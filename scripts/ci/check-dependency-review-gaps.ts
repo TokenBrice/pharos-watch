@@ -15,7 +15,7 @@
  * this static lane has no report cards (`hasReportCards === false`).
  *
  * Those checks plus the graph invariants (self-edges, duplicate edges, cycles,
- * overweight effective sets, unknown targets, depType-without-coinId) are what
+ * overweight effective sets, unknown targets, missing linked-slice types) are what
  * this check enforces.
  *
  * The analysis itself is not duplicated here: this re-bins the audit's own

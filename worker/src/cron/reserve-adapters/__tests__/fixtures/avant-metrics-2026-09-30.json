@@ -1,0 +1,1197 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-30T09:35:02Z -->",
+  "capturedAt": "2026-09-30T09:35:02.471Z",
+  "sourceUrl": "https://app.avantprotocol.com/api/metrics/avusd",
+  "payload": {
+    "transparency": {
+      "breakdown": {
+        "updatedAtIso": "2026-09-22T23:59:59+00:00",
+        "rows": [
+          {
+            "label": "Stablecoins",
+            "valueUsd": 125656809.8980506
+          },
+          {
+            "label": "Other",
+            "valueUsd": 19278796.23777532
+          },
+          {
+            "label": "ETH & Derivatives",
+            "valueUsd": 5393.774243152451
+          },
+          {
+            "label": "AVAX & Derivatives",
+            "valueUsd": 4201.789524104081
+          },
+          {
+            "label": "BTC & Derivatives",
+            "valueUsd": 2.794957579080428
+          },
+          {
+            "label": "Perpetuals",
+            "valueUsd": -19270522.745523
+          }
+        ],
+        "detailedData": [
+          {
+            "entries": [
+              {
+                "name": "usde",
+                "label": "USDe",
+                "value": 749916919.3870683,
+                "chains": [
+                  {
+                    "name": "Plasma",
+                    "value": 355482744.9859226
+                  },
+                  {
+                    "name": "Ethereum",
+                    "value": 127221298.6327562
+                  },
+                  {
+                    "name": "Base",
+                    "value": 125885680.2097075
+                  },
+                  {
+                    "name": "Solana",
+                    "value": 90460857.76120573
+                  },
+                  {
+                    "name": "Robinhood",
+                    "value": 50857689.76197035
+                  },
+                  {
+                    "name": "Ink",
+                    "value": 8607.051516885931
+                  },
+                  {
+                    "name": "Berachain",
+                    "value": 40.98398889240178
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "syrupusdt",
+                "label": "syrupUSDT",
+                "value": 101591888.7549028,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 101591888.7549028
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "syrupusdc",
+                "label": "syrupUSDC",
+                "value": 54632794.00872099,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 54632794.00872099
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "amonusde",
+                "label": "aMonUSDe",
+                "value": 43020129.93435727,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": 43020129.93435727
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usdc",
+                "label": "USDC",
+                "value": 38436553.63412534,
+                "chains": [
+                  {
+                    "name": "Unknown",
+                    "value": 23115555.68282653
+                  },
+                  {
+                    "name": "Solana",
+                    "value": 14968500.77172697
+                  },
+                  {
+                    "name": "Avalanche",
+                    "value": 351374.8190027945
+                  },
+                  {
+                    "name": "Arbitrum",
+                    "value": 998.910492385888
+                  },
+                  {
+                    "name": "Bsc",
+                    "value": 109.769459120192
+                  },
+                  {
+                    "name": "Ink",
+                    "value": 13.680617534624
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "causd",
+                "label": "cAUSD",
+                "value": 6138943.123729068,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": 6138943.123729068
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "hyausd",
+                "label": "hyAUSD",
+                "value": 25042.58167572724,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": 25042.58167572724
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usdtb",
+                "label": "USDtb",
+                "value": 996.817051723055,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 996.817051723055
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usdat pt 8/27/26",
+                "label": "USDat PT 8/27/26",
+                "value": 101.97686406849,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 101.97686406849
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usdat",
+                "label": "USDat",
+                "value": 99.88684633856201,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 50.079803760138
+                  },
+                  {
+                    "name": "Bsc",
+                    "value": 49.807042578424
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usdt0",
+                "label": "USDT0",
+                "value": 94.753836928512,
+                "chains": [
+                  {
+                    "name": "Plasma",
+                    "value": 69.01806087612
+                  },
+                  {
+                    "name": "Mantle",
+                    "value": 25.735776052392
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "dai",
+                "label": "DAI",
+                "value": 35.42973968488604,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 35.42973968488604
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "susde",
+                "label": "sUSDe",
+                "value": 22.46611408764788,
+                "chains": [
+                  {
+                    "name": "Mantle",
+                    "value": 22.46611408764788
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usds",
+                "label": "USDS",
+                "value": 17.60541689422273,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 17.60541689422273
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "wsrusd",
+                "label": "wsrUSD",
+                "value": 12.77730773,
+                "chains": [
+                  {
+                    "name": "Sei",
+                    "value": 12.77730773
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "savusd",
+                "label": "savUSD",
+                "value": 9.262012494061814,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 9.262012494061814
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usdt",
+                "label": "USDT",
+                "value": 8.544364029792,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 8.544364029792
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usdf",
+                "label": "USDf",
+                "value": 3.956361684927889,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 3.956361684927889
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "eusde",
+                "label": "eUSDe",
+                "value": 1.806342976533403,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 1.806342976533403
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "re_pend_pt_susde_25sep2025_eth",
+                "label": "RE_PEND_PT_SUSDE_25SEP2025_ETH",
+                "value": 1.01990208,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 1.01990208
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "usde",
+                "label": "USDe",
+                "value": -192.5364665346262,
+                "chains": [
+                  {
+                    "name": "Unknown",
+                    "value": -192.5364665346262
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "monusdt0",
+                "label": "MonUSDT0",
+                "value": -16849325.67739773,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": -16849325.67739773
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "monusdc",
+                "label": "MonUSDC",
+                "value": -21768849.20553029,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": -21768849.20553029
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "usdg",
+                "label": "USDG",
+                "value": -68621116.01198493,
+                "chains": [
+                  {
+                    "name": "Robinhood",
+                    "value": -45436377.12279736
+                  },
+                  {
+                    "name": "Solana",
+                    "value": -23184738.88918757
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "usdt",
+                "label": "USDT",
+                "value": -91701022.93355064,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": -91693055.30327581
+                  },
+                  {
+                    "name": "Ink",
+                    "value": -7967.630274829056
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "pyusd",
+                "label": "PYUSD",
+                "value": -118302260.0779906,
+                "chains": [
+                  {
+                    "name": "Solana",
+                    "value": -72437523.93883456
+                  },
+                  {
+                    "name": "Ethereum",
+                    "value": -45864736.139156
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "usdc",
+                "label": "USDC",
+                "value": -227139448.039995,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": -114517055.2506874
+                  },
+                  {
+                    "name": "Base",
+                    "value": -112622369.619776
+                  },
+                  {
+                    "name": "Mantle",
+                    "value": -20.449813629408
+                  },
+                  {
+                    "name": "Solana",
+                    "value": -2.719717882016
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "usdt0",
+                "label": "USDT0",
+                "value": -323724653.3457742,
+                "chains": [
+                  {
+                    "name": "Plasma",
+                    "value": -323724653.3457742
+                  }
+                ],
+                "isDebt": true
+              }
+            ],
+            "category": "Stablecoins",
+            "totalValue": 125656809.8980506,
+            "grossValue": 1861870545.55543
+          },
+          {
+            "entries": [
+              {
+                "name": "hype",
+                "label": "HYPE",
+                "value": 18009255.46476623,
+                "chains": [
+                  {
+                    "name": "Unknown",
+                    "value": 18009253.61710909
+                  },
+                  {
+                    "name": "Hyperevm",
+                    "value": 1.847657139321492
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "sena",
+                "label": "sENA",
+                "value": 846319.0811378569,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 846319.0811378569
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "ena",
+                "label": "ENA",
+                "value": 413516.8996851433,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 413516.8996851433
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "zest",
+                "label": "ZEST",
+                "value": 4104.386143337962,
+                "chains": [
+                  {
+                    "name": "Stacks",
+                    "value": 4104.386143337962
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "silo",
+                "label": "SILO",
+                "value": 1967.364824400017,
+                "chains": [
+                  {
+                    "name": "Sonic",
+                    "value": 1967.364824400017
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "mega",
+                "label": "MEGA",
+                "value": 1505.747643017901,
+                "chains": [
+                  {
+                    "name": "Megaeth",
+                    "value": 1505.747643017901
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "plume",
+                "label": "PLUME",
+                "value": 955.377030950017,
+                "chains": [
+                  {
+                    "name": "Plume",
+                    "value": 955.377030950017
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "reul",
+                "label": "rEUL",
+                "value": 235.4084156537723,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 235.4084156537723
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "xpl",
+                "label": "XPL",
+                "value": 233.6552218252495,
+                "chains": [
+                  {
+                    "name": "Plasma",
+                    "value": 233.6552218252495
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "mnt",
+                "label": "MNT",
+                "value": 211.9631887679562,
+                "chains": [
+                  {
+                    "name": "Mantle",
+                    "value": 211.9631887679562
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "morpho",
+                "label": "MORPHO",
+                "value": 202.0424771142238,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 202.0424771142238
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "mon",
+                "label": "MON",
+                "value": 107.0704504365224,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": 107.0704504365224
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "bera",
+                "label": "BERA",
+                "value": 35.93599926806239,
+                "chains": [
+                  {
+                    "name": "Berachain",
+                    "value": 35.93599926806239
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "wxpl",
+                "label": "WXPL",
+                "value": 31.82395254909324,
+                "chains": [
+                  {
+                    "name": "Plasma",
+                    "value": 31.82395254909324
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "xsilo",
+                "label": "xSILO",
+                "value": 28.02821737446764,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 28.02821737446764
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "opasf",
+                "label": "opASF",
+                "value": 20.54807915860835,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 20.54807915860835
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "sol",
+                "label": "SOL",
+                "value": 19.22417919681,
+                "chains": [
+                  {
+                    "name": "Solana",
+                    "value": 19.22417919681
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "sei",
+                "label": "SEI",
+                "value": 10.66889685568005,
+                "chains": [
+                  {
+                    "name": "Sei",
+                    "value": 10.66889685568005
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "s",
+                "label": "S",
+                "value": 7.484327535116465,
+                "chains": [
+                  {
+                    "name": "Sonic",
+                    "value": 7.484327535116465
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "bnb",
+                "label": "BNB",
+                "value": 6.741810712694184,
+                "chains": [
+                  {
+                    "name": "Bsc",
+                    "value": 6.741810712694184
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "stx",
+                "label": "STX",
+                "value": 6.622297952292,
+                "chains": [
+                  {
+                    "name": "Stacks",
+                    "value": 6.622297952292
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "cvx",
+                "label": "CVX",
+                "value": 6.048406786714422,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 6.048406786714422
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "ws",
+                "label": "wS",
+                "value": 4.663217604543003,
+                "chains": [
+                  {
+                    "name": "Sonic",
+                    "value": 4.663217604543003
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "nect",
+                "label": "NECT",
+                "value": 2.103717211877247,
+                "chains": [
+                  {
+                    "name": "Berachain",
+                    "value": 2.103717211877247
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "gho",
+                "label": "GHO",
+                "value": 1.883688382782203,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": 1.883688382782203
+                  }
+                ],
+                "isDebt": false
+              }
+            ],
+            "category": "Other",
+            "totalValue": 19278796.23777532,
+            "grossValue": 19278796.237775322
+          },
+          {
+            "entries": [
+              {
+                "name": "eth",
+                "label": "ETH",
+                "value": 5384.047296896145,
+                "chains": [
+                  {
+                    "name": "Base",
+                    "value": 2488.338366809458
+                  },
+                  {
+                    "name": "Ethereum",
+                    "value": 1548.400135226398
+                  },
+                  {
+                    "name": "Arbitrum",
+                    "value": 902.2016721434563
+                  },
+                  {
+                    "name": "Optimism",
+                    "value": 275.2907221368985
+                  },
+                  {
+                    "name": "Ink",
+                    "value": 126.3999699002984
+                  },
+                  {
+                    "name": "Megaeth",
+                    "value": 29.34576008769012
+                  },
+                  {
+                    "name": "Robinhood",
+                    "value": 14.07067059194631
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "weth",
+                "label": "WETH",
+                "value": 9.726946256306032,
+                "chains": [
+                  {
+                    "name": "Ink",
+                    "value": 6.974852014406581
+                  },
+                  {
+                    "name": "Ethereum",
+                    "value": 2.752094241899452
+                  }
+                ],
+                "isDebt": false
+              }
+            ],
+            "category": "ETH & Derivatives",
+            "totalValue": 5393.774243152451,
+            "grossValue": 5393.774243152451
+          },
+          {
+            "entries": [
+              {
+                "name": "avax",
+                "label": "AVAX",
+                "value": 3556.168341978598,
+                "chains": [
+                  {
+                    "name": "Avalanche",
+                    "value": 3556.168341978598
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "wavax",
+                "label": "WAVAX",
+                "value": 645.6211821254831,
+                "chains": [
+                  {
+                    "name": "Avalanche",
+                    "value": 645.6211821254831
+                  }
+                ],
+                "isDebt": false
+              }
+            ],
+            "category": "AVAX & Derivatives",
+            "totalValue": 4201.789524104081,
+            "grossValue": 4201.7895241040815
+          },
+          {
+            "entries": [
+              {
+                "name": "btc",
+                "label": "BTC",
+                "value": 51061.3856747748,
+                "chains": [
+                  {
+                    "name": "Unknown",
+                    "value": 51061.3856747748
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "xsolvbtc",
+                "label": "xSolvBTC",
+                "value": 4.35176280427876,
+                "chains": [
+                  {
+                    "name": "Bsc",
+                    "value": 4.35176280427876
+                  }
+                ],
+                "isDebt": false
+              },
+              {
+                "name": "btc perp (hyperliquid)",
+                "label": "BTC Perp (Hyperliquid)",
+                "value": -51062.94248,
+                "chains": [
+                  {
+                    "name": "Unknown",
+                    "value": -51062.94248
+                  }
+                ],
+                "isDebt": true
+              }
+            ],
+            "category": "BTC & Derivatives",
+            "totalValue": 2.794957579080428,
+            "grossValue": 102128.67991757908
+          },
+          {
+            "entries": [
+              {
+                "name": "ena perp (hyperliquid)",
+                "label": "ENA Perp (Hyperliquid)",
+                "value": -1259835.980823,
+                "chains": [
+                  {
+                    "name": "Unknown",
+                    "value": -1259835.980823
+                  }
+                ],
+                "isDebt": true
+              },
+              {
+                "name": "hype perp (hyperliquid)",
+                "label": "HYPE Perp (Hyperliquid)",
+                "value": -18010686.7647,
+                "chains": [
+                  {
+                    "name": "Unknown",
+                    "value": -18010686.7647
+                  }
+                ],
+                "isDebt": true
+              }
+            ],
+            "category": "Perpetuals",
+            "totalValue": -19270522.745523,
+            "grossValue": 19270522.745523
+          }
+        ]
+      },
+      "location": {
+        "updatedAtIso": "2026-09-22T23:59:59+00:00",
+        "rows": [
+          {
+            "label": "Protocol Deployments",
+            "valueUsd": 103788650.0233108
+          },
+          {
+            "label": "Pending Deployment",
+            "valueUsd": 31945.58546819715
+          },
+          {
+            "label": "Bridges",
+            "valueUsd": 21854092.75213073
+          }
+        ],
+        "detailedData": [
+          {
+            "entries": [
+              {
+                "name": "aave",
+                "label": "Aave",
+                "value": 59101035.1732198,
+                "chains": [
+                  {
+                    "name": "Plasma",
+                    "value": 31758091.6401484
+                  },
+                  {
+                    "name": "Ethereum",
+                    "value": 22599377.18889581
+                  },
+                  {
+                    "name": "Monad",
+                    "value": 4401955.051429249
+                  },
+                  {
+                    "name": "Avalanche",
+                    "value": 340962.8803518706
+                  },
+                  {
+                    "name": "Ink",
+                    "value": 646.3960940712805
+                  },
+                  {
+                    "name": "Mantle",
+                    "value": 2.016300458239883
+                  }
+                ]
+              },
+              {
+                "name": "morpho",
+                "label": "Morpho",
+                "value": 27452692.71440374,
+                "chains": [
+                  {
+                    "name": "Base",
+                    "value": 13263310.58993147
+                  },
+                  {
+                    "name": "Ethereum",
+                    "value": 8768057.869564988
+                  },
+                  {
+                    "name": "Robinhood",
+                    "value": 5421312.639172986
+                  },
+                  {
+                    "name": "Sei",
+                    "value": 11.6157343
+                  }
+                ]
+              },
+              {
+                "name": "kamino",
+                "label": "Kamino",
+                "value": 7678770.690285169,
+                "chains": [
+                  {
+                    "name": "Solana",
+                    "value": 7678770.690285169
+                  }
+                ]
+              },
+              {
+                "name": "curvance",
+                "label": "Curvance",
+                "value": 6151464.414566931,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": 6151464.414566931
+                  }
+                ]
+              },
+              {
+                "name": "jupiter",
+                "label": "Jupiter",
+                "value": 2128325.0146254,
+                "chains": [
+                  {
+                    "name": "Solana",
+                    "value": 2128325.0146254
+                  }
+                ]
+              },
+              {
+                "name": "ethena",
+                "label": "Ethena",
+                "value": 1259835.980823,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 1259835.980823
+                  }
+                ]
+              },
+              {
+                "name": "unknown",
+                "label": "Unknown",
+                "value": 12521.29083786362,
+                "chains": [
+                  {
+                    "name": "Monad",
+                    "value": 12521.29083786362
+                  }
+                ]
+              },
+              {
+                "name": "annamite",
+                "label": "Annamite",
+                "value": 3699.6448,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 3699.6448
+                  }
+                ]
+              },
+              {
+                "name": "euler",
+                "label": "Euler",
+                "value": 237.2147586303057,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 237.2147586303057
+                  }
+                ]
+              },
+              {
+                "name": "silo",
+                "label": "Silo",
+                "value": 30.45784510781164,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 29.04811945446764
+                  },
+                  {
+                    "name": "Avalanche",
+                    "value": 1.409725653344
+                  }
+                ]
+              },
+              {
+                "name": "asymmetry",
+                "label": "Asymmetry",
+                "value": 20.54807915860835,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 20.54807915860835
+                  }
+                ]
+              },
+              {
+                "name": "avant",
+                "label": "Avant",
+                "value": 9.262012494061814,
+                "chains": [
+                  {
+                    "name": "Ethereum",
+                    "value": 9.262012494061814
+                  }
+                ]
+              },
+              {
+                "name": "solv",
+                "label": "Solv",
+                "value": 4.35176280427876,
+                "chains": [
+                  {
+                    "name": "Bsc",
+                    "value": 4.35176280427876
+                  }
+                ]
+              },
+              {
+                "name": "dolomite",
+                "label": "Dolomite",
+                "value": 2.103717211877247,
+                "chains": [
+                  {
+                    "name": "Berachain",
+                    "value": 2.103717211877247
+                  }
+                ]
+              },
+              {
+                "name": "reservoir",
+                "label": "Reservoir",
+                "value": 1.16157343,
+                "chains": [
+                  {
+                    "name": "Sei",
+                    "value": 1.16157343
+                  }
+                ]
+              }
+            ],
+            "category": "Protocol Deployments",
+            "grossValue": 103788650.0233108,
+            "totalValue": 103788650.0233108
+          },
+          {
+            "entries": [
+              {
+                "name": "treasury wallets",
+                "label": "Pending Deployment",
+                "value": 31945.58546819715,
+                "chains": []
+              }
+            ],
+            "category": "Pending Deployment",
+            "grossValue": 31945.58546819715,
+            "totalValue": 31945.58546819715
+          },
+          {
+            "entries": [
+              {
+                "name": "bridges & exchanges",
+                "label": "Bridges",
+                "value": 21854092.75213073,
+                "chains": []
+              }
+            ],
+            "category": "Bridges",
+            "grossValue": 21854092.75213073,
+            "totalValue": 21854092.75213073
+          }
+        ]
+      },
+      "leverage": {
+        "updatedAtIso": "2026-09-22T23:59:59+00:00",
+        "assetsUsd": 1013103133.459377,
+        "liabilitiesUsd": 887428455.3230357,
+        "coveragePercent": 114.1616687387598
+      },
+      "nav": {
+        "netNav": 125674691.9077302,
+        "periodEnd": "2026-09-22T23:59:59+00:00"
+      }
+    }
+  }
+}

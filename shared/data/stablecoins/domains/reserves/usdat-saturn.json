@@ -7,6 +7,14 @@
       "risk": "low",
       "coinId": "pyusd-paypal",
       "depType": "wrapper",
+      "intermediary": {
+        "kind": "wrapper-token",
+        "label": "MoonPay PYUSDx",
+        "chain": "ethereum",
+        "contract": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "verified": true,
+        "sourceUrl": "https://docs.m0.org/build/pyusdx/deploy-extension"
+      },
       "assetClass": "stablecoin",
       "issuerOrObligor": "MoonPay-issued PYUSDx, backed by PayPal USD",
       "riskFactors": [
@@ -22,8 +30,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-31",
-    "reviewer": "Pharos reserve research (PYUSDx migration verification)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review W3",
     "confidence": "verified",
     "sources": [
       {
@@ -47,15 +55,15 @@
         "url": "https://www.m0.org/press-releases/moonpay-m0-and-paypal-announce-pyusdx-the-infrastructure-platform-for-pyusd-backed-stablecoins"
       },
       {
-        "label": "Ethereum public RPC: implementation, PYUSDx, M, and supply reads at block 25874567 (2026-08-31T10:08:47Z)",
+        "label": "Ethereum public RPC: pyusdx(), PYUSDx balance and USDat supply at block 26089449 (2026-09-30)",
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "USDat was a direct M0 M extension, but Saturn's current first-party repository records a successful upgrade at Ethereum block 25789911 to a PYUSDx-backed MultiMint implementation and a progressive M-to-PYUSDx reserve wind-down. At block 25874567, the proxy's implementation slot held 0x496a...702c; pyusdx() returned 0xebdb...b14d; assetBalanceOf(M), actual M balance, and totalAssets() were all zero; and the proxy's 71,373,622.378072 PYUSDx balance exactly matched its 71,373,622.378072 USDat total supply. M0 documents PYUSDx extensions as 1:1 PYUSDx wrappers and the PYUSDx platform as backed by PayPal USD. USDat therefore has no current m-m0 claim; its complete serial claim is linked through PYUSDx to the tracked pyusd-paypal parent.",
-    "compositionBasis": "Saturn's current implementation and migration runbook, M0's PYUSDx/PYUSD claim documentation, and fixed-block implementation-slot, PYUSDx, M, total-assets, reserve-balance, and total-supply reads",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "Saturn's PYUSDx-backed MultiMint implementation replaced the former M reserve. At Ethereum block 26089449, pyusdx() returned 0xebdb0942ce16386ab90718c7bd10c91cdb66b14d; the proxy held 84,861,787.607560 PYUSDx against exactly 84,861,787.607560 USDat supply. M0 documents PYUSDx as MoonPay's PayPal USD-backed extension. The canonical PYUSD wrapper dependency is retained with the immediate PYUSDx claim annotated; no separate tracked PYUSDx identity or independent reserve-solvency assurance is inferred.",
+    "compositionBasis": "Fixed-block USDat pyusdx(), PYUSDx balance and USDat totalSupply reads, with M0 PYUSDx claim documentation",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve asset is fully identified as PYUSDx and reconciles exactly to USDat supply; PYUSDx's documented 1:1 PayPal USD backing is represented by the pyusd-paypal wrapper dependency.",
+    "knownUnknownExposure": "PYUSDx identity and the local USDat reserve reconciliation are verified. PYUSDx issuer custody and backing assurance remain separate from the local wrapper-balance check.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

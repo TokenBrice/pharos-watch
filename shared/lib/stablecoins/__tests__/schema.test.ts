@@ -1032,6 +1032,14 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
 // is not a tracked coin. Curator fix needed before this invariant can be added.
 // See: shared/data/stablecoins/coins/srusd-reservoir.json reserves[0]
 describe("StablecoinMeta schema — reserves depType valid cases", () => {
+  it("rejects authored linked reserves without depType", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ id: "fixture-untyped", reserves: [
+        { name: "Parent token", pct: 100, risk: "low", coinId: "usdt-tether" },
+      ] }),
+    ], "fixture")).toThrow(/linked reserve slices require depType/);
+  });
+
   it("accepts a reserves entry with depType 'wrapper' and coinId set", () => {
     const json = [
       makeCoin({ id: "fixture-wrapper-ok", reserves: [

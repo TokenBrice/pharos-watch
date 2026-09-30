@@ -355,8 +355,8 @@ describe("curated reserve dependency admission", () => {
   // `defaultV9DependencyEconomicRole` maps any non-"collateral" type to
   // "serial-claim", which requires weight === 1 and drops any lesser weight
   // as `invalid-serial-weight`, poisoning the whole graph to `"invalid"`.
-  // A dust-weight coinId slice on a live-reserve branch must default (or be
-  // curated) to "collateral" so it lands as a valid basket-exposure edge.
+  // A dust-weight coinId slice declares "collateral" explicitly so it lands
+  // as a valid basket-exposure edge rather than an untyped withheld link.
   it("keeps a live-reserve branch with a dust-weight coinId slice as a valid basket edge", () => {
     const base = makeV9TwoAssetFixedInput({
       omitAlphaReserve: true,
@@ -383,6 +383,7 @@ describe("curated reserve dependency admission", () => {
             pct: 0.0068,
             risk: "low" as const,
             coinId: "beta",
+            depType: "collateral" as const,
           },
           {
             name: "Custodied cash",

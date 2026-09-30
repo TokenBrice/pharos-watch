@@ -69,7 +69,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "avant-reserves-api",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "avusd-avant",
     "display": {

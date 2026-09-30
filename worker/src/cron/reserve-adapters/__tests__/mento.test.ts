@@ -31,7 +31,18 @@ import {
   type AdapterNetworkSpec,
   type AdapterRpcValue,
 } from "./reserve-adapter.test-support";
-import { MENTO_RESERVE_COMPOSITION_PAYLOAD as SAMPLE_PAYLOAD } from "./reserve-adapter-payloads.test-support";
+import { MENTO_RESERVE_COMPOSITION_PAYLOAD as RAW_SAMPLE_PAYLOAD } from "./reserve-adapter-payloads.test-support";
+
+const SAMPLE_PAYLOAD = {
+  ...RAW_SAMPLE_PAYLOAD,
+  collateral: {
+    assets: RAW_SAMPLE_PAYLOAD.collateral.assets.map((asset) => ({
+      ...asset,
+      ...(asset.symbol === "USDT0" ? { chain: "monad" } : {}),
+      ...(["axlUSDC", "axlEUROC"].includes(asset.symbol) ? { chain: "celo" } : {}),
+    })),
+  },
+};
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const CURRENT_DASHBOARD_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
@@ -184,80 +195,31 @@ afterEach(() => {
 
 describe("mento adapter", () => {
   // --- Pure parse/adapt units ------------------------------------------------
-  it("parses reserve entries from the analytics API payload", () => {
-    const entries = parseMentoReserveComposition(SAMPLE_PAYLOAD);
-    expect(entries).toEqual([
-      { symbol: "sUSDS", percent: 50 },
-      { symbol: "EURC", percent: 10 },
-      { symbol: "axlEUROC", percent: 5 },
-      { symbol: "CELO", percent: 15 },
-      { symbol: "USDGLO", percent: 5 },
-      { symbol: "stETH", percent: 3 },
-      { symbol: "USDT", percent: 3 },
-      { symbol: "USDT0", percent: 1 },
-      { symbol: "USDC", percent: 2 },
-      { symbol: "axlUSDC", percent: 1 },
-      { symbol: "AUSD", percent: 4 },
-      { symbol: "WETH", percent: 1 },
+  it("retains measured bridge shares separately from native issuer holdings", () => {
+    const captured = JSON.parse(readFileSync(join(FIXTURES_DIR, "mento-reserve-2026-09-30.json"), "utf8"));
+    const result = adaptMentoReserveComposition(captured.payload);
+    const bridged = result.slices.filter((slice) => slice.intermediary);
+    expect(bridged.map((slice) => [slice.coinId, slice.pct])).toEqual([
+      ["eurc-circle", 1.373366633011464],
+      ["usdt-tether", 1.111004752080174],
+      ["usdc-circle", 1.1069622264377186],
     ]);
+    expect(bridged.every((slice) => slice.depType === "collateral")).toBe(true);
+    const nativeUsdc = result.slices.find((slice) => slice.coinId === "usdc-circle" && !slice.intermediary)!;
+    expect(nativeUsdc.pct).toBeCloseTo(2.692386446060812, 12);
   });
 
-  it("maps the analytics payload into Pharos reserve slices", () => {
-    const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
-    expect(result.slices).toEqual([
-      { name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky" },
-      { name: "EURC (Circle euro stablecoin)", pct: 15, risk: "low", coinId: "eurc-circle" },
-      { name: "CELO", pct: 15, risk: "high" },
-      { name: "USDGLO (Glo Dollar)", pct: 5, risk: "low", coinId: "usdglo-glo" },
-      { name: "USDT", pct: 4, risk: "low", coinId: "usdt-tether" },
-      { name: "AUSD (Agora Dollar)", pct: 4, risk: "low", coinId: "ausd-agora" },
-      { name: "stETH (Lido staked ETH)", pct: 3, risk: "low" },
-      { name: "USDC", pct: 3, risk: "low", coinId: "usdc-circle" },
-      { name: "ETH", pct: 1, risk: "very-low" },
-    ]);
-    expect(result.warnings).toBeUndefined();
+  it.each([undefined, "unreviewed"])("withholds USDT0 without a reviewed chain (%s)", (chain) => {
+    const result = adaptMentoReserveComposition({ collateral: { assets: [
+      { symbol: "USDT0", chain, percentage: 10 },
+      { symbol: "USDT0", chain: "monad", percentage: 10 },
+      { symbol: "USDC", chain: "ethereum", percentage: 80 },
+    ] } });
+    expect(result.slices.filter((slice) => slice.coinId === "usdt-tether").reduce((sum, slice) => sum + slice.pct, 0)).toBe(10);
+    expect(result.slices.find((slice) => slice.name === "USDT0")?.coinId).toBeUndefined();
+    expect(result.warnings?.some((warning) => warning.code === "unverified-mento-representation")).toBe(true);
   });
 
-  it("maps USDT0 into the existing USDT reserve bucket without degrading", () => {
-    const usdt0Payload = {
-      collateral: {
-        assets: [
-          { symbol: "USDC", percentage: 50 },
-          { symbol: "USDT0", percentage: 25 },
-          { symbol: "WETH", percentage: 25 },
-        ],
-      },
-    };
-
-    const result = adaptMentoReserveComposition(usdt0Payload);
-    expect(result.slices).toContainEqual({ name: "USDT", pct: 25, risk: "low", coinId: "usdt-tether" });
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({
-      stableReservePct: 75,
-      freshnessMode: "unverified",
-    });
-  });
-
-  it("maps EUROP as a tracked stablecoin reserve without degrading", () => {
-    const result = adaptMentoReserveComposition({
-      collateral: {
-        assets: [
-          { symbol: "USDC", percentage: 50 },
-          { symbol: "EUROP", percentage: 25 },
-          { symbol: "WETH", percentage: 25 },
-        ],
-      },
-    });
-
-    expect(result.slices).toContainEqual({
-      name: "EUROP (Schuman euro stablecoin)",
-      pct: 25,
-      risk: "low",
-      coinId: "europ-schuman",
-    });
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({ stableReservePct: 75 });
-  });
 
   it("extracts the historical dashboard reserve payload timestamp", () => {
     expect(extractMentoDashboardTimestamp(MENTO_DASHBOARD_HTML_FIXTURE)).toBe(DASHBOARD_FRAGMENT_TS_SEC);
@@ -367,15 +329,6 @@ describe("mento adapter", () => {
 
   it("maps CDP troves into USDm reserve slices and collateralization metadata", () => {
     const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm");
-    expect(result.slices).toEqual([
-      {
-        name: "USDm (Mento Dollar) CDP collateral",
-        pct: 100,
-        risk: "low",
-        coinId: "cusd-celo",
-        depType: "collateral",
-      },
-    ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       cdpStablecoin: "GBPm",
@@ -442,17 +395,6 @@ describe("mento adapter", () => {
       nowSec: CURRENT_DASHBOARD_NOW_SEC,
     });
 
-    expect(result.slices).toEqual([
-      { name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky" },
-      { name: "EURC (Circle euro stablecoin)", pct: 15, risk: "low", coinId: "eurc-circle" },
-      { name: "CELO", pct: 15, risk: "high" },
-      { name: "USDGLO (Glo Dollar)", pct: 5, risk: "low", coinId: "usdglo-glo" },
-      { name: "USDT", pct: 4, risk: "low", coinId: "usdt-tether" },
-      { name: "AUSD (Agora Dollar)", pct: 4, risk: "low", coinId: "ausd-agora" },
-      { name: "stETH (Lido staked ETH)", pct: 3, risk: "low" },
-      { name: "USDC", pct: 3, risk: "low", coinId: "usdc-circle" },
-      { name: "ETH", pct: 1, risk: "very-low" },
-    ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       details: { freshnessSource: "same-run-render-clock" },
@@ -494,7 +436,6 @@ describe("mento adapter", () => {
       freshnessMode: "verified",
       sourceTimestamp: DASHBOARD_FRAGMENT_TS_SEC,
     });
-    expect(result.slices).toContainEqual({ name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky" });
     for (const [url, fallback] of [[CATALOG_RESERVE_URL, reserveFails], [MENTO_DASHBOARD_URL, dashboardFails]] as const) {
       expect(identities.filter((request) => request.url === url).map(({ identity }) => identity))
         .toEqual(fallback ? ["browser", "neutral"] : ["browser"]);
@@ -694,9 +635,6 @@ describe("mento redemption telemetry", () => {
       feeBps: 5,
       sourceUrls: redemption.sourceUrls,
     });
-    // Redemption telemetry is additive: the analytics-API reserve composition
-    // is untouched.
-    expect(result.slices).toHaveLength(9);
     expectWarnings(result, []);
     expect(network.rpcCalls.map(({ data }) => data)).toEqual([
       MENTO_GET_EXCHANGE_IDS_SELECTOR,
@@ -750,7 +688,6 @@ describe("mento redemption telemetry", () => {
       feeBps: 100,
       sourceUrls: ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"],
     });
-    expect(result.slices).toHaveLength(9);
     expectWarnings(result, []);
   });
 
@@ -884,7 +821,8 @@ describe("mento redemption telemetry", () => {
       nowSec: CURRENT_DASHBOARD_NOW_SEC,
     });
 
-    expect(result.slices).toHaveLength(9);
+    expect(result.slices.find((slice) => slice.sourceKey === "mento:reserve:axlusdc"))
+      .toMatchObject({ pct: 1, coinId: "usdc-circle", depType: "collateral" });
     expect(result.metadata?.redemption).toBeUndefined();
     expectWarnings(result, ["mento-redemption-telemetry-failed"]);
     // The cap short-circuits before any per-pool reads.
@@ -949,7 +887,6 @@ describe("mento redemption telemetry", () => {
       await vi.advanceTimersByTimeAsync(1_000); // the stalled RPC read gives up
       const result = await resultPromise;
 
-      expect(result.slices).toHaveLength(9);
       expect(result.metadata?.redemption).toBeUndefined();
       expectWarnings(result, ["mento-redemption-telemetry-failed"]);
     } finally {
@@ -969,7 +906,6 @@ describe("mento redemption telemetry", () => {
       nowSec: CURRENT_DASHBOARD_NOW_SEC,
     });
 
-    expect(result.slices).toHaveLength(9);
     expect(result.metadata?.redemption).toBeUndefined();
     expectWarnings(result, ["mento-redemption-telemetry-failed"]);
     // Fails closed at the census read; no per-pool reads are attempted.

@@ -38,7 +38,7 @@ beforeEach(() => {
   vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
     slices: [
       { name: "FDIC-insured bank cash", pct: 0.990893, risk: "very-low", assetClass: "bank-deposit" },
-      { name: "BlackRock BUIDL", pct: 27.987907, risk: "low", coinId: "buidl-blackrock", assetClass: "fund-share" },
+      { name: "BlackRock BUIDL", pct: 27.987907, risk: "low", coinId: "buidl-blackrock", depType: "collateral", assetClass: "fund-share" },
       { name: "Goldman Sachs STBXX (CUSIP 38151N205)", pct: 8.904468, risk: "low", assetClass: "money-market-fund" },
       { name: "JPMorgan JLTXX (CUSIP 46655R119)", pct: 62.116731, risk: "low", assetClass: "money-market-fund" },
     ],

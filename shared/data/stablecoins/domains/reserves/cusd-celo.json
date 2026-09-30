@@ -14,7 +14,8 @@
         "custody",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:ausd"
     },
     {
       "name": "sUSDS (Sky savings USDS)",
@@ -28,7 +29,8 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:susds"
     },
     {
       "name": "CELO",
@@ -41,7 +43,8 @@
         "liquidity",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:celo"
     },
     {
       "name": "USDT family (Ethereum/Celo USDT and Monad USDT0)",
@@ -57,7 +60,8 @@
         "concentration",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:usdt"
     },
     {
       "name": "EUROP (Schuman Financial)",
@@ -72,11 +76,12 @@
         "custody",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:europ"
     },
     {
       "name": "EURC family (Ethereum EURC and Celo axlEUROC)",
-      "pct": 5.7192251470,
+      "pct": 5.719225147,
       "risk": "low",
       "coinId": "eurc-circle",
       "depType": "collateral",
@@ -87,7 +92,8 @@
         "custody",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:eurc"
     },
     {
       "name": "USDC family (Ethereum/Celo/Monad USDC and Celo axlUSDC)",
@@ -102,7 +108,8 @@
         "custody",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:usdc"
     },
     {
       "name": "stETH (Lido staked ETH)",
@@ -115,7 +122,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:steth"
     },
     {
       "name": "ETH",
@@ -127,12 +135,86 @@
         "market",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:eth"
+    },
+    {
+      "name": "axlEUROC (Axelar EURC)",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "eurc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the Axelar bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:axleuroc",
+      "intermediary": {
+        "kind": "bridge",
+        "label": "axlEUROC (Axelar)",
+        "chain": "celo",
+        "contract": "0x061cc5a2C863E0C1Cb404006D559dB18A34C762d",
+        "verified": true,
+        "sourceUrl": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts"
+      }
+    },
+    {
+      "name": "USDT0 (Monad)",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether and the USDT0 bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:usdt0",
+      "intermediary": {
+        "kind": "bridge",
+        "label": "USDT0",
+        "chain": "monad",
+        "contract": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
+        "verified": true,
+        "sourceUrl": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts"
+      }
+    },
+    {
+      "name": "axlUSDC (Axelar USDC)",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the Axelar bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "mento:reserve:axlusdc",
+      "intermediary": {
+        "kind": "bridge",
+        "label": "axlUSDC (Axelar)",
+        "chain": "celo",
+        "contract": "0xEB466342C4d449BC9f53A865D5Cb90586f405215",
+        "verified": true,
+        "sourceUrl": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts"
+      }
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Kimi data review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review W3",
     "confidence": "verified",
     "sources": [
       {
@@ -150,13 +232,21 @@
       {
         "label": "Pinned Mento stablecoin backing config",
         "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Mento issuer asset registry (representation contracts; accessed 2026-09-30)",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts"
+      },
+      {
+        "label": "Fixed-block representation symbols: Celo 78860375 and Monad 109288367 (2026-09-30)",
+        "url": "https://forno.celo.org"
       }
     ],
-    "rationale": "Fresh capture from the issuer-run reserve API on 2026-09-04 reported $19,855,565.93014987 of collateral; companion overview timestamp 2026-09-04T17:48:54.371Z. Grouping the 17 chain-level positions by stablecoin family yields AUSD 25.2901331784%, sUSDS 23.6406111204%, CELO 19.8880648425%, USDT/USDT0 11.1910668211%, EUROP 5.8495797572%, EURC/axlEUROC 5.7192251470%, USDC/axlUSDC 4.2423024173%, stETH 3.1196575688%, and ETH/WETH 1.0593591473%, normalized to 100%; WBTC is a zero-weight dust row and is omitted. Each tracked stablecoin exposure has an exact collateral edge; CELO, stETH, and ETH remain explicit exogenous collateral.",
+    "rationale": "Fresh capture from the issuer-run reserve API on 2026-09-04 reported $19,855,565.93014987 of collateral; companion overview timestamp 2026-09-04T17:48:54.371Z. Grouping the 17 chain-level positions by stablecoin family yields AUSD 25.2901331784%, sUSDS 23.6406111204%, CELO 19.8880648425%, USDT/USDT0 11.1910668211%, EUROP 5.8495797572%, EURC/axlEUROC 5.7192251470%, USDC/axlUSDC 4.2423024173%, stETH 3.1196575688%, and ETH/WETH 1.0593591473%, normalized to 100%; WBTC is a zero-weight dust row and is omitted. Each tracked stablecoin exposure has an exact collateral edge; CELO, stETH, and ETH remain explicit exogenous collateral. The September 4 curated parent-family shares remain on the proof-of-reserves period-end basis. September 30 verified representation identities are keyed zero-percent classification rows for new live slices; their zero authored weights do not assert historical absence or a September 4 native/bridge split. New live observations supply independently measured representation weights and remain subject to normal evidence admission.",
     "compositionBasis": "Issuer-run Mento Reserve API capture dated 2026-09-04, grouped by stablecoin family; USDm is reserve-backed under Mento's documented model",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "Every positive reserve API category is either linked to its tracked stablecoin family or explicitly dispositioned as an exogenous cryptoasset.",
+    "knownUnknownExposure": "Historical parent-family holdings are identified, but the September 4 native-versus-bridge split is not independently reconstructed. Zero-weight keyed bridge rows carry classification only; current live amounts are never transplanted into the dated proof-of-reserves composition.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

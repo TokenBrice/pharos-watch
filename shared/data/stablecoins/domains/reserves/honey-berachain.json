@@ -6,6 +6,7 @@
       "pct": 100,
       "risk": "high",
       "coinId": "usde-ethena",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Ethena Labs",
       "riskFactors": [

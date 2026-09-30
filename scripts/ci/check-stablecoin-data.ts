@@ -19,7 +19,7 @@ import { REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS } from "@shared/data/coverage-
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "@shared/types/reserves";
 import { StablecoinFlagsSchema } from "@shared/types/stablecoin-meta-schemas";
-import { defaultV9DependencyEconomicRole } from "@shared/types/dependency-types";
+import { DependencyTypeSchema, defaultV9DependencyEconomicRole } from "@shared/types/dependency-types";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import { analyzeOracleRiskCoverage, isBlockingOracleRiskCoverageFinding } from "../lib/oracle-risk-coverage";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -325,16 +325,41 @@ export function getDependencyReserveOverlapIssues(
   );
 }
 
-function getReserveDependencyTypeLinkIssues(coin: StablecoinMeta): string[] {
+export function getReserveDependencyTypeLinkIssues(coin: Pick<StablecoinMeta, "reserves">): string[] {
   const issues: string[] = [];
 
   (coin.reserves ?? []).forEach((reserve, index) => {
+    if (reserve.coinId && !reserve.depType) {
+      issues.push(`reserves[${index}] "${reserve.name}" sets coinId="${reserve.coinId}" without depType; linked reserve slices require an explicit dependency type`);
+    }
     if (!reserve.depType || reserve.coinId) return;
     issues.push(
       `reserves[${index}] "${reserve.name}" sets depType="${reserve.depType}" without coinId; depType only applies to stablecoin-linked reserve slices`,
     );
   });
 
+  return issues;
+}
+
+export function getLiveReserveDependencyTypeLinkIssues(
+  params: unknown,
+  path = "liveReservesConfig.params",
+): string[] {
+  if (Array.isArray(params)) {
+    return params.flatMap((entry, index) => getLiveReserveDependencyTypeLinkIssues(entry, `${path}[${index}]`));
+  }
+  if (params === null || typeof params !== "object") return [];
+  const issues: string[] = [];
+  const hasCoinId = "coinId" in params && typeof params.coinId === "string" && params.coinId.length > 0;
+  const depType = "depType" in params ? params.depType : undefined;
+  const hasDepType = depType != null;
+  if (hasCoinId && (!hasDepType || !DependencyTypeSchema.safeParse(depType).success)) {
+    issues.push(`${path}.coinId requires a valid depType declaration`);
+  }
+  if (hasDepType && !hasCoinId) issues.push(`${path}.depType requires a coinId declaration`);
+  for (const [key, value] of Object.entries(params)) {
+    issues.push(...getLiveReserveDependencyTypeLinkIssues(value, `${path}.${key}`));
+  }
   return issues;
 }
 
@@ -776,6 +801,9 @@ function runStablecoinDataCheck(): void {
 
       for (const reserveDependencyTypeLinkIssue of getReserveDependencyTypeLinkIssues(entry.coin)) {
         reportError(`${entry.file} (${entry.coin.id}): ${reserveDependencyTypeLinkIssue}`);
+      }
+      for (const issue of getLiveReserveDependencyTypeLinkIssues(entry.coin.liveReservesConfig?.params)) {
+        reportError(`${entry.file} (${entry.coin.id}): ${issue}`);
       }
 
       const algorithmicBackingIssue = getTrackedAlgorithmicBackingIssue(entry.coin);

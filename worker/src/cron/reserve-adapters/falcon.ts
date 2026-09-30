@@ -212,6 +212,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
           value,
           risk: config.risk,
           coinId: config.coinId,
+          depType: "collateral" as const,
         };
       }),
       {

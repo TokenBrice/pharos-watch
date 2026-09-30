@@ -23,6 +23,7 @@
       "pct": 28.8,
       "risk": "low",
       "coinId": "ustb-superstate",
+      "depType": "collateral",
       "assetClass": "fund-share",
       "issuerOrObligor": "Invesco Short Duration U.S. Government Securities Fund",
       "riskFactors": [
@@ -40,6 +41,7 @@
       "pct": 13.5,
       "risk": "low",
       "coinId": "buidl-blackrock",
+      "depType": "collateral",
       "assetClass": "fund-share",
       "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
       "riskFactors": [

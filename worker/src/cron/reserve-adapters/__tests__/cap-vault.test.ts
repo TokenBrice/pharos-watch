@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 
 import { adaptCapVaultState } from "../cap-vault";
+import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import {
   expectValidAdapterOutput,
   installAdapterNetwork,
@@ -85,6 +86,23 @@ function capNetwork(options: {
   };
 }
 
+describe("untyped Cap declarations", () => {
+  it("preserves a missing type so dependency derivation withholds the holding", () => {
+    const result = adaptCapVaultState({
+      contractAddress: CAP_VAULT, supplyUsd: 100,
+      assets: [makeCapAsset({ coinId: "usdc-circle" })],
+    });
+    expect(result.slices[0]).toMatchObject({ coinId: "usdc-circle", pct: 100 });
+    expect(result.slices[0].depType).toBeUndefined();
+    const derived = deriveEffectiveDependencySet({}, { liveReserveSlices: result.slices });
+    expect(derived.dependencies).toEqual([]);
+    expect(derived.coinIdWithoutDepTypeCount).toBe(1);
+    expect(derived.rejectionReasons).toContainEqual(expect.objectContaining({
+      reason: "coinId-without-depType", upstreamAssetId: "usdc-circle",
+    }));
+  });
+});
+
 
 describe("adaptCapVaultState", () => {
   it("uses total supplied assets for reserve slices and available unpaused balances for redemption capacity", () => {
@@ -97,6 +115,7 @@ describe("adaptCapVaultState", () => {
           name: "USDC",
           risk: "low",
           coinId: "usdc-circle",
+          depType: "collateral",
           decimals: 6,
           totalSupplied: 70,
           totalBorrowed: 20,
@@ -109,6 +128,7 @@ describe("adaptCapVaultState", () => {
           name: "USDT",
           risk: "low",
           coinId: "usdt-tether",
+          depType: "collateral",
           decimals: 6,
           totalSupplied: 30,
           totalBorrowed: 0,
@@ -120,8 +140,8 @@ describe("adaptCapVaultState", () => {
     });
 
     expect(result.slices).toEqual([
-      { sourceKey: "cap-vault:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", name: "USDC", pct: 70, risk: "low", coinId: "usdc-circle" },
-      { sourceKey: "cap-vault:0xdac17f958d2ee523a2206206994597c13d831ec7", name: "USDT", pct: 30, risk: "low", coinId: "usdt-tether" },
+      { sourceKey: "cap-vault:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", name: "USDC", pct: 70, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "cap-vault:0xdac17f958d2ee523a2206206994597c13d831ec7", name: "USDT", pct: 30, risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 100,
@@ -397,7 +417,7 @@ describe("fetchCapVaultReserves", () => {
     });
 
     expect(result.slices).toEqual([
-      { sourceKey: "cap-vault:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "cap-vault:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle", depType: "collateral" },
       { sourceKey: "cap-vault:0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c", name: "WTGXX", pct: 50, risk: "low", coinId: "wtgxx-wisdomtree", depType: "collateral" },
     ]);
     expect(result.warnings?.some((warning) => warning.code === "unknown-vault-asset") ?? false).toBe(false);

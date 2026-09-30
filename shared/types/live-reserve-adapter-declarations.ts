@@ -2675,9 +2675,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // make the adapter's output coin-specific, so results can no longer be
     // shared across coins within a run.
     sharedSourceMode: "none",
-    // v2: a dashboard payload without per-stablecoin `cdp_backings` totals
-    // degrades the snapshot instead of silently skipping the coherence gate.
-    configValidation: CONFIG_COLLATERAL_V1_V2,
+    // v3: keyed collateral identities preserve native/bridge contributions;
+    // dashboard-vs-CDP coherence and collateral-mix semantics are unchanged.
+    configValidation: configPolicy(["collateral-mix"], [3]),
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: DASHBOARD_VALIDATION,
   },
@@ -3167,7 +3167,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: configPolicy(["collateral-mix"], [2]),
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       // Weekly Tuesday reserve snapshots (2026-08-25, 2026-09-01) with grace

@@ -14,7 +14,7 @@ import {
   reserveDegradedWarning,
   reserveInfoWarning,
   sameRunRenderClockFreshnessMetadata,
-  slicesFromPercentages,
+  normalizeSlices,
   slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
@@ -31,6 +31,7 @@ type MentoCdpStablecoin = "GBPm" | "JPYm" | "CHFm";
 interface MentoReserveEntry {
   symbol: string;
   percent: number;
+  chain?: string;
 }
 
 interface MentoCdpTroveEntry {
@@ -44,6 +45,7 @@ interface MentoCdpTroveEntry {
 interface MentoReserveApiAsset {
   symbol?: unknown;
   percentage?: unknown;
+  chain?: unknown;
 }
 
 interface MentoCdpTroveApiEntry {
@@ -123,6 +125,7 @@ interface TokenConfig {
   risk: ReserveSlice["risk"];
   coinId?: string;
   stableLike?: boolean;
+  intermediary?: ReserveSlice["intermediary"];
 }
 
 const TOKEN_CONFIG: Record<string, TokenConfig> = {
@@ -148,11 +151,12 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     stableLike: true,
   },
   axlEUROC: {
-    key: "EURC",
-    name: "EURC (Circle euro stablecoin)",
+    key: "axlEUROC",
+    name: "axlEUROC (Axelar EURC)",
     risk: "low",
     coinId: "eurc-circle",
     stableLike: true,
+    intermediary: { kind: "bridge", label: "axlEUROC (Axelar)", chain: "celo", contract: "0x061cc5a2C863E0C1Cb404006D559dB18A34C762d", verified: true, sourceUrl: "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts" },
   },
   CELO: { key: "CELO", name: "CELO", risk: getCanonicalReserveAssetRisk("CELO") ?? "high" },
   USDGLO: {
@@ -175,11 +179,12 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     stableLike: true,
   },
   USDT0: {
-    key: "USDT",
-    name: "USDT",
+    key: "USDT0",
+    name: "USDT0 (Monad)",
     risk: "low",
     coinId: "usdt-tether",
     stableLike: true,
+    intermediary: { kind: "bridge", label: "USDT0", chain: "monad", contract: "0xe7cd86e13ac4309349f30b3435a9d337750fc82d", verified: true, sourceUrl: "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts" },
   },
   USDC: {
     key: "USDC",
@@ -189,11 +194,12 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     stableLike: true,
   },
   axlUSDC: {
-    key: "USDC",
-    name: "USDC",
+    key: "axlUSDC",
+    name: "axlUSDC (Axelar USDC)",
     risk: "low",
     coinId: "usdc-circle",
     stableLike: true,
+    intermediary: { kind: "bridge", label: "axlUSDC (Axelar)", chain: "celo", contract: "0xEB466342C4d449BC9f53A865D5Cb90586f405215", verified: true, sourceUrl: "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/assets.config.ts" },
   },
   AUSD: {
     key: "AUSD",
@@ -248,7 +254,7 @@ export function parseMentoReserveComposition(payload: unknown): MentoReserveEntr
   const assets = getCollateralAssets(payload);
   const entries = assets.flatMap((asset) => (
     typeof asset.symbol === "string" && typeof asset.percentage === "number"
-      ? [{ symbol: asset.symbol, percent: asset.percentage }]
+      ? [{ symbol: asset.symbol, percent: asset.percentage, ...(typeof asset.chain === "string" ? { chain: asset.chain } : {}) }]
       : []
   ));
 
@@ -412,20 +418,28 @@ export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: 
     name: string;
     risk: ReserveSlice["risk"];
     coinId?: string;
+    intermediary?: ReserveSlice["intermediary"];
     pct: number;
     stableLike: boolean;
   }>();
 
   let stablePct = 0;
   for (const entry of entries) {
-    const config = TOKEN_CONFIG[entry.symbol];
+    const reviewed = TOKEN_CONFIG[entry.symbol];
+    const config = reviewed?.intermediary && entry.chain !== reviewed.intermediary.chain
+      ? undefined
+      : reviewed;
+    if (reviewed?.intermediary && !config) {
+      warnings.push(reserveInfoWarning("unverified-mento-representation", `Unverified ${entry.symbol} representation on ${entry.chain}; canonical linkage withheld.`));
+    }
     if (!config) {
       warnings.push(reserveDegradedWarning("unknown-asset", `Unmapped Mento reserve symbol: ${entry.symbol}`));
-      const existing = grouped.get(entry.symbol);
+      const key = `unverified-${entry.symbol}-${entry.chain ?? "unknown"}`.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      const existing = grouped.get(key);
       if (existing) {
         existing.pct += entry.percent;
       } else {
-        grouped.set(entry.symbol, {
+        grouped.set(key, {
           name: entry.symbol,
           risk: "medium",
           pct: entry.percent,
@@ -443,6 +457,7 @@ export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: 
         name: config.name,
         risk: config.risk,
         coinId: config.coinId,
+        intermediary: config.intermediary,
         pct: entry.percent,
         stableLike: config.stableLike ?? false,
       });
@@ -454,14 +469,19 @@ export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: 
   }
 
   const totalPct = entries.reduce((sum, entry) => sum + entry.percent, 0);
-  const slices = slicesFromPercentages(
-    Array.from(grouped.values(), (group) => ({
+  if (Math.abs(totalPct - 100) > 1.5) {
+    throw new Error(`Mento reserve composition sum to ${totalPct.toFixed(1)}% (expected 100% ± 1.5%)`);
+  }
+  const slices = normalizeSlices(
+    Array.from(grouped.entries(), ([key, group]) => ({
+      sourceKey: `mento:reserve:${key.toLowerCase()}`,
       name: group.name,
       pct: group.pct,
       risk: group.risk,
-      ...(group.coinId ? { coinId: group.coinId } : {}),
+      ...(group.coinId ? { coinId: group.coinId, depType: "collateral" as const } : {}),
+      ...(group.intermediary ? { intermediary: group.intermediary } : {}),
     })),
-    { decimals: 1, context: "Mento reserve composition" },
+    null,
   );
 
   return {
@@ -478,6 +498,7 @@ export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: 
             "Mento analytics API exposes reserve composition but not a trustworthy payload update timestamp",
           )),
       stableReservePct: stablePct,
+      representations: entries.map((entry) => ({ symbol: entry.symbol, chain: entry.chain ?? null, pct: entry.percent })),
     },
   };
 }
@@ -528,13 +549,15 @@ export function adaptMentoCdpComposition(
 
   return {
     slices: slicesFromValues(
-      Array.from(grouped.values(), (group) => ({
+      Array.from(grouped.entries(), ([key, group]) => ({
+        sourceKey: `mento:cdp:${key.toLowerCase()}`,
         name: group.name,
         value: group.value,
         risk: group.risk,
         ...(group.coinId ? { coinId: group.coinId } : {}),
         ...(group.depType ? { depType: group.depType } : {}),
       })),
+      null,
     ),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {

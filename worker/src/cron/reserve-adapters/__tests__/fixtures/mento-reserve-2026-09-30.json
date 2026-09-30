@@ -1,0 +1,2231 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-30T09:35:02Z -->",
+  "capturedAt": "2026-09-30T09:35:02.472Z",
+  "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve",
+  "payload": {
+    "collateral": {
+      "total_usd": 20816318.848500364,
+      "by_custodian": {
+        "hot_usd": 3742188.9149212693,
+        "cold_usd": 12517070.423040174,
+        "ops_usd": 4557059.510538929
+      },
+      "assets": [
+        {
+          "symbol": "CELO",
+          "chain": "celo",
+          "balance": "52141601.4639383",
+          "usd_value": 5173912.15320475,
+          "percentage": 24.855077359547103,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+              "balance": "33937679.887277602347928717",
+              "usd_value": 3367571.564555768,
+              "custodian_type": "cold"
+            },
+            {
+              "type": "wallet",
+              "label": "Mento V2 Liquidity Reserve",
+              "identifier": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+              "balance": "17801583.447991760119823895",
+              "usd_value": 1766417.339742683,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "aave",
+              "label": "AAVE — Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "401728.174962467418979421",
+              "usd_value": 39862.72435764352,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "533.947239973740867622",
+              "usd_value": 52.982571238839164,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Ops Account",
+              "identifier": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+              "balance": "62.006466498057107597",
+              "usd_value": 6.152783987915306,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "14",
+              "usd_value": 1.389193429261339,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "sUSDS",
+          "chain": "ethereum",
+          "balance": "4234485.75104381",
+          "usd_value": 4705420.12133642,
+          "percentage": 22.604477552357462,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+              "balance": "4234485.751043809865459529",
+              "usd_value": 4705420.12133642,
+              "custodian_type": "cold"
+            }
+          ]
+        },
+        {
+          "symbol": "AUSD",
+          "chain": "ethereum",
+          "balance": "4285228.85",
+          "usd_value": 4285228.85,
+          "percentage": 20.585910896098294,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "4253453",
+              "usd_value": 4253453,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+              "balance": "31775.85",
+              "usd_value": 31775.85,
+              "custodian_type": "cold"
+            }
+          ]
+        },
+        {
+          "symbol": "USDT",
+          "chain": "ethereum",
+          "balance": "1225664.2726389999",
+          "usd_value": 1225664.2726389999,
+          "percentage": 5.8879972081485406,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+              "balance": "1222798.962161",
+              "usd_value": 1222798.962161,
+              "custodian_type": "cold"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "2865.310362",
+              "usd_value": 2865.310362,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "0.000116",
+              "usd_value": 0.000116,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "EUROP",
+          "chain": "ethereum",
+          "balance": "1000000",
+          "usd_value": 1133149.612009573,
+          "percentage": 5.443563870521741,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+              "balance": "1000000",
+              "usd_value": 1133149.612009573,
+              "custodian_type": "cold"
+            }
+          ]
+        },
+        {
+          "symbol": "EURC",
+          "chain": "ethereum",
+          "balance": "683640.14923",
+          "usd_value": 774666.5698541411,
+          "percentage": 3.721438816786519,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+              "balance": "683640.084633",
+              "usd_value": 774666.4966560756,
+              "custodian_type": "cold"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "0.064597",
+              "usd_value": 0.07319806548698239,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "AUSD",
+          "chain": "monad",
+          "balance": "734877.2663626648",
+          "usd_value": 734877.2663626648,
+          "percentage": 3.530294053002586,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Mento V3 Liquidity Reserve",
+              "identifier": "0x4255Cf38e51516766180b33122029A88Cb853806",
+              "balance": "686747.103668",
+              "usd_value": 686747.103668,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "fpmm",
+              "label": "FPMM AUSD / USDm — Ops Account",
+              "identifier": "0xb0a0264Ce6847F101b76ba36A4a3083ba489F501",
+              "balance": "46749.431503664775",
+              "usd_value": 46749.431503664775,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+              "balance": "1380.73",
+              "usd_value": 1380.73,
+              "custodian_type": "cold"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "0.001191",
+              "usd_value": 0.001191,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "stETH",
+          "chain": "ethereum",
+          "balance": "253.2894953063074",
+          "usd_value": 676981.9116303317,
+          "percentage": 3.2521692070406694,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+              "balance": "253.289495306307395306",
+              "usd_value": 676981.9116303317,
+              "custodian_type": "cold"
+            }
+          ]
+        },
+        {
+          "symbol": "USDT",
+          "chain": "celo",
+          "balance": "569179.9933076549",
+          "usd_value": 569179.9933076549,
+          "percentage": 2.734297055354047,
+          "sources": [
+            {
+              "type": "univ3",
+              "label": "UniV3 USDT/USDm — Reserve Safe",
+              "identifier": "0x5dC631aD6C26BEA1a59fBF2C2680CF3df43d249f#55551",
+              "balance": "374457.805653",
+              "usd_value": 374457.805653,
+              "custodian_type": "cold"
+            },
+            {
+              "type": "wallet",
+              "label": "Mento V2 Liquidity Reserve",
+              "identifier": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+              "balance": "193824.218224",
+              "usd_value": 193824.218224,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "879.564938",
+              "usd_value": 879.564938,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Ops Account",
+              "identifier": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+              "balance": "17.399489",
+              "usd_value": 17.399489,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "1",
+              "usd_value": 1,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "fpmm",
+              "label": "FPMM USDT / USDm — Ops Account",
+              "identifier": "0x0FEBa760d93423D127DE1B6ABECdB60E5253228D",
+              "balance": "0.005003654855217581",
+              "usd_value": 0.005003654855217581,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "axlEUROC",
+          "chain": "celo",
+          "balance": "252291.81941789784",
+          "usd_value": 285884.37728658016,
+          "percentage": 1.373366633011464,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Mento V2 Liquidity Reserve",
+              "identifier": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+              "balance": "170947.567589",
+              "usd_value": 193709.16988745562,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "fpmm",
+              "label": "FPMM axlEUROC / EURm — Ops Safe",
+              "identifier": "0x3aA7c431C06B10F7422e69d3E69b66807A6aF696",
+              "balance": "47140.91382289781",
+              "usd_value": 53417.70820819337,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Mento V3 Liquidity Reserve",
+              "identifier": "0x4255Cf38e51516766180b33122029A88Cb853806",
+              "balance": "34190.259141",
+              "usd_value": 38742.67888013091,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "13.078865",
+              "usd_value": 14.820310800275584,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "USDC",
+          "chain": "monad",
+          "balance": "234624.09274270572",
+          "usd_value": 234624.09274270572,
+          "percentage": 1.1271161556002411,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Mento V3 Liquidity Reserve",
+              "identifier": "0x4255Cf38e51516766180b33122029A88Cb853806",
+              "balance": "191020.151658",
+              "usd_value": 191020.151658,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "fpmm",
+              "label": "FPMM USDC / USDm — Ops Account",
+              "identifier": "0x463c0d1F04bcd99A1efCF94AC2a75bc19Ea4A7E5",
+              "balance": "43603.94108370573",
+              "usd_value": 43603.94108370573,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "0.000001",
+              "usd_value": 0.000001,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "USDT0",
+          "chain": "monad",
+          "balance": "231270.291615",
+          "usd_value": 231270.291615,
+          "percentage": 1.111004752080174,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Mento V3 Liquidity Reserve",
+              "identifier": "0x4255Cf38e51516766180b33122029A88Cb853806",
+              "balance": "226137.612951",
+              "usd_value": 226137.612951,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "5132.678664",
+              "usd_value": 5132.678664,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "axlUSDC",
+          "chain": "celo",
+          "balance": "230428.7865877341",
+          "usd_value": 230428.7865877341,
+          "percentage": 1.1069622264377186,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Mento V3 Liquidity Reserve",
+              "identifier": "0x4255Cf38e51516766180b33122029A88Cb853806",
+              "balance": "106559.528324",
+              "usd_value": 106559.528324,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "wallet",
+              "label": "Mento V2 Liquidity Reserve",
+              "identifier": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+              "balance": "99588.34784",
+              "usd_value": 99588.34784,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "fpmm",
+              "label": "FPMM USDm / axlUSDC — Ops Account",
+              "identifier": "0xb285d4C7133d6f27BfB29224fb0D22E7EC3ddD2D",
+              "balance": "24280.91042373407",
+              "usd_value": 24280.91042373407,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "ETH",
+          "chain": "ethereum",
+          "balance": "85.81588163449405",
+          "usd_value": 229019.85665545618,
+          "percentage": 1.100193835049539,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Reserve Safe",
+              "identifier": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+              "balance": "85.758743098468734372",
+              "usd_value": 228867.36903800382,
+              "custodian_type": "cold"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "0.053281415628941526",
+              "usd_value": 142.19398481172428,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "0.003857120396372273",
+              "usd_value": 10.293632640661999,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "USDC",
+          "chain": "polygon",
+          "balance": "182994.2357085308",
+          "usd_value": 182994.2357085308,
+          "percentage": 0.8790902802764955,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Mento V3 Liquidity Reserve",
+              "identifier": "0x4255Cf38e51516766180b33122029A88Cb853806",
+              "balance": "120812.4444",
+              "usd_value": 120812.4444,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "fpmm",
+              "label": "FPMM USDC / USDm — Ops Safe",
+              "identifier": "0x463c0d1F04bcd99A1efCF94AC2a75bc19Ea4A7E5",
+              "balance": "61799.12724153078",
+              "usd_value": 61799.12724153078,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Ops Account",
+              "identifier": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+              "balance": "382.664067",
+              "usd_value": 382.664067,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "USDC",
+          "chain": "celo",
+          "balance": "142837.1345035895",
+          "usd_value": 142837.1345035895,
+          "percentage": 0.6861786444719052,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Mento V2 Liquidity Reserve",
+              "identifier": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+              "balance": "99240.336954",
+              "usd_value": 99240.336954,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "fpmm",
+              "label": "FPMM USDm / USDC — Ops Account",
+              "identifier": "0x462fe04b4FD719Cbd04C0310365D421D02AaA19E",
+              "balance": "24201.8620885895",
+              "usd_value": 24201.8620885895,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Mento V3 Liquidity Reserve",
+              "identifier": "0x4255Cf38e51516766180b33122029A88Cb853806",
+              "balance": "19389.982392",
+              "usd_value": 19389.982392,
+              "custodian_type": "hot"
+            },
+            {
+              "type": "wallet",
+              "label": "Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "4.948518",
+              "usd_value": 4.948518,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "0.004551",
+              "usd_value": 0.004551,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "WETH",
+          "chain": "celo",
+          "balance": "0.0670821269243472",
+          "usd_value": 179.0387652381046,
+          "percentage": 0.0008600885033570803,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "0.067082126924347195",
+              "usd_value": 179.0387652381046,
+              "custodian_type": "ops"
+            }
+          ]
+        },
+        {
+          "symbol": "USDC",
+          "chain": "ethereum",
+          "balance": "0.28429099999999996",
+          "usd_value": 0.28429099999999996,
+          "percentage": 0.0000013657121706726771,
+          "sources": [
+            {
+              "type": "wallet",
+              "label": "Ops Safe",
+              "identifier": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+              "balance": "0.28429",
+              "usd_value": 0.28429,
+              "custodian_type": "ops"
+            },
+            {
+              "type": "wallet",
+              "label": "Rebalancer Bot",
+              "identifier": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+              "balance": "0.000001",
+              "usd_value": 0.000001,
+              "custodian_type": "ops"
+            }
+          ]
+        }
+      ]
+    },
+    "reserve_held_supply": {
+      "total_usd": 3923285.480908801,
+      "by_token": [
+        {
+          "symbol": "USDm",
+          "amount": 3603902.0337196267,
+          "usd_value": 3603902.0337196267
+        },
+        {
+          "symbol": "EURm",
+          "amount": 183147.75872323255,
+          "usd_value": 207533.8117376538
+        },
+        {
+          "symbol": "CHFm",
+          "amount": 43533.51940444645,
+          "usd_value": 52173.75392283805
+        },
+        {
+          "symbol": "JPYm",
+          "amount": 9363616.73974497,
+          "usd_value": 59675.83681305248
+        },
+        {
+          "symbol": "GBPm",
+          "amount": 0.03380881669947342,
+          "usd_value": 0.044715629458954256
+        }
+      ],
+      "by_source": [
+        {
+          "type": "wallet",
+          "label": "Operational holdings",
+          "usd_value": 1997357.8891305723
+        },
+        {
+          "type": "lp",
+          "label": "LP positions",
+          "usd_value": 1085101.258914893
+        },
+        {
+          "type": "aave",
+          "label": "AAVE deposits",
+          "usd_value": 414258.2743557286
+        },
+        {
+          "type": "cdp_overhead",
+          "label": "CDP overhead",
+          "usd_value": 353336.95879482746
+        },
+        {
+          "type": "stability_pool",
+          "label": "Stability pools",
+          "usd_value": 73231.09971277838
+        }
+      ]
+    },
+    "lp_positions": {
+      "total_usd": 1713612.050120966,
+      "positions": [
+        {
+          "pool_name": "USDm / axlUSDC",
+          "pool_type": "FPMM",
+          "chain": "celo",
+          "reserve_liquidity_usd": 60669.33321929007,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "36388.42"
+          },
+          "token_b": {
+            "symbol": "axlUSDC",
+            "amount": "24280.91"
+          },
+          "pool_share_pct": 99.9965141844082
+        },
+        {
+          "pool_name": "USDm / USDC",
+          "pool_type": "FPMM",
+          "chain": "celo",
+          "reserve_liquidity_usd": 60982.44489515064,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "36780.58"
+          },
+          "token_b": {
+            "symbol": "USDC",
+            "amount": "24201.86"
+          },
+          "pool_share_pct": 99.99666528346715
+        },
+        {
+          "pool_name": "USDT / USDm",
+          "pool_type": "FPMM",
+          "chain": "celo",
+          "reserve_liquidity_usd": 61450.5933637958,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "61450.59"
+          },
+          "token_b": {
+            "symbol": "USDT",
+            "amount": "0.01"
+          },
+          "pool_share_pct": 99.99310262225383
+        },
+        {
+          "pool_name": "axlEUROC / EURm",
+          "pool_type": "FPMM",
+          "chain": "celo",
+          "reserve_liquidity_usd": 128433.43018003512,
+          "token_a": {
+            "symbol": "EURm",
+            "amount": "66201.07"
+          },
+          "token_b": {
+            "symbol": "axlEUROC",
+            "amount": "47140.91"
+          },
+          "pool_share_pct": 99.99799989400505
+        },
+        {
+          "pool_name": "USDm / EURm",
+          "pool_type": "FPMM",
+          "chain": "celo",
+          "reserve_liquidity_usd": 116784.55128308746,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "70427.73"
+          },
+          "token_b": {
+            "symbol": "EURm",
+            "amount": "40909.71"
+          },
+          "pool_share_pct": 99.99785139381058
+        },
+        {
+          "pool_name": "USDm / JPYm",
+          "pool_type": "FPMM",
+          "chain": "celo",
+          "reserve_liquidity_usd": 61058.958404379315,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "24576.29"
+          },
+          "token_b": {
+            "symbol": "JPYm",
+            "amount": "5724422.35"
+          },
+          "pool_share_pct": 99.99997906370439
+        },
+        {
+          "pool_name": "USDm / CHFm",
+          "pool_type": "FPMM",
+          "chain": "celo",
+          "reserve_liquidity_usd": 58518.76636310002,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "28882.38"
+          },
+          "token_b": {
+            "symbol": "CHFm",
+            "amount": "24728.45"
+          },
+          "pool_share_pct": 99.99575075636838
+        },
+        {
+          "pool_name": "USDC / USDm",
+          "pool_type": "FPMM",
+          "chain": "monad",
+          "reserve_liquidity_usd": 102081.89767765484,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "58477.96"
+          },
+          "token_b": {
+            "symbol": "USDC",
+            "amount": "43603.94"
+          },
+          "pool_share_pct": 34.106173309652775
+        },
+        {
+          "pool_name": "AUSD / USDm",
+          "pool_type": "FPMM",
+          "chain": "monad",
+          "reserve_liquidity_usd": 101400.51407458467,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "54651.08"
+          },
+          "token_b": {
+            "symbol": "AUSD",
+            "amount": "46749.43"
+          },
+          "pool_share_pct": 4.488607512537725
+        },
+        {
+          "pool_name": "JPYm / USDm",
+          "pool_type": "FPMM",
+          "chain": "monad",
+          "reserve_liquidity_usd": 60309.58944647239,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "37116.42"
+          },
+          "token_b": {
+            "symbol": "JPYm",
+            "amount": "3639194.39"
+          },
+          "pool_share_pct": 99.99648598974268
+        },
+        {
+          "pool_name": "USDm / CHFm",
+          "pool_type": "FPMM",
+          "chain": "monad",
+          "reserve_liquidity_usd": 57889.91058210131,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "35352.55"
+          },
+          "token_b": {
+            "symbol": "CHFm",
+            "amount": "18805.06"
+          },
+          "pool_share_pct": 99.99572478017379
+        },
+        {
+          "pool_name": "USDC / USDm",
+          "pool_type": "FPMM",
+          "chain": "polygon",
+          "reserve_liquidity_usd": 103000.01129492867,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "41200.88"
+          },
+          "token_b": {
+            "symbol": "USDC",
+            "amount": "61799.13"
+          },
+          "pool_share_pct": 99.99805654678184
+        },
+        {
+          "pool_name": "EURm / USDm",
+          "pool_type": "FPMM",
+          "chain": "polygon",
+          "reserve_liquidity_usd": 113326.41514118652,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "67987.62"
+          },
+          "token_b": {
+            "symbol": "EURm",
+            "amount": "40011.30"
+          },
+          "pool_share_pct": 50.04869259398671
+        },
+        {
+          "pool_name": "USDm / WBTC",
+          "pool_type": "Uniswap V3",
+          "chain": "celo",
+          "reserve_liquidity_usd": 57.279273622946924,
+          "token_a": {
+            "symbol": "USDm",
+            "amount": "57.27927362294692184"
+          },
+          "token_b": {
+            "symbol": "WBTC",
+            "amount": "0"
+          },
+          "pool_share_pct": 0
+        },
+        {
+          "pool_name": "axlWBTC / USDm",
+          "pool_type": "Uniswap V3",
+          "chain": "celo",
+          "reserve_liquidity_usd": 12.379154394615313,
+          "token_a": {
+            "symbol": "axlWBTC",
+            "amount": "0"
+          },
+          "token_b": {
+            "symbol": "USDm",
+            "amount": "12.379154394615313327"
+          },
+          "pool_share_pct": 0
+        },
+        {
+          "pool_name": "USDT / USDm",
+          "pool_type": "Uniswap V3",
+          "chain": "celo",
+          "reserve_liquidity_usd": 627635.9757671818,
+          "token_a": {
+            "symbol": "USDT",
+            "amount": "374457.805653"
+          },
+          "token_b": {
+            "symbol": "USDm",
+            "amount": "253178.17011418180941462"
+          },
+          "pool_share_pct": 0
+        }
+      ]
+    },
+    "operational_holdings": {
+      "total_usd": 1997357.8891305723,
+      "holdings": [
+        {
+          "token": "USDm",
+          "chain": "celo",
+          "wallet_label": "Mento V2 Liquidity Reserve",
+          "balance": "5",
+          "usd_value": 5
+        },
+        {
+          "token": "EURm",
+          "chain": "celo",
+          "wallet_label": "Mento V2 Liquidity Reserve",
+          "balance": "0.000000000000000001",
+          "usd_value": 1.133149612009573e-18
+        },
+        {
+          "token": "USDm",
+          "chain": "celo",
+          "wallet_label": "Reserve Safe",
+          "balance": "2259.069494521202111928",
+          "usd_value": 2259.069494521202
+        },
+        {
+          "token": "EURm",
+          "chain": "celo",
+          "wallet_label": "Reserve Safe",
+          "balance": "0.0013",
+          "usd_value": 0.0014730944956124448
+        },
+        {
+          "token": "USDm",
+          "chain": "celo",
+          "wallet_label": "Ops Account",
+          "balance": "5000",
+          "usd_value": 5000
+        },
+        {
+          "token": "EURm",
+          "chain": "celo",
+          "wallet_label": "Ops Account",
+          "balance": "0.00000000720653529",
+          "usd_value": 8.166082667796795e-9
+        },
+        {
+          "token": "CHFm",
+          "chain": "celo",
+          "wallet_label": "Ops Account",
+          "balance": "0.000000002841178187",
+          "usd_value": 3.405075757884455e-9
+        },
+        {
+          "token": "JPYm",
+          "chain": "celo",
+          "wallet_label": "Ops Account",
+          "balance": "0.000000002809928211",
+          "usd_value": 1.790812482363472e-11
+        },
+        {
+          "token": "USDm",
+          "chain": "celo",
+          "wallet_label": "Rebalancer Bot",
+          "balance": "1977033.8706411231668233",
+          "usd_value": 1977033.8706411233
+        },
+        {
+          "token": "GBPm",
+          "chain": "celo",
+          "wallet_label": "Rebalancer Bot",
+          "balance": "0.018231430243077057",
+          "usd_value": 0.02411293735899675
+        },
+        {
+          "token": "CHFm",
+          "chain": "celo",
+          "wallet_label": "Rebalancer Bot",
+          "balance": "0.009142588973091118",
+          "usd_value": 0.010957147361970192
+        },
+        {
+          "token": "USDm",
+          "chain": "monad",
+          "wallet_label": "Ops Account",
+          "balance": "332.287845513573811386",
+          "usd_value": 332.2878455135738
+        },
+        {
+          "token": "CHFm",
+          "chain": "monad",
+          "wallet_label": "Ops Account",
+          "balance": "0.000000000000000001",
+          "usd_value": 1.1984731452129988e-18
+        },
+        {
+          "token": "USDm",
+          "chain": "monad",
+          "wallet_label": "Rebalancer Bot",
+          "balance": "0.029242346445391335",
+          "usd_value": 0.029242346445391334
+        },
+        {
+          "token": "EURm",
+          "chain": "monad",
+          "wallet_label": "Rebalancer Bot",
+          "balance": "0.08938687991457447",
+          "usd_value": 0.10128870829394636
+        },
+        {
+          "token": "GBPm",
+          "chain": "monad",
+          "wallet_label": "Rebalancer Bot",
+          "balance": "0.015577386456396361",
+          "usd_value": 0.020602692099957493
+        },
+        {
+          "token": "USDm",
+          "chain": "polygon",
+          "wallet_label": "Ops Safe",
+          "balance": "12637.732871332671652175",
+          "usd_value": 12637.732871332671
+        },
+        {
+          "token": "USDm",
+          "chain": "polygon",
+          "wallet_label": "Ops Account",
+          "balance": "0.11322261358211343",
+          "usd_value": 0.11322261358211343
+        },
+        {
+          "token": "EURm",
+          "chain": "polygon",
+          "wallet_label": "Ops Account",
+          "balance": "76.242864327499999999",
+          "usd_value": 86.39457213120514
+        },
+        {
+          "token": "USDm",
+          "chain": "polygon",
+          "wallet_label": "Rebalancer Bot",
+          "balance": "0.000000002240766705",
+          "usd_value": 2.240766705e-9
+        },
+        {
+          "token": "EURm",
+          "chain": "polygon",
+          "wallet_label": "Rebalancer Bot",
+          "balance": "2.852938713857077022",
+          "usd_value": 3.232806396694237
+        }
+      ]
+    },
+    "cdp_troves": {
+      "total_collateral_usd": 637107.335870505,
+      "total_debt_usd": 257973.07006879762,
+      "troves": [
+        {
+          "trove_id": "77631547822861397146870531365093839977050892786379206629132800481474578003708",
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "stablecoin": "GBPm",
+          "collateral_token": "USDm",
+          "collateral_amount": "173427.0146415643",
+          "collateral_usd": 173427.0146415643,
+          "debt_amount": "61584.81832623969",
+          "debt_usd": 81452.24191227136,
+          "ratio": 2.1291865094192857,
+          "annual_interest_rate": 0.03,
+          "liquidation_price": 0,
+          "status": "active",
+          "chain": "celo",
+          "contract_address": "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9",
+          "overhead": {
+            "usd": 83829.5485380658,
+            "committed_capital_usd": 89597.4661034985,
+            "wiggleroom_pct": 10
+          }
+        },
+        {
+          "trove_id": "33485095876159614726047613403978352551681035186623843688968480676533999021745",
+          "owner": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "owner_label": "Ops Safe",
+          "stablecoin": "GBPm",
+          "collateral_token": "USDm",
+          "collateral_amount": "204285.74168695576",
+          "collateral_usd": 204285.74168695576,
+          "debt_amount": "30955.822718980056",
+          "debt_usd": 40942.25215284003,
+          "ratio": 4.9896068473308235,
+          "annual_interest_rate": 0.015,
+          "liquidation_price": 0,
+          "status": "active",
+          "chain": "celo",
+          "contract_address": "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9",
+          "overhead": {
+            "usd": 159249.26431883173,
+            "committed_capital_usd": 45036.47736812404,
+            "wiggleroom_pct": 10
+          }
+        },
+        {
+          "trove_id": "77631547822861397146870531365093839977050892786379206629132800481474578003708",
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "stablecoin": "JPYm",
+          "collateral_token": "USDm",
+          "collateral_amount": "139819.74606988105",
+          "collateral_usd": 139819.74606988105,
+          "debt_amount": "11502746.248354608",
+          "debt_usd": 73308.85352292379,
+          "ratio": 1.907269577284539,
+          "annual_interest_rate": 0.03,
+          "liquidation_price": 0,
+          "status": "active",
+          "chain": "celo",
+          "contract_address": "0xD2E65Af47d927D5e84F384ae6bAC4F97C3dA65Df",
+          "overhead": {
+            "usd": 59180.00719466487,
+            "committed_capital_usd": 80639.73887521618,
+            "wiggleroom_pct": 10
+          }
+        },
+        {
+          "trove_id": "77631547822861397146870531365093839977050892786379206629132800481474578003708",
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "stablecoin": "CHFm",
+          "collateral_token": "USDm",
+          "collateral_amount": "119574.8334721038",
+          "collateral_usd": 119574.8334721038,
+          "debt_amount": "51957.5450893358",
+          "debt_usd": 62269.722480762466,
+          "ratio": 1.9202724648250216,
+          "annual_interest_rate": 0.03,
+          "liquidation_price": 0,
+          "status": "active",
+          "chain": "celo",
+          "contract_address": "0x4E105FEF015db26320C077427BD605AceAd9262E",
+          "overhead": {
+            "usd": 51078.13874326508,
+            "committed_capital_usd": 68496.69472883872,
+            "wiggleroom_pct": 10
+          }
+        }
+      ]
+    },
+    "positions": {
+      "wallet_balances": [
+        {
+          "address": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+          "label": "Mento V2 Liquidity Reserve",
+          "chain": "celo",
+          "token": "CELO",
+          "token_address": "0x471EcE3750Da237f93B8E339c536989b8978a438",
+          "balance": "17801583.447991760119823895",
+          "usd_value": 1766417.339742683,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+          "label": "Mento V2 Liquidity Reserve",
+          "chain": "celo",
+          "token": "USDC",
+          "token_address": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+          "balance": "99240.336954",
+          "usd_value": 99240.336954,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+          "label": "Mento V2 Liquidity Reserve",
+          "chain": "celo",
+          "token": "axlUSDC",
+          "token_address": "0xEB466342C4d449BC9f53A865D5Cb90586f405215",
+          "balance": "99588.34784",
+          "usd_value": 99588.34784,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+          "label": "Mento V2 Liquidity Reserve",
+          "chain": "celo",
+          "token": "USDT",
+          "token_address": "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+          "balance": "193824.218224",
+          "usd_value": 193824.218224,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+          "label": "Mento V2 Liquidity Reserve",
+          "chain": "celo",
+          "token": "axlEUROC",
+          "token_address": "0x061cc5a2C863E0C1Cb404006D559dB18A34C762d",
+          "balance": "170947.567589",
+          "usd_value": 193709.16988745562,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+          "label": "Mento V2 Liquidity Reserve",
+          "chain": "celo",
+          "token": "USDm",
+          "token_address": "0x765de816845861e75a25fca122bb6898b8b1282a",
+          "balance": "5",
+          "usd_value": 5,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+          "label": "Mento V2 Liquidity Reserve",
+          "chain": "celo",
+          "token": "EURm",
+          "token_address": "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73",
+          "balance": "0.000000000000000001",
+          "usd_value": 1.133149612009573e-18,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x4255Cf38e51516766180b33122029A88Cb853806",
+          "label": "Mento V3 Liquidity Reserve",
+          "chain": "celo",
+          "token": "USDC",
+          "token_address": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+          "balance": "19389.982392",
+          "usd_value": 19389.982392,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x4255Cf38e51516766180b33122029A88Cb853806",
+          "label": "Mento V3 Liquidity Reserve",
+          "chain": "celo",
+          "token": "axlUSDC",
+          "token_address": "0xEB466342C4d449BC9f53A865D5Cb90586f405215",
+          "balance": "106559.528324",
+          "usd_value": 106559.528324,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x4255Cf38e51516766180b33122029A88Cb853806",
+          "label": "Mento V3 Liquidity Reserve",
+          "chain": "celo",
+          "token": "axlEUROC",
+          "token_address": "0x061cc5a2C863E0C1Cb404006D559dB18A34C762d",
+          "balance": "34190.259141",
+          "usd_value": 38742.67888013091,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "label": "Reserve Safe",
+          "chain": "celo",
+          "token": "CELO",
+          "token_address": "0x471EcE3750Da237f93B8E339c536989b8978a438",
+          "balance": "33937679.887277602347928717",
+          "usd_value": 3367571.564555768,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "label": "Reserve Safe",
+          "chain": "celo",
+          "token": "USDm",
+          "token_address": "0x765de816845861e75a25fca122bb6898b8b1282a",
+          "balance": "2259.069494521202111928",
+          "usd_value": 2259.069494521202,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "label": "Reserve Safe",
+          "chain": "celo",
+          "token": "EURm",
+          "token_address": "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73",
+          "balance": "0.0013",
+          "usd_value": 0.0014730944956124448,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "celo",
+          "token": "CELO",
+          "token_address": "0x471EcE3750Da237f93B8E339c536989b8978a438",
+          "balance": "14",
+          "usd_value": 1.389193429261339,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "celo",
+          "token": "USDC",
+          "token_address": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+          "balance": "4.948518",
+          "usd_value": 4.948518,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "celo",
+          "token": "USDT",
+          "token_address": "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+          "balance": "1",
+          "usd_value": 1,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "celo",
+          "token": "WETH",
+          "token_address": "0xD221812de1BD094f35587EE8E174B07B6167D9Af",
+          "balance": "0.067082126924347195",
+          "usd_value": 179.0387652381046,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "celo",
+          "token": "CELO",
+          "token_address": "0x471EcE3750Da237f93B8E339c536989b8978a438",
+          "balance": "62.006466498057107597",
+          "usd_value": 6.152783987915306,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "celo",
+          "token": "USDT",
+          "token_address": "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+          "balance": "17.399489",
+          "usd_value": 17.399489,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "celo",
+          "token": "USDm",
+          "token_address": "0x765de816845861e75a25fca122bb6898b8b1282a",
+          "balance": "5000",
+          "usd_value": 5000,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "celo",
+          "token": "EURm",
+          "token_address": "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73",
+          "balance": "0.00000000720653529",
+          "usd_value": 8.166082667796795e-9,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "celo",
+          "token": "CHFm",
+          "token_address": "0xb55a79f398e759e43c95b979163f30ec87ee131d",
+          "balance": "0.000000002841178187",
+          "usd_value": 3.405075757884455e-9,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "celo",
+          "token": "JPYm",
+          "token_address": "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
+          "balance": "0.000000002809928211",
+          "usd_value": 1.790812482363472e-11,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "celo",
+          "token": "CELO",
+          "token_address": "0x471EcE3750Da237f93B8E339c536989b8978a438",
+          "balance": "533.947239973740867622",
+          "usd_value": 52.982571238839164,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "celo",
+          "token": "USDC",
+          "token_address": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+          "balance": "0.004551",
+          "usd_value": 0.004551,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "celo",
+          "token": "USDT",
+          "token_address": "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+          "balance": "879.564938",
+          "usd_value": 879.564938,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "celo",
+          "token": "axlEUROC",
+          "token_address": "0x061cc5a2C863E0C1Cb404006D559dB18A34C762d",
+          "balance": "13.078865",
+          "usd_value": 14.820310800275584,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "celo",
+          "token": "USDm",
+          "token_address": "0x765de816845861e75a25fca122bb6898b8b1282a",
+          "balance": "1977033.8706411231668233",
+          "usd_value": 1977033.8706411233,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "celo",
+          "token": "GBPm",
+          "token_address": "0xccf663b1ff11028f0b19058d0f7b674004a40746",
+          "balance": "0.018231430243077057",
+          "usd_value": 0.02411293735899675,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "celo",
+          "token": "CHFm",
+          "token_address": "0xb55a79f398e759e43c95b979163f30ec87ee131d",
+          "balance": "0.009142588973091118",
+          "usd_value": 0.010957147361970192,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+          "label": "Reserve Safe",
+          "chain": "ethereum",
+          "token": "stETH",
+          "token_address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+          "balance": "253.289495306307395306",
+          "usd_value": 676981.9116303317,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+          "label": "Reserve Safe",
+          "chain": "ethereum",
+          "token": "EURC",
+          "token_address": "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c",
+          "balance": "683640.084633",
+          "usd_value": 774666.4966560756,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+          "label": "Reserve Safe",
+          "chain": "ethereum",
+          "token": "EUROP",
+          "token_address": "0x888883b5F5D21fb10Dfeb70e8f9722B9FB0E5E51",
+          "balance": "1000000",
+          "usd_value": 1133149.612009573,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+          "label": "Reserve Safe",
+          "chain": "ethereum",
+          "token": "sUSDS",
+          "token_address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "balance": "4234485.751043809865459529",
+          "usd_value": 4705420.12133642,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+          "label": "Reserve Safe",
+          "chain": "ethereum",
+          "token": "USDT",
+          "token_address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+          "balance": "1222798.962161",
+          "usd_value": 1222798.962161,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+          "label": "Reserve Safe",
+          "chain": "ethereum",
+          "token": "AUSD",
+          "token_address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+          "balance": "31775.85",
+          "usd_value": 31775.85,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "ethereum",
+          "token": "USDC",
+          "token_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "balance": "0.28429",
+          "usd_value": 0.28429,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "ethereum",
+          "token": "USDT",
+          "token_address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+          "balance": "0.000116",
+          "usd_value": 0.000116,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "ethereum",
+          "token": "AUSD",
+          "token_address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+          "balance": "4253453",
+          "usd_value": 4253453,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "ethereum",
+          "token": "EURC",
+          "token_address": "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c",
+          "balance": "0.064597",
+          "usd_value": 0.07319806548698239,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "ethereum",
+          "token": "USDC",
+          "token_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "balance": "0.000001",
+          "usd_value": 0.000001,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "ethereum",
+          "token": "USDT",
+          "token_address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+          "balance": "2865.310362",
+          "usd_value": 2865.310362,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+          "label": "Reserve Safe",
+          "chain": "ethereum",
+          "token": "ETH",
+          "token_address": null,
+          "balance": "85.758743098468734372",
+          "usd_value": 228867.36903800382,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "ethereum",
+          "token": "ETH",
+          "token_address": null,
+          "balance": "0.003857120396372273",
+          "usd_value": 10.293632640661999,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "ethereum",
+          "token": "ETH",
+          "token_address": null,
+          "balance": "0.053281415628941526",
+          "usd_value": 142.19398481172428,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x4255Cf38e51516766180b33122029A88Cb853806",
+          "label": "Mento V3 Liquidity Reserve",
+          "chain": "monad",
+          "token": "USDC",
+          "token_address": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+          "balance": "191020.151658",
+          "usd_value": 191020.151658,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x4255Cf38e51516766180b33122029A88Cb853806",
+          "label": "Mento V3 Liquidity Reserve",
+          "chain": "monad",
+          "token": "USDT0",
+          "token_address": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
+          "balance": "226137.612951",
+          "usd_value": 226137.612951,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x4255Cf38e51516766180b33122029A88Cb853806",
+          "label": "Mento V3 Liquidity Reserve",
+          "chain": "monad",
+          "token": "AUSD",
+          "token_address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+          "balance": "686747.103668",
+          "usd_value": 686747.103668,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "label": "Reserve Safe",
+          "chain": "monad",
+          "token": "AUSD",
+          "token_address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+          "balance": "1380.73",
+          "usd_value": 1380.73,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "monad",
+          "token": "USDm",
+          "token_address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115",
+          "balance": "332.287845513573811386",
+          "usd_value": 332.2878455135738,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "monad",
+          "token": "CHFm",
+          "token_address": "0xF64e91fFEf7ef43aA314F0Bc2AC39f770797990C",
+          "balance": "0.000000000000000001",
+          "usd_value": 1.1984731452129988e-18,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "monad",
+          "token": "USDm",
+          "token_address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115",
+          "balance": "0.029242346445391335",
+          "usd_value": 0.029242346445391334,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "monad",
+          "token": "EURm",
+          "token_address": "0x4D502d735B4C574B487Ed641ae87cEaE884731C7",
+          "balance": "0.08938687991457447",
+          "usd_value": 0.10128870829394636,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "monad",
+          "token": "GBPm",
+          "token_address": "0x39bb4E0a204412bB98e821d25e7d955e69d40Fd1",
+          "balance": "0.015577386456396361",
+          "usd_value": 0.020602692099957493,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "monad",
+          "token": "USDC",
+          "token_address": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+          "balance": "0.000001",
+          "usd_value": 0.000001,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "monad",
+          "token": "USDT0",
+          "token_address": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
+          "balance": "5132.678664",
+          "usd_value": 5132.678664,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "monad",
+          "token": "AUSD",
+          "token_address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+          "balance": "0.001191",
+          "usd_value": 0.001191,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x4255Cf38e51516766180b33122029A88Cb853806",
+          "label": "Mento V3 Liquidity Reserve",
+          "chain": "polygon",
+          "token": "USDC",
+          "token_address": "0x3c499c542cEF5E3811e1192ce70d8cc03d5c3359",
+          "balance": "120812.4444",
+          "usd_value": 120812.4444,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "polygon",
+          "token": "USDm",
+          "token_address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115",
+          "balance": "12637.732871332671652175",
+          "usd_value": 12637.732871332671,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "polygon",
+          "token": "USDC",
+          "token_address": "0x3c499c542cEF5E3811e1192ce70d8cc03d5c3359",
+          "balance": "382.664067",
+          "usd_value": 382.664067,
+          "is_mento_stable": false
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "polygon",
+          "token": "USDm",
+          "token_address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115",
+          "balance": "0.11322261358211343",
+          "usd_value": 0.11322261358211343,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "label": "Ops Account",
+          "chain": "polygon",
+          "token": "EURm",
+          "token_address": "0x4D502d735B4C574B487Ed641ae87cEaE884731C7",
+          "balance": "76.242864327499999999",
+          "usd_value": 86.39457213120514,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "polygon",
+          "token": "USDm",
+          "token_address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115",
+          "balance": "0.000000002240766705",
+          "usd_value": 2.240766705e-9,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976",
+          "label": "Rebalancer Bot",
+          "chain": "polygon",
+          "token": "EURm",
+          "token_address": "0x4D502d735B4C574B487Ed641ae87cEaE884731C7",
+          "balance": "2.852938713857077022",
+          "usd_value": 3.232806396694237,
+          "is_mento_stable": true
+        }
+      ],
+      "aave_deposits": [
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "celo",
+          "token": "USDm",
+          "a_token_address": "0xBba98352628B0B0c4b40583F593fFCb630935a45",
+          "balance": "373525.528718019907199309",
+          "usd_value": 373525.5287180199,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "celo",
+          "token": "EURm",
+          "a_token_address": "0x34c02571094e08E935B8cf8dC10F1Ad6795f1f81",
+          "balance": "35946.48509429538345762",
+          "usd_value": 40732.745637708715,
+          "is_mento_stable": true
+        },
+        {
+          "address": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "label": "Ops Safe",
+          "chain": "celo",
+          "token": "CELO",
+          "a_token_address": "0xC3e77dC389537Db1EEc7C33B95Cf3beECA71A209",
+          "balance": "401728.174962467418979421",
+          "usd_value": 39862.72435764352,
+          "is_mento_stable": false
+        }
+      ],
+      "univ3_positions": [
+        {
+          "position_id": 3113,
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "chain": "celo",
+          "pool_address": "0x4f3EC822153e22B68e5A1C9ecAA9ca41e1df5cb5",
+          "fee_tier": 3000,
+          "token0": {
+            "symbol": "USDm",
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+            "amount": "57.27927362294692184"
+          },
+          "token1": {
+            "symbol": "WBTC",
+            "address": "0xd71Ffd0940c920786eC4DbB5A12306669b5b81EF",
+            "amount": "0"
+          },
+          "liquidity": "89923569515171",
+          "in_range": false
+        },
+        {
+          "position_id": 3115,
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "chain": "celo",
+          "pool_address": "0xA867ac8Eec721F12db7f519c792AAFE6dE4f948F",
+          "fee_tier": 3000,
+          "token0": {
+            "symbol": "axlWBTC",
+            "address": "0x1a35EE4640b0A3B87705B0A4B45D227Ba60Ca2ad",
+            "amount": "0"
+          },
+          "token1": {
+            "symbol": "USDm",
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+            "amount": "12.379154394615313327"
+          },
+          "liquidity": "4040728375888",
+          "in_range": false
+        },
+        {
+          "position_id": 55551,
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "chain": "celo",
+          "pool_address": "0x5dC631aD6C26BEA1a59fBF2C2680CF3df43d249f",
+          "fee_tier": 100,
+          "token0": {
+            "symbol": "USDT",
+            "address": "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+            "amount": "374457.805653"
+          },
+          "token1": {
+            "symbol": "USDm",
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+            "amount": "253178.17011418180941462"
+          },
+          "liquidity": "418603952010722297498",
+          "in_range": true
+        }
+      ],
+      "fpmm_positions": [
+        {
+          "pool_address": "0xb285d4C7133d6f27BfB29224fb0D22E7EC3ddD2D",
+          "chain": "celo",
+          "pool_name": "USDm / axlUSDC",
+          "strategy_registered": true,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 99.9965141844082,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 36388.422795556005,
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a"
+          },
+          "collateral_token": {
+            "symbol": "axlUSDC",
+            "amount": 24280.91042373407,
+            "address": "0xEB466342C4d449BC9f53A865D5Cb90586f405215"
+          }
+        },
+        {
+          "pool_address": "0x462fe04b4FD719Cbd04C0310365D421D02AaA19E",
+          "chain": "celo",
+          "pool_name": "USDm / USDC",
+          "strategy_registered": true,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 99.99666528346715,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 36780.58280656114,
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a"
+          },
+          "collateral_token": {
+            "symbol": "USDC",
+            "amount": 24201.8620885895,
+            "address": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"
+          }
+        },
+        {
+          "pool_address": "0x0FEBa760d93423D127DE1B6ABECdB60E5253228D",
+          "chain": "celo",
+          "pool_name": "USDT / USDm",
+          "strategy_registered": true,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 99.99310262225383,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 61450.588360140944,
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a"
+          },
+          "collateral_token": {
+            "symbol": "USDT",
+            "amount": 0.005003654855217581,
+            "address": "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e"
+          }
+        },
+        {
+          "pool_address": "0x3aA7c431C06B10F7422e69d3E69b66807A6aF696",
+          "chain": "celo",
+          "pool_name": "axlEUROC / EURm",
+          "strategy_registered": true,
+          "lp_holder": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "lp_holder_label": "Ops Safe",
+          "lp_share_pct": 99.99799989400505,
+          "debt_token": {
+            "symbol": "EURm",
+            "amount": 66201.07457726245,
+            "address": "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73"
+          },
+          "collateral_token": {
+            "symbol": "axlEUROC",
+            "amount": 47140.91382289781,
+            "address": "0x061cc5a2C863E0C1Cb404006D559dB18A34C762d"
+          }
+        },
+        {
+          "pool_address": "0x1aD2EA06502919F935D9c09028dF73a462979e29",
+          "chain": "celo",
+          "pool_name": "USDm / EURm",
+          "strategy_registered": false,
+          "lp_holder": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "lp_holder_label": "Ops Safe",
+          "lp_share_pct": 99.99785139381058,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 70427.73049407946,
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a"
+          },
+          "collateral_token": {
+            "symbol": "EURm",
+            "amount": 40909.7089190164,
+            "address": "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73"
+          }
+        },
+        {
+          "pool_address": "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41",
+          "chain": "celo",
+          "pool_name": "USDm / JPYm",
+          "strategy_registered": false,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 99.99997906370439,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 24576.293273260515,
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a"
+          },
+          "collateral_token": {
+            "symbol": "JPYm",
+            "amount": 5724422.348737575,
+            "address": "0xc45eCF20f3CD864B32D9794d6f76814aE8892e20"
+          }
+        },
+        {
+          "pool_address": "0xDC81135fD82f02Cae736E261FB676B716663e8b8",
+          "chain": "celo",
+          "pool_name": "USDm / CHFm",
+          "strategy_registered": false,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 99.99575075636838,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 28882.381019343433,
+            "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a"
+          },
+          "collateral_token": {
+            "symbol": "CHFm",
+            "amount": 24728.45174890377,
+            "address": "0xb55a79F398E759E43C95b979163f30eC87Ee131D"
+          }
+        },
+        {
+          "pool_address": "0x463c0d1F04bcd99A1efCF94AC2a75bc19Ea4A7E5",
+          "chain": "monad",
+          "pool_name": "USDC / USDm",
+          "strategy_registered": true,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 34.106173309652775,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 58477.9565939491,
+            "address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115"
+          },
+          "collateral_token": {
+            "symbol": "USDC",
+            "amount": 43603.94108370573,
+            "address": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603"
+          }
+        },
+        {
+          "pool_address": "0xb0a0264Ce6847F101b76ba36A4a3083ba489F501",
+          "chain": "monad",
+          "pool_name": "AUSD / USDm",
+          "strategy_registered": true,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 4.488607512537725,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 54651.0825709199,
+            "address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115"
+          },
+          "collateral_token": {
+            "symbol": "AUSD",
+            "amount": 46749.431503664775,
+            "address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a"
+          }
+        },
+        {
+          "pool_address": "0x4DF3f08977743Ad95aB31b8dC203EAe885Ae9D32",
+          "chain": "monad",
+          "pool_name": "JPYm / USDm",
+          "strategy_registered": false,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 99.99648598974268,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 37116.417764538724,
+            "address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115"
+          },
+          "collateral_token": {
+            "symbol": "JPYm",
+            "amount": 3639194.391007392,
+            "address": "0x22f6A6752800eAB67b84748FeFc3cC658384aF72"
+          }
+        },
+        {
+          "pool_address": "0xDC81135fD82f02Cae736E261FB676B716663e8b8",
+          "chain": "monad",
+          "pool_name": "USDm / CHFm",
+          "strategy_registered": false,
+          "lp_holder": "0x13a9803d547332c81ebc6060f739821264dbcf1e",
+          "lp_holder_label": "Ops Account",
+          "lp_share_pct": 99.99572478017379,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 35352.55296017061,
+            "address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115"
+          },
+          "collateral_token": {
+            "symbol": "CHFm",
+            "amount": 18805.058512950865,
+            "address": "0xF64e91fFEf7ef43aA314F0Bc2AC39f770797990C"
+          }
+        },
+        {
+          "pool_address": "0x463c0d1F04bcd99A1efCF94AC2a75bc19Ea4A7E5",
+          "chain": "polygon",
+          "pool_name": "USDC / USDm",
+          "strategy_registered": true,
+          "lp_holder": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "lp_holder_label": "Ops Safe",
+          "lp_share_pct": 99.99805654678184,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 41200.884053397895,
+            "address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115"
+          },
+          "collateral_token": {
+            "symbol": "USDC",
+            "amount": 61799.12724153078,
+            "address": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
+          }
+        },
+        {
+          "pool_address": "0x93e15A22fDa39FEfcCCe82D387A09cCF030EAD61",
+          "chain": "polygon",
+          "pool_name": "EURm / USDm",
+          "strategy_registered": false,
+          "lp_holder": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "lp_holder_label": "Ops Safe",
+          "lp_share_pct": 50.04869259398671,
+          "debt_token": {
+            "symbol": "USDm",
+            "amount": 67987.62194243002,
+            "address": "0xBC69212B8E4d445b2307C9D32dD68E2A4Df00115"
+          },
+          "collateral_token": {
+            "symbol": "EURm",
+            "amount": 40011.30364272981,
+            "address": "0x4D502d735B4C574B487Ed641ae87cEaE884731C7"
+          }
+        }
+      ],
+      "cdp_troves": [
+        {
+          "trove_id": "77631547822861397146870531365093839977050892786379206629132800481474578003708",
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "chain": "celo",
+          "status": "active",
+          "collateral_token": "USDm",
+          "collateral_amount": "173427.0146415643",
+          "collateral_usd": 173427.0146415643,
+          "debt_token": "GBPm",
+          "debt_amount": "61584.81832623969",
+          "debt_usd": 81452.24191227136,
+          "ratio": 2.1291865094192857,
+          "annual_interest_rate": 0.03,
+          "contract_address": "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9",
+          "overhead": {
+            "usd": 83829.5485380658,
+            "committed_capital_usd": 89597.4661034985,
+            "wiggleroom_pct": 10
+          }
+        },
+        {
+          "trove_id": "33485095876159614726047613403978352551681035186623843688968480676533999021745",
+          "owner": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "owner_label": "Ops Safe",
+          "chain": "celo",
+          "status": "active",
+          "collateral_token": "USDm",
+          "collateral_amount": "204285.74168695576",
+          "collateral_usd": 204285.74168695576,
+          "debt_token": "GBPm",
+          "debt_amount": "30955.822718980056",
+          "debt_usd": 40942.25215284003,
+          "ratio": 4.9896068473308235,
+          "annual_interest_rate": 0.015,
+          "contract_address": "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9",
+          "overhead": {
+            "usd": 159249.26431883173,
+            "committed_capital_usd": 45036.47736812404,
+            "wiggleroom_pct": 10
+          }
+        },
+        {
+          "trove_id": "77631547822861397146870531365093839977050892786379206629132800481474578003708",
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "chain": "celo",
+          "status": "active",
+          "collateral_token": "USDm",
+          "collateral_amount": "139819.74606988105",
+          "collateral_usd": 139819.74606988105,
+          "debt_token": "JPYm",
+          "debt_amount": "11502746.248354608",
+          "debt_usd": 73308.85352292379,
+          "ratio": 1.907269577284539,
+          "annual_interest_rate": 0.03,
+          "contract_address": "0xD2E65Af47d927D5e84F384ae6bAC4F97C3dA65Df",
+          "overhead": {
+            "usd": 59180.00719466487,
+            "committed_capital_usd": 80639.73887521618,
+            "wiggleroom_pct": 10
+          }
+        },
+        {
+          "trove_id": "77631547822861397146870531365093839977050892786379206629132800481474578003708",
+          "owner": "0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+          "owner_label": "Reserve Safe",
+          "chain": "celo",
+          "status": "active",
+          "collateral_token": "USDm",
+          "collateral_amount": "119574.8334721038",
+          "collateral_usd": 119574.8334721038,
+          "debt_token": "CHFm",
+          "debt_amount": "51957.5450893358",
+          "debt_usd": 62269.722480762466,
+          "ratio": 1.9202724648250216,
+          "annual_interest_rate": 0.03,
+          "contract_address": "0x4E105FEF015db26320C077427BD605AceAd9262E",
+          "overhead": {
+            "usd": 51078.13874326508,
+            "committed_capital_usd": 68496.69472883872,
+            "wiggleroom_pct": 10
+          }
+        }
+      ],
+      "stability_pool_deposits": [
+        {
+          "pool_address": "0x06346c0fAB682dBde9f245D2D84677592E8aaa15",
+          "pool_label": "StabilityPool (GBPm)",
+          "chain": "celo",
+          "depositor": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+          "depositor_label": "Ops Safe",
+          "deposit_token": "GBPm",
+          "deposit_amount": "0.000000000000000009",
+          "deposit_usd": 1.1903423556875219e-17,
+          "collateral_gained_token": "USDm",
+          "collateral_gained": "73231.099712778375913589",
+          "collateral_gained_usd": 73231.09971277838
+        }
+      ]
+    }
+  }
+}

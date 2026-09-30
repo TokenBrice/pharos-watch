@@ -511,7 +511,7 @@ export function publicDependencyMetadata(
   const dependencyCoverage: NonNullable<SafetyScoreV9CurrentCard["dependencyCoverage"]> = [];
   const coveredIdentities = new Set<string>();
   const addCoverage = (label: string, id: string | undefined, share: number | null, reason: string, verified: boolean, sourceKey?: string) => {
-    if (id && asset.dependencies.edges.some((edge) => edge.upstreamAssetId === id)) return;
+    if (reason !== "coinId-without-depType" && id && asset.dependencies.edges.some((edge) => edge.upstreamAssetId === id)) return;
     const key = `${sourceKey ?? `${id ?? ""}\u0000${label}`}\u0000${reason}`;
     if (coveredIdentities.has(key)) return;
     coveredIdentities.add(key);

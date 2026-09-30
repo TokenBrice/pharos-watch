@@ -300,6 +300,32 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     ]);
   });
 
+  it("discloses an untyped sibling even when the same upstream has a modeled edge", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const asset = structuredClone(result.compiledFacts.assets[0]!);
+    asset.dependencies.edges = [{
+      edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
+      economicRole: "serial-claim", pathKind: "serial-dependency", weight: 1, evidenceRefIds: [], failureDomains: [],
+    }];
+    asset.gaps = [];
+    asset.dependencies.diagnostics.issueCodes = [];
+    asset.dependencies.rejectionReasons = [
+      { sliceIndex: 0, upstreamAssetId: "beta", reason: "coinId-without-depType" },
+      { sliceIndex: 2, upstreamAssetId: "beta", reason: "expired" },
+    ];
+    fixedInput.liveReserveMap.alpha = [
+      { sourceKey: "fixture:untyped", name: "Untyped Beta", pct: 40, risk: "low", coinId: "beta" },
+      { sourceKey: "fixture:typed", name: "Typed Beta", pct: 40, risk: "low", coinId: "beta", depType: "collateral" },
+      { sourceKey: "fixture:expired", name: "Expired Beta", pct: 20, risk: "low", coinId: "beta" },
+    ];
+    const rows = publicDependencyMetadata(asset, result.compiledFacts, fixedInput, { id: "alpha" }).dependencyCoverage;
+    expect(rows).toEqual([{
+      upstreamLabel: "Untyped Beta", upstreamAssetId: "beta", share: 0.4,
+      reason: "coinId-without-depType", sourceAsOf: null, identityVerified: true,
+    }]);
+  });
+
   it("discloses withheld identities without inventing graph endpoints or treating cash as a relationship", () => {
     const fixedInput = exactFixedInput("alpha");
     const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });

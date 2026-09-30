@@ -1,5 +1,6 @@
-import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../types";
+import type { DependencyWeight, ReserveSlice, StablecoinMeta } from "../types";
 import type { ReserveIntermediary } from "../types/reserves";
+import { DependencyTypeSchema } from "../types/dependency-types";
 
 export type DependencyDerivationBaseSource =
   | "live-reserve"
@@ -13,7 +14,7 @@ export type DependencyDerivationSource = DependencyDerivationBaseSource | "varia
 export type DependencyRejectionReason =
   | {
       sliceIndex: number;
-      reason: "no-match" | "expired" | "non-link" |
+      reason: "no-match" | "expired" | "non-link" | "coinId-without-depType" |
         "reviewed-dependency-type-conflict" | "reviewed-dependency-identity-conflict";
       upstreamAssetId?: string;
       reviewedUpstreamAssetId?: string;
@@ -44,6 +45,7 @@ export interface DerivedDependencySet {
   mappedLiveReserveWeight: number | null;
   fallbackReason: DependencyFallbackReason | null;
   rejectionReasons: DependencyRejectionReason[];
+  coinIdWithoutDepTypeCount: number;
 }
 
 export type DependencyFallbackReason =
@@ -56,16 +58,14 @@ function aggregateReserveDependencies(
   subjectId?: string,
 ): DerivedDependency[] {
   const linked = reserves.filter((reserve): reserve is ReserveSlice & { coinId: string } =>
-    !!reserve.coinId && reserve.pct > 0,
+    !!reserve.coinId && !!reserve.depType && reserve.pct > 0,
   );
   if (linked.length === 0) return [];
 
   const aggregated = new Map<string, DerivedDependency>();
   for (const reserve of linked) {
     if (reserve.coinId === subjectId) continue;
-    const type: DependencyType = reserve.depType ?? "collateral";
-    // Native rows inherit a reviewed type in dependencyReserveSlices before
-    // reaching this legacy default. Authored missing-type rejection is separate.
+    const type = reserve.depType!;
     const key = `${reserve.coinId}::${type}`;
     const existing = aggregated.get(key);
     if (existing) {
@@ -225,21 +225,60 @@ function deriveCuratedDependencySet(
     mappedLiveReserveWeight: null,
     fallbackReason: null,
     rejectionReasons: mixedSourceRejections(manualDependencies, reserveDependencies),
+    coinIdWithoutDepTypeCount: (meta.reserves ?? []).filter((slice) => slice.coinId && !slice.depType).length,
   };
 }
 
+function reviewedTypeForLiveIdentity(
+  slice: ReserveSlice,
+  meta: Pick<StablecoinMeta, "reserves"> & Partial<Pick<StablecoinMeta, "liveReservesConfig">>,
+): ReserveSlice["depType"] {
+  const types = new Set<NonNullable<ReserveSlice["depType"]>>();
+  for (const reviewed of meta.reserves ?? []) {
+    if (reviewed.coinId === slice.coinId && reviewed.depType) types.add(reviewed.depType);
+  }
+  // Adapter identity declarations are authored evidence too. This covers
+  // cached native rows whose current reserve sidecar no longer has that row.
+  function collect(value: unknown): void {
+    if (!value || typeof value !== "object") return;
+    if ("coinId" in value && value.coinId === slice.coinId && "depType" in value) {
+      const parsed = DependencyTypeSchema.safeParse(value.depType);
+      if (parsed.success) types.add(parsed.data);
+    }
+    for (const child of Object.values(value)) collect(child);
+  }
+  collect(meta.liveReservesConfig?.params);
+  // Never choose between conflicting reviewed kinds.
+  return types.size === 1 ? types.values().next().value : undefined;
+}
+
 export function deriveEffectiveDependencySet(
-  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
+  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id" | "liveReservesConfig">>,
   options?: { liveReserveSlices?: readonly ReserveSlice[]; rejectionReasons?: readonly DependencyRejectionReason[] },
 ): DerivedDependencySet {
   if (Array.isArray(options?.liveReserveSlices)) {
-    const liveDependencies = aggregateReserveDependencies(options.liveReserveSlices, meta.id);
+    const liveSlices = options.liveReserveSlices.some((slice) => slice.coinId && !slice.depType)
+      ? options.liveReserveSlices.map((slice) => {
+          if (!slice.coinId || slice.depType) return slice;
+          const depType = reviewedTypeForLiveIdentity(slice, meta);
+          return depType ? { ...slice, depType } : slice;
+        })
+      : options.liveReserveSlices;
+    const liveDependencies = aggregateReserveDependencies(liveSlices, meta.id);
     const mappedLiveReserveWeight = sumDependencyWeight(liveDependencies);
     const rejectionReasons: DependencyRejectionReason[] = options.rejectionReasons
       ? [...options.rejectionReasons]
       : options.liveReserveSlices.flatMap((slice, sliceIndex) =>
           !slice.coinId || slice.coinId === meta.id ? [{ sliceIndex, reason: "no-match" as const }] : [],
         );
+    const missingTypes = liveSlices.flatMap((slice, sliceIndex) =>
+      slice.coinId && !slice.depType
+        ? [{ sliceIndex, reason: "coinId-without-depType" as const, upstreamAssetId: slice.coinId }]
+        : [],
+    );
+    rejectionReasons.push(...missingTypes.filter((missing) => !rejectionReasons.some(
+      (existing) => existing.sliceIndex === missing.sliceIndex && existing.reason === missing.reason,
+    )));
     rejectionReasons.push(...mixedSourceRejections(meta.dependencies ?? [], liveDependencies));
 
     // Select only reserve-derived weights here. Structural relationships are
@@ -257,6 +296,7 @@ export function deriveEffectiveDependencySet(
       mappedLiveReserveWeight,
       fallbackReason: null,
       rejectionReasons,
+      coinIdWithoutDepTypeCount: missingTypes.length,
     };
   }
 
@@ -264,7 +304,7 @@ export function deriveEffectiveDependencySet(
 }
 
 export function deriveEffectiveDependencies(
-  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
+  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id" | "liveReservesConfig">>,
   options?: { liveReserveSlices?: readonly ReserveSlice[] },
 ): DerivedDependency[] {
   return deriveEffectiveDependencySet(meta, options).dependencies;

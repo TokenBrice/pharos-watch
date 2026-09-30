@@ -7,7 +7,7 @@ import { isCanonicalStablecoinId } from "../stablecoin-id";
 import { fuzzyDateRange } from "../classification/resolve-implementation-launch-date";
 import { DetailProviderSchema } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
-import { FullReserveCompositionSchema } from "../../types/reserves";
+import { FullAuthoredReserveCompositionSchema } from "../../types/reserves";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
 import {
@@ -179,7 +179,7 @@ const StablecoinMetaAssetSchemaShape = {
     .boolean()
     .describe("When true, mechanismArchetype is an intentional departure from the parent's archetype.")
     .optional(),
-  reserves: FullReserveCompositionSchema.optional(),
+  reserves: FullAuthoredReserveCompositionSchema.optional(),
   reserveReview: ReserveReviewSchema.optional(),
   custodyProfile: CustodyProfileSchema.optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
@@ -245,7 +245,7 @@ function defineStablecoinSourceDomain<const TFieldSchemas extends StablecoinSour
 
 const STABLECOIN_SOURCE_DOMAIN_DESCRIPTORS = {
   reserves: defineStablecoinSourceDomain({
-    reserves: FullReserveCompositionSchema.optional(),
+    reserves: FullAuthoredReserveCompositionSchema.optional(),
     reserveReview: ReserveReviewSchema.optional(),
     custodyProfile: CustodyProfileSchema.optional(),
   }, (sidecar, ctx) => {

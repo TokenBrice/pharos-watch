@@ -24,6 +24,7 @@
       "pct": 21.290788,
       "risk": "low",
       "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial through the Synapse nexus pool",
       "riskFactors": [
@@ -41,6 +42,7 @@
       "pct": 56.682392,
       "risk": "low",
       "coinId": "usdt-tether",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether through the Synapse nexus pool",
       "riskFactors": [

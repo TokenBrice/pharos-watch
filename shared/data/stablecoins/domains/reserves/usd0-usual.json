@@ -6,6 +6,7 @@
       "pct": 100,
       "risk": "low",
       "coinId": "usyc-hashnote",
+      "depType": "collateral",
       "assetClass": "fund-share",
       "issuerOrObligor": "Hashnote International Short Duration Yield Fund Ltd.",
       "riskFactors": [

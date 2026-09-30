@@ -99,7 +99,6 @@ interface PositionsApiParams {
 interface ProtocolAssetConfig {
   risk: ReserveSlice["risk"];
   coinId?: string;
-  depType?: ReserveSlice["depType"];
 }
 
 interface CollateralPositionsRedemptionOptions {
@@ -151,7 +150,7 @@ const PROTOCOL_ASSET_CONFIG: Record<string, ProtocolAssetConfig> = {
   // Stablecoins not in canonical map
   VCHF: { risk: "low" },
   CHFAU: { risk: "low" },
-  YSYBOLD: { risk: "medium", coinId: "ybold-yearn", depType: "collateral" },
+  YSYBOLD: { risk: "medium", coinId: "ybold-yearn" },
   // Wrapped BTC variants
   BBTC: { risk: "medium" },
   // Tokenized equities / RWA
@@ -207,7 +206,10 @@ function inferCoinId(symbol: string): string | undefined {
 }
 
 function inferDepType(symbol: string): ReserveSlice["depType"] | undefined {
-  return getProtocolAssetConfig(symbol)?.depType;
+  // This adapter measures assets pledged to Frankencoin/dEURO loan positions
+  // (Position.collateralBalance), never a serial claim on the collateral token.
+  // The symbol table identifies that token; the position contract fixes its role.
+  return inferCoinId(symbol) ? "collateral" : undefined;
 }
 
 function parseCollateralBalance(raw: string | undefined, decimals: number): bigint | null {

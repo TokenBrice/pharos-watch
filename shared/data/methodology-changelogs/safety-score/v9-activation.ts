@@ -2,6 +2,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.98",
+    title: "Fail-closed dependency kinds and measured representation coverage",
+    date: "2026-09-30",
+    effectiveAt: 1790791200,
+    summary:
+      "Authored linked reserves require an explicit dependency kind, and legacy runtime rows inherit only a uniquely reviewed kind for the same native asset. Mento preserves native and bridged claim identities, USDat and Frankencoin name their immediate held intermediaries, and Avant exposes measured positive-long holdings without inventing tracked links. Pillar weights, materiality thresholds and evidence admission rules remain unchanged.",
+    impact: [
+      "The authored sweep assigns collateral to 32 previously untyped coinId slices across 18 assets, including seven inactive slices, without claiming refreshed reserve reviews. Runtime rows with no kind may inherit only a unique authored reserve or adapter-declared kind for the same native coinId. Missing or conflicting reviewed kinds are withheld as coinId-without-depType rather than silently treated as collateral. New linked producer rows explicitly carry collateral.",
+      "Mento separates native USDC, EURC and USDT from reviewed axlUSDC, axlEUROC and USDT0 representations. The saved shared-reserve observation aggregates AUSD 24.11620494910088%, sUSDS 22.604477552357462%, USDT 9.73329901558276%, EUROP 5.443563870521741%, EURC 5.094805449797983% and USDC 3.799348672498531%. Reviewed bridged contributions are 1.373366633011464% axlEUROC, 1.111004752080174% USDT0 and 1.1069622264377186% axlUSDC. Mixed parent edges retain contribution annotations in reserve slices and producer metadata, not a misleading whole-edge intermediary. CDP coins retain their single cUSD collateral parent; cUSD's authored composition remains on its September 4 basis with zero keyed bridge rows.",
+      "USDat retains its PYUSD serial parent while naming MoonPay PYUSDx as the immediate held claim. Frankencoin retains its 0.1% yBOLD collateral on the September 4 basis while naming held ysyBOLD vault shares. These annotations change provenance, not dependency weights or scores. Representation identity and documented lineage do not constitute independent bridge or escrow solvency assurance.",
+      "Avant exposes 20 measured positive-long holdings on the September 22 checkpoint, normalized by $1,013,103,133.459377 gross positive long assets. Financing debt of $887,428,455.3230357 and net NAV of $125,674,691.9077302 remain separately disclosed. All tracked links remain withheld pending same-checkpoint position-to-token or receipt-contract and bridge-route evidence. Source labels do not establish identity, gross holdings are not divided by NAV, and unsupported cross-venue netting does not reduce exposure.",
+      "Against committed W2 HEAD 4fb31b009, the original fixed-input replay changes 14 cards. USDat and Frankencoin change only dependency provenance. Mento BRLm, cEUR and KESm retain scores 59 C, 57 C and 59 C while reviewed reserve classification changes backing; USDO retains 50 C- and identical numerical pillars while explicit authored kinds rotate two reserve evidence keys. No binding cap changes. The only original score or grade change is nTBILL 41 D to 38 F on legacy untyped rows.",
+      "The original replay has 259 to 254 dependency edges, not five newly offset Reservoir edges: Reservoir's five reviewed edges were already in the W2 baseline. Four transiently withheld legacy links are FRAX USDT 0.3%, nBASIS USDC 0.3%, and nTBILL USTB 87.3% plus JTRSY 12.7%. An explicit typed-stored-row counterfactual restores all four, nTBILL to 41 D, and the exact prior nBASIS and nOPAL backing evaluations. The fifth old ReUSD USDe 0.3% link remains intentionally withheld; the reviewed pooled Re producer emits no tracked token dependencies. FPI, yzUSD and syzUSD inherit the corresponding backing and availability changes without original grade flips.",
+      "Diagnostic modified captures using new Mento, Avant and Re fixture outputs at clock 1790745438 preserve all Mento integer scores and grades, yield ReUSD 55 C with backing 48.75, and remove the newly introduced legacy missing-kind reasons after the four typed rows are restored. Avant conditionally moves 60 to 62 within C+, while savUSD moves 53 C- to 55 C and its parent cap follows; no tracked Avant edge is admitted. The saved Mento payload alone has no verified update clock, and fixture replacement bypasses production freshness admission. These conditional results are replay evidence, not live scoring admission or a forecast of the next publication.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.97",
     title: "Measured reserve leaves, immediate claim identity, and producer precision",
     date: "2026-09-30",

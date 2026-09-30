@@ -121,7 +121,8 @@
             "decimals": 18
           },
           "risk": "high",
-          "coinId": "usde-ethena"
+          "coinId": "usde-ethena",
+          "depType": "collateral"
         },
         {
           "name": "USDC.e (bridged Circle)",
@@ -132,7 +133,8 @@
             "decimals": 6
           },
           "risk": "low",
-          "coinId": "usdc-circle"
+          "coinId": "usdc-circle",
+          "depType": "collateral"
         },
         {
           "name": "USD₮0 (Tether via LayerZero)",
@@ -143,7 +145,8 @@
             "decimals": 6
           },
           "risk": "low",
-          "coinId": "usdt-tether"
+          "coinId": "usdt-tether",
+          "depType": "collateral"
         },
         {
           "name": "BYUSD (bridged PayPal USD)",
@@ -154,7 +157,8 @@
             "decimals": 6
           },
           "risk": "low",
-          "coinId": "pyusd-paypal"
+          "coinId": "pyusd-paypal",
+          "depType": "collateral"
         }
       ]
     }

@@ -6,6 +6,7 @@
       "pct": 80.2263,
       "risk": "low",
       "coinId": "dai-makerdao",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "MakerDAO/Sky (DAI) via Alchemix-registered Yearn and Aave yield strategies",
       "riskFactors": [
@@ -20,6 +21,7 @@
       "pct": 15.9306,
       "risk": "low",
       "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle (USDC) via Alchemix-registered Yearn and Aave yield strategies",
       "riskFactors": [
@@ -34,6 +36,7 @@
       "pct": 0.3867,
       "risk": "low",
       "coinId": "usdt-tether",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether (USDT) via Alchemix-registered Yearn and Aave yield strategies",
       "riskFactors": [
@@ -48,6 +51,7 @@
       "pct": 3.4564,
       "risk": "low",
       "coinId": "frax-frax",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax (FRAX) via Alchemix-registered yield strategies",
       "riskFactors": [

@@ -10,7 +10,8 @@
       "name": "USDC / stataUSDC (V3 Base pool collateral)",
       "pct": 25,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "collateral"
     },
     {
       "name": "ETH and LSTs (V3 multi-collateral)",

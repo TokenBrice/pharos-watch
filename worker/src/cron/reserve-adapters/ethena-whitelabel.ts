@@ -157,11 +157,12 @@ export function adaptEthenaWhitelabel(
     name: string;
     risk: ReserveSlice["risk"];
     coinId?: string;
+    depType?: ReserveSlice["depType"];
   }> = [];
 
   for (const [asset, value] of onChainTotals) {
     const config = ON_CHAIN_ASSET_CONFIG[asset];
-    sliceInputs.push({ sourceKey: `ethena-whitelabel:${asset.toLowerCase()}`, name: config.name, value, risk: config.risk, coinId: config.coinId });
+    sliceInputs.push({ sourceKey: `ethena-whitelabel:${asset.toLowerCase()}`, name: config.name, value, risk: config.risk, coinId: config.coinId, depType: "collateral" });
   }
 
   if (unmappedUsd > 0) {

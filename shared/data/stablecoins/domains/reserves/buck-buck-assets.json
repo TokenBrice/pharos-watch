@@ -10,7 +10,8 @@
       "name": "USDC liquidity reserve",
       "pct": 23,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "collateral"
     }
   ]
 }

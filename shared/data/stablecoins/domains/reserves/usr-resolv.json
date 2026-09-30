@@ -20,13 +20,15 @@
       "name": "USD stablecoins (USDC)",
       "pct": 5,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "collateral"
     },
     {
       "name": "USD stablecoins (USDT)",
       "pct": 5,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "depType": "collateral"
     }
   ]
 }

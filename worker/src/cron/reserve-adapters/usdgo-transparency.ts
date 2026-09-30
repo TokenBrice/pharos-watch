@@ -33,6 +33,7 @@ export const USDGO_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
       name: "BlackRock BUIDL",
       risk: "low",
       coinId: "buidl-blackrock",
+      depType: "collateral",
       assetClass: "fund-share",
       issuerOrObligor: "BlackRock USD Institutional Digital Liquidity Fund",
       riskFactors: ["credit", "liquidity", "custody", "counterparty", "legal"],

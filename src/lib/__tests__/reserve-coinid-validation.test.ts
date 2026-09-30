@@ -21,6 +21,38 @@ const KNOWN_TICKERS = [
 ];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
+    "avusd-avant::usde long positions (gross; identity unverified)::USDe",
+    "NET02-2: measured USDe source label remains insufficient-evidence; no same-checkpoint contract or held-position join establishes the complete claim.",
+  ],
+  [
+    "avusd-avant::usdc long positions (gross; identity unverified)::USDC",
+    "NET02-2: USDC includes undisclosed and multiple-chain strategy positions; exact held-token, receipt and bridge identities are not joined to the measured amount.",
+  ],
+  [
+    "avusd-avant::usdtb long positions (gross; identity unverified)::USDtb",
+    "NET02-2: measured USDtb source label remains insufficient-evidence without its held-contract or venue-receipt join.",
+  ],
+  [
+    "avusd-avant::dai long positions (gross; identity unverified)::DAI",
+    "NET02-2: measured DAI source label remains insufficient-evidence without its held-contract or venue-receipt join.",
+  ],
+  [
+    "avusd-avant::susde long positions (gross; identity unverified)::USDe",
+    "NET02-2: the Mantle sUSDe-labelled position lacks verified held-token, wrapper and bridge identity; no direct USDe holding is asserted.",
+  ],
+  [
+    "avusd-avant::usds long positions (gross; identity unverified)::USDS",
+    "NET02-2: measured USDS source label remains insufficient-evidence without its held-contract or venue-receipt join.",
+  ],
+  [
+    "avusd-avant::usdt long positions (gross; identity unverified)::USDT",
+    "NET02-2: positive gross USDT dust is preserved but remains insufficient-evidence without its held-contract or venue-receipt join; financing debt is separate.",
+  ],
+  [
+    "avusd-avant::re_pend_pt_susde_25sep2025_eth long positions (gross; identity unverified)::USDe",
+    "NET02-2: issuer-labelled Pendle PT exposure lacks an exact PT contract and underlying-claim join; it is not proven direct USDe collateral.",
+  ],
+  [
     "usd3-reserve-protocol::Steakhouse USDC V1 vault shares::USDC",
     "Untracked Steakhouse USDC Morpho V1 vault shares (0xbeef01735c132ada46aa9aa4c54623caa92a64cb); USDC is the underlying candidate only, and the tracked steakUSDC is the V2 token.",
   ],
