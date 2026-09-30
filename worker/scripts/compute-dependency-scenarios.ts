@@ -14,6 +14,8 @@ import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/po
 import type { ContagionShock } from "@shared/types/contagion";
 import { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
+import { parseSafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
 
 const DEPENDENCY_SCENARIOS_RETAINED_ARTIFACT_COUNT = 24;
 
@@ -59,10 +61,18 @@ async function main(): Promise<void> {
     if (!response.ok) throw new Error(`Publication capture failed: ${response.status}`);
     const source = ReportCardsV9CurrentResponseSchema.parse(await response.json());
     writeFileSync(sourcePath, JSON.stringify(source));
-    const raw = JSON.parse(remote("--command", "SELECT value FROM cache WHERE key = 'report-cards:fixed-input:exact'"));
-    if (!raw[0]?.results[0]?.value) throw new Error("Exact compiler capture unavailable");
-    const fixedInput = await parseSafetyScoreV9ReplayFixedInput(JSON.parse(raw[0].results[0].value));
-    writeFileSync(resolve(directory, "capture.json"), JSON.stringify(fixedInput));
+    const raw = JSON.parse(remote("--command", `SELECT key, value FROM cache WHERE key IN ('${SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY}')`));
+    const rows: Array<{ key: string; value: string }> = raw[0]?.results ?? [];
+    const delta = rows.find(row => row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY);
+    const base = rows.find(row => row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY);
+    if (!delta) throw new Error("accepted-publication-replay-delta-unavailable");
+    if (!base) throw new Error("accepted-publication-replay-base-unavailable");
+    const fixedInput = await parseSafetyScoreV9ReplayFixedInput(base.value);
+    const capture = await parseSafetyScoreV9PublicationReplayCapture(delta.value, fixedInput);
+    if (capture.publicationGenerationId !== source.safetyScoreIdentity.publicationGenerationId) {
+      throw new Error(`accepted-publication-replay-capture-generation-mismatch: publicationGenerationId accepted=${source.safetyScoreIdentity.publicationGenerationId} capture=${capture.publicationGenerationId}`);
+    }
+    writeFileSync(resolve(directory, "capture.json"), JSON.stringify(capture));
     console.log(JSON.stringify({ sourcePublicationGenerationId: source.safetyScoreIdentity.publicationGenerationId }));
     return;
   }
@@ -105,11 +115,24 @@ async function main(): Promise<void> {
   const capture = JSON.parse(readFileSync(resolve(values.input as string), "utf8"));
   const fixedInput = await parseSafetyScoreV9ReplayFixedInput(capture.fixedInput ?? capture, capture.registrySnapshot);
   const source = values.publication ? ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(resolve(values.publication as string), "utf8"))) : null;
-  let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
+  const transferMaterialityGeneration = capture.transferMaterialityGeneration == null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration);
+  let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
   const candidate = replay.pipeline.candidate;
   if (source) {
     const identity = source.safetyScoreIdentity;
-    if (candidate.publicationGenerationId !== identity.publicationGenerationId || candidate.baseInputGenerationId !== identity.baseInputGenerationId || candidate.evaluationBuildDigest !== identity.evaluationBuildDigest) throw new Error("Capture replay does not match accepted publication identity");
+    const expected = {
+      publicationGenerationId: identity.publicationGenerationId,
+      baseInputGenerationId: identity.baseInputGenerationId,
+      evaluationBuildDigest: identity.evaluationBuildDigest,
+      candidateId: source.source.candidateId,
+      factSetDigest: source.source.factSetDigest,
+      resultDigest: source.source.resultDigest,
+      publishedAtSec: source.updatedAt,
+    };
+    const mismatches = (Object.keys(expected) as Array<keyof typeof expected>)
+      .filter(key => candidate[key] !== expected[key])
+      .map(key => `${key} accepted=${expected[key]} replay=${candidate[key]}`);
+    if (mismatches.length > 0) throw new Error(`Capture replay does not match accepted publication identity: ${mismatches.join("; ")}`);
     for (const card of source.cards) {
       const baseline = candidate.cards.find(row => row.id === card.id);
       if (!baseline || baseline.score !== card.score || baseline.grade !== card.grade) throw new Error(`Published baseline mismatch: ${card.id}`);

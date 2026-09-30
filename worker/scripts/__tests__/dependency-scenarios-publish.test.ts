@@ -11,6 +11,9 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildSafetyScoreV9ReplayArtifact } from "../replay-safety-score-v9";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../../src/lib/report-cards-v9-cache";
+import { buildSafetyScoreV9PublicationReplayCapture, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-replay-capture";
+import { makeV9FixedInput, withV9WmReviewedDeploymentAttribution } from "../../src/test-helpers/v9-fixed-input";
+import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 
 const temporaryDirectories: string[] = [];
 afterEach(() => temporaryDirectories.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true })));
@@ -83,6 +86,43 @@ function prepareComputeFixture(directory: string) {
 }
 
 describe("dependency scenario accepted-publication verification stamp", () => {
+  it("reproduces accepted compute-time supply attribution rather than the stripped base capture", async () => {
+    const fixture = setup();
+    const base = makeV9FixedInput({ assetId: "wm-m0", clockSec: 1_800_000_000, aggregateCirculating: { peggedUSD: 87_020_618.58982982 } });
+    const fixedInput = withV9WmReviewedDeploymentAttribution(base);
+    const candidate = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: base.clockSec }).pipeline.candidate;
+    const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 1, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
+    const invoke = () => spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts", "--mode", "compute", "--input", resolve(fixture.directory, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", fixture.directory], { encoding: "utf8", timeout: 30_000 });
+    writeFileSync(resolve(fixture.directory, "publication.json"), JSON.stringify(source));
+    writeFileSync(resolve(fixture.directory, "capture.json"), JSON.stringify(base));
+    const incomplete = invoke();
+    expect(incomplete.status).not.toBe(0);
+    expect(incomplete.stderr).toContain("factSetDigest");
+    expect(existsSync(resolve(fixture.directory, "artifact.verified.sha256"))).toBe(false);
+    const entry = await buildSafetyScoreV9PublicationReplayCapture(candidate, fixedInput, null);
+    const baseEntry = await buildReportCardsFixedInputCacheEntry(base);
+    const newerEntry = await buildReportCardsFixedInputCacheEntry(createReplayFixedInput(base.clockSec + 1800));
+    const db = new DatabaseSync(fixture.databasePath);
+    try {
+      for (const [key, value] of [[entry.key, entry.value], [SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, baseEntry.value], [newerEntry.key, newerEntry.value]]) {
+        db.prepare("INSERT OR REPLACE INTO cache VALUES (?, ?, ?)").run(key, value, base.clockSec);
+      }
+    } finally { db.close(); }
+    const fetchShim = resolve(fixture.directory, "fetch.mjs");
+    writeFileSync(fetchShim, `import { readFileSync } from 'node:fs'; globalThis.fetch = async () => new Response(readFileSync(process.env.SCENARIO_TEST_PUBLICATION, 'utf8'));`);
+    const plan = spawnSync(process.execPath, ["--import", "tsx", "--import", fetchShim, "worker/scripts/compute-dependency-scenarios.ts", "--mode", "plan", "--out-dir", fixture.directory], {
+      encoding: "utf8", timeout: 30_000,
+      env: { ...process.env, PATH: `${resolve(fixture.directory, "bin")}:${process.env.PATH}`, PHAROS_API_KEY: "test-only", SCENARIO_TEST_PUBLICATION: resolve(fixture.directory, "publication.json"), SCENARIO_TEST_DB: fixture.databasePath, SCENARIO_TEST_EVENTS: resolve(fixture.directory, "events.jsonl") },
+    });
+    expect(plan.status, plan.stderr).toBe(0);
+    const complete = invoke();
+    expect(complete.status, complete.stderr).toBe(0);
+    expect(JSON.parse(complete.stdout).acceptedPublicationVerified).toBe(true);
+    const replayPath = resolve(fixture.directory, "replay.json");
+    const replay = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/replay-safety-score-v9.ts", "--input", resolve(fixture.directory, "capture.json"), "--output", replayPath, "--published-at", String(base.clockSec)], { encoding: "utf8", timeout: 30_000 });
+    expect(replay.status, replay.stderr).toBe(0);
+    expect(JSON.parse(readFileSync(replayPath, "utf8")).pipeline.candidate.publicationGenerationId).toBe(candidate.publicationGenerationId);
+  }, 30_000);
   it("rejects a missing stamp before touching the remote store", () => {
     const fixture = setup();
     rmSync(resolve(fixture.directory, "artifact.verified.sha256"));

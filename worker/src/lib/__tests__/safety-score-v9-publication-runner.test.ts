@@ -5,6 +5,11 @@ import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fix
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
+import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { currentInput } from "./safety-score-v9-publication-store.test-support";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-replay-capture";
+import type * as PublicationStore from "../safety-score-v9/publication-store";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -43,6 +48,24 @@ const { runSafetyScoreV9Publication } = await import(
 const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
 
 describe("Safety Score V9 publication runner", () => {
+  it("publishes despite replay serialization failure and retains the previous generation pair", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100, publicationGenerationId: "report-cards:v9:prior" });
+    const serialization = vi.spyOn(fixedInputCodec, "buildFixedInputCacheEntry").mockRejectedValueOnce(new Error("Replay delta exceeds byte ceiling"));
+    try {
+      await store.persistSafetyScoreV9Publication(db, { ...currentInput(prior), publicationReplayCaptureValue: "prior-delta", publicationReplayBaseValue: "prior-base" });
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, fixedInputCacheValue: "current-base", nowSec: fixedInput.clockSec });
+      expect(result.status).toBe("published");
+      expect((await store.loadSafetyScoreV9Publication(db))?.publishedAtSec).toBe(fixedInput.clockSec);
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY)?.value).toBe("prior-delta");
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY)?.value).toBe("prior-base");
+    } finally {
+      serialization.mockRestore();
+      sqlite.close();
+    }
+  });
   beforeEach(() => {
     const publication = makeWorkerSafetyScoreV9Publication({
       baseInputGenerationId: fixedInput.baseInputGenerationId,

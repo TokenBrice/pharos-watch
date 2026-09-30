@@ -15,6 +15,7 @@ import {
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-replay-capture";
 
 const databases: DatabaseSync[] = [];
 
@@ -32,6 +33,13 @@ afterEach(() => {
 });
 
 describe("Safety Score V9 publication store", () => {
+  it.each(["publicationReplayCaptureValue", "publicationReplayBaseValue"] as const)("rejects a torn accepted replay pair with only %s", async field => {
+    const { db } = database();
+    const publication = makeWorkerSafetyScoreV9Publication();
+    await expect(persistSafetyScoreV9Publication(db, { ...currentInput(publication), [field]: "unpaired" }))
+      .rejects.toThrow("both base and delta or neither");
+    await expect(loadSafetyScoreV9Publication(db)).resolves.toBeNull();
+  });
   it("rejects a health advance when the publication row is already newer", async () => {
     const { sqlite, db } = database();
     const older = makeWorkerSafetyScoreV9Publication({
@@ -54,7 +62,11 @@ describe("Safety Score V9 publication store", () => {
         value: string;
         updated_at: number;
       };
-    await persistSafetyScoreV9Publication(db, currentInput(newer));
+    await persistSafetyScoreV9Publication(db, {
+      ...currentInput(newer),
+      publicationReplayCaptureValue: "accepted-delta",
+      publicationReplayBaseValue: "accepted-base",
+    });
     sqlite
       .prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?")
       .run(
@@ -62,7 +74,11 @@ describe("Safety Score V9 publication store", () => {
         olderHealthRow.updated_at,
         SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
       );
-    await expect(persistSafetyScoreV9Publication(db, currentInput(incoming)))
+    await expect(persistSafetyScoreV9Publication(db, {
+      ...currentInput(incoming),
+      publicationReplayCaptureValue: "stale-delta",
+      publicationReplayBaseValue: "stale-base",
+    }))
       .rejects.toThrow(/Stale or conflicting Safety Score v9 publication/);
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(newer);
     await expect(loadSafetyScoreV9PublicationHealth(db)).resolves.toEqual(
@@ -72,6 +88,8 @@ describe("Safety Score V9 publication store", () => {
       attemptedAtSec: 200,
       publicationGenerationId: newer.publicationGenerationId,
     });
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY)?.value).toBe("accepted-delta");
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY)?.value).toBe("accepted-base");
   });
 
   it("rejects held health that loses the retained publication identity", async () => {

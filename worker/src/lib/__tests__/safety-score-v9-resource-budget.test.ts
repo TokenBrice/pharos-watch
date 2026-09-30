@@ -41,8 +41,41 @@ describe("Safety Score V9 canonical publication resource budget", {
           import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";
           import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
           import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+          import { buildSafetyScoreV9PublicationReplayCapture } from "../safety-score-v9/publication-replay-capture.ts";
+          import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
+          import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+          import { buildSafetyScoreV9PegProvenanceSummary, projectSafetyScoreV9PegScoreResult } from "../safety-score-v9/peg-provenance.ts";
+          import { computePegScore } from "@shared/lib/peg-score";
 
           const input = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+          input.evidenceJournalById = Object.fromEntries(input.activeAssetIds.slice(0, 250).map(assetId => [
+            assetId, [0, 1].map(index => createReportCardEvidenceJournalV1({
+              schemaVersion: 1, lane: "reserve", assetId, attemptId: "resource-reserve:" + index,
+              sourceId: "resource-reserve-adapter", sourceOriginClass: "onchain-observation",
+              attemptCode: "reserve.collector.attempted", admissionCode: "reserve.admission.accepted",
+              fallbackCode: "reserve.fallback.not-used", attemptedAtSec: input.clockSec - 20 + index,
+              completedAtSec: input.clockSec - 10 + index, sourceTimestampSec: input.clockSec - 20 + index,
+              sourceBlock: null, contentSha256: "a".repeat(64), sidecarMaterializationSha256: null,
+            })),
+          ]));
+          input.supplyAttributionJournalById = {
+            "wm-m0": [createSupplyAttributionJournalV1({
+              schemaVersion: 1, lane: "supply-attribution", assetId: "wm-m0", attemptId: "resource-supply:1",
+              sourceId: "wm.reviewed-deployment-unit-partition.v1", sourceOriginClass: "onchain-observation",
+              baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration,
+              registryFingerprint: input.registryFingerprint, routeInventoryDigest: "b".repeat(64),
+              attemptCode: "supply-attribution.collector.attempted", admissionCode: "supply-attribution.admission.accepted",
+              fallbackCode: "supply-attribution.fallback.not-used", attemptedAtSec: input.clockSec - 20,
+              completedAtSec: input.clockSec - 10, scoringClockSec: input.clockSec,
+              sourceObservedAtSec: input.clockSec - 20, failedRouteId: null, contentSha256: "c".repeat(64),
+            })],
+          };
+          input.pegProvenanceById = Object.fromEntries(input.activeAssetIds.map(assetId => [
+            assetId, buildSafetyScoreV9PegProvenanceSummary({
+              assetId, events: [], trackingStartSec: input.clockSec - 180 * 86400, clockSec: input.clockSec,
+              expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(computePegScore([], input.clockSec - 180 * 86400, input.clockSec)),
+            }),
+          ]));
           let extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input);
           if (process.env.CONTAGION_MATRIX === "1") {
             const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(input, extension);
@@ -97,6 +130,12 @@ describe("Safety Score V9 canonical publication resource budget", {
             fixedInput: input,
             publishedAtSec: input.clockSec,
           });
+          globalThis.gc?.();
+          const captureMemoryBefore = process.memoryUsage();
+          const captureCpuBefore = process.cpuUsage();
+          const capture = await buildSafetyScoreV9PublicationReplayCapture(result.candidate, input, null);
+          const captureCpu = process.cpuUsage(captureCpuBefore);
+          const captureMemoryAfter = process.memoryUsage();
           const stored = await serializeSafetyScoreV9Publication(result.candidate);
           const metadata = JSON.parse(stored);
           process.stdout.write(JSON.stringify({
@@ -114,6 +153,11 @@ describe("Safety Score V9 canonical publication resource budget", {
             ).byteLength,
             compressedBytes: metadata.compressedBytes,
             storedBytes: stored.length,
+            replayCaptureStoredBytes: capture.storedBytes,
+            replayCaptureUncompressedBytes: capture.uncompressedBytes,
+            replayCaptureCpuMs: (captureCpu.user + captureCpu.system) / 1000,
+            replayCaptureHeapDeltaBytes: captureMemoryAfter.heapUsed - captureMemoryBefore.heapUsed,
+            replayCaptureRssDeltaBytes: captureMemoryAfter.rss - captureMemoryBefore.rss,
           }));
         `,
         loader: "ts",
@@ -164,6 +208,7 @@ describe("Safety Score V9 canonical publication resource budget", {
       candidateBytes: number;
       compressedBytes: number;
       storedBytes: number;
+      replayCaptureUncompressedBytes: number;
       extensionAssets: number;
       extensionBytes: number;
       researchEvidenceCount: number;
@@ -174,6 +219,7 @@ describe("Safety Score V9 canonical publication resource budget", {
     expect(output.researchEvidenceCount).toBeGreaterThan(5_000);
     expect(output.componentEvidenceCount).toBeGreaterThan(3_000);
     expect(output.expected).toBeGreaterThan(300);
+    expect(output.replayCaptureUncompressedBytes).toBeGreaterThan(300_000);
     expect(output.cards).toBe(output.expected);
     expect(output.rated).toBeGreaterThan(output.expected / 3);
     expect(output.factDigest).toMatch(/^[a-f0-9]{64}$/);
