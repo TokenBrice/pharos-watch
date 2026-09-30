@@ -16,6 +16,14 @@ describe("ReserveTreemap", () => {
     expect(html).toContain("pharos-chart-stage");
   });
 
+  it("rounds precise curated shares for display and keeps positive dust visible", () => {
+    const html = renderToStaticMarkup(
+      <ReserveTreemap reserves={[SLICE("Gold carry", 74.0045198, "medium"), SLICE("thBILL", 25.9904802, "low"), SLICE("Cash", 0.004, "very-low")]} />,
+    );
+    expect(html).toContain("Reserve composition treemap: Gold carry 74%, thBILL 25.99%, Cash &lt;0.01%");
+    expect(html).not.toContain("74.0045198");
+  });
+
   it("keys the risk legend even when the basket carries a single tier", () => {
     const single = renderToStaticMarkup(
       <ReserveTreemap reserves={[SLICE("Cash", 60, "very-low"), SLICE("T-bills", 40, "very-low")]} />,
