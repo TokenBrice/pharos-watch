@@ -121,4 +121,11 @@ For quarantine or delisting:
 
 For a full cemetery removal authorized by the lifecycle owner, remove the catalog source and its active-universe projections, add the cemetery record, and retain the prior listing ID as `excluded`. This keeps the scope decision auditable even though the asset is no longer part of the tracked catalog.
 
+A curated cemetery record in `shared/data/dead-stablecoins.json` follows the cemetery's owner-approved rules:
+
+- **Inclusion.** A stablecoin is included when it had a public market and at least one primary public source documents its failure or discontinuation. There is no size floor; peak market cap is recorded when known.
+- **Primary cause.** Each record carries one primary cause: the root cause, meaning the design or party whose failure made the peg unrecoverable. Triggers such as runs, exploits or orders are described in the obituary.
+
+Every new curated record carries `recordedAt`, the UTC `YYYY-MM-DD` date on which it entered Pharos (not the death date), and a `mechanismArchetype` describing how the coin was designed to hold its peg. [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record) owns the full field contract.
+
 The complete implementation procedure for new assets is [Adding a Stablecoin](./process/adding-a-stablecoin.md). Catalog structure and generated artifacts are documented in [Stablecoin Data Registry](./stablecoin-data.md).
