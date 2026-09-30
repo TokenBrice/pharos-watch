@@ -40,11 +40,11 @@ export function ContagionGraphShell({ graph, stage, modeControls }: ContagionGra
       <label className="block text-xs">
         Choose neighborhood
         <select className="pharos-focus-ring mt-1 min-h-11 w-full rounded-sm border bg-background px-2" value={root ?? ""} onChange={event => graph.handleTraceNodeChange(event.target.value)}>
-          {graph.nodeSelectOptions.map(node => <option key={node.id} value={node.id}>{node.symbol}</option>)}
+          {graph.nodeSelectOptions.map(node => <option key={node.id} value={node.id}>{graphNodeLabel(node)}</option>)}
         </select>
       </label>
       <p className="text-xs text-muted-foreground">Neighborhood and linked coins. Select a coin here instead of using small canvas targets.</p>
-      {graph.nodes.length === 0 && <p className="text-sm text-muted-foreground">No coins are available in this neighborhood.</p>}
+      {graph.emptyFocusCoin && <p role="status" className="text-sm text-muted-foreground">{graph.emptyFocusCoin.name} has no published dependency links in this publication.</p>}
       <ul className="divide-y">
         {graph.nodes.filter(node => neighborhood.has(node.id)).map(node => (
           <li key={node.id} className="flex flex-wrap items-center gap-2">

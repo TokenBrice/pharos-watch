@@ -15,6 +15,7 @@ import {
 } from "@/lib/chart-colors";
 import type { ReserveDisplayBadgeView, ReserveSlice, ReserveRisk } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
+import { formatDecimal } from "@shared/lib/format";
 
 interface ReserveTreemapProps {
   reserves: ReserveSlice[];
@@ -76,6 +77,11 @@ const MIN_LABEL_HEIGHT = 32;
 const MIN_LABEL_AREA = 3400;
 const MIN_LABEL_CHARS = 6;
 
+/** Reserve shares are display-rounded to two decimals; positive dust stays visible. */
+function formatReserveSharePct(pct: number): string {
+  return pct > 0 && pct < 0.01 ? "<0.01%" : `${formatDecimal(pct, 0, 2)}%`;
+}
+
 function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCellProps) {
   // Recharts renders the synthetic root node (depth=0) via content too — skip it
   if (depth === 0) return <g />;
@@ -131,7 +137,7 @@ function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCel
           fontWeight={600}
           fontFamily="var(--font-mono, monospace)"
         >
-          {pct}%
+          {formatReserveSharePct(pct)}
         </text>
       )}
     </g>
@@ -150,7 +156,7 @@ function ReserveTooltip({
   return (
     <PharosChartTooltip active={active}>
       <TooltipLabel>{name}</TooltipLabel>
-      <TooltipRow color={RISK_ACCENT_COLORS[risk]} label={RESERVE_RISK_PRESENTATION[risk].longLabel} value={`${pct}%`} />
+      <TooltipRow color={RISK_ACCENT_COLORS[risk]} label={RESERVE_RISK_PRESENTATION[risk].longLabel} value={formatReserveSharePct(pct)} />
     </PharosChartTooltip>
   );
 }
@@ -211,7 +217,7 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
           ref={chartContainerRef}
           className="h-full min-w-0 overflow-hidden"
           role="figure"
-          aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
+          aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${formatReserveSharePct(r.pct)}`).join(", ")}`}
         >
           {isChartReady ? (
             <SectionErrorBoundary name="reserve-treemap" supportingText="Reserve composition chart unavailable">

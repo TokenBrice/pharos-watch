@@ -71,17 +71,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-28",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-09 (July report PDF read; manifest compilation reviewed in lockstep)",
+      "reviewer": "Pharos August assurance report review 2026-09-30 (PDF, letterhead, signature and composition reviewed)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USA₮ Reserve Report - July 2026",
-          "url": "https://learn.anchorage.com/07.31.26_USAT-Stablecoin-Attestation-Report-signed.pdf"
+          "label": "Deloitte USA₮ Reserve Report - August 2026",
+          "url": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
         }
       ]
     }

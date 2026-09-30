@@ -29,6 +29,20 @@ function isNetworkFetchError(error: unknown): boolean {
     && /failed to fetch|networkerror|load failed|network request failed/i.test(error.message);
 }
 
+/** A configured live adapter that has never attempted a sync: nothing failed yet. */
+function isAwaitingFirstLiveSync(reserves: ReserveResult | null): boolean {
+  const sync = reserves?.sync;
+  return !!sync
+    && sync.enabled
+    && sync.bootstrap
+    && sync.status === "skipped"
+    && sync.lastAttemptedAt == null
+    && !sync.lastError
+    && !sync.failureCategory
+    && !sync.uncertainWrite
+    && !sync.warnings?.length;
+}
+
 export function buildReserveFetchNotice(
   error: unknown,
   reserves: ReserveResult | null,
@@ -172,11 +186,21 @@ export function buildReserveFootnoteModel(
       };
     case "curated-fallback":
       return isLiveEnabled
-        ? { text: "Live sync unavailable; showing curated reserve baseline", references: [] }
+        ? {
+            text: isAwaitingFirstLiveSync(reserves)
+              ? "Live sync pending first run; showing curated reserve baseline"
+              : "Live sync unavailable; showing curated reserve baseline",
+            references: [],
+          }
         : null;
     case "template-fallback":
       return isLiveEnabled
-        ? { text: "Live sync unavailable; showing estimated classification template", references: [] }
+        ? {
+            text: isAwaitingFirstLiveSync(reserves)
+              ? "Live sync pending first run; showing estimated classification template"
+              : "Live sync unavailable; showing estimated classification template",
+            references: [],
+          }
         : reserves.estimated
           ? { text: `Estimated composition based on ${backingLabel} classification`, references: [] }
           : null;
@@ -277,6 +301,13 @@ export function buildReserveSyncNotice(
   const sync = reserves?.sync;
   if (!sync || (sync.status === "ok" && !sync.uncertainWrite)) {
     return null;
+  }
+  if (isAwaitingFirstLiveSync(reserves)) {
+    return {
+      title: "Live reserve sync pending",
+      rows: ["The first scheduled live reserve sync has not run yet."],
+      toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+    };
   }
 
   const staleSourceWarnings = (sync.warnings ?? []).filter((warning) => warning.startsWith("Upstream reserve source timestamp is ") && warning.includes("s old"));

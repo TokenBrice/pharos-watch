@@ -18864,6 +18864,66 @@
           "sourceUrl": "https://docs.theo.xyz/legal/terms.md"
         }
       }
+    },
+    {
+      "assetId": "ousd-open-standard",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-09-30",
+      "sources": [
+        {
+          "label": "Bridge Building Inc stablecoin terms, sections 2, 3, 4 and 5 (reserve segregation, denied property interest, conditional redemption and issuer controls; reviewed 2026-09-30)",
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+        },
+        {
+          "label": "Bridge issuance FAQ (OUSD-specific BNY, BlackRock and Lead Bank reserve institutions; segregation and prospective quarterly reports; reviewed 2026-09-30)",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+        },
+        {
+          "label": "Bridge reserve-management documentation (configurable liquid/treasury allocation and banking-hour redemption constraints; reviewed 2026-09-30)",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+        },
+        {
+          "label": "Bridge reporting documentation (public transparency API, monthly internal reports and optional quarterly independent attestations; reviewed 2026-09-30)",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+        },
+        {
+          "label": "Bridge OUSD public itemized supply and reserves API, last updated 2026-09-30T16:18:03Z",
+          "url": "https://transparency.bridge.xyz/v0/stablecoins/ousd"
+        },
+        {
+          "label": "Bridge Open USD reserve dashboard (cash, short-duration Treasury funds and four native deployment addresses; page updated 2026-09-30 16:10 UTC)",
+          "url": "https://reserves.bridge.xyz/ousd"
+        },
+        {
+          "label": "Ethereum PublicNode RPC (OUSD totalSupply at block 26091466, observed 2026-09-30T16:24:33Z)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Open Standard June 30, 2026 announcement (partner board, reserve earnings and fee-free business mint/redemption)",
+          "url": "https://joinopenstandard.com/blog/introducing-open-usd"
+        },
+        {
+          "label": "Open Standard September 9, 2026 economics disclosure (participating-business reserve rewards and developer transaction fees)",
+          "url": "https://joinopenstandard.com/blog/stablecoins-are-better-dollars"
+        },
+        {
+          "label": "Tempo OUSD product disclosure (native issuance and partner mint/burn access, including eligibility-limited Visa access; reviewed 2026-09-30)",
+          "url": "https://tempo.xyz/ousd/"
+        }
+      ],
+      "notes": "Evidence pinned 2026-09-30. Bridge Building Inc's binding stablecoin terms apply to its issued stablecoins, require reserves segregated from its other assets and business-day market value at least equal to outstanding dollars, but section 2 expressly denies holders any direct or indirect property interest in, or withdrawal right over, reserve assets. Section 5.11 assigns a contractual dollar redemption right to subsequent holders only if eligible to, and actually becoming, a Bridge User; section 3 processes compliant orders within two business days after Bridge's compliance determination, subject to external delays. This documented claim restriction supports weak claimAndSegregation, despite the FAQ's issuer assertion of bankruptcy-remote accounts for token holders; no OUSD-specific trust deed or enforceable bankruptcy allocation was available in the reviewed disclosures. The OUSD-specific FAQ identifies BNY, BlackRock and Lead Bank, and the itemized dashboard/API plus on-chain liability anchor support limited custodyContinuity. No institution-level balances, account agreements, custodian replacement arrangement or independently examined OUSD custody reconciliation were published. Generic Bridge provider options, including tokenized reserves, are not evidence that OUSD holds any particular fund or other stablecoin. The API at 2026-09-30T16:18:03Z reports $477,309,854.37 on-chain and reserve totals, $266,079,146.49 cash, $211,230,707.88 treasury and ratio 1.0. The dashboard's earlier 16:10 UTC snapshot reports $477,309,839 supply/reserves, 55.7% cash and 44.3% treasury, describing Treasury money-market funds with T-bill ladders of less than three-month duration. At Ethereum block 26091466 (hash 0x3bb6a7e0ea9741b9d5987434e2b0af4d91cca73e5a1b6ecb076a533497f70a4c; block time 2026-09-30T16:23:35Z), an eth_call observed at 16:24:33Z returned totalSupply 10102758000000 raw units for the dashboard-listed 0x9f6f3991d525015a6f8caf062c83b62fd3ac4436 deployment, or 10,102,758 OUSD at six decimals. This external liability anchor corroborates the issuer's structured disclosure, supporting limited assuranceAndReconciliation; it does not independently verify off-chain assets or reconcile all four chains at the API timestamp. Prospective quarterly reports in the FAQ and optional paid quarterly attestations in the reporting docs are not completed independent assurance. Open Standard describes partner-board governance, fee-free business mint/redemption, reserve earnings shared with participating businesses and developer transaction fees; those programme economics convey no additional holder title or unconditional redemption access. Tempo identifies native issuance and partner mint/burn access, with Visa eligibility restrictions and Mastercard coming soon. Bridge terms permit suspension, chain-support changes, freezing and burning, so programme governance is not evidence of constrained issuer mint or transfer powers; those controls and executable redemption capacity remain in their respective domain reviews. No numeric fiat-cash mechanism metric is manufactured. This date-only review becomes score-bearing only after 2026-09-30 UTC has elapsed.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "limited"
+        }
+      }
     }
   ]
 }

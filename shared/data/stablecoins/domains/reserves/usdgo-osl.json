@@ -4,7 +4,7 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:stbxx",
       "name": "Goldman Sachs STBXX (CUSIP 38151N205)",
-      "pct": 8.904468,
+      "pct": 7.982203,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Goldman Sachs Financial Square Government Fund",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:jltxx",
       "name": "JPMorgan JLTXX (CUSIP 46655R119)",
-      "pct": 62.116731,
+      "pct": 53.987681,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "JPMorgan Liquidity Funds",
@@ -36,7 +36,7 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:buidl",
       "name": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund)",
-      "pct": 27.987907,
+      "pct": 37.034727,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -53,7 +53,7 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:cash",
       "name": "Cash at FDIC-insured depository institutions",
-      "pct": 0.990893,
+      "pct": 0.995389,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed major commercial banks",
@@ -66,22 +66,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-05",
-    "reviewer": "Pharos night watch primary-source report review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos August assurance report review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Anchorage USDGO Reserve Report - July 31, 2026",
-        "url": "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf"
+        "label": "Anchorage USDGO Reserve Report - August 31, 2026",
+        "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
       },
       {
         "label": "Anchorage USDGO reserve attestations",
         "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
       }
     ],
-    "rationale": "Deloitte's July 31, 2026 examination, issued August 28, reports reserves of $1,116,301,304 against 1,112,640,495 redeemable USDGO on Solana; Morph liabilities are zero. Reserves comprise $99,400,695 STBXX, $693,409,879 JLTXX, $312,429,373 BUIDL on Solana in segregated Anchorage custody, and $11,061,357 cash at FDIC-insured banks ($10,811,357 uninsured). Surplus is $3,660,809. BUIDL is a private unregistered BVI fund without a secondary market.",
-    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of July 31, 2026",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Deloitte's August 31 examination, signed September 28 (letterhead and signature reviewed visually), reports $1,248,950,562 reserves against 1,244,426,424 redeemable USDGO on Solana; Morph liabilities are zero. Reserves comprise $99,693,768 STBXX, $674,279,453 JLTXX, $462,545,429 BUIDL self-custodied on Solana in segregated wallets and $12,431,912 bank cash ($12,181,912 uninsured). Surplus is $4,524,138. No underlying fund-portfolio allocation is inferred.",
+    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of August 31, 2026",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The two money market fund CUSIPs are disclosed but their issuer names and underlying portfolio composition are not identified in the report.",
     "knownUnknownExposurePct": 0

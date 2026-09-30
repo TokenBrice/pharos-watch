@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { URL as NodeURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
@@ -32,6 +34,22 @@ function installFetch(changedUrl?: string, redirect = false) {
 
 describe("Paxos reviewed Framer discovery", () => {
   afterEach(() => { vi.unstubAllGlobals(); });
+
+  it("accepts the September 30 official index and exact reviewed module bytes", async () => {
+    const fixture = (name: string) => readFileSync(new NodeURL(`./fixtures/paxos/${name}`, import.meta.url), "utf8");
+    const html = fixture("index-2026-09-30.html");
+    const main = fixture("main-2026-09-30.mjs.txt");
+    const page = fixture("paxg-2026-09-30.mjs.txt");
+    const pin: PaxosDiscoveryPin = {
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.D_i7a3kT.mjs",
+      mainSha256: "dc110f38af882dbf6e9c30d28a6d19c2c82c20db3d66fe2b176f777790efa0a8",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/9XsTDCj88fcSkvOKlIugorJnpRlJ-sQBU3zcghHZAGU.-iP-KhFb.mjs",
+      pageSha256: "3abe90e5439ad20619f0a1f799e4c4279f7ab5cc378177ba8efd97367c6f7048",
+    };
+    installAdapterNetwork({ html: { [pin.mainUrl]: main, [pin.pageUrl]: page } });
+    await expect(verifyPaxosDiscovery(html, pin, AbortSignal.timeout(1000))).resolves.toBe(page);
+    await expect(verifyPaxosDiscovery(html + html, pin, AbortSignal.timeout(1000))).rejects.toThrow("changed or ambiguous main module");
+  });
 
   it("checks both module hashes before accepting the reviewed product selection", async () => {
     const fetchMock = installFetch();

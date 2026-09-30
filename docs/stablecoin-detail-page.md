@@ -134,14 +134,19 @@ Detail experiments remain source-gated: hero verdict, depeg resolver, and the DD
 - `DistributionSection` renders after the chart in the Market zone, outside the top-level rail.
 - `DepegHistory` is omitted for NAV tokens, but the top-level history section remains mounted for timeline and score-history content.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata. Non-yield-bearing coins can still render the section when the yield stack publishes a live lending-opportunity or curated ranking row for that asset.
+- The Activity pill and banner are omitted when neither yield nor blacklist content is available. Flow analytics remain in Context and flow events in History; their availability alone does not create an empty Activity destination.
+- Module identity symbols remain untruncated at narrow widths; the title group wraps rather than sacrificing the asset identifier to chart controls.
 
 ### Compact desktop hero / SafetyGradeHero (mobile)
 
 On `lg+` the hero starts with a desktop-only identity/action strip above the metric card: a single identity row containing the 56px coin logo (shared with the loading shell), ticker, and name, followed by the one-line description beneath it; up to three source links plus report/compare/share controls sit opposite. The loaded mobile identity uses the same logo size so hydration does not shrink the asset mark. On `<lg`, the logo sits beside only the name/ticker (and any variant chip); the classification and infrastructure chips plus the Bluechip badge move into a full-width row below that identity block so they wrap as one flow. Below it, the hero renders as a compact dossier card with no internal action/header band: a top chip rail (derived archetype verdict, peg, backing, governance, and launch date), a four-cell divider grid (`Price`, `Market Cap`, `Supply`, and the live `30d Excess` benchmark gap), then the compact passport row. The old desktop `HeroSignalsRail` no longer renders in the hero; Safety / Peg / Liquidity / DEWS live in the `xl+` summary rail. On `<lg` the hero still renders the visible identity block, mobile actions, and `SafetyGradeHero` because the Safety Score card is far down the scroll on narrow screens. The verdict chip vocabulary is `Pre-launch`, `Quarantined Record`, `Delisted Record`, `Frozen Archive`, `Distressed` (alert), `Low Safety Score` (watch), `Yield-Bearing Hybrid`, `Decentralized Benchmark`, `Institutional Default`, and `Uncategorized`, which renders nothing.
 
 Hero tertiary metric chips below the identity block are mobile-only live signals: on `<lg` a 2x2 grid of `DEWS`, `Peg`, `Liq`, `30d Excess` with optional `1Y vs USD` beneath. On `lg+`, the compact metric grid owns the 30d benchmark gap and the summary rail owns Safety / Peg / Liquidity / DEWS. Freeze and chain facts live in the hero passport strip below.
+At narrow widths, stat chips wrap their contents and keep numeric subtitles such as the DEWS score intact rather than ellipsizing them.
 
-The `Supply` cell shows the token count (USD market cap ÷ observed price, `—` without an observed price) with 7D and 30D deltas. Each delta compares two samples of one series: the detail response's native `tokens[].totalCirculating`, projected into `nativeSupply` as the latest sample plus the newest samples at or before latest − 7 / 30 days, within one daily bucket (the same selection as the USD checkpoints). USD market-cap history never feeds the delta, so a non-$1 price — commodity, non-USD fiat, NAV — cannot inflate or collapse it (the 2026-09 regression compared ~806K XAUT against a ~$3.5B USD anchor and rendered `-99.98%`). A missing native anchor renders `—`, never a USD fallback; a missing or non-positive 30D anchor hides the 30D segment. The `Market Cap` 24H delta remains a USD-to-USD comparison.
+Current `Market Cap` uses `getCirculatingRawOrNull()` and retains `number | null` through the hero model. Missing current buckets render `—` in both layouts, including static first paint; `$0.00` requires an explicit observed zero.
+
+The `Supply` cell shows the token count (current USD market cap ÷ observed price, `—` without either input) with 7D and 30D deltas. Each delta compares two samples of one series: the detail response's native `tokens[].totalCirculating`, projected into `nativeSupply` as the latest sample plus the newest samples at or before latest − 7 / 30 days, within one daily bucket (the same selection as the USD checkpoints). USD market-cap history never feeds the delta, so a non-$1 price — commodity, non-USD fiat, NAV — cannot inflate or collapse it (the 2026-09 regression compared ~806K XAUT against a ~$3.5B USD anchor and rendered `-99.98%`). A missing native anchor renders `—`, never a USD fallback; a missing or non-positive 30D anchor hides the 30D segment. The `Market Cap` 24H delta remains a USD-to-USD comparison; missing previous-day buckets leave the current value visible and render `—` for the delta.
 
 Both identity layouts show only the external Bluechip grade/report link while the Pharos Bluechip roster is suspended; neither grants a Pharos designation or derives tenure from the external report date. Liquidity metrics require a non-null `liquidityScore` regardless of pool count: an unavailable score is a neutral dash with no score accent, while measured pool counts remain context. Numeric zero remains a measured zero with its score styling.
 
@@ -186,6 +191,8 @@ The compact rail treatment cuts the notes to a ~150-character lead (`RAIL_PROSE_
 ### Access posture evidence
 
 `AccessPosturePanel` renders the four scored access enums in the summary rail at `xl+` (compact) and inside the Safety Score card below `xl`. When `src/lib/transfer-review.ts` resolves a build-time view from `shared/data/safety-score-v9/transfer-review-overlays-v1.json` (server-only import, same slim-prop pattern), both copies gain a `How this was verified` disclosure listing every reviewed deployment: chain, scope (`Canonical` / `Bridged` / `Additional`), posture, the reviewer's written finding, and its citations. That disclosure is the evidence for restrictive postures; inventory counts belong to generated coverage audits rather than this page. Assets whose posture differs by chain carry an explicit note that the summary rows report the strictest posture. Every label is precomputed at build time so the client never imports the overlay.
+
+The V9 `primaryExit: undisclosed` posture renders as **Incomplete exit surface**. It describes an unobserved or unintegrated credited-route surface, not an issuer-disclosure finding. Reviewed `none` remains **None**, and unresolved `unknown` remains omitted.
 
 ### Score construction
 
@@ -240,6 +247,8 @@ Detail API stale-while-refresh is bounded: rows older than the 5-minute D1 TTL b
 
 For USD-pegged DefiLlama detail histories, the normalizer preserves upstream `totalCirculatingUSD` buckets, including explicit zero. When those buckets are absent, it converts native `totalCirculating` (or `circulating`) using a finite positive detail price. This supplies the USD totals consumed by the detail hero and build snapshots; missing or invalid prices leave them unavailable. This is a detail-history fallback using the current detail price, not historical daily prices, and does not change the canonical `/api/stablecoins` list supply, which is already USD-denominated.
 
+The response-only enrichment in `worker/src/api/stablecoin-detail/price.ts` also publishes `currentCirculatingUSD`, `currentCirculatingPrevDayUSD`, and `currentSupplyObservedAt` from the already-read admitted stablecoins publication. The compact live summary prefers these current USD buckets, so the hero agrees with the homepage even when the provider's latest daily native sample is older. Missing previous-day buckets remain unavailable. When current list supply is unavailable, projection falls back to the latest provider USD buckets, then native buckets multiplied by a finite positive observed detail price, otherwise `{}`. Native historical checkpoints and provider token history remain unchanged; neither a peg value nor a nominal par reference supplies a conversion price. This adds no first-paint client list request.
+
 For USD-to-native history conversion (D1 supply history, cached checkpoints, CoinGecko market caps, and commodity TVL), an absent `totalCirculating[pegType]` bucket means native supply is unavailable because there is no finite positive conversion price or the division cannot produce a usable finite quantity. It never means measured zero. The authoritative `totalCirculatingUSD` buckets and history dates remain intact; commodity TVL is retained even when its price series is empty. Nearest-price lookup returns unavailable for an unusable nearest observation rather than manufacturing a zero quote. A genuine zero USD observation can still convert to zero native units when a usable price exists.
 
 ### Build snapshot hydration
@@ -273,6 +282,14 @@ The detail page prefers live reserve data when the coin is live-enabled:
 - `unavailable`
 
 Live-reserve fetch failures do not take the full page down. They surface as reserve-specific messaging inside the overview section, with a reserve-local retry action when the live-reserve hook can refetch the feed. When report-card data is unavailable, the Reserve View still renders as an Overview sibling instead of depending on the report-card right-column slot.
+
+Reserve quality labels `reserveReview.knownUnknownExposurePct` as **Unresolved reserve exposure**: it is the share of unresolved reserve dispositions, not a measurement of individually identified obligors. Recorded obligor names or classes are visible beside the metric; generic classes do not establish individual counterparties. Scores and adapter classifications are unchanged.
+
+Custody summaries name a leader only when a positive known share is uniquely largest among the recorded shares. Unknown shares never confer leadership by provider order.
+
+Shared failure-domain percentages read `nominalExposureShare` from the published V9 trace. When its scoring `exposureShare` is capped, that value appears separately as **Modeled contribution (capped)**. The dependency-map board reports member-supply subtotals and published point adjustments, not capped exposure percentages.
+
+Static FAQ answers and their JSON-LD keep whole sentences within the prose budget. If the first sentence alone exceeds it, the whole sentence is retained rather than removing qualifying clauses.
 
 ### Shared stale banner
 

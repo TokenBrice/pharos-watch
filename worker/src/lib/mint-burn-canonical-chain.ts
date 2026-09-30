@@ -8,6 +8,9 @@
 // other heavy registries here. Gauge mcap weighting helpers that need the
 // full MINT_BURN_CONFIGS list live in mint-burn-mcap-weighting.ts instead.
 
+// Open USD (ousd-open-standard) retains the Ethereum default while the
+// Alchemy-only lane cannot index Tempo. Switch to Tempo only when its canonical
+// issuance config is ingested; an override now would exclude all tracked OUSD.
 const NON_ETHEREUM_CANONICAL_CHAIN_BY_STABLECOIN = new Map<string, string>([
   ["bd-basedollar", "base"],
   ["usdai-usd-ai", "arbitrum"],

@@ -9,6 +9,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { SupplyOf } from "@shared/lib/dependency-exposure";
 import { buildSharedFailureDomainsModel, type SharedFailureDomainCard, type SharedFailureDomainGroups, type SharedFailureDomainRow } from "@/lib/shared-failure-domains-model";
+import { stablecoinLabel } from "@/lib/stablecoin-label";
 
 export interface SharedFailureDomainsBoardProps {
   groups: SharedFailureDomainGroups | null;
@@ -27,10 +28,10 @@ function DomainRows({ rows }: { rows: readonly SharedFailureDomainRow[] }) {
         {row.oldestAsOfSec !== null && <p className="text-xs text-muted-foreground">Oldest supply date: {new Date(row.oldestAsOfSec * 1000).toISOString().slice(0, 10)}</p>}
         {row.supplyDateIncomplete && <p className="text-xs text-muted-foreground">Some supply dates unavailable.</p>}
       </TableCell>
-      <TableCell><ul className="flex max-w-80 flex-wrap gap-x-3 gap-y-1">{row.members.map(member => <li key={member.id}><Link href={buildStablecoinUrl(member.id)} title={member.name} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs text-frost-blue hover:text-foreground">{member.symbol}</Link></li>)}</ul></TableCell>
+      <TableCell><ul className="flex max-w-80 flex-wrap gap-x-3 gap-y-1">{row.members.map(member => <li key={member.id}><Link href={buildStablecoinUrl(member.id)} title={member.name} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs text-frost-blue hover:text-foreground">{stablecoinLabel(member)}</Link></li>)}</ul></TableCell>
       <TableCell className="max-w-96">
         {row.effects.length === 0 ? <p className="text-xs text-muted-foreground">No published effect references. This does not establish an absence of risk.</p> : <ul className="space-y-2 text-xs">{row.effects.map(effect => <li key={effect.assetId}>
-          <p className="font-semibold">{effect.label}</p>
+          <p className="font-semibold">{stablecoinLabel({ id: effect.assetId, symbol: effect.label })}</p>
           {effect.caps.map((cap, index) => <p key={`cap-${index}`}>{cap.kind} cap: {cap.limit}</p>)}
           {effect.adjustments.map((adjustment, index) => <p key={`adjustment-${index}`}>Deployment adjustment: {adjustment.scoreBefore} → {adjustment.scoreAfter} ({adjustment.adjustmentPoints} points)</p>)}
           {effect.referencesUnresolved && <p className="text-muted-foreground">Some referenced cap or deployment adjustment values are unavailable.</p>}

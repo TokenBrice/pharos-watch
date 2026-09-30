@@ -33,6 +33,7 @@ import {
   type SafetyScoreV9RegistrySnapshot,
 } from "./lib/safety-score-v9-registry";
 
+import { parseSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
 export interface SafetyScoreV9FutureDatedReview {
   assetId: string;
   field: "reviewedAt" | "compositionAsOf";
@@ -306,6 +307,7 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
   releaseCandidateId?: string;
   allowRegistryMismatch?: boolean;
   registrySnapshot?: SafetyScoreV9RegistrySnapshot;
+  transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
 }): SafetyScoreV9ReplayArtifact {
   if (input.registrySnapshot && (!input.fixedInput || typeof input.fixedInput !== "object" ||
     !("registryFingerprint" in input.fixedInput) || input.fixedInput.registryFingerprint !== input.registrySnapshot.fingerprint)) {
@@ -361,7 +363,8 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   );
 
   const raw = await readReplayInput(values.input);
-  const capture = raw as { kind?: string; fixedInput?: unknown; registrySnapshot?: SafetyScoreV9RegistrySnapshot };
+  const capture = raw as { kind?: string; fixedInput?: unknown; registrySnapshot?: SafetyScoreV9RegistrySnapshot; transferMaterialityGeneration?: unknown };
+  const acceptedCapture = capture.kind === "safety-score-v9-accepted-publication-capture";
   const embedded = capture.kind === "safety-score-v9-registry-capture" ? capture.registrySnapshot : undefined;
   assertCliUsage(
     !(values["registry-ref"] !== undefined && values["allow-registry-mismatch"] === true),
@@ -379,11 +382,11 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     }
   }
   const capturedInput = await parseSafetyScoreV9ReplayFixedInput(
-    capture.kind === "safety-score-v9-registry-capture" ? capture.fixedInput : raw, registrySnapshot,
+    capture.kind === "safety-score-v9-registry-capture" || acceptedCapture ? capture.fixedInput : raw, registrySnapshot,
   );
   // Capture-time replay must retain producer bytes and their base generation.
   // The legacy current-curation lane retains its SIM-EXIT-L2 emulation.
-  const fixedInput = registrySnapshot ? capturedInput : rederiveUndisclosedFeeObservations(capturedInput);
+  const fixedInput = registrySnapshot || acceptedCapture ? capturedInput : rederiveUndisclosedFeeObservations(capturedInput);
   if (values["allow-future-reviews"] !== true) {
     const futureDated = findFutureDatedCuratedReviews(fixedInput.clockSec, registrySnapshot
       ? new Map(registrySnapshot.activeStablecoins.map((coin) => [coin.id, coin]))
@@ -394,6 +397,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   const artifact = buildSafetyScoreV9ReplayArtifact({
     fixedInput,
     registrySnapshot,
+    ...(acceptedCapture ? { transferMaterialityGeneration: capture.transferMaterialityGeneration === null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration) } : {}),
     ...(extension === undefined ? {} : { extension }),
     publishedAtSec,
     ...(releaseCandidateId === undefined ? {} : { releaseCandidateId: String(releaseCandidateId) }),

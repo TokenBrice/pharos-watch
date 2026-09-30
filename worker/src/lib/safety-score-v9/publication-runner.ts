@@ -34,6 +34,7 @@ import { persistAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache
 import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
+import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError } from "./publication-replay-capture";
 
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
@@ -50,6 +51,8 @@ type SafetyScoreV9PublicationFailureStage =
 export interface RunSafetyScoreV9PublicationInput {
   db: D1Database;
   fixedInput: unknown;
+  /** Original compressed prepare-time envelope; retained without re-serialization. */
+  fixedInputCacheValue?: string;
   /** The cache parser already normalized this value; avoid cloning it again on the production hot path. */
   fixedInputAlreadyNormalized?: boolean;
   /**
@@ -522,8 +525,28 @@ export async function runSafetyScoreV9Publication(
     }
     stage = "publication-write";
     const partial = assessment.affectedAssetIds.length > 0;
+    let replayCaptureValue: string | undefined;
+    if (input.fixedInputCacheValue !== undefined) {
+      try {
+        replayCaptureValue = (await buildSafetyScoreV9PublicationReplayCapture(
+          publication, fixedInput, input.transferMaterialityGeneration ?? null,
+        )).value;
+      } catch (error) {
+        if (error instanceof SafetyScoreV9ReplayCaptureIdentityError) throw error;
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "safety_score_v9_replay_capture_retention_failed",
+          job: "compute-safety-score-v9",
+          message: "Accepted replay delta could not be serialized; canonical publication continues",
+          metadata: { reason: toErrorMessage(error).slice(0, 200) },
+        });
+      }
+    }
     await persistSafetyScoreV9Publication(input.db, {
       publication,
+      publicationReplayCaptureValue: replayCaptureValue,
+      publicationReplayBaseValue: replayCaptureValue === undefined ? undefined : input.fixedInputCacheValue,
       publicationHealth: {
         schemaVersion: 1,
         status: "current",

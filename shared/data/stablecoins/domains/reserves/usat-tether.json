@@ -4,7 +4,7 @@
     {
       "sourceKey": "anchorage-independent-assurance:usat:reverse-repo",
       "name": "Reverse repurchase agreements collateralized by U.S. Treasury securities",
-      "pct": 90.0472,
+      "pct": 90.091475,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed U.S. broker-dealer counterparty",
@@ -16,12 +16,12 @@
         "concentration"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 3
+      "maturityDaysMax": 1
     },
     {
       "sourceKey": "anchorage-independent-assurance:usat:cash",
       "name": "Cash in demand deposit accounts",
-      "pct": 9.9528,
+      "pct": 9.908525,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed major U.S. commercial banks",
@@ -34,22 +34,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-09",
-    "reviewer": "PoR verification sweep 2026-09 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos August assurance report review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USA₮ Reserve Report - July 2026",
-        "url": "https://learn.anchorage.com/07.31.26_USAT-Stablecoin-Attestation-Report-signed.pdf"
+        "label": "Deloitte USA₮ Reserve Report - August 2026",
+        "url": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
       },
       {
         "label": "Anchorage Digital USA₮ reserve attestations",
         "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
       }
     ],
-    "rationale": "Deloitte's July 31, 2026 examination (report signed 2026-08-28, PDF read this pass): reserves $175,906,606 against 175,245,527 redeemable USAT (Ethereum 175,204,971 + Celo 40,556) - $158,399,000 of reverse repurchase agreements collateralized by U.S. Treasuries (single U.S. broker-dealer counterparty, 7/31 purchase maturing 8/3) and $17,507,606 of cash in demand deposits at FDIC-insured institutions ($17,257,606 uninsured). Surplus $661,079.",
-    "compositionBasis": "Deloitte examination of the USA₮ Reserve Report as of July 31, 2026",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Deloitte's August 31 examination, signed September 28 (letterhead and signature reviewed visually), reports $176,391,828 reserves against 175,731,350 redeemable USAT: Ethereum 175,534,959 plus Celo 196,391. Reserves comprise $158,914,000 Treasury-collateralized reverse repos with one U.S. broker-dealer, purchased August 31 and maturing September 1, and $17,477,828 cash ($17,227,828 uninsured). Gross surplus is $660,478; $3 redeemed but not paid gives the reported net surplus $660,475.",
+    "compositionBasis": "Deloitte examination of the USA₮ Reserve Report as of August 31, 2026",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "No material asset-class exposure is unclassified; the report does not identify the repo counterparty, commercial banks, or custodian and sub-custodian used for the reported accounts.",
     "knownUnknownExposurePct": 0

@@ -17,22 +17,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-07",
+    "reviewedAt": "2026-09-30",
     "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KK Yap & Associates XUSD SCS Reserve Account Report, 31 July 2026",
-        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e145187f4227fbe226ec2_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf"
+        "label": "KK Yap & Associates XUSD SCS Reserve Account Report, 31 August 2026",
+        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb483d1de79f8ca93f1c67_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf"
       },
       {
         "label": "StraitsX reserve-backing disclosures",
         "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
       }
     ],
-    "rationale": "KK Yap & Associates SSAE 3000 (Revised) reasonable-assurance examination as of 31 July 2026 11:59 PM Singapore time, signed 28 August 2026 and reviewed 7 September 2026: USD45,269,767 cash, zero fixed deposits and zero government/repo instruments against USD45,182,310 XUSD in circulation. The four disclosed chain supplies reconcile exactly; the reserve composition remains 100% cash. The report does not identify the safeguarding institution or provider shares.",
-    "compositionBasis": "KK Yap & Associates independent examination as of 31 July 2026",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "KK Yap & Associates SSAE 3000 (Revised) reasonable-assurance examination as of 31 August 2026 11:59 PM Singapore time, signed 28 September 2026: USD46,324,677 cash, zero fixed deposits and zero government/repo instruments against USD46,182,310 XUSD in circulation. The four disclosed chain supplies reconcile exactly; composition remains 100% cash. The safeguarding institution and provider shares remain undisclosed.",
+    "compositionBasis": "KK Yap & Associates independent examination as of 31 August 2026",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The examination discloses the complete reserve asset-class allocation. The safeguarding institution and any provider-level allocation remain undisclosed.",
     "knownUnknownExposurePct": 0

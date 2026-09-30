@@ -60,11 +60,16 @@ function summarizeText(text: string, maxLength = 280): string {
   const normalized = normalizeWhitespace(stripTermMarkup(text));
   if (normalized.length <= maxLength) return normalized;
 
-  const truncated = normalized.slice(0, maxLength - 1);
-  const lastSpace = truncated.lastIndexOf(" ");
-  const wordBoundary = lastSpace > Math.floor(maxLength * 0.7) ? lastSpace : truncated.length;
-
-  return `${truncated.slice(0, wordBoundary).replace(/[,.!?;:]+$/, "")}...`;
+  const sentences = [...new Intl.Segmenter("en", { granularity: "sentence" }).segment(normalized)];
+  let complete = "";
+  for (const { segment } of sentences) {
+    const candidate = `${complete}${segment}`;
+    if (candidate.trimEnd().length > maxLength) break;
+    complete = candidate;
+  }
+  // A single long sentence is preferable to a fragment that can drop a
+  // redemption restriction or other qualification.
+  return complete.trimEnd() || sentences[0]!.segment.trim();
 }
 
 function formatJurisdiction(coin: StablecoinMeta): string {

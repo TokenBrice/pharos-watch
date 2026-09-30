@@ -6,6 +6,7 @@ import type { GraphNode } from "@/lib/contagion-layout";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
+import { graphNodeLabel } from "@/components/contagion-graph-model";
 
 interface ContagionGraphInsightsProps {
   inspectedNode: GraphNode | null;
@@ -46,7 +47,7 @@ function summarizeNodeLinks({
     if (seenNodeIds.has(relatedId)) continue;
     seenNodeIds.add(relatedId);
     const relatedNode = nodeMap.get(relatedId);
-    if (relatedNode && examples.length < 3) examples.push(relatedNode.symbol);
+    if (relatedNode && examples.length < 3) examples.push(graphNodeLabel(relatedNode));
   }
 
   return {
@@ -122,7 +123,7 @@ export function ContagionGraphInsights({
         <div className="flex min-w-0 items-center gap-2">
           <StablecoinLogo src={logos?.[inspectedNode.id]} name={inspectedNode.symbol} size={28} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">{inspectedNode.symbol}</p>
+            <p className="break-words text-sm font-semibold text-foreground">{graphNodeLabel(inspectedNode)}</p>
             <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
               {inspectedNode.mcap === null ? "mcap n/a" : formatCurrency(inspectedNode.mcap, 1)}
             </p>

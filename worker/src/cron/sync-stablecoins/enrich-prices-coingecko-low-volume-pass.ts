@@ -15,8 +15,9 @@ import {
 
 const COINGECKO_LOW_VOLUME_SOURCE = "coingecko-low-volume";
 
-// Explicitly scoped to DL-listed assets identified by reviewed missing-price
-// audits. This avoids turning every stale CoinGecko row into a fallback price.
+// Explicitly scoped to assets identified by reviewed missing-price audits,
+// including CG-only rows whose fresh price outlives supplemental supply admission.
+// This avoids turning every stale CoinGecko row into a fallback price.
 // Membership is guarded by enrich-prices-coingecko-low-volume-pass.test.ts, which
 // fails if any ID here is no longer present in the active registry (ACTIVE_META_BY_ID).
 export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
@@ -34,6 +35,9 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   // 2026-09-28 missing-price audit: DefiLlama dropped MONEY's list price and
   // coins entries (second episode in two days) and it has no DEX, CMC or CEX lane.
   "money-defi-money",
+  // 2026-09-30: HBD's low-volume quote remains inside the existing seven-day
+  // budget, but CG-only intake rejects its stale market cap and carries supply.
+  "hbd-hive",
 ]);
 
 export async function runCoingeckoLowVolumePass(

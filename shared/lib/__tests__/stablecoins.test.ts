@@ -145,7 +145,6 @@ describe("tracked stablecoin metadata", () => {
       "aed-rakbank",
       "bils-bitsofgold",
       "kusd-kerne",
-      "ousd-open-standard",
       "rd-rai-dollar",
       "usd-bank-consortium",
       "jpy-megabank-consortium",

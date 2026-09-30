@@ -17,22 +17,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Codex T37 reserve replay",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "OpenAI Codex reserve source review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Independent public accountant certification for wCOP - March 2026",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+        "label": "Independent public accountant certification for wCOP - June 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
       },
       {
-        "label": "Ripio local stablecoins",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "label": "Ripio wFIAT attestations",
+        "url": "https://action.ripio.com/en/wfiat-attestations"
       }
     ],
-    "rationale": "The March 31, 2026 certification reconciles 104,898,654 outstanding wCOP across six chains and COP107,966,549.02 of collateral to a Colombian bank statement, then certifies that all outstanding tokens are backed by Colombian pesos at a financial institution in Colombia. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed. Write-time re-open 2026-08-08: Ripio's current wFIAT page still reports the same wCOP circulation and Colombian bank-account collateral, while the certification remains the latest dated assurance artifact; no newer composition or named custodian was published.",
-    "compositionBasis": "Independent public accountant certification of the wCOP collateral as of March 31, 2026",
-    "compositionAsOf": "2026-03-31",
+    "rationale": "The June 30, 2026 certification reconciles 196,398,754 outstanding wCOP across seven chains to COP212,085,195.86 in a Colombian bank account and certifies full local-currency backing. Pablo Eduardo Soto signed the certification on July 28, 2026 for SLD y Asociados S.A. The engagement expressly does not constitute an audit or review and expresses no professional opinion. The bank and account terms remain undisclosed. The official wFIAT attestation index serves this report as its latest wCOP evidence on September 30, 2026; the 92-day-old balance date remains outside the live adapter's 33-day freshness ceiling.",
+    "compositionBasis": "Independent public accountant certification of wCOP collateral as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve asset class is unclassified; the Colombian financial institution, account type, and withdrawal liquidity are undisclosed.",
     "knownUnknownExposurePct": 0,

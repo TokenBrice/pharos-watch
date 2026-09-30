@@ -6,6 +6,8 @@ import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
 import { DependencyExposureWorkspace, type DependencyExposureWorkspaceState } from "./dependency-exposure-workspace";
+import { stablecoinLabel } from "@/lib/stablecoin-label";
+import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
 
 interface DependencyHeroProps {
   model: DependencyHubsModel;
@@ -16,9 +18,10 @@ interface DependencyHeroProps {
   methodologyVersion: string;
   publishedAt: number;
   workspace: DependencyExposureWorkspaceState;
+  commonModeGroups?: SharedFailureDomainGroups | null;
 }
 
-export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, methodologyVersion, publishedAt, workspace }: DependencyHeroProps) {
+export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, methodologyVersion, publishedAt, workspace, commonModeGroups }: DependencyHeroProps) {
   const supply = model.mappedSupply;
   const hasKnownSupply = model.uniqueDirectDependentCount > supply.excludedSupplyUnknownIds.length;
   return (
@@ -32,7 +35,7 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
             </p>
             <p className="pharos-meta">Dependents&apos; supply mapped to tracked upstreams (gross)</p>
             {model.directEdgeCount > 0 && <p className="max-w-3xl text-sm text-muted-foreground">
-              {hasKnownSupply ? <>Includes {formatCurrency(supply.overlapUsd, 2)} counted in more than one layer. Wrapper claims {formatCurrency(supply.passThroughUsd, 2)}, vault claims {formatCurrency(supply.vaultClaimUsd, 2)}.</> : <>Layer overlap unavailable. Wrapper claims unavailable, vault claims unavailable.</>} Excludes {supply.excludedSupplyUnknownIds.length} coins without supply data.
+              {hasKnownSupply ? <>Includes {formatCurrency(supply.overlapUsd, 2)} counted in more than one layer. {supply.unknownFormCount > 0 && supply.passThroughCount + supply.vaultClaimCount === 0 ? "Wrapper/vault split unavailable." : <>Wrapper claims {supply.unknownFormCount > 0 && supply.passThroughCount === 0 ? "unavailable" : formatCurrency(supply.passThroughUsd, 2)}, vault claims {supply.unknownFormCount > 0 && supply.vaultClaimCount === 0 ? "unavailable" : formatCurrency(supply.vaultClaimUsd, 2)}{supply.unknownFormCount > 0 ? " (classified claims only)" : ""}.</>} {supply.unknownFormCount > 0 && <>Wrapper/vault split unavailable{supply.unknownFormUsd === null ? "; supply unavailable" : ` for ${formatCurrency(supply.unknownFormUsd, 2)} of known serial exposure`}; {supply.unknownFormCount} claims have no published form.</>}</> : <>Layer overlap unavailable. Wrapper claims unavailable, vault claims unavailable.</>} Excludes {supply.excludedSupplyUnknownIds.length} coins without supply data.
             </p>}
             {supply.unknownShareEdgeCount > 0 && <p className="text-sm text-muted-foreground">Excludes {supply.unknownShareEdgeCount} links with unknown mapped shares.</p>}
             {supply.integrityFlag && <p role="alert" className="text-sm text-muted-foreground">Published basket shares exceed 100%. Exposure totals require review.</p>}
@@ -45,8 +48,8 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
           </dl>
         </div>
       </section>
-      <DependencyExposureWorkspace workspace={workspace} options={cards.map(card => ({ id: card.id, label: card.symbol }))}>
-        <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} syncUrlState modeControls={workspace.modeControls} exposureOverlay={workspace.overlay} onUseAsExposureRoot={workspace.addRoot} hubExposures={model.hubs} />
+      <DependencyExposureWorkspace workspace={workspace} options={cards.map(card => ({ id: card.id, label: stablecoinLabel(card) }))}>
+        <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} syncUrlState modeControls={workspace.modeControls} exposureOverlay={workspace.overlay} onUseAsExposureRoot={workspace.addRoot} hubExposures={model.hubs} commonModeGroups={commonModeGroups} />
       </DependencyExposureWorkspace>
     </div>
   );

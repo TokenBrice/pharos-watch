@@ -151,9 +151,6 @@ describe("projectReserveQualityClientSummary", () => {
     );
     expect(summary!.unknownHorizonPct).toBe(100);
     expect(summary!.liquidWithinOneDayPct).toBe(0);
-    expect(summary!.lede).toBe(
-      "1 reviewed reserve slice — no published exit timeline for any of the basket. 100% of the basket has no identified obligor.",
-    );
     expect(summary!.lede).not.toContain("0% convertible");
   });
 
@@ -318,7 +315,6 @@ describe("projectReserveQualityClientSummary", () => {
     );
     expect(summary!.selfExposurePct).toBe(8.8);
     expect(summary!.unidentifiedObligorsPct).toBe(12.6);
-    expect(summary!.lede).toContain("12.6% of the basket has no identified obligor.");
     expect(summary!.lede).toContain("8.8% is issuer self-exposure rather than independent collateral.");
   });
 

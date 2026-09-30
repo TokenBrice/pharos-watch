@@ -72,6 +72,18 @@ const summary: StablecoinAiSummary = {
 
 describe("StablecoinDetailSeoContent", () => {
 
+  it("keeps complete FAQ sentences and their qualifying clauses in JSON-LD", () => {
+    const lead = "Reserves consist of cash and short-duration Treasury assets. ";
+    const qualification = `Direct redemption requires ${"verified business eligibility ".repeat(12)}and is unavailable to retail holders.`;
+    const items = buildStablecoinFaqItems({ ...coin, pegMechanism: lead + qualification });
+    expect(items[0]!.answer).toContain(lead.trim());
+    expect(items[0]!.answer).not.toContain("Direct redemption requires");
+    expect(items[0]!.answer).not.toContain("...");
+    const { container } = render(<FaqSection items={items} includeJsonLd />);
+    const schema = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
+    expect(schema.mainEntity[0].acceptedAnswer.text).toBe(items[0]!.answer);
+  });
+
   it("answers USDC depeg history with existing research links and matching FAQ schema", () => {
     const usdc = { ...coin, id: "usdc-circle", name: "USD Coin", symbol: "USDC" };
     const items = buildStablecoinFaqItems(usdc);

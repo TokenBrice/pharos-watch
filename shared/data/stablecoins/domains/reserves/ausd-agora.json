@@ -4,7 +4,7 @@
     {
       "sourceKey": "agora-independent-assurance:ausd:us-treasury-securities",
       "name": "Short-dated U.S. Treasury securities held in the Agora Reserve Fund",
-      "pct": 25.41239,
+      "pct": 30.423631,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -14,7 +14,7 @@
     {
       "sourceKey": "agora-independent-assurance:ausd:us-treasury-repos",
       "name": "Overnight U.S. Treasury repurchase agreements held in the Agora Reserve Fund",
-      "pct": 47.595951,
+      "pct": 45.999214,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed overnight repo counterparties",
@@ -24,7 +24,7 @@
     {
       "sourceKey": "agora-independent-assurance:ausd:company-cash",
       "name": "Cash held by Agora Bermuda Limited at regulated financial institutions",
-      "pct": 20.127998,
+      "pct": 20.026233,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed regulated financial institutions",
@@ -34,7 +34,7 @@
     {
       "sourceKey": "agora-independent-assurance:ausd:stablecoins",
       "name": "Stablecoin cash equivalents held in segregated wallets",
-      "pct": 2.511124,
+      "pct": 2.087489,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle USDC and Paxos-issued PYUSD; individual split undisclosed",
@@ -44,7 +44,7 @@
     {
       "sourceKey": "agora-independent-assurance:ausd:fund-cash",
       "name": "Cash held in the Agora Reserve Fund at regulated financial institutions",
-      "pct": 4.352537,
+      "pct": 1.463433,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed regulated financial institutions",
@@ -54,31 +54,31 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map WS1.D reserve research",
+    "reviewer": "Pharos August assurance report review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Grant Thornton July 31, 2026 Agora reserve examination (accessed 2026-09-30)",
-        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/377372bfa35fa0c22ea1113fde44f99459f3c5f3dfa547bbf3ab692d71aac53d/docs/assets/2026%20Jul%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+        "label": "Grant Thornton August 31, 2026 Agora reserve examination (accessed 2026-09-30)",
+        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
       },
       {
         "label": "Agora transparency index (accessed 2026-09-30)",
         "url": "https://docs.agora.finance/developer/transparency"
       }
     ],
-    "rationale": "The July 31 examination, signed September 1, reports $61,365,065 Treasury securities, $114,933,254 overnight Treasury repos, $48,604,476 company cash, $10,510,374 fund cash and $6,063,786 stablecoins, totaling $241,476,955 against $240,745,867 AUSD in circulation. Five source-keyed rows match the live adapter categories. Page 9 explicitly names USDC and PYUSD within the combined stablecoin balance but discloses neither individual amount; no token allocation is inferred. The latest reported Treasury maturity, October 27, is 88 days after the report date. This dated examination does not refresh live composition beyond July 31.",
-    "compositionBasis": "Grant Thornton examination at July 31, 2026 23:59 UTC, normalized by $241,476,955 total reserve assets; source-key alignment with independently assured adapter",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "The August 31 examination, signed September 29, reports $72,739,998 Treasury securities, $109,979,730 overnight Treasury repos, $47,880,812 company cash, $3,498,929 fund cash and $4,990,986 stablecoins. Categories sum to $239,090,455; the printed fund subtotal and reserve total are $1 higher ($239,090,456). The reviewed $1 absolute and 1 ppm allowance preserves measured category amounts without inventing a residual. Circulation is $238,379,206, equal to total supply $266,520,420 less $28,141,214 AUSD Created; the typed excluded-circulation adjustment preserves this disclosure without mislabeling it asset netting. Five keyed rows match the adapter. Page 9 names USDC and PYUSD without individual balances; no token split is inferred. The latest Treasury maturity is November 27, 88 days after the report date.",
+    "compositionBasis": "Grant Thornton examination at August 31, 2026 23:59 UTC, normalized by $239,090,455 measured reserve categories",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "USDC and PYUSD are positively named in the combined 2.511124% stablecoin category. Individual balances and any other included constituents remain undisclosed. Repo and bank identities also remain unresolved. Issuer questionnaire pending.",
-    "knownUnknownExposurePct": 2.511124,
+    "knownUnknownExposure": "USDC and PYUSD are named within the combined 2.087489% stablecoin category. Individual balances and exhaustive constituents remain undisclosed. Repo and bank identities remain unresolved.",
+    "knownUnknownExposurePct": 2.087489,
     "nonLinkDispositions": [
       {
         "reserveIndex": 3,
         "reserveName": "Stablecoin cash equivalents held in segregated wallets",
-        "pct": 2.511124,
+        "pct": 2.087489,
         "disposition": "basket-needs-split",
-        "rationale": "Blocked on issuer balances: page 9 names USDC and PYUSD, but the $6,063,786 category has no individual weights or exhaustive constituent inventory. This shared budget cannot be assigned twice or split by assumption.",
+        "rationale": "Page 9 names USDC and PYUSD, but the $4,990,986 category has no individual weights or exhaustive constituent inventory. This shared budget cannot be assigned twice or split by assumption.",
         "candidateCoinIds": ["usdc-circle", "pyusd-paypal"]
       }
     ]

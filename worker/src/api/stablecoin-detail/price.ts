@@ -1,6 +1,7 @@
 import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib/solomon-usdv-identity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { admitSupplyBuckets } from "@shared/lib/supply";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { logWorkerEventArgs } from "../../lib/structured-log";
@@ -46,23 +47,27 @@ export async function enrichMissingDetailPrice(
     if (!Number.isFinite(cacheAge) || canonical.updatedAt <= 0 || cacheAge < 0) return response;
 
     const coin = canonical.payload.peggedAssets.find((asset) => asset.id === stablecoinId);
-    if (coin?.nominalPriceReference) {
-      detail.nominalPriceReference = coin.nominalPriceReference;
-      const headers = new Headers(response.headers);
-      headers.delete("Content-Length");
-      response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+    // Reuse the already-read publication: current USD supply must match the list,
+    // even when a provider's daily history is older or its own price is unavailable.
+    const hasCurrentSupply = coin != null && !coin.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
+      admitSupplyBuckets(coin.circulating).status === "observed";
+    if (hasCurrentSupply) {
+      detail.currentCirculatingUSD = coin.circulating;
+      detail.currentCirculatingPrevDayUSD = admitSupplyBuckets(coin.circulatingPrevDay).status === "observed"
+        ? coin.circulatingPrevDay : {};
+      const supplyObservedAt = coin.supplyObservedAt;
+      detail.currentSupplyObservedAt = typeof supplyObservedAt === "number" && Number.isFinite(supplyObservedAt) &&
+        supplyObservedAt > 0 && supplyObservedAt <= now ? supplyObservedAt : canonical.updatedAt;
     }
-    if (hasDetailPrice) return response;
+    if (coin?.nominalPriceReference) detail.nominalPriceReference = coin.nominalPriceReference;
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;
-    if (
-      !coin || coin.frozen || !isObservedPrice(coin) ||
-      !isSolomonPriceIdentityAllowed(stablecoinId, coin.priceSource, coin.agreeSources) ||
-      typeof coin.price !== "number" || !Number.isFinite(coin.price) || coin.price <= 0 ||
-      !coin.priceSource || coin.priceSource === "cached" ||
-      (coin.priceConfidence !== "high" && coin.priceConfidence !== "single-source") ||
-      typeof observedAt !== "number" || !Number.isFinite(observedAt) || observedAt <= 0 ||
-      observedAt > now
-    ) return response;
+    const canEnrichPrice = !hasDetailPrice && coin != null && !coin.frozen && isObservedPrice(coin) &&
+      isSolomonPriceIdentityAllowed(stablecoinId, coin.priceSource, coin.agreeSources) &&
+      typeof coin.price === "number" && Number.isFinite(coin.price) && coin.price > 0 &&
+      !!coin.priceSource && coin.priceSource !== "cached" &&
+      (coin.priceConfidence === "high" || coin.priceConfidence === "single-source") &&
+      typeof observedAt === "number" && Number.isFinite(observedAt) && observedAt > 0 && observedAt <= now;
+    if (!hasCurrentSupply && !coin?.nominalPriceReference && !canEnrichPrice) return response;
 
     const headers = new Headers(response.headers);
     // Detail display follows the current publication, not the stricter observation
@@ -84,16 +89,18 @@ export async function enrichMissingDetailPrice(
     headers.delete("Content-Length");
     return new Response(JSON.stringify({
       ...detail,
-      price: coin.price,
-      priceSource: coin.priceSource,
-      priceConfidence: coin.priceConfidence,
-      priceUpdatedAt: coin.priceUpdatedAt,
-      priceObservedAt: observedAt,
-      priceObservedAtMode: coin.priceObservedAtMode,
-      priceSyncedAt: coin.priceSyncedAt,
-      consensusSources: coin.consensusSources,
-      agreeSources: coin.agreeSources,
-      priceSourceConfidenceProfile: coin.priceSourceConfidenceProfile,
+      ...(canEnrichPrice && coin ? {
+        price: coin.price,
+        priceSource: coin.priceSource,
+        priceConfidence: coin.priceConfidence,
+        priceUpdatedAt: coin.priceUpdatedAt,
+        priceObservedAt: observedAt,
+        priceObservedAtMode: coin.priceObservedAtMode,
+        priceSyncedAt: coin.priceSyncedAt,
+        consensusSources: coin.consensusSources,
+        agreeSources: coin.agreeSources,
+        priceSourceConfidenceProfile: coin.priceSourceConfidenceProfile,
+      } : {}),
     }), { status: response.status, statusText: response.statusText, headers });
   } catch (error) {
     logWorkerEventArgs("api", "warn", `[detail] canonical price unavailable stablecoin=${stablecoinId}`, error);

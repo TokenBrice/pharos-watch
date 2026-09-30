@@ -28,13 +28,14 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
   "fiat-cash": {
     accentColor: "var(--mechanism-fiat-cash)",
     stressFootnote: "stress: banking-rail freeze (USDC, Mar 2023)",
-    ariaLabel: (symbol) => `${symbol} mechanism: user dollars in, custodied 1:1, redeemable on demand`,
+    ariaLabel: (symbol) =>
+      `${symbol} mechanism: customer funds in by bank transfer, custodied 1:1, redeemable through the issuer by eligible holders`,
     description: (symbol) =>
-      `Users send USD via wire or ACH to the issuer; the issuer custodies the dollars in cash, repos, and short-term Treasuries; the issuer mints ${symbol} 1:1 and lets holders redeem at any time.`,
+      `Onboarded customers send fiat to the issuer by bank transfer; the issuer custodies the funds in cash and short-term instruments such as repos and government bills, and mints ${symbol} 1:1; eligible holders redeem through the issuer, with proceeds typically settling back over banking rails.`,
     defaultSteps: (symbol) => [
-      { label: "User USD", subtitle: "wire / ACH" },
+      { label: "Customer funds", subtitle: "bank transfer (KYC)" },
       { label: "Issuer reserves", subtitle: "custodied 1:1" },
-      { label: `${symbol} minted`, subtitle: "redeem any time" },
+      { label: `${symbol} minted`, subtitle: "eligible holders redeem" },
     ],
     returnArrow: {
       fromX: 500,
@@ -171,7 +172,7 @@ const TBILL_PAR_REDEMPTION_CONFIG: ThreeStepConfig = {
   ariaLabel: (symbol) =>
     `Subscriber cash funds a short-duration Treasury reserve; ${symbol} is minted at par and redeemed 1:1.`,
   description: (symbol) =>
-    `Subscribers send cash or an accepted stablecoin to the issuer; the reserve is held in short-duration T-Bills, repos, and cash; ${symbol} is minted 1:1 against that reserve and redeems at par — the yield reaches holders through unit accrual or a separate staked wrapper, not through the token's unit price.`,
+    `Subscribers send cash or an accepted stablecoin to the issuer; the reserve is held in short-duration T-Bills, repos, and cash; ${symbol} is minted 1:1 against that reserve and eligible holders redeem at par. The yield reaches holders through unit accrual or a separate staked wrapper, not through the token's unit price.`,
   defaultSteps: (symbol) => [
     { label: "Subscriber cash", subtitle: "cash / accepted stablecoin" },
     { label: "T-Bills + Repos", subtitle: "short-duration RWA" },

@@ -12,6 +12,7 @@ import {
 
 const USDSUI_ENDPOINT = "https://transparency.bridge.xyz/v0/stablecoins/usd_sui";
 const PATHUSD_ENDPOINT = "https://transparency.bridge.xyz/v0/stablecoins/path_usd";
+const OUSD_ENDPOINT = "https://transparency.bridge.xyz/v0/stablecoins/ousd";
 const NOW_SEC = Math.floor(Date.parse("2026-09-09T16:50:36Z") / 1000);
 
 /** Live capture of https://transparency.bridge.xyz/v0/stablecoins/usd_sui on
@@ -36,6 +37,19 @@ const PATHUSD_PAYLOAD: BridgeTransparencyPayload = {
   reserves: [
     { type: "cash", amount: "3609603.05" },
     { type: "treasury", amount: "33049128.64" },
+  ],
+  collateralization_ratio: "1.0",
+};
+
+/** Live capture of https://transparency.bridge.xyz/v0/stablecoins/ousd on
+ *  2026-09-30 (aggregate four-chain liability; cash-dominant reserves). */
+const OUSD_PAYLOAD: BridgeTransparencyPayload = {
+  last_updated: "2026-09-30T16:18:03Z",
+  total_onchain_amount: "477309854.37",
+  total_reserve_amount: "477309854.37",
+  reserves: [
+    { type: "cash", amount: "266079146.49" },
+    { type: "treasury", amount: "211230707.88" },
   ],
   collateralization_ratio: "1.0",
 };
@@ -211,6 +225,44 @@ describe("fetchBridgeTransparencyReserves", () => {
     expect(result.metadata?.details).toMatchObject({
       driftVsReservesUsd: expect.closeTo(0.32, 3),
       driftVsLiabilitiesUsd: expect.closeTo(0.314959, 3),
+    });
+    expectWarnings(result, []);
+  });
+
+  it("publishes Open USD's cash-dominant mix against the registered aggregate liability", async () => {
+    const { result, network } = await runAdapter("bridge-transparency", "ousd-open-standard", {
+      network: { json: { [OUSD_ENDPOINT]: OUSD_PAYLOAD } },
+      nowSec: Math.floor(Date.parse("2026-09-30T17:18:03Z") / 1000),
+    });
+
+    expect(network.requests.map((request) => request.url)).toEqual([OUSD_ENDPOINT]);
+    expect(result.slices).toEqual([
+      expect.objectContaining({
+        sourceKey: "bridge-transparency:cash",
+        name: "Cash",
+        pct: 55.7,
+        risk: "very-low",
+        assetClass: "cash",
+      }),
+      expect.objectContaining({
+        sourceKey: "bridge-transparency:treasury",
+        name: "Treasury",
+        pct: 44.3,
+        risk: "very-low",
+        assetClass: "treasury-bill",
+      }),
+    ]);
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 477_309_854.37,
+      supplyUsd: 477_309_854.37,
+      collateralizationRatio: 1,
+      sourceTimestamp: Math.floor(Date.parse("2026-09-30T16:18:03Z") / 1000),
+      details: {
+        slug: "ousd",
+        componentSumUsd: 477_309_854.37,
+        driftVsReservesUsd: 0,
+        driftVsLiabilitiesUsd: 0,
+      },
     });
     expectWarnings(result, []);
   });

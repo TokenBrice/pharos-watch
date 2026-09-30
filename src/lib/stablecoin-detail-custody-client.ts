@@ -121,12 +121,21 @@ function resolvePostureKey(profile: CustodyProfile): CustodyPostureKey {
 
 function composeSummary(profile: CustodyProfile): string {
   const providers = profile.providers;
+  const ranked = providers
+    .filter((provider) => typeof provider.sharePct === "number" && Number.isFinite(provider.sharePct))
+    .toSorted((left, right) => right.sharePct! - left.sharePct!);
+  const largest = ranked[0];
+  const unknownShareBound = 100 - ranked.reduce((total, provider) => total + provider.sharePct!, 0);
+  const leader = largest && largest.sharePct! > 0
+    && largest.sharePct !== ranked[1]?.sharePct
+    && (ranked.length === providers.length || largest.sharePct! > unknownShareBound)
+    ? largest : null;
   const lead =
     providers.length === 0
       ? "Reserve custody counterparties are not individually disclosed"
       : providers.length === 1
         ? `Reserve custody is held by ${providers[0]!.name}`
-        : `Reserve custody spans ${providers.length} counterparties, led by ${providers[0]!.name}`;
+        : `Reserve custody spans ${providers.length} counterparties${leader ? `, led by ${leader.name}` : ""}`;
   const bankruptcy = BANKRUPTCY_CLAUSES[profile.bankruptcyRemoteness];
   const first = `${lead}; ${SEGREGATION_CLAUSES[profile.segregation]}${bankruptcy ? ` ${bankruptcy}` : ""}.`;
   const rehypothecation = REHYPOTHECATION_SENTENCES[profile.rehypothecation];

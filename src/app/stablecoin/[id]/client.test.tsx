@@ -126,6 +126,18 @@ describe("StablecoinDetailClient", () => {
     longformScrollspyNavMock.mockClear();
   });
 
+  it.each([
+    { hasYieldSection: false, hasBlacklist: false, visible: false },
+    { hasYieldSection: true, hasBlacklist: false, visible: true },
+    { hasYieldSection: false, hasBlacklist: true, visible: true },
+  ])("publishes the Activity destination only with content: $visible", ({ hasYieldSection, hasBlacklist, visible }) => {
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      hasFlows: true, hasYieldSection, hasBlacklist, blacklistSymbol: hasBlacklist ? "USDT" : null,
+    }));
+    const { container } = renderDetail();
+    expect(container.querySelector("#activity") !== null).toBe(visible);
+  });
+
   afterEach(() => {
     cleanup();
   });

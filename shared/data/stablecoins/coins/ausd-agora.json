@@ -21,16 +21,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-07-31",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-29",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos dependency-map WS1.D reserve research (2026-09-30)",
+      "reviewer": "Pharos August assurance report review (2026-09-30)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Grant Thornton July 31, 2026 Agora reserve examination (accessed 2026-09-30)",
-          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/377372bfa35fa0c22ea1113fde44f99459f3c5f3dfa547bbf3ab692d71aac53d/docs/assets/2026%20Jul%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+          "label": "Grant Thornton August 31, 2026 Agora reserve examination (accessed 2026-09-30)",
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
         }
       ]
     }

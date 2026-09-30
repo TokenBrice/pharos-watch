@@ -365,6 +365,33 @@ describe("buildReserveSyncNotice", () => {
     expect(notice?.rows).toContain("Upstream reserve source timestamp exceeds the accepted age");
     expect(notice?.toneClass).toBe(AMBER);
   });
+
+  it("never-attempted live adapter → neutral pending notice, not degraded", () => {
+    const pending = makeReserves({
+      mode: "curated-fallback",
+      sync: makeSync({ status: "skipped", bootstrap: true }),
+    });
+    const notice = buildReserveSyncNotice(pending);
+    expect(notice?.title).toBe("Live reserve sync pending");
+    expect(notice?.rows).toEqual(["The first scheduled live reserve sync has not run yet."]);
+    expect(buildReserveFootnoteModel(pending, true, "rwa backed")?.text)
+      .toBe("Live sync pending first run; showing curated reserve baseline");
+  });
+
+  it.each([
+    { lastAttemptedAt: 1_700_000_000 },
+    { lastError: "run-budget-exhausted" },
+    { failureCategory: "circuit-open" },
+    { warnings: ["Adapter returned a partial slice set"] },
+  ])("skipped bootstrap with attempt or failure evidence %o stays degraded", (evidence) => {
+    const reserves = makeReserves({
+      mode: "curated-fallback",
+      sync: makeSync({ status: "skipped", bootstrap: true, ...evidence }),
+    });
+    expect(buildReserveSyncNotice(reserves)?.title).toBe("Live reserve sync degraded");
+    expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
+      .toBe("Live sync unavailable; showing curated reserve baseline");
+  });
 });
 
 

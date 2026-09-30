@@ -9,7 +9,7 @@ import {
   makeBuildStablecoinDetailViewModelParams,
   makeReadyDetailParams,
 } from "./fixtures/stablecoin-detail-view-model";
-import { buildDetailPegPriceSnapshot, buildDetailStaleQueries } from "../stablecoin-detail-query-view-model";
+import { buildDetailMarketSnapshot, buildDetailPegPriceSnapshot, buildDetailStaleQueries } from "../stablecoin-detail-query-view-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { deriveDataHealth } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
@@ -24,6 +24,27 @@ function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummary
 }
 
 describe("stablecoin detail view-model builder", () => {
+  it("keeps current listing supply independent of unavailable previous-day and native history", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const row = {
+      id: coin.id, circulating: { peggedUSD: 477_309_888.38 }, circulatingPrevDay: {},
+      price: 0.99985, priceSource: "coingecko", priceConfidence: "single-source",
+    };
+    const market = buildDetailMarketSnapshot(coin, row as never, null, [], 1_790_793_000_000);
+    expect(market.mcap).toBe(477_309_888.38);
+    expect(market.supply).toBeCloseTo(477_309_888.38 / 0.99985);
+    expect(market.prevDay).toBeNull();
+  });
+
+  it("preserves absent current supply rather than manufacturing zero market cap", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const market = buildDetailMarketSnapshot(coin, {
+      circulating: {}, circulatingPrevDay: {}, price: 1, priceSource: "coingecko",
+    } as never, { current: 454_459_687.73, prevWeek: null, prevMonth: null }, [], 1_790_793_000_000);
+    expect(market.mcap).toBeNull();
+    expect(market.supply).toBeNull();
+  });
+
   it("uses coin-scoped liquidity warnings without hiding stale producer data or legacy advisories", () => {
     const now = Date.now();
     const globalWarning = '199 - "Quality drift: major-tvl-cliff:crvusd-curve"';

@@ -20,6 +20,7 @@ import {
   HUB_LABEL_FONT_SIZE,
   PAD,
   RING_WIDTH,
+  WIDTH,
   type GraphNode,
   type HubTier,
 } from "@/lib/contagion-layout";
@@ -52,6 +53,7 @@ interface ContagionGraphSvgProps {
   nodeScale?: number;
   suppressHubLabels?: boolean;
   showTickerLabels?: boolean;
+  bottomInsetFraction?: number;
   fillHeight?: boolean;
   nodeTooltipEl: ReactNode;
   edgeTooltipEl: ReactNode;
@@ -464,6 +466,7 @@ export function ContagionGraphSvg({
   nodeScale = 1,
   suppressHubLabels = false,
   showTickerLabels = false,
+  bottomInsetFraction = 0,
   fillHeight = false,
   nodeTooltipEl,
   edgeTooltipEl,
@@ -490,7 +493,7 @@ export function ContagionGraphSvg({
   const reducedMotion = usePrefersReducedMotion();
   const arrowId = `upstream-arrow-${instanceId}`;
   const hatchId = `unknown-supply-${instanceId}`;
-  const fitBox = footprintViewBox(nodes, positions, graph.exposureOverlay ? graph.exposureNodeIds : visibleNodeIds);
+  const fitBox = footprintViewBox(nodes, positions, graph.exposureOverlay ? graph.exposureNodeIds : visibleNodeIds, { nodeScale, bottomInsetFraction });
   // Manual viewport survives coordinate updates. Only membership/root changes release it.
   const fitIdentity = JSON.stringify([
     [...(graph.exposureOverlay?.roots ?? [])].sort(),
@@ -503,7 +506,7 @@ export function ContagionGraphSvg({
   const panMoved = useRef(false);
   const zoom = (factor: number) => {
     const [x, y, width, height] = viewBox.split(" ").map(Number);
-    const w = Math.max(80, Math.min(2400, width * factor));
+    const w = Math.max(WIDTH / 4, Math.min(WIDTH * 3, width * factor));
     const h = height * w / width;
     setViewport({ identity: fitIdentity, box: `${x + (width - w) / 2} ${y + (height - h) / 2} ${w} ${h}` });
   };
@@ -521,8 +524,8 @@ export function ContagionGraphSvg({
     </div>
     <svg
       viewBox={viewBox}
-      className={fillHeight ? "w-full lg:h-full" : "w-full"}
-      style={{ cursor: dragId ? "grabbing" : "default", touchAction: "none" }}
+      className={fillHeight ? "block aspect-[4/3] w-full lg:h-full" : "block aspect-[4/3] w-full"}
+      style={{ cursor: dragId ? "grabbing" : "default", touchAction: "none", aspectRatio: `${WIDTH} / ${HEIGHT}` }}
       onPointerDown={event => {
         if ((event.target as Element).closest("[data-node-id]")) return;
         pan.current = { x: event.clientX, y: event.clientY, box: viewBox.split(" ").map(Number), pointerId: event.pointerId };

@@ -2,9 +2,348 @@
   "id": "ousd-open-standard",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "OUSD resolves to Yes: it is announced as a centralized, issuer-controlled fully-reserved dollar operated by Open Standard, so an issuer freeze/blacklist surface is expected once contracts deploy. No mainnet contract is public yet to point at a specific freeze function.",
-    "reviewer": "Claude pre-launch addition",
-    "reviewedAt": "2026-07-01"
+    "sources": [
+      {
+        "label": "Bridge OUSD supply and reserve reconciliation",
+        "url": "https://reserves.bridge.xyz/ousd"
+      },
+      {
+        "label": "Tempo pinned RPC reads",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "TIP-20 specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "TIP-403 specification",
+        "url": "https://tempo.xyz/developers/docs/protocol/tip403/spec"
+      },
+      {
+        "label": "OUSD reserve-ledger mint transaction",
+        "url": "https://explore.tempo.xyz/tx/0x2fd5beb56ddbbc67f7a37d8b6b6b0d9672fd1b4572999ce6b4f43b7134f6f155"
+      },
+      {
+        "label": "Ethereum pinned RPC reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Verified StablecoinTemplateV3 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x264048239dd1b5939599fae8e6000df40248d524"
+      },
+      {
+        "label": "Verified ReserveLedgerWrappedHandler",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1767c61c9ec15126de4eb02cd9a91474584a1873"
+      },
+      {
+        "label": "Base pinned RPC reads",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "B20 constants",
+        "url": "https://docs.base.org/specifications/b20/reference/constants"
+      },
+      {
+        "label": "B20 roles and pause",
+        "url": "https://docs.base.org/specifications/b20/concepts/roles-and-pause"
+      },
+      {
+        "label": "B20 policies",
+        "url": "https://docs.base.org/specifications/b20/concepts/policies"
+      },
+      {
+        "label": "OUSD native issuance transaction",
+        "url": "https://basescan.org/tx/0x24e9953d8efd8744eed28be5f3c43cd5a7856157ca39e55b840f996269ac0aac"
+      },
+      {
+        "label": "Finalized Solana RPC reads",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "OUSD native Mint transaction",
+        "url": "https://explorer.solana.com/tx/ncPiAZyBwkau1Fm7PaQ2QgrzuYaAPWMcwfj6WX9nkKFbovdVWJdJG6HmgRn63v5bhnXUSJBUVihKyNtJupNz1kz"
+      },
+      {
+        "label": "Solana program upgrade semantics",
+        "url": "https://solana.com/docs/core/programs"
+      },
+      {
+        "label": "Permanent delegate semantics",
+        "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+      },
+      {
+        "label": "Squads V3 state layout",
+        "url": "https://raw.githubusercontent.com/Squads-Protocol/squads-mpl/main/programs/squads-mpl/src/state.rs"
+      }
+    ],
+    "evidence": "RPC https://rpc.tempo.xyz at block 41972876, observed 2026-09-30T16:24:40.633Z: TIP-20 native token code 0xef, zero EIP-1967 slots, paused=false, supplyCap=1,000,000,001 OUSD, transferPolicyId=2 (blacklist), policy admin 0x251d2711ebeb0a09fdb8992f5506f3d949175246. DEFAULT_ADMIN_ROLE is held by 0x79c6631fa15cda38777fb9dd7a6348baee794a4e; ISSUER_ROLE is held by reserve-ledger handler 0x5176dfcab18ff5519bc1cfa4c6ef2d8008371d5f. All inspected role admins are zero. Neither address holds PAUSE_ROLE, UNPAUSE_ROLE or BURN_BLOCKED_ROLE. The default admin can grant those roles and change the policy immediately. Mint transaction 0x2fd5beb56ddbbc67f7a37d8b6b6b0d9672fd1b4572999ce6b4f43b7134f6f155 at block 41967286 creates local reserve-ledger tokens and OUSD in the same transaction, establishing native issuer accounting rather than a remote-lock representation. The handler is an ERC-1967 proxy with implementation 0x86234502292ee398a0c6ac4f060b315dd020d179; its two default admins are 0xd440e868ceb9aee13034e329d3c7a8d18c9150d2 and 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. UPGRADE_INTERFACE_VERSION=5.0.0 and implementation proxiableUUID matches the EIP-1967 implementation slot. At the same block, observed 2026-09-30T16:43:41.697Z, eth_call upgradeToAndCall(currentImplementation, emptyData) from 0x79c663 succeeded, establishing a zero-delay UUPS replacement path. The latter account delegates through EIP-7702 to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b; no Safe quorum is claimed. RPC https://ethereum-rpc.publicnode.com at block 26091471, observed 2026-09-30T16:24:41.114Z: minimal ERC-1967 proxy delegates to verified Bridge StablecoinTemplateV3 0x264048239dd1b5939599fae8e6000df40248d524, admin slot zero. Sole DEFAULT_ADMIN_ROLE and owner is 0x79c6631fa15cda38777fb9dd7a6348baee794a4e, with empty account code and no on-chain Safe. It controls roles, cap, policy selection and UUPS upgrades without a contract delay. Sole MINTER_ROLE is ReserveLedgerWrappedHandler 0x1767c61c9ec15126de4eb02cd9a91474584a1873; PAUSER_ROLE, UNPAUSER_ROLE, BLOCKED_ADDRESS_BURNER_ROLE and UNWRAPPER_ROLE have zero members. paused=false; maxSupply=1,000,000,001 OUSD; transfer policy 7 is blacklist type 1 at AuthRegistry 0x69026c540cda3d42a1530d0fa3feb092d0bc944d, admin 0x251d2711ebeb0a09fdb8992f5506f3d949175246; mint recipient policy is 10. Verified handler mint creates local ReserveLedger 0x25547a44e7020c8ba39d5bfaaa5fb11a332fe91f and wraps it into OUSD, not a cross-chain lockbox. TOKEN_AUTHORITY=0x0198f9d5c8e8ef8869d70d387d3efa997f727464, whose sole default admin is the same 0x79c663 account; transaction mint limit is 500,000,000 OUSD. The wrap path is ledger-backed but the ledger and upgrade administrators remain privileged. RPC https://mainnet.base.org at block 51998343, observed 2026-09-30T16:33:54.998Z: code 0xef and zero EIP-1967 slots identify a B20 native token, consistent with Base B20 documentation and successful B20-only policy/role getters. DEFAULT_ADMIN_ROLE is held by empty-code EOA 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. MINT_ROLE is held by verified ReserveLedgerBackedHandler 0x4787ad0324a68152834f150326fe2357af8993cc. At block 51997796, transaction 0x24e9953d8efd8744eed28be5f3c43cd5a7856157ca39e55b840f996269ac0aac minted local ReserveLedger 0x00b65e1153a839570f38b506fd46f8a14540485a and native OUSD together. supplyCap=1,000,000,001 OUSD. Additional https://mainnet.base.org reads at block 51998562, observed 2026-09-30T16:41:11.954Z, show pausedFeatures empty, TRANSFER_SENDER_POLICY=122 with policy admin 0x251d2711ebeb0a09fdb8992f5506f3d949175246, receiver/executor policies zero. SEIZE_EXEMPT_POLICY and SEIZE_RECEIVER_POLICY revert as unsupported at this observation; no active seizeWithMemo capability is asserted. Admin can change supply cap and policy and grant pause/burn-blocked roles. This is native issuance, not an EIP-7702 delegation or a proxy whose implementation can be inferred from the one-byte code. At block 51998562, observed 2026-09-30T16:43:41.829Z, handler TOKEN_AUTHORITY is 0xf37a982d1f6c9d1cc9d792aaba494264e0f315d7; that authority has two default admins, 0xd440e868ceb9aee13034e329d3c7a8d18c9150d2 and 0x79c6631fa15cda38777fb9dd7a6348baee794a4e, and per-transaction mint limit 750,000,000 OUSD. Finalized RPC https://api.mainnet-beta.solana.com mint read at slot 452017685, observed 2026-09-30T16:25:21.719Z: Token-2022 mint authority EBArgZpd8iv7QRgUFhCasaHxck5oujhHNCkonoa1kEKA, freeze authority H2UbwLLJAen1W2z6oRCYqZCFo6BidkU4QFDw2eWxL9W4, permanent delegate Aj2gxCSQ7A7eTnUL2VnyT3KQa79AcZi5x15rPRSnw6RA. Mint-close, confidential-transfer, transfer-hook, metadata-pointer, metadata-update and pausable authorities are E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw; transferHook programId=null, defaultAccountState=initialized and paused=false. Successful Mint transaction ncPiAZyBwkau1Fm7PaQ2QgrzuYaAPWMcwfj6WX9nkKFbovdVWJdJG6HmgRn63v5bhnXUSJBUVihKyNtJupNz1kz at slot 452017788 invokes Bridge program 8j1GB7MJ1xkbNnaHTboTGynzqQQbYfaRqKFh3NN67Q87 and mints local reserve-ledger ordRfw9q3nTSK5DR2H9o1SA6TtL3HRzAMKVXQsigayp and OUSD in the same call, signed by backend 3ZGf3ERiitfTR9RCChchfo7QWmSfH1WArJ3jjrtMXnKa. At finalized slot 452020311, observed 2026-09-30T16:37:02.331Z, ProgramData 5iaSiFSPdbK8mTzxiBA1mu4mtnHw7sm1B3g2mXiLqi9z names E7Jd as upgrade authority, which is a system-owned empty-data account. Token-2022 ProgramData names AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz; Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ decodes to threshold 4 and six members. Squads V3 source seeds [squad, multisig pubkey, authority_index=1 as little-endian u32, authority, bump=254] with program SMPLecH534NA9acpos4G6x7uf3LWbCAwZQE9e8ZekMu derive exactly AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz; the derived address is off-curve. This closes controller identity at 4-of-6. The fetched Squads V3 state layout has no timelock or module/guard field. Direct holder restriction is established through mutable blacklist policies on Tempo/Ethereum/Base and Token-2022 freeze, permanent delegate, pause and mutable transfer hook on Solana. Unpaused and currently unassigned operating roles do not remove the administrators' ability to install restrictions. No live FreezeWatch event scanner is added by this evidence review.",
+    "reviewer": "Claude OUSD promotion review",
+    "reviewedAt": "2026-09-30"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Four deployments have observed native Bridge reserve-ledger issuance. Local reserve-ledger wrapping is issuer accounting and is not classified as cross-chain bridging. No OUSD-specific bridge rail, peer, DVN, lockbox or validator route is verified, so no structured bridge controls are asserted. Native minters and mint-logic replacement belong only in Mint Authority; future cross-chain rails require a separate review.",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Claude OUSD promotion review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge OUSD supply and reserve reconciliation",
+        "url": "https://reserves.bridge.xyz/ousd"
+      },
+      {
+        "label": "Tempo pinned RPC reads",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "TIP-20 specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "TIP-403 specification",
+        "url": "https://tempo.xyz/developers/docs/protocol/tip403/spec"
+      },
+      {
+        "label": "OUSD reserve-ledger mint transaction",
+        "url": "https://explore.tempo.xyz/tx/0x2fd5beb56ddbbc67f7a37d8b6b6b0d9672fd1b4572999ce6b4f43b7134f6f155"
+      },
+      {
+        "label": "Ethereum pinned RPC reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Verified StablecoinTemplateV3 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x264048239dd1b5939599fae8e6000df40248d524"
+      },
+      {
+        "label": "Verified ReserveLedgerWrappedHandler",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1767c61c9ec15126de4eb02cd9a91474584a1873"
+      },
+      {
+        "label": "Base pinned RPC reads",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "B20 constants",
+        "url": "https://docs.base.org/specifications/b20/reference/constants"
+      },
+      {
+        "label": "B20 roles and pause",
+        "url": "https://docs.base.org/specifications/b20/concepts/roles-and-pause"
+      },
+      {
+        "label": "B20 policies",
+        "url": "https://docs.base.org/specifications/b20/concepts/policies"
+      },
+      {
+        "label": "OUSD native issuance transaction",
+        "url": "https://basescan.org/tx/0x24e9953d8efd8744eed28be5f3c43cd5a7856157ca39e55b840f996269ac0aac"
+      },
+      {
+        "label": "Finalized Solana RPC reads",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "OUSD native Mint transaction",
+        "url": "https://explorer.solana.com/tx/ncPiAZyBwkau1Fm7PaQ2QgrzuYaAPWMcwfj6WX9nkKFbovdVWJdJG6HmgRn63v5bhnXUSJBUVihKyNtJupNz1kz"
+      },
+      {
+        "label": "Solana program upgrade semantics",
+        "url": "https://solana.com/docs/core/programs"
+      },
+      {
+        "label": "Permanent delegate semantics",
+        "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+      },
+      {
+        "label": "Squads V3 state layout",
+        "url": "https://raw.githubusercontent.com/Squads-Protocol/squads-mpl/main/programs/squads-mpl/src/state.rs"
+      }
+    ],
+    "routes": [
+      {
+        "id": "tempo:0x20c0000000000000000000006a37da5c996874be",
+        "destinationChain": "tempo",
+        "canonicalChain": "tempo",
+        "contractAddress": "0x20c0000000000000000000006a37da5c996874be",
+        "protocol": "Bridge OUSD tempo native reserve-ledger issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "RPC https://rpc.tempo.xyz at block 41972876, observed 2026-09-30T16:24:40.633Z: TIP-20 native token code 0xef, zero EIP-1967 slots, paused=false, supplyCap=1,000,000,001 OUSD, transferPolicyId=2 (blacklist), policy admin 0x251d2711ebeb0a09fdb8992f5506f3d949175246. DEFAULT_ADMIN_ROLE is held by 0x79c6631fa15cda38777fb9dd7a6348baee794a4e; ISSUER_ROLE is held by reserve-ledger handler 0x5176dfcab18ff5519bc1cfa4c6ef2d8008371d5f. All inspected role admins are zero. Neither address holds PAUSE_ROLE, UNPAUSE_ROLE or BURN_BLOCKED_ROLE. The default admin can grant those roles and change the policy immediately. Mint transaction 0x2fd5beb56ddbbc67f7a37d8b6b6b0d9672fd1b4572999ce6b4f43b7134f6f155 at block 41967286 creates local reserve-ledger tokens and OUSD in the same transaction, establishing native issuer accounting rather than a remote-lock representation. The handler is an ERC-1967 proxy with implementation 0x86234502292ee398a0c6ac4f060b315dd020d179; its two default admins are 0xd440e868ceb9aee13034e329d3c7a8d18c9150d2 and 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. UPGRADE_INTERFACE_VERSION=5.0.0 and implementation proxiableUUID matches the EIP-1967 implementation slot. At the same block, observed 2026-09-30T16:43:41.697Z, eth_call upgradeToAndCall(currentImplementation, emptyData) from 0x79c663 succeeded, establishing a zero-delay UUPS replacement path. The latter account delegates through EIP-7702 to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b; no Safe quorum is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x5176dfcab18ff5519bc1cfa4c6ef2d8008371d5f",
+        "failureDomainKeys": [
+          "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+          "tempo:0xd440e868ceb9aee13034e329d3c7a8d18c9150d2",
+          "tempo:0x251d2711ebeb0a09fdb8992f5506f3d949175246"
+        ],
+        "observedAt": "2026-09-30",
+        "observedBlock": 41972876,
+        "sources": [
+          {
+            "label": "Bridge OUSD official deployments",
+            "url": "https://reserves.bridge.xyz/ousd"
+          },
+          {
+            "label": "Tempo pinned RPC reads",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "TIP-20 specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          },
+          {
+            "label": "TIP-403 specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip403/spec"
+          },
+          {
+            "label": "OUSD reserve-ledger mint transaction",
+            "url": "https://explore.tempo.xyz/tx/0x2fd5beb56ddbbc67f7a37d8b6b6b0d9672fd1b4572999ce6b4f43b7134f6f155"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
+        "protocol": "Bridge OUSD ethereum native reserve-ledger issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "RPC https://ethereum-rpc.publicnode.com at block 26091471, observed 2026-09-30T16:24:41.114Z: minimal ERC-1967 proxy delegates to verified Bridge StablecoinTemplateV3 0x264048239dd1b5939599fae8e6000df40248d524, admin slot zero. Sole DEFAULT_ADMIN_ROLE and owner is 0x79c6631fa15cda38777fb9dd7a6348baee794a4e, with empty account code and no on-chain Safe. It controls roles, cap, policy selection and UUPS upgrades without a contract delay. Sole MINTER_ROLE is ReserveLedgerWrappedHandler 0x1767c61c9ec15126de4eb02cd9a91474584a1873; PAUSER_ROLE, UNPAUSER_ROLE, BLOCKED_ADDRESS_BURNER_ROLE and UNWRAPPER_ROLE have zero members. paused=false; maxSupply=1,000,000,001 OUSD; transfer policy 7 is blacklist type 1 at AuthRegistry 0x69026c540cda3d42a1530d0fa3feb092d0bc944d, admin 0x251d2711ebeb0a09fdb8992f5506f3d949175246; mint recipient policy is 10. Verified handler mint creates local ReserveLedger 0x25547a44e7020c8ba39d5bfaaa5fb11a332fe91f and wraps it into OUSD, not a cross-chain lockbox. TOKEN_AUTHORITY=0x0198f9d5c8e8ef8869d70d387d3efa997f727464, whose sole default admin is the same 0x79c663 account; transaction mint limit is 500,000,000 OUSD. The wrap path is ledger-backed but the ledger and upgrade administrators remain privileged.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1767c61c9ec15126de4eb02cd9a91474584a1873",
+        "failureDomainKeys": [
+          "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+          "ethereum:0x251d2711ebeb0a09fdb8992f5506f3d949175246"
+        ],
+        "observedAt": "2026-09-30",
+        "observedBlock": 26091471,
+        "sources": [
+          {
+            "label": "Bridge OUSD official deployments",
+            "url": "https://reserves.bridge.xyz/ousd"
+          },
+          {
+            "label": "Ethereum pinned RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Verified StablecoinTemplateV3 implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x264048239dd1b5939599fae8e6000df40248d524"
+          },
+          {
+            "label": "Verified ReserveLedgerWrappedHandler",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1767c61c9ec15126de4eb02cd9a91474584a1873"
+          }
+        ]
+      },
+      {
+        "id": "base:0xb2000000000000000000002feb517dfec7415344",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xb2000000000000000000002feb517dfec7415344",
+        "protocol": "Bridge OUSD base native reserve-ledger issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "RPC https://mainnet.base.org at block 51998343, observed 2026-09-30T16:33:54.998Z: code 0xef and zero EIP-1967 slots identify a B20 native token, consistent with Base B20 documentation and successful B20-only policy/role getters. DEFAULT_ADMIN_ROLE is held by empty-code EOA 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. MINT_ROLE is held by verified ReserveLedgerBackedHandler 0x4787ad0324a68152834f150326fe2357af8993cc. At block 51997796, transaction 0x24e9953d8efd8744eed28be5f3c43cd5a7856157ca39e55b840f996269ac0aac minted local ReserveLedger 0x00b65e1153a839570f38b506fd46f8a14540485a and native OUSD together. supplyCap=1,000,000,001 OUSD. Additional https://mainnet.base.org reads at block 51998562, observed 2026-09-30T16:41:11.954Z, show pausedFeatures empty, TRANSFER_SENDER_POLICY=122 with policy admin 0x251d2711ebeb0a09fdb8992f5506f3d949175246, receiver/executor policies zero. SEIZE_EXEMPT_POLICY and SEIZE_RECEIVER_POLICY revert as unsupported at this observation; no active seizeWithMemo capability is asserted. Admin can change supply cap and policy and grant pause/burn-blocked roles. This is native issuance, not an EIP-7702 delegation or a proxy whose implementation can be inferred from the one-byte code. At block 51998562, observed 2026-09-30T16:43:41.829Z, handler TOKEN_AUTHORITY is 0xf37a982d1f6c9d1cc9d792aaba494264e0f315d7; that authority has two default admins, 0xd440e868ceb9aee13034e329d3c7a8d18c9150d2 and 0x79c6631fa15cda38777fb9dd7a6348baee794a4e, and per-transaction mint limit 750,000,000 OUSD.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x4787ad0324a68152834f150326fe2357af8993cc",
+        "failureDomainKeys": [
+          "tempo:0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+          "tempo:0xd440e868ceb9aee13034e329d3c7a8d18c9150d2",
+          "base:0x251d2711ebeb0a09fdb8992f5506f3d949175246"
+        ],
+        "observedAt": "2026-09-30",
+        "observedBlock": 51998343,
+        "sources": [
+          {
+            "label": "Bridge OUSD official deployments",
+            "url": "https://reserves.bridge.xyz/ousd"
+          },
+          {
+            "label": "Base pinned RPC reads",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "B20 constants",
+            "url": "https://docs.base.org/specifications/b20/reference/constants"
+          },
+          {
+            "label": "B20 roles and pause",
+            "url": "https://docs.base.org/specifications/b20/concepts/roles-and-pause"
+          },
+          {
+            "label": "B20 policies",
+            "url": "https://docs.base.org/specifications/b20/concepts/policies"
+          },
+          {
+            "label": "OUSD native issuance transaction",
+            "url": "https://basescan.org/tx/0x24e9953d8efd8744eed28be5f3c43cd5a7856157ca39e55b840f996269ac0aac"
+          }
+        ]
+      },
+      {
+        "id": "solana:ousd2mJsPEckLHcSCDxyKD7NDGARZcfLbDZkKiatYHB",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "ousd2mJsPEckLHcSCDxyKD7NDGARZcfLbDZkKiatYHB",
+        "protocol": "Bridge OUSD solana native reserve-ledger issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Finalized RPC https://api.mainnet-beta.solana.com mint read at slot 452017685, observed 2026-09-30T16:25:21.719Z: Token-2022 mint authority EBArgZpd8iv7QRgUFhCasaHxck5oujhHNCkonoa1kEKA, freeze authority H2UbwLLJAen1W2z6oRCYqZCFo6BidkU4QFDw2eWxL9W4, permanent delegate Aj2gxCSQ7A7eTnUL2VnyT3KQa79AcZi5x15rPRSnw6RA. Mint-close, confidential-transfer, transfer-hook, metadata-pointer, metadata-update and pausable authorities are E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw; transferHook programId=null, defaultAccountState=initialized and paused=false. Successful Mint transaction ncPiAZyBwkau1Fm7PaQ2QgrzuYaAPWMcwfj6WX9nkKFbovdVWJdJG6HmgRn63v5bhnXUSJBUVihKyNtJupNz1kz at slot 452017788 invokes Bridge program 8j1GB7MJ1xkbNnaHTboTGynzqQQbYfaRqKFh3NN67Q87 and mints local reserve-ledger ordRfw9q3nTSK5DR2H9o1SA6TtL3HRzAMKVXQsigayp and OUSD in the same call, signed by backend 3ZGf3ERiitfTR9RCChchfo7QWmSfH1WArJ3jjrtMXnKa. At finalized slot 452020311, observed 2026-09-30T16:37:02.331Z, ProgramData 5iaSiFSPdbK8mTzxiBA1mu4mtnHw7sm1B3g2mXiLqi9z names E7Jd as upgrade authority, which is a system-owned empty-data account. Token-2022 ProgramData names AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz; Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ decodes to threshold 4 and six members. Squads V3 source seeds [squad, multisig pubkey, authority_index=1 as little-endian u32, authority, bump=254] with program SMPLecH534NA9acpos4G6x7uf3LWbCAwZQE9e8ZekMu derive exactly AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz; the derived address is off-curve. This closes controller identity at 4-of-6. The fetched Squads V3 state layout has no timelock or module/guard field.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "8j1GB7MJ1xkbNnaHTboTGynzqQQbYfaRqKFh3NN67Q87",
+        "failureDomainKeys": [
+          "solana:E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw",
+          "platform:solana-token-2022-program",
+          "program:solana:8j1GB7MJ1xkbNnaHTboTGynzqQQbYfaRqKFh3NN67Q87"
+        ],
+        "observedAt": "2026-09-30",
+        "observedBlock": 452020311,
+        "sources": [
+          {
+            "label": "Bridge OUSD official deployments",
+            "url": "https://reserves.bridge.xyz/ousd"
+          },
+          {
+            "label": "Finalized Solana RPC reads",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "OUSD native Mint transaction",
+            "url": "https://explorer.solana.com/tx/ncPiAZyBwkau1Fm7PaQ2QgrzuYaAPWMcwfj6WX9nkKFbovdVWJdJG6HmgRn63v5bhnXUSJBUVihKyNtJupNz1kz"
+          },
+          {
+            "label": "Solana program upgrade semantics",
+            "url": "https://solana.com/docs/core/programs"
+          },
+          {
+            "label": "Permanent delegate semantics",
+            "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+          }
+        ]
+      }
+    ]
   }
 }

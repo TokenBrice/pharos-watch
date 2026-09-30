@@ -118,7 +118,9 @@ export function DetailLiquidityActivitySections({
       </div>
 
       <div ref={activityGateRef} className="space-y-6">
-        <SectionBanner id="activity" label="Activity" icon={HeartPulse} active={activeBannerId === "activity"} />
+        {viewModel.hasYieldSection || viewModel.hasBlacklist ? (
+          <SectionBanner id="activity" label="Activity" icon={HeartPulse} active={activeBannerId === "activity"} />
+        ) : null}
         {viewModel.hasYieldSection ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
         {viewModel.hasBlacklist ? (
           <div>

@@ -61,7 +61,7 @@ async function prepareAgoraIndexHtml(html: string): Promise<string> {
     return `href="${manifest.reportUrl}"`;
   });
   if (reviewedCount !== 1) {
-    throw new Error(`${ADAPTER_KEY}: reviewed July report link missing or ambiguous on official index`);
+    throw new Error(`${ADAPTER_KEY}: reviewed report link missing or ambiguous on official index`);
   }
   return rewritten;
 }
@@ -71,6 +71,10 @@ export const AGORA_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   product: "AUSD",
   profile: "ausd-v1",
   requiredAssetCodes: ["us-treasury-securities", "us-treasury-repos"],
+  reconciliation: {
+    // Reviewed August category sum is $1 below the printed reserve total.
+    reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
+  },
   classifications: {
     "us-treasury-securities": {
       name: "Short-dated U.S. Treasury securities held in the Agora Reserve Fund",

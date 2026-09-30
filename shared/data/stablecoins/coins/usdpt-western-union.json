@@ -50,17 +50,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-28",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-09 (July report PDF read; manifest compilation reviewed in lockstep)",
+      "reviewer": "Pharos reserve research 2026-09-30 (August examination, asset schedules and liabilities reviewed in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USDPT reserve examination for July 2026",
-          "url": "https://learn.anchorage.com/07.31.26_USDPT-Stablecoin-Attestation-Report-signed.pdf"
+          "label": "Deloitte USDPT reserve examination for August 2026",
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
         },
         {
           "label": "Anchorage Digital USDPT reserve-attestation index",

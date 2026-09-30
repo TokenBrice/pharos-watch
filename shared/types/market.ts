@@ -73,6 +73,10 @@ export const StablecoinDetailResponseSchema = z.object({
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
+  /** Current admitted list USD buckets; distinct from the provider's dated token history. */
+  currentCirculatingUSD: PegBucketsSchema.optional(),
+  currentCirculatingPrevDayUSD: PegBucketsSchema.optional(),
+  currentSupplyObservedAt: z.number().finite().positive().optional(),
   tokens: z.array(StablecoinDetailTokenSchema).optional(),
 }).passthrough();
 export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;

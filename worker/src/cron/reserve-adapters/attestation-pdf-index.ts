@@ -183,6 +183,15 @@ const DAY_DATE_PARSERS: readonly ReportDateParserEntry[] = [
     month: 2,
     day: 1,
   },
+  // Unambiguous US-style dates in issuer filenames (e.g. 06.30.2026).
+  // Days above 12 cannot be confused with the day-first convention above.
+  {
+    kind: "day",
+    regex: /(?<![A-Za-z0-9])(0?[1-9]|1[0-2])[-_.](1[3-9]|2\d|3[01])[-_.]((?:19|20)\d{2})(?![A-Za-z0-9])/g,
+    year: 3,
+    month: 1,
+    day: 2,
+  },
   // Month DD, YYYY
   {
     kind: "day",

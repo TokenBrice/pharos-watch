@@ -1,4 +1,5 @@
 "use client";
+import { stablecoinLabel } from "@/lib/stablecoin-label";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -320,7 +321,7 @@ export function CompareClient() {
 
   const activeSelectionLabel = selectedCoins
     .filter((coin): coin is NonNullable<(typeof selectedCoins)[number]> => coin !== null)
-    .map((coin) => coin.symbol)
+    .map(stablecoinLabel)
     .join(" vs ");
   const selectionInsights = useMemo(
     () => buildCompareSelectionInsights({ selectedIds, selectedCoins, comparisonCoins }),
@@ -364,7 +365,7 @@ export function CompareClient() {
             <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="pharos-kicker">Active Comparison</p>
-                <p className="truncate text-sm text-foreground">
+                <p className="break-words text-sm text-foreground">
                   {activeSelectionLabel}
                 </p>
               </div>
@@ -390,7 +391,7 @@ export function CompareClient() {
                         href={buildStablecoinUrl(coin.id)}
                         className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-accent lg:min-h-9"
                       >
-                        {coin.symbol} detail
+                        {stablecoinLabel(coin)} detail
                       </Link>
                     ))}
                   </div>
@@ -531,7 +532,7 @@ export function CompareClient() {
                       <div key={card.id} className="flex items-center gap-1.5 text-sm">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                         <span>
-                          {symbol}: {card.grade}
+                          {stablecoinLabel({ id: card.id, symbol })}: {card.grade}
                         </span>
                       </div>
                     ))}

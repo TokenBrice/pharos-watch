@@ -18,17 +18,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-28",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos night watch 2026-09-05 (July report and composition reviewed together)",
+      "reviewer": "Pharos August assurance report review 2026-09-30 (PDF, letterhead, signature and composition reviewed)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Anchorage USDGO Reserve Report - July 31, 2026",
-          "url": "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf"
+          "label": "Anchorage USDGO Reserve Report - August 31, 2026",
+          "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
         }
       ]
     }

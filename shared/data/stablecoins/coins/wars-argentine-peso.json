@@ -91,14 +91,13 @@
   "governanceQuality": "single-entity",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-    "provider": "Pablo Eduardo Soto, Contador Público, CPCECABA T.275 F.153 (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
+    "url": "https://action.ripio.com/en/wfiat-attestations",
+    "provider": "Pablo Eduardo Soto, partner at SLD y Asociados S.A., CPCECABA T.275 F.153 (certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Argentina",
     "latestReport": {
-      "periodEnd": "2026-03-31",
-      "publishedAt": "2026-04-22",
+      "periodEnd": "2026-06-30",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -106,8 +105,8 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "Independent public accountant certification for wARS - March 2026",
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+          "label": "Independent public accountant certification for wARS - June 2026",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wARS%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       ]
     }
@@ -118,13 +117,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "wars-argentine-peso",
     "display": {
-      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-      "label": "Ripio wFIAT Updates"
+      "url": "https://action.ripio.com/en/wfiat-attestations",
+      "label": "Ripio wFIAT attestations"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "url": "https://action.ripio.com/en/wfiat-attestations"
       }
     },
     "params": {
@@ -141,8 +140,8 @@
         }
       ],
       "reviewedReport": {
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf",
-        "balanceDate": "2026-03-31"
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wARS%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+        "balanceDate": "2026-06-30"
       }
     }
   },

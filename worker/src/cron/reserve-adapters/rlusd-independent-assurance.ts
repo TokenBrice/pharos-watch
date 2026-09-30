@@ -1,6 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
 import { decodeHtmlEntities } from "./helpers";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
@@ -11,7 +12,12 @@ import type { AdapterContext, AdapterResult } from "./types";
 function rlusdReportDate(href: string): string | null {
   const filename = (decodeHtmlEntities(decodeURIComponent(href)).split("/").pop() ?? "").replace(/_/g, " ");
   const match = filename.match(/\b(January|February|March|April|May|June|July|August|September|Sept|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[ '’-]+(20\d{2}|\d{2})(?!\d)/i);
-  if (!match) return null;
+  if (!match) {
+    // August's filename omits the year. Only the exact reviewed artifact may
+    // inherit its document-verified date; unknown month-only URLs stay closed.
+    const reviewed = getIndependentAssuranceManifest("RLUSD");
+    return new URL(href).href === new URL(reviewed.reportUrl).href ? reviewed.reportDate : null;
+  }
   const month = monthNumberFromLabel(match[1]);
   const year = Number(match[2]) + (match[2].length === 2 ? 2000 : 0);
   return month ? formatValidIsoDate(year, month, lastDayOfMonth(year, month)!) : null;

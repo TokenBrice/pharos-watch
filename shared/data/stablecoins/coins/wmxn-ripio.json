@@ -14,15 +14,14 @@
   "pegMechanism": "Issuer-controlled wFIAT token: the Ripio affiliate mints WMXN against local Mexican-peso reserves and burns supply as needed, holding 1 WMXN = 1 MXN through on/off-ramp convertibility on Ripio and other VASP platforms plus DEX arbitrage; holders have no contractual on-chain redemption right",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf",
-    "provider": "Pablo Eduardo Soto (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
+    "url": "https://action.ripio.com/en/wfiat-attestations",
+    "provider": "Pablo Eduardo Soto, partner at SLD y Asociados S.A. (certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Argentina",
     "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires",
     "latestReport": {
-      "periodEnd": "2026-03-31",
-      "publishedAt": "2026-04-24",
+      "periodEnd": "2026-06-30",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -30,8 +29,8 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "Independent public accountant certification for wMXN - March 2026",
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+          "label": "Independent public accountant certification for wMXN - June 2026",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wMXN%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       ]
     }
@@ -98,13 +97,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "wmxn-ripio",
     "display": {
-      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-      "label": "Ripio local stablecoins"
+      "url": "https://action.ripio.com/en/wfiat-attestations",
+      "label": "Ripio wFIAT attestations"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "url": "https://action.ripio.com/en/wfiat-attestations"
       }
     },
     "params": {
@@ -121,8 +120,8 @@
         }
       ],
       "reviewedReport": {
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf",
-        "balanceDate": "2026-03-31"
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wMXN%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+        "balanceDate": "2026-06-30"
       }
     }
   },

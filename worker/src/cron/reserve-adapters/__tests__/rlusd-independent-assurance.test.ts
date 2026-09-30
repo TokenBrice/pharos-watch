@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
-import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
+import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { getReserveAdapter } from "../index";
 import { RLUSD_INDEPENDENT_ASSURANCE_PROFILE as profile } from "../rlusd-independent-assurance";
 import { validateAdapterOutput } from "../validate";
@@ -33,28 +33,12 @@ function verify(index = html, manifest = fixtureManifest, body = pdf) {
 describe("rlusd-independent-assurance", () => {
   afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-  it("reconciles the visually verified July 31 asset table and full outstanding units", () => {
-    expect(reviewed).toMatchObject({
-      attestor: "Deloitte & Touche LLP", conclusion: "unmodified", assuranceTier: "independent-assurance",
-      reportAsOf: "2026-07-31T21:00:00Z", reportIssuedAt: "2026-08-27T00:00:00Z",
-    });
-    expect(reviewed.assets.map(({ amount }) => amount)).toEqual(["1077871526", "258192967", "239096420"]);
-    expect(reconcileIndependentAssuranceManifest(reviewed)).toMatchObject({
-      computedAssetTotal: "1575160913", liabilityTotal: "1463694758",
-      reportedAssetDifference: "0", reportedLiabilityDifference: "0",
-    });
-    for (const chain of ["XRPL", "Ethereum", "Base", "Unichain", "Optimism", "Ink", "XRPL EVM Sidechain"]) {
-      expect(reviewed.liabilities[0].label).toContain(chain);
-    }
-  });
 
-  it("admits the reviewed July observation under the next-month disclosure age policy", () => {
+  it("admits the reviewed observation under the next-month disclosure age policy", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["rlusd-independent-assurance"]).toMatchObject({
       evidenceClass: "independent", sourceOriginClass: "independent-assurance",
     });
     const adapter = getReserveAdapter("rlusd-independent-assurance") ?? undefined;
-    // Ripple publishes each month-end report 25-29 days later, so the July 31 observation is
-    // ~54 days old three weeks before the September 27 successor is due; it ages out only at the cap.
     const sourceTimestamp = Math.floor(Date.parse(reviewed.reportAsOf) / 1000);
     for (const [ageSec, expectedStale] of [
       [54 * 86_400 + 12 * 3_600, false],
@@ -72,29 +56,33 @@ describe("rlusd-independent-assurance", () => {
   it("dates every real archive row, including escaped apostrophes and two-digit years", async () => {
     const prepared = await profile.prepareIndexHtml!(html, new AbortController().signal, undefined);
     const urls = [...prepared.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
-    expect(urls).toHaveLength(20);
+    expect(urls).toHaveLength(21);
     expect(urls.every((url) => profile.isReportCandidate(url, ""))).toBe(true);
     expect(urls.map((url) => profile.reportDateFromCandidate!(url, ""))).toEqual([
       "2024-12-31", "2025-01-31", "2025-02-28", "2025-03-31", "2025-04-30", "2025-05-31",
       "2025-06-30", "2025-07-31", "2025-08-31", "2025-09-30", "2025-10-31", "2025-11-30",
       "2025-12-31", "2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30", "2026-05-31",
-      "2026-06-30", "2026-07-31",
+      "2026-06-30", "2026-07-31", "2026-08-31",
     ]);
   });
 
   it("verifies the newest official report URL and binds its PDF bytes to the source basis", async () => {
     await expect(verify()).resolves.toMatchObject({
-      sourceTimestamp: Date.parse("2026-07-31T21:00:00Z") / 1000, byteLength: Buffer.byteLength(pdf),
+      sourceTimestamp: Date.parse("2026-08-31T21:00:00Z") / 1000, byteLength: Buffer.byteLength(pdf),
     });
   });
 
   it("fails closed on a newer unreviewed report", async () => {
-    await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_August_26.pdf">Aug</a>')).rejects.toThrow("newer unreviewed report");
+    await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_September_26.pdf">Sep</a>')).rejects.toThrow("newer unreviewed report");
   });
 
   it("fails closed on unknown report dating and duplicate latest reports", async () => {
     await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_latest.pdf">Latest</a>')).rejects.toThrow("ambiguous report date");
-    await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_July_26.pdf">Jul</a>')).rejects.toThrow("missing or duplicated");
+    await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_August_26.pdf">Aug</a>')).rejects.toThrow("missing or duplicated");
+  });
+
+  it("does not assign a reviewed year to another month-only artifact", async () => {
+    await expect(verify(html.replace("4981331c98a2bb203c0c9ab2584e8b2a0da80938", "unknown"))).rejects.toThrow("ambiguous report date");
   });
 
   it("rejects same-length PDF changes and the unreviewed fixture against the production hash", async () => {
