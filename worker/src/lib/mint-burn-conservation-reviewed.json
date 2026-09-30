@@ -13547,6 +13547,189 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA22"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ousd-open-standard",
+      "address": "0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x264048239dd1b5939599fae8e6000df40248d524",
+        "sourceVerified": true,
+        "contractName": "StablecoinTemplateV3",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x264048239dd1b5939599fae8e6000df40248d524",
+          "implementationSourceVerified": true,
+          "proxySourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
+          "note": "Explorer identifies an ERC-7760 minimal proxy; its published bytecode delegates through the EIP-1967 implementation slot. The verified implementation uses UUPS upgrades.",
+          "boundaryPins": [
+            {
+              "block": 26077249,
+              "blockHash": "0x4ac89567b3b49ff5ecb5423be9eeeefeeccd0f6a049cb03098a90684aacb361b",
+              "implementation": "0x264048239dd1b5939599fae8e6000df40248d524"
+            },
+            {
+              "block": 26084420,
+              "blockHash": "0xf670fa72e315da4cf5349989498c6e7bed8b613cc6d34ccc059c6b141997f512",
+              "implementation": "0x264048239dd1b5939599fae8e6000df40248d524"
+            },
+            {
+              "block": 26091591,
+              "blockHash": "0x539aa64df24b9fd7bb7dd52f185b323761eb8fecdb205c7ab6c1e50594fc57a8",
+              "implementation": "0x264048239dd1b5939599fae8e6000df40248d524"
+            }
+          ],
+          "inRangeUpgradedLogCount": 0
+        },
+        "externalMatches": [
+          {
+            "source": "https://reserves.bridge.xyz/ousd",
+            "value": "0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
+            "matches": true
+          }
+        ],
+        "onChain": {
+          "rpcUrl": "https://eth-mainnet.g.alchemy.com/v2/",
+          "credentialVariable": "ALCHEMY_API_KEY",
+          "observedAt": "2026-09-30T17:02:27.052Z",
+          "block": 26091591,
+          "blockHash": "0x539aa64df24b9fd7bb7dd52f185b323761eb8fecdb205c7ab6c1e50594fc57a8",
+          "decimals": 6,
+          "totalSupplyRaw": "10102758000000",
+          "note": "EIP-1898 hash-pinned decimals, totalSupply and implementation-slot reads at all three boundaries; no Upgraded logs in blocks 26077250-26091591."
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "ERC20Upgradeable._mint -> StablecoinTemplateV3Base._update -> ERC20Upgradeable._update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MINTER_ROLE, max-supply and recipient-policy gates; disabled after migration to wrapped mode. Exactly one Transfer(0,to,amount)."
+        },
+        {
+          "function": "wrap(address,uint256)",
+          "internal": "ERC20Upgradeable._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Moves reserve-ledger tokens into the proxy, then mints the same raw amount with one Transfer(0,to,amount); Wrapped is not additionally counted."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "ERC20Upgradeable._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MINTER_ROLE; disabled after migration. Burns caller balance with one Transfer(caller,0,amount)."
+        },
+        {
+          "function": "unwrap(uint256)",
+          "internal": "ERC20Upgradeable._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MINTER_ROLE; burns caller balance before returning reserve-ledger tokens, with one Transfer(caller,0,amount)."
+        },
+        {
+          "function": "burnFromBlockedAddress(address)",
+          "internal": "ERC20Upgradeable._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "BLOCKED_ADDRESS_BURNER_ROLE; temporary policy bypass burns the entire blocked balance with one Transfer(account,0,balance), then transfers reserve-ledger tokens to caller. No separate OUSD seizure transfer."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Inherited OpenZeppelin 5.3 ERC20Upgradeable.totalSupply returns ERC20Storage._totalSupply at namespaced slot 0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00 + 2. Only _update writes supply, adding/subtracting the exact Transfer value. Base override adds pause/policy guards and calls super once; initialize/reinitialize and completeMigrationToWrapped do not write supply."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": false,
+      "identityIssue": null,
+      "notes": "Verified implementation and inherited sources reviewed via Blockscout on 2026-09-30. No burnFrom, bridge-specific mint, rebase, arbitrary supply setter or other supply writer exists in this implementation; all five supply-changing public paths are listed. transfer/transferFrom use _transfer, which rejects either zero endpoint; _mint/_burn reject a zero account, preventing Transfer(0,0). UUPS upgradeToAndCall can replace the law and requires renewed source/path review on implementation change. Archive admission audit observed at 2026-09-30T17:01:26Z through https://eth-mainnet.g.alchemy.com/v2/ using ALCHEMY_API_KEY; production hash-pinned boundary reads and header rechecks passed for both windows. Implementation/decimals pins and empty in-range Upgraded logs were independently read at 2026-09-30T17:02:27.052Z.",
+      "windows": [
+        {
+          "fromBlock": 26084420,
+          "fromBlockHash": "0xf670fa72e315da4cf5349989498c6e7bed8b613cc6d34ccc059c6b141997f512",
+          "fromTimestamp": 1790700515,
+          "toBlock": 26091591,
+          "toBlockHash": "0x539aa64df24b9fd7bb7dd52f185b323761eb8fecdb205c7ab6c1e50594fc57a8",
+          "toTimestamp": 1790786915,
+          "mintRaw": "100127000000",
+          "burnRaw": "55000000",
+          "supplyDeltaRaw": "100072000000",
+          "residualRaw": "0",
+          "logCount": 7,
+          "journalSha256": "490214ca13efcf6f75fc30677aadf159f6e54240124219a7187ada59e47df30e"
+        },
+        {
+          "fromBlock": 26077249,
+          "fromBlockHash": "0x4ac89567b3b49ff5ecb5423be9eeeefeeccd0f6a049cb03098a90684aacb361b",
+          "fromTimestamp": 1790614115,
+          "toBlock": 26084420,
+          "toBlockHash": "0xf670fa72e315da4cf5349989498c6e7bed8b613cc6d34ccc059c6b141997f512",
+          "toTimestamp": 1790700515,
+          "mintRaw": "154630000",
+          "burnRaw": "42630000",
+          "supplyDeltaRaw": "112000000",
+          "residualRaw": "0",
+          "logCount": 8,
+          "journalSha256": "490214ca13efcf6f75fc30677aadf159f6e54240124219a7187ada59e47df30e"
+        }
+      ],
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Claude OUSD promotion review"
+    },
+    {
+      "chainId": "base",
+      "stablecoinId": "ousd-open-standard",
+      "address": "0xb2000000000000000000002feb517dfec7415344",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "unverified-implementation-source",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://docs.base.org/specifications/b20",
+        "sourceVerified": false,
+        "contractName": "B20 native token precompile",
+        "externalMatches": [
+          {
+            "source": "https://reserves.bridge.xyz/ousd",
+            "value": "0xb2000000000000000000002feb517dfec7415344",
+            "matches": true
+          }
+        ],
+        "onChain": {
+          "rpcUrl": "https://base-mainnet.g.alchemy.com/v2/",
+          "credentialVariable": "ALCHEMY_API_KEY",
+          "observedAt": "2026-09-30T17:02:27.052Z",
+          "block": 51999105,
+          "blockHash": "0x158ac5b470e47b8a00eff0fb5e94636c1ef7e77eecb1876251fc5784494581b2",
+          "decimals": 6,
+          "totalSupplyRaw": "15000528320000",
+          "code": "0xef",
+          "hasCode": true,
+          "eip1967ImplementationSlot": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "supplyPaths": [],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": null,
+        "note": "Published B20 interfaces describe totalSupply and mint/burn/burnBlocked/seize semantics but do not establish the deployed native implementation's complete storage-writer set."
+      },
+      "zeroRecipientTransferReverts": null,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "Intentional source-verification gap. https://docs.base.org/specifications/b20/reference/interfaces and https://docs.base.org/specifications/b20/reference/interfaces/ib20 publish canonical Solidity interfaces, not executable native implementation source tied to this Base deployment. The observed 0xef marker and empty EIP-1967 slot cannot bind ordinary ERC-20 source to the precompile. No source-exception is claimed. Read-only production archive audit at 2026-09-30T17:01:26Z through https://base-mainnet.g.alchemy.com/v2/ using ALCHEMY_API_KEY passed both windows (boundary blocks 51955905-51999105: mintRaw 5000160000000, burnRaw 181000000, supplyDeltaRaw 4999979000000, residualRaw 0, 19 logs; 51912705-51955905: mintRaw 208260000, burnRaw 54260000, supplyDeltaRaw 154000000, residualRaw 0, 13 logs; journal SHA-256 490214ca13efcf6f75fc30677aadf159f6e54240124219a7187ada59e47df30e). Passing samples do not prove all supply paths or reverse zero-address pairing. Revisit when authoritative version-pinned native implementation source or a justified source-exception closes the full path/storage review, including blocked burns and seizures.",
+      "windows": [],
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Claude OUSD promotion review"
     }
   ]
 }

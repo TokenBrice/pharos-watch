@@ -1356,6 +1356,25 @@
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ousd-open-standard",
+      "address": "0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "base",
+      "stablecoinId": "ousd-open-standard",
+      "address": "0xb2000000000000000000002feb517dfec7415344",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "unverified-implementation-source",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
     }
   ]
 }

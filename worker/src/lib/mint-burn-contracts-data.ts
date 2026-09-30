@@ -464,6 +464,32 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
 
+  // Open USD (Bridge), distinct from Origin Dollar. Archive eth_getCode
+  // bisection reviewed 2026-09-30: absent at startBlock - 1, present at startBlock.
+  // Both deployments emit zero-address Transfers; do not double-count issuer events.
+  {
+    chain: ETHEREUM,
+    stablecoinId: "ousd-open-standard",
+    contractSource: "primary",
+    dustThreshold: 10_000,
+    startBlock: 25_137_271,
+    tier: "extended",
+    startBlockSource: "alchemy-ethereum-code-deployment-2026-05-20-reviewed-2026-09-30",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+  {
+    chain: BASE,
+    stablecoinId: "ousd-open-standard",
+    contractSource: "primary",
+    dustThreshold: 10_000,
+    startBlock: 48_631_941,
+    tier: "extended",
+    startBlockSource: "alchemy-base-code-deployment-2026-07-14-reviewed-2026-09-30",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+
   // --- reUSD (Re Protocol, ID 339) — Ethereum only ---
   // Track the reUSD token's canonical zero-address Transfers. The vault
   // Deposited event reports deposited collateral units, so USDC/USDT mints
