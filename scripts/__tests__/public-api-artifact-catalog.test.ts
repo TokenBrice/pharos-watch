@@ -17,7 +17,7 @@ const integrationFacingPublicKeys = ENDPOINT_DEFINITIONS.filter(
   .map((endpoint) => endpoint.key)
   .sort();
 
-const noKeyPublicArtifactKeys = ["health", "safety-grades"];
+const noKeyPublicArtifactKeys = ["health", "safety-grades", "dependency-graph-v1"];
 const FORBIDDEN_ARTIFACT_PATHS = [
   "/api/donor-key-claims",
   "/api/feedback",

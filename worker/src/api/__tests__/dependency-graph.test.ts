@@ -1,0 +1,79 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getPublicApiAccess } from "@shared/lib/api-endpoints";
+import { DependencyGraphResponseSchema, projectDependencyGraph } from "@shared/types/dependency-graph";
+import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+
+const mockLoadActiveSafetyScoreSource = vi.fn();
+vi.mock("../../lib/safety-score-active-source", () => ({
+  loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
+}));
+// Load after the accepted-source mock has been installed.
+const { handleDependencyGraph } = await import("../dependency-graph");
+
+function fixturePublication() {
+  return makeReportCardsV9Response({
+    cards: [
+      makeWorkerV9Card({ id: "child", supply: { circulatingUsdAtEvaluation: 0, asOfSec: 100, generationId: "supply-1" }, sharedBookId: "book-1", dependencyCoverage: [], dependencies: {
+        serial: [{ upstreamAssetId: "parent", score: 80, blocked: false, dependencyType: "wrapper", wrapperForm: "pure", provenance: { source: "manual", evidenceAsOf: "2026-09-29", intermediary: null } }],
+        basket: [],
+        cycleBlocked: false,
+        reasonCodes: [],
+        roles: [{ edgeKey: "role-1", exposureKey: "exposure-1", riskEventKey: "event-1", upstreamAssetId: "parent", role: "exit-dependency", weight: 0.4, targetPillar: "exit", propagationEventEdgeKeys: [], propagationEventExposureKey: null, propagationEventRiskEventKey: null, propagationEventNominalExposureShare: null, propagationEventExposureShare: null, propagationEventInheritedScore: null, propagationEventModeledLossPoints: null, inheritedDimensions: [], unavailableDimensions: [], score: 80, boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [] }],
+      } }),
+      makeWorkerV9Card({ id: "parent", score: null, supply: undefined, sharedBookId: undefined, dependencyCoverage: undefined }),
+    ],
+    commonModeGroups: [{ id: "reserve-issuer:shared", kind: "reserve-issuer", key: "shared", memberAssetIds: ["child", "parent"] }],
+  });
+}
+
+describe("dependency graph projection", () => {
+  beforeEach(() => mockLoadActiveSafetyScoreSource.mockReset());
+
+  it("preserves accepted edges and publication-bound zero, null, role and coverage facts", async () => {
+    const snapshot = fixturePublication();
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    const response = await handleDependencyGraph(mockD1([], { requireMatch: true }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Safety-Score-Status")).toBe("current");
+    const body = DependencyGraphResponseSchema.parse(await response.json());
+    expect(body).toMatchObject({ publicationGenerationId: snapshot.safetyScoreIdentity.publicationGenerationId, methodologyVersion: snapshot.methodology.version, asOfSec: snapshot.asOfSec, updatedAt: snapshot.updatedAt });
+    expect(body.commonModeGroups).toEqual(snapshot.commonModeGroups);
+    expect(body.nodes).toEqual([
+      { id: "child", grade: snapshot.cards[0]!.grade, score: 80, circulatingUsdAtEvaluation: 0, supplyAsOfSec: 100, sharedBookId: "book-1", roles: [{ upstreamAssetId: "parent", economicRole: "exit-dependency", weight: 0.4 }], dependencyCoverageCount: 0 },
+      { id: "parent", grade: "NR", score: null, circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null },
+    ]);
+    expect(body.edges).toEqual(snapshot.dependencyGraph.edges);
+    expect(body).not.toHaveProperty("cards");
+  });
+
+  it("does not invent supply, book or coverage facts for v5 publications", () => {
+    const snapshot = makeReportCardsV9Response({ schemaVersion: 5, cards: [makeWorkerV9Card({ supply: undefined, sharedBookId: undefined, dependencyCoverage: undefined })] });
+    const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
+    expect(body.nodes[0]).toMatchObject({ circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, dependencyCoverageCount: null });
+    expect(body).not.toHaveProperty("commonModeGroups");
+  });
+
+  it("serves the held accepted generation without caching and retains hold reasons", async () => {
+    const current = fixturePublication();
+    const snapshot = { ...current, publicationHealth: { ...current.publicationHealth, status: "held" as const, attemptedAtSec: current.updatedAt + 1800, heldSinceSec: current.updatedAt + 1800, reasons: [{ code: "dex-stale" as const }] } };
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    const response = await handleDependencyGraph(mockD1([], { requireMatch: true }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
+    const body = DependencyGraphResponseSchema.parse(await response.json());
+    expect(body.publicationStatus).toBe("held");
+    expect(body.publicationHealth).toEqual(snapshot.publicationHealth);
+    expect(body.publicationGenerationId).toBe(current.safetyScoreIdentity.publicationGenerationId);
+    expect(body.edges).toEqual(current.dependencyGraph.edges);
+  });
+
+  it("fails closed without an accepted publication", async () => {
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "error", detail: "Canonical Safety Score V9 publication is unavailable" });
+    const response = await handleDependencyGraph(mockD1([], { requireMatch: true }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: "Canonical Safety Score V9 publication is unavailable" });
+    expect(getPublicApiAccess("/api/dependency-graph/v1")).toBe("exempt");
+  });
+});

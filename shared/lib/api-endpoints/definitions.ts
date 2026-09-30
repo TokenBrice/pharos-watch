@@ -532,6 +532,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   }),
   publicGet({
+    key: "dependency-graph-v1",
+    path: API_PATHS.dependencyGraph(),
+    cacheKeyIgnoresQuery: true,
+    publicApiAccess: "exempt",
+    strictContract: true,
+    probeGroup: "public",
+  }),
+  publicGet({
     key: "depeg-resolver",
     path: API_PATHS.depegResolver(),
     cacheKeyIgnoresQuery: true,

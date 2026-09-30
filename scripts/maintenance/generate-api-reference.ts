@@ -42,7 +42,7 @@ const PUBLIC_OPERATION_ORDER = [
   "depegResolver", "depegResolverReview", "pegSummary", "usdsStatus", "bluechipRatings", "dexLiquidity",
   "dexLiquidityHistory", "supplyHistory", "dailyDigest", "digestArchive", "digestSnapshot", "snapshotsIndex",
   "snapshotsDateJson", "snapshotDateStablecoinStablecoinId", "health", "publicStatusHistory", "telegramPulse",
-  "stabilityIndex", "reportCardsV9", "safetyGrades", "redemptionBackstops", "safetyScoreHistory", "safetyScoreHistoryV2",
+  "stabilityIndex", "reportCardsV9", "safetyGrades", "dependencyGraphV1", "redemptionBackstops", "safetyScoreHistory", "safetyScoreHistoryV2",
   "yieldRankings", "yieldAdapterManifest", "yieldHistory", "mintBurnFlows", "mintBurnEvents", "stressSignals",
 ] as const;
 const SUPPLEMENTAL_ENDPOINT_ORDER = [
@@ -80,8 +80,9 @@ export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
   publicStatusHistory: "Returns a bounded, public-safe status timeline.",
   telegramPulse: "Returns public Telegram adoption and delivery health aggregates.",
   stabilityIndex: "Returns the current Pharos Stability Index and optional component detail. Since 2026-09-28 (PSI v3.64), daily snapshots persist all-null components as null rather than zero. Observed zero remains numeric zero; partial components average only observations and disclose `dailyProvenance.componentSampleCounts`. All-day score averaging and mixed-version breakdown are retained; `componentsUnavailable` identifies unavailable components. Legacy rows without counts remain unknown, not assumed complete.",
-  reportCardsV9: "Returns the currently published Safety Score V9 report-card set.",
+  reportCardsV9: "Accepted V9 cards and their sorted serial/basket graph. Held snapshots return HTTP 200 with no-store and `X-Safety-Score-Status: held`. See [the publication contract](./report-cards.md#api).",
   safetyGrades: "Returns one Safety Score and grade per tracked stablecoin from the same V9 publication, without an API key.",
+  dependencyGraphV1: "Free accepted-publication graph with nullable evaluation supply, roles and coverage counts. Edges and optional common-mode groups pass through unchanged. See [the contract](./report-cards.md#api).",
   redemptionBackstops: "Returns reviewed redemption paths and backstop evidence.",
   safetyScoreHistory: "Returns legacy bounded Safety Score history for one stablecoin.",
   safetyScoreHistoryV2: "Returns identity-aware bounded Safety Score history for one stablecoin.",
@@ -235,7 +236,7 @@ function renderRedemptionBackstopContract(): string {
     `**Capacity-confidence vocabulary:** ${RedemptionCapacityConfidenceSchema.options.map((value) => `\`${value}\``).join(", ")}.`,
   ].join("\n");
 }
-function currentMethodologyExample(operationId: string): Record<string, string> | null {
+function currentMethodologyExample(operationId: string): Record<string, string | Record<string, string>> | null {
   switch (operationId) {
     case "blacklist":
       return {
@@ -248,7 +249,7 @@ function currentMethodologyExample(operationId: string): Record<string, string> 
     case "stabilityIndex":
       return { currentVersion: PSI_METHODOLOGY_VERSION, methodologyVersion: PSI_METHODOLOGY_VERSION };
     case "reportCardsV9":
-      return { version: SAFETY_SCORE_METHODOLOGY_VERSION, methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION };
+      return { methodology: { version: SAFETY_SCORE_METHODOLOGY_VERSION } };
     case "yieldRankings":
       return { currentVersion: YIELD_METHODOLOGY_VERSION, methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION };
     case "yieldAdapterManifest":

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
 import { ChainsResponseSchema } from "@shared/types/chains";
+import { DependencyGraphNodeSchema, DependencyGraphResponseSchema } from "@shared/types/dependency-graph";
 import {
   DigestArchiveResponseSchema,
   DigestSnapshotResponseSchema,
@@ -185,6 +186,7 @@ export const PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS = {
   DdrrV2SummaryMetrics: DdrrV2SummaryMetricsSchema,
   DdrrV2SummarySegment: DdrrV2SummarySegmentSchema,
   ReportCardsV9DependencyGraph: ReportCardsV9DependencyGraphSchema,
+  DependencyGraphNode: DependencyGraphNodeSchema,
   V9PublicationHealth: V9PublicationHealthSchema,
   YieldPysInputsAtPublish: YieldPysInputsAtPublishSchema,
   YieldVenueRiskScores: YieldVenueRiskScoresSchema,
@@ -215,6 +217,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,
   ReportCardsV9Response: ReportCardsV9ResponseSchema,
   SafetyGradesResponse: SafetyGradesResponseSchema,
+  DependencyGraphResponse: DependencyGraphResponseSchema,
   DdrResponse: DdrResponseSchema,
   DdrrResponse: DdrrResponseOpenApiSchema,
   RedemptionBackstopsResponse: RedemptionBackstopsResponseSchema,

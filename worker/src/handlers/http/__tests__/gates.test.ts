@@ -82,11 +82,11 @@ describe("evaluateAccessGate", () => {
     }
   });
 
-  it("limits anonymous safety grades before reading data and fails closed", async () => {
+  it.each(["/api/safety-grades", "/api/dependency-graph/v1"])("limits anonymous %s before reading data and fails closed", async (path) => {
     const env = makeEnv();
     const limit = vi.fn().mockResolvedValue({ success: true });
     env.SAFETY_GRADES_RATE_LIMIT = { limit };
-    const request = new Request("https://api.pharos.watch/api/safety-grades", { headers: { "CF-Connecting-IP": "192.0.2.1" } });
+    const request = new Request(`https://api.pharos.watch${path}`, { headers: { "CF-Connecting-IP": "192.0.2.1" } });
     expect((await evaluateAccessGate(request, new URL(request.url), env)).response).toBeNull();
     expect(limit).toHaveBeenCalledWith({ key: "192.0.2.1" });
     expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();

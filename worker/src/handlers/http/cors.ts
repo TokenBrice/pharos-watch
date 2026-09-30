@@ -31,7 +31,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
     // authentication credential — admin trust comes from the CF Access JWT
     // (handlers/http/auth.ts trustedAdmin). Do not treat it as a secret.
     "Access-Control-Allow-Headers": "Content-Type, Idempotency-Key, X-API-Key, X-Pharos-Admin",
-    "Access-Control-Expose-Headers": "X-Data-Age, X-Data-Freshness, X-Data-Freshness-Reason, Warning, Retry-After",
+    "Access-Control-Expose-Headers": "X-Data-Age, X-Data-Freshness, X-Data-Freshness-Reason, X-Safety-Score-Status, Warning, Retry-After",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
     "X-Content-Type-Options": "nosniff",

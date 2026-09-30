@@ -30,6 +30,22 @@ describe("router contract: strict frontend paths are routable", () => {
     }
   });
 
+  it("exposes the free dependency graph as a strict GET contract and rejects writes", () => {
+    const path = "/api/dependency-graph/v1";
+    expect(STRICT_CONTRACT_PATHS_LIST).toContain(path);
+    const resolved = resolveRoute(new URL(`https://api.pharos.watch${path}`), "GET");
+    expect(resolved?.routeMatch.endpoint).toMatchObject({
+      key: "dependency-graph-v1",
+      publicApiAccess: "exempt",
+      siteDataAccess: "allowed",
+      methods: ["GET"],
+    });
+    expect(resolveRoute(new URL(`https://api.pharos.watch${path}`), "POST")?.methodValidation).toEqual({
+      message: "Method not allowed",
+      allowedMethods: ["GET"],
+    });
+  });
+
   it("returns null for unknown paths", () => {
     const result = route(makeRouteCtx({ url: new URL("https://api.pharos.watch/api/definitely-not-real") }));
     expect(result).toBeNull();

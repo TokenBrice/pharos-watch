@@ -123,6 +123,20 @@ describe("site-data proxy", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it("preserves held Safety Score status and forbids caching on the browser graph lane", async () => {
+    siteApi.json("/api/dependency-graph/v1", { publicationStatus: "held" }, 200, {
+      "Cache-Control": "no-store",
+      "X-Safety-Score-Status": "held",
+    });
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/dependency-graph/v1", {
+      headers: { Origin: "https://pharos.watch" },
+    })));
+    expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(cachePut).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toEqual({ publicationStatus: "held" });
+  });
+
   it("rejects requests without Origin or Referer", async () => {
     const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins")));
 

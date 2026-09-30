@@ -31,6 +31,7 @@ import type {
   SafetyScoreHistoryV2Response,
 } from "@shared/types/safety-score-history";
 import type { ReportCardsV9CurrentResponse, SafetyGradesResponse } from "@shared/types/report-cards-v9";
+import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import type {
   HealthResponse,
   PublicStatusHistoryResponse,
@@ -493,6 +494,18 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     "plain",
     createLazySchema<SafetyGradesResponse>(
       async () => (await import("@shared/types/report-cards-v9")).SafetyGradesResponseSchema,
+    ),
+  ),
+  // Lazy validators keep the report-card schema family out of the eager client bundle.
+  dependencyGraph: defineApiQuery(
+    {
+      queryKey: ["dependency-graph", "v1"] as const,
+      path: API_PATHS.dependencyGraph(),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
+    },
+    "plain",
+    createLazySchema<DependencyGraphResponse>(
+      async () => (await import("@shared/types/dependency-graph")).DependencyGraphResponseSchema,
     ),
   ),
   depegResolver: defineApiQuery(

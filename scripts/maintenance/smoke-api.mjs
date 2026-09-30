@@ -25,6 +25,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/dex-liquidity",
   "/api/stability-index",
   "/api/report-cards/v9",
+  "/api/dependency-graph/v1",
   "/api/depeg-resolver",
   "/api/depeg-resolver-review",
   "/api/redemption-backstops",
@@ -287,6 +288,14 @@ export const ENDPOINT_ASSERTIONS = {
       "/api/report-cards/v9 missing methodology.version",
     );
     return `${body.cards.length} cards`;
+  },
+  "/api/dependency-graph/v1": (result) => {
+    assert(result.status === 200, `/api/dependency-graph/v1 returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.nodes) && Array.isArray(body.edges), "/api/dependency-graph/v1 missing nodes[] or edges[]");
+    assert(typeof body.publicationGenerationId === "string" && body.publicationGenerationId.length > 0, "/api/dependency-graph/v1 missing publicationGenerationId");
+    assert(body.publicationStatus === "current" || body.publicationStatus === "held", "/api/dependency-graph/v1 invalid publicationStatus");
+    return `${body.nodes.length} nodes, ${body.edges.length} edges (${body.publicationStatus})`;
   },
   "/api/depeg-resolver": (result) => {
     assert(result.status === 200, `/api/depeg-resolver returned ${result.status}`);

@@ -323,7 +323,7 @@ For `GET /api/mint-burn-flows`, aggregate `coins[].netFlow24hUsd`, `netFlow7dUsd
 
 ### Public Endpoints Quick Reference
 
-Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operations: **40**.
+Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operations: **41**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -358,6 +358,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/stability-index` | Pharos Stability Index | Risk | `X-API-Key` required | `detail` (query, optional, boolean) | 200, 400, 401, 429, 503 |
 | GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-grades` | Safety Score grades (no key) | Risk | exempt | — | 200, 400, 503 |
+| GET | `/api/dependency-graph/v1` | Dependency graph (no key) | Risk | exempt | — | 200, 400, 503 |
 | GET | `/api/redemption-backstops` | Redemption backstops | Risk, Reserves | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history` | Safety score history | Risk, History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history-v2` | Safety score history (identity-aware) | Risk, History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
@@ -766,7 +767,7 @@ Dynamic social-card image routes are served by the Worker and intentionally omit
 
 ### `GET /api/report-cards/v9`
 
-Returns the currently published Safety Score V9 report-card set.
+Accepted V9 cards and their sorted serial/basket graph. Held snapshots return HTTP 200 with no-store and `X-Safety-Score-Status: held`. See [the publication contract](./report-cards.md#api).
 
 - **Operation ID:** `reportCardsV9`
 - **Path:** `/api/report-cards/v9`
@@ -778,8 +779,9 @@ Returns the currently published Safety Score V9 report-card set.
 
 ```json
 {
-  "version": "9.97",
-  "methodologyVersion": "9.97"
+  "methodology": {
+    "version": "9.98"
+  }
 }
 ```
 
@@ -791,6 +793,16 @@ Returns one Safety Score and grade per tracked stablecoin from the same V9 publi
 - **Path:** `/api/safety-grades`
 - **Parameters:** None.
 - **Success response schema:** [`SafetyGradesResponse`](https://pharos.watch/openapi.json#/components/schemas/SafetyGradesResponse)
+- **Policy:** authentication exempt; shared endpoint caching allowed (`cacheBypass: false`).
+
+### `GET /api/dependency-graph/v1`
+
+Free accepted-publication graph with nullable evaluation supply, roles and coverage counts. Edges and optional common-mode groups pass through unchanged. See [the contract](./report-cards.md#api).
+
+- **Operation ID:** `dependencyGraphV1`
+- **Path:** `/api/dependency-graph/v1`
+- **Parameters:** None.
+- **Success response schema:** [`DependencyGraphResponse`](https://pharos.watch/openapi.json#/components/schemas/DependencyGraphResponse)
 - **Policy:** authentication exempt; shared endpoint caching allowed (`cacheBypass: false`).
 
 ### `GET /api/redemption-backstops`
@@ -871,7 +883,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.46",
-  "methodologyVersion": "9.97"
+  "methodologyVersion": "9.98"
 }
 ```
 
