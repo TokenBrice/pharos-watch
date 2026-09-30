@@ -92,6 +92,8 @@ Every new curated row sets `recordedAt` to the UTC date it is added to Pharos. `
 
 New ids must not equal a section anchor or start with a reserved element-id prefix (`CEMETERY_SECTION_ANCHORS`, `CEMETERY_RESERVED_ID_PREFIXES`); `findCemeteryIdCollisions` must stay empty for the real set.
 
+Every new death also has to fit the plot map. `src/lib/__tests__/cemetery-plot-map.test.ts` runs `validatePlotMapCapacity` on the real data in both presets, so a record that overfills a year block or shrinks plain stones below `PLOT_LAYOUT.faceFloorPx` fails the suite. Treat that failure as a design review: retune the lane depths in `PLOT_MAP_PRESETS` (or, as the archive approaches a few hundred records, add a deliberate overview and zoom policy), and never lower the face floor to make stones fit.
+
 ### Order authority
 
 `sortCemeteryCoins` in `shared/lib/cemetery.ts` is the single cemetery order. The register's Died sort, the page's JSON-LD `ItemList`, the RSS feed, the dataset export and the case-study list all use it. Its keys, in order:
