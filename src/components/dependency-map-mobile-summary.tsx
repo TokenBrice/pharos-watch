@@ -27,10 +27,11 @@ export function DependencyMapMobileSummary({ model, logos, onExposure }: { model
               <p className="text-sm font-semibold">{hub.label}</p>
               <p className="pharos-numeric text-sm">Direct exposure {hub.direct.excludedSupplyUnknownIds.length === hub.dependentCount ? "n/a" : formatCurrency(hub.direct.knownUsd, 2)}</p>
               <dl className="space-y-1 text-xs text-muted-foreground">
-                <div><dt className="inline">Of which own-family wrappers: </dt><dd className="inline">{formatCurrency(hub.ownFamilyUsd, 2)}</dd></div>
-                <div><dt className="inline">Of which vault claims: </dt><dd className="inline">{formatCurrency(hub.vaultClaimUsd, 2)}</dd></div>
+                <div><dt className="inline">Of which own-family wrappers: </dt><dd className="inline">{hub.unknownFormCount > 0 && hub.passThroughCount + hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatCurrency(hub.ownFamilyUsd, 2)}{hub.unknownFormCount > 0 ? " (classified claims only)" : ""}</>}</dd></div>
+                <div><dt className="inline">Of which vault claims: </dt><dd className="inline">{hub.unknownFormCount > 0 && hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatCurrency(hub.vaultClaimUsd, 2)}{hub.unknownFormCount > 0 ? " (classified claims only)" : ""}</>}</dd></div>
                 <div><dt className="inline">Direct dependents: </dt><dd className="inline">{hub.dependentCount}</dd></div>
               </dl>
+              {hub.unknownFormCount > 0 && <p className="text-xs text-muted-foreground">Wrapper/vault split unavailable{hub.unknownFormUsd === null ? "; supply unavailable" : ` for ${formatCurrency(hub.unknownFormUsd, 2)} of known serial exposure`}.</p>}
               <p className="text-xs text-muted-foreground">{hub.topDependent ? `${Math.round(hub.topDependent.shareOfHubExposure * 100)}% from ${hub.topDependentSymbol}` : "Top dependent share unavailable"}</p>
               <p className="text-xs text-muted-foreground">{hub.edgeTypeBreakdown.map(entry => `${entry.type} ${entry.edgeCount}`).join(" · ")}. {hub.hubMcapUsd === null ? "mcap n/a" : `Own market cap ${formatCurrency(hub.hubMcapUsd, 2)}`}</p>
               {!hub.direct.complete && <p className="text-xs text-muted-foreground">{hub.direct.excludedSupplyUnknownIds.length} supplies unavailable; {hub.direct.unknownShareEdgeCount} shares unknown{hub.direct.integrityFlag ? "; basket shares require review" : ""}.</p>}

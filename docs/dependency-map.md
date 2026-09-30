@@ -160,6 +160,8 @@ The board is titled **Largest mapped direct exposures** and ranks by known direc
 
 The hero reports gross mapped dependent supply, upstream hub count, and unique direct dependent count. Its overlap line identifies the mapped fraction counted in more than one dependency layer; it is not subtracted from the gross figure. Serial dependents count once even with multiple parents. Unknown supply and unknown basket shares are disclosed separately, and excessive basket shares raise an integrity warning rather than silently clamping a published total.
 
+Wrapper and vault-claim splits use only the published edge `wrapperForm`. A serial edge without it (every serial edge on a report v5 publication) stays in direct USD totals but cannot be classified. The hero, board and mobile summary then disclose that exposure's known USD as "split unavailable" and qualify any classified subtotal as covering classified claims only. They never print an unclassified category as $0.00, and own-family figures exclude form-unknown exposure.
+
 Two clocks are explicit: methodology version and V9 publication time, then market-cap source time (or `unknown`). Graph filters and node limits never change these full-graph exposure totals.
 
 ## Adaptive Supernodes
