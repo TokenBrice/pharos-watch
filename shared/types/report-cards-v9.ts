@@ -12,7 +12,6 @@ import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText } from "./safety-score-v9-fact-primitives";
 import { Sha256Schema } from "./safety-schema-primitives";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
-import { stableJsonStringifyV1 } from "../lib/stable-json";
 import { DependencyTypeSchema } from "./dependency-types";
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 6;
@@ -216,8 +215,24 @@ export function buildReportCardsV9DependencyGraph(
   };
 }
 
+/**
+ * Structural equality for parsed JSON values: object key order is ignored,
+ * array order is significant. Used for exact-projection refinements, where
+ * Zod reorders parsed object keys to schema order.
+ */
 function sameJson(left: unknown, right: unknown): boolean {
-  return stableJsonStringifyV1(left) === stableJsonStringifyV1(right);
+  if (left === right) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => sameJson(value, right[index]));
+  }
+  if (left === null || right === null || typeof left !== "object" || typeof right !== "object") return false;
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord).filter((key) => leftRecord[key] !== undefined);
+  const rightKeys = Object.keys(rightRecord).filter((key) => rightRecord[key] !== undefined);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every((key) => Object.hasOwn(rightRecord, key) && sameJson(leftRecord[key], rightRecord[key]));
 }
 
 function isUniqueSorted(values: readonly string[]): boolean {
