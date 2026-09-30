@@ -105,7 +105,7 @@ export interface PlotMapPreset {
  * whose in-bed empty runs stay ≤ 3 rows at the 15 px floor). Re-check with {@link validatePlotMapCapacity} when a
  * year block grows.
  */
-export const PLOT_MAP_PRESETS: Readonly<Record<PlotMapPresetName, PlotMapPreset>> = {
+const PLOT_MAP_PRESETS: Readonly<Record<PlotMapPresetName, PlotMapPreset>> = {
   desktop: {
     name: "desktop",
     projection: "dimetric",
@@ -141,7 +141,7 @@ export const PLOT_MAP_PRESETS: Readonly<Record<PlotMapPresetName, PlotMapPreset>
 /** Fresh soil: died within 90 days of the latest recorded death (stated verbatim in the legend). */
 export const PLOT_FRESH_DAYS = 90;
 /** Weathering classes: upper bounds in years for w0…w3; w4 is everything older. */
-export const PLOT_WEATHER_BOUNDS_YEARS: readonly number[] = [0.5, 1.5, 3, 5];
+const PLOT_WEATHER_BOUNDS_YEARS: readonly number[] = [0.5, 1.5, 3, 5];
 /** Plinth steps = clamp(floor(log10(peak)) − 6, 0, 4): one step at each of these peaks. */
 export const PLOT_STEP_THRESHOLDS_USD: readonly number[] = [1e7, 1e8, 1e9, 1e10];
 /** Stone height factor: clamped log scale (floor reached at $10^6.5, ceiling at ≈ $15B). */
@@ -150,7 +150,7 @@ export const PLOT_HEIGHT = { floor: 0.64, ceiling: 1.34, atLog10: 6.5, perDecade
 export const PLOT_PEG_GLYPHS: Readonly<Record<string, string>> = { EUR: "€", JPY: "¥", CNH: "¥", VAR: "∿", OTHER: "◇" };
 
 /** Desktop scene frame around the plan (world units). */
-export const PLOT_SCENE = {
+const PLOT_SCENE = {
   /** Rim of the site wall outside the lawn. */
   rim: 0.3,
   /** Verge outside the front railing that carries the per-year cypress band. */
@@ -205,7 +205,7 @@ export function plotHeightFactorOf(peak: number): number {
 }
 
 /** Quantised weathering class for an age in years. */
-export function plotWeatherOf(years: number): PlotWeather {
+function plotWeatherOf(years: number): PlotWeather {
   for (let k = 0; k < PLOT_WEATHER_BOUNDS_YEARS.length; k++) if (years < PLOT_WEATHER_BOUNDS_YEARS[k]) return k as PlotWeather;
   return 4;
 }
@@ -1366,41 +1366,6 @@ export function placeColossusChips(input: {
     taken.push({ left: at.x, top: at.y, right: at.x + w, bottom: at.y + h });
   }
   return out;
-}
-
-/**
- * One Beam figure: searches the sky left of the lantern, bottom-up from the lantern's height, for the first spot
- * clear of every drawn volume, HTML plate and wall crest point (6 px pad), outside the route head. All inputs in
- * SVG units except `scale` (px per unit). Returns the figure's right-middle anchor, or null (caller falls back to
- * 60 units left of the lantern).
- */
-export function placeBeamFigure(input: {
-  map: DesktopPlotMap;
-  figure: { width: number; height: number };
-  scale: number;
-  plates: readonly PlotBox[];
-  /** Route-head keep-out (SVG units), margins included. */
-  head: { right: number; bottom: number };
-}): PlotPoint | null {
-  const { map, figure, scale, plates, head } = input;
-  const [vbX, vbY] = map.viewBox;
-  const [lx, ly] = map.beamOrigin;
-  const fw = figure.width;
-  const fh = figure.height;
-  const pad = 6 / scale;
-  const boxClear = (b: PlotBox, x0: number, y0: number, x1: number, y1: number) => !(b.x0 < x1 + pad && b.x1 > x0 - pad && b.y0 < y1 + pad && b.y1 > y0 - pad);
-  const clear = (x0: number, y0: number, x1: number, y1: number) =>
-    map.obstacles.every((o) => boxClear(o, x0, y0, x1, y1)) &&
-    plates.every((o) => boxClear(o, x0, y0, x1, y1)) &&
-    !map.skyline.edges.some(([sx, sy]) => sx > x0 - pad && sx < x1 + pad && sy > y0 - pad && sy < y1 + pad);
-  for (let ay = ly + 10; ay >= vbY - 150 / scale + fh / 2; ay -= 3) {
-    for (let ax = lx - 22; ax >= lx - 700; ax -= 4) {
-      if (ax - fw < vbX + 4) break;
-      if (ax - fw < head.right && ay - fh / 2 < head.bottom) break;
-      if (clear(ax - fw, ay - fh / 2, ax, ay + fh / 2)) return [ax, ay];
-    }
-  }
-  return null;
 }
 
 /** Top-most drawn y (SVG units) at or left of `x`: how far the header may overlap the plan's empty sky. */

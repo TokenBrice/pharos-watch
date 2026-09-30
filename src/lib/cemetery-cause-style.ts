@@ -15,5 +15,3 @@ export function causeColorVars(cause: CauseOfDeath): CSSProperties {
 
 export const CAUSE_BG_CLASS = "bg-[var(--cause-hex)] dark:bg-[var(--cause-hex-dark)]";
 export const CAUSE_TEXT_FILL_CLASS = "fill-[var(--cause-hex)] dark:fill-[var(--cause-hex-dark)]";
-export const CAUSE_STROKE_CLASS = "stroke-[var(--cause-hex)] dark:stroke-[var(--cause-hex-dark)]";
-export const CAUSE_BORDER_CLASS = "border-[var(--cause-hex)] dark:border-[var(--cause-hex-dark)]";

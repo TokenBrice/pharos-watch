@@ -63,14 +63,14 @@ export const PLOT_PROJECTIONS: Readonly<Record<PlotProjectionName, PlotProjectio
 /** Round to 0.1 (screen coordinates); `+ 0` folds −0 into 0 so rounded data survives a JSON round trip exactly. */
 export const round1 = (n: number): number => Math.round(n * 10) / 10 + 0;
 /** Round to 0.001 (matrix coefficients, face-local path data). */
-export const round3 = (n: number): number => Math.round(n * 1000) / 1000 + 0;
+const round3 = (n: number): number => Math.round(n * 1000) / 1000 + 0;
 
 export function project(p: PlotProjection, i: number, j: number, z = 0): PlotPoint {
   return [i * p.A[0] + j * p.B[0] + z * p.C[0], i * p.A[1] + j * p.B[1] + z * p.C[1]];
 }
 
 /** Screen half-width of a unit horizontal radius (screen-aligned round bodies: urns, trees, domes). */
-export function roundHalfWidth(p: PlotProjection): number {
+function roundHalfWidth(p: PlotProjection): number {
   return Math.hypot(p.A[0], p.B[0]);
 }
 
@@ -84,7 +84,7 @@ export function formatPoints(pts: readonly PlotPoint[]): string {
 }
 
 /** Open polyline as path data ("Mx,yLx,y…"), 0.1-rounded. */
-export function formatPath(pts: readonly PlotPoint[]): string {
+function formatPath(pts: readonly PlotPoint[]): string {
   return pts.map(([x, y], k) => `${k ? "L" : "M"}${round1(x)},${round1(y)}`).join("");
 }
 
@@ -188,12 +188,12 @@ export type PlotMark =
 export type PlotBoxMaterial = string | { t: string; e: string; s: string };
 
 /** Polygon from screen points (0.1-rounded). */
-export function screenPolygon(cls: string, pts: readonly PlotPoint[]): PlotMark {
+function screenPolygon(cls: string, pts: readonly PlotPoint[]): PlotMark {
   return { kind: "polygon", cls, points: pts.map(roundPoint) };
 }
 
 /** Polygon from world points. */
-export function worldPolygon(p: PlotProjection, cls: string, world: readonly (readonly number[])[]): PlotMark {
+function worldPolygon(p: PlotProjection, cls: string, world: readonly (readonly number[])[]): PlotMark {
   return screenPolygon(
     cls,
     world.map((w) => project(p, w[0], w[1], w[2] || 0)),
@@ -201,7 +201,7 @@ export function worldPolygon(p: PlotProjection, cls: string, world: readonly (re
 }
 
 /** Axis-aligned box: the three camera-facing faces (south, east, top), in that paint order. */
-export function boxMarks(
+function boxMarks(
   p: PlotProjection,
   i0: number,
   j0: number,
@@ -224,7 +224,7 @@ export function boxMarks(
 }
 
 /** The eight projected corners of a box (unrounded; for extents and hulls). */
-export function boxPoints(p: PlotProjection, i0: number, j0: number, z0: number, di: number, dj: number, dz: number): PlotPoint[] {
+function boxPoints(p: PlotProjection, i0: number, j0: number, z0: number, di: number, dj: number, dz: number): PlotPoint[] {
   const out: PlotPoint[] = [];
   for (const i of [i0, i0 + di]) for (const j of [j0, j0 + dj]) for (const z of [z0, z0 + dz]) out.push(project(p, i, j, z));
   return out;
@@ -239,13 +239,8 @@ export function faceMatrixE(p: PlotProjection, i: number, j: number, z: number):
   return matrixAt(project(p, i, j, z), [-p.B[0], -p.B[1]], [-p.C[0], -p.C[1]]);
 }
 
-/** South-face frame: u → +i, v → −z. */
-export function faceMatrixS(p: PlotProjection, i: number, j: number, z: number): PlotMatrix {
-  return matrixAt(project(p, i, j, z), p.A, [-p.C[0], -p.C[1]]);
-}
-
 /** Ground frame: u → +i, v → +j. */
-export function faceMatrixG(p: PlotProjection, i: number, j: number, z = 0): PlotMatrix {
+function faceMatrixG(p: PlotProjection, i: number, j: number, z = 0): PlotMatrix {
   return matrixAt(project(p, i, j, z), p.A, p.B);
 }
 
@@ -313,10 +308,10 @@ export function columnFractureTop(opts: { phase: number; amp: number; drop?: num
  * Direction (θ in the i–j plane) of a snapped column's low side: toward the east-north-east light. The break then
  * falls left → right on screen and its cross-section (`brk`) faces the light, the lightest face of the column.
  */
-export const PLOT_FRACTURE_PHASE = Math.atan2(-0.383, 0.924);
+const PLOT_FRACTURE_PHASE = Math.atan2(-0.383, 0.924);
 
 /** Octagonal prism: the three camera-facing faces then the cap. */
-export function octPrismMarks(
+function octPrismMarks(
   p: PlotProjection,
   ic: number,
   jc: number,
@@ -338,7 +333,7 @@ export function octPrismMarks(
 }
 
 /** Ground shadow of an axis-aligned footprint [i0, i1, j0, j1] cast by height H. */
-export function shadowMark(p: PlotProjection, foot: readonly [number, number, number, number], H: number, cls = "shadow"): PlotMark {
+function shadowMark(p: PlotProjection, foot: readonly [number, number, number, number], H: number, cls = "shadow"): PlotMark {
   const [i0, i1, j0, j1] = foot;
   const all: PlotPoint[] = [];
   for (const [i, j] of [[i0, j0], [i1, j0], [i1, j1], [i0, j1]]) {
@@ -380,9 +375,9 @@ export function plotShapeOf(archetype: PlotArchetype, lot: PlotLot): PlotShape {
 /** One plinth step per order of magnitude of peak market cap (world units). */
 export const PLOT_STEP_HEIGHT = 0.1;
 /** Medallion diameter on a 1×1 stone (world units). */
-export const PLOT_MEDALLION = 0.44;
+const PLOT_MEDALLION = 0.44;
 /** Base stone heights before the log-peak height factor (world units). */
-export const PLOT_BASE_HEIGHT: Readonly<Record<PlotArchetype, number>> = {
+const PLOT_BASE_HEIGHT: Readonly<Record<PlotArchetype, number>> = {
   pillow: 0.72,
   "split-arch": 0.98,
   "sealed-tablet": 0.9,
@@ -904,7 +899,7 @@ export function lampGeometry(p: PlotProjection, i: number, j: number): PlotObjec
 }
 
 /** Warm light pool under a year lamp. */
-export function lampPoolMark(p: PlotProjection, i: number, j: number): PlotMark {
+function lampPoolMark(p: PlotProjection, i: number, j: number): PlotMark {
   const [x, y] = project(p, i, j, 0);
   return { kind: "ellipse", cls: "pool", cx: round1(x), cy: round1(y), rx: round1(S * 1.7), ry: round1(S * 0.85) };
 }

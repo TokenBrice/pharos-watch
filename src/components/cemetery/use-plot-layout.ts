@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 /** The phone breakpoint of the plot map: the portrait plan at or below it, the desktop plan above (CSS agrees). */
-export const PLOT_PORTRAIT_QUERY = "(max-width: 760px)";
+const PLOT_PORTRAIT_QUERY = "(max-width: 760px)";
 
 export type PlotLayout = "desktop" | "portrait";
 

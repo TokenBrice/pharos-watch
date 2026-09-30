@@ -124,11 +124,11 @@ export function peakBucketOf(peak: number | null | undefined): CemeteryPeakBucke
 // ---------------------------------------------------------------------------
 
 /** URL params owned by the Autopsy Register, in canonical href order. */
-export const CEMETERY_REGISTER_PARAMS = ["cause", "year", "peg", "mechanism", "record", "peak", "q", "sort", "dir"] as const;
+const CEMETERY_REGISTER_PARAMS = ["cause", "year", "peg", "mechanism", "record", "peak", "q", "sort", "dir"] as const;
 export type CemeteryRegisterParam = (typeof CEMETERY_REGISTER_PARAMS)[number];
 
 /** "tracked" = tracked archive (frozen) rows, "curated" = the rest, "case-study" = rows with a case study. */
-export const CEMETERY_RECORD_FILTER_VALUES = ["tracked", "curated", "case-study"] as const;
+const CEMETERY_RECORD_FILTER_VALUES = ["tracked", "curated", "case-study"] as const;
 export type CemeteryRecordFilter = (typeof CEMETERY_RECORD_FILTER_VALUES)[number];
 
 export const CEMETERY_RECORD_FILTER_LABELS: Readonly<Record<CemeteryRecordFilter, string>> = {
@@ -137,10 +137,10 @@ export const CEMETERY_RECORD_FILTER_LABELS: Readonly<Record<CemeteryRecordFilter
   "case-study": "Case study",
 };
 
-export const CEMETERY_REGISTER_SORT_KEYS = ["died", "peak", "name", "cause"] as const;
+const CEMETERY_REGISTER_SORT_KEYS = ["died", "peak", "name", "cause"] as const;
 export type CemeteryRegisterSortKey = (typeof CEMETERY_REGISTER_SORT_KEYS)[number];
 
-export const CEMETERY_REGISTER_SORT_DIRECTIONS = ["asc", "desc"] as const;
+const CEMETERY_REGISTER_SORT_DIRECTIONS = ["asc", "desc"] as const;
 export type CemeteryRegisterSortDirection = (typeof CEMETERY_REGISTER_SORT_DIRECTIONS)[number];
 
 export const CEMETERY_REGISTER_QUERY_MAX_LENGTH = 80;

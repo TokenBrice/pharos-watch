@@ -48,9 +48,9 @@ export interface CemeteryStatsInput {
 }
 
 /** Length of the trailing and prior comparison windows, in calendar months. */
-export const CEMETERY_TRAILING_WINDOW_MONTHS = 12;
+const CEMETERY_TRAILING_WINDOW_MONTHS = 12;
 /** Last year of the "early record" era used by the algorithmic pattern. */
-export const CEMETERY_ALGORITHMIC_ERA_END_YEAR = 2022;
+const CEMETERY_ALGORITHMIC_ERA_END_YEAR = 2022;
 /** A curated-only count counts as rising (or falling) only past both thresholds. */
 const TREND_MIN_RELATIVE_CHANGE = 0.25;
 const TREND_MIN_ABSOLUTE_CHANGE = 5;
