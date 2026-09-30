@@ -12,42 +12,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Grok wave-8 reserve research",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "OpenAI Codex reserve source review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Independent public accountant certification for wARS - March 2026",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+        "label": "Independent public accountant certification for wARS - June 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wARS%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
       },
       {
-        "label": "Ripio local stablecoins",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
-      },
-      {
-        "label": "Ripio wFIAT attestation archive",
-        "url": "https://www.ripio.com/pt/wfiat"
-      },
-      {
-        "label": "wARS April 2026 certification check (404)",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260430_wARS_Certification.pdf"
-      },
-      {
-        "label": "wARS May 2026 certification check (404)",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260531_wARS_Certification.pdf"
-      },
-      {
-        "label": "wARS June 2026 certification check (404)",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260630_wARS_Certification.pdf"
-      },
-      {
-        "label": "wARS July 2026 certification check (404)",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260731_wARS_Certification.pdf"
+        "label": "Ripio wFIAT attestations",
+        "url": "https://action.ripio.com/en/wfiat-attestations"
       }
     ],
-    "rationale": "Write-time re-open 2026-08-08: the March 31, 2026 independent public accountant certification (Pablo Eduardo Soto, CPA) is still the newest published wARS attestation. It reconciles 973,000,960.19 outstanding wARS across Ethereum, World Chain, Base, Polygon, Gnosis, and BNB Smart Chain to ARS 1,036,276,284 of collateral in Argentine bank accounts and financial institutions and certifies that outstanding tokens are fully backed by Argentine-peso deposits. Probed April 30, May 31, June 30, and July 31, 2026 certification URLs following the same path pattern and each returned HTTP 404; the Ripio local-stablecoins and wFIAT archive pages still link only the March 31, 2026 PDF. The engagement is expressly a certification rather than an audit or review, and institutions and account terms remain undisclosed. Composition is therefore 130 days stale as of this review and outside the V9 admission window.",
-    "compositionBasis": "Independent public accountant certification of wARS collateral as of March 31, 2026",
-    "compositionAsOf": "2026-03-31",
+    "rationale": "The June 30, 2026 certification reconciles 7,619,996,077 outstanding wARS across eight chains to ARS7,909,436,643.14 deposited in Argentine bank accounts and financial institutions and certifies full local-currency backing. Pablo Eduardo Soto signed the certification on July 28, 2026 for SLD y Asociados S.A. The engagement expressly does not constitute an audit or review and expresses no professional opinion. The institutions and account terms remain undisclosed. The official wFIAT attestation index serves this report as its latest wARS evidence on September 30, 2026; the 92-day-old balance date remains outside the live adapter's 33-day freshness ceiling.",
+    "compositionBasis": "Independent public accountant certification of wARS collateral as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve asset class is unclassified; the Argentine financial institutions, account types, provider allocations, and withdrawal liquidity are undisclosed.",
     "knownUnknownExposurePct": 0,

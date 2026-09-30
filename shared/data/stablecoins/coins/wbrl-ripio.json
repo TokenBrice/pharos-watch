@@ -14,15 +14,14 @@
   "pegMechanism": "WBRL is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
-    "provider": "Pablo Eduardo Soto (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
+    "url": "https://action.ripio.com/en/wfiat-attestations",
+    "provider": "Pablo Eduardo Soto, partner at SLD y Asociados S.A. (certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Argentina",
     "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires",
     "latestReport": {
-      "periodEnd": "2026-03-31",
-      "publishedAt": "2026-05-18",
+      "periodEnd": "2026-06-30",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -30,8 +29,8 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "Independent public accountant certification for wBRL - March 2026",
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf"
+          "label": "Independent public accountant certification for wBRL - June 2026",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wBRL%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       ]
     }
@@ -102,13 +101,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "wbrl-ripio",
     "display": {
-      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-      "label": "Ripio local stablecoins"
+      "url": "https://action.ripio.com/en/wfiat-attestations",
+      "label": "Ripio wFIAT attestations"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "url": "https://action.ripio.com/en/wfiat-attestations"
       }
     },
     "params": {
@@ -125,8 +124,8 @@
         }
       ],
       "reviewedReport": {
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
-        "balanceDate": "2026-03-31"
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wBRL%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+        "balanceDate": "2026-06-30"
       }
     }
   },

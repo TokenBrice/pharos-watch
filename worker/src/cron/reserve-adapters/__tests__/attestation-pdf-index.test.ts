@@ -12,6 +12,7 @@ import {
   type AttestationPdfIndexParams,
 } from "../attestation-pdf-index";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
+import ripioJune from "./fixtures/ripio-wfiat-june-2026.json";
 
 const CONFIGURED_PARAMS: AttestationPdfIndexParams = {
   slices: [
@@ -35,28 +36,6 @@ function buildConfig(url = "https://issuer.example/transparency/"): LiveReserves
 describe("adaptAttestationPdfIndex", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-  });
-
-  it.each([wars, wbrl, wcop, wmxn])("keeps $id on reviewed balances until its next report is reviewed", (coin) => {
-    const params = parseLiveReserveAdapterParams("attestation-pdf-index", coin.liveReservesConfig.params);
-    const url = coin.proofOfReserves.latestReport.sources[0].url;
-    const current = `<a href="${url}">Certification</a>`;
-    const result = adaptAttestationPdfIndex(current, params);
-    expect(result.metadata).toMatchObject({
-      reportPdfUrl: url,
-      reportBalanceDate: "2026-03-31",
-      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
-      freshnessMode: "verified",
-    });
-
-    const nextUrl = url.replace("20260331", "20260831");
-    const next = adaptAttestationPdfIndex(`${current}<a href="${nextUrl}">Certification</a>`, params);
-    expect(next.metadata).toMatchObject({ reportPdfUrl: nextUrl, freshnessMode: "unverified" });
-    expect(next.metadata?.sourceTimestamp).toBeUndefined();
-    expect(next.warnings).toContainEqual(expect.objectContaining({
-      code: "attestation-report-basis-unreviewed",
-      effect: "degraded",
-    }));
   });
 
   it("uses the reviewed balance date and rejects publication dates from a newer unreviewed report", () => {
@@ -296,6 +275,30 @@ describe("adaptAttestationPdfIndex", () => {
       reportDateSource: "href",
       reportPdfPath: "/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
     });
+  });
+
+  it.each([wars, wbrl, wcop, wmxn])("reads $id's reviewed balance date rather than its upload folder", (coin) => {
+    const config = coin.liveReservesConfig as LiveReservesConfig;
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", config.params);
+    const result = adaptAttestationPdfIndex(ripioJune.html, params, { indexUrl: ripioJune.sourceUrl });
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 5, 30) / 1000,
+      reportDate: "2026-06-30",
+      reportDatePrecision: "day",
+      reportBalanceDate: "2026-06-30",
+      reportPdfUrl: params.reviewedReport!.url,
+      freshnessMode: "verified",
+    });
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("preserves day-first interpretation for ambiguous numeric filenames", () => {
+    const result = adaptAttestationPdfIndex(
+      '<a href="https://issuer.example/attestation-06.07.2026.pdf">Report</a>',
+      CONFIGURED_PARAMS,
+    );
+    expect(result.metadata?.reportDate).toBe("2026-07-06");
   });
 
   it("ignores 8-digit tokens that are not valid dates in PDF filenames", () => {

@@ -12,10 +12,10 @@ export function straitsxProfile(
     profile: "straitsx-v1",
     officialIndexUrl: `https://www.straitsx.com/${product.toLowerCase()}`,
     reportUrl: xsgd
-      ? "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e13a54059e618ca8c06e3_XSGD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf"
-      : "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e145187f4227fbe226ec2_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf",
-    reportDate: "2026-07-31",
-    reportAsOf: "2026-07-31T23:59:00+08:00",
+      ? "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb46bca92eaa67297d7500_XSGD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf"
+      : "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb483d1de79f8ca93f1c67_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf",
+    reportDate: "2026-08-31",
+    reportAsOf: "2026-08-31T23:59:00+08:00",
     reportTimeZone: "Singapore Time (GMT+8)",
     attestor: "KK Yap & Associates",
     engagement: "Independent accountant's reasonable-assurance examination under SSAE 3000 (Revised)",
@@ -55,7 +55,7 @@ export function straitsxProfile(
       { label: "KK Yap & Associates", pattern: /KK YAP & ASSOCIATES/i },
       { label: "SSAE 3000", pattern: /SSAE\)?\s*3000/i },
       { label: "reasonable assurance", pattern: /reasonable assurance/i },
-      { label: `${product} report date`, pattern: /31 July 2026/i },
+      { label: `${product} report date`, pattern: /31 August 2026/i },
       { label: "favorable StraitsX conclusion", pattern: /in our opinion[\s\S]*fairly stated/i },
     ],
     rejectedText: [
