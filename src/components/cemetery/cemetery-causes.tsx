@@ -178,7 +178,7 @@ function CauseColumn({ causeStats }: { causeStats: CemeteryCauseStats }) {
       </p>
       <p className="mt-2 hidden text-[13px] leading-relaxed text-foreground/80 md:block">{meta.definition}</p>
       <details className="group mt-2 md:hidden">
-        <summary className="pharos-focus-ring w-fit cursor-pointer rounded-sm text-xs text-muted-foreground hover:text-foreground">
+        <summary className="pharos-focus-ring -my-1.5 w-fit cursor-pointer rounded-sm py-1.5 text-xs text-muted-foreground hover:text-foreground">
           Definition
         </summary>
         <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/80">{meta.definition}</p>

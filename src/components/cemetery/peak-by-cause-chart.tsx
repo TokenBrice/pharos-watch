@@ -449,7 +449,7 @@ export function PeakByCauseChart({
       <div className="mt-5 space-y-3">
         <div>{footnote}</div>
         <details className="group">
-          <summary className="pharos-focus-ring w-fit cursor-pointer rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground">
+          <summary className="pharos-focus-ring -my-1.5 w-fit cursor-pointer rounded-sm py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
             Data table
           </summary>
           <ChartDataTable
