@@ -18766,6 +18766,104 @@
           "quality": "limited"
         }
       }
+    },
+    {
+      "assetId": "thusd-theo",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-09-30",
+      "sources": [
+        {
+          "label": "Theo thUSD product documentation (gold leases, short CME futures and Treasury liquidity; reviewed 2026-09-30)",
+          "url": "https://docs.theo.xyz/products/thusd.md"
+        },
+        {
+          "label": "Theo gold-carry yield mechanics (illustrative 80/20 capital allocation, futures rolling and basis; reviewed 2026-09-30)",
+          "url": "https://docs.theo.xyz/products/thusd/how-thusd-generates-yield.md"
+        },
+        {
+          "label": "Theo thUSD strategy, margin, lease and custody risks (three-sigma policy without current account measurements; reviewed 2026-09-30)",
+          "url": "https://docs.theo.xyz/products/thusd/risks.md"
+        },
+        {
+          "label": "Theo transparency dashboard (Sep 30, 2026 reserve composition and attestation status; no downloadable reports)",
+          "url": "https://app.theo.xyz/transparency"
+        },
+        {
+          "label": "Theo public thUSD historical API (dated reserve and supply rows, without hedge notionals or margin requirements; reviewed 2026-09-30)",
+          "url": "https://theo-api.theo.xyz/v1/public/thusd/historical/30"
+        },
+        {
+          "label": "Theo counterparties and venues documentation (heading-only disclosure; reviewed 2026-09-30)",
+          "url": "https://docs.theo.xyz/security-and-transparency/counterparties-and-venues.md"
+        },
+        {
+          "label": "Theo thGOLD documentation (undergoing updates; reviewed 2026-09-30)",
+          "url": "https://docs.theo.xyz/products/thgold.md"
+        },
+        {
+          "label": "Theo legal terms (no thUSD-specific loss waterfall or committed reserve-fund balance; reviewed 2026-09-30)",
+          "url": "https://docs.theo.xyz/legal/terms.md"
+        },
+        {
+          "label": "Theo gold carry explanation (corroboration only: fund-beneficiary insurance, first-loss protection and unnamed clearing FCM; reviewed 2026-09-30)",
+          "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
+        }
+      ],
+      "notes": "Evidence pinned 2026-09-30. The hydrated issuer dashboard, labelled Sep 30, 2026, itemizes $34,295,295 thBILL, $98,716,576 Gold Carry, $360,760 USDC and $20,000 USDT; these are issuer-reported reserve categories, not independently reconciled hedge, margin or loss-absorbing capital measurements. It lists Theo Protocol Corp as attested on 2026-06-22, Libeara thBILL holdings as attested on 2026-06-01, and Accountable auditor as In Progress, but publishes no report downloads or current gold-side, clearing-FCM or Wellington account reconciliations. No numeric mechanism metric is admitted: delta-neutral and close-to-1:1 hedge language is not measured hedgeCoverageRatio; the illustrative $80 gold/$20 hedge allocation and three-sigma margin policy are not marginBufferPct; dashboard reserve excess and fund-level first-loss or insurance claims are not committed thUSD lossAbsorptionShare. All six components are sourced-unavailable rather than graded weak: venueAndCustody lacks an anchored current account inventory and identified FCM; hedgeReconciliation lacks long/short quantities and independent reconciliation; fundingBasisStress lacks dated stress results and an externally anchored response record; marginAndLiquidation lacks current collateral, requirements and tested top-up/closeout capacity; unwindCapacity lacks a dated maturity/settlement ladder and matched-leg stress unwind; lossAbsorption lacks funded protocol-level capital and an enforceable holder waterfall. Issuer qualitative policies and marketing claims do not meet the evidence standard's minimum limited class. No structural absence is established, so no not-applicable state or invented venue shares are used. The managed gold-long/CME-short position supports synthetic-delta-neutral, not a direct commodity claim; underlying fund credit exposure does not remove hedge and margin risk. Date-only evidence becomes admissible after 2026-09-30 UTC has elapsed.",
+      "metrics": {
+        "hedgeCoverageRatio": null,
+        "marginBufferPct": null,
+        "lossAbsorptionShare": null
+      },
+      "metricApplicability": {
+        "hedgeCoverageRatio": {
+          "state": "unavailable",
+          "rationale": "The reviewed product, yield, risk and transparency disclosures publish no dated matched gold-long and CME-short quantities or independently reconciled hedge ratio. Delta-neutral and close-to-1:1 policy language is not a measured ratio.",
+          "sourceUrl": "https://app.theo.xyz/transparency"
+        },
+        "marginBufferPct": {
+          "state": "unavailable",
+          "rationale": "The yield page's $80 gold/$20 hedge example and risk page's three-sigma margin policy publish neither current FCM collateral and maintenance requirements nor reconciled protocol-wide reserve excess. Neither illustrative allocation nor unverified dashboard excess establishes measured margin headroom.",
+          "sourceUrl": "https://docs.theo.xyz/products/thusd/risks.md"
+        },
+        "lossAbsorptionShare": {
+          "state": "unavailable",
+          "rationale": "The reviewed risk, legal, thGOLD and transparency disclosures publish no dated thUSD-dedicated reserve or insurance capital and liability denominator with enforceable loss coverage. Fund-level first-loss and insurance claims do not quantify protocol-wide committed protection.",
+          "sourceUrl": "https://docs.theo.xyz/legal/terms.md"
+        }
+      },
+      "components": {
+        "venueAndCustody": {
+          "applicability": "unavailable",
+          "rationale": "The dashboard itemizes broad reserve categories but supplies no current externally anchored gold and futures account inventory, clearing-FCM identity, or custody/segregation agreement. The counterparties page contains only a heading; named institutions in the blog and attestation badges without reports do not establish the full custody chain.",
+          "sourceUrl": "https://docs.theo.xyz/security-and-transparency/counterparties-and-venues.md"
+        },
+        "hedgeReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The dashboard and historical API publish no matched physical-gold or lease inventory, CME contract quantities, net delta, or dated independent long/short reconciliation. A delta-neutral policy and a claimed clearing-account attestation without the report do not support a quality grade.",
+          "sourceUrl": "https://app.theo.xyz/transparency"
+        },
+        "fundingBasisStress": {
+          "applicability": "unavailable",
+          "rationale": "The risk page acknowledges basis compression and backwardation and describes staggered futures rolls, but publishes no dated position-level basis stress, roll-cost limits, funded negative-carry capacity, or externally anchored response results.",
+          "sourceUrl": "https://docs.theo.xyz/products/thusd/risks.md"
+        },
+        "marginAndLiquidation": {
+          "applicability": "unavailable",
+          "rationale": "The risk page states a three-sigma single-day gold-rally margin invariant but publishes no current FCM collateral and maintenance requirements, enforceable invariant implementation, tested top-up resources, or independently anchored liquidation and closeout results.",
+          "sourceUrl": "https://docs.theo.xyz/products/thusd/risks.md"
+        },
+        "unwindCapacity": {
+          "applicability": "unavailable",
+          "rationale": "The yield page describes deep gold markets and rolling futures, but publishes no dated gold-lease maturity ladder, lease recall rights, matched futures-close settlement schedule, or stress-tested dollar capacity and cost to unwind both legs. Market size and staking lockup do not measure strategy unwind capacity.",
+          "sourceUrl": "https://docs.theo.xyz/products/thusd/how-thusd-generates-yield.md"
+        },
+        "lossAbsorption": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed risk and legal pages describe lessee insurance, reinsurance and title retention but publish no thUSD-specific funded reserve, insurance policy terms, covered-loss limits, beneficiary rights or enforceable loss waterfall. The blog's fund-level first-loss protection is not a verified protocol-wide backstop.",
+          "sourceUrl": "https://docs.theo.xyz/legal/terms.md"
+        }
+      }
     }
   ]
 }

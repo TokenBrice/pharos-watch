@@ -2,9 +2,9 @@
   "id": "thusd-theo",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "collateral-gated",
     "confidence": "verified",
-    "summary": "thUSD is minted only by the ThUSDMinter contract, which executes EIP-712 orders signed by Theo's backend under a Fordefi MPC Minter EOA, pulls the matching USDC or USDT collateral before minting, and enforces whitelist, per-block cap, and collateral-ratio invariants that prevent undercollateralized mints even on backend compromise. The token's single minter and its UUPS upgrade path sit behind the Theo two-day timelock controlled by a 4-of-6 Safe.",
+    "summary": "thUSD's sole native minter is the non-upgradeable ThUSDMinter. The Fordefi MPC Minter EOA submits depositor-signed EIP-712 orders; each mint transfers USDC/USDT collateral before creating supply and enforces a normalized collateral floor, whitelist and per-block cap. Minter replacement, role administration, supported-asset changes and token upgrades require the self-administered 172800-second timelock governed by a 4-of-6 Safe. This is collateral-gated issuance, not immutable backing or verified continuous reconciliation.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -22,8 +22,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "thUSD administration timelock",
-      "observedAt": "2026-09-29",
-      "observedBlock": 26083731,
+      "observedAt": "2026-09-30",
+      "observedBlock": 26088438,
       "sources": [
         {
           "label": "Blockscout thUSD ERC1967Proxy",
@@ -50,18 +50,18 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "Sole caller of thUSD.mint(); executes whitelisted EIP-712 orders only after transferring the matching USDC/USDT collateral, with per-block caps and an on-chain collateral-ratio floor before any new supply issues. The contract is not upgradeable; its supported assets, destinations, caps, and redemption fee are admin-gated.",
-        "canRaiseCap": true,
+        "capDescription": "Sole token-level minter; transfers USDC/USDT collateral for depositor-signed orders before minting, requiring normalized thUSD output not to exceed collateral input. No undercollateralization tolerance exists; signers may accept less output. Current maxMintPerBlock is 1000000000000 six-decimal units (1000000 thUSD). Caps, supported assets and destinations are changeable only by the timelock admin, not by this contract itself.",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-29",
-        "observedBlock": 26083731,
+        "observedAt": "2026-09-30",
+        "observedBlock": 26088438,
         "sources": [
           {
             "label": "Blockscout verified ThUSDMinter",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2D99aC801DC0edadD53f5688FeF2317932E8696e"
           },
           {
-            "label": "Theo mint and redeem documentation (backend-signed orders, 1:1 invariants)",
+            "label": "Theo mint and redeem documentation (depositor-signed orders, collateral invariants)",
             "url": "https://docs.theo.xyz/products/thusd/mint-and-redeem.md"
           },
           {
@@ -69,7 +69,7 @@
             "url": "https://docs.theo.xyz/developers/contract-reference/mint-and-redeem.md"
           }
         ],
-        "evidence": "At Ethereum block 26083731, thUSD.minter() returned this address and it holds MINTER_ROLE on itself per the grant log at block 24837116 (role 0x9f2df0fe...956a6 granted to 0x09ec...53b6 is the order-authorization EOA; the contract is the token-level minter). Verified documentation states the contract validates the EIP-712 signature, checks the TheoWhitelist gate, transfers collateral, and then mints, with contract invariants preventing undercollateralized minting even if the backend is compromised."
+        "evidence": "Ethereum block 26088438: thUSD.minter() is this contract and its ERC1967 implementation slot is zero. Verified ThUSDMinter.sol has non-upgradeable inheritance, immutable token/whitelist references and no upgrade function. Lines 74-84 require MINTER_ROLE, pause/cap checks and order validation, then transfer collateral before thUSD.mint; line 221 transfers collateral to the Cash Wallet. Lines 189-198 normalize decimals and reject mint output above input. Complete role replay from block 24837116 plus hasRole proves MINTER_ROLE belongs only to the backend EOA, not this contract. AssetAdded/AssetRemoved replay establishes only USDC/USDT are supported. No mint incident is disclosed in reviewed issuer security/audit pages."
       },
       {
         "chain": "ethereum",
@@ -77,7 +77,7 @@
         "deploymentRefs": [
           "ethereum:0xa3fe5c7596024e6811e14f029937d5bd8ae485b3"
         ],
-        "label": "Minter EOA (order authorization)",
+        "label": "Minter EOA (signed-order submission)",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "cap-limited",
@@ -90,11 +90,11 @@
             }
           ]
         },
-        "capDescription": "Holds MINTER_ROLE on ThUSDMinter to authorize mint orders within the contract's collateral, whitelist, and per-block cap constraints; cannot move user funds or change roles per issuer documentation.",
+        "capDescription": "Sole MINTER_ROLE caller on ThUSDMinter; submits depositor-signed orders rather than signing as depositor. Cannot bypass collateral transfer, ratio floor, whitelist or per-block cap, and cannot change caps, roles or logic.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-29",
-        "observedBlock": 26083731,
+        "observedAt": "2026-09-30",
+        "observedBlock": 26088438,
         "sources": [
           {
             "label": "RoleGranted log at block 24837116 (MINTER_ROLE to this address)",
@@ -105,7 +105,7 @@
             "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
           }
         ],
-        "evidence": "MINTER_ROLE (0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6) was granted to this address at block 24837116 and hasRole returns true at block 26083731. Theo documents the key as an EOA under Fordefi MPC whose only power is authorizing mints on ThUSDMinter."
+        "evidence": "MINTER_ROLE (0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6) was granted at block 24837116. Grants-minus-revokes replay through Ethereum block 26088438 leaves only this holder, confirmed by hasRole; eth_getCode is empty. Source lines 207-208 recover order.signer, the depositor; this EOA submits the role-gated transaction. Theo roles/security pages re-read 2026-09-30 attest Fordefi MPC custody, not independently observable on-chain. No mint incident is disclosed in reviewed issuer security/audit pages."
       },
       {
         "chain": "ethereum",
@@ -120,8 +120,8 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-29",
-        "observedBlock": 26083731,
+        "observedAt": "2026-09-30",
+        "observedBlock": 26088438,
         "sources": [
           {
             "label": "Blockscout verified TimelockController",
@@ -132,7 +132,7 @@
             "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
           }
         ],
-        "evidence": "At block 26083731, thUSD.owner() returned this timelock and hasRole(DEFAULT_ADMIN_ROLE) on ThUSDMinter returned true (granted at block 25094140 after an intermediate admin was revoked at 25094186); getMinDelay() returned 172800 seconds. As owner it can call setMinter (no zero-address check, so minting can also be disabled) and upgradeToAndCall on the token, so it can replace mint logic after the two-day delay."
+        "evidence": "At Ethereum block 26088438, thUSD.owner() is this timelock, pendingOwner is zero and it alone holds ThUSDMinter DEFAULT_ADMIN_ROLE. getMinDelay() is 172800. Full timelock role replay from deployment block 25046194 plus hasRole proves DEFAULT_ADMIN_ROLE only on itself; operator Safe admin was revoked at 25094121, and deployer 0x89f3344cc1139b9582b84b461a4af15868d40071 has no admin. PROPOSER/EXECUTOR belong only to the operator Safe, with no address(0) executor; CANCELLER belongs to the Safe and 0x7afb1d3308d22639f1ce698a2985cbf22f96d94a. Source gates minter replacement/UUPS authorization by token ownership and asset/cap/role changes by minter admin. Delayed self-calls can reduce the delay; these are current, not immutable, constraints. No mint incident is disclosed in reviewed issuer security/audit pages."
       },
       {
         "chain": "ethereum",
@@ -164,23 +164,23 @@
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
           "version": "1.4.1",
-          "observedAt": "2026-09-29",
-          "observedBlock": 26083731,
-          "source": "safe-api"
+          "observedAt": "2026-09-30",
+          "observedBlock": 26088438,
+          "source": "onchain"
         },
-        "observedAt": "2026-09-29",
-        "observedBlock": 26083731,
+        "observedAt": "2026-09-30",
+        "observedBlock": 26088438,
         "sources": [
           {
-            "label": "Theo governance Safe state",
-            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x94877640dD9E6F1e3Cb56Bf7b5665b7152601295/"
+            "label": "Theo governance Safe (configuration read at block 26088438)",
+            "url": "https://etherscan.io/address/0x94877640dd9e6f1e3cb56bf7b5665b7152601295#readProxyContract"
           },
           {
             "label": "Theo roles and access control (Safe holds timelock roles and whitelist manager role)",
             "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
           }
         ],
-        "evidence": "Safe API state read on 2026-09-29 shows a 4-of-6 Safe v1.4.1 with no enabled modules and a zero guard, the same six owners recorded for the Theo governance Safe in August 2026. Theo documents it as PROPOSER, EXECUTOR, and CANCELLER on the two-day timelock and as WHITELIST_MANAGER_ROLE holder on TheoWhitelist, which gates who may mint and redeem; it cannot mint directly."
+        "evidence": "Ethereum reads at block 26088438 confirm unchanged six owners, threshold 4, version 1.4.1, empty modules ending at the sentinel, zero guard, unchanged fallback handler and singleton. Timelock role replay/hasRole confirms PROPOSER, EXECUTOR and CANCELLER but no current DEFAULT_ADMIN_ROLE (revoked at 25094121). It schedules and executes minter replacement, cap changes and upgrades only after the current 172800-second delay; it cannot directly mint. Whitelist manager scope is issuer-documented. No mint incident is disclosed in reviewed issuer security/audit pages."
       },
       {
         "chain": "ethereum",
@@ -204,8 +204,8 @@
         "capDescription": "Holds the emergency pause role that halts ThUSDMinter issuance and redemptions instantly; cannot create supply or change parameters.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-29",
-        "observedBlock": 26083731,
+        "observedAt": "2026-09-30",
+        "observedBlock": 26088438,
         "sources": [
           {
             "label": "RoleGranted log at block 24837116 (emergency role to this address)",
@@ -216,11 +216,11 @@
             "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
           }
         ],
-        "evidence": "The emergency role (0xbf233dd2aafeb4d50879c4aa5a81e96d92f6e6945c906a58f9f2d1c1631b4b26) was granted to this address at block 24837116 and hasRole returns true at block 26083731. Theo documents the key as a Fordefi MPC EOA whose only power on Mint and Redeem, and on sthUSD, is pause."
+        "evidence": "EMERGENCY_ROLE (0xbf233dd2aafeb4d50879c4aa5c81e96d92f6e6945c906a58f9f2d1c1631b4b26) was granted at block 24837116. Full replay through Ethereum block 26088438 leaves this sole holder, confirmed by hasRole; eth_getCode is empty. Verified source lines 153-159 permit only pause; unpause and parameter/role changes require admin. It cannot mint or raise caps. Theo roles/security pages re-read 2026-09-30 attest Fordefi MPC custody, not independently observable on-chain. No mint incident is disclosed in reviewed issuer security/audit pages."
       }
     ],
-    "economicCapSemantics": "raiseable",
-    "reconciliation": "continuous",
+    "economicCapSemantics": "collateral-gated",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "sources": [
@@ -237,22 +237,38 @@
           "url": "https://docs.theo.xyz/products/thusd/mint-and-redeem.md"
         },
         {
-          "label": "Theo transparency dashboard (continuous supply-versus-reserves reconciliation)",
+          "label": "Theo transparency dashboard (dated reserve/supply snapshot, undisclosed reconciliation cadence)",
           "url": "https://app.theo.xyz/transparency"
         },
         {
           "label": "Blockscout verified ThUSDMinter",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2D99aC801DC0edadD53f5688FeF2317932E8696e"
+        },
+        {
+          "label": "Theo terms section 11.B.i (no governmental registration or licence)",
+          "url": "https://docs.theo.xyz/legal/terms.md"
+        },
+        {
+          "label": "Blockscout verified thUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcd04f57464d25f257089a286aab47df096d300ad"
+        },
+        {
+          "label": "Blockscout verified TimelockController",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
+        },
+        {
+          "label": "Blockscout Ethereum OFT adapter and inherited lock/unlock source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9aa9aa0530a6af70ee7bc47cf1240100f514b065"
+        },
+        {
+          "label": "Theo security audit disclosures",
+          "url": "https://docs.theo.xyz/security-and-transparency/audits.md"
         }
       ],
-      "evidence": "Direct reads at Ethereum block 26083731 established thUSD.owner() = timelock 0x2bb4...ca02, thUSD.minter() = ThUSDMinter 0x2d99...696e, getMinDelay() = 172800 seconds, and role grants on ThUSDMinter (DEFAULT_ADMIN to the timelock, MINTER_ROLE to the Minter EOA, emergency role to the Guardian EOA, each confirmed by hasRole and by replaying grants minus revokes from the deploy block 24837116). The Safe API confirmed the operator Safe is 4-of-6 v1.4.1 with no modules or guard. Minting runs through backend-signed EIP-712 orders executed by the non-upgradeable ThUSDMinter, which transfers 1:1 USDC/USDT collateral before minting under whitelist and per-block cap constraints, so no privileged party can mint unbacked thUSD under current code; the timelock can nonetheless replace the minter, change caps and supported assets, or upgrade the UUPS token after two days, so the posture is partially bounded and the economic cap is raiseable. Reconciliation is continuous: every mint is collateral-gated on-chain by contract invariant and the transparency dashboard reconciles aggregate thUSD supply against attested reserves in real time ($134.69M reserves versus $133.67M supply, 100.76%, read 2026-09-29). No prudential regime supervises the issuer: Theo's terms state the company is not registered or licensed by any governmental authority, and the protocol-level reserve attestation is self-run with an independent auditor in progress.",
+      "evidence": "Re-reviewed 2026-09-30 at Ethereum block 26088438. Token implementation, owner and sole minter are unchanged; complete role replay/hasRole proves minter admin solely on the self-administered 172800-second timelock, MINTER_ROLE solely on the backend EOA and EMERGENCY_ROLE solely on Guardian. No deployer/EOA timelock admin or open executor remains. The operator Safe is unchanged 4-of-6 with no modules/guard. Depositors sign orders; the backend submits them. Current code transfers supported USDC/USDT collateral before supply creation and rejects normalized output above input with no tolerance. Economic cap is collateral-gated under methodology 9.32: every live native mint path requires collateral, no current privileged caller bypasses it, and every minter authorization, replacement or upgrade path is absent or delayed 172800 seconds (above 86400). Numeric caps remain admin-raiseable, but the separately satisfied collateral-gated definition intentionally takes the lower rung. Timelocked administration may replace logic/minter, add collateral or reduce delay: this is not immutable backing protection. The Ethereum OFT adapter only locks/unlocks existing thUSD and is not its minter. Cash Wallet 0xec417ccb6dd26868cca993a92f37217b1d4b3c2f is both mint/redeem destination, a 4-of-5 Safe v1.4.1 with no modules/guard; it is neither token owner nor minter and has no role on ThUSDMinter or timelock. Post-mint collateral management and the unnamed FCM belong to reserve/custody uncertainty, not unresolved native issuance controls, so both aggregate questions are removed. Reconciliation is unknown: the Sep 30 dashboard snapshot and June 22 protocol attestation establish no continuous or recurring cadence for deployed backing; atomic collateral transfer is not ongoing reconciliation. Supervision remains none under Theo terms section 11.B.i's explicit governmental registration/licensing disclaimer. MPC is issuer-attested, not chain-provable. No mint incident is disclosed in reviewed issuer security/audit evidence.",
       "reviewer": "Pharos mint authority research",
-      "reviewedAt": "2026-09-29",
-      "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "The thUSD Cash Wallet 4-of-5 Safe that receives mint collateral is not named as a mint control because it holds no mint role; its post-mint deployment of collateral could be reviewed as a separate operational control.",
-        "The clearing FCM holding CME margin is described only as a US-regulated Fortune-500 firm and is not named."
-      ]
+      "reviewedAt": "2026-09-30",
+      "disposition": "scoreable"
     }
   }
 }

@@ -5484,6 +5484,76 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "thusd-theo",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos risk review",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At Ethereum block 26088429 the thUSD UUPS proxy resolved to verified ThUSD implementation 0xcd04f57464d25f257089a286aab47df096d300ad and owner() was timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 with getMinDelay() = 172800 seconds. Current transfers use unmodified ERC20 logic without pause, blacklist, allowlist, seizure, or transfer hook, and burnFrom consumes allowance. However _authorizeUpgrade is onlyOwner, so delayed governance can replace the holder-transfer implementation and introduce restrictions.",
+          "sources": [
+            {
+              "label": "Verified ThUSD implementation and OpenZeppelin dependencies",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcd04f57464d25f257089a286aab47df096d300ad"
+            },
+            {
+              "label": "Theo thUSD contract reference: standard transfers and owner-only UUPS",
+              "url": "https://docs.theo.xyz/developers/contract-reference/thusd.md"
+            },
+            {
+              "label": "Ethereum pinned implementation, owner and delay reads",
+              "url": "https://etherscan.io/block/26088429"
+            }
+          ]
+        },
+        {
+          "chainId": "stable",
+          "contractOrTokenId": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Stable block 41274206 this direct ThUSDOFT held 49,916,245.784914 thUSD and its EIP-1967 implementation slot was zero. Runtime bytecode matches Sourcify's exact-match Arbitrum ThUSDOFT outside compiler-declared immutable locations; those locations contain the Stable endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and unchanged decimalConversionRate = 1. ThUSDOFT only adds a six-decimal override to OFT and inherits ordinary ERC20 transfer/transferFrom. There is no local pause, blacklist, allowlist, seizure, arbitrary-holder burn, upgrade or transfer-hook path. OFT send burns the caller's tokens; owner peer configuration and EndpointV2 delegate configuration affect bridge delivery, not local holder transfers.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match ThUSDOFT and compiler immutable references",
+              "url": "https://sourcify.dev/server/v2/contract/42161/0x9aa9aa0530a6af70ee7bc47cf1240100f514b065?fields=all"
+            },
+            {
+              "label": "Stable pinned runtime, implementation slot, endpoint and supply at block 41274206",
+              "url": "https://rpc.stable.xyz"
+            },
+            {
+              "label": "Theo deployed addresses: Stable thUSD OFT",
+              "url": "https://docs.theo.xyz/developers/deployed-addresses.md"
+            }
+          ]
+        },
+        {
+          "chainId": "arbitrum",
+          "contractOrTokenId": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Arbitrum block 510263215 this direct non-proxy Sourcify exact-match ThUSDOFT held 190,522.212183 thUSD and had zero EIP-1967 implementation slot. ThUSDOFT only adds a six-decimal override to LayerZero OFT, whose holder transfer/transferFrom are ordinary OpenZeppelin ERC20. There is no local pause, blacklist, allowlist, seizure, arbitrary-holder burn, upgrade or transfer hook. OFT send debits the caller; owner-only setPeer and setDelegate do not alter local holder transfer logic, and EndpointV2 configuration authority is a separate bridge-control exposure.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match Arbitrum ThUSDOFT with bundled dependencies",
+              "url": "https://sourcify.dev/server/v2/contract/42161/0x9aa9aa0530a6af70ee7bc47cf1240100f514b065?fields=all"
+            },
+            {
+              "label": "Arbitrum pinned supply and implementation-slot reads at block 510263215",
+              "url": "https://arb1.arbitrum.io/rpc"
+            },
+            {
+              "label": "Theo deployed addresses: Arbitrum thUSD OFT",
+              "url": "https://docs.theo.xyz/developers/deployed-addresses.md"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

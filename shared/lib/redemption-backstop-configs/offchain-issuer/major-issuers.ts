@@ -436,30 +436,61 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "thusd-theo": {
     ...issuerBase,
-    ...documentedBoundSupplyFull("2026-09-29"),
+    reviewedAt: "2026-09-30",
+    holderEligibility: "whitelisted-primary",
     executionModel: "deterministic-onchain",
-    costModel: documentedVariableFee(
-      "1:1 redemption in USDC or USDT through the whitelisted ThUSDMinter using backend-signed EIP-712 orders with per-block caps; the redemption fee is hard-capped on-chain but the rate is not published",
+    costModel: fixedFee(
+      5,
+      "ThUSDMinter redeemFeeBps() is 5 bps at Ethereum block 26088429 (2026-09-30); fee = ceil(collateral_amount * 5 / 10000), retained in the Cash Wallet; MAX_FEE_BPS is 10",
     ),
+    v9RouteReviewTerms: {
+      minRedeemUsd: 1,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+      rationale:
+        "The contract atomically burns thUSD and pays USDC/USDT only after Theo's role-restricted API submits the depositor-signed order; no end-to-end processing SLA or full-supply executable liquidity bound is published. At Ethereum block 26088429 the Cash Wallet held 360760.446791 USDC and 20000 USDT, with minter allowances of 200400 USDC and 400300 USDT; a 200000-thUSD per-block cap also applies. These observations do not establish replenishment or a guaranteed same-day exit. Platform terms reserve account-specific transaction limits without a public numeric daily bound.",
+      reviewedAt: "2026-09-30",
+      docs: [
+        sourceRef(
+          "Theo mint and redeem (depositor-signed orders submitted through the API)",
+          "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
+          ["route", "capacity", "settlement", "access"],
+        ),
+        sourceRef(
+          "Verified ThUSDMinter source and state (Ethereum block 26088429)",
+          "https://eth.blockscout.com/api/v2/smart-contracts/0x2d99ac801dc0edadd53f5688fef2317932e8696e",
+          ["route", "capacity", "settlement", "fees", "access"],
+        ),
+        sourceRef(
+          "Theo terms (as-available services and account-specific transaction limits)",
+          "https://docs.theo.xyz/legal/terms.md",
+          ["capacity", "settlement", "access"],
+        ),
+      ],
+    },
     docs: [
       sourceRef("Theo thUSD mint and redeem documentation", "https://docs.theo.xyz/products/thusd/mint-and-redeem.md", [
         "route",
-        "capacity",
         "access",
-        "settlement",
-        "fees",
       ]),
       sourceRef(
-        "Theo contract reference: Mint and Redeem (EIP-712 orders, caps, hard-capped redemption fee)",
+        "Theo contract reference: Mint and Redeem (depositor signatures, atomic execution, caps and 5 bps fee)",
         "https://docs.theo.xyz/developers/contract-reference/mint-and-redeem.md",
-        ["route", "fees"],
+        ["route", "capacity", "fees", "access", "settlement"],
       ),
       sourceRef("Theo roles and access control (TheoWhitelist gates mint and redeem)", "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md", [
         "access",
       ]),
+      sourceRef(
+        "Verified ThUSDMinter source (MAX_FEE_BPS = 10) and fee read at Ethereum block 26088429",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x2d99ac801dc0edadd53f5688fef2317932e8696e",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
     ],
     notes: [
-      "Minting and redemption are limited to KYC-whitelisted entities and settle from the thUSD Cash Wallet's USDC/USDT balances, so the route is an institutional primary-market exit; ordinary holders exit through Uniswap or Curve liquidity",
+      "KYC-whitelisted, non-blacklisted signers and recipients must submit depositor-signed EIP-712 orders through Theo's API; only MINTER_ROLE can execute them. The contract enforces at least 1 thUSD and 1 USDC/USDT gross collateral per order, with no on-chain redemption cooldown or daily counter.",
+      "Burn and collateral payout are atomic once submitted, but API submission timing is not bounded; the inherited same-day settlement category and full-supply capacity are diagnostic defaults, not verified executable terms. The V9 terms gap withholds route scoring until capacity and end-to-end settlement evidence are supplied.",
+      "The Cash Wallet at 0xec417ccb6dd26868cca993a92f37217b1d4b3c2f supplies USDC/USDT payouts through transferFrom. At Ethereum block 26088429 its balances totalled 380760.446791 USD nominal; allowances limited currently approved net payouts to 220400 USD nominal before replenishment or new approvals. Balances are observations, not a permanent liquidity floor.",
     ],
   },
   "eurs-stasis": {

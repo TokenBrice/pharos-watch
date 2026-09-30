@@ -99,6 +99,17 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
   },
   {
+    stablecoinId: "thusd-theo",
+    chain: "ethereum",
+    contract: "0xa808bc9775cb41c52c7842f8b50427fe7a770326",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+    // sthUSD ERC-4626 vault over thUSD (convertToAssets(1e6) = 1017821 at block 26088438); no pinned DL pool.
+    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
+  },
+  {
     stablecoinId: "susdc-spark",
     chain: "ethereum",
     contract: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
