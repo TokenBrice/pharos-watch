@@ -96,6 +96,18 @@ const DEFAULT_BUDGETS = {
   // client-registry/methodology-version expansion measured ~866 KiB per detail
   // route; keep a narrow post-ratchet ceiling.
   representativeDetailEagerJsGzipBytes: 905_000,
+  // /cemetery/ server-renders the drawn plot-map hero (~430 KB raw, ~71 KB
+  // gzip) and the Autopsy Register (first 25 rows in full, the rest as compact
+  // `:target` rows), and its RSC flight carries the shared register rows with
+  // every obituary and contract (~115 KB), so it carries its own ceilings.
+  // Rebased at the redesign cutover to the measured route (1.30 MB raw,
+  // ~226 KB gzip, 334 KB flight) plus ~5% headroom. The spike's lower targets
+  // (900 KB / 175 KB / 165 KB) assumed slim hero-only rows; the site-wide
+  // streamed-body reveal, not these bytes, is what gates LCP today.
+  // The flight is `index.txt`, byte-identical to the decoded inline `__next_f`.
+  cemeteryHtmlBytes: 1_370_000,
+  cemeteryHtmlGzipBytes: 240_000,
+  cemeteryFlightBytes: 350_000,
 };
 
 const BUDGET_ENV = {
@@ -110,6 +122,9 @@ const BUDGET_ENV = {
   representativeDetailHtmlBytes: "PHAROS_SIZE_BUDGET_DETAIL_HTML_BYTES",
   representativeDetailPageTxtBytes: "PHAROS_SIZE_BUDGET_DETAIL_PAGE_TXT_BYTES",
   representativeDetailEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_DETAIL_EAGER_JS_GZIP_BYTES",
+  cemeteryHtmlBytes: "PHAROS_SIZE_BUDGET_CEMETERY_HTML_BYTES",
+  cemeteryHtmlGzipBytes: "PHAROS_SIZE_BUDGET_CEMETERY_HTML_GZIP_BYTES",
+  cemeteryFlightBytes: "PHAROS_SIZE_BUDGET_CEMETERY_FLIGHT_BYTES",
 };
 
 const REPRESENTATIVE_DETAIL_ROUTES = [
@@ -119,6 +134,8 @@ const REPRESENTATIVE_DETAIL_ROUTES = [
   "stablecoin/usde-ethena",
   "stablecoin/eurc-circle",
 ];
+
+const CEMETERY_ROUTE = "cemetery";
 
 function resolveBudget(key) {
   const raw = process.env[BUDGET_ENV[key]];
@@ -385,6 +402,22 @@ const representativeDetailEagerJs = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route)
 
 printTop("Representative detail eager JS (gzip sum of referenced scripts)", representativeDetailEagerJs, 10);
 
+const cemeteryHtmlPath = path.join(outDir, CEMETERY_ROUTE, "index.html");
+const cemeteryFlightPath = path.join(outDir, CEMETERY_ROUTE, "index.txt");
+const cemeteryPayloads = [
+  ...(existsSync(cemeteryHtmlPath)
+    ? [
+        { label: "html", budgetKey: "cemeteryHtmlBytes", path: cemeteryHtmlPath, size: statSync(cemeteryHtmlPath).size },
+        { label: "html gzip", budgetKey: "cemeteryHtmlGzipBytes", path: cemeteryHtmlPath, size: gzipSizeOf(cemeteryHtmlPath) },
+      ]
+    : []),
+  ...(existsSync(cemeteryFlightPath)
+    ? [{ label: "RSC flight", budgetKey: "cemeteryFlightBytes", path: cemeteryFlightPath, size: statSync(cemeteryFlightPath).size }]
+    : []),
+].map((payload) => ({ ...payload, rel: `${path.relative(root, payload.path)} (${payload.label})` }));
+
+printTop("Cemetery route payloads", cemeteryPayloads, 10);
+
 if (check) {
   const failures = [];
   console.log("\nDeploy gate (blocking)");
@@ -449,6 +482,11 @@ if (check) {
         budgets.representativeDetailEagerJsGzipBytes,
         { responsible: detail.rel },
       ),
+    ),
+    ...cemeteryPayloads.map((payload) =>
+      referenceDelta(`${CEMETERY_ROUTE} ${payload.label}`, payload.size, budgets[payload.budgetKey], {
+        responsible: payload.rel,
+      }),
     ),
   ];
 
