@@ -1,4 +1,4 @@
-import type { GraphNode } from "@/lib/contagion-layout";
+import { HEIGHT, WIDTH, type GraphNode } from "@/lib/contagion-layout";
 
 export interface ExposureOverlay {
   roots: readonly string[];
@@ -26,7 +26,13 @@ export function footprintViewBox(nodes: readonly GraphNode[], positions: Readonl
     left = Math.min(left, p.x - pad); top = Math.min(top, p.y - pad);
     right = Math.max(right, p.x + pad); bottom = Math.max(bottom, p.y + pad);
   }
-  return Number.isFinite(left) ? `${left} ${top} ${Math.max(120, right - left)} ${Math.max(120, bottom - top)}` : "0 0 800 600";
+  if (!Number.isFinite(left)) return `0 0 ${WIDTH} ${HEIGHT}`;
+  // Fit may zoom out, but never magnifies a sparse neighborhood. Preserve the
+  // stage aspect by expanding the shorter bound, centered on the footprint.
+  const scale = Math.max(1, (right - left) / WIDTH, (bottom - top) / HEIGHT);
+  const width = WIDTH * scale;
+  const height = HEIGHT * scale;
+  return `${(left + right - width) / 2} ${(top + bottom - height) / 2} ${width} ${height}`;
 }
 
 export function upstreamArrowPoint(source: { x: number; y: number }, upstream: { x: number; y: number }, radius: number) {
