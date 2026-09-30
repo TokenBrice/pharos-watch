@@ -631,6 +631,8 @@ export interface StablecoinObituary {
   causeOfDeath: CauseOfDeath;
   /** YYYY-MM or YYYY-MM-DD; precision must match `dead-stablecoins.json` entries. */
   deathDate: string;
+  /** UTC YYYY-MM-DD cemetery entry date when it differs from frozenAt. */
+  recordedAt?: string;
   /** Headline shown in detail-page banner and cemetery tombstone. */
   epitaph: string;
   /** Full obituary paragraph — collapsible in the banner. */

@@ -99,14 +99,40 @@ describe("staged artifact sync", () => {
       runCommand,
       log: vi.fn(),
     });
-    expect(result.regenerated).toEqual(["stablecoin-catalog", "report-card-registry-fingerprint", "cemetery-dataset"]);
+    expect(result.regenerated).toEqual([
+      "stablecoin-catalog",
+      "report-card-registry-fingerprint",
+      "cemetery-dataset",
+      "cemetery-logo-atlas",
+    ]);
     expect(runCommand.mock.calls.map(([command]) => command)).toEqual(
       result.regenerated.map((id) => GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === id)!.command),
     );
     expect(execFile).toHaveBeenCalledWith("git", ["add", "--",
       "public/datasets/stablecoin-cemetery.csv", "public/datasets/stablecoin-cemetery.json",
+      "public/logos/atlas/cemetery-atlas.webp",
+      "scripts/maintenance/state/cemetery-logo-atlas-signature.json",
+      "src/lib/cemetery-logo-atlas.generated.json",
     ], expect.anything());
     expect(runCommand.mock.calls.some(([command]) => command.includes("detail-snapshots"))).toBe(false);
+  });
+
+  it("regenerates the cemetery logo atlas for a tracked-archive logo but not for an unrelated tracked logo", () => {
+    const signature = JSON.parse(readFileSync(
+      join(__dirname, "../maintenance/state/cemetery-logo-atlas-signature.json"),
+      "utf8",
+    )) as { sources: { logo: string }[] };
+    const archiveLogo = signature.sources.map((source) => `public${source.logo}`)
+      .find((path) => !path.startsWith("public/logos/cemetery/"));
+    expect(archiveLogo).toBeDefined();
+    const regeneratedFor = (stagedFile: string) => syncStagedGeneratedArtifacts({
+      stagedFiles: [stagedFile],
+      execFile: execReturning(""),
+      runCommand: vi.fn(() => 0),
+      log: vi.fn(),
+    }).regenerated;
+    expect(regeneratedFor(archiveLogo!)).toContain("cemetery-logo-atlas");
+    expect(regeneratedFor("public/logos/not-a-cemetery-logo.png")).not.toContain("cemetery-logo-atlas");
   });
 
   it("rejects unstaged dependency sources before cemetery generation", () => {

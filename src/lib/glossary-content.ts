@@ -1,3 +1,4 @@
+import { CAUSE_LABEL_LIST } from "@shared/lib/cause-of-death";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -62,7 +63,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "Cemetery",
     letter: "C",
     definition:
-      "Pharos's archive of decommissioned stablecoins. Each entry preserves the asset's historical data, an authored obituary, and the cause of death: algorithmic failure, liquidity drain, custodial failure, regulatory action, or abandonment. The Cemetery is a citeable archive of failure, not a graveyard joke; the tombstone register is a discipline, not a theme.",
+      `Pharos's archive of decommissioned stablecoins. Each entry preserves the asset's historical data, an authored obituary, and the cause of death: ${CAUSE_LABEL_LIST}. The Cemetery is a citeable archive of failure, not a graveyard joke; the tombstone register is a discipline, not a theme.`,
     methodologyAnchor: "/methodology/#lifecycle-phases-methodology",
     methodologyVersion: "v7.26",
     example: {

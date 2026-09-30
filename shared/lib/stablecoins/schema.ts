@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { DeadStablecoinSchema } from "../../types/market";
+import { StrictIsoDateSchema } from "../../types/safety-schema-primitives";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 import { isCanonicalStablecoinId } from "../stablecoin-id";
@@ -128,6 +129,7 @@ const obituarySchema = z.object({
   // group around a counted repetition raises the star height and trips
   // security/detect-unsafe-regex. Both branches are linear in the input.
   deathDate: z.string().regex(/^\d{4}-\d{2}$|^\d{4}-\d{2}-\d{2}$/),
+  recordedAt: StrictIsoDateSchema.optional(),
   epitaph: z.string().min(1),
   obituary: z.string().min(1),
   peakMcap: z.number().positive().optional(),
@@ -905,7 +907,10 @@ export const StablecoinMetaCatalogInvariantsSchema: z.ZodType<StablecoinMeta[], 
   .superRefine(refineMintAuthorityCatalog);
 export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
-const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = DeadStablecoinSchema.extend({ id: DeadStablecoinIdSchema });
+const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = DeadStablecoinSchema.extend({
+  id: DeadStablecoinIdSchema,
+  recordedAt: StrictIsoDateSchema,
+});
 
 const DeadStablecoinAssetArraySchema: z.ZodType<DeadStablecoin[]> = z.array(DeadStablecoinAssetSchema);
 

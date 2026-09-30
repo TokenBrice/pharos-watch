@@ -19,6 +19,8 @@ type CemeteryDatasetExport = {
   }[];
   recordsOrderedBy: string;
   rowCount: number;
+  /** Latest row `recordedAt` (UTC `YYYY-MM-DD`); null or absent when none is recorded. */
+  updatedAt?: string | null;
   limitations: string[];
   fields: Record<string, string>;
 };
@@ -48,6 +50,7 @@ export function buildCemeteryDatasetJsonLd() {
     license: PHAROS_DATA_LICENSE_URL,
     isAccessibleForFree: true,
     sameAs: cemeteryDataset.jsonUrl,
+    ...(cemeteryDataset.updatedAt ? { dateModified: cemeteryDataset.updatedAt } : {}),
     keywords: [
       "stablecoin cemetery",
       "defunct stablecoins",

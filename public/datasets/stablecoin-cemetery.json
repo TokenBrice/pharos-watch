@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "name": "Pharos Stablecoin Cemetery Dataset",
   "description": "Curated dataset of defunct, depegged, discontinued, and abandoned stablecoins documented by Pharos.",
   "license": "MIT",
@@ -7,26 +7,30 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:9f8c9f2d4b3cb759b2cacb5c498c8f79b3c071464c33847e62a591488966d1c6",
+  "sourceChecksum": "sha256:55a1b47814bee24cea172522470f408d4a504329fa9bfa837db473c64ac9186c",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
-      "checksum": "sha256:71f2cbae5d1b33ca7304baccaae71d5dee5212fb822efabdfa5523477fedd511",
+      "checksum": "sha256:6d1b27e599b097c4b37efa8f8b9210445b3e3f5c3ca78e0e91a7cde711fc785b",
       "role": "Curated dead-stablecoin metadata."
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:104387d5b561af3a95b2c7e8f89c7549bd6e1a2fc2dd03a77be641ce9641dc80",
+      "checksum": "sha256:e64c16722ef905b0c2f09c885e970638bb886199e3244d12d8401c20825383fd",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     }
   ],
-  "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
+  "recordsOrderedBy": "deathDate descending by year, month, then day (a month-precision date sorts as the start of its month, after that month's day-precision rows; an unparseable date sorts last), then peakMcapUsd descending (rows without a peak after rows with one), then symbol ascending, then id ascending (symbol and id compared by UTF-16 code unit)",
   "rowCount": 113,
+  "updatedAt": "2026-09-23",
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
     "Each row includes one primary source link; the export is an incident index, not a complete bibliography."
   ],
+  "datasetFields": {
+    "updatedAt": "Latest recordedAt across all rows (UTC YYYY-MM-DD): when the newest record entered Pharos. Tracks documentation, not deaths; null when no row carries a recordedAt."
+  },
   "fields": {
     "id": "Stable export row identifier from curated dead-stablecoin metadata.",
     "name": "Stablecoin or protocol display name.",
@@ -45,7 +49,9 @@
     "sourceLabel": "Primary source label for the cemetery entry.",
     "archivedDataAvailable": "True when Pharos preserves a frozen detail page with archived data for this entry.",
     "contracts": "Known historical token contracts when available.",
-    "pharosUrl": "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor."
+    "pharosUrl": "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor.",
+    "mechanismArchetype": "Pharos mechanism archetype: how the stablecoin was designed to hold its peg (fiat-cash, tbill, cdp, synthetic-delta-neutral, algorithmic, rwa-credit-fund, commodity-claim). Independent of causeOfDeath; null when not yet classified.",
+    "recordedAt": "UTC date (YYYY-MM-DD) on which the record entered Pharos; for tracked-archive rows, the date the coin was frozen. Distinct from deathDate; null when not recorded."
   },
   "rows": [
     {
@@ -72,7 +78,64 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/cdxusd-cod3x/"
+      "pharosUrl": "https://pharos.watch/stablecoin/cdxusd-cod3x/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-09-23"
+    },
+    {
+      "id": "xtusd-xt",
+      "name": "XTUSD",
+      "symbol": "XTUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/xtusd-xt.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2026-07-18",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 171786044,
+      "epitaph": "The only market went quiet",
+      "obituary": "XT.com's official xtusd_usdt market stopped updating on July 18, 2026: the exchange ticker froze at that timestamp, the order book emptied, and the pair no longer appears in the exchange's symbol list. CoinGecko ended the feed on July 20 with an implausible tail near $0.04, and CoinMarketCap lists the asset inactive. XTUSD circulates on XSC, which Pharos does not index, so no contracts are configured and no identity-safe DEX route can be expressed. With the last admissible price at 0.93205 on July 20 and roughly $1.25M still circulating, Pharos freezes XTUSD as an archived market-ended asset rather than an active stablecoin.",
+      "sourceUrl": "https://sapi.xt.com/v4/public/ticker?symbol=xtusd_usdt",
+      "sourceLabel": "XT.com public ticker for xtusd_usdt (stale since 2026-07-18)",
+      "archivedDataAvailable": true,
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/stablecoin/xtusd-xt/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-09-23"
+    },
+    {
+      "id": "aznd-mu-digital",
+      "name": "Mu Digital AZND",
+      "symbol": "AZND",
+      "llamaId": "327",
+      "logoUrl": "https://pharos.watch/logos/327-aznd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-07-10",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 16326376,
+      "epitaph": "An orderly exit from Asia credit",
+      "obituary": "Mu Digital announced an orderly wind-down of AZND, loAZND, and muBOND on July 10, 2026, and opened its redemption portal on August 7, 2026. Secondary trading had already collapsed: Pharos accepted its last admissible price, 0.19444 from the thin Curve pool, on July 20, 2026, and the residual pool now holds roughly $767 of liquidity near $0.03. CoinGecko stopped updating the feed on July 10 and DefiLlama delisted the project, leaving no admissible market or provider path. Pharos freezes AZND as an archived wind-down asset rather than an active stablecoin.",
+      "sourceUrl": "https://x.com/MuDigitalHQ/status/2075417387625832880",
+      "sourceLabel": "Mu Digital wind-down announcement",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "decimals": 18
+        },
+        {
+          "chain": "monad",
+          "address": "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/aznd-mu-digital/",
+      "mechanismArchetype": "rwa-credit-fund",
+      "recordedAt": "2026-09-23"
     },
     {
       "id": "mim-abracadabra",
@@ -163,58 +226,9 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/mim-abracadabra/"
-    },
-    {
-      "id": "xtusd-xt",
-      "name": "XTUSD",
-      "symbol": "XTUSD",
-      "llamaId": null,
-      "logoUrl": "https://pharos.watch/logos/xtusd-xt.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "liquidity-drain",
-      "causeLabel": "Liquidity Drain",
-      "deathDate": "2026-07-18",
-      "deathDatePrecision": "day",
-      "peakMcapUsd": 171786044,
-      "epitaph": "The only market went quiet",
-      "obituary": "XT.com's official xtusd_usdt market stopped updating on July 18, 2026: the exchange ticker froze at that timestamp, the order book emptied, and the pair no longer appears in the exchange's symbol list. CoinGecko ended the feed on July 20 with an implausible tail near $0.04, and CoinMarketCap lists the asset inactive. XTUSD circulates on XSC, which Pharos does not index, so no contracts are configured and no identity-safe DEX route can be expressed. With the last admissible price at 0.93205 on July 20 and roughly $1.25M still circulating, Pharos freezes XTUSD as an archived market-ended asset rather than an active stablecoin.",
-      "sourceUrl": "https://sapi.xt.com/v4/public/ticker?symbol=xtusd_usdt",
-      "sourceLabel": "XT.com public ticker for xtusd_usdt (stale since 2026-07-18)",
-      "archivedDataAvailable": true,
-      "contracts": [],
-      "pharosUrl": "https://pharos.watch/stablecoin/xtusd-xt/"
-    },
-    {
-      "id": "aznd-mu-digital",
-      "name": "Mu Digital AZND",
-      "symbol": "AZND",
-      "llamaId": "327",
-      "logoUrl": "https://pharos.watch/logos/327-aznd.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "abandoned",
-      "causeLabel": "Abandoned",
-      "deathDate": "2026-07-10",
-      "deathDatePrecision": "day",
-      "peakMcapUsd": 16326376,
-      "epitaph": "An orderly exit from Asia credit",
-      "obituary": "Mu Digital announced an orderly wind-down of AZND, loAZND, and muBOND on July 10, 2026, and opened its redemption portal on August 7, 2026. Secondary trading had already collapsed: Pharos accepted its last admissible price, 0.19444 from the thin Curve pool, on July 20, 2026, and the residual pool now holds roughly $767 of liquidity near $0.03. CoinGecko stopped updating the feed on July 10 and DefiLlama delisted the project, leaving no admissible market or provider path. Pharos freezes AZND as an archived wind-down asset rather than an active stablecoin.",
-      "sourceUrl": "https://x.com/MuDigitalHQ/status/2075417387625832880",
-      "sourceLabel": "Mu Digital wind-down announcement",
-      "archivedDataAvailable": true,
-      "contracts": [
-        {
-          "chain": "ethereum",
-          "address": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
-          "decimals": 18
-        },
-        {
-          "chain": "monad",
-          "address": "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
-          "decimals": 18
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/stablecoin/aznd-mu-digital/"
+      "pharosUrl": "https://pharos.watch/stablecoin/mim-abracadabra/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-07-26"
     },
     {
       "id": "ebusd-ebisu",
@@ -245,7 +259,126 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/ebusd-ebisu/"
+      "pharosUrl": "https://pharos.watch/stablecoin/ebusd-ebisu/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-07-29"
+    },
+    {
+      "id": "usdk-orki",
+      "name": "Orki USD",
+      "symbol": "USDK",
+      "llamaId": "265",
+      "logoUrl": "https://pharos.watch/logos/usdk-orki.jpg",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-06-30",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": null,
+      "epitaph": "A CDP stranded on a shuttered chain",
+      "obituary": "Orki USDK was deployed only on Swellchain. Swellchain shut down its bridge flow in June 2026 and moved to halt chain operations on June 30, leaving remaining positions dependent on direct contract access or unrecoverable as the network wound down. Because USDK had no verified deployment outside Swellchain, Pharos freezes it as a discontinued single-chain CDP stablecoin.",
+      "sourceUrl": "https://cryptoslate.com/swellchain-shutdown-users-left-behind-when-crypto-projects-move-on/",
+      "sourceLabel": "CryptoSlate Swellchain shutdown report",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "swellchain",
+          "address": "0x0000baa0b1678229863c0a941c1056b83a1955f5",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/usdk-orki/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-06-30"
+    },
+    {
+      "id": "msusd-main-street",
+      "name": "Main Street USD",
+      "symbol": "MSUSD",
+      "llamaId": "297",
+      "logoUrl": "https://pharos.watch/logos/297-msusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2026-06-20",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": null,
+      "epitaph": "Verification failed before the dollar did",
+      "obituary": "Main Street's msUSD collapsed after Accountable terminated its verification relationship on June 20, 2026, saying the protocol failed verification standards. msUSD fell far below the dollar and remained around $0.29-$0.33 in the following week while independent on-chain analysts reported minimal immediately redeemable reserves against tens of millions of tokens. Main Street disputed the characterization and said assets remained backed, but the combination of failed third-party verification, unresolved redemption capacity, and persistent market pricing made msUSD unsuitable for active stablecoin tracking.",
+      "sourceUrl": "https://finance.yahoo.com/markets/crypto/articles/main-street-msusd-stablecoin-loses-201216552.html",
+      "sourceLabel": "Yahoo Finance msUSD depeg report",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+          "decimals": 18
+        },
+        {
+          "chain": "sonic",
+          "address": "0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/msusd-main-street/",
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "recordedAt": "2026-06-20"
+    },
+    {
+      "id": "msy-main-street",
+      "name": "Main Street Yield",
+      "symbol": "msY",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/msy-main-street.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2026-06-20",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": null,
+      "epitaph": "The wrapper followed the parent down",
+      "obituary": "msY is a strategy-vault wrapper over msUSD, so the June 2026 msUSD collapse impaired the wrapper's durable dollar backing. As msUSD depegged after Accountable terminated reserve verification, msY also traded far below its prior net-asset value and could not recover independently from the parent asset. Pharos freezes msY with msUSD as a derivative collapse rather than treating the vault share as an active stablecoin-like dollar instrument.",
+      "sourceUrl": "https://protos.com/latest-defi-yield-vault-drama-wipes-out-69m-of-msusd-and-avlt-market-cap-1/",
+      "sourceLabel": "Protos Main Street vault collapse report",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x890a5122aa1da30fec4286de7904ff808f0bd74a",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/msy-main-street/",
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "recordedAt": "2026-06-20"
+    },
+    {
+      "id": "ausdt-tether-alloy",
+      "name": "Alloy Tether",
+      "symbol": "aUSD₮",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/ausdt-tether-alloy.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-06-17",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 50122663,
+      "epitaph": "Tether closed the gold-dollar experiment",
+      "obituary": "Tether began winding down Alloy by Tether and aUSDt on June 17, 2026 after reviewing activity, demand, and product priorities. New positions and minting were closed, while existing users were given until September 17, 2026 to return aUSDt and recover XAUt collateral. The protocol remains available only to unwind existing exposure, so Pharos freezes it as an archived wind-down asset rather than an active issuance venue.",
+      "sourceUrl": "https://tether.io/news/tether-updates-users-on-strategic-changes-to-its-product-support-offering/",
+      "sourceLabel": "Tether Alloy by Tether wind-down announcement",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x9eead9ce15383caeed975427340b3a369410cfbf",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/ausdt-tether-alloy/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-07-11"
     },
     {
       "id": "susd-synthetix",
@@ -286,116 +419,42 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/susd-synthetix/"
+      "pharosUrl": "https://pharos.watch/stablecoin/susd-synthetix/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-06-26"
     },
     {
-      "id": "ausdt-tether-alloy",
-      "name": "Alloy Tether",
-      "symbol": "aUSD₮",
-      "llamaId": null,
-      "logoUrl": "https://pharos.watch/logos/ausdt-tether-alloy.png",
+      "id": "usdh-native-markets",
+      "name": "USDH Stablecoin",
+      "symbol": "USDH",
+      "llamaId": "321",
+      "logoUrl": "https://pharos.watch/logos/321-usdh.png",
       "pegCurrency": "USD",
       "causeOfDeath": "abandoned",
       "causeLabel": "Abandoned",
-      "deathDate": "2026-06-17",
+      "deathDate": "2026-05-14",
       "deathDatePrecision": "day",
-      "peakMcapUsd": 50122663,
-      "epitaph": "Tether closed the gold-dollar experiment",
-      "obituary": "Tether began winding down Alloy by Tether and aUSDt on June 17, 2026 after reviewing activity, demand, and product priorities. New positions and minting were closed, while existing users were given until September 17, 2026 to return aUSDt and recover XAUt collateral. The protocol remains available only to unwind existing exposure, so Pharos freezes it as an archived wind-down asset rather than an active issuance venue.",
-      "sourceUrl": "https://tether.io/news/tether-updates-users-on-strategic-changes-to-its-product-support-offering/",
-      "sourceLabel": "Tether Alloy by Tether wind-down announcement",
+      "peakMcapUsd": 106412008,
+      "epitaph": "A Hyperliquid native made way for USDC",
+      "obituary": "Native Markets and Bridge announced USDH's sunset in May 2026 as Hyperliquid markets migrated to USDC. New issuance ended except to support migration liquidity; the USDH dashboard was scheduled to close on July 17, while Bridge continued USDH-to-USDC and fiat redemption for onboarded holders. USDH remained fully backed during the transition, but its role as an active stablecoin product ended, so Pharos freezes it as an archived migration asset.",
+      "sourceUrl": "https://usdh.com/migration",
+      "sourceLabel": "USDH migration and sunset notice",
       "archivedDataAvailable": true,
       "contracts": [
         {
-          "chain": "ethereum",
-          "address": "0x9eead9ce15383caeed975427340b3a369410cfbf",
+          "chain": "hyperevm",
+          "address": "0x111111a1a0667d36bd57c0a9f569b98057111111",
           "decimals": 6
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/stablecoin/ausdt-tether-alloy/"
-    },
-    {
-      "id": "msusd-main-street",
-      "name": "Main Street USD",
-      "symbol": "MSUSD",
-      "llamaId": "297",
-      "logoUrl": "https://pharos.watch/logos/297-msusd.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "counterparty-failure",
-      "causeLabel": "Counterparty Failure",
-      "deathDate": "2026-06-20",
-      "deathDatePrecision": "day",
-      "peakMcapUsd": null,
-      "epitaph": "Verification failed before the dollar did",
-      "obituary": "Main Street's msUSD collapsed after Accountable terminated its verification relationship on June 20, 2026, saying the protocol failed verification standards. msUSD fell far below the dollar and remained around $0.29-$0.33 in the following week while independent on-chain analysts reported minimal immediately redeemable reserves against tens of millions of tokens. Main Street disputed the characterization and said assets remained backed, but the combination of failed third-party verification, unresolved redemption capacity, and persistent market pricing made msUSD unsuitable for active stablecoin tracking.",
-      "sourceUrl": "https://finance.yahoo.com/markets/crypto/articles/main-street-msusd-stablecoin-loses-201216552.html",
-      "sourceLabel": "Yahoo Finance msUSD depeg report",
-      "archivedDataAvailable": true,
-      "contracts": [
-        {
-          "chain": "ethereum",
-          "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
-          "decimals": 18
         },
         {
-          "chain": "sonic",
-          "address": "0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
-          "decimals": 18
+          "chain": "hyperliquid",
+          "address": "0x54e00a5988577cb0b0c9ab0cb6ef7f4b",
+          "decimals": 8
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/msusd-main-street/"
-    },
-    {
-      "id": "msy-main-street",
-      "name": "Main Street Yield",
-      "symbol": "msY",
-      "llamaId": null,
-      "logoUrl": "https://pharos.watch/logos/msy-main-street.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "counterparty-failure",
-      "causeLabel": "Counterparty Failure",
-      "deathDate": "2026-06-20",
-      "deathDatePrecision": "day",
-      "peakMcapUsd": null,
-      "epitaph": "The wrapper followed the parent down",
-      "obituary": "msY is a strategy-vault wrapper over msUSD, so the June 2026 msUSD collapse impaired the wrapper's durable dollar backing. As msUSD depegged after Accountable terminated reserve verification, msY also traded far below its prior net-asset value and could not recover independently from the parent asset. Pharos freezes msY with msUSD as a derivative collapse rather than treating the vault share as an active stablecoin-like dollar instrument.",
-      "sourceUrl": "https://protos.com/latest-defi-yield-vault-drama-wipes-out-69m-of-msusd-and-avlt-market-cap-1/",
-      "sourceLabel": "Protos Main Street vault collapse report",
-      "archivedDataAvailable": true,
-      "contracts": [
-        {
-          "chain": "ethereum",
-          "address": "0x890a5122aa1da30fec4286de7904ff808f0bd74a",
-          "decimals": 18
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/stablecoin/msy-main-street/"
-    },
-    {
-      "id": "usdk-orki",
-      "name": "Orki USD",
-      "symbol": "USDK",
-      "llamaId": "265",
-      "logoUrl": "https://pharos.watch/logos/usdk-orki.jpg",
-      "pegCurrency": "USD",
-      "causeOfDeath": "abandoned",
-      "causeLabel": "Abandoned",
-      "deathDate": "2026-06-30",
-      "deathDatePrecision": "day",
-      "peakMcapUsd": null,
-      "epitaph": "A CDP stranded on a shuttered chain",
-      "obituary": "Orki USDK was deployed only on Swellchain. Swellchain shut down its bridge flow in June 2026 and moved to halt chain operations on June 30, leaving remaining positions dependent on direct contract access or unrecoverable as the network wound down. Because USDK had no verified deployment outside Swellchain, Pharos freezes it as a discontinued single-chain CDP stablecoin.",
-      "sourceUrl": "https://cryptoslate.com/swellchain-shutdown-users-left-behind-when-crypto-projects-move-on/",
-      "sourceLabel": "CryptoSlate Swellchain shutdown report",
-      "archivedDataAvailable": true,
-      "contracts": [
-        {
-          "chain": "swellchain",
-          "address": "0x0000baa0b1678229863c0a941c1056b83a1955f5",
-          "decimals": 18
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/stablecoin/usdk-orki/"
+      "pharosUrl": "https://pharos.watch/stablecoin/usdh-native-markets/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-07-11"
     },
     {
       "id": "gyen-gyen",
@@ -436,38 +495,9 @@
           "decimals": 7
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/gyen-gyen/"
-    },
-    {
-      "id": "usdh-native-markets",
-      "name": "USDH Stablecoin",
-      "symbol": "USDH",
-      "llamaId": "321",
-      "logoUrl": "https://pharos.watch/logos/321-usdh.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "abandoned",
-      "causeLabel": "Abandoned",
-      "deathDate": "2026-05-14",
-      "deathDatePrecision": "day",
-      "peakMcapUsd": 106412008,
-      "epitaph": "A Hyperliquid native made way for USDC",
-      "obituary": "Native Markets and Bridge announced USDH's sunset in May 2026 as Hyperliquid markets migrated to USDC. New issuance ended except to support migration liquidity; the USDH dashboard was scheduled to close on July 17, while Bridge continued USDH-to-USDC and fiat redemption for onboarded holders. USDH remained fully backed during the transition, but its role as an active stablecoin product ended, so Pharos freezes it as an archived migration asset.",
-      "sourceUrl": "https://usdh.com/migration",
-      "sourceLabel": "USDH migration and sunset notice",
-      "archivedDataAvailable": true,
-      "contracts": [
-        {
-          "chain": "hyperevm",
-          "address": "0x111111a1a0667d36bd57c0a9f569b98057111111",
-          "decimals": 6
-        },
-        {
-          "chain": "hyperliquid",
-          "address": "0x54e00a5988577cb0b0c9ab0cb6ef7f4b",
-          "decimals": 8
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/stablecoin/usdh-native-markets/"
+      "pharosUrl": "https://pharos.watch/stablecoin/gyen-gyen/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-07-08"
     },
     {
       "id": "usdh-hubble-2026-05",
@@ -487,7 +517,9 @@
       "sourceLabel": "CoinGecko",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdh-hubble-2026-05"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdh-hubble-2026-05",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-05-12"
     },
     {
       "id": "euroe-membrane",
@@ -538,7 +570,9 @@
           "decimals": 6
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/euroe-membrane/"
+      "pharosUrl": "https://pharos.watch/stablecoin/euroe-membrane/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-05-15"
     },
     {
       "id": "fusd-fedz-2026-05",
@@ -558,7 +592,9 @@
       "sourceLabel": "CoinGecko (issuer site offline)",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#fusd-fedz-2026-05"
+      "pharosUrl": "https://pharos.watch/cemetery/#fusd-fedz-2026-05",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-05-11"
     },
     {
       "id": "eurr-stablr",
@@ -589,7 +625,9 @@
           "decimals": 6
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/eurr-stablr/"
+      "pharosUrl": "https://pharos.watch/stablecoin/eurr-stablr/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-05-24"
     },
     {
       "id": "usdr-stablr",
@@ -615,7 +653,9 @@
           "decimals": 6
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/usdr-stablr/"
+      "pharosUrl": "https://pharos.watch/stablecoin/usdr-stablr/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-05-24"
     },
     {
       "id": "wemix-dollar-wemix",
@@ -635,7 +675,9 @@
       "sourceLabel": "WEMIX3.0 USD stablecoin transition plan",
       "archivedDataAvailable": true,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/stablecoin/wemix-dollar-wemix/"
+      "pharosUrl": "https://pharos.watch/stablecoin/wemix-dollar-wemix/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-07-11"
     },
     {
       "id": "buck-buck-assets",
@@ -661,7 +703,9 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/buck-buck-assets/"
+      "pharosUrl": "https://pharos.watch/stablecoin/buck-buck-assets/",
+      "mechanismArchetype": null,
+      "recordedAt": "2026-04-30"
     },
     {
       "id": "usnd-nerite",
@@ -687,7 +731,9 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/usnd-nerite/"
+      "pharosUrl": "https://pharos.watch/stablecoin/usnd-nerite/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-05-10"
     },
     {
       "id": "usr-resolv",
@@ -743,7 +789,9 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/usr-resolv/"
+      "pharosUrl": "https://pharos.watch/stablecoin/usr-resolv/",
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "recordedAt": "2026-04-27"
     },
     {
       "id": "eura-angle-eura-2026-03",
@@ -768,7 +816,9 @@
           "address": "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#eura-angle-eura-2026-03"
+      "pharosUrl": "https://pharos.watch/cemetery/#eura-angle-eura-2026-03",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-03-10"
     },
     {
       "id": "usda-angle-usda-2026-03",
@@ -793,7 +843,9 @@
           "address": "0x0000206329b97db379d5e1bf586bbdb969c63274"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usda-angle-usda-2026-03"
+      "pharosUrl": "https://pharos.watch/cemetery/#usda-angle-usda-2026-03",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-03-10"
     },
     {
       "id": "usx-dforce",
@@ -854,7 +906,9 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/usx-dforce/"
+      "pharosUrl": "https://pharos.watch/stablecoin/usx-dforce/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-07-18"
     },
     {
       "id": "gyd-gyroscope-gyd-2026-02",
@@ -883,7 +937,9 @@
           "address": "0xca5d8f8a8d49439357d3cf46ca2e720702f132b8"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#gyd-gyroscope-gyd-2026-02"
+      "pharosUrl": "https://pharos.watch/cemetery/#gyd-gyroscope-gyd-2026-02",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-04-14"
     },
     {
       "id": "cnht-tether-cnh-2026-02",
@@ -908,7 +964,9 @@
           "address": "0x6e109e9dd7fa1a58bc3eff667e8e41fc3cc07aef"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#cnht-tether-cnh-2026-02"
+      "pharosUrl": "https://pharos.watch/cemetery/#cnht-tether-cnh-2026-02",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-03-11"
     },
     {
       "id": "must-mustang-2026-01",
@@ -928,7 +986,9 @@
       "sourceLabel": "CoinTelegraph",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#must-mustang-2026-01"
+      "pharosUrl": "https://pharos.watch/cemetery/#must-mustang-2026-01",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-05-11"
     },
     {
       "id": "pusd-palm-usd-2026-01",
@@ -953,7 +1013,9 @@
           "address": "0xFAF0cEe6B20e2Aaa4B80748a6AF4CD89609a3d78"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#pusd-palm-usd-2026-01"
+      "pharosUrl": "https://pharos.watch/cemetery/#pusd-palm-usd-2026-01",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "d-saga-dollar-2026-01",
@@ -973,7 +1035,9 @@
       "sourceLabel": "CoinTelegraph",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#d-saga-dollar-2026-01"
+      "pharosUrl": "https://pharos.watch/cemetery/#d-saga-dollar-2026-01",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-03-25"
     },
     {
       "id": "syusd-synnax-stablecoin-2026-01",
@@ -998,7 +1062,9 @@
           "address": "0x059A6b0bA116c63191182a0956cF697d0d2213eC"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#syusd-synnax-stablecoin-2026-01"
+      "pharosUrl": "https://pharos.watch/cemetery/#syusd-synnax-stablecoin-2026-01",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-03-25"
     },
     {
       "id": "usdl-lift-dollar-2025-12",
@@ -1023,7 +1089,9 @@
           "address": "0xbdc7c08592ee4aa51d06c27ee23d5087d65adbcd"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdl-lift-dollar-2025-12"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdl-lift-dollar-2025-12",
+      "mechanismArchetype": "tbill",
+      "recordedAt": "2026-03-25"
     },
     {
       "id": "uspd-us-permissionless-dollar-2025-12",
@@ -1048,7 +1116,9 @@
           "address": "0x476ef9ac6D8673E220d0E8BC0a810C2Dc6A2AA84"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#uspd-us-permissionless-dollar-2025-12"
+      "pharosUrl": "https://pharos.watch/cemetery/#uspd-us-permissionless-dollar-2025-12",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-28"
     },
     {
       "id": "deusd-elixir-deusd-2025-11",
@@ -1073,7 +1143,9 @@
           "address": "0x15700b564ca08d9439c58ca5053166e8317aa138"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#deusd-elixir-deusd-2025-11"
+      "pharosUrl": "https://pharos.watch/cemetery/#deusd-elixir-deusd-2025-11",
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "xusd-stream-finance-xusd-2025-11",
@@ -1098,7 +1170,9 @@
           "address": "0xe2fc85bfb48c4cf147921fbe110cf92ef9f26f94"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#xusd-stream-finance-xusd-2025-11"
+      "pharosUrl": "https://pharos.watch/cemetery/#xusd-stream-finance-xusd-2025-11",
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "yu-yu-2025-11",
@@ -1123,7 +1197,9 @@
           "address": "0xE868084cf08F3c3db11f4B73a95473762d9463f7"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#yu-yu-2025-11"
+      "pharosUrl": "https://pharos.watch/cemetery/#yu-yu-2025-11",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-20"
     },
     {
       "id": "usdx-stables-labs-usdx-2025-11",
@@ -1148,7 +1224,9 @@
           "address": "0xf3527ef8de265eaa3716fb312c12847bfba66cef"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdx-stables-labs-usdx-2025-11"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdx-stables-labs-usdx-2025-11",
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "lvlusd-level-usd-2025-10",
@@ -1173,7 +1251,9 @@
           "address": "0x7c1156e515aa1a2e851674120074968c905aaf37"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#lvlusd-level-usd-2025-10"
+      "pharosUrl": "https://pharos.watch/cemetery/#lvlusd-level-usd-2025-10",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "csusdl-coinshift-csusdl-2025-10",
@@ -1198,7 +1278,9 @@
           "address": "0xbEeFc011e94f43b8B7b455eBaB290C7Ab4E216f1"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#csusdl-coinshift-csusdl-2025-10"
+      "pharosUrl": "https://pharos.watch/cemetery/#csusdl-coinshift-csusdl-2025-10",
+      "mechanismArchetype": "tbill",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "pinto-pinto-2025-10",
@@ -1223,7 +1305,9 @@
           "address": "0xb170000aeefa790fa61d6e837d1035906839a3c8"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#pinto-pinto-2025-10"
+      "pharosUrl": "https://pharos.watch/cemetery/#pinto-pinto-2025-10",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "usdm-mountain-protocol-usdm-2025-08",
@@ -1248,7 +1332,9 @@
           "address": "0x59d9356e565ab3a36dd77763fc0d87feaf85508c"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdm-mountain-protocol-usdm-2025-08"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdm-mountain-protocol-usdm-2025-08",
+      "mechanismArchetype": "tbill",
+      "recordedAt": "2026-03-25"
     },
     {
       "id": "usdj-just-usdj-2025-08",
@@ -1273,7 +1359,9 @@
           "address": "TMwFHYXLJaRUPeW6421aqXL4ZEzPRFGkGT"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdj-just-usdj-2025-08"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdj-just-usdj-2025-08",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "float-float-protocol-2025-07",
@@ -1298,27 +1386,42 @@
           "address": "0xb05097849bca421a3f51b249ba6cca4af4b97cb9"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#float-float-protocol-2025-07"
+      "pharosUrl": "https://pharos.watch/cemetery/#float-float-protocol-2025-07",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-03-25"
     },
     {
-      "id": "usdl-liquid-loans-usdl-2025-06",
-      "name": "Liquid Loans USDL",
-      "symbol": "USDL",
-      "llamaId": "152",
-      "logoUrl": "https://pharos.watch/logos/cemetery/liquid-loans-usdl.png",
+      "id": "ist-agoric",
+      "name": "Inter Stable Token",
+      "symbol": "IST",
+      "llamaId": "135",
+      "logoUrl": "https://pharos.watch/logos/135-ist.png",
       "pegCurrency": "USD",
-      "causeOfDeath": "liquidity-drain",
-      "causeLabel": "Liquidity Drain",
-      "deathDate": "2025-06",
-      "deathDatePrecision": "month",
-      "peakMcapUsd": 32700000,
-      "epitaph": "PulseChain sank",
-      "obituary": "A Liquity V1 fork on PulseChain where users minted USDL against PLS collateral at 110% minimum ratio. As PulseChain's ecosystem collapsed with PLS price down over 90%, USDL supply followed, from $33M peak to $3.4M. The immutable contracts still technically work, but with PulseChain abandoned by mainstream DeFi, nobody is using them.",
-      "sourceUrl": "https://defillama.com/stablecoin/liquid-loans-usdl",
-      "sourceLabel": "DefiLlama",
-      "archivedDataAvailable": false,
-      "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdl-liquid-loans-usdl-2025-06"
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-06-26",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": null,
+      "epitaph": "Inter Protocol sunset by governance",
+      "obituary": "Agoric governance approved Inter Protocol's wind-down in mid-2025, disabled new IST minting, and completed the sunset process on June 26, 2025. Pharos keeps IST as a frozen archive because the former vault and PSM dollar stablecoin no longer operates as an active mintable protocol asset.",
+      "sourceUrl": "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787",
+      "sourceLabel": "Agoric community sunset proposal",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "agoric",
+          "address": "uist",
+          "decimals": 6
+        },
+        {
+          "chain": "osmosis",
+          "address": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/ist-agoric/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-06-21"
     },
     {
       "id": "jpyc-jpyc-v1",
@@ -1354,7 +1457,31 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/jpyc-jpyc-v1/"
+      "pharosUrl": "https://pharos.watch/stablecoin/jpyc-jpyc-v1/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-07-11"
+    },
+    {
+      "id": "usdl-liquid-loans-usdl-2025-06",
+      "name": "Liquid Loans USDL",
+      "symbol": "USDL",
+      "llamaId": "152",
+      "logoUrl": "https://pharos.watch/logos/cemetery/liquid-loans-usdl.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2025-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 32700000,
+      "epitaph": "PulseChain sank",
+      "obituary": "A Liquity V1 fork on PulseChain where users minted USDL against PLS collateral at 110% minimum ratio. As PulseChain's ecosystem collapsed with PLS price down over 90%, USDL supply followed, from $33M peak to $3.4M. The immutable contracts still technically work, but with PulseChain abandoned by mainstream DeFi, nobody is using them.",
+      "sourceUrl": "https://defillama.com/stablecoin/liquid-loans-usdl",
+      "sourceLabel": "DefiLlama",
+      "archivedDataAvailable": false,
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/#usdl-liquid-loans-usdl-2025-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "dyad-dyad-v2-2025-06",
@@ -1379,7 +1506,9 @@
           "address": "0xfd03723a9a3abe0562451496a9a394d2c4bad4ab"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#dyad-dyad-v2-2025-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#dyad-dyad-v2-2025-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "mod-move-dollar-2025-06",
@@ -1404,7 +1533,9 @@
           "address": "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#mod-move-dollar-2025-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#mod-move-dollar-2025-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "zusd-gmo-zusd-2025-06",
@@ -1429,7 +1560,9 @@
           "address": "0xc56c2b7e71b54d38aab6d52e94a04cbfa8f604fa"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#zusd-gmo-zusd-2025-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#zusd-gmo-zusd-2025-06",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "grai-gravita-grai-2025-06",
@@ -1454,7 +1587,9 @@
           "address": "0x15f74458aE0bFdAA1a96CA1aa779D715Cc1Eefe4"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#grai-gravita-grai-2025-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#grai-gravita-grai-2025-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "hyusd-high-yield-usd-2025-06",
@@ -1479,38 +1614,9 @@
           "address": "0xacdf0dba4b9839b96221a8487e9ca660a48212be"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#hyusd-high-yield-usd-2025-06"
-    },
-    {
-      "id": "ist-agoric",
-      "name": "Inter Stable Token",
-      "symbol": "IST",
-      "llamaId": "135",
-      "logoUrl": "https://pharos.watch/logos/135-ist.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "abandoned",
-      "causeLabel": "Abandoned",
-      "deathDate": "2025-06-26",
-      "deathDatePrecision": "day",
-      "peakMcapUsd": null,
-      "epitaph": "Inter Protocol sunset by governance",
-      "obituary": "Agoric governance approved Inter Protocol's wind-down in mid-2025, disabled new IST minting, and completed the sunset process on June 26, 2025. Pharos keeps IST as a frozen archive because the former vault and PSM dollar stablecoin no longer operates as an active mintable protocol asset.",
-      "sourceUrl": "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787",
-      "sourceLabel": "Agoric community sunset proposal",
-      "archivedDataAvailable": true,
-      "contracts": [
-        {
-          "chain": "agoric",
-          "address": "uist",
-          "decimals": 6
-        },
-        {
-          "chain": "osmosis",
-          "address": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
-          "decimals": 6
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/stablecoin/ist-agoric/"
+      "pharosUrl": "https://pharos.watch/cemetery/#hyusd-high-yield-usd-2025-06",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "l-bold-legacy-bold-2025-02",
@@ -1535,7 +1641,9 @@
           "address": "0xb01dd87b29d187f3e3a4bf6cdaebfb97f3d9ab98"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#l-bold-legacy-bold-2025-02"
+      "pharosUrl": "https://pharos.watch/cemetery/#l-bold-legacy-bold-2025-02",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "usd-usd-2025-01",
@@ -1560,7 +1668,9 @@
           "address": "0x236eec6359fb44cce8f97e99387aa7f8cd5cde1f"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usd-usd-2025-01"
+      "pharosUrl": "https://pharos.watch/cemetery/#usd-usd-2025-01",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "usdv-verified-usd-2024-12",
@@ -1585,7 +1695,9 @@
           "address": "0x0e573ce2736dd9637a0b21058352e1667925c7a8"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdv-verified-usd-2024-12"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdv-verified-usd-2024-12",
+      "mechanismArchetype": "tbill",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "dai-overnight-dai-2024-12",
@@ -1610,7 +1722,9 @@
           "address": "0x970d50d09f3a656b43e11b0d45241a84e3a6e011"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#dai-overnight-dai-2024-12"
+      "pharosUrl": "https://pharos.watch/cemetery/#dai-overnight-dai-2024-12",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "eurt-euro-tether-2024-11",
@@ -1635,7 +1749,9 @@
           "address": "0xc581b735a1688071a1746c968e0798d642ede491"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#eurt-euro-tether-2024-11"
+      "pharosUrl": "https://pharos.watch/cemetery/#eurt-euro-tether-2024-11",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "mkusd-prisma-mkusd-2024-11",
@@ -1660,7 +1776,9 @@
           "address": "0x4591dbff62656e7859afe5e45f6f47d3669fbb28"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#mkusd-prisma-mkusd-2024-11"
+      "pharosUrl": "https://pharos.watch/cemetery/#mkusd-prisma-mkusd-2024-11",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "ultra-prismalrt-ultra-2024-11",
@@ -1685,7 +1803,9 @@
           "address": "0x35282d87011f87508d457f08252bc5bfa52e10a0"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#ultra-prismalrt-ultra-2024-11"
+      "pharosUrl": "https://pharos.watch/cemetery/#ultra-prismalrt-ultra-2024-11",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "bob-zkbob-bob-2024-10",
@@ -1710,7 +1830,9 @@
           "address": "0xb0b195aefa3650a6908f15cdac7d92f8a5791b0b"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#bob-zkbob-bob-2024-10"
+      "pharosUrl": "https://pharos.watch/cemetery/#bob-zkbob-bob-2024-10",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "par-parallel-2024-09",
@@ -1735,7 +1857,9 @@
           "address": "0x68037790a0229e9ce6eaa8a99ea92964106c4703"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#par-parallel-2024-09"
+      "pharosUrl": "https://pharos.watch/cemetery/#par-parallel-2024-09",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-13"
     },
     {
       "id": "uxd-uxd-stablecoin-2024-08",
@@ -1760,7 +1884,9 @@
           "address": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#uxd-uxd-stablecoin-2024-08"
+      "pharosUrl": "https://pharos.watch/cemetery/#uxd-uxd-stablecoin-2024-08",
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "seur-synthetix-seur-2024-07",
@@ -1785,7 +1911,9 @@
           "address": "0xd71ecff9342a5ced620049e616c5035f1db98620"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#seur-synthetix-seur-2024-07"
+      "pharosUrl": "https://pharos.watch/cemetery/#seur-synthetix-seur-2024-07",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "aeur-anchored-coins",
@@ -1816,7 +1944,9 @@
           "decimals": 18
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/aeur-anchored-coins/"
+      "pharosUrl": "https://pharos.watch/stablecoin/aeur-anchored-coins/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-07-11"
     },
     {
       "id": "uno-nostra-uno-2024-07",
@@ -1841,7 +1971,9 @@
           "address": "0x719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#uno-nostra-uno-2024-07"
+      "pharosUrl": "https://pharos.watch/cemetery/#uno-nostra-uno-2024-07",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-13"
     },
     {
       "id": "eusd-lybra-eusd-2024-06",
@@ -1866,7 +1998,9 @@
           "address": "0xdf3ac4f479375802A821f7b7b46Cd7eB5e4262cc"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#eusd-lybra-eusd-2024-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#eusd-lybra-eusd-2024-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "note-note-2024-06",
@@ -1886,7 +2020,9 @@
       "sourceLabel": "DefiLlama",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#note-note-2024-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#note-note-2024-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "peusd-lybra-peusd-2024-06",
@@ -1911,7 +2047,9 @@
           "address": "0xD585aaafA2B58b1CD75092B51aDe9Fa4Ce52F247"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#peusd-lybra-peusd-2024-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#peusd-lybra-peusd-2024-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "star-preon-star-2024-06",
@@ -1936,7 +2074,9 @@
           "address": "0xC19669A405067927865B40Ea045a2baabbbe57f5"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#star-preon-star-2024-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#star-preon-star-2024-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "pusd-jpeg-d-pusd-2024-06",
@@ -1961,7 +2101,9 @@
           "address": "0x466a756E9A7401B5e2444a3fCB3c2C12FBEa0a54"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#pusd-jpeg-d-pusd-2024-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#pusd-jpeg-d-pusd-2024-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "ush-hedge-usd-2024-06",
@@ -1986,7 +2128,9 @@
           "address": "9iLH8T7zoWhY7sBmj1WK9ENbWdS1nL8n9wAxaeRitTa6"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#ush-hedge-usd-2024-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#ush-hedge-usd-2024-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "cash-stabl-fi-cash-2024-06",
@@ -2011,7 +2155,9 @@
           "address": "0x80487b4f8f70e793a81a42367c225ee0b94315df"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#cash-stabl-fi-cash-2024-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#cash-stabl-fi-cash-2024-06",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-13"
     },
     {
       "id": "dyadv1-dyad-v1-2024-06",
@@ -2036,7 +2182,9 @@
           "address": "0x305b58c5f6b5b6606fb13edd11fbdd5e532d5a26"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#dyadv1-dyad-v1-2024-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#dyadv1-dyad-v1-2024-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-03-16"
     },
     {
       "id": "bean-bean-2024-05",
@@ -2061,7 +2209,9 @@
           "address": "0xBEA0000029AD1c77D3d5D23Ba2D8893dB9d1Efab"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#bean-bean-2024-05"
+      "pharosUrl": "https://pharos.watch/cemetery/#bean-bean-2024-05",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-20"
     },
     {
       "id": "dusd-fluid",
@@ -2087,7 +2237,9 @@
           "decimals": 6
         }
       ],
-      "pharosUrl": "https://pharos.watch/stablecoin/dusd-fluid/"
+      "pharosUrl": "https://pharos.watch/stablecoin/dusd-fluid/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-09-04"
     },
     {
       "id": "xai-silo-finance",
@@ -2107,7 +2259,9 @@
       "sourceLabel": "SiloDAO governance",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#xai-silo-finance"
+      "pharosUrl": "https://pharos.watch/cemetery/#xai-silo-finance",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-07-28"
     },
     {
       "id": "rai-rai-reflex-index-2024-02",
@@ -2132,7 +2286,9 @@
           "address": "0x03ab458634910AaD20eF5f1C8ee96F1D6ac54919"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#rai-rai-reflex-index-2024-02"
+      "pharosUrl": "https://pharos.watch/cemetery/#rai-rai-reflex-index-2024-02",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "yusd-yusd-stablecoin-2023-12",
@@ -2157,7 +2313,9 @@
           "address": "0x111111111111ed1D73f860F57b2798b683f2d325"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#yusd-yusd-stablecoin-2023-12"
+      "pharosUrl": "https://pharos.watch/cemetery/#yusd-yusd-stablecoin-2023-12",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "ibeur-iron-bank-euro-2023-12",
@@ -2182,7 +2340,9 @@
           "address": "0x96E61422b6A9bA0e068B6c5ADd4fFaBC6a4aae27"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#ibeur-iron-bank-euro-2023-12"
+      "pharosUrl": "https://pharos.watch/cemetery/#ibeur-iron-bank-euro-2023-12",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "r-raft-r-2023-11",
@@ -2207,7 +2367,9 @@
           "address": "0x183015a9bA6fF60230fdEaDc3F43b3D788b13e21"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#r-raft-r-2023-11"
+      "pharosUrl": "https://pharos.watch/cemetery/#r-raft-r-2023-11",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "usdr-real-usd-2023-10",
@@ -2232,7 +2394,9 @@
           "address": "0x40379a439D4F6795B6fc9aa5687dB461677A2dBa"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdr-real-usd-2023-10"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdr-real-usd-2023-10",
+      "mechanismArchetype": "rwa-credit-fund",
+      "recordedAt": "2026-02-13"
     },
     {
       "id": "vst-vesta-stable-2023-09",
@@ -2257,7 +2421,9 @@
           "address": "0x64343594Ab9b56e99087BfA6F2335Db24c2d1F17"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#vst-vesta-stable-2023-09"
+      "pharosUrl": "https://pharos.watch/cemetery/#vst-vesta-stable-2023-09",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "tor-tor-2023-07",
@@ -2282,7 +2448,9 @@
           "address": "0x74e23df9110aa9ea0b6ff2faee01e740ca1c642e"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#tor-tor-2023-07"
+      "pharosUrl": "https://pharos.watch/cemetery/#tor-tor-2023-07",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "usdc-m-multichain-usdc-2023-07",
@@ -2307,7 +2475,9 @@
           "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdc-m-multichain-usdc-2023-07"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdc-m-multichain-usdc-2023-07",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "pai-parrot-usd-2023-07",
@@ -2332,7 +2502,9 @@
           "address": "Ea5SjE2Y6yvCeW5dYTn7PYMuW5ikXkvbGdcmSnXeaLjS"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#pai-parrot-usd-2023-07"
+      "pharosUrl": "https://pharos.watch/cemetery/#pai-parrot-usd-2023-07",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "ausd-acala-usd-2023-07",
@@ -2352,7 +2524,9 @@
       "sourceLabel": "CoinDesk",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#ausd-acala-usd-2023-07"
+      "pharosUrl": "https://pharos.watch/cemetery/#ausd-acala-usd-2023-07",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "fiat-fiat-i-2023-07",
@@ -2377,7 +2551,9 @@
           "address": "0x586Aa273F262909EEF8fA02d90Ab65F5015e0516"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#fiat-fiat-i-2023-07"
+      "pharosUrl": "https://pharos.watch/cemetery/#fiat-fiat-i-2023-07",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-13"
     },
     {
       "id": "usdp-usdp-stablecoin-2023-06",
@@ -2402,7 +2578,9 @@
           "address": "0x1456688345527be1f37e9e627da0837d6f08c925"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdp-usdp-stablecoin-2023-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdp-usdp-stablecoin-2023-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "usdk-usdk-2023-06",
@@ -2427,7 +2605,9 @@
           "address": "0x1c48f86ae57291f7686349f12601910bd8d470bb"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdk-usdk-2023-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdk-usdk-2023-06",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "usdi-interest-protocol-2023-06",
@@ -2447,7 +2627,9 @@
       "sourceLabel": "DefiLlama",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdi-interest-protocol-2023-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdi-interest-protocol-2023-06",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-13"
     },
     {
       "id": "musd-mstable-usd-2023-04",
@@ -2472,7 +2654,9 @@
           "address": "0xe2f2a5c287993345a840db3b0845fbc70f5935a5"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#musd-mstable-usd-2023-04"
+      "pharosUrl": "https://pharos.watch/cemetery/#musd-mstable-usd-2023-04",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "rsv-reserve-2023-03",
@@ -2497,7 +2681,9 @@
           "address": "0x196f4727526ea7fb1e17b2071b3d8eaa38486988"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#rsv-reserve-2023-03"
+      "pharosUrl": "https://pharos.watch/cemetery/#rsv-reserve-2023-03",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "busd-binance-usd-2023-02",
@@ -2526,7 +2712,9 @@
           "address": "0xe9e7cea3dedca5984780bafc599bd69add087d56"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#busd-binance-usd-2023-02"
+      "pharosUrl": "https://pharos.watch/cemetery/#busd-binance-usd-2023-02",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "usp-usp-stablecoin-2023-02",
@@ -2551,7 +2739,9 @@
           "address": "0xdaCDe03d7Ab4D81fEDdc3a20fAA89aBAc9072CE2"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usp-usp-stablecoin-2023-02"
+      "pharosUrl": "https://pharos.watch/cemetery/#usp-usp-stablecoin-2023-02",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-18"
     },
     {
       "id": "usds-sperax-usd-2023-02",
@@ -2576,7 +2766,9 @@
           "address": "0xd74f5255d557944cf7dd0e45ff521520002d5748"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usds-sperax-usd-2023-02"
+      "pharosUrl": "https://pharos.watch/cemetery/#usds-sperax-usd-2023-02",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "husd-husd-2022-10",
@@ -2601,7 +2793,9 @@
           "address": "0xdf574c24545e5ffecb9a659c229253d4111d87e1"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#husd-husd-2022-10"
+      "pharosUrl": "https://pharos.watch/cemetery/#husd-husd-2022-10",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "usn-usn-2022-10",
@@ -2626,7 +2820,9 @@
           "address": "usn"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usn-usn-2022-10"
+      "pharosUrl": "https://pharos.watch/cemetery/#usn-usn-2022-10",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "usds-spiceusd-2022-09",
@@ -2646,7 +2842,9 @@
       "sourceLabel": "CoinGecko",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#usds-spiceusd-2022-09"
+      "pharosUrl": "https://pharos.watch/cemetery/#usds-spiceusd-2022-09",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "fei-fei-usd-2022-08",
@@ -2671,7 +2869,9 @@
           "address": "0x956f47f50a910163d8bf957cf5846d573e7f87ca"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#fei-fei-usd-2022-08"
+      "pharosUrl": "https://pharos.watch/cemetery/#fei-fei-usd-2022-08",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "volt-volt-protocol-2022-08",
@@ -2696,7 +2896,9 @@
           "address": "0x559ebc30b0e58a45cc9ff573f77ef1e5eb1b3e18"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#volt-volt-protocol-2022-08"
+      "pharosUrl": "https://pharos.watch/cemetery/#volt-volt-protocol-2022-08",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "flexusd-flexusd-2022-06",
@@ -2721,7 +2923,9 @@
           "address": "0xa774FFB4AF6B0A91331C084E1aebAE6Ad535e6F3"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#flexusd-flexusd-2022-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#flexusd-flexusd-2022-06",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "usdx-kava-usdx-2022-06",
@@ -2741,7 +2945,9 @@
       "sourceLabel": "The Block",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdx-kava-usdx-2022-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdx-kava-usdx-2022-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-13"
     },
     {
       "id": "fusd-fantom-usd-2022-06",
@@ -2766,7 +2972,9 @@
           "address": "0xAd84341756Bf337f5a0164515b1f6F993D194E1f"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#fusd-fantom-usd-2022-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#fusd-fantom-usd-2022-06",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-20"
     },
     {
       "id": "ust-terrausd-2022-05",
@@ -2791,7 +2999,9 @@
           "address": "0xa47c8bf37f92aBed4A126BDA807A7b7498661acD"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#ust-terrausd-2022-05"
+      "pharosUrl": "https://pharos.watch/cemetery/#ust-terrausd-2022-05",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "krt-terrakrw-2022-05",
@@ -2816,7 +3026,9 @@
           "address": "0xcAAfF72A8CbBfc5Cf343BA4e26f65a257065bFF1"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#krt-terrakrw-2022-05"
+      "pharosUrl": "https://pharos.watch/cemetery/#krt-terrakrw-2022-05",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "dei-dei-2022-05",
@@ -2841,7 +3053,9 @@
           "address": "0xDE12c7959E1a72bbe8a5f7A1dc8f8EeF9Ab011B3"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#dei-dei-2022-05"
+      "pharosUrl": "https://pharos.watch/cemetery/#dei-dei-2022-05",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "usdn-neutrino-usd-2022-04",
@@ -2866,7 +3080,9 @@
           "address": "0x674C6Ad92Fd080e4004b2312b45f796a192D27a0"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdn-neutrino-usd-2022-04"
+      "pharosUrl": "https://pharos.watch/cemetery/#usdn-neutrino-usd-2022-04",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "bean-beanstalk-v1-2022-04",
@@ -2891,7 +3107,9 @@
           "address": "0xDC59ac4FeFa32293A95889Dc396682858d52e5Db"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#bean-beanstalk-v1-2022-04"
+      "pharosUrl": "https://pharos.watch/cemetery/#bean-beanstalk-v1-2022-04",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "cash-cashio-dollar-2022-03",
@@ -2916,7 +3134,9 @@
           "address": "CASHVDm2wsJXfhj6VWxb7GiMdoLc17Du7paH4bNr5woT"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#cash-cashio-dollar-2022-03"
+      "pharosUrl": "https://pharos.watch/cemetery/#cash-cashio-dollar-2022-03",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-02-19"
     },
     {
       "id": "vai-vai-2021-09",
@@ -2941,7 +3161,9 @@
           "address": "0x4BD17003473389A42DAF6a0a729f6Fdb328BbBd7"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#vai-vai-2021-09"
+      "pharosUrl": "https://pharos.watch/cemetery/#vai-vai-2021-09",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "iron-iron-2021-06",
@@ -2966,7 +3188,9 @@
           "address": "0xD86b5923F3AD7b585eD81B448170ae026c65ae9a"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#iron-iron-2021-06"
+      "pharosUrl": "https://pharos.watch/cemetery/#iron-iron-2021-06",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "esd-empty-set-dollar-2021-01",
@@ -2991,7 +3215,9 @@
           "address": "0x36F3FD68E7325a35EB768F1AedaAe9EA0689d723"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#esd-empty-set-dollar-2021-01"
+      "pharosUrl": "https://pharos.watch/cemetery/#esd-empty-set-dollar-2021-01",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "dsd-dynamic-set-dollar-2021-01",
@@ -3016,7 +3242,9 @@
           "address": "0xBD2F0Cd039E0BFcf88901C98c0bFAc5ab27566e3"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#dsd-dynamic-set-dollar-2021-01"
+      "pharosUrl": "https://pharos.watch/cemetery/#dsd-dynamic-set-dollar-2021-01",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-12"
     },
     {
       "id": "bac-basis-cash-2021-01",
@@ -3041,7 +3269,9 @@
           "address": "0x3449FC1Cd036255BA1EB19d65fF4BA2b8903A69a"
         }
       ],
-      "pharosUrl": "https://pharos.watch/cemetery/#bac-basis-cash-2021-01"
+      "pharosUrl": "https://pharos.watch/cemetery/#bac-basis-cash-2021-01",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-11"
     },
     {
       "id": "usnbt-nubits-2018-03",
@@ -3061,7 +3291,9 @@
       "sourceLabel": "Reserve Research",
       "archivedDataAvailable": false,
       "contracts": [],
-      "pharosUrl": "https://pharos.watch/cemetery/#usnbt-nubits-2018-03"
+      "pharosUrl": "https://pharos.watch/cemetery/#usnbt-nubits-2018-03",
+      "mechanismArchetype": "algorithmic",
+      "recordedAt": "2026-02-11"
     }
   ]
 }

@@ -67,6 +67,7 @@
   "obituary": {
     "causeOfDeath": "counterparty-failure",
     "deathDate": "2024-04-22",
+    "recordedAt": "2026-09-04",
     "epitaph": "Bankruptcy closed Fluid's dollar rail",
     "obituary": "Fluid Finance SA was dissolved by bankruptcy and renamed in liquidation effective 2024-04-22. Its DUSD and issuer websites no longer resolve, so Pharos freezes DUSD as an archived legacy asset rather than an active issuance venue.",
     "sourceUrl": "https://www.moneyhouse.ch/en/company/fluid-finance-sa-en-liquidation-20212209121",

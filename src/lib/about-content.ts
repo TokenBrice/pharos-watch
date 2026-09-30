@@ -19,6 +19,7 @@ import {
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
+import { CAUSE_LABEL_LIST } from "@shared/lib/cause-of-death";
 
 export interface AboutFeatureItem {
   title: string;
@@ -216,8 +217,7 @@ export function getTrackedFeatures({
     },
     {
       title: `${deadStablecoins} coins in the Cemetery`,
-      description:
-        "Algorithmic failures, rug pulls, regulatory shutdowns, and the quiet abandonments worth remembering.",
+      description: `Dead stablecoins filed by cause of death (${CAUSE_LABEL_LIST}), each with an obituary and source.`,
       icon: Skull,
       href: "/cemetery/",
       linkLabel: "Open cemetery",

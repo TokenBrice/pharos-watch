@@ -63,6 +63,7 @@
   "obituary": {
     "causeOfDeath": "abandoned",
     "deathDate": "2025-06-26",
+    "recordedAt": "2026-06-21",
     "epitaph": "Inter Protocol sunset by governance",
     "obituary": "Agoric governance approved Inter Protocol's wind-down in mid-2025, disabled new IST minting, and completed the sunset process on June 26, 2025. Pharos keeps IST as a frozen archive because the former vault and PSM dollar stablecoin no longer operates as an active mintable protocol asset.",
     "sourceUrl": "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787",

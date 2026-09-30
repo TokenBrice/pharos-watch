@@ -18,6 +18,7 @@ import {
 } from "./exit-route";
 import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
+import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 
 export {
   BluechipRatingSchema,
@@ -206,6 +207,10 @@ export const DeadStablecoinSchema = z
     causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES), deathDate: z.string(), peakMcap: z.number().optional(),
     epitaph: z.string().optional(), obituary: z.string(), sourceUrl: z.string(), sourceLabel: z.string(),
     contracts: z.array(z.object({ chain: z.string(), address: z.string() }).strict()).optional(),
+    /** How the coin worked; the one authority for cemetery mechanism links. Absent until curated. */
+    mechanismArchetype: z.enum(MECHANISM_ARCHETYPE_VALUES).optional(),
+    /** UTC `YYYY-MM-DD` on which the record entered Pharos (not the death date); required for curated assets. */
+    recordedAt: StrictIsoDateSchema.optional(),
   })
   .strict();
 export type DeadStablecoin = z.output<typeof DeadStablecoinSchema>;

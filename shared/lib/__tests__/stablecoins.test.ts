@@ -854,6 +854,7 @@ describe("tracked stablecoin metadata", () => {
       pegCurrency: "USD",
       causeOfDeath: "algorithmic-failure",
       deathDate: "2025-01-01",
+      recordedAt: "2026-02-11",
       obituary: "Broken",
       sourceUrl: "https://example.com",
       sourceLabel: "Example",
@@ -865,6 +866,12 @@ describe("tracked stablecoin metadata", () => {
     expect(() => parseDeadStablecoinAssets(
       [{ ...asset, id: "Broken Dead Coin" }], "dead-id-broken.json",
     )).toThrowError(/id/);
+    expect(() => parseDeadStablecoinAssets(
+      [{ ...asset, recordedAt: undefined }], "dead-recorded-missing.json",
+    )).toThrowError(/dead-recorded-missing\.json: 0\.recordedAt/);
+    expect(() => parseDeadStablecoinAssets(
+      [{ ...asset, recordedAt: "2026-02-30" }], "dead-recorded-invalid.json",
+    )).toThrowError(/dead-recorded-invalid\.json: 0\.recordedAt: Expected YYYY-MM-DD/);
   });
 
   it("does not attach a CoinGecko slug to M by M0 when the base token is not contract-resolved on CoinGecko", () => {
