@@ -1407,8 +1407,13 @@ export function skyTopLeftOf(map: DesktopPlotMap, x: number): number {
 }
 
 /**
- * Inspector docking (≥ 1280 px, fix I): beside the grave on the side with room, inside the visible band below the
- * sticky chrome, clear of the Feedback button, joined to the medallion by a hairline connector. Viewport px.
+ * Inspector docking (≥ 1280 px, fix I): beside the grave on the side with room, inside the band of the plan frame that
+ * is visible below the sticky chrome, clear of the Feedback button, joined to the medallion by a hairline connector.
+ * `avoid` lists volumes and text the card must not cover (the colossi when another grave is read, the route head): on
+ * either side the card takes the free run of the band nearest the grave (the side with more room wins a tie),
+ * shortening (it scrolls) down to 220 px; if no run is tall enough it keeps the plain placement. With the frame
+ * scrolled (nearly) out of view the card stays by its grave inside the frame instead of following the viewport.
+ * Viewport px.
  */
 export function placeInspectorCard(input: {
   stone: PlotRect;
@@ -1416,17 +1421,47 @@ export function placeInspectorCard(input: {
   medal: PlotPoint;
   card: { width: number; height: number };
   viewport: { width: number; height: number };
+  avoid?: readonly PlotRect[];
 }): { x: number; y: number; maxHeight: number; connector: { x1: number; y1: number; x2: number; y2: number } } {
-  const { stone, frame, medal, card, viewport } = input;
+  const { stone, frame, medal, card, viewport, avoid = [] } = input;
   const w = card.width;
-  const topMin = PLOT_LAYOUT.chromeTop;
+  const minH = Math.min(card.height, 220);
+  const visibleTop = Math.max(PLOT_LAYOUT.chromeTop, frame.top);
+  const visibleBottom = Math.min(viewport.height - 8, frame.bottom);
+  // the plan is (nearly) out of view: dock by the grave inside the frame, not in the viewport band
+  const onScreen = visibleBottom - visibleTop >= minH;
+  const topMin = onScreen ? visibleTop : frame.top;
   const feedbackTop = viewport.height - 84;
   const roomR = frame.right - stone.right;
   const roomL = stone.left - frame.left;
-  const x = roomR >= w + 36 && (roomR >= roomL || roomL < w + 36) ? stone.right + 28 : Math.max(frame.left + 4, stone.left - 28 - w);
-  const bottomMax = x + w > viewport.width - 170 ? feedbackTop : viewport.height - 8;
-  const h = Math.min(card.height, bottomMax - topMin);
-  const y = Math.min(Math.max((stone.top + stone.bottom) / 2 - h / 2, topMin), bottomMax - h);
+  const right = stone.right + 28;
+  const left = Math.max(frame.left + 4, stone.left - 28 - w);
+  const sides = roomR >= w + 36 && (roomR >= roomL || roomL < w + 36) ? [right, ...(roomL >= w + 36 ? [left] : [])] : [left, ...(roomR >= w + 36 ? [right] : [])];
+  const mid = (stone.top + stone.bottom) / 2;
+  const bottomOf = (x: number) => (onScreen ? Math.min(x + w > viewport.width - 170 ? feedbackTop : viewport.height - 8, frame.bottom) : frame.bottom);
+
+  // every free run of the band on each side; the one nearest the grave wins (the preferred side on a tie)
+  const gap = ([a, b]: [number, number]) => (mid < a ? a - mid : mid > b ? mid - b : 0);
+  let spot: { x: number; top: number; bottom: number; gap: number } | null = null;
+  for (const x of sides) {
+    let runs: [number, number][] = [[topMin, bottomOf(x)]];
+    for (const r of avoid) {
+      if (r.left >= x + w + 8 || r.right <= x - 8) continue;
+      runs = runs.flatMap(([a, b]): [number, number][] => {
+        const cut0 = r.top - 8;
+        const cut1 = r.bottom + 8;
+        if (cut1 <= a || cut0 >= b) return [[a, b]];
+        return [...(cut0 > a ? [[a, cut0] as [number, number]] : []), ...(cut1 < b ? [[cut1, b] as [number, number]] : [])];
+      });
+    }
+    for (const run of runs) {
+      if (run[1] - run[0] < minH || (spot && gap(run) >= spot.gap)) continue;
+      spot = { x, top: run[0], bottom: run[1], gap: gap(run) };
+    }
+  }
+  const { x, top, bottom } = spot ?? { x: sides[0], top: topMin, bottom: bottomOf(sides[0]) };
+  const h = Math.min(card.height, bottom - top);
+  const y = Math.min(Math.max(mid - h / 2, top), bottom - h);
   const ex = x > medal[0] ? x : x + w;
   const ey = Math.min(Math.max(medal[1], y + 14), y + h - 14);
   return { x, y, maxHeight: h, connector: { x1: medal[0], y1: medal[1], x2: ex, y2: ey } };

@@ -23,6 +23,10 @@ const ALLOWED_SERIF_FILES = new Set<string>([
   "src/components/cemetery-tombstones.tsx",
   // Autopsy Register epitaph pull line: the same sanctioned cemetery carve-out.
   "src/components/cemetery/cemetery-register-autopsy.tsx",
+  // Cemetery hero h1 (plot map redesign): the same sanctioned cemetery carve-out.
+  "src/components/cemetery/cemetery-hero.tsx",
+  // Plot-map record card (desktop inspector and phone sheet): name, editorial title and epitaph in Newsreader.
+  "src/components/cemetery/plot-map-record-card.tsx",
   // Root error boundary keeps its editorial register in Georgia
   // (`font-serif`), deliberately not Newsreader: error.tsx is in every
   // route's preload graph, and importing digestDisplay from it preloaded

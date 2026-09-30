@@ -1,0 +1,80 @@
+/*
+ * Stablecoin Cemetery plot map, phone layer (≤ 760 px): the portrait slot's reserved box and the bottom sheet.
+ * The plan's own art (column heads, year margin, hit boxes) lives in `plot-map.module.css` (`.portrait*`).
+ */
+
+/* ------------------------------------------------------------------ portrait slot */
+/* Hidden above 760 px (the desktop plan shows there). At ≤ 760 px the slot holds the portrait's exact height before
+   the client mounts it: 4 px top margin + the header row + the plan at its viewBox aspect beside the 36 px year
+   margin — the same box `.portrait` fills once mounted, so the swap does not shift the page. */
+.slot {
+  display: none;
+}
+.reserve {
+  padding-top: calc(4px + var(--portrait-head));
+}
+.reserve::after {
+  content: "";
+  display: block;
+  margin-left: 36px;
+  aspect-ratio: var(--portrait-ar);
+}
+
+@media (max-width: 760px) {
+  /* nothing below needs extra room for the fixed bottom nav: the root layout already ends every page with a
+     `--mobile-bottom-nav-safe-height` spacer, and the plan is followed by the legend and the register */
+  .slot {
+    display: block;
+  }
+}
+
+/* ------------------------------------------------------------------ bottom sheet */
+/* Non-modal dialog on top of the bottom nav: z 56 is above `MobileBottomNav` (55) and the utility dock (50), and its
+   bottom edge sits on the nav's safe height so neither covers it. */
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--mobile-bottom-nav-safe-height);
+  z-index: 56;
+  max-height: 52vh;
+  max-height: 52dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--card);
+  color: var(--foreground);
+  border-top: 1px solid var(--border-strong);
+  border-radius: 14px 14px 0 0;
+  padding: 12px 16px 14px;
+  box-shadow: 0 -8px 24px oklch(0 0 0 / 0.12);
+  transform: translateY(calc(100% + var(--mobile-bottom-nav-safe-height)));
+  visibility: hidden;
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    visibility 0s linear 260ms;
+}
+.sheet[data-open="true"] {
+  transform: none;
+  visibility: visible;
+  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.sheet:focus {
+  outline: none;
+}
+.sheet:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 55%, transparent);
+  outline-offset: -3px;
+}
+:global(:root[data-motion="reduced"]) .sheet {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(:root:not([data-motion="full"])) .sheet {
+    transition: none;
+  }
+}
+@media (min-width: 761px) {
+  .sheet {
+    display: none;
+  }
+}

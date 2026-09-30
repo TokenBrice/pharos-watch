@@ -1,0 +1,1634 @@
+/*
+ * Stablecoin Cemetery plot map (hero "Isometric Plot Map"): scene tokens, scene faces, hero layout, legend and the
+ * portrait plan. Port of the approved prototype v2 (`agents/2026-09-30-cemetery-redesign/concepts/c-isometric-v2/`
+ * `src/prototype.css`, art-direction.md §2–4).
+ *
+ * Every colour is a custom property on `.tokens`; the theme switch is the `.dark` ancestor (next-themes class
+ * strategy) and nothing reads the theme in JS. Cause colours arrive as `--c-*-l` / `--c-*-d` custom properties set
+ * from `CAUSE_HEX` / `CAUSE_HEX_DARK` on the tokens element. Frost blue is used ONLY by the `113` figure and the beam.
+ * One light from the east-north-east; one hairline weight (0.6 px, non-scaling); no filters; no idle animation.
+ */
+
+/* ------------------------------------------------------------------ tokens: surveyor's daylight */
+.tokens {
+  --c-ab: var(--c-ab-l);
+  --c-cp: var(--c-cp-l);
+  --c-lq: var(--c-lq-l);
+  --c-al: var(--c-al-l);
+  --c-rg: var(--c-rg-l);
+  --sky-0: oklch(0.985 0 0);
+  --sky-1: oklch(0.972 0.006 85);
+  --sea: oklch(0.885 0.012 165);
+  --swell: oklch(0.52 0.02 165 / 0.28);
+  --earth-e: oklch(0.86 0.028 75);
+  --earth-s: oklch(0.8 0.03 70);
+  --strata: oklch(0.45 0.03 70 / 0.22);
+  --lawn: oklch(0.955 0.014 118);
+  --bed: oklch(0.925 0.026 126);
+  --gravel: oklch(0.955 0.012 85);
+  --gravel-strip: oklch(0.935 0.012 85);
+  --wall-e: oklch(0.975 0.006 85);
+  --wall-t: oklch(0.935 0.01 85);
+  --wall-s: oklch(0.86 0.014 80);
+  --stone-e: oklch(0.985 0.005 90);
+  --stone-t: oklch(0.945 0.009 88);
+  --stone-s: oklch(0.83 0.014 82);
+  /* fracture cross-section of a snapped column: the warm, freshly exposed core, tilted toward the ENE light */
+  --brk: oklch(0.955 0.03 80);
+  --plinth-e: oklch(0.955 0.008 88);
+  --plinth-t: oklch(0.925 0.01 88);
+  --plinth-s: oklch(0.8 0.014 80);
+  --grime: oklch(0.52 0.02 75);
+  --edge: oklch(0.32 0.012 75 / 0.62);
+  --edge-soft: oklch(0.32 0.012 75 / 0.3);
+  --shadow: oklch(0.35 0.02 90 / 0.13);
+  --mound: oklch(0.905 0.03 124);
+  --soil: oklch(0.7 0.05 60);
+  --bronze: oklch(0.66 0.09 70);
+  --seal: oklch(0.62 0.07 65);
+  --lichen: oklch(0.72 0.07 110 / 0.55);
+  --moss: oklch(0.6 0.08 128);
+  --mouth: oklch(0.3 0.01 80);
+  --tree-d: oklch(0.52 0.045 140);
+  --tree-l: oklch(0.64 0.05 135);
+  --tree-h: oklch(0.3 0.03 140 / 0.35);
+  --tree-bed: oklch(0.88 0.03 90);
+  --trunk: oklch(0.45 0.03 60);
+  --lamp-post: oklch(0.42 0.01 80);
+  --lamp-glass: oklch(0.86 0.02 85);
+  --pool-0: transparent;
+  --lh-e: oklch(0.98 0.006 85);
+  --lh-m: oklch(0.93 0.008 85);
+  --lh-s: oklch(0.85 0.012 80);
+  --lh-t: oklch(0.95 0.008 85);
+  --lh-win: oklch(0.42 0.012 80);
+  --lh-glass: oklch(0.93 0.01 90);
+  --rock: oklch(0.72 0.012 80);
+  --rock-s: oklch(0.6 0.012 80);
+  --door: oklch(0.36 0.01 80);
+  --inscr: oklch(0.36 0.012 75 / 0.85);
+  --hatch: oklch(0.35 0.012 75 / 0.55);
+  --ring: oklch(0.2 0 0 / 0.55);
+  --ring-fill: oklch(0.2 0 0 / 0.06);
+  --tint: 12%;
+  --bed-tint: 12%;
+  --curb-tint: 42%;
+  --med-rest: 62%;
+  --beam-0: color-mix(in oklab, var(--frost-blue) 40%, transparent);
+  --beam-1: color-mix(in oklab, var(--frost-blue) 14%, transparent);
+  --beam-2: color-mix(in oklab, var(--frost-blue) 5%, transparent);
+  --beam-end: color-mix(in oklab, var(--frost-blue) 16%, transparent);
+  --beam-blend: multiply;
+  --plate: color-mix(in oklab, var(--card) 92%, transparent);
+  --plate-border: oklch(0.2 0 0 / 0.14);
+  --logo-rest: 1;
+  --flower-stem: oklch(0.55 0.07 135);
+  --flower-0: oklch(0.57 0.16 5);
+  --flower-1: oklch(0.92 0.02 90);
+  --flower-2: oklch(0.74 0.13 75);
+  --flower-3: oklch(0.57 0.12 305);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --plot-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* main padding (route-chrome MainContent: px-4 / lg:px-5 / xl:px-9): the sky runs full-bleed through it */
+  --page-pad: 16px;
+}
+
+/* ------------------------------------------------------------------ tokens: lamplit night */
+:global(.dark) .tokens {
+  --c-ab: var(--c-ab-d);
+  --c-cp: var(--c-cp-d);
+  --c-lq: var(--c-lq-d);
+  --c-al: var(--c-al-d);
+  --c-rg: var(--c-rg-d);
+  --sky-0: oklch(0.085 0 0);
+  --sky-1: oklch(0.13 0.008 250);
+  --sea: oklch(0.17 0.012 220);
+  --swell: oklch(0.7 0.02 220 / 0.14);
+  --earth-e: oklch(0.24 0.012 60);
+  --earth-s: oklch(0.19 0.01 60);
+  --strata: oklch(0.8 0.02 60 / 0.1);
+  --lawn: oklch(0.2 0.02 145);
+  --bed: oklch(0.235 0.028 145);
+  --gravel: oklch(0.255 0.008 80);
+  --gravel-strip: oklch(0.22 0.008 80);
+  --wall-e: oklch(0.52 0.008 250);
+  --wall-t: oklch(0.42 0.008 250);
+  --wall-s: oklch(0.26 0.006 250);
+  --stone-e: oklch(0.72 0.01 240);
+  --stone-t: oklch(0.56 0.01 240);
+  --stone-s: oklch(0.3 0.008 240);
+  --brk: oklch(0.77 0.024 78);
+  --plinth-e: oklch(0.6 0.01 240);
+  --plinth-t: oklch(0.47 0.01 240);
+  --plinth-s: oklch(0.25 0.008 240);
+  --grime: oklch(0.12 0.01 90);
+  --edge: oklch(1 0 0 / 0.16);
+  --edge-soft: oklch(1 0 0 / 0.08);
+  --shadow: oklch(0 0 0 / 0.35);
+  --mound: oklch(0.25 0.03 145);
+  --soil: oklch(0.36 0.04 55);
+  --bronze: oklch(0.52 0.06 70);
+  --seal: oklch(0.48 0.05 65);
+  --lichen: oklch(0.55 0.05 110 / 0.5);
+  --moss: oklch(0.38 0.06 135);
+  --mouth: oklch(0.1 0 0);
+  --tree-d: oklch(0.24 0.035 150);
+  --tree-l: oklch(0.34 0.045 150);
+  --tree-h: oklch(0 0 0 / 0.35);
+  --tree-bed: oklch(0.24 0.02 90);
+  --trunk: oklch(0.25 0.02 60);
+  --lamp-post: oklch(0.34 0.01 80);
+  --lamp-glass: oklch(0.86 0.12 80);
+  --pool-0: oklch(0.8 0.13 75 / 0.26);
+  --lh-e: oklch(0.6 0.01 250);
+  --lh-m: oklch(0.47 0.01 250);
+  --lh-s: oklch(0.3 0.008 250);
+  --lh-t: oklch(0.52 0.01 250);
+  --lh-win: oklch(0.8 0.13 75);
+  --lh-glass: oklch(0.93 0.06 90);
+  --rock: oklch(0.3 0.008 250);
+  --rock-s: oklch(0.22 0.006 250);
+  --door: oklch(0.14 0.005 250);
+  --inscr: oklch(0.15 0.01 250 / 0.8);
+  --hatch: oklch(1 0 0 / 0.3);
+  --ring: oklch(1 0 0 / 0.6);
+  --ring-fill: oklch(1 0 0 / 0.07);
+  --tint: 16%;
+  --bed-tint: 16%;
+  --curb-tint: 55%;
+  --beam-0: color-mix(in oklab, var(--frost-blue) 55%, transparent);
+  --beam-1: color-mix(in oklab, var(--frost-blue) 20%, transparent);
+  --beam-2: color-mix(in oklab, var(--frost-blue) 4%, transparent);
+  --beam-end: color-mix(in oklab, var(--frost-blue) 22%, transparent);
+  --beam-blend: screen;
+  --plate-border: oklch(1 0 0 / 0.14);
+  --logo-rest: 0.92;
+}
+
+@media (min-width: 1024px) {
+  .tokens {
+    --page-pad: 20px;
+  }
+}
+@media (min-width: 1280px) {
+  .tokens {
+    --page-pad: 36px;
+  }
+}
+
+/* ------------------------------------------------------------------ hero layout */
+.hero {
+  position: relative;
+  isolation: isolate;
+}
+/* one sky gradient behind header and plan, full-bleed through the page padding */
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: calc(-1 * var(--page-pad));
+  right: calc(-1 * var(--page-pad));
+  top: -28px;
+  bottom: 0;
+  background: linear-gradient(180deg, var(--sky-0) 0%, var(--sky-1) 58%, var(--sky-0) 100%);
+}
+.head {
+  position: relative;
+  z-index: 3;
+}
+.routeHead {
+  position: relative;
+  max-width: min(360px, 36%);
+}
+.title {
+  margin: 0;
+  font-weight: 470;
+  font-size: 2.25rem;
+  line-height: 1.05;
+  letter-spacing: -0.012em;
+  font-optical-sizing: auto;
+  /* reserved line box: the Newsreader swap cannot shift the layout */
+  height: 1.05em;
+  white-space: nowrap;
+}
+.lead {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+.links {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.links a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+.links a:hover {
+  text-decoration-color: currentColor;
+}
+.skip {
+  position: absolute;
+  left: 0;
+  z-index: 30;
+  transform: translateY(-200%);
+  opacity: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--foreground);
+}
+.skip:focus {
+  transform: none;
+  opacity: 1;
+}
+
+/* One Beam figure: DEFAULT_BEAM_VALUE_CLASS recipe; right edge 22 px left of the lantern, the beam rests on it.
+   Phones restyle the same block into one row under the route head (the `113` exists once on the page). */
+.figure {
+  position: absolute;
+  top: 0;
+  right: calc(var(--lantern-right) + 22px);
+  z-index: 3;
+  text-align: right;
+  pointer-events: none;
+}
+.beamLabel {
+  margin: 0 0 4px;
+  font-size: 0.875rem;
+  line-height: 1.43;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.figureValue {
+  margin: 0;
+}
+.beamSub {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.beamPlaque {
+  margin: 8px 0 0;
+  font-weight: 600;
+  font-size: 10.5px;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.beamRest {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.beamRest b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.beamRest .mono {
+  font-size: 11.5px;
+}
+
+/* the plan pulls up under the header only as far as the drawn skyline, the signpost plates and the monuments under
+   the figure allow: `--sky*` (per viewport band) and `--ov-terms` are solved by the scene's layout; % = frame width */
+.stage {
+  --sky: var(--sky0);
+  position: relative;
+  margin-top: calc(10px - clamp(0px, min(var(--sky), var(--ov-terms)), var(--head-keep)));
+}
+/* a size container: signpost plates clamp themselves inside the frame with `cqw` */
+.frame {
+  position: relative;
+  width: 100%;
+  container-type: inline-size;
+}
+.frame > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.overlay > * {
+  pointer-events: auto;
+}
+
+/* signposts: plain CAUSE_META label + count, hanging left of the post top; count first and largest. A plate whose
+   post stands near the frame's west edge slides right just enough to stay inside the frame (`--post-x`: the post's
+   x as a percentage of the frame width) */
+.signpost {
+  position: absolute;
+  transform: translate(max(calc(-100% + 5px), calc(2px - var(--post-x) * 1cqw)), -100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 12px 4px;
+  border-radius: 3px;
+  background: var(--plate);
+  border: 1px solid var(--plate-border);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.2;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  color: var(--foreground);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.signpost:hover,
+.signpost:focus-visible {
+  border-color: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+.signpost .n {
+  order: -1;
+  font-family: var(--plot-mono);
+  font-variant-caps: normal;
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+}
+/* narrow frames bring the posts within one plate height of each other: flatter plates stay apart */
+@media (max-width: 1279px) {
+  .signpost {
+    padding: 2px 10px 3px;
+  }
+  .signpost .n {
+    font-size: 14px;
+  }
+}
+/* 761–1023 px: the Algorithmic and Regulatory posts stand ~18 px apart, so plates drop to a 17 px line (10.5 px
+   label, 12.5 px count) */
+@media (max-width: 1023px) {
+  .signpost {
+    gap: 5px;
+    padding: 1px 7px 2px;
+    font-size: 10.5px;
+  }
+  .signpost .n {
+    font-size: 12.5px;
+  }
+}
+.sw {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 1px;
+  background: var(--cause);
+}
+
+/* year stamps: on the page background under the headland's cut face */
+.yearStamp {
+  position: absolute;
+  transform: translate(-50%, 7px);
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* a year stamp lights its year across the plan on hover (like its cypress) */
+.yearStamp[data-plot-year] {
+  pointer-events: auto;
+}
+.yearStamp[data-lit="true"] {
+  color: var(--foreground);
+}
+.yearStamp small {
+  font-size: 10.5px;
+}
+/* the empty strip's stamp hangs left of its anchor, clear of the thin oldest block's stamp beside it */
+.yearStamp[data-empty="true"] {
+  transform: translate(calc(-100% - 4px), 7px);
+}
+/* figures inside sans text (stamps, chips, at-rest line, margin labels) */
+.mono {
+  font-family: var(--plot-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* colossus chips: signpost style + hairline leader; offsets from the monument top per viewport band (no JS) */
+.chip,
+.leader {
+  --dx: var(--dx0);
+  --dy: var(--dy0);
+  --lx: var(--lx0);
+  --ly: var(--ly0);
+  --ll: var(--ll0);
+  --la: var(--la0);
+}
+.chip {
+  position: absolute;
+  left: calc(var(--ax) + var(--dx));
+  top: calc(var(--ay) + var(--dy));
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px 4px;
+  border-radius: 3px;
+  background: var(--plate);
+  border: 1px solid var(--plate-border);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--foreground);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* below 1280 px the colossi stand close together: a flatter 11 px chip (the scene's layout assumes the same) */
+@media (max-width: 1279px) {
+  .chip {
+    gap: 5px;
+    padding: 2px 10px 3px;
+    font-size: 11px;
+  }
+}
+/* below 1024 px no placement keeps both colossus chips apart (the layout's bands 0–1 report conflicts): the chips
+   go; the names stay in each grave's accessible name, its hover tag and its record card */
+@media (max-width: 1023px) {
+  .chip,
+  .leader {
+    display: none;
+  }
+}
+.leader {
+  position: absolute;
+  left: calc(var(--ax) + var(--lx));
+  top: calc(var(--ay) + var(--ly));
+  z-index: 2;
+  width: var(--ll);
+  height: 1px;
+  background: var(--edge);
+  transform: rotate(var(--la));
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/* hover tag slot for the island */
+.tag {
+  position: absolute;
+  z-index: 5;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-family: var(--plot-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  color: var(--foreground);
+  transition: opacity 120ms;
+}
+.tag[data-on="true"] {
+  opacity: 1;
+}
+
+/* zoom (fix E): while a section is zoomed the header block, figure, signposts, stamps and chips hide (visibility, so
+   they also leave the tab order) and the toolbar row takes the frame top; the beam fades out */
+.hero[data-zooming="true"] .head,
+.hero[data-zooming="true"] :is(.signpost, .yearStamp, .chip, .leader) {
+  visibility: hidden;
+}
+.frame[data-zoomed="true"] .beamG {
+  opacity: 0;
+}
+.zoomBar {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.zoomOut {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--card);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.zoomOut:hover {
+  border-color: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+.zoomChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--card);
+  font-weight: 600;
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+.zoomChip .sw {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.zoomChip .n {
+  font-family: var(--plot-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+.part {
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+/* ------------------------------------------------------------------ inspector + record card */
+/* 761–1279 px: in flow below the plan (pinned only). ≥ 1280 px: docked beside its grave; the island sets left, top
+   and max-height from `placeInspectorCard` and draws the hairline connector. A hover preview never takes the pointer. */
+.inspector {
+  position: relative;
+  z-index: 6;
+  max-width: 720px;
+  margin: 8px 0 0;
+}
+.inspector[data-preview="true"] {
+  pointer-events: none;
+}
+@media (min-width: 1280px) {
+  .inspector {
+    position: absolute;
+    width: 344px;
+    margin: 0;
+    border-radius: 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-shadow: 0 8px 24px -12px oklch(0 0 0 / 0.25);
+  }
+}
+.cardLeader {
+  position: absolute;
+  z-index: 5;
+  height: 1px;
+  background: var(--edge);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.cardLeader[hidden] {
+  display: none;
+}
+.card {
+  padding: 14px 16px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--foreground);
+}
+.cardKicker {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  font-size: 10.5px;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.cardClose {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  min-height: 24px;
+  margin: -5px -6px 0 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.cardClose:hover {
+  color: var(--foreground);
+}
+.cardName {
+  margin: 6px 0 0;
+  font-weight: 500;
+  font-size: 1.45rem;
+  line-height: 1.12;
+}
+.cardSymbol {
+  margin-left: 6px;
+  font-family: var(--plot-mono);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.cardTitle {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.cardEpitaph {
+  margin: 8px 0 0;
+  font-style: italic;
+  font-size: 1.02rem;
+  line-height: 1.35;
+  color: color-mix(in oklab, var(--foreground) 88%, transparent);
+}
+.cardChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 10.5px;
+  line-height: 1.6;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cardDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cause);
+}
+.cardObituary {
+  margin: 9px 0 0;
+  color: color-mix(in oklab, var(--foreground) 86%, transparent);
+}
+.cardObituaryFull {
+  max-height: min(30vh, 220px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+}
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+}
+.cardGrid dt {
+  font-size: 10.5px;
+  color: var(--muted-foreground);
+}
+.cardGrid dd {
+  margin: 2px 0 0;
+  font-family: var(--plot-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.cardLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+.cardLinks a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+}
+.cardLinks a:hover {
+  text-decoration-color: currentColor;
+}
+.cardRegister {
+  font-weight: 600;
+}
+.cardHint {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+}
+.cardFlowerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+.cardFlower {
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: none;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.cardCount {
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+}
+.card :is(a, button, [tabindex]):focus-visible,
+.zoomOut:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 60%, transparent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ scene faces */
+.map .e {
+  stroke: var(--edge);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.map .eo {
+  stroke: var(--edge);
+  stroke-width: 0.8px;
+  stroke-dasharray: 2 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.map .es {
+  stroke: var(--edge-soft);
+  stroke-width: 0.5px;
+  vector-effect: non-scaling-stroke;
+}
+.map .sea {
+  fill: var(--sea);
+}
+.map .sea.far {
+  opacity: 0.42;
+}
+.map .swell {
+  stroke: var(--swell);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+  stroke-dasharray: 14 9;
+}
+.map .earth-e {
+  fill: var(--earth-e);
+}
+.map .earth-s {
+  fill: var(--earth-s);
+}
+.map .strata {
+  stroke: var(--strata);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+  stroke-dasharray: 3 3;
+}
+.map .lawn {
+  fill: var(--lawn);
+}
+.map .gravel {
+  fill: var(--gravel);
+}
+.map .gravel.strip {
+  fill: var(--gravel-strip);
+}
+.map .bed {
+  fill: color-mix(in oklab, var(--bed), var(--cause) var(--bed-tint));
+}
+.map .curb {
+  fill: color-mix(in oklab, var(--wall-s), var(--cause) var(--curb-tint));
+}
+.map .w-e {
+  fill: var(--wall-e);
+}
+.map .w-t {
+  fill: var(--wall-t);
+}
+.map .w-s {
+  fill: var(--wall-s);
+}
+.map .rail {
+  stroke: var(--edge-soft);
+  stroke-width: 0.5px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+.map .shadow {
+  fill: var(--shadow);
+}
+.map .mound {
+  fill: var(--mound);
+}
+.map .soil {
+  fill: var(--soil);
+}
+.map .bronze {
+  fill: var(--bronze);
+}
+.map .pool {
+  fill: url(#cem-g-pool);
+}
+.map .tree-bed {
+  fill: var(--tree-bed);
+}
+.map .tree-d {
+  fill: var(--tree-d);
+}
+.map .tree-l {
+  fill: var(--tree-l);
+}
+.map .tree-h {
+  stroke: var(--tree-h);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+.map .trunk {
+  fill: var(--trunk);
+}
+/* year lamps: dark theme only (memorial tone in daylight) */
+.map .lamp {
+  display: none;
+}
+:global(.dark) .map .lamp {
+  display: inline;
+}
+.map .lamp-post,
+.map .post {
+  fill: var(--lamp-post);
+}
+.map .lamp-glass {
+  fill: var(--lamp-glass);
+}
+.map .lh-e {
+  fill: var(--lh-e);
+}
+.map .lh-m {
+  fill: var(--lh-m);
+}
+.map .lh-s {
+  fill: var(--lh-s);
+}
+.map .lh-t {
+  fill: var(--lh-t);
+}
+.map .lh-c {
+  fill: url(#cem-g-col);
+}
+.map .lh-win {
+  fill: var(--lh-win);
+}
+.map .lh-glass {
+  fill: var(--lh-glass);
+}
+.map .rock {
+  fill: var(--rock);
+}
+.map .rock-s {
+  fill: var(--rock-s);
+}
+.map .glyph {
+  fill: var(--inscr);
+  font-family: var(--plot-mono);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ graves: stone ≤ 20 % cause tint, grime w0–w4 */
+.grave,
+.gm,
+.bedG {
+  --cause: var(--c-ab);
+  --wg: 0%;
+}
+.c-ab {
+  --cause: var(--c-ab);
+}
+.c-cp {
+  --cause: var(--c-cp);
+}
+.c-lq {
+  --cause: var(--c-lq);
+}
+.c-al {
+  --cause: var(--c-al);
+}
+.c-rg {
+  --cause: var(--c-rg);
+}
+.w1 {
+  --wg: 5%;
+  --lg-o: 0.9;
+}
+.w2 {
+  --wg: 11%;
+  --lg-o: 0.78;
+}
+.w3 {
+  --wg: 17%;
+  --lg-o: 0.66;
+}
+.w4 {
+  --wg: 24%;
+  --lg-o: 0.55;
+}
+.grave {
+  cursor: pointer;
+  outline: none;
+}
+.grave .st-e {
+  fill: color-mix(in oklab, color-mix(in oklab, var(--stone-e), var(--cause) var(--tint)), var(--grime) var(--wg));
+}
+.grave .st-t {
+  fill: color-mix(in oklab, color-mix(in oklab, var(--stone-t), var(--cause) var(--tint)), var(--grime) var(--wg));
+}
+.grave .st-s {
+  fill: color-mix(in oklab, color-mix(in oklab, var(--stone-s), var(--cause) var(--tint)), var(--grime) var(--wg));
+}
+/* the break is newer than the weathered shaft: half the grime, no cause tint */
+.grave .brk {
+  fill: color-mix(in oklab, var(--brk), var(--grime) calc(var(--wg) / 2));
+}
+.grave .col {
+  fill: url(#cem-g-col);
+}
+.grave .pl-e {
+  fill: color-mix(in oklab, var(--plinth-e), var(--grime) var(--wg));
+}
+.grave .pl-t {
+  fill: color-mix(in oklab, var(--plinth-t), var(--grime) var(--wg));
+}
+.grave .pl-s {
+  fill: color-mix(in oklab, var(--plinth-s), var(--grime) var(--wg));
+}
+.grave .pl-open {
+  fill: color-mix(in oklab, var(--lawn) 70%, transparent);
+}
+.grave .hatch {
+  fill: url(#cem-hatch);
+  pointer-events: none;
+}
+.hatchLine {
+  stroke: var(--hatch);
+  stroke-width: 0.55;
+}
+.grave .crack {
+  stroke: var(--mouth);
+  stroke-width: 0.7px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+.grave .flute {
+  stroke: var(--edge-soft);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+.grave .mouth {
+  fill: var(--mouth);
+}
+.grave .seal {
+  fill: var(--seal);
+}
+.grave .seal-disc {
+  fill: var(--seal);
+  stroke: var(--edge);
+  stroke-width: 0.5px;
+  vector-effect: non-scaling-stroke;
+}
+.grave .bars {
+  stroke: var(--wall-s);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+.grave .door {
+  fill: var(--door);
+}
+.grave .relief {
+  fill: none;
+  stroke: var(--inscr);
+  stroke-width: 0.8px;
+  vector-effect: non-scaling-stroke;
+}
+.grave .lichen {
+  fill: var(--lichen);
+}
+.grave .moss {
+  fill: var(--moss);
+  opacity: 0.7;
+}
+/* footstones are stone and dim with their section */
+.fs-e {
+  fill: color-mix(in oklab, var(--stone-e), var(--grime) 10%);
+}
+.fs-t {
+  fill: var(--stone-t);
+}
+.fs-s {
+  fill: var(--stone-s);
+}
+.grave .med {
+  fill: var(--stone-e);
+  stroke: color-mix(in oklab, var(--cause) var(--med-rest), var(--stone-s));
+}
+.grave .lg {
+  opacity: calc(var(--logo-rest) * var(--lg-o, 1));
+}
+.grave .lgInit {
+  font-family: var(--plot-mono);
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--muted-foreground);
+}
+.grave .hit {
+  fill: transparent;
+}
+/* hot (island hover/focus) and pinned (`aria-pressed`): full cause ring, colour logo cell, stone lifts 1.5 px */
+.grave:is([data-hot="true"], :focus-visible, [aria-pressed="true"]) .med {
+  stroke: var(--cause);
+}
+.grave:is([data-hot="true"], :focus-visible, [aria-pressed="true"]) .lg {
+  opacity: 1;
+}
+.grave:is([data-hot="true"], :focus-visible, [aria-pressed="true"]) .lgImg {
+  transform: translateX(var(--atlas-shift));
+}
+.grave:is([data-hot="true"], [aria-pressed="true"]) .stone {
+  translate: 0 -1.5px;
+}
+.map .ring {
+  fill: var(--ring-fill);
+  stroke: var(--ring);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  pointer-events: none;
+}
+.map .ring[data-on="true"] {
+  opacity: 1;
+}
+.map .ring[data-focus="true"] {
+  stroke-dasharray: 3 2;
+  stroke-width: 1.4px;
+}
+/* session flowers at the grave base (hidden easter egg); the newest blooms once, not under reduced motion */
+.flowerStem {
+  stroke: var(--flower-stem);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+}
+.flowerHead {
+  fill: var(--flower);
+  stroke: var(--edge);
+  stroke-width: 0.4px;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: plotBloom 520ms var(--ease) both;
+}
+.flower0 {
+  --flower: var(--flower-0);
+}
+.flower1 {
+  --flower: var(--flower-1);
+}
+.flower2 {
+  --flower: var(--flower-2);
+}
+.flower3 {
+  --flower: var(--flower-3);
+}
+@keyframes plotBloom {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* section focus / zoom / year highlight: the island sets `data-dim` on the svg and `data-lit` on members */
+.map[data-dim] :is(.grave, .gm):not([data-lit="true"]) {
+  opacity: 0.22;
+}
+.map[data-dim="lane"] .bedG:not([data-lit="true"]) {
+  opacity: 0.45;
+}
+.map[data-dim="year"] .tree:not([data-lit="true"]) {
+  opacity: 0.35;
+}
+/* section zoom: the island sets `transform` on the world group, and (unless motion is reduced) its transition inline
+   with `!important`, because the app's global reset `svg * { transition: none !important }` wins over any rule here */
+.world {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+/* beam: frost wedge; rests on the 113 figure, moves only on interaction (island sets --ba/--bs on .beamRot) */
+.beamG {
+  mix-blend-mode: var(--beam-blend);
+  pointer-events: none;
+  --ba: var(--ba0);
+  --bs: var(--bs0);
+}
+
+/* viewport bands (`PLOT_VIEWPORT_BANDS` in plot-map-scene.tsx): the scene solves the header sky, the colossus chips
+   and the beam's rest angle per band and hands them over as numbered custom properties */
+@media (min-width: 900px) {
+  .stage {
+    --sky: var(--sky1);
+  }
+  .chip,
+  .leader {
+    --dx: var(--dx1);
+    --dy: var(--dy1);
+    --lx: var(--lx1);
+    --ly: var(--ly1);
+    --ll: var(--ll1);
+    --la: var(--la1);
+  }
+  .beamG {
+    --ba: var(--ba1);
+    --bs: var(--bs1);
+  }
+}
+@media (min-width: 1024px) {
+  .stage {
+    --sky: var(--sky2);
+  }
+  .chip,
+  .leader {
+    --dx: var(--dx2);
+    --dy: var(--dy2);
+    --lx: var(--lx2);
+    --ly: var(--ly2);
+    --ll: var(--ll2);
+    --la: var(--la2);
+  }
+  .beamG {
+    --ba: var(--ba2);
+    --bs: var(--bs2);
+  }
+}
+@media (min-width: 1152px) {
+  .stage {
+    --sky: var(--sky3);
+  }
+  .chip,
+  .leader {
+    --dx: var(--dx3);
+    --dy: var(--dy3);
+    --lx: var(--lx3);
+    --ly: var(--ly3);
+    --ll: var(--ll3);
+    --la: var(--la3);
+  }
+  .beamG {
+    --ba: var(--ba3);
+    --bs: var(--bs3);
+  }
+}
+@media (min-width: 1280px) {
+  .stage {
+    --sky: var(--sky4);
+  }
+  .chip,
+  .leader {
+    --dx: var(--dx4);
+    --dy: var(--dy4);
+    --lx: var(--lx4);
+    --ly: var(--ly4);
+    --ll: var(--ll4);
+    --la: var(--la4);
+  }
+  .beamG {
+    --ba: var(--ba4);
+    --bs: var(--bs4);
+  }
+}
+@media (min-width: 1440px) {
+  .stage {
+    --sky: var(--sky5);
+  }
+  .chip,
+  .leader {
+    --dx: var(--dx5);
+    --dy: var(--dy5);
+    --lx: var(--lx5);
+    --ly: var(--ly5);
+    --ll: var(--ll5);
+    --la: var(--la5);
+  }
+  .beamG {
+    --ba: var(--ba5);
+    --bs: var(--bs5);
+  }
+}
+@media (min-width: 1680px) {
+  .stage {
+    --sky: var(--sky6);
+  }
+  .chip,
+  .leader {
+    --dx: var(--dx6);
+    --dy: var(--dy6);
+    --lx: var(--lx6);
+    --ly: var(--ly6);
+    --ll: var(--ll6);
+    --la: var(--la6);
+  }
+  .beamG {
+    --ba: var(--ba6);
+    --bs: var(--bs6);
+  }
+}
+.beamRot {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  transform: translate(var(--bx), var(--by)) rotate(var(--ba)) scale(var(--bs), var(--bw, 0.18));
+}
+.beam {
+  fill: url(#cem-g-beam);
+}
+.beamEnd {
+  fill: url(#cem-g-spot);
+}
+.beamG[data-beam="rest"] .beamEnd {
+  display: none;
+}
+.gsShade {
+  stop-color: var(--stone-s);
+}
+.gsMid {
+  stop-color: var(--stone-t);
+}
+.gsLit {
+  stop-color: var(--stone-e);
+}
+.gb0 {
+  stop-color: var(--beam-0);
+}
+.gb1 {
+  stop-color: var(--beam-1);
+}
+.gb2 {
+  stop-color: var(--beam-2);
+}
+.gp0 {
+  stop-color: var(--pool-0);
+}
+.gsp0 {
+  stop-color: var(--beam-end);
+}
+.stopClear {
+  stop-color: transparent;
+}
+.defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* reduced motion: stones do not lift and flowers appear without a bloom (the island adds no beam or zoom transition) */
+:root[data-motion="reduced"] .grave .stone {
+  translate: none;
+}
+:root[data-motion="reduced"] .flowerHead {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .grave .stone {
+    translate: none;
+  }
+  :root:not([data-motion="full"]) .flowerHead {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ legend: encoding = field, drawn examples */
+.legend {
+  margin: 18px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 18px 36px;
+}
+.legend .grave {
+  cursor: default;
+}
+.legend h2 {
+  margin: 0 0 8px;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.legend ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.legend li {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 10px;
+  align-items: center;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.legend li b {
+  font-weight: 600;
+}
+.icon {
+  width: 58px;
+  height: 36px;
+  overflow: visible;
+}
+.icons {
+  display: flex;
+  gap: 1px;
+}
+.icons .icon {
+  width: 24px;
+}
+.eq {
+  color: var(--muted-foreground);
+}
+.note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+.steps {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.steps figure {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font: 10.5px/1 var(--plot-mono);
+  color: var(--muted-foreground);
+}
+.steps .icon {
+  width: 40px;
+  height: 40px;
+}
+.yearAxis {
+  font-family: var(--plot-mono);
+  font-size: 9px;
+  fill: currentColor;
+  fill-opacity: 0.7;
+}
+.yearAxisLine {
+  stroke: currentColor;
+  stroke-opacity: 0.35;
+}
+.legend .afterSteps {
+  margin-top: 8px;
+}
+/* the second and third columns: a disclosure on phones, always open and summary-less above them */
+.legendMore > summary {
+  display: none;
+}
+.moreGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 36px;
+}
+@media (max-width: 1023px) {
+  .legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .moreGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------ portrait plan (≤ 760 px) */
+.portrait {
+  display: none;
+}
+.portraitHeads {
+  position: relative;
+  margin: 4px 0 0 36px;
+}
+.colHead {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  padding: 3px 1px 4px;
+  border-radius: 3px 3px 0 0;
+  border: 1px solid var(--plate-border);
+  border-bottom: 0;
+  background: var(--plate);
+  font-weight: 600;
+  font-size: 10.5px;
+  line-height: 1.1;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: var(--foreground);
+}
+.colHead .top {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.colHead .sw {
+  width: 6px;
+  height: 6px;
+}
+.colHead .n {
+  font-family: var(--plot-mono);
+  font-variant-caps: normal;
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.colHead .lb {
+  font-size: 9.5px;
+  hyphens: manual;
+}
+.portraitPlan {
+  position: relative;
+  margin-left: 36px;
+}
+.portraitPlan > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.yr {
+  position: absolute;
+  left: -36px;
+  width: 32px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.15;
+  color: var(--foreground);
+  text-align: right;
+  pointer-events: none;
+}
+.yr small {
+  font-weight: 500;
+  font-size: 10.5px;
+  color: var(--muted-foreground);
+}
+.yr[data-empty="true"] {
+  font-size: 10px;
+}
+.yr[data-empty="true"] small {
+  font-size: 9px;
+  line-height: 1.15;
+}
+.hits {
+  position: absolute;
+  inset: 0;
+}
+.hit44 {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hit44:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 60%, transparent);
+  outline-offset: -8px;
+}
+.portrait .grave[data-hot="true"] :is(.st-e, .st-t) {
+  stroke: var(--foreground);
+  stroke-width: 1.2px;
+}
+
+@media (max-width: 760px) {
+  .stage {
+    display: none;
+  }
+  .portrait {
+    display: block;
+    position: relative;
+  }
+  .routeHead {
+    max-width: none;
+  }
+  .title {
+    font-size: 1.625rem;
+  }
+  .lead {
+    margin-top: 4px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+  .links {
+    margin-top: 4px;
+  }
+  .figure {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    text-align: left;
+  }
+  .beamLabel,
+  .beamPlaque {
+    display: none;
+  }
+  .beamSub {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+  .beamRest {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+  .legend {
+    margin-top: 10px;
+    padding-top: 10px;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .legend > div:first-child ul {
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 10px;
+  }
+  .legendMore > summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--muted-foreground);
+  }
+  .legend li {
+    grid-template-columns: 44px 1fr;
+    font-size: 12px;
+  }
+  .legend li .icon {
+    width: 34px;
+    height: 26px;
+  }
+  .legend li .icons .icon {
+    width: 14px;
+  }
+}

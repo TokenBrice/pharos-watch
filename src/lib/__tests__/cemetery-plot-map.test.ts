@@ -10,6 +10,7 @@ import {
   buildCemeteryPlotMap,
   fitSectionCamera,
   placeColossusChips,
+  placeInspectorCard,
   placePlotTag,
   plotHeightFactorOf,
   plotPeakClassOf,
@@ -347,6 +348,42 @@ describe("hover tag placement", () => {
     expect(blocked.y).toBeGreaterThan(95);
     const everywhere = placePlotTag({ stone, tag, frame, obstacles: [{ left: 0, top: 0, right: 400, bottom: 300 }] });
     expect(everywhere.collisions).toBe(1);
+  });
+});
+
+describe("inspector docking", () => {
+  const frame = { left: 36, top: 200, right: 1404, bottom: 973 };
+  const stone = { left: 600, top: 400, right: 640, bottom: 440 };
+  const card = { width: 344, height: 300 };
+  const viewport = { width: 1440, height: 800 };
+  const overlaps = (a: { left: number; top: number; right: number; bottom: number }, b: typeof a) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+
+  it("docks beside the grave on the roomier side, centred on it inside the visible band", () => {
+    const p = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport });
+    expect(p).toMatchObject({ x: stone.right + 28, y: 270, maxHeight: 300 });
+    expect(p.connector).toEqual({ x1: 620, y1: 410, x2: stone.right + 28, y2: 410 });
+  });
+
+  it("moves to the other side rather than cover a volume it must avoid", () => {
+    const colossus = { left: 700, top: 150, right: 900, bottom: 700 };
+    const p = placeInspectorCard({ stone, frame, medal: [620, 410], card, viewport, avoid: [colossus] });
+    expect(p.x + card.width).toBeLessThanOrEqual(stone.left);
+    expect(overlaps({ left: p.x, top: p.y, right: p.x + card.width, bottom: p.y + p.maxHeight }, colossus)).toBe(false);
+  });
+
+  it("never docks under the sticky chrome or over the Feedback button's corner", () => {
+    const high = placeInspectorCard({ stone: { left: 600, top: 100, right: 640, bottom: 140 }, frame: { ...frame, top: 60 }, medal: [620, 110], card, viewport });
+    expect(high.y).toBeGreaterThanOrEqual(PLOT_LAYOUT.chromeTop);
+    const nearFeedback = placeInspectorCard({ stone: { left: 900, top: 700, right: 940, bottom: 760 }, frame: { ...frame, left: 700 }, medal: [920, 710], card: { width: 344, height: 700 }, viewport });
+    expect(nearFeedback.x + 344).toBeGreaterThan(viewport.width - 170);
+    expect(nearFeedback.y + nearFeedback.maxHeight).toBeLessThanOrEqual(viewport.height - 84);
+  });
+
+  it("stays by its grave inside the frame once the plan has scrolled out of view", () => {
+    const scrolled = { left: 36, top: -900, right: 1404, bottom: -127 };
+    const p = placeInspectorCard({ stone: { left: 600, top: -600, right: 640, bottom: -560 }, frame: scrolled, medal: [620, -590], card, viewport });
+    expect(p.y).toBeGreaterThanOrEqual(scrolled.top);
+    expect(p.y + p.maxHeight).toBeLessThanOrEqual(scrolled.bottom);
   });
 });
 
