@@ -538,6 +538,7 @@ If the issuer publishes a usable transparency API, attestation feed, or on-chain
 - add `liveReservesConfig` to the coin metadata
 - reuse an existing adapter if it actually matches the source
 - otherwise add a new adapter under `worker/src/cron/reserve-adapters/` and register it
+- if the adapter produces mapped dependencies, add an `adapterReview(...)` entry in `shared/data/coverage-dispositions/dependency-target-dispositions.ts` in the same change, with dated primary evidence for claim identity and mapping semantics; registering an adapter alone does not satisfy dependency review
 
 Current `liveReservesConfig` rules:
 

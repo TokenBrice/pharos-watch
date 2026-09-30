@@ -115,3 +115,70 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: ${{ secrets.CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN }}
         run: npm run check:cloudflare-account-state
+
+  dependency-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+      - name: Capture production dependency coverage
+        env:
+          DEPENDENCY_COVERAGE_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+        run: npm run audit:coverage -- --domain=dependency-coverage --prod --format=json --report=.tmp/dependency-coverage/audit.json
+      - name: Evaluate published dependency structure
+        run: |
+          node --import tsx --input-type=module <<'JS'
+          import { readFileSync, writeFileSync } from "node:fs";
+          import { evaluateDependencyCoverageStructure, renderDependencyCoverageAuditMarkdown } from "./scripts/maintenance/generate-dependency-coverage-audit.ts";
+          const audit = JSON.parse(readFileSync(".tmp/dependency-coverage/audit.json", "utf8"));
+          writeFileSync(".tmp/dependency-coverage/audit.md", renderDependencyCoverageAuditMarkdown(audit));
+          if (audit.summary.publicationComparisonStatus === "checkout-production-skew") {
+            console.warn(`::warning title=checkout-production-skew::Publication methodology ${audit.summary.publicationMethodologyVersion} differs from checkout ${audit.summary.checkoutMethodologyVersion}; only skew-independent invariants are gated.`);
+          }
+          const failures = evaluateDependencyCoverageStructure(audit, { requireAdapterMappingCoverage: true, publishedOnly: true });
+          if (failures.length) {
+            console.error(failures.join("\n"));
+            process.exitCode = 1;
+          }
+          JS
+      - name: Reconcile static and published graphs (advisory)
+        if: always()
+        continue-on-error: true
+        run: npm run audit:dependency-reconcile -- --audit=.tmp/dependency-coverage/audit.json --report=.tmp/dependency-coverage/reconciliation.md
+      - name: Retain dependency review evidence
+        id: snapshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/dependency-coverage/
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Alert on weekly production failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SNAPSHOT_URL: ${{ steps.snapshots.outputs.artifact-url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(mktemp)
+          printf '%s\n' \
+            '<!-- dependency-coverage-weekly -->' \
+            '# Dependency coverage weekly failure' \
+            'Review the dependency-coverage drain queue. Findings never authorize edges automatically.' \
+            "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            "Full audit and advisory reconciliation: ${SNAPSHOT_URL:-artifact unavailable; inspect run logs}." \
+            'This weekly gate does not block releases.' > "$body"
+          issue_number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search 'in:title "Dependency coverage weekly failure"' --json number,title --jq '[.[] | select(.title == "Dependency coverage weekly failure")][0].number // empty')
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --repo "$GITHUB_REPOSITORY" --body-file "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Dependency coverage weekly failure" --body-file "$body"
+          fi

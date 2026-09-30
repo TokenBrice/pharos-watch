@@ -268,6 +268,21 @@ describe("classifyChangedFiles", () => {
     ["shared/data/stablecoins/domains/compliance/usdc-circle.json", "docs/compliance-page.md"],
     [".omp/config.yml", "docs/process/agent-artifacts.md"],
     ["scripts/maintenance/sync-agent-skills.mjs", "docs/process/agent-artifacts.md"],
+    ["src/app/dependency-map/client.tsx", "docs/dependency-map.md"],
+    ["src/components/contagion-graph-root.tsx", "docs/dependency-map.md"],
+    ["src/components/contagion-graph/contagion-graph-shell.tsx", "docs/dependency-map.md"],
+    ["src/lib/contagion-layout.ts", "docs/dependency-map.md"],
+    ["src/lib/dependency-hubs-model.ts", "docs/dependency-map.md"],
+    ["shared/lib/dependency-exposure.ts", "docs/dependency-map.md"],
+    ["shared/lib/dependency-graph.ts", "docs/dependency-map.md"],
+    ["shared/lib/dependency-derivation.ts", "docs/dependency-map.md"],
+    ["src/components/stablecoin-detail/contagion-snapshot.tsx", "docs/dependency-map.md"],
+    ["shared/data/coverage-dispositions/dependency-target-dispositions.ts", "docs/dependency-map.md"],
+    ["scripts/maintenance/generate-dependency-coverage-audit.ts", "docs/dependency-map.md"],
+    ["scripts/maintenance/reconcile-dependency-graph.ts", "docs/dependency-map.md"],
+    ["scripts/ci/check-dependency-review-gaps.ts", "docs/dependency-map.md"],
+    [".agents/skills/dependency-coverage-drain/SKILL.md", "docs/dependency-map.md"],
+    ["docs/runbooks/dependency-network.md", "docs/dependency-map.md"],
   ])("retains the domain owner in bounded Read first for %s", (file, owner) => {
     const contract = classifyChangedFiles([file]);
     expect(contract.docs.map((doc) => doc.path)).toContain(owner);

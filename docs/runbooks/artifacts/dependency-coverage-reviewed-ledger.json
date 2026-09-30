@@ -1,0 +1,488 @@
+{
+  "schemaVersion": 1,
+  "description": "Durable dependency coverage review history. Initial open entries are the 16 unverifiable published edges identified in the 2026-09-29 review, not independently verified evidence. Audit regeneration never deletes this history.",
+  "seededAt": "2026-09-30",
+  "decisionFields": [
+    "claimGroupId",
+    "taskIds",
+    "dependentId",
+    "upstreamId",
+    "workType",
+    "resolutionMode",
+    "status",
+    "decision",
+    "deferState",
+    "firstSeenAt",
+    "reviewedAt",
+    "reviewer",
+    "evidence",
+    "rationale",
+    "changeRefs",
+    "sentinels",
+    "nextReviewTrigger",
+    "factsClosed"
+  ],
+  "allowedStatuses": [
+    "open",
+    "resolved",
+    "deferred",
+    "rejected"
+  ],
+  "allowedDecisions": [
+    "evidence-refreshed",
+    "retargeted",
+    "withheld",
+    "deferred",
+    "rejected"
+  ],
+  "decisions": [
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aa-falconx-mev-capital->usdc-circle",
+      "taskIds": [
+        "NC-144"
+      ],
+      "dependentId": "aa-falconx-mev-capital",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Exact Ethereum facility token/tranche claim identity needs verification.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-144"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:syusd-aegis->yusd-aegis",
+      "taskIds": [
+        "NC-146"
+      ],
+      "dependentId": "syusd-aegis",
+      "upstreamId": "yusd-aegis",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Exact vault asset/redemption relationship needs primary verification.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-146"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:xmd-metal-dollar->usdc-circle",
+      "taskIds": [
+        "NC-143"
+      ],
+      "dependentId": "xmd-metal-dollar",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "XUSDC bridge escrow and canonical USDC claim need verification.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-143"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:spusd-soulpeg->usdc-circle",
+      "taskIds": [
+        "NC-148"
+      ],
+      "dependentId": "spusd-soulpeg",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "BSC representation and soul-bound sUSDC backing need verification.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-148"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:reusd-re-protocol->susde-ethena",
+      "taskIds": [
+        "NC-116"
+      ],
+      "dependentId": "reusd-re-protocol",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Pooled protocol backing does not establish this tranche weight.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-116"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->susde-ethena",
+      "taskIds": [
+        "NC-169"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify issuer identity and dependent backing; LP debt is not a measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-169"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->susds-sky",
+      "taskIds": [
+        "NC-170"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "susds-sky",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify issuer identity and dependent backing; LP debt is not a measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-170"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->reusd-resupply",
+      "taskIds": [
+        "NC-167"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "reusd-resupply",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify issuer identity and dependent backing; LP debt is not a measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-167"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->scrvusd-curve",
+      "taskIds": [
+        "NC-168"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "scrvusd-curve",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify issuer identity and dependent backing; LP debt is not a measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-168"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aid-gaib->usdc-circle",
+      "taskIds": [
+        "NC-174"
+      ],
+      "dependentId": "aid-gaib",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify current exact claim identity and measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-174"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aid-gaib->usdt-tether",
+      "taskIds": [
+        "NC-175"
+      ],
+      "dependentId": "aid-gaib",
+      "upstreamId": "usdt-tether",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify current exact claim identity and measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-175"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:stusd-stoneyield->usdc-circle",
+      "taskIds": [
+        "NC-177"
+      ],
+      "dependentId": "stusd-stoneyield",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify serial/mechanism semantics; deposit currency alone is insufficient.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-177"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:hbusdt-hyperbeat->usdt-tether",
+      "taskIds": [
+        "NC-178"
+      ],
+      "dependentId": "hbusdt-hyperbeat",
+      "upstreamId": "usdt-tether",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify serial/mechanism semantics; deposit currency alone is insufficient.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-178"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->susde-ethena",
+      "taskIds": [
+        "NC-164"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Refresh issuer mint-market values together with pinned USM frxUSD balance; borrow-market collateral is out of scope.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-164"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->syrupusdc-maple",
+      "taskIds": [
+        "NC-165"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "syrupusdc-maple",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Refresh issuer mint-market values together with pinned USM frxUSD balance; borrow-market collateral is out of scope.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-165"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->frxusd-frax",
+      "taskIds": [
+        "NC-163"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "frxusd-frax",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Third DUSD-alto edge in WS1.E: refresh issuer mint-market values and independently read pinned USM frxUSD balance atomically.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-163"
+      ]
+    }
+  ]
+}

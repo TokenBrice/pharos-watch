@@ -11,6 +11,8 @@
  * means a reviewed record went missing or stale, a structural disposition is
  * malformed, or a live-reserve mapping lacks review. Adapter mapping coverage
  * is derived from the static graph when report cards are absent.
+ * Report-card counters are evaluated only in the weekly production lane:
+ * this static lane has no report cards (`hasReportCards === false`).
  *
  * Those checks plus the graph invariants (self-edges, duplicate edges, cycles,
  * overweight effective sets, unknown targets, depType-without-coinId) are what

@@ -1,0 +1,1 @@
+../../../.codex/skills/dependency-coverage-drain/SKILL.md
