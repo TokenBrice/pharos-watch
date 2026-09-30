@@ -13,6 +13,18 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
+  "dependencyReview": {
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map evidence review",
+    "confidence": "verified",
+    "sources": [
+      {"label": "Ethereum old FalconX facility token() and AATranche() at block 26088256 (2026-09-30)", "url": "https://ethereum-rpc.publicnode.com"}
+    ],
+    "rationale": "At Ethereum block 26088256, the old facility 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d returned canonical USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 from token() and the tracked token 0xc26a6fa2c37b38e549a4a1807543801db684f99c from AATranche(). This verifies the exact Ethereum tranche's USDC settlement lineage without substituting the newer Optimism facility or Falcon Finance USDf. The retained serial strategy-vault claim describes settlement dependence, not USDC held as collateral; the facility receivable remains FalconX credit risk.",
+    "relationships": [
+      {"id": "usdc-circle", "weight": 1, "type": "wrapper", "economicRole": "serial-claim", "reason": "Exact old Ethereum CDO token() and AATranche() join at block 26088256 establishes the tracked AA tranche's USDC settlement asset."}
+    ]
+  },
   "collateral": "A senior (AA) tranche claim on a single-obligor FalconX credit facility curated by M11 Credit. USDC is the vault's deposit, unit of account and repayment asset, not its collateral: Pareto sends deposited USDC directly to the borrower's wallet, so the vault's asset is the FalconX receivable. Collateralisation, loan tape and claim priority are not disclosed.",
   "pegMechanism": "NAV-style credit vault token with monthly redemption mechanics; not a Falcon Finance USDf or MEV Capital strategy token.",
   "mechanismArchetype": "rwa-credit-fund",

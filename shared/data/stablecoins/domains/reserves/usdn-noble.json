@@ -14,8 +14,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-01",
-    "reviewer": "Pharos reserve research (ODR-C5 fixed-height M principal verification)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
@@ -23,8 +23,8 @@
         "url": "https://docs.noble.xyz/learn/usdn/overview/"
       },
       {
-        "label": "Noble USDN architecture",
-        "url": "https://docs.noble.xyz/usdn/architecture/"
+        "label": "Noble USDN architecture (accessed 2026-09-30)",
+        "url": "https://docs.noble.xyz/learn/usdn/architecture/"
       },
       {
         "label": "Noble Dollar collateral disclosure",
@@ -40,7 +40,7 @@
       }
     ],
     "rationale": "USDN is the Noble representation of M0's M, not an independently issued Noble liability. Noble's architecture documentation states that because the Noble Dollar is collateralized by $M, issuance can only happen by locking $M as collateral on Ethereum through M0's Portal, with both principal and accrued yield bridged to Noble over Wormhole NTT; the exit is the reverse bridge back into $M. Verified directly on chain at Noble height 58284069 (2026-09-01T10:27:17Z): the dollar module reports total_principal 1,835,201.076317 $M and an M index of 1.093272766999, giving a present value of 2,006,375.358705, against a uusdn bank supply of 2,006,375.358704 - a 1:1 match to the last micro-unit, so every circulating USDN is covered by locked $M principal and nothing else. A USDN holder's claim therefore runs against M0's M, and M0's own Treasury and cash collateral is reviewed on the tracked m-m0 parent rather than duplicated here as a second, parallel claim.",
-    "compositionBasis": "Noble USDN architecture and M0 portal documentation plus fixed-height Noble dollar-module principal, index, and uusdn supply reads",
+    "compositionBasis": "Immediate M claim: Noble locks M on Ethereum through the M0 Portal and issues USDN on Noble; fixed-height principal, index and supply reads retain their 2026-09-01 basis. M0 API Treasury/cash output is look-through parent composition, not independent Noble custody.",
     "compositionAsOf": "2026-09-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No direct reserve asset remains unidentified: the whole claim is the tracked m-m0 parent, whose own collateral composition is reviewed on that entry.",
@@ -70,7 +70,7 @@
       },
       {
         "label": "Noble USDN architecture",
-        "url": "https://docs.noble.xyz/usdn/architecture/"
+        "url": "https://docs.noble.xyz/learn/usdn/architecture/"
       }
     ],
     "uncertainty": "Noble identifies bankruptcy-remote SPVs and the on-chain M Portal path, but does not publish current minter shares, named custody providers for every SPV, or rehypothecation terms.",

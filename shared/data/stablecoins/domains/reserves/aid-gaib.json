@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "USDC held by AID minter, redeemer, and sAID reserve contracts",
-      "pct": 1.142545,
+      "pct": 1.13622166,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -18,12 +18,10 @@
     },
     {
       "name": "USDT held by the BNB Chain AID minter contract",
-      "pct": 0.000029,
+      "pct": 0.00002927,
       "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether Holdings",
+      "issuerOrObligor": "Binance-Peg USDT on BNB Chain; canonical issuer escrow unverified",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -33,7 +31,7 @@
     },
     {
       "name": "GPU Financing Facility",
-      "pct": 28.547064,
+      "pct": 28.54889011,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "GAIB SPV Ltd.",
@@ -48,7 +46,7 @@
     },
     {
       "name": "GPU Financing",
-      "pct": 55.50818,
+      "pct": 55.51173076,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "GAIB SPV Ltd.",
@@ -63,7 +61,7 @@
     },
     {
       "name": "GPU Refinancing",
-      "pct": 14.802181,
+      "pct": 14.8031282,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "GAIB SPV Ltd.",
@@ -78,10 +76,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv13)",
-    "confidence": "verified",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map evidence review",
+    "confidence": "probable",
     "sources": [
+      {"label": "GAIB deployed transparency module, facility principal disclosures (accessed 2026-09-30)", "url": "https://aid.gaib.ai/assets/Transparency-CfyG2wVP.js"},
+      {"label": "GAIB deployed contract and asset registry (accessed 2026-09-30)", "url": "https://aid.gaib.ai/assets/migration-config-DzLHduzo.js"},
+      {"label": "Ethereum balances at block 26088275 (2026-09-30)", "url": "https://ethereum-rpc.publicnode.com"},
+      {"label": "Arbitrum minter USDC balance at block 510256611 (2026-09-30)", "url": "https://arbitrum-one-rpc.publicnode.com"},
+      {"label": "Base minter USDC balance at block 51978808 (2026-09-30)", "url": "https://base-rpc.publicnode.com"},
+      {"label": "BSC minter Binance-Peg USDT balance at block 124854510 (2026-09-30)", "url": "https://bsc-rpc.publicnode.com"},
       {
         "label": "GAIB AID transparency dashboard",
         "url": "https://aid.gaib.ai/transparency"
@@ -95,31 +99,32 @@
         "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
       }
     ],
-    "rationale": "Reviewed 2026-09-21 against GAIB's current protocol dashboard and direct public-RPC reads of the dashboard's disclosed contracts. The dashboard identifies three active GAIB SPV Ltd. facilities with principal allocations of $5.4 million, $10.5 million, and $2.8 million and links its latest attestation as September 2026. Reads on 2026-09-21 found $216,125.388053 USDC across the Ethereum redeemer, Ethereum, Arbitrum, and Base minters, and the sAID reserve, plus $5.536064300516316 USDT in the BNB Chain minter. The five amounts total $18,916,130.9241173 and are normalized to 100%. The linked attestation concerns the deployed facilities; the stablecoin balances are independently reproducible on-chain.",
-    "compositionBasis": "GAIB transparency dashboard active-facility amounts and direct on-chain stablecoin balances observed 2026-09-21",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "GAIB's deployed transparency module accessed 2026-09-30 still discloses facility principal allocations of $5.4 million, $10.5 million and $2.8 million. These are the existing principal-allocation denominator convention, not audited current fair values or the separately displayed remainingPrincipal. Exact registry-qualified balanceOf reads found 214,915.429119 USDC across Ethereum redeemer 0x52323f33551188f170d8de14fe8d8423a839629d, minter 0xe2e1424687eb676b3807693cbb439362b8ea908e and sAID reserve 0xdaed70e64aaea8efff8fe150ee7762210aed2e9b at block 26088275, Arbitrum minter 0x04dfa27c7d1ade09ddfccfa233fb3c8490ca2b18 at block 510256611, and Base minter 0x81c1fba2c7df54ac76de5ebe373e89bcad3b8632 at block 51978808. BSC block 124854510 returned 5.536064300516316 Binance-Peg USDT at minter 0x66f9383271af3cb719b17ad07a2389185a3f580a from token 0x55d398326f99059ff775485246999027b3197955. The measured liquid balances plus disclosed principals total $18,914,920.965183303 and are normalized to 100%; cross-chain observations are not atomic. The USDT issuer edge is withheld because these balances establish a BSC representation, not verified canonical escrow coverage.",
+    "compositionBasis": "Issuer-disclosed facility principal allocations plus exact multichain liquid token balances observed 2026-09-30; not a fair-value attestation",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full current allocation is classified. Facility borrower identities, collateral realization terms, and reserve-contract custody controls remain qualitative risks rather than unidentified reserve slices.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "Facility principal allocations are issuer disclosure rather than independently verified current NAV. Binance-Peg USDT canonical escrow coverage remains unverified.",
+    "knownUnknownExposurePct": 0.00002927,
     "nonLinkDispositions": [
+      {"reserveIndex": 1, "reserveName": "USDT held by the BNB Chain AID minter contract", "pct": 0.00002927, "disposition": "insufficient-evidence", "rationale": "BSC block 124854510 confirms Binance-Peg USDT holdings, but canonical Tether escrow coverage was not verified. Symbol and local balance alone do not establish the issuer edge."},
       {
         "reserveIndex": 2,
         "reserveName": "GPU Financing Facility",
-        "pct": 28.547064,
+        "pct": 28.54889011,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The disclosed GAIB SPV Ltd. private-credit facility is an external reserve asset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "GPU Financing",
-        "pct": 55.50818,
+        "pct": 55.51173076,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The disclosed GAIB SPV Ltd. private-credit facility is an external reserve asset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 4,
         "reserveName": "GPU Refinancing",
-        "pct": 14.802181,
+        "pct": 14.8031282,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The disclosed GAIB SPV Ltd. private-credit facility is an external reserve asset rather than a tracked stablecoin dependency."
       }

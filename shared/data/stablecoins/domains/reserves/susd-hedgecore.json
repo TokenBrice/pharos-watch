@@ -15,9 +15,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos Dependency Map WS1.D documented-route review",
+    "confidence": "probable",
     "sources": [
       {
         "label": "HedgeCore protocol architecture",
@@ -36,11 +36,11 @@
         "url": "https://docs.hedgecore.io/docs/protocol/analytics-monitoring"
       }
     ],
-    "rationale": "Re-opened 2026-08-20: HedgeCore's current yield-generation and analytics documentation still specifies the sole USDC -> StakeableAsset/StrategyRouter -> VenusUSDVault path, and BSC block 117054691 confirms the documented sUSD, hUSDC, StrategyRouter, and Venus vault contracts. The current point reads do not publish a durable supply-to-vault reconciliation or a further strategy allocation, so the full documented reserve remains one linked USDC protocol-position slice.",
-    "compositionBasis": "HedgeCore yield-generation and analytics-monitoring documentation checked against BSC block 117054691",
+    "rationale": "N04-07: yield-generation documentation accessed 2026-09-30 continues to describe USDC -> StakeableAsset -> StrategyRouter -> VenusUSDVault -> Venus Protocol, while allowing future strategy additions. This establishes a documented route, not freshly measured allocation or canonical Circle custody. The 100% row is retained as historical strategy context and its August 20 composition date is unchanged. Publication remains blocked on a same-block sUSD/hUSDC liability-to-asset reconciliation and verification of the BSC USDC held claim and bridge escrow. Next evidence: read the immutable underlying/strategy/vault asset contracts, vUSDC balances and exchange rate, idle balances, debt and circulating liabilities at one BSC block; annotate a verified bridge representation before admitting any issuer look-through edge.",
+    "compositionBasis": "Historical BSC block 117054691 route context; issuer yield-generation documentation accessed 2026-09-30 without refreshed balances",
     "compositionAsOf": "2026-08-20",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve relationship is USDC routed through the documented HedgeCore and Venus path. Current vUSDC balances, liquidity, and contract allocation detail are not published as a durable composition.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The documented Venus USDC route is confirmed, but current allocation, supply-to-vault reconciliation and BSC representation custody are unresolved. A 100% historical strategy statement is not a current measured Circle USDC share.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

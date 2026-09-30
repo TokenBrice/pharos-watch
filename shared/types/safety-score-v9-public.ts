@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { scoreToGrade } from "./safety-score-v9-grade";
-import { V9DependencyEconomicRoleSchema } from "./dependency-types";
+import { V9DependencyEconomicRoleSchema, DependencyTypeSchema } from "./dependency-types";
 import {
   V9EvidenceLevelSchema,
   V9GradeSchema,
@@ -26,6 +26,28 @@ import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
 import { SafetyScoreV9BreakdownsSchema } from "./safety-score-v9-public-breakdowns";
 import { SafetyScoreV9ScoreTraceSchema } from "./safety-score-v9-public-trace";
+import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
+import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
+import { ReserveSliceSchema } from "./reserves";
+
+export const SafetyScoreV9DependencyProvenanceSchema = z.object({
+  source: V9EffectiveDependenciesV3Schema.shape.source,
+  evidenceAsOf: z.string().min(1).nullable(),
+  intermediary: ReserveSliceSchema.shape.intermediary.unwrap().nullable(),
+}).strict();
+
+const SafetyScoreV9DependencyCoverageSchema = z.object({
+  upstreamLabel: z.string().min(1),
+  upstreamAssetId: z.string().min(1).nullable(),
+  share: z.number().finite().min(0).max(1).nullable(),
+  reason: z.string().min(1),
+  sourceAsOf: z.string().min(1).nullable(),
+  identityVerified: z.boolean(),
+}).strict().superRefine((row, ctx) => {
+  if (!row.identityVerified && row.upstreamAssetId !== null) {
+    ctx.addIssue({ code: "custom", path: ["upstreamAssetId"], message: "Unverified identities cannot name a tracked upstream" });
+  }
+});
 
 export {
   findSafetyScoreV9ParentAttributionIssues,
@@ -41,6 +63,9 @@ const SafetyScoreV9SerialDependencySchema = z
     upstreamAssetId: z.string().min(1),
     score: ScoreSchema.nullable(),
     blocked: z.boolean(),
+    dependencyType: DependencyTypeSchema.optional(),
+    wrapperForm: V9WrapperFormSchema.nullable().optional(),
+    provenance: SafetyScoreV9DependencyProvenanceSchema.optional(),
   })
   .strict();
 
@@ -50,6 +75,9 @@ const SafetyScoreV9BasketDependencySchema = z
     weight: z.number().finite().min(0).max(1),
     score: ScoreSchema.nullable(),
     boundedUnknown: z.boolean(),
+    dependencyType: DependencyTypeSchema.optional(),
+    wrapperForm: z.null().optional(),
+    provenance: SafetyScoreV9DependencyProvenanceSchema.optional(),
   })
   .strict();
 
@@ -174,6 +202,13 @@ const SafetyScoreV9CardShape = {
    * Worker can continue reading the last pre-field publication during rollout.
    */
   backingFromLiveReserves: z.boolean().optional(),
+  supply: z.object({
+    circulatingUsdAtEvaluation: z.number().finite().nonnegative().nullable(),
+    asOfSec: z.number().int().nonnegative().nullable(),
+    generationId: z.string().min(1).nullable(),
+  }).strict().optional(),
+  sharedBookId: z.string().min(1).nullable().optional(),
+  dependencyCoverage: z.array(SafetyScoreV9DependencyCoverageSchema).optional(),
   score: ScoreSchema.nullable(),
   grade: V9GradeSchema,
   qualityScore: ScoreSchema.nullable(),

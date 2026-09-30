@@ -1,0 +1,64 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-29T20:11:28Z -->",
+  "reconstructionNote": "Capture-derived reconstruction, not a raw or atomic groups payload: each module debt is the captured rounded share times the captured rounded total group debt; collateral outside PSM is not reconstructed. Source: live-reserves/usds-sky.json, captured 2026-09-29.",
+  "totalGroupDebtUsd": 10751404484,
+  "measuredUsdcBalanceRaw": "4255200267580757",
+  "groups": [
+    {
+      "group": "stablecoins",
+      "group_name": "Stablecoins (PSM)",
+      "debt": "4236053366.6959996",
+      "collateral": "4256013468.4855995",
+      "datetime": "2026-09-29T20:09:26.000Z"
+    },
+    {
+      "group": "spark",
+      "group_name": "Spark (lending)",
+      "debt": "3612471906.624",
+      "collateral": "3612471906.624",
+      "datetime": "2026-09-29T20:09:26.000Z"
+    },
+    {
+      "group": "grove",
+      "group_name": "Grove (RWA)",
+      "debt": "1795484548.8279998",
+      "collateral": "1795484548.8279998",
+      "datetime": "2026-09-29T20:09:26.000Z"
+    },
+    {
+      "group": "obex",
+      "group_name": "Obex",
+      "debt": "408553370.39199996",
+      "collateral": "408553370.39199996",
+      "datetime": "2026-09-29T20:09:26.000Z"
+    },
+    {
+      "group": "core",
+      "group_name": "Core (crypto vaults)",
+      "debt": "397801965.90800005",
+      "collateral": "397801965.90800005",
+      "datetime": "2026-09-29T20:09:26.000Z"
+    },
+    {
+      "group": "staked",
+      "group_name": "Staking Engine",
+      "debt": "161271067.26",
+      "collateral": "161271067.26",
+      "datetime": "2026-09-29T20:09:26.000Z"
+    },
+    {
+      "group": "legacy-rwa",
+      "group_name": "Legacy RWA",
+      "debt": "86011235.87200001",
+      "collateral": "86011235.87200001",
+      "datetime": "2026-09-29T20:09:26.000Z"
+    },
+    {
+      "group": "osero",
+      "group_name": "Osero",
+      "debt": "53757022.42",
+      "collateral": "53757022.42",
+      "datetime": "2026-09-29T20:09:26.000Z"
+    }
+  ]
+}

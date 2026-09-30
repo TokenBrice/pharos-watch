@@ -49,36 +49,11 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
     rationale:
       "OUSG's September 11 portfolio explicitly holds Franklin OnChain U.S. Government Money Fund (BENJI). Retain that measured collateral dependency while the tracked fund is quarantined; the link does not make BENJI scoreable or remove unavailable-upstream treatment.",
   },
-  {
-    targetId: "rusd-reservoir",
-    expectedLifecycle: "active",
-    action: "retain-reviewed-link",
-    reviewer: "Codex Prompt 6b dependency review",
-    reviewedAt: "2026-07-20",
-    sources: [
-      { label: "Reservoir documentation", url: "https://docs.reservoir.xyz" },
-      { label: "Reservoir proof of reserves", url: "https://app.reservoir.xyz/reserves" },
-    ],
-    rationale:
-      "srUSD and wrapped srUSD are direct claims on Reservoir rUSD. rUSD is tracked and active, but its current report card is NR, so the reviewed wrapper link must remain visible with unavailable-upstream scoring.",
-  },
-  {
-    targetId: "zsd-zephyr-protocol",
-    expectedLifecycle: "active",
-    action: "retain-reviewed-link",
-    reviewer: "Codex dependency review",
-    reviewedAt: "2026-07-12",
-    sources: [
-      { label: "Zephyr documentation", url: "https://zephyrprotocol.com/documentation" },
-      { label: "Zephyr yield dashboard", url: "https://zephyrprotocol.com/yield" },
-    ],
-    rationale:
-      "ZYS is a yield-share claim on the ZSD yield reserve. ZSD is tracked and active, but its current report card is NR, so the reviewed wrapper link remains correct with unavailable-upstream scoring.",
-  },
 ];
 
 /** Exact adapters observed producing mapped live dependency sets in the P1b replay. */
 export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappingReview[] = [
+  adapterReview("sky-makercore", "worker/src/cron/reserve-adapters/sky-makercore.ts", "Verifies LitePSM gem() and pocket() against canonical Ethereum USDC and measures the pocket balance in the same adapter run. Maps only the reconciled USDC constituent to usdc-circle with collateral depType; residual and reconciliation-failed PSM groups remain unlinked. The 0.25 percentage-point timing/rounding band is recorded as excess metadata, and the shared DAI/USDS book carries one measured holding.", "2026-09-30"),
   adapterReview("ondo-ousg", "worker/src/cron/reserve-adapters/ondo-ousg.ts", "Maps only the exact reviewed Sanity IDs and matching names/symbols for BUIDL, BENJI and USDC. Other fund, bank and residual rows stay unlinked; quarantined BENJI remains unavailable for upstream scoring.", "2026-09-14"),
   adapterReview("midas-mtbill", "worker/src/cron/reserve-adapters/midas-mtbill.ts", "Maps only the exact reviewed unleveraged USTB/BUIDL position tuples. The entire residual stays unclassified and unlinked, with source totals and scope required to reconcile.", "2026-09-14"),
   adapterReview("hylo-solana", "worker/src/cron/reserve-adapters/hylo-solana.ts", "Maps only the pinned SPL USDC vault/mint to usdc-circle; the registry-enumerated LST pool and pinned cbBTC/HYPE pools remain untracked cryptoasset exposures. Unknown LSTs or activation of an unreviewed exogenous pair fail closed.", "2026-09-09"),
@@ -97,7 +72,7 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("flying-tulip-ftusd", "worker/src/cron/reserve-adapters/flying-tulip-ftusd.ts", "Maps only the reviewed Ethereum and Sonic USDC, USDT, and USSD collateral addresses to canonical upstream IDs.", "2026-08-09"),
   adapterReview("frax-balance-sheet", "worker/src/cron/reserve-adapters/frax.ts", "Uses the subject-aware reviewed Frax reserve mapping and suppresses self-links."),
   adapterReview("frax-fpi-collateral", "worker/src/cron/reserve-adapters/frax.ts", "Maps the reviewed FPI collateral roster to canonical upstream IDs."),
-  adapterReview("gho", "worker/src/cron/reserve-adapters/gho.ts", "Maps only reviewed GHO facilitator reserve assets while leaving issuance-only labels unlinked."),
+  adapterReview("gho", "worker/src/cron/reserve-adapters/gho.ts", "Maps only reviewed measured GSM reserve assets, retaining twelve-decimal percentages so positive USDC receipt claims are not rounded away. Issuance-only facilitator labels and the unresolved parent-facilitator collateral envelope remain unlinked; measured GSM holdings do not establish look-through weights for that residual.", "2026-09-30"),
   adapterReview("sodax-sonic", "worker/src/cron/reserve-adapters/sodax-sonic.ts", "Maps exact reviewed Sonic reserve wrapper addresses to USDC, USDT, and ftUSD; API borrower candidates must reconcile exactly to pinned non-transferable scaled debt supply. Unknown reserves are quantified, and v1/v2 inventory uncertainty keeps the adapter weak-live-probe.", "2026-09-09"),
   adapterReview("idle-cdo-epoch-variant", "worker/src/cron/reserve-adapters/idle-cdo-epoch-variant.ts", "Maps only the CDO's unlent underlying balance to its canonical deposit-token dependency; the borrower receivable is deliberately unlinked because a single-obligor credit claim is not a claim on that token.", "2026-09-01"),
   adapterReview("infinifi", "worker/src/cron/reserve-adapters/infinifi.ts", "Maps exact infiniFi reserve assets and leaves mixed unnamed baskets unresolved.", "2026-08-27"),
@@ -118,7 +93,7 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("resupply-pairs", "worker/src/cron/reserve-adapters/resupply-pairs.ts", "Maps Resupply pair collateral using the reviewed market-to-upstream identities."),
   adapterReview("saturn-pyusdx", "worker/src/cron/reserve-adapters/saturn-pyusdx.ts", "Emits the fixed canonical PayPal USD dependency at full weight for the reviewed PYUSDx MultiMint wrapper after verifying the pinned implementation and measuring its on-chain PYUSDx balance against supply.", "2026-09-09"),
   adapterReview("usdai-hub", "worker/src/cron/reserve-adapters/usdai-hub.ts", "Emits the fixed canonical PYUSD dependency at full weight after verifying the configured hub base token and measuring its on-chain balance.", "2026-09-01"),
-  adapterReview("usdd-data-platform", "worker/src/cron/reserve-adapters/usdd-data-platform.ts", "Maps exact USDD reserve assets from the reviewed data-platform response."),
+  adapterReview("usdd-data-platform", "worker/src/cron/reserve-adapters/usdd-data-platform.ts", "Maps exact USDD reserve assets from the reviewed data-platform response. The Smart Allocator global portfolio is not attributable to the Tron SA001-A debt envelope without chain-scope and checkpoint reconciliation, so its named stablecoin holdings remain unlinked.", "2026-09-30"),
   adapterReview("usdtb-transparency", "worker/src/cron/reserve-adapters/usdtb-transparency.ts", "Maps USDtb transparency rows through its reviewed canonical asset-key roster."),
   adapterReview("xdai-bridge", "worker/src/cron/reserve-adapters/xdai-bridge.ts", "Maps the complete measured bridge collateral to fixed canonical sUSDS and USDS dependencies according to their on-chain balances while leaving legacy DAI and sDAI unmapped.", "2026-09-01"),
   adapterReview("xpr-account-balances", "worker/src/cron/reserve-adapters/xpr-account-balances.ts", "Measures only the configured xtokens symbols held by xmd.treasury (XUSDC and XPYUSD) against the xmd.token XMD currency-stats supply and deliberately emits no coinId: XPR X-tokens are issuer-custodial Metal X bridge wrappers whose 1:1 upstream backing is not independently published, which the adapter records as a bridge-wrapper-unverified info warning. Supply beyond the measured balances becomes the explicit unknown remainder for non-xtokens treasury holdings such as MPD. A configured slice symbol missing from get_currency_balance, a supply-symbol mismatch, a non-array balance response, a non-positive supply, or an unreadable head-block identity fails the adapter closed.", "2026-09-22"),
@@ -189,9 +164,9 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   {
     adapter: "united-por",
     reviewer: "pharos-live-reserve-upgrade",
-    reviewedAt: "2026-09-09",
+    reviewedAt: "2026-09-30",
     sourceFiles: ["worker/src/cron/reserve-adapters/united-por.ts"],
-    rationale: "Preserves only an explicit configured dependency for the aggregate reviewed bucket; the current mixed United reserve bucket carries no inferred token link.",
+    rationale: "Preserves only an explicit configured dependency for the aggregate reviewed bucket. United's current proof-of-reserves source is genuinely single-bucket and does not publish constituent weights, so no token link is inferred.",
   },
   {
     adapter: "yamato",

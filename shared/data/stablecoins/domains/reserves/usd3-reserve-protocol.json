@@ -52,11 +52,9 @@
       "sourceKey": "reserve-protocol-dtf:0x27f2f159fe990ba83d57f39fd69661764bebf37a"
     },
     {
-      "name": "Steakhouse USDC strategy",
+      "name": "Steakhouse USDC V1 vault shares",
       "pct": 25,
       "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
       "blacklistable": true,
       "assetClass": "protocol-position",
       "issuerOrObligor": "Steakhouse Financial-curated Morpho V1 USDC lending vault and its borrowers; underlying USDC is issued by Circle",
@@ -74,8 +72,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Codex USD3 exact-contract identity review",
     "confidence": "verified",
     "sources": [
       {
@@ -97,13 +95,37 @@
       {
         "label": "Steakhouse legacy vault registry",
         "url": "https://www.steakhouse.financial/docs/products/vault-products/legacy-vaults"
+      },
+      {
+        "label": "USD3 Reserve basket and registry RPC reads at Ethereum block 26088539",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Steakhouse USDC V1 verified MetaMorpho contract",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef01735c132ada46aa9aa4c54623caa92a64cb"
+      },
+      {
+        "label": "Steakhouse USDC V1 contract and read interface",
+        "url": "https://etherscan.io/address/0xbeef01735c132ada46aa9aa4c54623caa92a64cb#readContract"
       }
     ],
-    "rationale": "USD3's current Reserve DTF basket contains four identified collateral contracts at approximately equal weight. Savings USDS exactly matches the tracked susds-sky contract. The Steakhouse row is the legacy Morpho V1 USDC vault at 0xbeef01735c132ada46aa9aa4c54623caa92a64cb; it retains the tracked USDC collateral dependency while remaining distinct from the separately tracked steakusdc-steakhouse V2 token.",
-    "compositionBasis": "Current Reserve DTF API basket, Reserve protocol documentation, and exact collateral-contract identity checks",
+    "rationale": "The previously reviewed four-contract composition and rounded 25% weights are retained. Exact identity reads at Ethereum block 26088539 (2026-09-30T06:35:47Z) confirm that USD3's BasketHandler quote includes 0xbeef01735c132ada46aa9aa4c54623caa92a64cb and its AssetRegistry maps that token to collateral plugin 0xb1327ead6ab9a1e363c4fc61648bd3131a587e39. USD3's BackingManager 0x4b0b3d40b0623f3a9eac09d2e01f592710ee59f0 holds 372031454478024121936647 raw vault shares. The vault returns name Steakhouse USDC, symbol steakUSDC, asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and curator 0x827e86072b06674a077f592a531dce4590adecdb. Steakhouse's legacy registry identifies this exact address as its Morpho V1 USDC vault. It differs from the tracked steakusdc-steakhouse V2 contract 0xbeef088055857739c12cd3765f20b7679def0f51, so the V1 share position is unlinked rather than attributed to V2 shares or direct USDC.",
+    "compositionBasis": "Previously reviewed 2026-09-21 Reserve DTF basket weights retained; exact basket, registry, holder, vault asset and curator identity rechecked by block-pinned Ethereum RPC at block 26088539",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "All four collateral contracts and their underlying stablecoin dependencies are identified. The legacy Steakhouse V1 vault is not itself a separately tracked Pharos asset, and wrapped strategy look-through allocations remain dynamic.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "All four direct collateral contracts are identified. The Steakhouse USDC V1 share token is an untracked protocol position with confirmed USDC underlying, not an unresolved constituent basket. Its dynamic borrower allocations and strategy risks remain represented by the protocol-position classification.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 3,
+        "reserveName": "Steakhouse USDC V1 vault shares",
+        "pct": 25,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The exact held token is the identified but untracked Morpho V1 vault 0xbeef01735c132ada46aa9aa4c54623caa92a64cb. Its asset() is canonical Circle USDC, retained as an underlying research candidate only. Neither the tracked V2 share token at 0xbeef088055857739c12cd3765f20b7679def0f51 nor direct or Aave USDC is the held asset, so no dependency identity or type is asserted.",
+        "candidateCoinIds": [
+          "usdc-circle"
+        ]
+      }
+    ]
   }
 }

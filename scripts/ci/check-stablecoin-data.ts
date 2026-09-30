@@ -19,6 +19,7 @@ import { REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS } from "@shared/data/coverage-
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "@shared/types/reserves";
 import { StablecoinFlagsSchema } from "@shared/types/stablecoin-meta-schemas";
+import { defaultV9DependencyEconomicRole } from "@shared/types/dependency-types";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import { analyzeOracleRiskCoverage, isBlockingOracleRiskCoverageFinding } from "../lib/oracle-risk-coverage";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -290,15 +291,35 @@ function dependencyKey(dependency: { id: string; type?: string }): string {
   return `${dependency.id}::${dependency.type ?? "collateral"}`;
 }
 
-export function getDependencyReserveOverlapIssues(coin: Pick<StablecoinMeta, "dependencies" | "reserves">): string[] {
+export function getDependencyReserveOverlapIssues(
+  coin: Pick<StablecoinMeta, "dependencies" | "reserves" | "dependencyReview">,
+): string[] {
   const dependencies = coin.dependencies ?? [];
-  const linkedReserves = (coin.reserves ?? []).filter((reserve) => reserve.coinId);
+  const linkedReserves = (coin.reserves ?? []).filter((reserve) => reserve.coinId && reserve.pct > 0);
   if (dependencies.length === 0 || linkedReserves.length === 0) return [];
 
   const reserveKeys = new Set(
     linkedReserves.map((reserve) => dependencyKey({ id: reserve.coinId!, type: reserve.depType })),
   );
-  return [...new Set(dependencies.map(dependencyKey).filter((key) => reserveKeys.has(key)))].map(
+  const redundantKeys = dependencies.flatMap((dependency) => {
+    const key = dependencyKey(dependency);
+    if (!reserveKeys.has(key)) return [];
+    const reviewedRoles = coin.dependencyReview?.sources.length
+      ? coin.dependencyReview.relationships.filter((relationship) =>
+          dependencyKey(relationship) === key && Math.abs(relationship.weight - dependency.weight) <= 1e-6,
+        )
+      : [];
+    const hasDistinctRole = reviewedRoles.some((relationship) =>
+      relationship.economicRole != null &&
+      relationship.economicRole !== defaultV9DependencyEconomicRole(relationship.type),
+    );
+    const hasDefaultRole = reviewedRoles.some((relationship) =>
+      (relationship.economicRole ?? defaultV9DependencyEconomicRole(relationship.type)) ===
+        defaultV9DependencyEconomicRole(relationship.type),
+    );
+    return hasDistinctRole && !hasDefaultRole ? [] : [key];
+  });
+  return [...new Set(redundantKeys)].map(
     (key) =>
       `${key} is authored in both dependencies and linked reserves; keep reserve-backed relationships only in reserves`,
   );

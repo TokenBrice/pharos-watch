@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ReserveIntermediarySchema } from "./reserves";
 import {
   DependencyTypeSchema,
   V9DependencyEconomicRoleSchema,
@@ -209,6 +210,7 @@ const V9EffectiveDependencyEdgeBaseSchema = z.object({
   weight: PositiveFractionSchema,
   evidenceRefIds: CanonicalStringArraySchema,
   failureDomains: CanonicalFailureDomainsSchema,
+  intermediary: ReserveIntermediarySchema.optional(),
 });
 
 const V9EffectiveDependencyEdgeV2Schema = V9EffectiveDependencyEdgeBaseSchema.extend({
@@ -227,8 +229,12 @@ const V9EffectiveDependencyEdgeV2Schema = V9EffectiveDependencyEdgeBaseSchema.ex
   });
 
 export const V9DependencyRejectionReasonsSchema = z.array(z.object({
-  sliceIndex: z.number().int().nonnegative(),
-  reason: z.enum(["no-match", "expired", "non-link"]),
+  sliceIndex: z.number().int().min(-1),
+  reason: z.enum(["no-match", "expired", "non-link", "manual-collateral-not-in-reserves", "reviewed-dependency-type-conflict", "reviewed-dependency-identity-conflict"]),
+  manualDependencyIndex: z.number().int().nonnegative().optional(),
+  upstreamAssetId: z.string().min(1).optional(),
+  reviewedUpstreamAssetId: z.string().min(1).optional(),
+  share: z.number().finite().min(0).max(1).optional(),
 }).strict());
 
 const V9EffectiveDependenciesBaseFields = {

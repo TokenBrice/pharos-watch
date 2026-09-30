@@ -2,8 +2,114 @@
   "id": "dola-inverse-finance",
   "reserves": [
     {
+      "sourceKey": "dola-inverse:lp:dola-susde",
+      "name": "DOLA-sUSDe LP-secured debt (undecomposed)",
+      "pct": 51.7,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:unattributed",
+      "name": "Unattributed non-FiRM issuance",
+      "pct": 34,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Inverse Finance issuance outside measured FiRM debt",
+      "riskFactors": [
+        "counterparty",
+        "credit",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:lp:dola-susds",
+      "name": "DOLA-sUSDS LP-secured debt (undecomposed)",
+      "pct": 5.7,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:lp:sdola-scrvusd",
+      "name": "sDOLA-scrvUSD LP-secured debt (undecomposed)",
+      "pct": 4.2,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:lp:reusd-sdola",
+      "name": "reUSD-sDOLA LP-secured debt (undecomposed)",
+      "pct": 2.7,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "ETH / Liquid staking (wstETH, WETH)",
+      "pct": 0.6,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "ETH and liquid staking tokens (Lido wstETH, WETH)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "dola-inverse:eth-lst"
+    },
+    {
+      "name": "Governance tokens (INV, CRV, CVX)",
+      "pct": 0.5,
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Inverse Finance (INV), Curve (CRV), and Convex (CVX) governance tokens",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "dola-inverse:governance"
+    },
+    {
       "name": "sUSDe collateral",
-      "pct": 81.9,
+      "pct": 0.4,
       "risk": "high",
       "coinId": "susde-ethena",
       "depType": "collateral",
@@ -21,67 +127,8 @@
       "sourceKey": "dola-inverse:susde"
     },
     {
-      "name": "sUSDS collateral",
-      "pct": 11.8,
-      "risk": "low",
-      "coinId": "susds-sky",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault issuer)",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate",
-      "sourceKey": "dola-inverse:susds"
-    },
-    {
-      "name": "Other collateral",
-      "pct": 3.3,
-      "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Inverse Finance FiRM residual collateral markets",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "concentration",
-        "counterparty"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "dola-inverse:other"
-    },
-    {
-      "name": "ETH / Liquid staking (wstETH, WETH)",
-      "pct": 1.4,
-      "risk": "low",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "ETH and liquid staking tokens (Lido wstETH, WETH)",
-      "riskFactors": [
-        "market",
-        "smart-contract",
-        "liquidity"
-      ],
-      "liquidityHorizon": "immediate",
-      "sourceKey": "dola-inverse:eth-lst"
-    },
-    {
-      "name": "Governance tokens (INV, CRV, CVX)",
-      "pct": 1.1,
-      "risk": "very-high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Inverse Finance (INV), Curve (CRV), and Convex (CVX) governance tokens",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "dola-inverse:governance"
-    },
-    {
       "name": "BTC (WBTC, cbBTC)",
-      "pct": 0.5,
+      "pct": 0.2,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Wrapped BTC custodians (WBTC, Coinbase cbBTC)",
@@ -96,12 +143,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve research",
-    "confidence": "verified",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency map reserve review",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "Inverse Finance FiRM markets API",
+        "label": "Inverse Finance FiRM markets API (accessed 2026-09-29; saved issuer capture)",
         "url": "https://www.inverse.finance/api/f2/fixed-markets"
       },
       {
@@ -113,33 +160,68 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
       }
     ],
-    "rationale": "Re-verified against the live Inverse FiRM markets API on 2026-08-08. This review mirrors the live dola-inverse adapter's exact normalized names and one-decimal weights. The adapter buckets all non-tracked stablecoins and unrecognized collateral symbols into the 3.3% 'Other collateral' slice, which is classified as a residual protocol-position exposure rather than a tracked stablecoin dependency.",
-    "compositionBasis": "Inverse Finance FiRM markets API totalDebt values normalized by the live dola-inverse adapter",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "The saved 2026-09-29 issuer payload reports direct sUSDe debt of $422,722.29957580566, versus $56,003,176.34275359 secured by DOLA-sUSDe LPs and Yearn LP vaults. LP totalDebt remains an undecomposed protocol position without coinId or depType. This illustrative dated composition runs the corrected adapter over the saved issuer payload with the earlier captured live supply of $108,602,244.08936833; these two observations are temporally mixed and are not a synchronized reserve valuation. Runtime percentages remain producer-owned. Existing one-decimal rounding omits DAI dust; no new dust policy is introduced.",
+    "compositionBasis": "FiRM totalDebt by direct collateral or undecomposed LP identity; 2026-09-29 issuer capture and earlier 2026-09-29 Pharos live circulating-supply capture, normalized with the existing adapter policy",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "Every live adapter slice is named and classified; the 3.3% 'Other collateral' bucket is an aggregate of non-tracked collateral markets and is classified as a residual protocol-position exposure.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "64.3% is undecomposed LP-secured debt and 34.0% is unattributed non-FiRM issuance. No constituent backing shares are inferred from LP debt or names.",
+    "knownUnknownExposurePct": 98.3,
     "nonLinkDispositions": [
       {
+        "reserveIndex": 0,
+        "reserveName": "DOLA-sUSDe LP-secured debt (undecomposed)",
+        "pct": 51.7,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer totalDebt measures debt secured by an LP, not the value or weights of its external stablecoin constituents. DOLA and sDOLA circular legs and Yearn conversion remain undecomposed; no tracked issuer edge is admitted."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Unattributed non-FiRM issuance",
+        "pct": 34,
+        "disposition": "insufficient-evidence",
+        "rationale": "Captured circulating supply exceeds measured FiRM debt; the residual has no measured collateral breakdown."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "DOLA-sUSDS LP-secured debt (undecomposed)",
+        "pct": 5.7,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer totalDebt measures debt secured by an LP, not the value or weights of its external stablecoin constituents. DOLA and sDOLA circular legs and Yearn conversion remain undecomposed; no tracked issuer edge is admitted."
+      },
+      {
         "reserveIndex": 3,
-        "reserveName": "ETH / Liquid staking (wstETH, WETH)",
-        "pct": 1.4,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "ETH and liquid-staking collateral is not a tracked stablecoin dependency."
+        "reserveName": "sDOLA-scrvUSD LP-secured debt (undecomposed)",
+        "pct": 4.2,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer totalDebt measures debt secured by an LP, not the value or weights of its external stablecoin constituents. DOLA and sDOLA circular legs and Yearn conversion remain undecomposed; no tracked issuer edge is admitted."
       },
       {
         "reserveIndex": 4,
-        "reserveName": "Governance tokens (INV, CRV, CVX)",
-        "pct": 1.1,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Governance-token collateral is not a tracked stablecoin dependency."
+        "reserveName": "reUSD-sDOLA LP-secured debt (undecomposed)",
+        "pct": 2.7,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer totalDebt measures debt secured by an LP, not the value or weights of its external stablecoin constituents. DOLA and sDOLA circular legs and Yearn conversion remain undecomposed; no tracked issuer edge is admitted."
       },
       {
         "reserveIndex": 5,
-        "reserveName": "BTC (WBTC, cbBTC)",
+        "reserveName": "ETH / Liquid staking (wstETH, WETH)",
+        "pct": 0.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "This directly identified cryptoasset category is not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "Governance tokens (INV, CRV, CVX)",
         "pct": 0.5,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Bitcoin collateral is not a tracked stablecoin dependency."
+        "rationale": "This directly identified cryptoasset category is not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 8,
+        "reserveName": "BTC (WBTC, cbBTC)",
+        "pct": 0.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "This directly identified cryptoasset category is not a tracked stablecoin dependency."
       }
     ]
   }

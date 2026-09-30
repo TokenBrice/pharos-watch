@@ -21,20 +21,40 @@ const KNOWN_TICKERS = [
 ];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
+    "usd3-reserve-protocol::Steakhouse USDC V1 vault shares::USDC",
+    "Untracked Steakhouse USDC Morpho V1 vault shares (0xbeef01735c132ada46aa9aa4c54623caa92a64cb); USDC is the underlying candidate only, and the tracked steakUSDC is the V2 token.",
+  ],
+  [
+    "spusd-soulpeg::USDC routed through Venus lending markets (via soul-bound sUSDC)::USDC",
+    "D5: bridge/intermediary unverified; withheld as insufficient-evidence (ResearchE, 2026-09-30).",
+  ],
+  [
+    "aid-gaib::USDT held by the BNB Chain AID minter contract::USDT",
+    "D5: bridge/intermediary unverified; withheld as insufficient-evidence (ResearchE, 2026-09-30).",
+  ],
+  [
+    "xmd-metal-dollar::XUSDC (bridge-wrapped USDC) held by the xmd.treasury contract::USDC",
+    "D5: bridge/intermediary unverified; withheld as insufficient-evidence (ResearchE, 2026-09-30).",
+  ],
+  [
+    "dola-inverse-finance::DOLA-sUSDe LP-secured debt (undecomposed)::USDe",
+    "WS1.B7: LP-secured debt is not a measured sUSDe constituent holding; the undecomposed LP remains deliberately unlinked.",
+  ],
+  [
+    "dola-inverse-finance::DOLA-sUSDe LP-secured debt (undecomposed)::DOLA",
+    "WS1.B7: the DOLA leg is subject self exposure within undecomposed LP-secured debt, not an upstream token reserve.",
+  ],
+  [
+    "dola-inverse-finance::DOLA-sUSDS LP-secured debt (undecomposed)::DOLA",
+    "WS1.B7: the DOLA leg is subject self exposure within undecomposed LP-secured debt, not an upstream token reserve.",
+  ],
+  [
     "trusd-tori::On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum::USDC",
     "Tori's Accountable 'On-chain Liquidity' bucket is an unsplit Morpho-USDC/USDC/USDT basket (basket-needs-split disposition), so a USDC coinId would overstate the dependency.",
   ],
   [
     "trusd-tori::On-chain liquidity: USDC supplied to Morpho plus USDC and USDT held on Ethereum::USDT",
     "Tori's Accountable 'On-chain Liquidity' bucket is an unsplit Morpho-USDC/USDC/USDT basket (basket-needs-split disposition), so a USDT coinId would overstate the dependency.",
-  ],
-  [
-    "usdm-mega::USDC and USDtb reserve basket::USDC",
-    "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDC coinId would overstate the dependency.",
-  ],
-  [
-    "usdm-mega::USDC and USDtb reserve basket::USDtb",
-    "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDtb coinId would overstate the dependency.",
   ],
   [
     "susd1plus-lorenzo::Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)::USDC",
@@ -125,10 +145,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "PicWe's Phase-1 100% USDC documentation conflicts with the on-chain Movement dual MOVE+stablecoin mint state and with EVM mint USDC balances that do not match issued supply, so no dated inventory splits the basket.",
   ],
   [
-    "hbusdt-hyperbeat::Dynamic Hyperbeat hbUSDT strategy portfolio::USDT",
-    "The reviewed Hyperbeat portfolio is a dynamic strategy envelope without durable asset or position weights; the hbUSDT product name does not establish a fixed USDT reserve slice.",
-  ],
-  [
     "buidl-blackrock::BlackRock BUIDL fund shares::BUIDL",
     "The reserve label names the subject fund itself, not an upstream BUIDL dependency edge.",
   ],
@@ -203,6 +219,9 @@ describe("reserve coinId validation", () => {
       "ftusd-flying-tulip",
       "gbpm-mento",
       "susd1plus-lorenzo",
+      "susdt-spark", // D11: reviewed USDS mechanism claim coexists with the native USDT reserve wrapper link.
+      "susdc-spark", // D11: reviewed USDS mechanism claim coexists with the native USDC reserve wrapper link.
+      "usdm-mega", // Reviewed USDtb control-operator role anchor is separate from measured USDC/USDtb reserve holdings.
       "ussd-sonic-labs",
       "wemix-dollar-wemix",
       "xmd-metal-dollar",

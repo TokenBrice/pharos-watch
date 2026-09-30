@@ -118,7 +118,11 @@
   "status": "quarantined",
   "listingStatusReview": {
     "changedAt": "2026-07-15",
-    "reviewBy": "2026-08-15",
-    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+    "reviewBy": "2026-10-30",
+    "reason": "2026-09-30 review: price and Chainlink NAV resolve, but CoinGecko market cap and circulating supply are zero and DefiLlama has no list row. Multi-chain supply is unreconciled; issuer-confirmed Stellar shares have no runtime reader.",
+    "source": {
+      "label": "WisdomTree Stellar identity accessed 2026-09-30",
+      "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"
+    }
   }
 }

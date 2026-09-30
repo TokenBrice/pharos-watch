@@ -5,6 +5,16 @@
       "name": "Dynamic Hyperbeat hbUSDT strategy portfolio",
       "pct": 100,
       "risk": "high",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "intermediary": {
+        "kind": "bridge",
+        "label": "USDT0 (HyperEVM)",
+        "chain": "hyperevm",
+        "contract": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+        "verified": false,
+        "sourceUrl": "https://docs.usdt0.to/technical-documentation/deployments"
+      },
       "assetClass": "protocol-position",
       "issuerOrObligor": "Hyperbeat, Midas, and allocated HyperEVM strategy protocols",
       "riskFactors": [
@@ -19,10 +29,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28; Kimi T59 re-review 2026-07-30",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map evidence review",
     "confidence": "probable",
     "sources": [
+      {"label": "USDT0 exact HyperEVM deployment registry (accessed 2026-09-30)", "url": "https://docs.usdt0.to/technical-documentation/deployments"},
+      {"label": "Hyperbeat exact hbUSDT vault and redemption documentation (accessed 2026-09-30)", "url": "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault"},
+      {"label": "HyperEVM depositor asset() probe at block 47265526 (2026-09-30)", "url": "https://rpc.hyperliquid.xyz/evm"},
       {
         "label": "Hyperbeat USDT vault documentation",
         "url": "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault"
@@ -44,21 +57,12 @@
         "url": "https://rpc.hyperliquid.xyz/evm"
       }
     ],
-    "rationale": "At HyperEVM block 40439370, the active Depositor accepted USDT0 while the reviewed Hyperbeat documentation also listed USDe and USR as broader or legacy inputs. The sources do not pin a current 60.5% hoUSDT / 39.5% masterUSD allocation or publish a durable constituent split, so hbUSDT is represented as one dynamic strategy envelope rather than an unsupported static snapshot. Write-time re-open 2026-07-28: Hyperbeat USDT vault docs still describe automated multi-strategy USDT vault with Accountable proof-of-solvency link; builder-code vault docs corroborate. Live strategy weights not dual-published as fixed composition \u2192 ku=100. Accountable dashboard returned 503 at write time. Write-time re-open 2026-07-30: Hyperbeat USDT vault docs still describe dynamic deployment of deposited assets into HyperEVM protocols with RockawayX risk oversight and publish no constituent or venue split; the Accountable proof-of-solvency dashboard returned HTTP 503 again at write time (also 503 on 2026-07-15 and 2026-07-28), so live strategy weights remain undisclosed and the single dynamic envelope with ku=100 stands.",
-    "compositionBasis": "Hyperbeat vault documentation, Accountable transparency, and fixed-block HyperEVM deposit-token review",
-    "scope": "full-composition",
-    "knownUnknownExposure": "Current strategy venues, position weights, look-through assets, and custody-provider shares are dynamic or undisclosed in the reviewed evidence.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Dynamic Hyperbeat hbUSDT strategy portfolio",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The reviewed sources describe eligible inputs and a dynamic strategy product but do not support durable venue, asset, or position weights."
-      }
-    ],
-    "compositionAsOf": "2026-07-30"
+    "rationale": "Current issuer documentation identifies tracked hbUSDT 0x5e105266db42f78fa814322bce7f388b4c2e61eb as its automated USDT strategy vault and describes instant and two-day classic exits. The previously pinned deposit-token review at HyperEVM block 40439370 identified USDT0, not direct USDT; USDT0's current deployment registry confirms HyperEVM token 0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb. A fresh asset() probe on the depositor 0x6261f30144b259c74243d5f5d9230941186ac936 reverted at block 47265526 and does not supersede that deposit-token identity. The reserve row expresses the retained whole strategy-vault claim under D3, with an unverified USDT0 intermediary annotation; it does not quantify idle USDT0 or any constituent allocation. Canonical escrow coverage and current venue/position weights remain unreconciled.",
+    "compositionBasis": "Issuer exact vault/exit documentation and USDT0 deployment registry accessed 2026-09-30, with historical deposit-token identity at HyperEVM block 40439370",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "Current strategy venues, position weights, look-through assets, custody-provider shares and USDT0 canonical escrow coverage remain unreconciled. The parent link describes settlement lineage only.",
+    "knownUnknownExposurePct": 0,
+    "compositionAsOf": "2026-09-30"
   },
   "custodyProfile": {
     "providers": [

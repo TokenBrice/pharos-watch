@@ -46,15 +46,13 @@ interface ModuleSpec {
   coinId?: string;
 }
 
-// The Sky PSM group ("stablecoins") aggregates USDC + USDT + USDP without a
-// per-stable breakdown in the Block Analitica groups API response. We emit
-// the PSM slice without a `coinId` attribution (rather than hardcoding one)
-// and surface the composition note in metadata.details.
-const SKY_PSM_COMPOSITION_NOTE =
-  "Sky PSM pool aggregates USDC, USDT, USDP without per-stable breakdown from the module-groups API";
 const SKY_MODULE_SOURCE_KEY_PREFIX = "sky-makercore:module";
 const SKY_OTHER_MODULE_SOURCE_KEY = `${SKY_MODULE_SOURCE_KEY_PREFIX}:other-modules`;
+const SKY_LITE_PSM_USDC_SOURCE_KEY = "sky-makercore:lite-psm:usdc";
+const SKY_PSM_RESIDUAL_SOURCE_KEY = "sky-makercore:module:stablecoins-residual";
 const SKY_UNKNOWN_MODULE_OBLIGOR = "Sky unknown module";
+// Absolute percentage points: cross-endpoint timing and group-feed rounding band.
+const SKY_PSM_RECONCILIATION_TOLERANCE_PCT = 0.25;
 
 function skyModuleSourceKey(group: string): string {
   return `${SKY_MODULE_SOURCE_KEY_PREFIX}:${group}`;
@@ -120,27 +118,84 @@ function hasMalformedDebt(raw: string): boolean {
 // ---------------------------------------------------------------------------
 // Pure helpers (exported for tests)
 // ---------------------------------------------------------------------------
+function reconcileSkyPsm(groups: SkyGroupResult[], measuredUsdcUsd: number | null) {
+  const totalDebt = groups.reduce((sum, group) => sum + parseNumericString(group.debt), 0);
+  const groupDebt = groups.filter((group) => group.group === "stablecoins")
+    .reduce((sum, group) => sum + parseNumericString(group.debt), 0);
+  const excessUsd = measuredUsdcUsd == null ? 0 : Math.max(0, measuredUsdcUsd - groupDebt);
+  const excessShare = totalDebt > 0 ? excessUsd / totalDebt : 0;
+  const blocked = excessShare * 100 > SKY_PSM_RECONCILIATION_TOLERANCE_PCT;
+  return {
+    totalDebt,
+    excessUsd,
+    excessShare,
+    blocked,
+    attributedUsd: measuredUsdcUsd == null || blocked ? null : Math.min(measuredUsdcUsd, groupDebt),
+  };
+}
 
-export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices"] {
+
+export function adaptSkyModules(
+  groups: SkyGroupResult[],
+  measuredUsdcUsd: number | null = null,
+): AdapterResult["slices"] {
   const knownValues: Array<{
     value: number;
     sourceKey: string;
     name: string;
     risk: "very-low" | "low" | "medium" | "high" | "very-high";
     coinId?: string;
-    assetClass?: "other";
+    depType?: "collateral";
+    assetClass?: "other" | "stablecoin";
     issuerOrObligor?: string;
   }> = [];
 
   let unknownDebtTotal = 0;
+  const reconciliation = reconcileSkyPsm(groups, measuredUsdcUsd);
+  const attributedUsd = reconciliation.attributedUsd;
 
   for (const g of groups) {
     const debt = parseNumericString(g.debt);
     if (debt <= 0) continue;
 
     const spec = MODULE_MAP[g.group];
+    if (g.group === "stablecoins" && attributedUsd != null) {
+      if (attributedUsd > 0) {
+        knownValues.push({
+          value: attributedUsd,
+          sourceKey: SKY_LITE_PSM_USDC_SOURCE_KEY,
+          name: "USDC (Sky LitePSM)",
+          risk: "low",
+          coinId: "usdc-circle",
+          depType: "collateral",
+          assetClass: "stablecoin",
+          issuerOrObligor: "Circle",
+        });
+      }
+      const residualUsd = Math.max(0, debt - attributedUsd);
+      if (residualUsd > 0) {
+        knownValues.push({
+          value: residualUsd,
+          sourceKey: SKY_PSM_RESIDUAL_SOURCE_KEY,
+          name: "Unattributed stablecoins (PSM)",
+          risk: "very-low",
+          assetClass: "stablecoin",
+          issuerOrObligor: "Sky PSM contracts and external stablecoin issuers",
+        });
+      }
+      continue;
+    }
     if (spec) {
-      knownValues.push({ value: debt, sourceKey: skyModuleSourceKey(g.group), ...spec });
+      knownValues.push(g.group === "stablecoins"
+        ? {
+            value: debt,
+            sourceKey: SKY_PSM_RESIDUAL_SOURCE_KEY,
+            name: "Unattributed stablecoins (PSM)",
+            risk: "very-low",
+            assetClass: "stablecoin",
+            issuerOrObligor: "Sky PSM contracts and external stablecoin issuers",
+          }
+        : { value: debt, sourceKey: skyModuleSourceKey(g.group), ...spec });
     } else {
       unknownDebtTotal += debt;
     }
@@ -157,7 +212,12 @@ export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices
     });
   }
 
-  return slicesFromValues(knownValues);
+  if (attributedUsd == null) return slicesFromValues(knownValues);
+  // Preserve the group-debt denominator and exact residual instead of rounding
+  // a small remainder into the largest constituent.
+  return knownValues
+    .map(({ value, ...slice }) => ({ ...slice, pct: (value / reconciliation.totalDebt) * 100 }))
+    .sort((a, b) => b.pct - a.pct);
 }
 
 export function resolveSkyImmediateRedeemableUsd(groups: SkyGroupResult[]): number {
@@ -257,7 +317,9 @@ export async function fetchSkyMakercoreReserves(
     throw new Error("sky-makercore: groups results array is empty or missing");
   }
 
-  const slices = adaptSkyModules(groups);
+  const litePsmCapacity = await fetchSkyLitePsmUsdcCapacity(signal, ctx);
+  const psmReconciliation = reconcileSkyPsm(groups, litePsmCapacity?.capacityUsd ?? null);
+  const slices = adaptSkyModules(groups, litePsmCapacity?.capacityUsd ?? null);
   if (slices.length === 0) {
     throw new Error("sky-makercore: all module debt values are zero or invalid");
   }
@@ -278,6 +340,17 @@ export async function fetchSkyMakercoreReserves(
   const warnings: LiveReserveWarning[] = unknown.map((group) =>
     reserveInfoWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
   );
+  if (!litePsmCapacity) {
+    warnings.push(reserveInfoWarning(
+      "litepsm-attribution-unavailable",
+      "Sky LitePSM canonical identity or pocket balance could not be verified; the PSM group remains unlinked",
+    ));
+  } else if (psmReconciliation.blocked) {
+    warnings.push(reserveInfoWarning(
+      "litepsm-reconciliation-excess",
+      "Sky LitePSM measured USDC exceeds group debt beyond the 0.25 percentage-point timing/rounding band; the PSM group remains unlinked",
+    ));
+  }
   for (const group of groups.filter((group) => hasMalformedDebt(group.debt))) {
     const knownGroup = KNOWN_GROUPS.has(group.group);
     warnings.push(
@@ -302,7 +375,6 @@ export async function fetchSkyMakercoreReserves(
     );
   }
 
-  const litePsmCapacity = await fetchSkyLitePsmUsdcCapacity(signal, ctx);
   const redemptionMetadata = litePsmCapacity
     ? buildRedemptionSnapshotMetadata({
         capacityUsd: litePsmCapacity.capacityUsd,
@@ -336,6 +408,14 @@ export async function fetchSkyMakercoreReserves(
       totalLiabilitiesUsd: Math.round(totalDebt),
       balanceSheetScope: "shared-sky-maker",
       sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
+      ...(litePsmCapacity
+        ? {
+            sharedBookMeasuredHoldings: { "usdc-circle": litePsmCapacity.capacityUsd },
+            reconciliationExcessUsd: psmReconciliation.excessUsd,
+            reconciliationExcessShare: psmReconciliation.excessShare,
+            ...(psmReconciliation.blocked ? { reconciliationIssue: "litepsm-reconciliation-excess" } : {}),
+          }
+        : {}),
       ...(totalDebt > 0 ? { collateralizationRatio: totalCollateralUsd / totalDebt } : {}),
       skyStablecoinsModuleCollateralUsd: immediateRedeemableUsd,
       ...(hasCompleteTimestamps ? { snapshotDate: timestampSummary.sourceTimestamp } : {}),
@@ -352,7 +432,6 @@ export async function fetchSkyMakercoreReserves(
           )),
       unknownExposurePct,
       details: {
-        psmComposition: SKY_PSM_COMPOSITION_NOTE,
         ...(litePsmCapacity ? {} : { litePsmCapacity: "unavailable" }),
       },
       ...redemptionMetadata,

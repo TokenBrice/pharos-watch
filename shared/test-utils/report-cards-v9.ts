@@ -187,6 +187,9 @@ export function makeReportCardsV9Card(
     : buildBreakdowns(score, pillars);
   const card = {
     id: "usdc-circle",
+    supply: { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
+    sharedBookId: null,
+    dependencyCoverage: [],
     pegMultiplier,
     pegAdjustedScore,
     caps: [],

@@ -1,4 +1,5 @@
 import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../types";
+import type { ReserveIntermediary } from "../types/reserves";
 
 export type DependencyDerivationBaseSource =
   | "live-reserve"
@@ -9,13 +10,34 @@ export type DependencyDerivationBaseSource =
 
 export type DependencyDerivationSource = DependencyDerivationBaseSource | "variant";
 
-export interface DependencyRejectionReason {
-  sliceIndex: number;
-  reason: "no-match" | "expired" | "non-link";
+export type DependencyRejectionReason =
+  | {
+      sliceIndex: number;
+      reason: "no-match" | "expired" | "non-link" |
+        "reviewed-dependency-type-conflict" | "reviewed-dependency-identity-conflict";
+      upstreamAssetId?: string;
+      reviewedUpstreamAssetId?: string;
+    }
+  | {
+      sliceIndex: -1;
+      reason: "manual-collateral-not-in-reserves";
+      manualDependencyIndex: number;
+      upstreamAssetId: string;
+      share: number;
+    };
+
+export type DerivedDependency = DependencyWeight & { intermediary?: ReserveIntermediary };
+
+class DependencyDerivationError extends Error {
+  readonly code = "manual-collateral-not-in-reserves";
+  constructor(readonly rejectionReasons: DependencyRejectionReason[]) {
+    super("Manual collateral dependencies must be represented by linked reserve identities");
+    this.name = "DependencyDerivationError";
+  }
 }
 
 export interface DerivedDependencySet {
-  dependencies: DependencyWeight[];
+  dependencies: DerivedDependency[];
   source: DependencyDerivationSource;
   baseSource: DependencyDerivationBaseSource;
   dependencyFromLive: boolean;
@@ -32,21 +54,38 @@ export type DependencyFallbackReason =
 function aggregateReserveDependencies(
   reserves: readonly ReserveSlice[],
   subjectId?: string,
-): DependencyWeight[] {
-  const linked = reserves.filter((reserve): reserve is ReserveSlice & { coinId: string } => !!reserve.coinId);
+): DerivedDependency[] {
+  const linked = reserves.filter((reserve): reserve is ReserveSlice & { coinId: string } =>
+    !!reserve.coinId && reserve.pct > 0,
+  );
   if (linked.length === 0) return [];
 
-  const aggregated = new Map<string, { id: string; weight: number; type: DependencyType }>();
+  const aggregated = new Map<string, DerivedDependency>();
   for (const reserve of linked) {
     if (reserve.coinId === subjectId) continue;
     const type: DependencyType = reserve.depType ?? "collateral";
+    // Native rows inherit a reviewed type in dependencyReserveSlices before
+    // reaching this legacy default. Authored missing-type rejection is separate.
     const key = `${reserve.coinId}::${type}`;
     const existing = aggregated.get(key);
     if (existing) {
       existing.weight += reserve.pct / 100;
+      // One edge cannot claim a bridge/vault route for only part of its share.
+      // Retain an annotation only when every merged slice has the same route.
+      if (
+        existing.intermediary?.kind !== reserve.intermediary?.kind ||
+        existing.intermediary?.label !== reserve.intermediary?.label ||
+        existing.intermediary?.chain !== reserve.intermediary?.chain ||
+        existing.intermediary?.contract !== reserve.intermediary?.contract ||
+        existing.intermediary?.verified !== reserve.intermediary?.verified ||
+        existing.intermediary?.sourceUrl !== reserve.intermediary?.sourceUrl
+      ) delete existing.intermediary;
       continue;
     }
-    aggregated.set(key, { id: reserve.coinId, weight: reserve.pct / 100, type });
+    aggregated.set(key, {
+      id: reserve.coinId, weight: reserve.pct / 100, type,
+      ...(reserve.intermediary ? { intermediary: reserve.intermediary } : {}),
+    });
   }
 
   return Array.from(aggregated.values());
@@ -60,31 +99,40 @@ function sumDependencyWeight(dependencies: readonly DependencyWeight[]): number 
   // which is not a real overweight condition but is outside FractionSchema.
   // Canonicalize only negligible boundary drift; material overweights remain
   // visible to the dependency validator and fail closed.
-  if (Math.abs(total) <= 1e-12) return 0;
   if (Math.abs(total - 1) <= 1e-12) return 1;
   return total;
 }
 
 function injectStructuralDependencies(
-  dependencies: readonly DependencyWeight[],
+  dependencies: readonly DerivedDependency[],
   meta: Pick<StablecoinMeta, "variantOf" | "dependencies" | "reserves">,
-): DependencyWeight[] {
+): DerivedDependency[] {
+  const variantReserveClaims = meta.variantOf
+    ? (meta.reserves ?? []).filter((reserve) =>
+        reserve.coinId === meta.variantOf && reserve.depType === "wrapper" && reserve.pct > 0,
+      )
+    : [];
+  const variantIntermediary = variantReserveClaims.length === 1
+    ? variantReserveClaims[0]!.intermediary
+    : undefined;
   // A variant is a serial claim on its parent. Its reserve view may expose the
   // parent's backing, but those slices are not an additional parallel path.
-  const result: DependencyWeight[] = meta.variantOf
-    ? [{ id: meta.variantOf, weight: 1, type: "wrapper" }]
+  const result: DerivedDependency[] = meta.variantOf
+    ? [{
+        id: meta.variantOf, weight: 1, type: "wrapper",
+        ...(variantIntermediary ? { intermediary: variantIntermediary } : {}),
+      }]
     : [...dependencies];
   // Explicit wrapped-asset identities are serial claims, not basket weights.
   // A variant's reserve book is look-through backing, so its parent wins.
   if (!meta.variantOf) {
-    for (const reserve of meta.reserves ?? []) {
-      if (!reserve.coinId || reserve.depType !== "wrapper") continue;
+    for (const dependency of aggregateReserveDependencies(meta.reserves ?? [])) {
+      if (dependency.type !== "wrapper") continue;
       const existingIndex = result.findIndex(
-        (candidate) => candidate.id === reserve.coinId && candidate.type === "wrapper",
+        (candidate) => candidate.id === dependency.id && candidate.type === "wrapper",
       );
-      const wrapper: DependencyWeight = { id: reserve.coinId, weight: 1, type: "wrapper" };
-      if (existingIndex < 0) result.push(wrapper);
-      else result[existingIndex] = wrapper;
+      if (existingIndex < 0) result.push({ ...dependency, weight: 1 });
+      else result[existingIndex] = { ...result[existingIndex], weight: 1 };
     }
   }
   for (const dependency of meta.dependencies ?? []) {
@@ -116,6 +164,24 @@ function resolveSource(
   return baseSource;
 }
 
+function mixedSourceRejections(
+  dependencies: readonly DependencyWeight[],
+  reserveDependencies: readonly DependencyWeight[],
+): DependencyRejectionReason[] {
+  if (reserveDependencies.length === 0) return [];
+  const reserveIds = new Set(reserveDependencies.map((dependency) => dependency.id));
+  return dependencies.flatMap((dependency, manualDependencyIndex) =>
+    (dependency.type ?? "collateral") === "collateral" && !reserveIds.has(dependency.id)
+      ? [{
+          sliceIndex: -1 as const,
+          reason: "manual-collateral-not-in-reserves" as const,
+          manualDependencyIndex,
+          upstreamAssetId: dependency.id,
+          share: dependency.weight,
+        }]
+      : [],
+  );
+}
 /**
  * Derives dependency weights from curated reserve composition.
  * Reserve slices with `coinId` are converted to dependency entries, and
@@ -124,12 +190,14 @@ function resolveSource(
  */
 export function deriveDependencies(
   meta: Pick<StablecoinMeta, "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
-): DependencyWeight[] {
+): DerivedDependency[] {
   const reserves = meta.reserves;
   if (!reserves?.length) return meta.dependencies ?? [];
 
   const reserveDependencies = aggregateReserveDependencies(reserves, meta.id);
   if (reserveDependencies.length === 0) return meta.dependencies ?? [];
+  const rejectionReasons = mixedSourceRejections(meta.dependencies ?? [], reserveDependencies);
+  if (rejectionReasons.length > 0) throw new DependencyDerivationError(rejectionReasons);
 
   return injectStructuralDependencies(reserveDependencies, meta);
 }
@@ -156,7 +224,7 @@ function deriveCuratedDependencySet(
     dependencyFromLive: false,
     mappedLiveReserveWeight: null,
     fallbackReason: null,
-    rejectionReasons: [],
+    rejectionReasons: mixedSourceRejections(manualDependencies, reserveDependencies),
   };
 }
 
@@ -167,11 +235,12 @@ export function deriveEffectiveDependencySet(
   if (Array.isArray(options?.liveReserveSlices)) {
     const liveDependencies = aggregateReserveDependencies(options.liveReserveSlices, meta.id);
     const mappedLiveReserveWeight = sumDependencyWeight(liveDependencies);
-    const rejectionReasons = options.rejectionReasons
+    const rejectionReasons: DependencyRejectionReason[] = options.rejectionReasons
       ? [...options.rejectionReasons]
       : options.liveReserveSlices.flatMap((slice, sliceIndex) =>
           !slice.coinId || slice.coinId === meta.id ? [{ sliceIndex, reason: "no-match" as const }] : [],
         );
+    rejectionReasons.push(...mixedSourceRejections(meta.dependencies ?? [], liveDependencies));
 
     // Select only reserve-derived weights here. Structural relationships are
     // applied afterward even when the live composition maps to no upstreams.
@@ -197,6 +266,6 @@ export function deriveEffectiveDependencySet(
 export function deriveEffectiveDependencies(
   meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
   options?: { liveReserveSlices?: readonly ReserveSlice[] },
-): DependencyWeight[] {
+): DerivedDependency[] {
   return deriveEffectiveDependencySet(meta, options).dependencies;
 }

@@ -5,20 +5,15 @@ import {
   filterDependencyGraphEdgesToLive,
   orderDependencyGraphNodes,
 } from "../dependency-graph";
-import { deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
+import { deriveDependencies, deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
 import type { StablecoinMeta } from "../../types/core";
+import { ReserveSliceSchema } from "../../types/reserves";
 
 function makeMeta(input: {
   id: string;
   variantOf?: string;
   variantKind?: "savings-passthrough" | "strategy-vault" | "risk-absorption";
-  reserves?: Array<{
-    name: string;
-    pct: number;
-    risk: "very-low" | "low" | "medium" | "high" | "very-high";
-    coinId?: string;
-    depType?: "wrapper" | "mechanism" | "collateral";
-  }>;
+  reserves?: StablecoinMeta["reserves"];
   dependencies?: Array<{
     id: string;
     weight: number;
@@ -150,6 +145,101 @@ describe("dependency-graph", () => {
     });
 
     expect(result.mappedLiveReserveWeight).toBeCloseTo(1.00001, 12);
+  });
+
+  it("preserves tiny positive linked shares through aggregation and mapped totals", () => {
+    const reserves = [
+      { name: "Small holding A", pct: 0.000148, risk: "low" as const, coinId: "upstream", depType: "collateral" as const },
+      { name: "Small holding B", pct: 0.000148, risk: "low" as const, coinId: "upstream", depType: "collateral" as const },
+    ];
+    const meta = makeMeta({ id: "dependent", reserves });
+    expect(deriveDependencies(meta)[0].weight).toBeCloseTo(0.00000296, 14);
+    const live = deriveEffectiveDependencySet(meta, { liveReserveSlices: reserves });
+    expect(live.dependencies[0].weight).toBeCloseTo(0.00000296, 14);
+    expect(live.mappedLiveReserveWeight).toBeCloseTo(0.00000296, 14);
+    const smaller = deriveEffectiveDependencySet(meta, {
+      liveReserveSlices: [{ ...reserves[0], pct: 0.0000000000148 }],
+    });
+    expect(smaller.mappedLiveReserveWeight).toBeGreaterThan(0);
+  });
+
+  it("rejects manual collateral absent from linked reserve identities", () => {
+    const meta = makeMeta({
+      id: "dependent",
+      reserves: [{ name: "Backing", pct: 40, risk: "low", coinId: "backing", depType: "collateral" }],
+      dependencies: [
+        { id: "backing", weight: 0.8, type: "collateral" },
+        { id: "missing", weight: 0.2, type: "collateral" },
+        { id: "operator", weight: 1, type: "mechanism" },
+      ],
+    });
+    const rejection = {
+      sliceIndex: -1, reason: "manual-collateral-not-in-reserves",
+      manualDependencyIndex: 1, upstreamAssetId: "missing", share: 0.2,
+    };
+    expect(deriveEffectiveDependencySet(meta)).toMatchObject({
+      dependencies: [
+        { id: "backing", weight: 0.4, type: "collateral" },
+        { id: "operator", weight: 1, type: "mechanism" },
+      ],
+      rejectionReasons: [rejection],
+    });
+    expect(deriveEffectiveDependencySet(meta, { liveReserveSlices: meta.reserves })).toMatchObject({
+      rejectionReasons: [rejection],
+    });
+    expect(() => deriveDependencies(meta)).toThrow(expect.objectContaining({
+      code: "manual-collateral-not-in-reserves", rejectionReasons: [rejection],
+    }));
+  });
+
+  it("retains intermediary provenance on reserve-derived basket and wrapper claims", () => {
+    const intermediary = { kind: "bridge" as const, label: "USDC.e", chain: "Polygon", verified: true };
+    for (const depType of ["collateral", "wrapper"] as const) {
+      const reserve = ReserveSliceSchema.parse({
+        name: "USDC.e", pct: 80, risk: "low", coinId: "usdc-circle", depType, intermediary,
+      });
+      const meta = makeMeta({ id: "dependent", reserves: [reserve] });
+      expect(deriveEffectiveDependencySet(meta).dependencies[0]).toMatchObject({
+        id: "usdc-circle", weight: depType === "wrapper" ? 1 : 0.8, intermediary,
+      });
+      expect(deriveEffectiveDependencySet(makeMeta({
+        id: "variant", variantOf: "usdc-circle", reserves: [reserve],
+      })).dependencies[0].intermediary).toEqual(depType === "wrapper" ? intermediary : undefined);
+    }
+    expect(ReserveSliceSchema.safeParse({
+      name: "Unlinked representation", pct: 100, risk: "low", intermediary,
+    }).success).toBe(false);
+  });
+
+  it("does not attribute a partial intermediary to an aggregate or synthetic parent claim", () => {
+    const intermediary = { kind: "bridge" as const, label: "USDC.e", verified: true };
+    const reserves = [
+      { name: "Legacy", pct: 27.46, risk: "low" as const, coinId: "usdc-circle", depType: "wrapper" as const, intermediary },
+      { name: "Native", pct: 72.54, risk: "low" as const, coinId: "usdc-circle", depType: "wrapper" as const },
+    ];
+    for (const slices of [reserves, [...reserves].reverse()]) {
+      expect(deriveEffectiveDependencySet(makeMeta({ id: "dependent", reserves: slices })).dependencies)
+        .toEqual([{ id: "usdc-circle", weight: 1, type: "wrapper" }]);
+    }
+    expect(deriveEffectiveDependencySet(makeMeta({
+      id: "dependent", variantOf: "usdc-circle", reserves,
+    })).dependencies).toEqual([{ id: "usdc-circle", weight: 1, type: "wrapper" }]);
+  });
+
+  it("accepts keyed zero-percent reviewed rows without admitting dependency edges", () => {
+    for (const depType of ["collateral", "wrapper", "mechanism"] as const) {
+      const reserve = ReserveSliceSchema.parse({
+        sourceKey: "fixture:zero", name: "Reviewed absent holding", pct: 0,
+        risk: "low", coinId: "upstream", depType,
+      });
+      const meta = makeMeta({ id: "dependent", reserves: [reserve] });
+      expect(deriveDependencies(meta)).toEqual([]);
+      expect(deriveEffectiveDependencySet(meta).dependencies).toEqual([]);
+      expect(deriveEffectiveDependencySet(meta, { liveReserveSlices: [reserve] }).dependencies).toEqual([]);
+    }
+    expect(ReserveSliceSchema.safeParse({
+      name: "Unkeyed zero holding", pct: 0, risk: "low",
+    }).success).toBe(false);
   });
 
   it("never restores curated weights for wholly unmapped live reserves", () => {

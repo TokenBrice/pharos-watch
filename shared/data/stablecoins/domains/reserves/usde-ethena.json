@@ -4,7 +4,7 @@
     {
       "sourceKey": "ethena:stable",
       "name": "Liquid Cash strategy basket",
-      "pct": 86.9,
+      "pct": 81.1,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Ethena Liquid Cash strategy counterparties: stablecoin issuers, Aave and Morpho markets, tokenized-fund issuers, and institutional borrowers",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "ethena:eth",
       "name": "ETH / liquid staking collateral",
-      "pct": 7.2,
+      "pct": 7.6,
       "risk": "medium",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians, liquid-staking protocols, and derivatives venues for delta-hedged ETH positions",
@@ -38,7 +38,7 @@
     {
       "sourceKey": "ethena:btc",
       "name": "BTC collateral",
-      "pct": 5.3,
+      "pct": 9.9,
       "risk": "medium",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for delta-hedged BTC positions",
@@ -55,7 +55,7 @@
     {
       "sourceKey": "ethena:other",
       "name": "Other crypto collateral",
-      "pct": 0.6,
+      "pct": 1.4,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for delta-hedged SOL and BNB positions",
@@ -71,16 +71,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-28",
-    "reviewer": "Codex reserve refresh (Ethena live telemetry)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map WS1.D reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ethena current collateral positions API",
+        "label": "Ethena collateral positions API (accessed 2026-09-30)",
         "url": "https://app.ethena.fi/api/positions/current/collateral"
       },
       {
-        "label": "Ethena current strategy breakdown API",
+        "label": "Ethena category breakdown API (accessed 2026-09-30)",
         "url": "https://app.ethena.fi/api/collateral-breakdown"
       },
       {
@@ -92,19 +92,19 @@
         "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
       }
     ],
-    "rationale": "Refresh 2026-08-27: the frozen 2026-08-27T20:11:23Z capture of Ethena's current collateral API reduced live USD positions to the repository adapter's four exact exposure identities: Liquid Cash strategy basket 86.9%, ETH / liquid staking collateral 7.2%, BTC collateral 5.3%, and Other crypto collateral 0.6%. The current strategy-breakdown endpoint describes the Liquid Cash constituents at category level (Liquid Stables, DeFi Lending, RWA, Institutional Lending, and Crypto Basis) but does not publish constituent or failure-domain weights inside those categories. This review retains the adapter identities and weights without inventing constituent allocations.",
-    "compositionBasis": "Exact live Ethena collateral-adapter exposure names and rounded weights from the issuer collateral positions API captured at 2026-08-27T20:11:23Z; no constituent weights inferred",
-    "compositionAsOf": "2026-08-27",
+    "rationale": "The issuer positions API accessed 2026-09-30 reports $4,909,493,244.78 of backing, reconciled exactly to its positive rows at source timestamp 1790724310 (2026-09-29). The existing adapter emits Liquid Cash 81.1%, ETH / liquid staking collateral 7.6%, BTC 9.9%, and Other crypto 1.4%. The category endpoint separately reports a $1,404,244,668 Liquid Stables bucket naming USDT, USDC, USDtb and PYUSD, without per-token balances. Its $4,900,605,327 category denominator differs from the collateral endpoint; no category fraction is multiplied into the legacy Liquid Cash envelope. RWA likewise names JAAA and STAC without individual balances. No constituent links are authored.",
+    "compositionBasis": "Existing Ethena adapter output from the issuer collateral positions payload accessed 2026-09-30; source timestamp 1790724310; category disclosure retained only as non-additive research evidence",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 86.9% Liquid Cash live exposure aggregates disclosed strategy categories with current category weights, but the issuer does not publish within-category constituent weights or failure-domain allocations for the named stablecoins, lending markets, tokenized funds, and institutional borrowers. The full adapter row therefore remains a reviewed mixed basket even though its non-additive category breakdown is preserved in the rationale.",
-    "knownUnknownExposurePct": 86.9,
+    "knownUnknownExposure": "The 81.1% Liquid Cash basket remains allocation-unresolved. Named stablecoins and tokenized funds in the category endpoint lack per-asset balances and a reconciled cross-endpoint checkpoint. Issuer questionnaire pending.",
+    "knownUnknownExposurePct": 81.1,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Liquid Cash strategy basket",
-        "pct": 86.9,
+        "pct": 81.1,
         "disposition": "basket-needs-split",
-        "rationale": "The live row combines several stablecoins, protocol positions, tokenized funds, and institutional loans without current constituent weights, so it cannot be linked to any single tracked asset.",
+        "rationale": "Blocked on issuer per-asset balances: USDT, USDC, USDtb and PYUSD are named in one $1,404,244,668 category, while JAAA and STAC share a separate RWA category. The two endpoints have different totals and supply no per-token balances; retain candidates only, without guessed allocations.",
         "candidateCoinIds": [
           "usdt-tether",
           "usdc-circle",
@@ -117,21 +117,21 @@
       {
         "reserveIndex": 1,
         "reserveName": "ETH / liquid staking collateral",
-        "pct": 7.2,
+        "pct": 7.6,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Delta-hedged ETH and liquid-staking-token backing is an external crypto, staking, and derivatives exposure, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "BTC collateral",
-        "pct": 5.3,
+        "pct": 9.9,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Delta-hedged BTC backing is an external crypto and derivatives exposure, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Other crypto collateral",
-        "pct": 0.6,
+        "pct": 1.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The live adapter's SOL and BNB bucket is an external crypto and derivatives exposure, not a tracked stablecoin dependency."
       }

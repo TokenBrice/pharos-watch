@@ -50,8 +50,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvalonRiver)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
@@ -83,7 +83,7 @@
         "url": "https://docs.riverai.inc/outro/deployed-contracts.md"
       },
       {
-        "label": "River Smart Vault documentation (deposit assets, internal satUSD minting, custodian wallets)",
+        "label": "River Smart Vault documentation (strategy deployment and internal satUSD minting; accessed 2026-09-29)",
         "url": "https://docs.riverai.inc/products/smart-vault.md"
       },
       {
@@ -96,7 +96,7 @@
     "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
     "knownUnknownExposure": "All collateral locations River publishes are identified, and no undisclosed product surface appears in its documentation or app. Remaining issuer-described facts: Prime Vault and Smart Vault custodian identities, addresses, and segregation terms are undisclosed; vault-level completeness beyond the listed vaults cannot be independently verified; the share of circulation minted internally by vaults versus trove debt is not published; both Smart Vault USDT vaults are displayed claimable, so near-term USDT outflows are possible. The on-chain trove bucket is independently verifiable and was verified for the material branches.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposurePct": 10.27,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
@@ -116,8 +116,8 @@
         "reserveIndex": 2,
         "reserveName": "Smart Vault custodial USDT deposits (Ethereum)",
         "pct": 10.27,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The USDT vault deposits are issuer-dashboard-reported, not reconciled to published wallet addresses, and both vaults are claimable; USDT remains a candidate upstream rather than a linked dependency until the holdings are address-verifiable.",
+        "disposition": "insufficient-evidence",
+        "rationale": "USDT is tracked as usdt-tether, but 10.27% is the dashboard deposit share, not a reconciled direct reserve-token weight. Smart Vault deposits enter DeFi, CeDeFi, and RWA strategies and mint or stake satUSD internally. Published wallet holdings, deployed strategy claims, and the liabilities minted by each vault must be reconciled before linking a weighted USDT dependency.",
         "candidateCoinIds": [
           "usdt-tether"
         ]

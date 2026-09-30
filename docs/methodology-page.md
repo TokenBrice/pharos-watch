@@ -53,6 +53,8 @@ For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-c
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                              |
 | Chain Health Score    | `shared/lib/chains/health.ts`, `shared/lib/chains/index.ts`, `shared/lib/chains/l2beat-risk.ts`, `shared/lib/methodology-versions/registry.ts` — formula, factors, not-rated gate, and bands are owned by [chain-health.md](./chain-health.md) |
 
+The public Safety Score dependency explanation in `src/app/methodology/sections/core/safety-scores-overview.tsx` covers v9.95 identity/kind parity, withheld conflicting links, zero-balance row exclusion, intermediary annotations, and serial mechanism parents (including Spark's weaker-parent limit). It also explains that unresolved reviewed-static reserve dispositions withhold the whole curated envelope, with possible backing and downstream parent-limit consequences. The owning methodology contract remains [report-cards.md](./report-cards.md).
+
 ---
 
 ## Update Rules

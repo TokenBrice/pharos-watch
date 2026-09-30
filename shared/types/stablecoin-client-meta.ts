@@ -149,6 +149,8 @@ export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_C
   /** Chain IDs are derived from contracts and tradedContracts at build time. */
   chainIds?: string[];
   listingClass: ListingClass;
+  /** Authored variant, manual dependency, or reserve coinId evidence; not proof of a published edge. */
+  hasAuthoredDependencyEvidence: boolean;
   /** Compact cross-coin badges; detail evidence remains on the loaded projection. */
   custodyModel?: StablecoinMeta["custodyModel"];
   blacklistStatus?: BlacklistClientStatus;

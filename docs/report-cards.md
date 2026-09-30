@@ -2,15 +2,15 @@
 
 Safety Score V9 is the sole active stablecoin safety model. It publishes evidence-backed grades from A+ through F, with NR reserved for assets whose required facts cannot be bounded honestly.
 
-> **Agent navigation** — Methodology Identity · V9 Model · Canonical Publication · API · Consumers · History · Frontend.
+> **Agent navigation**: Methodology Identity · V9 Model · [Dependency Coverage](#dependency-coverage) · Canonical Publication · API · Consumers · History · Frontend.
 
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.94`<!-- GENERATED-END: methodology-version-safety-score -->
-- Public response schema: report v5 with score trace v3
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.95`<!-- GENERATED-END: methodology-version-safety-score -->
+- Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `b71d07a90353dcc730f3f6c3bbba87b5b59f5460b05407e5c420dd6f7e5dfdb1` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `dee6f45829829042f34f5323452d4817e951d7d629c944e62b1acabba667a0ca` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -166,6 +166,28 @@ The 2026-09-23 TRON re-review replaced the three dead or bot-blocked citation UR
 
 The public premium is intentionally not inherited. `applyV9AssetPremium` does not reassign `inheritableScore`, and `projectV9DependencyScore` returns that pre-premium value. Therefore USDT's public card can show 87 while children such as `steakusdt-steakhouse` and `susdt-spark` correctly inherit 83. A child snapshot carrying 83 is not stale and must not be resynchronized to the parent's premium-adjusted public score.
 
+## Dependency Coverage
+
+Keyed zero-percent categories retain their captured provenance and consume matching reviewed classifications, but emit neither dependency edges nor positive-weight backing exposure facts. A zero balance cannot quarantine the asset solely by violating the compiled exposure-weight bound.
+
+Reserve-derived basket exposure can coexist with an independently reviewed non-default role to the same upstream. A subset role review must explicitly name a non-default role and match an exact authored identity, type, and weight anchor in the sourced derivation. Reserve weights remain basket exposures; the role uses its own authored anchor. An unanchored subset remains a dependency-review mismatch. Relationships merge by identity, type, and role, so a reviewed default replaces rather than duplicates the same edge.
+
+### Report schema v6
+
+Report v6 is additive. New publications carry `card.supply` with `circulatingUsdAtEvaluation`, `asOfSec`, and `generationId`. The amount is the evaluated compiled supply fact, not a current market-cap lookup. Unknown supply remains null, including its unavailable clock and identity. Observed zero remains zero. The supply clock is the fingerprint whose generation matches that fact; it is distinct from the publication clock.
+
+Cards carry nullable `sharedBookId`. The stable scope mapping assigns `sky-maker` only to captured `balanceSheetScope: "shared-sky-maker"` members named in `sharedBookAssetIds`; unknown scopes publish null. The adapter's measured holdings remain in the captured reserve provenance. Consumers must not add shared-book liabilities as independent holdings.
+
+Serial and basket summaries, and their exact graph projection, carry optional `dependencyType` from the compiled relationship using the existing `wrapper`, `mechanism`, and `collateral` vocabulary. The field is absent in v5; edge identity remains `(from, to, kind)`. Nullable `wrapperForm` comes from `scoreTrace.wrapperParentLimit.form` only on wrapper claims. Mechanism and basket claims publish null; a wrapper without a parent-limit form also publishes null, so consumers distinguish claim types with `dependencyType`, not form presence.
+
+`provenance` uses the existing dependency-source vocabulary (`live-reserve`, `live-unmapped`, `curated-reserve`, `manual`, `none`, `variant`), the dependency evidence observation date as `evidenceAsOf`, and a nullable reserve-slice `intermediary`. An intermediary retains kind, label, optional chain/contract/source URL, and verification status. Structural and manual serial claims also retain matching slice annotations. Identical annotations across all contributing slices publish that annotation. Any unverified annotation takes precedence, using the first unverified slice. Otherwise mixed native/bridged or differing verified routes publish null; Plume's aggregate claim does not inherit its partial USDC.e route annotation.
+
+`dependencyCoverage` is an optional disclosure list, separate from scoring admission and graph edges. Rows carry `upstreamLabel`, nullable `upstreamAssetId`, nullable fractional `share`, an existing producer rejection or admission `reason`, nullable `sourceAsOf`, and `identityVerified`. Unverified identity never publishes a tracked upstream ID. Reasons retain producer codes such as `no-match`, `expired`, `non-link`, native reviewed identity/type conflicts, `manual-collateral-not-in-reserves`, `outside-active-set:<id>`, and compiled reserve-envelope gaps. These relationships never contribute to graph totals. An absent list means this generation did not publish coverage, not that no relationships were withheld.
+
+Coverage deduplication uses source-key identity and reason, or upstream identity, label, and reason for unkeyed rows. Distinct withheld slices or reasons sharing a display label remain visible.
+
+Pre-field v5 payloads still parse without fabricated defaults or rewritten graph edges. New producers emit schema version 6. Graph validation requires unique edges sorted by `(from, to, kind)` and continues to require exactly the serial/basket card projection; coverage cannot introduce external graph nodes.
+
 ## Canonical Publication
 
 Publication follows rule R8 (ADR-35 in [architecture.md](./architecture.md#architectural-decision-records)): one unusable asset is quarantined by id and field path, not allowed to hold the cohort. `compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension` is the reference implementation of that rule for the whole repository.
@@ -251,6 +273,9 @@ The response includes:
 - per-card `backingFromLiveReserves` provenance for score-grade reserve coverage
 - the canonical serial/basket dependency graph
 - accepted `updatedAt`
+
+See [Dependency Coverage](#dependency-coverage) for the additive report v6 fields and v5 readability contract.
+
 
 Each pillar row on a card carries a `freshness` value: `current`, `stale`, or `unknown`. The Exit
 pillar's value is the age of the DEX liquidity input the exit-route evidence was observed at,

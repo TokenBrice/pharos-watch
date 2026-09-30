@@ -106,8 +106,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Codex Safety Score V9 NR-recovery wave 3; R13 CDP split pass",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos Dependency Map WS1.D issuance-route review",
     "confidence": "verified",
     "sources": [
       {
@@ -131,7 +131,7 @@
     "compositionBasis": "Finalized Hubble SDK state for PSM minted USDH and all configured borrowing-market debt at Solana slot 434386680; CDP collateral split from active depositedCollateral at Solana slot 438037097",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "All active USDH issuance paths and their direct backing assets are identified; the CDP collateral split uses active depositedCollateral and excludes inactive/retired collateral slots whose value is negligible relative to the active basket.",
+    "knownUnknownExposure": "N04-07: PSM documentation accessed 2026-09-30 explicitly describes swapping USDC for USDH and the resulting USDC backing/freeze risk. It supplies no new PSM minted/deposited balances or borrowing-market debt. The authored 94.4468% is historical and must not be renewed by this documentation review. Next evidence: finalized same-slot USDH supply, PSM USDC/minted USDH and all borrowing-market debt, then active collateral/receipt valuations at that checkpoint; reconcile reserve/treasury exclusions and LP look-through before replacing weights. The August 8 composition date is preserved.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

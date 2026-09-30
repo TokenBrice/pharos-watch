@@ -102,7 +102,11 @@
   "status": "quarantined",
   "listingStatusReview": {
     "changedAt": "2026-07-15",
-    "reviewBy": "2026-08-15",
-    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+    "reviewBy": "2026-10-30",
+    "reason": "2026-09-30 review: price resolves, but CoinGecko market cap is zero and DefiLlama has no list row; detail supply ends 2026-06-04. A complete multi-chain supply route is unproven, including XRPL and the issuer-listed BNB deployment.",
+    "source": {
+      "label": "OpenEden deployments accessed 2026-09-30",
+      "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
+    }
   }
 }

@@ -172,14 +172,12 @@ describe("adaptAccountableDashboard", () => {
       sourceTimestamp: 1_785_194_915,
       freshnessMode: "verified",
     });
-    expect(result.slices.filter((slice) => slice.coinId != null)).toEqual([
-      expect.objectContaining({
-        name: "CLOs (JAAA)",
-        coinId: "jaaa-janus-henderson-anemoy",
-        depType: "collateral",
-        risk: "high",
-      }),
-    ]);
+    // NC-118: this bucket holds Dinari's tokenized JAAA ETF, not the tracked Anemoy fund.
+    const jaaa = result.slices.find((slice) => slice.sourceKey === "accountable:noon:deployment:clos-jaaa");
+    expect(jaaa).toMatchObject({ name: "CLOs (JAAA)", risk: "high" });
+    expect(jaaa?.coinId).toBeUndefined();
+    expect(jaaa?.depType).toBeUndefined();
+    expect(result.slices.filter((slice) => slice.coinId != null)).toEqual([]);
     expect(result.slices).toContainEqual(expect.objectContaining({
       name: "Other / unmapped Accountable buckets",
       sourceKey: "accountable:noon:deployment:other",

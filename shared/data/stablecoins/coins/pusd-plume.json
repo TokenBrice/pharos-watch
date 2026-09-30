@@ -7,6 +7,29 @@
     "backing": "crypto-backed",
     "governance": "centralized"
   },
+  "variantOf": "usdc-circle",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "usdc-circle",
+  "dependencyReview": {
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Plume USD documentation (accessed 2026-09-30)",
+        "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      }
+    ],
+    "rationale": "Plume explicitly describes pUSD as a non-interest-bearing wrapper of USDC, previously USDC.e, minted and redeemed 1:1 through Plume-managed Nucleus BoringVaults. The canonical parent is USDC with serial wrapper semantics. Compliance checks, vault control, cross-chain redemption delays and the legacy bridged representation remain local claim risks.",
+    "relationships": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "Issuer-documented 1:1 USDC wrapper; legacy USDC.e is retained as a bridge-qualified look-through rather than a fictitious tracked parent."
+      }
+    ]
+  },
   "collateral": "1:1 backed by USDC deposited into a Nucleus BoringVault",
   "pegMechanism": "Zero-fee mint/redeem at 1:1 for USDC on Ethereum or Plume Chain; reserves managed by Nucleus BoringVault contracts with OFAC compliance checks",
   "llamaId": "266",
@@ -62,7 +85,8 @@
     "params": {
       "label": "USDC via Nucleus BoringVault",
       "risk": "medium",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
     }
   },
   "launchDate": "2024-12-10",

@@ -54,7 +54,10 @@ function normalizedReserveName(value: string): string {
 function reserveSlicesMatch(live: ReserveSlice, reviewed: ReserveSlice): boolean {
   if (live.sourceKey) return reviewed.sourceKey === live.sourceKey;
   const normalizedName = normalizedReserveName(live.name);
-  return normalizedName.length > 0 && normalizedName === normalizedReserveName(reviewed.name);
+  const sameName = normalizedName.length > 0 && normalizedName === normalizedReserveName(reviewed.name);
+  // A native tracked id is not an identity by itself. For unkeyed rows it
+  // corroborates the same reserve identity; explicit keys never fall back.
+  return sameName && (!live.coinId || !reviewed.coinId || live.coinId === reviewed.coinId);
 }
 
 function overlayReviewedReserveClassification(
@@ -172,7 +175,7 @@ export function dependencyReserveSlices(
   const slices = liveReserves.map((slice, liveIndex) => {
     if (nonLinkLiveIndexes.has(liveIndex)) {
       rejectionReasons.push({ sliceIndex: liveIndex, reason: "non-link" });
-      const { coinId: _coinId, depType: _depType, ...unlinked } = slice;
+      const { coinId: _coinId, depType: _depType, intermediary: _intermediary, ...unlinked } = slice;
       return unlinked;
     }
     const reviewed = reviewedByLiveIndex.get(liveIndex);
@@ -184,11 +187,27 @@ export function dependencyReserveSlices(
           : "no-match",
       });
     }
-    if (!reviewed?.coinId || slice.coinId) return slice;
+    if (!reviewed?.coinId) return slice;
+    const identityConflict = !!slice.coinId && slice.coinId !== reviewed.coinId;
+    const typeConflict = !!slice.depType && !!reviewed.depType && slice.depType !== reviewed.depType;
+    if (identityConflict || typeConflict) {
+      rejectionReasons.push({
+        sliceIndex: liveIndex,
+        reason: identityConflict ? "reviewed-dependency-identity-conflict" : "reviewed-dependency-type-conflict",
+        ...(slice.coinId ? { upstreamAssetId: slice.coinId } : {}),
+        reviewedUpstreamAssetId: reviewed.coinId,
+      });
+      const { coinId: _coinId, depType: _depType, intermediary: _intermediary, ...unlinked } = slice;
+      return unlinked;
+    }
+    // Native coinId rows still need the reviewed relationship kind. A
+    // matching native kind is retained, a missing kind inherits, and a
+    // conflict above withholds the link rather than silently choosing.
     return {
       ...slice,
       coinId: reviewed.coinId,
       ...(reviewed.depType ? { depType: reviewed.depType } : {}),
+      ...(!slice.intermediary && reviewed.intermediary ? { intermediary: reviewed.intermediary } : {}),
     };
   });
   return { slices, rejectionReasons };

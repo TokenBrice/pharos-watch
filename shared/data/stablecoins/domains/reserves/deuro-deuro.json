@@ -49,10 +49,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-12",
-    "reviewer": "Pharos reserve research (production-capture alignment)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos Dependency Map WS1.D reserve-scope review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Ethereum PublicNode bridge minted/balance/supply census (block 26088296, timestamp 1790747207; accessed 2026-09-30)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
       {
         "label": "dEURO smart contracts",
         "url": "https://docs.deuro.com/smart-contracts"
@@ -75,10 +79,10 @@
       }
     ],
     "rationale": "The production collateral-positions adapter snapshot fetched on 2026-08-12T04:13:17Z emits three normalized slices: 85.0% WFPS, 13.8% WBTC, and 1.2% Other collateral. The first-party positions and price-mapping APIs support those exact live identities and weights; the 2026-08-11 on-chain review independently anchors WFPS and WBTC identity and itemizes the residual as cbBTC, kBTC, and WETH positions below the adapter's 2% display threshold. The API price dimension remains issuer-provided.",
-    "compositionBasis": "Current dEURO collateral positions API and official protocol documentation",
+    "compositionBasis": "Historical CDP-only collateral composition; fresh issuer reserve/positions evidence reviewed 2026-09-30 establishes omitted bridge issuance but not a combined checkpoint",
     "compositionAsOf": "2026-08-12",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No collateral identity is undisclosed in the reviewed source. The displayed 1.2% Other collateral row aggregates identified cbBTC, kBTC, and WETH positions below the adapter's 2% threshold, so its exact per-asset failure-domain weights remain unresolved in the displayed slice.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "NC-098: reserve documentation accessed 2026-09-30 includes bridge stablecoins, loans to minters and reserve-pool equity; borrower collateral stays outside that balance sheet. The supplied September 29 census at block 26085926 was independently refreshed at block 26088296 (timestamp 1790747207): canonical supply 1,314,941.465169323021901347, EURC inventory 265,235.974361 and minted 265,235.97424847865, EURE minted 80.68352239443757, EURI 0.12107894811773151, EURS 0.51 and EURA 0.013878229134009315; the other four bridges have zero inventory and minted. These measured issuance claims cannot be appended to the old 100% gross CDP denominator. The fresh positions API is not pinned to the bridge checkpoint, and reserve/pool versus borrower-debt attribution remains unreconciled. Publication is blocked on a combined producer envelope. Next evidence: capture position debt/collateral/prices, bridge minted/inventory, reserve-pool balances and canonical supply at one checkpoint; reconcile non-bridge issuance, scale the CDP branch and emit keyed bridge rows. The 1.2% field below describes only the historical CDP display residual, not the omitted bridge envelope.",
     "knownUnknownExposurePct": 1.2,
     "nonLinkDispositions": [
       {

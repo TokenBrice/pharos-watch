@@ -22,10 +22,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map evidence review",
     "confidence": "verified",
     "sources": [
+      {"label": "Ethereum sAID asset() at block 26088256 (2026-09-30)", "url": "https://ethereum-rpc.publicnode.com"},
+      {"label": "GAIB exact AID/sAID deployment registry (accessed 2026-09-30)", "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"},
       {
         "label": "GAIB staked AI Dollar documentation",
         "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
@@ -39,9 +41,9 @@
         "url": "https://etherscan.io/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8"
       }
     ],
-    "rationale": "GAIB documents sAID as vault shares over AID and the associated AI-infrastructure financing strategy. The direct reserve is one protocol position; upstream financing obligors, custody, concentration, liquidity, and smart-contract risks remain explicit instead of being treated as cash-like backing.",
-    "compositionBasis": "Exact live single-asset row, GAIB product documentation, and deployed sAID vault",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "At Ethereum block 26088256 on 2026-09-30, asset() on tracked sAID 0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8 returned tracked AID 0x18f52b3fb465118731d9e0d276d4eb3599d57596, matching GAIB's deployment registry. The serial lineage is retained as a strategy-vault claim under owner decision D3, not as a statement that the vault holds 100% idle AID. AI financing, custody, liquidity and counterparty risk remain explicit.",
+    "compositionBasis": "Exact Ethereum sAID asset() read at block 26088256 and issuer deployment registry",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct sAID reserve slice is identified; borrower and facility allocations inside AID remain upstream portfolio detail.",
     "knownUnknownExposurePct": 0

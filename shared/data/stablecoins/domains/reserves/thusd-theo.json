@@ -43,25 +43,27 @@
       "pct": 0.08,
       "risk": "very-low",
       "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "blacklistabilityExposure": "upstream"
     },
     {
       "name": "USDT redemption liquidity",
-      "pct": 0.01,
+      "pct": 0.0148486,
       "risk": "very-low",
       "coinId": "usdt-tether",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "blacklistabilityExposure": "upstream"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Theo transparency dashboard (reserve composition, Sep 29 2026)",
+        "label": "Theo transparency dashboard (reserve composition disclosed and accessed 2026-09-29)",
         "url": "https://app.theo.xyz/transparency"
       },
       {
@@ -73,7 +75,7 @@
         "url": "https://docs.theo.xyz/products/thusd.md"
       }
     ],
-    "rationale": "The live transparency dashboard reported $134.69M of reserves against $133.67M of thUSD supply on 2026-09-29: actively deployed positions of $98.72M gold carry (73.3% of total reserves) and $35.85M thBILL (26.61%), plus $124k of redemption liquidity split 83.92% USDC and 16.08% USDT (0.09% combined). The gold carry slice is modeled as one position because Theo does not publish its internal split between gold leases, futures margin, and Treasury collateral.",
+    "rationale": "The 2026-09-29 dashboard disclosure reported $134,692,762 of reserves against about $133.67M of thUSD supply: $98.72M gold carry and $35.85M thBILL, plus about $124k of redemption liquidity. USDT was $20,000 / $134,692,762, or 0.0148486%; the other three disclosed percentages remain at their published precision. The four authored slices total 100.0048486%, within the 0.5 percentage-point composition tolerance. The gold carry slice remains one position because its internal allocation is not disclosed. This review corrects precision in the September 29 snapshot, rather than replacing it with the September 30 dashboard composition.",
     "compositionBasis": "Theo transparency dashboard reserve composition read on 2026-09-29",
     "compositionAsOf": "2026-09-29",
     "scope": "full-composition",

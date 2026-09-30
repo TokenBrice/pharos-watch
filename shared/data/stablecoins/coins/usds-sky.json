@@ -8,7 +8,7 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "Upgraded 1:1 successor to DAI on the same vault system, with current exposure organized across Sky Agent/Star buckets: Stablecoins/PSM around 38%, Spark around 28%, Grove RWA around 23%, Obex around 5%, Core crypto around 4%, Staking around 1%, and Legacy RWA around 1%; percentages drift with vault and Agent allocation changes.",
+  "collateral": "Shared Sky/Maker balance sheet with DAI: measured canonical USDC in the LitePSM, Spark lending, Grove RWA, Obex and Osero allocator strategies, Core crypto vaults, Staking Engine, and legacy RWA. Group-debt shares drift with allocation changes; DAI and USDS do not hold separate copies of the same USDC stock.",
   "pegMechanism": "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
   "mechanismArchetype": "cdp",
   "llamaId": "209",

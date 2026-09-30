@@ -132,8 +132,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice5)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
@@ -151,6 +151,14 @@
       {
         "label": "Schuman Financial EUROP disclosure",
         "url": "https://schuman.io/europ/"
+      },
+      {
+        "label": "Mento issuer backing configuration (COPm reserve-backed; accessed 2026-09-30)",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "MGP-18 Mento V2 deprecation (accessed 2026-09-29)",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
       }
     ],
     "rationale": "The issuer-run reserve API was re-read on 2026-09-21 and confirms the current Mento collateral categories, including EUROP. The reviewed rows preserve the exact current live-adapter names and weights for AUSD, sUSDS, CELO, USDT, EUROP, EURC, USDC, stETH, and ETH. EUROP is linked to the tracked Schuman stablecoin and uses the same reviewed classification as other Mento assets holding this reserve.",

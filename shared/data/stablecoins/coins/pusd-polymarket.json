@@ -72,7 +72,7 @@
         "name": "USDC / USDC.e on Polygon",
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "collateral"
+        "depType": "wrapper"
       },
       "sourceUrls": [
         "https://docs.polymarket.com/concepts/pusd"

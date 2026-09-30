@@ -264,8 +264,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (ResvOndoA7a5)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos Dependency Map WS1.D BVI primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -273,7 +273,7 @@
         "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
       },
       {
-        "label": "Ondo Global Markets (BVI) Limited daily verification-agent report, 2026-09-22 (Ankura-reviewed)",
+        "label": "Ondo Global Markets (BVI) Limited daily verification-agent report, 2026-09-22 (Ankura-reviewed; accessed 2026-09-30)",
         "url": "https://bin.bnbstatic.com/images/web3-data/public/token/ondo/pdf/daily-2026-09-22.pdf"
       }
     ],
@@ -408,7 +408,7 @@
         "reserveName": "USDY outside LLC report scope (including BVI issuance)",
         "pct": 5.967260269898646,
         "disposition": "insufficient-evidence",
-        "rationale": "Reviewed bounded unknown: USDY issued outside the Ankura-verified LLC report scope (Ondo Global Markets (BVI) Limited issuance plus measurement timing), measured as canonical circulating supply minus report-time LLC principal. The issuer's OGM daily verification-agent report attests only an aggregate collateral pool shared with tokenized securities and USDon, so no instrument-level holdings, obligors, or weights exist to link; the slice stays an unclassified high-risk known unknown rather than being restated."
+        "rationale": "NC-136: BVI report accessed 2026-09-30 confirms $198,949,893.44 USDY liabilities inside a shared $1,532,537,048.33 pool backing stocks and USDon as well. It itemizes USDC, BSC-USDT, SOL-USDC and pathUSD holdings, but does not assign them to USDY. The 5.9673% excluded-scope share is the historical LLC/canonical-supply reconciliation, not a measured BVI token allocation. Next evidence: issuer allocation/seniority rules and USDY-specific holdings at the same close as LLC principal and canonical supply. No pooled USDC/USDT amount is copied into a USDY edge or counted once per issuer liability."
       }
     ]
   },

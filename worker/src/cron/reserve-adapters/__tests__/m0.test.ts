@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import musdReserves from "@shared/data/stablecoins/domains/reserves/musd-metamask.json";
 import ctusdReserves from "@shared/data/stablecoins/domains/reserves/ctusd-citrea.json";
 import usdatReserves from "@shared/data/stablecoins/domains/reserves/usdat-saturn.json";
 import ctusdCoin from "@shared/data/stablecoins/coins/ctusd-citrea.json";
@@ -51,21 +50,6 @@ const SAMPLE_PAYLOAD = {
 };
 
 describe("adaptM0Collateral", () => {
-  it("keeps M0-backed curated aggregate collateral on the conservative classification", () => {
-    for (const coinId of ["musd-metamask"]) {
-      const aggregateCollateral = musdReserves.reserves.find(
-        ({ name }) => name === "U.S. Treasury bills & cash (M0 eligible collateral)",
-      );
-      expect(aggregateCollateral, coinId).toMatchObject({
-        sourceKey: "m0:eligible-collateral",
-        pct: 100,
-        risk: "very-low",
-        assetClass: "other",
-        issuerOrObligor: "M0 permissioned minters and eligible collateral SPVs",
-      });
-    }
-  });
-
   it("keeps exact extension claims out of the generic M0 collateral cohort", () => {
     const ctusd = { ...ctusdCoin, reserves: ctusdReserves.reserves } as unknown as StablecoinMeta;
     const usdat = { ...usdatCoin, reserves: usdatReserves.reserves } as unknown as StablecoinMeta;
@@ -260,7 +244,7 @@ describe("adaptM0Collateral", () => {
 
 describe("fetchM0Reserves", () => {
   it("fetches the keyed GraphQL payload through the shared network harness", async () => {
-    const { result, network } = await runAdapter("m0", "musd-metamask", {
+    const { result, network } = await runAdapter("m0", "m-m0", {
       network: {
         json: {
           "https://protocol-api.m0.org/graphql": (request: Request) => {
@@ -287,7 +271,7 @@ describe("fetchM0Reserves", () => {
 
   it("fails closed before fetching when M0_API_KEY is not configured", async () => {
     for (const m0ApiKey of [undefined, "   "]) {
-      await expect(runAdapter("m0", "musd-metamask", {
+      await expect(runAdapter("m0", "m-m0", {
         network: { json: { "https://protocol-api.m0.org/graphql": SAMPLE_PAYLOAD } },
         ctx: { m0ApiKey },
         nowSec: 1_787_171_387 + 3_600,
@@ -469,7 +453,7 @@ describe("fetchM0Reserves on-chain fallback", () => {
       calls: 1,
     });
 
-    const { result, report } = await runAdapter("m0", "musd-metamask", {
+    const { result, report } = await runAdapter("m0", "m-m0", {
       network: {
         json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
         ...m0OnchainNetwork({
@@ -528,7 +512,7 @@ describe("fetchM0Reserves on-chain fallback", () => {
   });
 
   it("keeps the degraded indexer snapshot when the window scan is incomplete", async () => {
-    const { result, report, network } = await runAdapter("m0", "musd-metamask", {
+    const { result, report, network } = await runAdapter("m0", "m-m0", {
       network: {
         json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
         block: ONCHAIN_BLOCK,
@@ -564,7 +548,7 @@ describe("fetchM0Reserves on-chain fallback", () => {
       calls: 1,
     });
 
-    const { result } = await runAdapter("m0", "musd-metamask", {
+    const { result } = await runAdapter("m0", "m-m0", {
       network: {
         json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
         block: ONCHAIN_BLOCK,

@@ -75,6 +75,18 @@ export function SafetyScoresOverview() {
         there is no live composition; partial live mappings retain their live weights.
       </p>
       <p>
+        Since methodology v9.95, a live reserve link must agree with its reviewed upstream identity and relationship
+        kind; conflicts withhold the link rather than silently choosing one. Keyed zero-balance rows remain evidence
+        but never create reserve-derived edges. Intermediary annotations identify a bridge, wrapper token, or vault
+        share without creating another measured holding. Serial mechanism claims inherit the required parent&apos;s
+        final score: Spark&apos;s native-asset and USDS parents both apply, so the weaker parent limits the claim.
+      </p>
+      <p>
+        Reviewed curated compositions require verified, complete evidence. An unresolved reserve disposition or known
+        unknown exposure withholds the whole curated reserve envelope, not just the disputed link. That can change
+        backing scores and downstream parent limits even when the unresolved share is tiny.
+      </p>
+      <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
         owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
         every originating owner downstream. Every attributed root receives a causal-root-qualified score path even

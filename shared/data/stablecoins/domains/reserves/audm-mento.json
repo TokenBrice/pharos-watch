@@ -127,8 +127,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
@@ -146,10 +146,18 @@
       {
         "label": "Schuman Financial EURØP issuer and backing disclosure",
         "url": "https://schuman.io/europ/"
+      },
+      {
+        "label": "Mento issuer backing configuration (AUDm reserve-backed; accessed 2026-09-30)",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "MGP-18 Mento V2 deprecation (accessed 2026-09-29)",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
       }
     ],
-    "rationale": "AUDm is minted through Mento V3 CDPs collateralized in USDm, and USDm is backed by the shared Mento Reserve. The live Mento adapter captures that reserve's constituents. The 2026-09-21 capture adds EURØP, which the Mento analytics API identifies as one million EUROP held in the Ethereum Reserve Safe; Schuman Financial identifies EURØP as its euro-backed stablecoin. Every captured constituent is linked to a tracked stablecoin or explicitly classified.",
-    "compositionBasis": "Mento reserve analytics API constituent identities and live adapter weights captured 2026-09-21; AUDm CDP collateral is USDm, whose backing is this shared reserve mix",
+    "rationale": "AUDm remains on the Mento V2 USDm/AUDm Broker pool and is classified as reserve-backed by the issuer's enumerated backing configuration. Its direct collateral exposure is the shared Mento Reserve portfolio, not a borrower-specific USDm CDP. The live adapter supplies current constituent weights; the authored composition retains the 2026-09-21 snapshot.",
+    "compositionBasis": "Mento reserve API collateral.assets grouped by economic parent; per-currency reserve-backed classification corroborated by issuer backing config and MGP-18",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "Every constituent of the shared Mento Reserve captured by the live adapter is identified and either linked to a tracked stablecoin or explicitly classified. Constituent weights drift and are refreshed by the live adapter.",
@@ -192,8 +200,8 @@
     "segregation": "mixed",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "conditional",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "probable",
     "sources": [
       {
@@ -205,7 +213,7 @@
         "url": "https://docs.mento.org/"
       }
     ],
-    "uncertainty": "Reserve assets backing USDm (and transitively AUDm) are held in on-chain Mento Reserve safes, liquidity contracts, operational accounts, and governance-approved strategies rather than with a legal custodian, so legal segregation, insolvency treatment, and strategy-specific reuse limits are not established by the reviewed sources; constituent-level custody (e.g. Circle, Tether, Agora, Sky, Lido) sits with each issuer.",
+    "uncertainty": "AUDm's shared Mento Reserve assets are held in on-chain reserve safes, liquidity contracts, operational accounts, and governance-approved strategies rather than a borrower-specific USDm CDP. Legal segregation, insolvency treatment, and strategy-specific reuse limits are not established by the reviewed sources; constituent-level custody sits with each asset's issuer or protocol.",
     "knownUnknownExposurePct": 100
   }
 }

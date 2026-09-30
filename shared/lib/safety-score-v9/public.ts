@@ -35,6 +35,11 @@ export interface V9PublicCardProjectionInput {
   trace: V9ProductionScoreTrace;
   /** Exact fact-set provenance; absent only in compatibility/test callers. */
   backingFromLiveReserves?: boolean;
+  supply?: SafetyScoreV9CurrentCard["supply"];
+  sharedBookId?: string | null;
+  dependencyCoverage?: SafetyScoreV9CurrentCard["dependencyCoverage"];
+  dependencyProvenance?: ReadonlyMap<string, NonNullable<SafetyScoreV9CurrentCard["dependencies"]["serial"][number]["provenance"]>>;
+  dependencyTypes?: ReadonlyMap<string, NonNullable<SafetyScoreV9CurrentCard["dependencies"]["serial"][number]["dependencyType"]>>;
   scoreInput: Pick<V9ProductionScoreInput, "pillars" | "peg" | "dependencyReasons" | "methodologyReasons">;
   access: V9PublicAccessProjectionInput;
   dependencyInputs: V9ResolvedDependencyInputs;
@@ -524,10 +529,20 @@ function projectDependencies(input: V9PublicCardProjectionInput): SafetyScoreV9C
   return {
     serial: [...input.dependencyInputs.serial]
       .sort((left, right) => compareText(left.upstreamAssetId, right.upstreamAssetId))
-      .map((dependency) => ({ ...dependency })),
+      .map((dependency) => ({
+        ...dependency,
+        wrapperForm: input.dependencyTypes?.get(`serial:${dependency.upstreamAssetId}`) === "wrapper" ? input.trace.wrapperParentLimit?.form ?? null : null,
+        ...(input.dependencyTypes?.get(`serial:${dependency.upstreamAssetId}`) === undefined ? {} : { dependencyType: input.dependencyTypes.get(`serial:${dependency.upstreamAssetId}`) }),
+        ...(input.dependencyProvenance?.get(dependency.upstreamAssetId) === undefined ? {} : { provenance: input.dependencyProvenance.get(dependency.upstreamAssetId) }),
+      })),
     basket: [...input.dependencyInputs.basket]
       .sort((left, right) => compareText(left.upstreamAssetId, right.upstreamAssetId))
-      .map((dependency) => ({ ...dependency })),
+      .map((dependency) => ({
+        ...dependency,
+        wrapperForm: null,
+        ...(input.dependencyTypes?.get(`basket:${dependency.upstreamAssetId}`) === undefined ? {} : { dependencyType: input.dependencyTypes.get(`basket:${dependency.upstreamAssetId}`) }),
+        ...(input.dependencyProvenance?.get(dependency.upstreamAssetId) === undefined ? {} : { provenance: input.dependencyProvenance.get(dependency.upstreamAssetId) }),
+      })),
     roles: [...(input.dependencyInputs.roleInputs ?? [])]
       .sort(
         (left, right) =>
@@ -770,6 +785,9 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
   const bindingCap = isRateable ? (caps.find((cap) => cap.binding) ?? null) : null;
   return {
     id: input.trace.assetId,
+    supply: input.supply ?? { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
+    sharedBookId: input.sharedBookId ?? null,
+    ...(input.dependencyCoverage === undefined ? {} : { dependencyCoverage: input.dependencyCoverage }),
     ...(input.backingFromLiveReserves === undefined
       ? {}
       : { backingFromLiveReserves: input.backingFromLiveReserves }),

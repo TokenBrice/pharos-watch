@@ -1,0 +1,405 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-29T21:45:15Z -->",
+  "timestamp": 1790718315625,
+  "markets": [
+    {
+      "name": "WETH",
+      "underlying": {
+        "symbol": "WETH"
+      },
+      "totalDebt": 53758.52837678931,
+      "borrowPaused": false
+    },
+    {
+      "name": "stETH",
+      "underlying": {
+        "symbol": "stETH"
+      },
+      "totalDebt": 2400,
+      "borrowPaused": true
+    },
+    {
+      "name": "gOHM",
+      "underlying": {
+        "symbol": "gOHM"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "CRV",
+      "underlying": {
+        "symbol": "CRV"
+      },
+      "totalDebt": 0,
+      "borrowPaused": false
+    },
+    {
+      "name": "cvxCRV",
+      "underlying": {
+        "symbol": "cvxCRV"
+      },
+      "totalDebt": 94117.85333388772,
+      "borrowPaused": false
+    },
+    {
+      "name": "INV",
+      "underlying": {
+        "symbol": "INV"
+      },
+      "totalDebt": 156854.90274194023,
+      "borrowPaused": true
+    },
+    {
+      "name": "cvxFXS",
+      "underlying": {
+        "symbol": "cvxFXS"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "st-yCRV",
+      "underlying": {
+        "symbol": "st-yCRV"
+      },
+      "totalDebt": 113124.22954696605,
+      "borrowPaused": false
+    },
+    {
+      "name": "DAI",
+      "underlying": {
+        "symbol": "DAI"
+      },
+      "totalDebt": 26.23169332263704,
+      "borrowPaused": true
+    },
+    {
+      "name": "CVX",
+      "underlying": {
+        "symbol": "CVX"
+      },
+      "totalDebt": 190483.97137137476,
+      "borrowPaused": false
+    },
+    {
+      "name": "wstETH",
+      "underlying": {
+        "symbol": "wstETH"
+      },
+      "totalDebt": 631794.2800233618,
+      "borrowPaused": false
+    },
+    {
+      "name": "WBTC",
+      "underlying": {
+        "symbol": "WBTC"
+      },
+      "totalDebt": 151542.319118802,
+      "borrowPaused": false
+    },
+    {
+      "name": "st-yETH",
+      "underlying": {
+        "symbol": "st-yETH"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "sFRAX",
+      "underlying": {
+        "symbol": "sFRAX"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "COMP",
+      "underlying": {
+        "symbol": "COMP"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "sUSDe",
+      "underlying": {
+        "symbol": "sUSDe"
+      },
+      "totalDebt": 422722.29957580566,
+      "borrowPaused": false
+    },
+    {
+      "name": "crvUSD-DOLA",
+      "underlying": {
+        "symbol": "DOLA-crvUSD lp",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-crvUSD-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-crvUSD lp",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "cbBTC",
+      "underlying": {
+        "symbol": "cbBTC"
+      },
+      "totalDebt": 85334.9800357788,
+      "borrowPaused": false
+    },
+    {
+      "name": "FraxPyUSD-DOLA",
+      "underlying": {
+        "symbol": "DOLA-FRAX-PYUSD",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-FraxPyUSD-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-FraxPyUSD lp",
+        "isLP": true
+      },
+      "totalDebt": 3.502442e-12,
+      "borrowPaused": true
+    },
+    {
+      "name": "FraxBP-DOLA",
+      "underlying": {
+        "symbol": "DOLA-FRAXBP",
+        "isLP": true
+      },
+      "totalDebt": 6.25e-13,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-FraxBP-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-FraxBP lp",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-sUSDe-27MAR25",
+      "underlying": {
+        "symbol": "PT-sUSDe-27MAR25"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "sUSDe-DOLA",
+      "underlying": {
+        "symbol": "DOLA-sUSDe clp",
+        "isLP": true
+      },
+      "totalDebt": 44704137.43891964,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-sUSDe-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-sUSDe",
+        "isLP": true
+      },
+      "totalDebt": 11299038.90383395,
+      "borrowPaused": false
+    },
+    {
+      "name": "sUSDS-DOLA",
+      "underlying": {
+        "symbol": "DOLA-sUSDS clp",
+        "isLP": true
+      },
+      "totalDebt": 5296595.415293269,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-sUSDS-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-sUSDS",
+        "isLP": true
+      },
+      "totalDebt": 910208.679829294,
+      "borrowPaused": false
+    },
+    {
+      "name": "scrvUSD-DOLA",
+      "underlying": {
+        "symbol": "DOLA-scrvUSD clp",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-scrvUSD-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-scrvUSD",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "scrvUSD-sDOLA-convex",
+      "underlying": {
+        "symbol": "sDOLA-scrvUSD clp",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "yv-scrvUSD-sDOLA",
+      "underlying": {
+        "symbol": "yv-sDOLA-scrvUSD",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "deUSD-DOLA",
+      "underlying": {
+        "symbol": "DOLA-deUSD clp",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-deUSD-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-deUSD",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": false
+    },
+    {
+      "name": "USR-DOLA",
+      "underlying": {
+        "symbol": "DOLA-USR clp",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-USR-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-USR",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": false
+    },
+    {
+      "name": "PT-sUSDe-29MAY25",
+      "underlying": {
+        "symbol": "PT-sUSDe-29MAY25"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-sUSDe-31JUL25",
+      "underlying": {
+        "symbol": "PT-sUSDe-31JUL25"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-sUSDe-25SEP25",
+      "underlying": {
+        "symbol": "PT-sUSDe-25SEP25"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-USDe-25SEP25",
+      "underlying": {
+        "symbol": "PT-USDe-25SEP25"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-sUSDe-27NOV25",
+      "underlying": {
+        "symbol": "PT-sUSDe-27NOV25"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "PT-USDe-27NOV25",
+      "underlying": {
+        "symbol": "PT-USDe-27NOV25"
+      },
+      "totalDebt": 0,
+      "borrowPaused": true
+    },
+    {
+      "name": "wstUSR-DOLA",
+      "underlying": {
+        "symbol": "DOLA-wstUSR clp",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-wstUSR-DOLA",
+      "underlying": {
+        "symbol": "yv-DOLA-wstUSR",
+        "isLP": true
+      },
+      "totalDebt": 0,
+      "borrowPaused": false
+    },
+    {
+      "name": "scrvUSD-sDOLA",
+      "underlying": {
+        "symbol": "sDOLA-scrvUSD clp",
+        "isLP": true
+      },
+      "totalDebt": 4569026.301386574,
+      "borrowPaused": false
+    },
+    {
+      "name": "reUSD-sDOLA",
+      "underlying": {
+        "symbol": "reUSD-sDOLA clp",
+        "isLP": true
+      },
+      "totalDebt": 1490000,
+      "borrowPaused": false
+    },
+    {
+      "name": "yv-reUSD-sDOLA",
+      "underlying": {
+        "symbol": "yv-reUSD-sDOLA",
+        "isLP": true
+      },
+      "totalDebt": 1489999.9735833157,
+      "borrowPaused": false
+    }
+  ]
+}

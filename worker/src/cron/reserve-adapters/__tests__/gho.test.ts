@@ -119,6 +119,23 @@ describe("GHO parent-local exposure", () => {
     expect(result.slices.find((slice) => slice.coinId === "usdt-tether")?.pct).toBe(25);
   });
 
+  it("preserves positive dust GSM claims without linking zero-balance modules", () => {
+    const data = sample();
+    data.facilitators[0].bucketLevel = 400_000_000n * UNIT;
+    data.facilitators[1].bucketLevel = 299_000_000n * UNIT;
+    data.totalSupply = 699_000_000n * UNIT;
+    data.trackedModules[0].currentBackingGho = 34_709n * 10n ** 12n;
+    data.trackedModules.push({
+      ...data.trackedModules[0], address: CORE, label: "USDT GSM", coinId: "usdt-tether", currentBackingGho: 0n,
+    });
+    const result = adaptGhoFacilitators(data);
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct)
+      .toBeCloseTo(0.034709 / 699_000_000 * 100, 12);
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct).toBeGreaterThan(0);
+    expect(result.slices.some((slice) => slice.coinId === "usdt-tether")).toBe(false);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+  });
+
   it("preserves measured issuance but degrades when it exceeds the supply observation", () => {
     const data = sample();
     data.totalSupply = 150n * UNIT;

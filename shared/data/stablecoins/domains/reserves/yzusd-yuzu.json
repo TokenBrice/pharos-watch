@@ -395,10 +395,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Kimi R05 reserve re-verify (yzusd-yuzu); Pharos reserve research refresh",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos Dependency Map WS1.D PT claim-identity review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Yuzu live Alpha asset whitelist (browser-rendered; accessed 2026-09-30; confirms USDG eligibility, not held PT identity)",
+        "url": "https://app.yuzu.money/asset-whitelist"
+      },
       {
         "label": "Yuzu Accountable dashboard API (current exposure_split)",
         "url": "https://cache.accountable.capital/dashboard/yuzu"
@@ -420,7 +424,7 @@
     "compositionBasis": "Accountable exposure_split snapshot dated 2026-08-28 09:26:05 UTC, normalized to the nearest contemporaneous timeline reserve total with an explicit reconciliation residual",
     "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "0.348657% of the nearest timeline backing total consists of Accountable Rest_of_Assets plus the residual between the named exposure split and that timeline total; the tiny sub-cent Ethena USDe bucket is below stored percentage precision. Custody, leverage, and legal treatment of the disclosed strategy positions remain incompletely documented.",
+    "knownUnknownExposure": "NC-097: Accountable API accessed 2026-09-30 still reports exposure_split_ts 2026.09.25 09:19:29 UTC and Global_Dollar PT_USDG_Loop value $1,732,033.7455591. The strategy label supplies no PT contract, chain, expiry, SY/redemption-token path or held-claim census; the issuer underlying-strategies page lists USDG as eligible but cannot settle the exact claim. The current total-reserves $63,659,756.28 is newer than the split, so it cannot refresh or replace the split denominator. PT USDG remains an unlinked identity lead, not an extra guessed 2.7% USDG edge. Next evidence: identify held PT and expiry from dated position inventory, verify SY/redemption asset resolves to canonical USDG, disclose loop debt/gross-versus-net accounting, and reconcile weights to the contemporaneous backing total. The 0.348657% field below pertains only to the historical August 28 residual; it is not the size of this newly observed claim gap.",
     "knownUnknownExposurePct": 0.348657,
     "nonLinkDispositions": [
       {

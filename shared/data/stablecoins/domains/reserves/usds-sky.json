@@ -2,12 +2,14 @@
   "id": "usds-sky",
   "reserves": [
     {
-      "sourceKey": "sky-makercore:module:stablecoins",
-      "name": "Stablecoins (PSM)",
-      "pct": 38.6,
-      "risk": "very-low",
+      "sourceKey": "sky-makercore:lite-psm:usdc",
+      "name": "USDC (Sky LitePSM)",
+      "pct": 39.4,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Sky PSM contracts and external stablecoin issuers",
+      "issuerOrObligor": "Circle",
       "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "concentration"],
       "blacklistabilityExposure": "yes",
       "liquidityHorizon": "immediate"
@@ -26,7 +28,7 @@
     {
       "sourceKey": "sky-makercore:module:spark",
       "name": "Spark (lending)",
-      "pct": 34.4,
+      "pct": 33.6,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Spark Agent and its lending, liquidity, CeFi, and RWA counterparties",
@@ -82,13 +84,36 @@
       "issuerOrObligor": "Osero allocator vault, ALMProxy, and deployed strategy counterparties",
       "riskFactors": ["credit", "counterparty", "liquidity", "custody", "smart-contract", "market", "concentration"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "sky-makercore:module:stablecoins-residual",
+      "name": "Unattributed stablecoins (PSM)",
+      "pct": 0,
+      "risk": "very-low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky PSM contracts and external stablecoin issuers",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "concentration"],
+      "blacklistabilityExposure": "yes",
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Codex Sky LitePSM dependency review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "LitePSM canonical gem and pocket contract, accessed 2026-09-30",
+        "url": "https://github.com/makerdao/dss-lite-psm"
+      },
+      {
+        "label": "Sky stablecoins dashboard, accessed 2026-09-30",
+        "url": "https://info.skyeco.com/collateral/stablecoins"
+      },
+      {
+        "label": "USDS shared DAI conversion book, accessed 2026-09-30",
+        "url": "https://developers.skyeco.com/protocol/tokens/usds/"
+      },
       {
         "label": "Sky MakerCore group debt snapshot",
         "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
@@ -130,21 +155,13 @@
         "url": "https://developers.skyeco.com/protocol/rewards/staking-engine/"
       }
     ],
-    "rationale": "The 2026-09-21 Sky MakerCore feed reports the complete eight-group debt envelope used by the live adapter. Sky governance identifies Osero as the ALLOCATOR-PRYSM-A allocator vault with an ALMProxy and governance-controlled debt ceilings. Osero is classified at that allocator and deployed-strategy failure domain without inventing look-through weights.",
-    "compositionBasis": "Relative debt reported by the Sky MakerCore group endpoint and mapped through the canonical sky-makercore adapter",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "The September 29 captured Sky book reports canonical Ethereum USDC in the verified LitePSM pocket. Both DAI and USDS share this book. The measured $4,255,200,267.580757 divided by captured total group debt $10,751,404,484 is 39.578087%. The rounded stablecoins group share is 39.4%; its 0.178087 percentage-point excess falls inside the explicitly reviewed 0.25-point cross-endpoint timing/rounding band, so the reviewed USDC share is capped to the group share and the measured stock remains separate metadata. The zero keyed residual is a classification row, not a holding. Positive unexplained remainders and failed reconciliations retain the existing very-low PSM-pool risk, without an inferred constituent identity. Allocators remain classified at their deployed-strategy failure domain.",
+    "compositionBasis": "September 29 captured group-debt shares; canonical gem() and measured LitePSM USDC pocket balance with explicit reconciliation",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The PSM group combines external stablecoins without publishing constituent weights in the group feed. Osero and the other allocator groups are classified at their protocol or obligor failure domain and are not represented as direct tracked-stablecoin dependencies.",
-    "knownUnknownExposurePct": 38.6,
+    "knownUnknownExposure": "Unexplained positive PSM remainders stay unlinked; excess above 0.25 percentage points fails the split closed. Allocator groups have no invented tracked-token look-through weights.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Stablecoins (PSM)",
-        "pct": 38.6,
-        "disposition": "basket-needs-split",
-        "rationale": "The published group combines several PSM assets without per-asset weights.",
-        "candidateCoinIds": ["usdc-circle", "usdt-tether", "usdp-paxos"]
-      },
       {
         "reserveIndex": 1,
         "reserveName": "Grove (RWA)",
@@ -155,7 +172,7 @@
       {
         "reserveIndex": 2,
         "reserveName": "Spark (lending)",
-        "pct": 34.4,
+        "pct": 33.6,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Spark is an allocator and lending-protocol position with multiple deployment counterparties, not a direct wrapper around one tracked stablecoin."
       },

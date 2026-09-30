@@ -6,7 +6,6 @@ import {
   V9AssetEvaluationError,
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   loadV9CandidateMethodologyPolicy,
   loadV9MethodologyPolicy,
@@ -20,6 +19,7 @@ import {
   buildSafetyScoreV9PublicationFromNormalizedInput,
   computeSafetyScoreV9CandidateId,
   computeSafetyScoreV9ProducerCapabilityDigest,
+  publicDependencyMetadata,
 } from "../safety-score-v9/candidate";
 import {
   compileSafetyScoreV9FactSetFromValidatedExtension,
@@ -213,6 +213,112 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
 
 describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it("publishes evaluation supply and captured shared-book identity without using publication time", () => {
+    const fixedInput = exactFixedInput("alpha");
+    fixedInput.liveReserveProvenanceMap.alpha = {
+      ...fixedInput.liveReserveProvenanceMap.alpha!,
+      balanceSheetScope: "shared-sky-maker",
+      sharedBookAssetIds: ["alpha"],
+    };
+    fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
+    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const fact = result.compiledFacts.assets[0]!.supply;
+    const fingerprint = Object.values(result.compiledFacts.sourceFingerprints).find((source) => source.generationId === fact.sourceGenerationId)!;
+    expect(result.candidate.cards[0]!.supply).toEqual({
+      circulatingUsdAtEvaluation: fact.circulatingUsd,
+      generationId: fact.sourceGenerationId,
+      asOfSec: fingerprint.observedAtSec,
+    });
+    expect(result.candidate.cards[0]!.sharedBookId).toBe("sky-maker");
+  });
+
+  it("prefers the first unverified intermediary for a structural serial claim", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const asset = structuredClone(result.compiledFacts.assets[0]!);
+    asset.dependencies.edges = [{
+      edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
+      economicRole: "serial-claim", pathKind: "serial-dependency", weight: 1, evidenceRefIds: [], failureDomains: [],
+    }];
+    const verified = { kind: "bridge" as const, label: "Verified bridge", verified: true };
+    const unverified = { kind: "bridge" as const, label: "Unverified bridge", verified: false };
+    const meta = { id: "alpha", variantOf: "beta", reserves: [
+      { name: "Beta 1", pct: 40, risk: "low" as const, coinId: "beta", intermediary: verified },
+      { name: "Beta 2", pct: 30, risk: "low" as const, coinId: "beta", intermediary: unverified },
+      { name: "Beta 3", pct: 30, risk: "low" as const, coinId: "beta", intermediary: { ...unverified, label: "Later unverified bridge" } },
+    ] };
+    expect(publicDependencyMetadata(asset, result.compiledFacts, fixedInput, meta).dependencyProvenance.get("beta")).toMatchObject({ source: "variant", intermediary: unverified });
+    meta.reserves[1]!.intermediary = verified;
+    meta.reserves[2]!.intermediary = verified;
+    expect(publicDependencyMetadata(asset, result.compiledFacts, fixedInput, meta).dependencyProvenance.get("beta")!.intermediary).toEqual(verified);
+    asset.supply.circulatingUsd = null;
+    expect(publicDependencyMetadata(asset, result.compiledFacts, fixedInput, meta).supply).toEqual({ circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null });
+  });
+
+  it("keeps a mixed native and verified bridge aggregate unannotated, but preserves unverified risk", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const asset = structuredClone(result.compiledFacts.assets[0]!);
+    asset.dependencies.edges = [{
+      edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
+      economicRole: "serial-claim", pathKind: "serial-dependency", weight: 1, evidenceRefIds: [], failureDomains: [],
+    }];
+    const bridge = { kind: "bridge" as const, label: "USDC.e", verified: true };
+    fixedInput.liveReserveMap.alpha = [
+      { sourceKey: "fixture:native", name: "Native USDC", pct: 72.5, risk: "low", coinId: "beta" },
+      { sourceKey: "fixture:bridge", name: "USDC.e", pct: 27.5, risk: "low", coinId: "beta", intermediary: bridge },
+    ];
+    expect(publicDependencyMetadata(asset, result.compiledFacts, fixedInput, { id: "alpha" }).dependencyProvenance.get("beta")!.intermediary).toBeNull();
+    bridge.verified = false;
+    expect(publicDependencyMetadata(asset, result.compiledFacts, fixedInput, { id: "alpha" }).dependencyProvenance.get("beta")!.intermediary).toEqual(bridge);
+  });
+
+  it("does not assign the Sky shared book to an unknown captured scope", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    Object.assign(fixedInput.liveReserveProvenanceMap.alpha!, { balanceSheetScope: "unknown-book", sharedBookAssetIds: ["alpha"] });
+    expect(publicDependencyMetadata(result.compiledFacts.assets[0]!, result.compiledFacts, fixedInput, { id: "alpha" }).sharedBookId).toBeNull();
+  });
+
+  it("retains distinct keyed withheld slices sharing a label and preserves different reasons", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const asset = structuredClone(result.compiledFacts.assets[0]!);
+    asset.dependencies.edges = [];
+    asset.gaps = [];
+    asset.dependencies.rejectionReasons = [{ sliceIndex: 0, reason: "expired" }, { sliceIndex: 1, reason: "no-match" }];
+    asset.dependencies.diagnostics.issueCodes = ["outside-active-set:gamma"];
+    fixedInput.liveReserveMap.alpha = [
+      { sourceKey: "fixture:first", name: "USDC reserves", pct: 40, risk: "low", coinId: "beta" },
+      { sourceKey: "fixture:second", name: "USDC reserves", pct: 60, risk: "low", coinId: "gamma" },
+    ];
+    const rows = publicDependencyMetadata(asset, result.compiledFacts, fixedInput, { id: "alpha" }).dependencyCoverage;
+    expect(rows.map((row) => ({ id: row.upstreamAssetId, reason: row.reason, share: row.share }))).toEqual([
+      { id: "beta", reason: "expired", share: 0.4 },
+      { id: "gamma", reason: "no-match", share: 0.6 },
+      { id: "gamma", reason: "outside-active-set:gamma", share: 0.6 },
+    ]);
+  });
+
+  it("discloses withheld identities without inventing graph endpoints or treating cash as a relationship", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const asset = structuredClone(result.compiledFacts.assets[0]!);
+    asset.dependencies.edges = [];
+    asset.dependencies.rejectionReasons = [{ sliceIndex: 0, reason: "no-match" }, { sliceIndex: 1, reason: "expired" }];
+    const sourceSlices = [
+      { name: "Unverified bridged Beta", pct: 40, risk: "low" as const, coinId: "beta", intermediary: { kind: "bridge" as const, label: "Beta bridge", verified: false } },
+      { name: "Cash", pct: 60, risk: "very-low" as const, assetClass: "cash" as const },
+    ];
+    fixedInput.liveReserveMap.alpha = sourceSlices;
+    const metadata = publicDependencyMetadata(asset, result.compiledFacts, fixedInput, { id: "alpha" });
+    expect(metadata.dependencyCoverage).toEqual([{
+      upstreamLabel: "Unverified bridged Beta", upstreamAssetId: null, share: 0.4,
+      reason: "no-match", sourceAsOf: null, identityVerified: false,
+    }]);
+    expect(asset.dependencies.edges).toEqual([]);
+  });
+
   it("is deterministic for the same exact generation and explicit publication inputs", () => {
     const fixedInput = exactFixedInput("alpha");
     const input = {
@@ -630,17 +736,18 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
 
   it("publishes a strict rated candidate from a supplied reviewed extension", () => {
     const fixedInput = exactFixedInput("alpha");
+    const policy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
     const result = buildSafetyScoreV9Candidate({
       fixedInput,
       extension: reviewedExtension(fixedInput),
+      policy,
       publishedAtSec: PUBLISHED_AT_SEC,
     });
 
     expect(result.candidate).toMatchObject({
       model: "v9-critical-path",
       lifecycle: "active",
-      // Tracks the active methodology version instead of re-pinning it per release.
-      policyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      policyVersion: policy.policy.releaseVersion,
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });

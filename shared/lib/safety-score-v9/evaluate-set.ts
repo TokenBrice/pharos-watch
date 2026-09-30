@@ -1130,9 +1130,17 @@ function evaluatedSetDigestPayload(result: Omit<V9EvaluatedSet, "evaluatedSetDig
   };
 }
 
+/** Default-off boundary interventions for hypothetical evaluation only. */
+export interface V9SetEvaluationInterventions {
+  projectUpstream?: (result: V9UpstreamResult) => V9UpstreamResult;
+  projectEvaluatedUpstream?: (result: V9EvaluatedAsset) => V9EvaluatedAsset;
+  onAssetError?: (assetId: string, error: unknown) => void;
+}
+
 function evaluateV9FactSetRead(
   factSetRead: V9EvaluationFactSetRead,
   envelope: V9ValidatedPolicyEnvelope,
+  interventions?: V9SetEvaluationInterventions,
 ): Readonly<V9EvaluatedSet> {
   assertV9ValidatedPolicyEnvelope(envelope);
   const factSet = factSetRead.factSet;
@@ -1145,6 +1153,8 @@ function evaluateV9FactSetRead(
   const dependencyResolutionContext = createV9DependencyResolutionContext(dependencyPlan);
   const commonSignals = commonModeSignalsByAsset(dependencyPlan, envelope, assetsById);
   const evaluatedById = new Map<string, V9EvaluatedAsset>();
+  const downstreamEvaluatedById = interventions?.projectEvaluatedUpstream
+    ? new Map<string, V9EvaluatedAsset>() : evaluatedById;
   const upstreamResultsById = new Map<string, V9UpstreamResult>();
   // Terminal unavailable-asset roots per evaluated asset, propagated in
   // topological order: an unavailable asset inherits the union of the roots of
@@ -1177,14 +1187,17 @@ function evaluateV9FactSetRead(
       resolved,
       dependencyPlan,
       envelope,
-      evaluatedById,
+      evaluatedById: downstreamEvaluatedById,
       unavailabilityRootsById,
       identity,
       marketRank: marketRanks.get(assetId) ?? null,
       dependencySignals: commonSignals.get(assetId) ?? [],
     });
     evaluatedById.set(assetId, evaluatedAsset);
-    upstreamResultsById.set(assetId, {
+    if (downstreamEvaluatedById !== evaluatedById) {
+      downstreamEvaluatedById.set(assetId, interventions!.projectEvaluatedUpstream!(evaluatedAsset));
+    }
+    const upstream: V9UpstreamResult = {
       assetId: evaluatedAsset.assetId,
       score: projectV9DependencyScore(evaluatedAsset.trace),
       backingScore: projectV9EffectiveBackingPillarScore(evaluatedAsset),
@@ -1192,9 +1205,21 @@ function evaluateV9FactSetRead(
       accessScore: upstreamExitAccessScore(evaluatedAsset.exit),
       controlScore: evaluatedAsset.scoreInput.pillars.control.score,
       oracleNavScore: upstreamOracleNavScore(evaluatedAsset, envelope),
-    });
+    };
+    upstreamResultsById.set(assetId, interventions?.projectUpstream?.(upstream) ?? upstream);
     unavailabilityRootsById.set(assetId, unavailabilityRoots);
     } catch (error) {
+      if (interventions?.onAssetError) {
+        interventions.onAssetError(assetId, error);
+        evaluatedById.delete(assetId);
+        downstreamEvaluatedById.delete(assetId);
+        upstreamResultsById.set(assetId, {
+          assetId, score: null, backingScore: null, exitScore: null,
+          accessScore: null, controlScore: null, oracleNavScore: null,
+        });
+        unavailabilityRootsById.set(assetId, [assetId]);
+        continue;
+      }
       throw error instanceof V9AssetEvaluationError
         ? error
         : new V9AssetEvaluationError(assetId, error);
@@ -1239,6 +1264,7 @@ export function evaluateV9FactSet(
 export function evaluateValidatedV9FactSet(
   factSet: CompiledV9FactSetV3,
   envelope: V9ValidatedPolicyEnvelope,
+  interventions?: V9SetEvaluationInterventions,
 ): Readonly<V9EvaluatedSet> {
   assertV9FactSetCompiledInProcess(factSet);
   return evaluateV9FactSetRead(
@@ -1248,5 +1274,6 @@ export function evaluateValidatedV9FactSet(
       factSet,
     },
     envelope,
+    interventions,
   );
 }

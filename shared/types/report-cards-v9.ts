@@ -3,14 +3,17 @@ import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publicati
 import {
   SafetyScoreV9CompletenessSchema,
   SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9DependencyProvenanceSchema,
   findSafetyScoreV9ParentAttributionIssues,
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
 import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText } from "./safety-score-v9-fact-primitives";
 import { Sha256Schema } from "./safety-schema-primitives";
+import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
+import { DependencyTypeSchema } from "./dependency-types";
 
-export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 5;
+export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 6;
 
 export const V9_PUBLICATION_HOLD_REASON_CODES = [
   "dex-stale",
@@ -135,9 +138,12 @@ export const ReportCardsV9DependencyEdgeSchema = z
     from: z.string().min(1),
     to: z.string().min(1),
     kind: z.enum(["serial", "basket"]),
+    dependencyType: DependencyTypeSchema.optional(),
     materiality: z.enum(["serial", "serial-blocked", "basket-weighted", "basket-bounded-unknown"]),
     weight: z.number().finite().min(0).max(1).nullable(),
     upstreamScore: z.number().finite().min(0).max(100).nullable(),
+    wrapperForm: V9WrapperFormSchema.nullable().optional(),
+    provenance: SafetyScoreV9DependencyProvenanceSchema.optional(),
   })
   .strict();
 export type ReportCardsV9DependencyEdge = z.infer<typeof ReportCardsV9DependencyEdgeSchema>;
@@ -146,7 +152,20 @@ export const ReportCardsV9DependencyGraphSchema = z
   .object({
     edges: z.array(ReportCardsV9DependencyEdgeSchema),
   })
-  .strict();
+  .strict()
+  .superRefine((graph, ctx) => {
+    let previous: string | null = null;
+    graph.edges.forEach((edge, index) => {
+      const key = `${edge.from}\u0000${edge.to}\u0000${edge.kind}`;
+      if (previous !== null && compareText(previous, key) >= 0) {
+        ctx.addIssue({ code: "custom", path: ["edges", index], message: "Dependency edges must be unique and sorted by (from, to, kind)" });
+      }
+      if (edge.kind === "basket" && edge.wrapperForm != null) {
+        ctx.addIssue({ code: "custom", path: ["edges", index, "wrapperForm"], message: "Basket edges cannot carry a wrapper form" });
+      }
+      previous = key;
+    });
+  });
 export type ReportCardsV9DependencyGraph = z.infer<typeof ReportCardsV9DependencyGraphSchema>;
 
 /**
@@ -166,6 +185,9 @@ export function buildReportCardsV9DependencyGraph(
         materiality: dependency.blocked ? "serial-blocked" : "serial",
         weight: null,
         upstreamScore: dependency.score,
+        ...(dependency.dependencyType === undefined ? {} : { dependencyType: dependency.dependencyType }),
+        ...(dependency.wrapperForm === undefined ? {} : { wrapperForm: dependency.wrapperForm }),
+        ...(dependency.provenance === undefined ? {} : { provenance: dependency.provenance }),
       });
     }
     for (const dependency of card.dependencies.basket) {
@@ -176,6 +198,9 @@ export function buildReportCardsV9DependencyGraph(
         materiality: dependency.boundedUnknown ? "basket-bounded-unknown" : "basket-weighted",
         weight: dependency.weight,
         upstreamScore: dependency.score,
+        ...(dependency.dependencyType === undefined ? {} : { dependencyType: dependency.dependencyType }),
+        ...(dependency.wrapperForm === undefined ? {} : { wrapperForm: dependency.wrapperForm }),
+        ...(dependency.provenance === undefined ? {} : { provenance: dependency.provenance }),
       });
     }
   }
@@ -291,12 +316,12 @@ function refineReportCardsV9Response(
   }
 }
 
-/** Current public report contract. Report-v5 adds per-card live-reserve provenance. */
+/** Report-v6 adds evaluation supply, dependency provenance and coverage. V5 remains readable during rollout. */
 export const ReportCardsV9CurrentResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
     lifecycle: z.literal("active"),
-    schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
+    schemaVersion: z.union([z.literal(5), z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION)]),
     publicationHealth: V9PublicationHealthSchema,
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })

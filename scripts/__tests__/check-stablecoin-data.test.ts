@@ -109,6 +109,47 @@ describe("stablecoin dependency/reserve source ownership", () => {
         "keep reserve-backed relationships only in reserves",
     ]);
   });
+
+  it.each(["control-operator", "exit-dependency", "oracle-nav"] as const)(
+    "allows a sourced %s anchor alongside the reserve-owned basket",
+    (economicRole) => {
+      expect(getDependencyReserveOverlapIssues({
+        dependencies: [{ id: "usdtb-ethena", weight: 0.001, type: "collateral" }],
+        reserves: [{
+          name: "USDtb backing", pct: 30, risk: "low", coinId: "usdtb-ethena", depType: "collateral",
+        }],
+        dependencyReview: {
+          reviewedAt: "2026-09-30", reviewer: "Fixture reviewer", confidence: "verified",
+          sources: [{ label: "Issuer rails", url: "https://example.com/rails" }],
+          rationale: "The role is separate from the backing allocation.",
+          relationships: [{
+            id: "usdtb-ethena", weight: 0.001, type: "collateral", economicRole,
+            reason: "Reviewed distinct role.",
+          }],
+        },
+      })).toEqual([]);
+    },
+  );
+
+  it("does not exempt an explicitly reviewed default-role collateral duplicate", () => {
+    expect(getDependencyReserveOverlapIssues({
+      dependencies: [{ id: "usdtb-ethena", weight: 0.001, type: "collateral" }],
+      reserves: [{
+        name: "USDtb backing", pct: 30, risk: "low", coinId: "usdtb-ethena", depType: "collateral",
+      }],
+      dependencyReview: {
+        reviewedAt: "2026-09-30", reviewer: "Fixture reviewer", confidence: "verified",
+        sources: [{ label: "Issuer backing", url: "https://example.com/backing" }],
+        rationale: "Redundant backing claim.",
+        relationships: [{
+          id: "usdtb-ethena", weight: 0.001, type: "collateral", economicRole: "basket-exposure",
+          reason: "The reserve already owns this exposure.",
+        }],
+      },
+    })).toEqual([
+      "usdtb-ethena::collateral is authored in both dependencies and linked reserves; keep reserve-backed relationships only in reserves",
+    ]);
+  });
 });
 
 describe("commodity-allocated peg-match guard", () => {

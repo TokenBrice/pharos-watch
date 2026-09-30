@@ -139,6 +139,14 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     owner: POLICY_OWNER,
     reviewedAt: "2026-09-09",
   },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "musd-metamask",
+    reason:
+      "mUSD's M-wrapper producer measures M backing and a sampled whitelisted SwapFacility redemption cohort; this capacity does not establish the liquidity of the configured Bridge fiat-redemption rail, so it remains reserve evidence rather than that route's redemption capacity.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-30",
+  },
 ];
 
 const UNVERIFIED_FRESHNESS_APPROVALS = new Set<string>(

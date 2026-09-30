@@ -6,6 +6,7 @@
       "pct": 25.3,
       "risk": "low",
       "coinId": "ausd-agora",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Agora",
       "riskFactors": [
@@ -50,6 +51,7 @@
       "pct": 11.2,
       "risk": "low",
       "coinId": "usdt-tether",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether",
       "riskFactors": [
@@ -65,6 +67,7 @@
       "pct": 5.8,
       "risk": "low",
       "coinId": "europ-schuman",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Schuman Financial",
       "riskFactors": [
@@ -80,6 +83,7 @@
       "pct": 5.7,
       "risk": "low",
       "coinId": "eurc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle",
       "riskFactors": [
@@ -95,6 +99,7 @@
       "pct": 4.2,
       "risk": "low",
       "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle",
       "riskFactors": [
@@ -133,8 +138,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Kimi data review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
@@ -148,9 +153,21 @@
       {
         "label": "Mento stable assets on Celo",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento issuer backing configuration (ZARm and XOFm reserve-backed; accessed 2026-09-30)",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Mento CDP registry (only GBPm, JPYm, CHFm; accessed 2026-09-29)",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/cdp.config.ts"
+      },
+      {
+        "label": "MGP-18 Mento V2 deprecation (accessed 2026-09-29)",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
       }
     ],
-    "rationale": "ZARm mints through the oracle-priced FPMM/BiPoolManager path against the shared Mento Reserve: the reserve analytics API reports active borrower CDP troves only for GBPm, JPYm, CHFm, and XOFm, and none for ZARm (see the oracle-risk branch review). ZARm's reserve exposure is therefore the shared Mento Reserve basket, fetched 2026-09-04: AUSD 25.3%, sUSDS 23.6%, CELO 20.0%, USDT family 11.2%, EUROP 5.8%, EURC family 5.7%, USDC family 4.2%, stETH 3.1%, and ETH 1.1%, with chain and token variants grouped by the Pharos Mento adapter.",
+    "rationale": "ZARm remains reserve-backed on its legacy USDm/ZARm Broker/BiPoolManager pool. The issuer backing configuration and MGP-18 identify only GBPm, JPYm, and CHFm as migrated borrower-CDP currencies; XOFm remains on V2. ZARm's collateral composition is the shared reserve portfolio, refreshed by the live adapter. The authored slices retain their 2026-09-04 composition date.",
     "compositionBasis": "Mento reserve analytics API collateral.assets composition fetched on 2026-09-04 and grouped by the Pharos Mento adapter's configured token families",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",

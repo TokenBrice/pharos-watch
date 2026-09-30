@@ -34,10 +34,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Spark Savings V2 backing and risk architecture (accessed 2026-09-30)",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
       {
         "label": "Spark Documentation Portal",
         "url": "https://docs.spark.fi/"
@@ -51,19 +55,19 @@
         "url": "https://data.spark.fi/savings"
       }
     ],
-    "rationale": "Spark documents the vault as an ERC-4626 USDC product whose permissioned Spark Liquidity Layer taker can pull liquidity into yield-bearing strategies. The current live rows separate idle USDC from assets outstanding to deployed strategies, so each adapter-owned category is classified without treating the deployed position as direct USDC custody.",
+    "rationale": "Spark documents the V2 vault as an ERC-4626 USDC product whose permissioned Spark Liquidity Layer taker can deploy liquidity into strategies. The dated rows measure idle USDC and aggregate assets outstanding; they do not resolve the deployed position's current constituent stablecoins, venues or custody shares. Spark separately describes full USDS backing and a junior/senior capital and token-backstop loss waterfall. That economic USDS relationship is recorded as a manual serial mechanism claim, without converting the deployed accounting remainder into measured USDS custody.",
     "compositionBasis": "Current ERC-4626 live rows and Spark Vaults V2 architecture",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The deployed row identifies the Spark Liquidity Layer strategy position; venue-level allocations within that position remain dynamic.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The 96.742127158783% deployed accounting position has unresolved current constituent asset, venue and custodian weights. The reviewed full USDS mechanism claim establishes residual loss dependence after backstops, not a measured strategy allocation.",
+    "knownUnknownExposurePct": 96.742127158783,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "Spark Savings deployed strategy positions",
         "pct": 96.742127158783,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "This row is the adapter's aggregate assets-outstanding claim on Spark Liquidity Layer strategies, not a single tracked stablecoin."
+        "disposition": "basket-needs-split",
+        "rationale": "Aggregate assets outstanding to Spark Liquidity Layer strategies do not establish current constituent weights or liability reconciliation. The separate USDS mechanism claim does not resolve this basket or prove direct USDS custody."
       }
     ]
   },

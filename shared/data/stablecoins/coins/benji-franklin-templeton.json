@@ -119,7 +119,11 @@
   "status": "quarantined",
   "listingStatusReview": {
     "changedAt": "2026-07-15",
-    "reviewBy": "2026-08-15",
-    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+    "reviewBy": "2026-10-30",
+    "reason": "2026-09-30 review: price resolves, but CoinGecko market cap and circulating supply are zero and DefiLlama has no list row. A complete, supply-conserving multi-chain route remains unproven; Aptos and Stellar have no runtime supply reader.",
+    "source": {
+      "label": "BENJI Stellar supply observed 2026-09-30",
+      "url": "https://horizon.stellar.org/assets?asset_code=BENJI&asset_issuer=GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5"
+    }
   }
 }

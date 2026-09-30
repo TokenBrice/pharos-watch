@@ -9,10 +9,10 @@ import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fix
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 
-// Kept ahead of the newest reviewed date in the registry metadata this fixture
-// reads: the DUSD reserve and mechanism reviews moved to 2026-09-03,
-// which the extension's scoring-clock guard treats as a future review.
-const AS_OF_SEC = Date.parse("2026-09-04T12:00:00.000Z") / 1_000;
+// This real-registry fixture evaluates after the additive 2026-09-30
+// dependency identity review. An earlier clock correctly rejects future
+// evidence and cannot exercise the reviewed custody/mechanism behavior.
+const AS_OF_SEC = Date.parse("2026-09-30T12:00:00.000Z") / 1_000;
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const ASSET_ID = "dusd-dialectic";
 const PARENT_ID = "usdc-circle";
@@ -28,7 +28,7 @@ function fixedInput() {
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
     activeAssetIds: [...ACTIVE_ASSET_IDS],
-    capturedAt: "2026-09-04T12:00:00.000Z",
+    capturedAt: new Date(AS_OF_SEC * 1_000).toISOString(),
     sourceGeneration: "report-cards:fixture:dusd-team-answers",
     dexGenerationId: `dex-liquidity-${OBSERVED_AT_SEC}`,
     redemptionGenerationId: "redemption-backstops-unavailable",

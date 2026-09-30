@@ -8,7 +8,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions: BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
+  "collateral": "Liquid Cash strategy basket (81.1% of the issuer collateral API's September 29, 2026 backing): stablecoins, DeFi lending, tokenized funds and institutional lending, with constituent balances undisclosed; remaining adapter categories are delta-hedged BTC (9.9%), ETH and liquid-staking collateral (7.6%), and other crypto (1.4%)",
   "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Anchorage Digital, Kraken) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
   "llamaId": "146",
   "detailProvider": "defillama",

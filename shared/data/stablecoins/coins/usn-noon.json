@@ -112,12 +112,6 @@
         "Funding Rate Arb (BTC)": "accountable:noon:deployment:funding-rate-arb-btc",
         "Funding Rate Arb (HYPE)": "accountable:noon:deployment:funding-rate-arb-hype",
         "Undeployed": "accountable:noon:deployment:undeployed"
-      },
-      "coinIdMap": {
-        "CLOs (JAAA)": "jaaa-janus-henderson-anemoy"
-      },
-      "depTypeMap": {
-        "CLOs (JAAA)": "collateral"
       }
     }
   },

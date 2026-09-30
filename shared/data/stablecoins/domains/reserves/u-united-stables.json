@@ -18,12 +18,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map WS1.D reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "United Stables live proof of reserves",
+        "label": "United Stables aggregate proof of reserves (accessed 2026-09-30)",
         "url": "https://u.tech/u-client-api/v1/public/u/por"
       },
       {
@@ -35,9 +35,9 @@
         "url": "https://u.tech/terms/"
       }
     ],
-    "rationale": "The live issuer feed reports only aggregate reserve value and token supply. The issuer's terms identify the eligible reserve envelope as cash, U.S. Treasury bills, and fiat-referenced stablecoins, but explicitly permit the mix and counterparties to change without notice and do not publish constituent identities or weights.",
-    "compositionBasis": "United Stables live aggregate proof of reserves and contractual reserve envelope",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The issuer API accessed 2026-09-30 remains genuinely single-bucket at source: totalReserve $1,540,127,120.98 and totalToken $1,497,830,391.63, updatedAt 2026-09-30T05:37:40.598Z, ripcord false. It discloses no constituent balances, contracts, custody allocation, or stablecoin weights. The contractual cash, Treasury and fiat-referenced stablecoin envelope remains a variable mix. Accepted mint or redemption assets do not prove positive holdings.",
+    "compositionBasis": "Aggregate issuer PoR at 2026-09-30T05:37:40.598Z; single-bucket source with no asset-level composition",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "All reserve value is reported as one variable basket; asset weights, stablecoin identities, banking counterparties, custodians, and liquidity terms are undisclosed.",
     "knownUnknownExposurePct": 100,
@@ -47,7 +47,7 @@
         "reserveName": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Cash, Treasury bills, and unidentified stablecoins are reported as one combined balance."
+        "rationale": "Blocked on source disclosure: one totalReserve balance cannot resolve cash, Treasury and stablecoin allocations or positively held issuers. No guessed candidate weights or links. Issuer questionnaire pending."
       }
     ]
   },

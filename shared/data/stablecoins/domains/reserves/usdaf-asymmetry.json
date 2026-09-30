@@ -2,7 +2,7 @@
   "id": "usdaf-asymmetry",
   "reserves": [
     {
-      "sourceKey": "liquity-v2-branches:ethereum:0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+      "sourceKey": "liquity-v2-branches:ethereum:0x23346b04a7f55b8760e5860aa5a77383d63491cd",
       "name": "ysyBOLD",
       "pct": 57.2,
       "risk": "medium",
@@ -19,7 +19,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "sourceKey": "liquity-v2-branches:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "sourceKey": "liquity-v2-branches:ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367",
       "name": "scrvUSD",
       "pct": 11.5,
       "risk": "medium",
@@ -36,7 +36,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "sourceKey": "liquity-v2-branches:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "sourceKey": "liquity-v2-branches:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
       "name": "sUSDS",
       "pct": 7.7,
       "risk": "low",
@@ -68,7 +68,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "sourceKey": "liquity-v2-branches:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
+      "sourceKey": "liquity-v2-branches:ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
       "name": "sfrxUSD",
       "pct": 8.6,
       "risk": "medium",
@@ -101,8 +101,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "probable",
     "sources": [
       {
@@ -110,7 +110,7 @@
         "url": "https://app.asymmetry.finance/api/stats"
       },
       {
-        "label": "Pinned USDaf V2 deployment registry",
+        "label": "Pinned USDaf V2 deployment registry (collateral identities reconciled to captured V2 adapter rows; accessed 2026-09-30)",
         "url": "https://github.com/asymmetryfinance/api.usdafv2/blob/394afe37705c011326ff84299c6d3b2966b18a6f/src/v2MainnetDeployment.json"
       },
       {
@@ -118,8 +118,8 @@
         "url": "https://github.com/asymmetryfinance/USDaf-v2/tree/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts"
       }
     ],
-    "rationale": "The official Asymmetry stats endpoint reports the current USDaf V2 collateral mix, and the pinned deployment registry maps the reported branch symbols to the reviewed collateral contracts. Rows retain the live adapter's exact source keys and 2026-09-21 weights. The snapshot does not independently establish legal custody, reserve segregation, or assurance for the underlying protocol positions and BTC wrappers.",
-    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-09-21",
+    "rationale": "The four corrected source keys for ysyBOLD, scrvUSD, sUSDS, and sfrxUSD match the collToken addresses in the pinned USDaf V2 deployment registry and the captured 2026-09-29 V2 live adapter rows. The existing 2026-09-21 authored percentages are retained as historical classification-row context; admitted fixed-block V2 adapter observations own current weights. The general /api/stats endpoint is not independent validation of the V2 composition because its outstanding supply differs materially from the captured V2 deployment. This identity correction does not reweight the slices or establish custody, segregation, or assurance.",
+    "compositionBasis": "Retained 2026-09-21 authored composition; four V2 collateral source keys reconciled against the pinned deployment registry and fixed-block live adapter capture reviewed 2026-09-29",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "Underlying protocol-position custody, wrapper counterparty exposure, and independent reserve assurance are not established by the public stats endpoint.",

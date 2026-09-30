@@ -47,8 +47,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv11)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
@@ -60,7 +60,7 @@
         "url": "https://erpc.xinfin.network"
       },
       {
-        "label": "Fathom XDC deployment registry",
+        "label": "Fathom XDC deployment registry (CGO collateral pool; accessed 2026-09-30)",
         "url": "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network"
       },
       {
@@ -73,7 +73,7 @@
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "Pool identities, balances, and protocol valuation weights are measured at XDC block 107486464. Weights can change after that block, and psXDC retains Fathom's one-for-one XDC valuation because the protocol has no separate psXDC exchange-rate feed.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposurePct": 0.001,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
@@ -93,8 +93,11 @@
         "reserveIndex": 2,
         "reserveName": "Fathom CGO collateral pool (Comtech Gold)",
         "pct": 0.001,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Comtech Gold collateral is an external tokenized-gold asset, not a tracked stablecoin dependency."
+        "disposition": "insufficient-evidence",
+        "rationale": "Comtech Gold is tracked as cgo-comtech. The reviewed 2026-09-21 fixed-block disclosure establishes a positive CGO pool balance and a rounded 0.001% protocol-valued share, but does not record the collateral token contract needed to reconcile the claim to the tracked CGO deployment. The issuer registry names the CGO adapter rather than its underlying token. Retain the measured slice without asserting an edge until exact token identity is reconciled.",
+        "candidateCoinIds": [
+          "cgo-comtech"
+        ]
       }
     ]
   }

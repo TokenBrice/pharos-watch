@@ -395,6 +395,7 @@ export function buildDependencies(context: AssetBuildContext): V9EffectiveDepend
         economicRole,
         evidenceRefIds: evidenceIds,
         failureDomains: edge.failureDomains,
+        ...(edge.intermediary === undefined ? {} : { intermediary: edge.intermediary }),
       };
     }),
     diagnostics: overlay.diagnostics,
@@ -542,6 +543,10 @@ export function buildReserves(context: AssetBuildContext): {
     const classification = classificationByKey.get(exposureKey);
     if (classification) consumedClassifications.add(exposureKey);
     assertCompatibleReserveClassification(context.asset.assetId, raw, classification);
+    // A keyed zero-balance category still consumes its reviewed identity, but
+    // it is not an economic exposure and cannot satisfy the positive-weight
+    // compiled exposure contract.
+    if (weight === 0) continue;
     const evidenceIds = reviewedStatic
       ? reviewedStaticEvidenceIds
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];

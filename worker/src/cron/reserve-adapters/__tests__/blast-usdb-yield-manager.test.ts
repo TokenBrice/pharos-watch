@@ -28,6 +28,7 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
         pct: 100,
         risk: "low",
         coinId: "dai-makerdao",
+        depType: "mechanism",
       },
     ]);
     expectWarnings(result, []);

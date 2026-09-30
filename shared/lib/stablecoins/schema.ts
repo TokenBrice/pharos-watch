@@ -422,12 +422,37 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = Sta
 
     const linkedRelationshipKeys = new Set(
       (meta.reserves ?? [])
-        .filter((reserve) => reserve.coinId != null)
+        .filter((reserve) => reserve.coinId != null && reserve.pct > 0)
         .map((reserve) => `${reserve.coinId}::${reserve.depType ?? "collateral"}`),
     );
-    const manualDependencies = (meta.dependencies ?? []).filter(
-      (dependency) => !linkedRelationshipKeys.has(`${dependency.id}::${dependency.type ?? "collateral"}`),
+    const reviewedNonDefaultRoleKeys = new Set(
+      (meta.dependencyReview?.relationships ?? [])
+        .filter((relationship) =>
+          relationship.economicRole != null &&
+          relationship.economicRole !== defaultV9DependencyEconomicRole(relationship.type),
+        )
+        .map((relationship) => `${relationship.id}::${relationship.type}`),
     );
+    const manualDependencies = (meta.dependencies ?? []).filter(
+      (dependency) => {
+        const key = `${dependency.id}::${dependency.type ?? "collateral"}`;
+        return !linkedRelationshipKeys.has(key) || reviewedNonDefaultRoleKeys.has(key);
+      },
+    );
+    const linkedReserveIds = new Set(
+      (meta.reserves ?? []).filter((reserve) => reserve.coinId && reserve.pct > 0).map((reserve) => reserve.coinId),
+    );
+    if (linkedReserveIds.size > 0) {
+      for (let index = 0; index < (meta.dependencies ?? []).length; index += 1) {
+        const dependency = meta.dependencies![index]!;
+        if ((dependency.type ?? "collateral") !== "collateral" || linkedReserveIds.has(dependency.id)) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `manual-collateral-not-in-reserves: ${dependency.id} must be represented by a linked reserve identity`,
+          path: ["dependencies", index],
+        });
+      }
+    }
     if (manualDependencies.length > 0 && meta.dependencyReview == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -442,6 +467,18 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = Sta
         const relationship = meta.dependencyReview.relationships[index];
         const key = `${relationship.id}::${relationship.type}`;
         const roleKey = `${key}::${relationship.economicRole ?? defaultV9DependencyEconomicRole(relationship.type)}`;
+        if (
+          relationship.type === "collateral" &&
+          linkedRelationshipKeys.has(key) &&
+          (relationship.economicRole ?? defaultV9DependencyEconomicRole(relationship.type)) ===
+            defaultV9DependencyEconomicRole(relationship.type)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `dependencyReview relationship ${key} is redundant reserve metadata`,
+            path: ["dependencyReview", "relationships", index],
+          });
+        }
         if (!isCanonicalStablecoinId(relationship.id)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,

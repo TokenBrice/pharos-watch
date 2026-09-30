@@ -6,7 +6,7 @@
       "pct": 72.53964533,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "collateral",
+      "depType": "wrapper",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial, Inc.",
       "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
@@ -17,7 +17,15 @@
       "pct": 27.46035467,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "collateral",
+      "depType": "wrapper",
+      "intermediary": {
+        "kind": "bridge",
+        "label": "USDC.e (legacy Plume bridge representation)",
+        "chain": "plume",
+        "contract": "0x78adD880A697070c1e765Ac44D65323a0DcCE913",
+        "verified": true,
+        "sourceUrl": "https://docs.plume.org/plume/developers/contract-addresses"
+      },
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial, Inc. and the legacy Plume USDC.e bridge route",
       "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
@@ -25,16 +33,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv31)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Plume USD documentation",
+        "label": "Plume USD documentation (accessed 2026-09-30)",
         "url": "https://docs.plume.org/plume/tokens/plume-usd"
       },
       {
-        "label": "Plume mainnet contract addresses (accessed 2026-09-21)",
+        "label": "Plume mainnet contract addresses (accessed 2026-09-30)",
         "url": "https://docs.plume.org/plume/developers/contract-addresses"
       },
       {
@@ -50,7 +58,7 @@
     "compositionBasis": "Issuer-documented USDC-only composition reconciled from pUSD totalSupply and BoringVault token balances at timestamp-aligned Ethereum and Plume blocks",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unresolved reserve constituent exposure in the issuer-documented and on-chain-reconciled composition.",
+    "knownUnknownExposure": "The dated reconciled composition maps USDC-only backing through a serial wrapper claim: 72.53964533% native USDC and 27.46035467% legacy Plume USDC.e on the September 21 basis. The legacy slice retains additional bridge risk; verification identifies the representation and its documented USDC lineage, without asserting current escrow solvency. The aggregate live row and synthetic structural wrapper edge cannot express this partial bridge exposure with their single-intermediary field, so their intermediary remains null rather than implying 100% bridged backing. This is a provenance limitation, not unidentified reserve constituents. Current balances are remeasured by the live producer rather than fixed by the dated split.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

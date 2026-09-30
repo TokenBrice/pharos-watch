@@ -4,15 +4,15 @@
   "detailProvider": "coingecko",
   "name": "Mento Colombian Peso",
   "symbol": "COPm",
-  "oneLiner": "COPm is Mento's Colombian peso stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
+  "oneLiner": "COPm is Mento's Colombian peso stablecoin on Celo, issued and retired through the legacy USDm FX Broker pool against the shared Mento Reserve.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "COP",
     "governance": "centralized-dependent"
   },
-  "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-  "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing COPm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the COPm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
-  "mechanismArchetype": "cdp",
+  "collateral": "Shared Mento Reserve: current issuer configuration classifies this currency as reserve-backed, not USDm locked in a borrower-specific CDP.",
+  "pegMechanism": "COPm is issued and retired through Mento V2's oracle-priced USDm/COPm Broker/BiPoolManager pool. USDm-to-COPm swaps burn incoming USDm and mint the FX token; reverse swaps burn the FX token and mint USDm, subject to the configured oracle, spread, trading limits, and breaker checks.",
+  "mechanismArchetype": "fiat-cash",
   "geckoId": "ccop",
   "proofOfReserves": {
     "type": "real-time",
@@ -84,9 +84,6 @@
       "title": "Peg grouped as Other",
       "message": "COP is not yet a first-class Pharos peg-currency enum, so COPm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
     }
-  ],
-  "infrastructures": [
-    "liquity-v2"
   ],
   "launchDate": "2024-10-11"
 }
