@@ -92,6 +92,7 @@ async function main(): Promise<void> {
     try {
       const artifactKeys = sqlString(`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}artifact:*`);
       const markerKey = sqlString(`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}latest`);
+      // SAFETY: both keys are fixed module constants passed through sqlString and the LIMIT is the integer DEPENDENCY_SCENARIOS_RETAINED_ARTIFACT_COUNT constant; no external input reaches the SQL.
       remote("--command", `DELETE FROM cache WHERE key GLOB ${artifactKeys} AND key <> (SELECT value FROM cache WHERE key = ${markerKey}) AND key NOT IN (SELECT key FROM cache WHERE key GLOB ${artifactKeys} ORDER BY updated_at DESC, key DESC LIMIT ${DEPENDENCY_SCENARIOS_RETAINED_ARTIFACT_COUNT})`);
     } catch (error) {
       console.warn(`Dependency scenario artifact pruning failed; publication remains committed: ${error instanceof Error ? error.message : String(error)}`);
