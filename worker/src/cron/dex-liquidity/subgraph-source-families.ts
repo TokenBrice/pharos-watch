@@ -3,7 +3,7 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import { mergeDexPriceObservationMap, type SubgraphPriceObservation } from "./subgraph-helpers";
+import { fetchSubgraphEntities, mergeDexPriceObservationMap, type SubgraphPriceObservation } from "./subgraph-helpers";
 import type {
   DexPriceObs,
   UniswapV4Lookups,
@@ -20,6 +20,8 @@ import {
   UNISWAP_V4_SUBGRAPHS,
   UNIV3_POOL_MIN_TVL_USD,
   buildUniswapV4PoolQuery,
+  buildUniswapV4ExactPoolQuery,
+  SUBGRAPH_PER_CHAIN_TIMEOUT_MS,
   buildUniV3MessariPoolQuery,
   buildUniV3PoolQuery,
 } from "./constants";
@@ -30,6 +32,8 @@ import {
   buildUniswapV4ExecutionCandidateKey,
   buildUniV3ExecutionCandidateKey,
 } from "../measured-execution/inventory";
+import type { UniswapV4ExecutionCandidate } from "../measured-execution/candidate-types";
+import { computeUniswapV4PoolId } from "../measured-execution/uniswap-v4";
 
 type UniV3SubgraphPool = {
   id: string;
@@ -321,9 +325,10 @@ export async function fetchUniV3Data(
 
 export async function fetchUniswapV4Data(
   graphApiKey: string | null,
+  exactPoolIdsByChain: ReadonlyMap<string, readonly string[]>,
   signal?: AbortSignal,
 ): Promise<SubgraphFamilyResult<UniswapV4Lookups>> {
-  return runSubgraphFamily<UniswapV4SubgraphPool, UniswapV4Lookups>({
+  const result = await runSubgraphFamily<UniswapV4SubgraphPool, UniswapV4Lookups>({
     graphApiKey,
     signal,
     subgraphs: UNISWAP_V4_SUBGRAPHS,
@@ -344,67 +349,13 @@ export async function fetchUniswapV4Data(
       extractEntities: (data) =>
         (data as { pools?: UniswapV4SubgraphPool[] } | undefined)?.pools,
       mapEntity: (pool) => {
-        const poolId = pool.id.trim().toLowerCase();
-        const hookAddress = pool.hooks.trim().toLowerCase();
-        const feePips = parseSubgraphInteger(pool.feeTier);
-        const tickSpacing = parseSubgraphInteger(pool.tickSpacing);
-        const activeLiquidity = pool.liquidity.trim();
-        const tvlUsd = Number.parseFloat(pool.totalValueLockedUSD);
-        const token0Decimals = parseSubgraphInteger(pool.token0.decimals);
-        const token1Decimals = parseSubgraphInteger(pool.token1.decimals);
-        const token0Price = Number.parseFloat(pool.token0Price);
-        const token1Price = Number.parseFloat(pool.token1Price);
-        const executionKey = buildUniswapV4ExecutionCandidateKey(
-          chain,
-          [pool.token0.id, pool.token1.id],
-          feePips,
-        );
-        if (
-          executionKey &&
-          /^0x[a-f0-9]{64}$/.test(poolId) &&
-          canonicalEvmAddress(hookAddress) !== null &&
-          Number.isInteger(tickSpacing) &&
-          tickSpacing > 0 &&
-          tickSpacing <= 32_767 &&
-          /^[0-9]+$/.test(activeLiquidity) &&
-          Number.isFinite(tvlUsd) &&
-          tvlUsd > 0 &&
-          Number.isInteger(token0Decimals) &&
-          token0Decimals >= 0 &&
-          token0Decimals <= 255 &&
-          Number.isInteger(token1Decimals) &&
-          token1Decimals >= 0 &&
-          token1Decimals <= 255 &&
-          Number.isFinite(token0Price) &&
-          token0Price > 0 &&
-          Number.isFinite(token1Price) &&
-          token1Price > 0
-        ) {
-          const candidates =
-            lookups.uniswapV4ExecutionCandidates.get(executionKey) ?? [];
-          candidates.push({
-            chain,
-            poolId: poolId as `0x${string}`,
-            feePips,
-            tickSpacing,
-            hookAddress: hookAddress as `0x${string}`,
-            activeLiquidity,
-            tvlUsd,
-            token0Price,
-            token1Price,
-            tokens: [
-              {
-                address: pool.token0.id,
-                symbol: pool.token0.symbol,
-                decimals: token0Decimals,
-              },
-              {
-                address: pool.token1.id,
-                symbol: pool.token1.symbol,
-                decimals: token1Decimals,
-              },
-            ],
-          });
+        const candidate = normalizeExactUniswapV4Pool(chain, pool);
+        if (candidate && candidate.tvlUsd > 0) {
+          const executionKey = buildUniswapV4ExecutionCandidateKey(
+            chain, candidate.tokens.map((token) => token.address), candidate.feePips,
+          )!;
+          const candidates = lookups.uniswapV4ExecutionCandidates.get(executionKey) ?? [];
+          candidates.push(candidate);
           lookups.uniswapV4ExecutionCandidates.set(executionKey, candidates);
         }
         // V4 contributes execution identity only; retained-pool pricing remains
@@ -418,4 +369,117 @@ export async function fetchUniswapV4Data(
     buildFinalSummary: (lookups) =>
       `[dex-liquidity] Collected ${lookups.uniswapV4ExecutionCandidates.size} Uniswap V4 execution candidate keys`,
   });
+  if (!graphApiKey) return result;
+
+  // Exact requests start only after the broad family has drained. Every batch
+  // uses the existing bounded, body-consuming transport before the next opens.
+  for (const [chain, subgraphId] of Object.entries(UNISWAP_V4_SUBGRAPHS)) {
+    const poolIds = [...new Set(exactPoolIdsByChain.get(chain) ?? [])];
+    if (poolIds.length === 0) continue;
+    const requested = new Set(poolIds);
+    // Current exact evidence is authoritative: missing/invalid rows cannot be
+    // rescued by a broad-scan copy of the same physical identity.
+    for (const [key, candidates] of result.uniswapV4ExecutionCandidates) {
+      const remaining = candidates.filter((candidate) =>
+        candidate.chain !== chain || !requested.has(candidate.poolId));
+      if (remaining.length) result.uniswapV4ExecutionCandidates.set(key, remaining);
+      else result.uniswapV4ExecutionCandidates.delete(key);
+    }
+    const seen = new Map<string, UniswapV4ExecutionCandidate>();
+    const conflicted = new Set<string>();
+    const timeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
+    const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    for (let offset = 0; offset < poolIds.length; offset += 100) {
+      const batch = poolIds.slice(offset, offset + 100);
+      const batchIds = new Set(batch);
+      const fetched = await fetchSubgraphEntities<UniswapV4SubgraphPool>({
+        subgraphUrl: `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`,
+        sourceLabel: "Uniswap V4 exact subgraph",
+        chain,
+        signal: combinedSignal,
+        buildQuery: () => buildUniswapV4ExactPoolQuery(batch),
+        extractEntities: (data) =>
+          (data as { pools?: UniswapV4SubgraphPool[] } | undefined)?.pools,
+        mapEntity: (pool) => {
+          const id = typeof pool?.id === "string" ? pool.id.trim().toLowerCase() : "";
+          if (!batchIds.has(id) || conflicted.has(id)) return [];
+          const candidate = normalizeExactUniswapV4Pool(chain, pool);
+          const prior = seen.get(id);
+          if (!candidate || computeUniswapV4PoolId({
+            currency0: candidate.tokens[0].address as `0x${string}`,
+            currency1: candidate.tokens[1].address as `0x${string}`,
+            feePips: candidate.feePips, tickSpacing: candidate.tickSpacing,
+            hookAddress: candidate.hookAddress,
+          }) !== id || (prior && JSON.stringify(prior) !== JSON.stringify(candidate))) {
+            conflicted.add(id);
+            seen.delete(id);
+          } else {
+            seen.set(id, candidate);
+          }
+          return [];
+        },
+      }).catch((error: unknown) => {
+        if (signal?.aborted) throw error;
+        return { failed: true, failureReason: "http" as const };
+      });
+      if (fetched.failed) {
+        if (!result.failedChains.includes(chain)) result.failedChains.push(chain);
+        result.failedChainReasons[chain] = fetched.failureReason ?? "http";
+        break;
+      }
+    }
+    for (const candidate of seen.values()) {
+      const key = buildUniswapV4ExecutionCandidateKey(
+        chain, candidate.tokens.map((token) => token.address), candidate.feePips,
+      )!;
+      const candidates = result.uniswapV4ExecutionCandidates.get(key) ?? [];
+      candidates.push(candidate);
+      result.uniswapV4ExecutionCandidates.set(key, candidates);
+    }
+  }
+  return result;
+}
+
+function isReadableUniswapV4Pool(pool: UniswapV4SubgraphPool): boolean {
+  return pool != null &&
+    [pool.id, pool.hooks, pool.feeTier, pool.tickSpacing, pool.liquidity,
+      pool.totalValueLockedUSD, pool.token0Price, pool.token1Price,
+      pool.token0?.id, pool.token0?.symbol, pool.token0?.decimals,
+      pool.token1?.id, pool.token1?.symbol, pool.token1?.decimals]
+      .every((field) => typeof field === "string" && field.trim().length > 0);
+}
+
+function normalizeExactUniswapV4Pool(
+  chain: string,
+  pool: UniswapV4SubgraphPool,
+): UniswapV4ExecutionCandidate | null {
+  if (!isReadableUniswapV4Pool(pool)) return null;
+  const poolId = pool.id.trim().toLowerCase();
+  const hookAddress = canonicalEvmAddress(pool.hooks);
+  const feePips = parseSubgraphInteger(pool.feeTier);
+  const tickSpacing = parseSubgraphInteger(pool.tickSpacing);
+  const tvlUsd = Number(pool.totalValueLockedUSD);
+  const token0Price = Number(pool.token0Price);
+  const token1Price = Number(pool.token1Price);
+  const tokens = [pool.token0, pool.token1].map((token) => ({
+    address: canonicalEvmAddress(token.id),
+    symbol: token.symbol,
+    decimals: parseSubgraphInteger(token.decimals),
+  }));
+  if (
+    !/^0x[a-f0-9]{64}$/.test(poolId) || !hookAddress ||
+    !buildUniswapV4ExecutionCandidateKey(chain, tokens.map((token) => token.address ?? ""), feePips) ||
+    !Number.isInteger(tickSpacing) || tickSpacing <= 0 || tickSpacing > 32_767 ||
+    !/^[0-9]+$/.test(pool.liquidity.trim()) || !Number.isFinite(tvlUsd) ||
+    !Number.isFinite(token0Price) || token0Price <= 0 ||
+    !Number.isFinite(token1Price) || token1Price <= 0 ||
+    tokens.some((token) => !token.address || !Number.isInteger(token.decimals) ||
+      token.decimals < 0 || token.decimals > 255)
+  ) return null;
+  return {
+    chain, poolId: poolId as `0x${string}`, hookAddress: hookAddress as `0x${string}`,
+    feePips, tickSpacing, activeLiquidity: pool.liquidity.trim(), tvlUsd,
+    token0Price, token1Price,
+    tokens: tokens as [{ address: string; symbol: string; decimals: number }, { address: string; symbol: string; decimals: number }],
+  };
 }

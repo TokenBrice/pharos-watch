@@ -420,6 +420,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
   symbolToChainScopedIds?: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
   retainedTvlUsd: number;
+  identityMatch: "exact-pool-id" | "token-fee";
   capturedAt: number;
 }): DexMeasuredExecutionTarget | null {
   const chain = canonicalExitRouteChain(input.candidate.chain);
@@ -441,11 +442,13 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     !/^[0-9]+$/.test(input.candidate.activeLiquidity) ||
     BigInt(input.candidate.activeLiquidity) <= 0n ||
     !Number.isFinite(input.candidate.tvlUsd) ||
-    input.candidate.tvlUsd <= 0 ||
     !Number.isFinite(input.retainedTvlUsd) ||
     input.retainedTvlUsd <= 0 ||
-    Math.abs(input.candidate.tvlUsd / input.retainedTvlUsd - 1) >
-      UNISWAP_V4_TARGET_MAX_TVL_RELATIVE_DRIFT
+    (input.identityMatch === "token-fee" && (
+      input.candidate.tvlUsd <= 0 ||
+      Math.abs(input.candidate.tvlUsd / input.retainedTvlUsd - 1) >
+        UNISWAP_V4_TARGET_MAX_TVL_RELATIVE_DRIFT
+    ))
   ) {
     return null;
   }

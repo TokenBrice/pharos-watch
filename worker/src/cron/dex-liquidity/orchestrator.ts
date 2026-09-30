@@ -19,7 +19,7 @@ import {
   STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
   buildStagedPoolWriteback,
 } from "./staged-pool-writeback";
-import { buildSymbolLookups, classifyPoolType, initLiquidityFallbackCounters } from "./pool-helpers";
+import { buildSymbolLookups, classifyPoolType, initLiquidityFallbackCounters, normalizeProtocol } from "./pool-helpers";
 import { buildChainAddressKey } from "./token-resolution";
 import {
   fetchDataSources,
@@ -73,6 +73,7 @@ import {
   createKnownPoolIdentityIndex,
   partitionByKnownIdentity,
   registerKnownPoolIdentity,
+  type PoolIdentity,
 } from "./pool-identity";
 import { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
 import {
@@ -928,10 +929,34 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     metadata: { providerFamilies: ["uniswap-v3", "uniswap-v4"] },
     counts: { subgraphFamilies: 2 },
   });
+  const uniswapV4ExactPoolIdsByChain = new Map<string, string[]>();
+  const retainedV4Keys = new Set<string>();
+  const retainV4Identity = (identity: PoolIdentity) => {
+    const key = identity.exactPoolKey;
+    if (!key || retainedV4Keys.has(key)) return;
+    const match = key.match(/^([^:]+):(0x[a-f0-9]{64})$/);
+    if (!match) return;
+    retainedV4Keys.add(key);
+    const ids = uniswapV4ExactPoolIdsByChain.get(match[1]!) ?? [];
+    ids.push(match[2]!);
+    uniswapV4ExactPoolIdsByChain.set(match[1]!, ids);
+  };
+  for (const pool of dataSources.pools) {
+    if (normalizeProtocol(pool.project) !== "uniswap-v4") continue;
+    retainV4Identity(buildPoolIdentity({
+      chain: pool.chain, protocol: pool.project, poolAddressOrId: pool.pool,
+      tokenAddresses: pool.underlyingTokens ?? [],
+    }));
+  }
+  for (const pool of compactedDirectApi.pools) {
+    if (normalizeProtocol(pool.source) !== "uniswap-v4") continue;
+    retainV4Identity(buildDirectApiPoolIdentity(pool, lookups.chainAddressToId));
+  }
   const subgraphEnrichment = await fetchSubgraphEnrichmentPhase({
     graphApiKey: ctx.graphApiKey,
     symbolToChainScopedIds: lookups.symbolToChainScopedIds,
     chainAddressToId: lookups.chainAddressToId,
+    uniswapV4ExactPoolIdsByChain,
     signal: ctx.signal,
     validationReferences,
   });

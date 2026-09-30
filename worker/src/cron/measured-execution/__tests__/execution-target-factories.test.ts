@@ -72,6 +72,72 @@ function factoryInput(
 }
 
 describe("registered concentrated execution-target factories", () => {
+  it.each([-222031.942086, 0, 2514.771234, 50_000_000])(
+    "admits the real thUSD exact PoolId independently of indexed TVL %s",
+    (tvlUsd) => {
+      // Ethereum Initialize block 24974199; Graph block 26088668, 2026-09-30.
+      // https://etherscan.io/tx/0xdbfd03418344a5db0e0910874e6b15da64bd8edff032253e20de67e709918d7c
+      const thusd = "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3";
+      const poolId = "0xb30bf32e26a35328286df33c17dd01e1051b5e3a0ec55a4a211e6957594b5a0d";
+      const input = factoryInput("uniswap-v4", poolId);
+      input.stablecoinId = "thusd-theo";
+      input.identity.pool.underlyingTokens = [TOKEN0, thusd];
+      input.enrichment.rawContribTvl = 5_561_855;
+      input.context.chainAddressToId.set(`ethereum:${thusd}`, "thusd-theo");
+      input.context.stablecoinPriceById!.set("thusd-theo", 1);
+      const key = buildUniswapV4ExecutionCandidateKey("ethereum", [TOKEN0, thusd], 100)!;
+      input.context.uniswapV4ExecutionCandidates = new Map([[key, [{
+        chain: "ethereum", poolId, feePips: 100, tickSpacing: 1,
+        hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS, activeLiquidity: "1215742317323",
+        tvlUsd, token0Price: 0.9988856322499521, token1Price: 1.0011156109509132,
+        tokens: [{ address: TOKEN0, symbol: "USDC", decimals: 6 },
+          { address: thusd, symbol: "thUSD", decimals: 6 }],
+      }]]]);
+      expect(buildUniswapV4RegisteredExecutionTarget(input)?.measuredExecutionTarget)
+        .toMatchObject({ poolId: `ethereum:${poolId}`, tokenIn: { trackedAssetId: "thusd-theo" } });
+      input.identity.pool.underlyingTokens = [TOKEN0, TOKEN1];
+      expect(buildUniswapV4RegisteredExecutionTarget(input)?.executionCapabilityGate?.reason)
+        .toBe("target-unresolved");
+      input.identity.pool.underlyingTokens = [TOKEN0, thusd];
+      input.identity.pool.pool = V4_POOL;
+      expect(buildUniswapV4RegisteredExecutionTarget(input)?.executionCapabilityGate?.reason)
+        .toBe("target-unresolved");
+      input.identity.pool.pool = "unresolved-uuid";
+      expect(buildUniswapV4RegisteredExecutionTarget(input)?.executionCapabilityGate?.reason)
+        .toBe("target-unresolved");
+    },
+  );
+
+  it("keeps the two-percent affinity boundary and collision guard on token-fee fallback", () => {
+    const input = factoryInput("uniswap-v4", "unresolved-uuid");
+    const key = buildUniswapV4ExecutionCandidateKey("ethereum", [TOKEN0, TOKEN1], 100)!;
+    const candidate = {
+      chain: "ethereum", poolId: V4_POOL, feePips: 100, tickSpacing: 1,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS, activeLiquidity: "1000000",
+      tvlUsd: 1_019_999, token0Price: 1, token1Price: 1,
+      tokens: [{ address: TOKEN0, symbol: "USDC", decimals: 6 },
+        { address: TOKEN1, symbol: "USDT", decimals: 6 }],
+    } as const;
+    input.context.uniswapV4ExecutionCandidates = new Map([
+      [key, [{ ...candidate, tokens: [...candidate.tokens] }]],
+    ]);
+    expect(buildUniswapV4RegisteredExecutionTarget(input)?.measuredExecutionTarget?.poolId)
+      .toBe(`ethereum:${V4_POOL}`);
+    input.context.uniswapV4ExecutionCandidates = new Map([
+      [key, [{ ...candidate, tvlUsd: 1_020_001, tokens: [...candidate.tokens] }]],
+    ]);
+    expect(buildUniswapV4RegisteredExecutionTarget(input)?.executionCapabilityGate?.reason)
+      .toBe("target-unresolved");
+    input.context.uniswapV4ExecutionCandidates = new Map([
+      [key, [
+        { ...candidate, tokens: [...candidate.tokens] },
+        { ...candidate, tokens: [...candidate.tokens],
+          hookAddress: "0x0000000000000000000000000000000000000001", activeLiquidity: "0" },
+      ]],
+    ]);
+    expect(buildUniswapV4RegisteredExecutionTarget(input)?.executionCapabilityGate?.reason)
+      .toBe("target-unresolved");
+  });
   it("joins an exact retained V3 pool when the token/fee key has siblings", () => {
     const input = factoryInput("uniswap-v3", `ethereum:${V3_POOL}`);
     const key = buildUniV3ExecutionCandidateKey(
