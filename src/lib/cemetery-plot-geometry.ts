@@ -301,23 +301,19 @@ export function cylinder(
 }
 
 /**
- * The single planar diagonal break of a snapped column, as a z offset of the top rim at angle θ: the rim drops
- * `drop` plus up to `amp` along direction `phase`, with one small spall of depth `spall` where
- * cos(θ − phase) ∈ (band[0], band[1]).
+ * The single clean planar break of a snapped column, as a z offset of the top rim at angle θ: the rim drops `drop`
+ * plus up to `amp` toward direction `phase` (the low side), and stays whole opposite it.
  */
-export function columnFractureTop(opts: {
-  phase: number;
-  amp: number;
-  spall: number;
-  drop?: number;
-  band?: readonly [number, number];
-}): (theta: number) => number {
-  const { phase, amp, spall, drop = 0, band = [0.55, 0.85] } = opts;
-  return (th) => {
-    const c = Math.cos(th - phase);
-    return -drop - amp * (0.5 + 0.5 * c) - (c > band[0] && c < band[1] ? spall : 0);
-  };
+export function columnFractureTop(opts: { phase: number; amp: number; drop?: number }): (theta: number) => number {
+  const { phase, amp, drop = 0 } = opts;
+  return (th) => -drop - amp * (0.5 + 0.5 * Math.cos(th - phase));
 }
+
+/**
+ * Direction (θ in the i–j plane) of a snapped column's low side: toward the east-north-east light. The break then
+ * falls left → right on screen and its cross-section (`brk`) faces the light, the lightest face of the column.
+ */
+export const PLOT_FRACTURE_PHASE = Math.atan2(-0.383, 0.924);
 
 /** Octagonal prism: the three camera-facing faces then the cap. */
 export function octPrismMarks(
@@ -654,10 +650,10 @@ export function graveGeometry(p: PlotProjection, g: PlotGraveShapeInput): PlotGr
     hi = bw / 2;
     hj = bw / 2;
     stone.push(...boxMarks(p, ic - hi, jc - hj, z0, bw, bw, bh, "st"));
-    // one decisive diagonal break with a single small spall, seeded direction
-    const topFn = columnFractureTop({ phase: rnd() * 6.28, amp: 0.3 * sc, spall: 0.06 * sc });
+    // one clean planar break toward the light; the seeded jitter (±0.25 rad) keeps the columns from reading as stamped
+    const topFn = columnFractureTop({ phase: PLOT_FRACTURE_PHASE + (rnd() - 0.5) * 0.5, amp: 0.3 * sc });
     stone.push(...cylinder(p, ic, jc, r * 1.22, z0 + bh, z0 + bh + 0.05, "col", null, "st-t").marks);
-    const cyl = cylinder(p, ic, jc, r, z0 + bh + 0.05, z0 + h + 0.06, "col", topFn, "st-d");
+    const cyl = cylinder(p, ic, jc, r, z0 + bh + 0.05, z0 + h + 0.06, "col", topFn, "brk");
     stone.push(...cyl.marks);
     if (open) stone.push(worldPolygon(p, "hatch", [[ic + hi, jc - hj, z0], [ic + hi, jc + hj, z0], [ic + hi, jc + hj, z0 + bh], [ic + hi, jc - hj, z0 + bh]]));
     faceI = ic + hi;
@@ -772,8 +768,8 @@ function colossusGeometry(p: PlotProjection, g: PlotGraveShapeInput): PlotGraveG
     s.push(...weatheringMarks(p, g.weather, ic + 0.64, jc, zp + 0.12, 1.1, 1.1, rnd));
     const z1 = zp + 1.42;
     const top = 6.9;
-    const topFn = columnFractureTop({ phase: 0.9, drop: 0.25, amp: 0.85, spall: 0.14, band: [0.5, 0.8] });
-    const cyl = cylinder(p, ic, jc, 0.48, z1, top, "col", topFn, "st-d");
+    const topFn = columnFractureTop({ phase: PLOT_FRACTURE_PHASE, drop: 0.25, amp: 0.85 });
+    const cyl = cylinder(p, ic, jc, 0.48, z1, top, "col", topFn, "brk");
     s.push(...cyl.marks);
     let fl = "";
     for (let q = 0; q < 8; q++) {
@@ -796,9 +792,9 @@ function colossusGeometry(p: PlotProjection, g: PlotGraveShapeInput): PlotGraveG
     for (let q = 0; q < 22; q++) {
       const th = (q / 22) * 2 * Math.PI;
       capA.push(project(p, di + dr * Math.cos(th), jc - 0.1, 0.52 + dr + dr * Math.sin(th)));
-      capB.push(project(p, di + dr * Math.cos(th), jc + 0.95 + (q % 2 ? 0.04 : -0.03), 0.52 + dr + dr * Math.sin(th)));
+      capB.push(project(p, di + dr * Math.cos(th), jc + 0.95, 0.52 + dr + dr * Math.sin(th)));
     }
-    s.push(screenPolygon("st-t e", hull(capA.concat(capB))), screenPolygon("st-d e", capB));
+    s.push(screenPolygon("st-t e", hull(capA.concat(capB))), screenPolygon("brk e", capB));
     pts = pts.concat(capA, capB);
     ground.push(shadowMark(p, [ic - 1.3, ic + 1.3, jc - 1.3, jc + 1.3], 0.52), shadowMark(p, [ic - 0.5, ic + 0.5, jc - 0.5, jc + 0.5], H * 0.92));
   } else {

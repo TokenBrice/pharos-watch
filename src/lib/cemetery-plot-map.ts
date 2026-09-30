@@ -411,7 +411,11 @@ export interface PlotSectionCamera {
   zoom: number;
   /** Plain-stone face at this zoom (px). */
   facePx: number;
-  /** World-group transform: `translate(tx, ty) scale(zoom)` in SVG units. */
+  /**
+   * World-group offset for `transform="translate(tx ty) scale(zoom)"`, i.e. about the user-space origin (0, 0)
+   * (CSS equivalent: `transform-box: view-box; transform-origin: 0 0`). A user point p lands at frame px
+   * `(zoom·p + translate − viewBox origin) · frameWidth / viewBox width`; the box centre lands mid-band.
+   */
   translate: PlotPoint;
   total: number;
   shown: number;
@@ -1157,18 +1161,21 @@ export function fitSectionCamera(
       span = [cand.a, cand.b];
     }
   }
-  const s = best.z;
+  const s = Math.round(best.z * 1000) / 1000;
   const cx = (best.x0 + best.x1) / 2;
   const cy = (best.y0 + best.y1) / 2;
+  // Target: the box centre at the middle of the visible band, below the zoom toolbar (frame px → user units).
   const tcx = viewport.frameWidth / 2 / scale;
   const tcy = (L.zoomBar + availH / 2 + L.zoomCentreOffset) / scale;
   const shown = best.ms.slice().sort((a, b) => a.laneIndex - b.laneIndex);
   return {
     cause,
     box: roundBox(best),
-    zoom: Math.round(s * 1000) / 1000,
+    zoom: s,
     facePx: round1(s * scale * faceUnits),
-    translate: [round1(tcx - s * (cx - vbX)), round1(tcy - s * (cy - vbY))],
+    // The transform scales about user (0, 0), not about the viewBox origin: the prototype's
+    // `tcx − s·(cx − vbX)` was off by (s − 1)·(vbX, vbY) and framed the lighthouse for Regulatory at 1920×1080.
+    translate: [round1(vbX + tcx - s * cx), round1(vbY + tcy - s * cy)],
     total: list.length,
     shown: shown.length,
     span,

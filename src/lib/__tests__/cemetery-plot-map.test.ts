@@ -382,6 +382,47 @@ describe("section cameras", () => {
       expect(narrow.ids.every((id) => desktop.graves.find((g) => g.id === id)!.cause === cause)).toBe(true);
     }
   });
+
+  // Real app chrome: the frame follows the content box (1024 → 984 px, 1440 → 1368, 1920 → 1848).
+  const viewports = [
+    { name: "1024×768", frameWidth: 984, viewportHeight: 768 },
+    { name: "1440×800", frameWidth: 1368, viewportHeight: 800 },
+    { name: "1920×1080", frameWidth: 1848, viewportHeight: 1080 },
+  ];
+  for (const viewport of viewports) {
+    it(`lands every shown grave inside the visible band and centres on the section, never the lighthouse (${viewport.name})`, () => {
+      const [vbX, vbY, vbW, vbH] = desktop.viewBox;
+      const scale = viewport.frameWidth / vbW;
+      const bandTop = PLOT_LAYOUT.zoomBar;
+      const bandBottom = Math.min(vbH * scale, viewport.viewportHeight - PLOT_LAYOUT.chromeTop);
+      const lighthouse = desktop.obstacles.find((o) => o.key === "lighthouse")!;
+      for (const cause of CAUSE_ORDER) {
+        const camera = fitSectionCamera(desktop, cause, viewport)!;
+        // `translate(tx ty) scale(zoom)` about user (0, 0), then the viewBox maps user units to frame px.
+        const toFrame = (x: number, y: number) => [(camera.zoom * x + camera.translate[0] - vbX) * scale, (camera.zoom * y + camera.translate[1] - vbY) * scale];
+        const toUser = (px: number, py: number) => [(px / scale + vbX - camera.translate[0]) / camera.zoom, (py / scale + vbY - camera.translate[1]) / camera.zoom];
+
+        const section = desktop.graves.filter((g) => g.cause === cause);
+        // Every grave, unless the 28 px floor forces the approved partial view (then its flagged run of years).
+        if (viewport.frameWidth >= PLOT_LAYOUT.reference.frameWidth && cause !== "algorithmic-failure") expect(camera.partial, cause).toBe(false);
+        const shown = camera.partial ? section.filter((g) => camera.ids.includes(g.id)) : section;
+        expect(shown).toHaveLength(camera.shown);
+        for (const g of shown) {
+          const [x0, y0] = toFrame(g.screen.box.x0, g.screen.box.y0);
+          const [x1, y1] = toFrame(g.screen.box.x1, g.screen.box.y1);
+          expect(x0, `${cause} ${g.id} left`).toBeGreaterThanOrEqual(-1);
+          expect(x1, `${cause} ${g.id} right`).toBeLessThanOrEqual(viewport.frameWidth + 1);
+          expect(y0, `${cause} ${g.id} top`).toBeGreaterThanOrEqual(bandTop - 1);
+          expect(y1, `${cause} ${g.id} bottom`).toBeLessThanOrEqual(bandBottom + 1);
+        }
+
+        // The middle of the visible band shows the framed graves, not the lighthouse or the sea behind the wall.
+        const [mx, my] = toUser(viewport.frameWidth / 2, (bandTop + bandBottom) / 2);
+        expect(within({ x0: mx, y0: my, x1: mx, y1: my }, camera.box), `${cause} centre`).toBe(true);
+        expect(within({ x0: mx, y0: my, x1: mx, y1: my }, lighthouse), `${cause} centre on the lighthouse`).toBe(false);
+      }
+    });
+  }
 });
 
 describe("validatePlotMapCapacity", () => {

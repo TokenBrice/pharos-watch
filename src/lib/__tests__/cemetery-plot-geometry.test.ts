@@ -85,34 +85,23 @@ describe("hull and bbox", () => {
 });
 
 describe("columnFractureTop", () => {
-  it("cuts the column with one planar diagonal break, deepened only by a small spall near the break", () => {
+  it("cuts the column with one planar break, lowest toward its phase and whole opposite it", () => {
     const phase = seededStream(fnv1a("any-id"))() * 6.28;
-    const top = columnFractureTop({ phase, amp: 0.3, spall: 0.06 });
-    const n = 720;
-    const thetas = Array.from({ length: n }, (_, k) => (k / n) * 2 * Math.PI);
-    const offsets = thetas.map(top);
-    for (const z of offsets) {
-      expect(z).toBeLessThanOrEqual(0);
-      expect(z).toBeGreaterThanOrEqual(-0.36);
+    const top = columnFractureTop({ phase, amp: 0.3 });
+    const thetas = Array.from({ length: 720 }, (_, k) => (k / 720) * 2 * Math.PI);
+    for (const th of thetas) {
+      expect(top(th)).toBeLessThanOrEqual(0);
+      expect(top(th)).toBeGreaterThanOrEqual(top(phase));
     }
-    // Outside the spall the rim lies on one tilted plane through the axis: z = −0.15 − 0.15·cos(θ − phase).
-    const plane = (th: number) => -0.15 - 0.15 * Math.cos(th - phase);
-    const spalled = thetas.filter((th, k) => Math.abs(offsets[k] - plane(th)) > 1e-12);
-    expect(spalled.length).toBeGreaterThan(0);
-    expect(spalled.length).toBeLessThan(n / 4);
-    for (const th of spalled) {
-      expect(Math.cos(th - phase)).toBeGreaterThan(0.5); // only on the low side, near the break
-      expect(top(th)).toBeCloseTo(plane(th) - 0.06, 12);
-    }
-    // The rim stays whole opposite the break.
+    expect(top(phase)).toBeCloseTo(-0.3, 12);
     expect(top(phase + Math.PI)).toBeCloseTo(0, 12);
   });
 
   it("lowers the cylinder's cap along the fracture, never raises it", () => {
     const flat = cylinder(dimetric, 0, 0, 0.2, 0, 1, "col");
-    const broken = cylinder(dimetric, 0, 0, 0.2, 0, 1, "col", columnFractureTop({ phase: 1, amp: 0.3, spall: 0.06 }), "st-d");
+    const broken = cylinder(dimetric, 0, 0, 0.2, 0, 1, "col", columnFractureTop({ phase: 1, amp: 0.3 }), "brk");
     expect(flat.body).toHaveLength(42);
-    expect(classes(broken.marks)).toEqual(["col e", "st-d e"]);
+    expect(classes(broken.marks)).toEqual(["col e", "brk e"]);
     const capYs = (c: typeof flat) => {
       const cap = c.marks[1];
       return cap.kind === "polygon" ? cap.points.map((p) => p[1]) : [];
@@ -122,6 +111,25 @@ describe("columnFractureTop", () => {
     expect(cut).toHaveLength(intact.length);
     cut.forEach((y, k) => expect(y).toBeGreaterThanOrEqual(intact[k]));
     expect(cut.some((y, k) => y > intact[k])).toBe(true);
+  });
+
+  it("snaps every column toward the light: a visible cross-section whose break falls left to right", () => {
+    const signedArea = (pts: PlotPoint[]) => pts.reduce((s, [x, y], k) => s + x * pts[(k + 1) % pts.length][1] - pts[(k + 1) % pts.length][0] * y, 0);
+    const flatCap = cylinder(dimetric, 0, 0, 0.2, 0, 1, "col").marks[1];
+    const facing = flatCap.kind === "polygon" ? Math.sign(signedArea(flatCap.points)) : 0;
+    const lot3 = { lot: 3 as const, steps: 4 as const, cell: { i0: 0, i1: 3.3, j0: 0, j1: 2.76 }, anchor: { i: 1.5, j: 1.38 } };
+    const columns = [
+      ...Array.from({ length: 40 }, (_, k) => stone({ shape: "broken-column", seed: fnv1a(`column-${k}`) })),
+      stone({ ...lot3, shape: plotShapeOf("broken-column", 3) }),
+    ];
+    for (const g of columns) {
+      const cap = graveGeometry(dimetric, g).body.find((m) => m.kind === "polygon" && m.cls === "brk e");
+      if (cap?.kind !== "polygon") throw new Error("broken column without a cross-section");
+      expect(Math.sign(signedArea(cap.points))).toBe(facing); // front-facing: never a back-facing cap over the shaft
+      const high = cap.points.reduce((a, b) => (b[1] < a[1] ? b : a));
+      const low = cap.points.reduce((a, b) => (b[1] > a[1] ? b : a));
+      expect(high[0]).toBeLessThan(low[0]); // high side west (left), low side toward the east-north-east light
+    }
   });
 });
 
@@ -167,7 +175,7 @@ describe("graveGeometry", () => {
     const mausoleum = graveGeometry(dimetric, stone({ ...lot3, shape: plotShapeOf("sealed-tablet", 3) }));
     expect(classes(mausoleum.body)).not.toContain("crack");
     expect(classes(mausoleum.body)).toContain("door e");
-    expect(classes(graveGeometry(dimetric, stone({ shape: "broken-column" })).body)).toContain("st-d e");
+    expect(classes(graveGeometry(dimetric, stone({ shape: "broken-column" })).body)).toContain("brk e");
   });
 
   it("makes the colossal column the tallest element: above the lighthouse finial and the mausoleum", () => {
