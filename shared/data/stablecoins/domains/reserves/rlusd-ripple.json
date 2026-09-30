@@ -4,7 +4,7 @@
     {
       "sourceKey": "rlusd-independent-assurance:rlusd:treasury-bills",
       "name": "U.S. Treasury bills",
-      "pct": 68.429296,
+      "pct": 63.649687,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -19,7 +19,7 @@
     {
       "sourceKey": "rlusd-independent-assurance:rlusd:government-mmf",
       "name": "Government money-market funds",
-      "pct": 16.39153,
+      "pct": 19.115512,
       "risk": "very-low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "U.S. government money-market funds",
@@ -33,7 +33,7 @@
     {
       "sourceKey": "rlusd-independent-assurance:rlusd:cash",
       "name": "Cash and deposit accounts",
-      "pct": 15.179174,
+      "pct": 17.234801,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "U.S. regulated financial institutions",
@@ -46,22 +46,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
-    "reviewer": "Independent-assurance migration review 2026-09-14",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte RLUSD Reserves Report - July 2026",
-        "url": "https://cdn.sanity.io/files/ior4a5y3/production/42b2ca149329bbf0e34d5d687d30cbb750eea6b8.pdf/RLUSD_Attestation_Report_-_July_26.docx%20(Final).pdf"
+        "label": "Deloitte RLUSD Reserves Report - August 2026",
+        "url": "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf"
       },
       {
         "label": "Ripple RLUSD transparency",
         "url": "https://ripple.com/products/stablecoin/transparency/"
       }
     ],
-    "rationale": "Deloitte’s unmodified AICPA examination dated August 27, 2026 covers management’s July 31, 2026 5:00pm Eastern Time assertion. The rendered page 5 table reports $1,575,160,913 of reserve market value against 1,463,694,758 outstanding RLUSD across all seven NYDFS-approved networks: Treasury bills $1,077,871,526, government money-market funds $258,192,967, and cash $239,096,420. The three asset rows sum exactly to the reported total, with $111,466,155 excess reserves. Stable row keys match the hash-bound independent-PDF producer. The report confirms Treasury bills acquired within three months of maturity; depository and money-market-fund identities remain undisclosed.",
-    "compositionBasis": "Deloitte examination of the RLUSD Reserve Report as of July 31, 2026 at 5:00pm Eastern Time",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Deloitte's unmodified AICPA examination signed September 29, 2026 covers August 17 and August 31 at 5:00pm Eastern Time. The rendered page 5 month-end column reports Treasury bills $1,557,070,479, government money-market funds $467,625,232 and cash deposits $421,617,153, summing exactly to $2,446,312,864 against 2,325,969,308 outstanding RLUSD. The August 31 column alone supplies this composition; the August 17 column is not blended. Stable row keys match the hash-bound producer. Depository and fund identities remain undisclosed.",
+    "compositionBasis": "Deloitte examination of the RLUSD Reserve Report as of August 31, 2026 at 5:00pm Eastern Time",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "No material asset-class exposure is unclassified; the public report does not identify the depository institutions, money market funds, or custodians.",
     "knownUnknownExposurePct": 0

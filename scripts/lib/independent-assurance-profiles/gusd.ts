@@ -33,6 +33,7 @@ export const PROFILE: CompilerProfile = {
   adjustments: [
     {
       code: "net-cash-receivable",
+      alreadyNettedIntoAssets: true,
       label: "Net cash receivable (payable) due to timing and settlement differences",
       treatment: "Deducted from gross cash deposits to arrive at the reported Total Reserve",
       pattern: /Net cash receivable \(payable\) due to timing\s*\n\s*and settlement differences\s*\d*\s+\([0-9][0-9,]*\.[0-9]+\)\s+(\([0-9][0-9,]*\.[0-9]+\))/,

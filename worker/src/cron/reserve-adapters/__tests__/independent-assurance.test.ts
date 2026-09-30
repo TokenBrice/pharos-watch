@@ -168,15 +168,15 @@ const FIDD_AUGUST_VIEWER_HTML = FIDD_VIEWER_HTML.replaceAll("July26", "August26"
 function assuranceFenceCases() {
   const ausd = getIndependentAssuranceManifest("AUSD");
   const agoraReviewed =
-    `https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com/agora.docs.buildwithfern.com/${ausd.reportSha256.toLowerCase()}/docs/assets/2026%20Jul%20-%20Agora%20Dollar%20Reserve%20Report.pdf?X-Amz-Signature=fixture`;
+    `https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com${new URL(ausd.reportUrl).pathname}?X-Amz-Signature=fixture`;
   const fiddIndex = `<a href="${FIDD_VIEWER_URL}">July</a>`;
   return [
     {
       adapter: "agora-independent-assurance",
       coinId: "ausd-agora",
       product: "AUSD",
-      html: `<a href="${agoraReviewed}">July</a>`,
-      newerHtml: `<a href="${agoraReviewed}">July</a><a href="https://files.buildwithfern.com/agora.docs.buildwithfern.com/new/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf">August</a>`,
+      html: `<a href="${agoraReviewed}">August</a>`,
+      newerHtml: `<a href="${agoraReviewed}">August</a><a href="https://files.buildwithfern.com/agora.docs.buildwithfern.com/new/docs/assets/2026%20Sep%20-%20Agora%20Dollar%20Reserve%20Report.pdf">September</a>`,
     },
     {
       adapter: "anchorage-independent-assurance",
@@ -184,7 +184,15 @@ function assuranceFenceCases() {
       product: "USAT",
       html: indexFixture("anchorage-independent-assurance.html"),
       newerHtml: indexFixture("anchorage-independent-assurance.html") +
-        '<a href="https://learn.anchorage.com/08.31.26_USAT-Stablecoin-Attestation-Report.pdf">Aug</a>',
+        '<a href="https://learn.anchorage.com/09.30.26_USAT-Stablecoin-Attestation-Report.pdf">Sep</a>',
+    },
+    {
+      adapter: "anchorage-independent-assurance",
+      coinId: "usdpt-western-union",
+      product: "USDPT",
+      html: indexFixture("usdpt-independent-assurance.html"),
+      newerHtml: indexFixture("usdpt-independent-assurance.html") +
+        '<a href="https://learn.anchorage.com/09.30.26_USDPT_Stablecoin_Attestation_Report.pdf">Sep</a>',
     },
     {
       adapter: "audd-independent-assurance",
@@ -457,7 +465,7 @@ describe("independent-assurance manifest framework", () => {
     ).rejects.toThrow("PDF byte length");
 
     const withNewReport = indexFixture(fixture) +
-      '<button data-gated-asset="XSGD Attestation Report August 2026" data-gated-url="https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/XSGD_SCS_Reserve_Account_Report_(31_August_2026).pdf"></button>';
+      '<button data-gated-asset="XSGD Attestation Report September 2026" data-gated-url="https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/XSGD_SCS_Reserve_Account_Report_(30_September_2026).pdf"></button>';
     await expect(
       verifyFixtureIndex("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture, withNewReport),
     ).rejects.toThrow("newer unreviewed report");
@@ -466,7 +474,7 @@ describe("independent-assurance manifest framework", () => {
   it("still fails closed when the USDGO family has two reports for the reviewed latest date", async () => {
     const fixture = "usdgo-transparency.html";
     const ambiguous = indexFixture(fixture) +
-      '<a href="https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-revised.pdf">Jul revised</a>';
+      '<a href="https://learn.anchorage.com/08.31.26_USDGO-Stablecoin-Attestation-Report-revised.pdf">Aug revised</a>';
     await expect(
       verifyFixtureIndex("USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, fixture, ambiguous),
     ).rejects.toThrow("reviewed report URL is missing or duplicated");
@@ -562,21 +570,19 @@ describe("independent-assurance manifest framework", () => {
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
   });
 
-  it("reconciles July StraitsX reports including the new XSGD XLAYER liability", () => {
+  it("fails reconciliation when a positive StraitsX liability is omitted", () => {
     for (const product of ["XUSD", "XSGD"] as const) {
       const reviewed = getIndependentAssuranceManifest(product);
-      expect(reviewed.reportDate).toBe("2026-07-31");
       expect(reconcileIndependentAssuranceManifest(reviewed)).toMatchObject({
         reportedAssetDifference: "0",
         reportedLiabilityDifference: "0",
       });
     }
     const xsgd = getIndependentAssuranceManifest("XSGD");
-    expect(xsgd.liabilities).toContainEqual({ code: "xlayer", label: "XSGD XLAYER circulation", amount: "5" });
     expect(() => reconcileIndependentAssuranceManifest({
       ...xsgd,
       liabilities: xsgd.liabilities.filter((row) => row.code !== "xlayer"),
-    })).toThrow("liability total 21283481 does not match manifest 21283486");
+    })).toThrow(/liability total .* does not match manifest/);
   });
 
   it("allows EUROP's reviewed sub-unit headline rounding difference", () => {

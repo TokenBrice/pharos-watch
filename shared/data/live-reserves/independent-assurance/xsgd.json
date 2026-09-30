@@ -3,11 +3,11 @@
   "product": "XSGD",
   "profile": "straitsx-v1",
   "officialIndexUrl": "https://www.straitsx.com/xsgd",
-  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e13a54059e618ca8c06e3_XSGD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf",
-  "reportSha256": "bd6e5262d75d6f2913ea5e83ef38bc804a73f69d90b7458a03e36cd1a273718b",
-  "reportByteLength": 777134,
-  "reportDate": "2026-07-31",
-  "reportAsOf": "2026-07-31T23:59:00+08:00",
+  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb46bca92eaa67297d7500_XSGD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf",
+  "reportSha256": "fe182968ee0766d897bfc0d60a3256228ca98642ba0f82b9083e484f4a50e2ea",
+  "reportByteLength": 776757,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T23:59:00+08:00",
   "reportTimeZone": "Singapore Time (GMT+8)",
   "attestor": "KK Yap & Associates",
   "engagement": "Independent accountant's reasonable-assurance examination under SSAE 3000 (Revised)",
@@ -17,19 +17,19 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "10952069"
+      "amount": "11621981"
     },
     {
       "code": "short-dated-government-or-repo",
       "label": "Bonds or notes denominated in SGD with no more than three months residual maturity or eligible overnight reverse repos",
-      "amount": "10342225"
+      "amount": "10583870"
     }
   ],
   "liabilities": [
     {
       "code": "erc20",
       "label": "XSGD ERC20 circulation",
-      "amount": "10246472"
+      "amount": "11472891"
     },
     {
       "code": "zrc2",
@@ -39,7 +39,7 @@
     {
       "code": "pos",
       "label": "XSGD POS circulation",
-      "amount": "1861590"
+      "amount": "2130641"
     },
     {
       "code": "hts",
@@ -49,12 +49,12 @@
     {
       "code": "avax",
       "label": "XSGD AVAX circulation",
-      "amount": "1702678"
+      "amount": "1514194"
     },
     {
       "code": "arb",
       "label": "XSGD ARB circulation",
-      "amount": "20374"
+      "amount": "21673"
     },
     {
       "code": "xrp",
@@ -69,12 +69,12 @@
     {
       "code": "base",
       "label": "XSGD BASE circulation",
-      "amount": "6052100"
+      "amount": "5652269"
     },
     {
       "code": "sol",
       "label": "XSGD SOL circulation",
-      "amount": "61921"
+      "amount": "64699"
     },
     {
       "code": "xlayer",
@@ -82,13 +82,14 @@
       "amount": "5"
     }
   ],
-  "reportedAssetTotal": "21294294",
-  "computedAssetTotal": "21294294",
-  "reportedLiabilityTotal": "21283486",
+  "reportedAssetTotal": "22205851",
+  "computedAssetTotal": "22205851",
+  "reportedLiabilityTotal": "22194718",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "078729fbb9f5d3cda48d6585c2f54823d417d6c9229c0caa521cee2b64871167",
+    "normalizedTextSha256": "6024f824efe366815cf8e2cd4161aa1e6d3e2c985b146438bf938499f2caeba6",
     "pageCount": 6
-  }
+  },
+  "assuranceTier": "independent-assurance"
 }

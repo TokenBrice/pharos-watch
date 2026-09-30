@@ -19,6 +19,10 @@ const TOLERANCE_OVERRIDES: Partial<Record<
   IndependentAssuranceProduct,
   NonNullable<Parameters<typeof reconcileIndependentAssuranceManifest>[1]>
 >> = {
+  AUSD: {
+    // August 2026 category amounts sum to $239,090,455; the printed total is $239,090,456.
+    reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
+  },
   EUROP: {
     reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
     reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
@@ -83,6 +87,7 @@ function compile(pdfPath: string, config: CompilerProfile): IndependentAssurance
     label: row.label,
     amount: amountFromMatch(text.match(row.pattern), row.label, config.normalizeAmount),
     treatment: row.treatment,
+    ...("kind" in row ? { kind: row.kind } : { alreadyNettedIntoAssets: row.alreadyNettedIntoAssets }),
   }));
   const manifest = IndependentAssuranceManifestSchema.parse({
     schemaVersion: 1,
@@ -158,7 +163,11 @@ if (checkOnly && !parseFlag("--product") && !pdfPath) {
     if (profileAdjustments.length !== manifestAdjustments.length ||
       profileAdjustments.some((row, index) => row.code !== manifestAdjustments[index]?.code ||
         row.label !== manifestAdjustments[index]?.label ||
-        row.treatment !== manifestAdjustments[index]?.treatment)) {
+        row.treatment !== manifestAdjustments[index]?.treatment ||
+        JSON.stringify("kind" in row ? { kind: row.kind } : { alreadyNettedIntoAssets: row.alreadyNettedIntoAssets }) !==
+          JSON.stringify(manifestAdjustments[index] && ("kind" in manifestAdjustments[index]
+            ? { kind: manifestAdjustments[index].kind }
+            : { alreadyNettedIntoAssets: manifestAdjustments[index].alreadyNettedIntoAssets })))) {
       throw new Error(`Offline profile ${product} adjustment definitions differ from reviewed manifest`);
     }
     reconcileIndependentAssuranceManifest(manifest, TOLERANCE_OVERRIDES[product]);

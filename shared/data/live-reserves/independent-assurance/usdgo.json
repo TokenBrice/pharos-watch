@@ -3,13 +3,13 @@
   "product": "USDGO",
   "profile": "usdgo-v1",
   "officialIndexUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
-  "reportUrl": "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf",
-  "reportSha256": "27a8c25bd1d269892c8a58bb24c040042e51f5f6932796de3ecf6469870718fa",
-  "reportByteLength": 406396,
-  "reportDate": "2026-07-31",
-  "reportAsOf": "2026-07-31T23:59:59Z",
+  "reportUrl": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+  "reportSha256": "945b496e7048c34da46494d6eeea0ded8ba8e026911d56d1552d5d92fa1c9429",
+  "reportByteLength": 415018,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T23:59:59Z",
   "reportTimeZone": "UTC",
-  "reportIssuedAt": "2026-08-28T23:59:00Z",
+  "reportIssuedAt": "2026-09-28T23:59:00Z",
   "attestor": "Deloitte & Touche LLP",
   "engagement": "Independent accountant's examination under AICPA attestation standards",
   "conclusion": "unmodified",
@@ -18,38 +18,39 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "11061357"
+      "amount": "12431912"
     },
     {
       "code": "buidl",
       "label": "BUIDL at fair value",
-      "amount": "312429373"
+      "amount": "462545429"
     },
     {
       "code": "stbxx",
       "label": "STBXX money market fund (CUSIP 38151N205)",
-      "amount": "99400695"
+      "amount": "99693768"
     },
     {
       "code": "jltxx",
       "label": "JLTXX money market fund (CUSIP 46655R119)",
-      "amount": "693409879"
+      "amount": "674279453"
     }
   ],
   "liabilities": [
     {
       "code": "solana",
       "label": "Solana USDGO redeemable tokens",
-      "amount": "1112640495"
+      "amount": "1244426424"
     }
   ],
-  "reportedAssetTotal": "1116301304",
-  "computedAssetTotal": "1116301304",
-  "reportedLiabilityTotal": "1112640495",
+  "reportedAssetTotal": "1248950562",
+  "computedAssetTotal": "1248950562",
+  "reportedLiabilityTotal": "1244426424",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "67189de8b2c6d2b7b7bc37aeea06d6ff6949f3daf6e9e67666043b408275c1fe",
+    "normalizedTextSha256": "13acf59fa37ab59f0e1b444ecbed58b4d1af8abbcb66ae6116a2854618de5482",
     "pageCount": 7
-  }
+  },
+  "assuranceTier": "independent-assurance"
 }

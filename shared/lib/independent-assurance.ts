@@ -33,15 +33,22 @@ const ReportAmountSchema = z
   })
   .strict();
 
-const ReportAdjustmentSchema = z
-  .object({
+const ReportAdjustmentSchema = z.union([
+  z.object({
+    code: z.string().trim().min(1),
+    label: z.string().trim().min(1),
+    amount: DecimalStringSchema,
+    kind: z.literal("excluded-circulation"),
+    treatment: z.string().trim().min(1),
+  }).strict(),
+  z.object({
     code: z.string().trim().min(1),
     label: z.string().trim().min(1),
     amount: DecimalStringSchema,
     alreadyNettedIntoAssets: z.literal(true),
     treatment: z.string().trim().min(1),
-  })
-  .strict();
+  }).strict(),
+]);
 
 export const IndependentAssuranceManifestSchema = z
   .object({

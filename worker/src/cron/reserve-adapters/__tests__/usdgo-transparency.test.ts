@@ -4,7 +4,7 @@ import { getReserveAdapter } from "../index";
 import { fetchIndependentAssuranceReserves } from "../independent-assurance";
 import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
-const REPORT_TIMESTAMP = 1_785_542_399;
+const REPORT_TIMESTAMP = 1_788_220_799;
 const ISSUER_URL = "https://www.usdgo.com/api/lark-bitable";
 
 vi.mock("../independent-assurance", async () => {
@@ -25,7 +25,7 @@ function issuerNetwork(overrides: Record<string, unknown> = {}): AdapterNetworkS
           backingAssetsM: "1159.83",
           circulationSupplyMFormatted: "1157.62",
           collateralizationRatio: 100.192,
-          lastUpdated: "Aug 11, 2026",
+          lastUpdated: "Sep 11, 2026",
           ...overrides,
         },
       },
@@ -37,16 +37,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
     slices: [
-      { name: "FDIC-insured bank cash", pct: 0.990893, risk: "very-low", assetClass: "bank-deposit" },
-      { name: "BlackRock BUIDL", pct: 27.987907, risk: "low", coinId: "buidl-blackrock", depType: "collateral", assetClass: "fund-share" },
-      { name: "Goldman Sachs STBXX (CUSIP 38151N205)", pct: 8.904468, risk: "low", assetClass: "money-market-fund" },
-      { name: "JPMorgan JLTXX (CUSIP 46655R119)", pct: 62.116731, risk: "low", assetClass: "money-market-fund" },
+      { name: "FDIC-insured bank cash", pct: 0.995389, risk: "very-low", assetClass: "bank-deposit" },
+      { name: "BlackRock BUIDL", pct: 37.034727, risk: "low", coinId: "buidl-blackrock", depType: "collateral", assetClass: "fund-share" },
+      { name: "Goldman Sachs STBXX (CUSIP 38151N205)", pct: 7.982203, risk: "low", assetClass: "money-market-fund" },
+      { name: "JPMorgan JLTXX (CUSIP 46655R119)", pct: 53.987681, risk: "low", assetClass: "money-market-fund" },
     ],
     metadata: {
       sourceTimestamp: REPORT_TIMESTAMP,
       freshnessMode: "verified",
-      collateralizationRatio: 1_116_301_304 / 1_112_640_495,
-      details: { assurance: { reportUrl: "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf" } },
+      collateralizationRatio: 1_248_950_562 / 1_244_426_424,
+      details: { assurance: { reportUrl: "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf" } },
     },
   });
 });
@@ -63,15 +63,15 @@ describe("usdgo-transparency independent promotion", () => {
     expect(result.metadata).toMatchObject({
       sourceTimestamp: REPORT_TIMESTAMP,
       freshnessMode: "verified",
-      totalReserveUsd: 1_116_301_304,
-      totalAssetsUsd: 1_116_301_304,
-      totalLiabilitiesUsd: 1_112_640_495,
-      supplyUsd: 1_112_640_495,
-      shareholderEquityUsd: 3_660_809,
+      totalReserveUsd: 1_248_950_562,
+      totalAssetsUsd: 1_248_950_562,
+      totalLiabilitiesUsd: 1_244_426_424,
+      supplyUsd: 1_244_426_424,
+      shareholderEquityUsd: 4_524_138,
       unknownExposurePct: 0,
       details: {
         authoritativeBasis: "Deloitte examination report; issuer API is cross-check only",
-        reportSurplusUsd: 3_660_809,
+        reportSurplusUsd: 4_524_138,
       },
     });
     expect(result.metadata?.issuerCrossCheck).toMatchObject({ sourceTimestamp: expect.any(Number) });
@@ -95,7 +95,7 @@ describe("usdgo-transparency independent promotion", () => {
         buidlUsdM: "150",
         backingAssetsM: "950.46",
         circulationSupplyMFormatted: "859.224943",
-        lastUpdated: "Jul 31, 2026",
+        lastUpdated: "Aug 31, 2026",
       }),
       nowSec: REPORT_TIMESTAMP + 3_600,
       validate: false,

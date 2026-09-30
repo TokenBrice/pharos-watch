@@ -17,7 +17,9 @@ export interface CompilerProfile {
   unit: IndependentAssuranceManifest["unit"];
   assetRows: Array<{ code: string; label: string; pattern: RegExp }>;
   liabilityRows: Array<{ code: string; label: string; pattern: RegExp }>;
-  adjustments?: Array<{ code: string; label: string; pattern: RegExp; treatment: string }>;
+  adjustments?: Array<{ code: string; label: string; pattern: RegExp; treatment: string } & (
+    { kind: "excluded-circulation" } | { alreadyNettedIntoAssets: true }
+  )>;
   requiredText: Array<{ label: string; pattern: RegExp }>;
   rejectedText: Array<{ label: string; pattern: RegExp }>;
   reportedTotals: Array<{ label: string; expected: string; pattern: RegExp }>;

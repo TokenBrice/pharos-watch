@@ -17,22 +17,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28; R13 stale-as-of refresh",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "OpenAI Codex reserve source review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Independent public accountant certification for wBRL - March 2026",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf"
+        "label": "Independent public accountant certification for wBRL - June 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wBRL%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
       },
       {
-        "label": "Ripio local stablecoins",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "label": "Ripio wFIAT attestations",
+        "url": "https://action.ripio.com/en/wfiat-attestations"
       }
     ],
-    "rationale": "The March 31, 2026 certification reconciles 719,448 outstanding wBRL across six chains and R$809,597.28 of collateral to a Brazilian bank statement, then certifies that all outstanding tokens are backed by Brazilian reais at a financial institution in Brazil. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed. R13 re-open 2026-08-08: the Ripio local stablecoins page still presents only the March 31, 2026 certification as the most recent wBRL reserve evidence; no newer attestation or reserve breakdown was published.",
-    "compositionBasis": "Independent public accountant certification of the wBRL collateral as of March 31, 2026",
-    "compositionAsOf": "2026-03-31",
+    "rationale": "The June 30, 2026 certification reconciles 2,586,148 outstanding wBRL across seven chains to R$2,594,240.11 in a Brazilian bank account and certifies full local-currency backing. Pablo Eduardo Soto signed the certification on July 28, 2026 for SLD y Asociados S.A. The engagement expressly does not constitute an audit or review and expresses no professional opinion. The bank and account terms remain undisclosed. The official wFIAT attestation index serves this report as its latest wBRL evidence on September 30, 2026; the 92-day-old balance date remains outside the live adapter's 33-day freshness ceiling.",
+    "compositionBasis": "Independent public accountant certification of wBRL collateral as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve asset class is unclassified; the Brazilian financial institution, account type, and withdrawal liquidity are undisclosed.",
     "knownUnknownExposurePct": 0,

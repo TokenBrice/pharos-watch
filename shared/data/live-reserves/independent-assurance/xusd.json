@@ -3,11 +3,11 @@
   "product": "XUSD",
   "profile": "straitsx-v1",
   "officialIndexUrl": "https://www.straitsx.com/xusd",
-  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e145187f4227fbe226ec2_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf",
-  "reportSha256": "16af9b75bd128d4a641ee7b05fde7e1ba36ae2c0038e9fbe62da8c034346aedf",
-  "reportByteLength": 704764,
-  "reportDate": "2026-07-31",
-  "reportAsOf": "2026-07-31T23:59:00+08:00",
+  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb483d1de79f8ca93f1c67_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf",
+  "reportSha256": "7abdd8886032534092a7206abaa445f67ad6e2a406b358561fbf5ccf4dd9ffb8",
+  "reportByteLength": 704140,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T23:59:00+08:00",
   "reportTimeZone": "Singapore Time (GMT+8)",
   "attestor": "KK Yap & Associates",
   "engagement": "Independent accountant's reasonable-assurance examination under SSAE 3000 (Revised)",
@@ -17,7 +17,7 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "45269767"
+      "amount": "46324677"
     },
     {
       "code": "fixed-deposits",
@@ -34,7 +34,7 @@
     {
       "code": "erc20",
       "label": "XUSD ERC20 circulation",
-      "amount": "6147961"
+      "amount": "7147961"
     },
     {
       "code": "bep20",
@@ -52,13 +52,14 @@
       "amount": "50505"
     }
   ],
-  "reportedAssetTotal": "45269767",
-  "computedAssetTotal": "45269767",
-  "reportedLiabilityTotal": "45182310",
+  "reportedAssetTotal": "46324677",
+  "computedAssetTotal": "46324677",
+  "reportedLiabilityTotal": "46182310",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "fc0b61471052953e2ecf121224bb8576daec4ebb28bf944d767466149255b1ec",
+    "normalizedTextSha256": "e697f5b8bb29397da9e7c39f731ecaf5a2456cb822c94a9331beabdefece3138",
     "pageCount": 6
-  }
+  },
+  "assuranceTier": "independent-assurance"
 }
