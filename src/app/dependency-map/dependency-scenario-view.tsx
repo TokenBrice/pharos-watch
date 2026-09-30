@@ -3,6 +3,7 @@
 import type { DependencyScenarioArtifact, DependencyScenariosResponse } from "@shared/types/dependency-scenarios";
 import { DEPENDENCY_SCENARIO_KIND_LABELS, DEPENDENCY_SCENARIO_DIMENSION_LABELS } from "@shared/lib/classification";
 import { DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC } from "@shared/types/dependency-scenarios";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 
 type Scenario = DependencyScenarioArtifact["scenarios"][number];
 export interface DependencyScenarioSelection {
@@ -69,7 +70,14 @@ export function DependencyScenarioView({ response, roots, selection, selectedId,
       <h5 className="text-sm font-medium">Stated assumptions</h5>
       <ul className="list-inside list-disc text-sm">{selection.scenario?.assumptions.map((assumption, index) => <li key={index}>{assumption}</li>)}</ul>
       <p className="text-xs text-muted-foreground">Modeled results include role dependencies. The exposure table uses mapped collateral and wrapper relationships only. Stored rows include changed coins and the upstream root; missing rows are not numeric estimates.</p>
-      {selection.showNumbers && <table className="w-full text-left text-sm"><caption className="sr-only">Published and modeled grades for stored scenario rows</caption><thead><tr><th className="p-2">Coin</th><th className="p-2">Published → modeled grade</th><th className="p-2">Modeled Safety Score change</th></tr></thead><tbody>{selection.scenario?.results.map(row => <tr className="border-t border-border" key={row.assetId}><td className="p-2">{label(row.assetId)}{row.assetId === selection.scenario?.rootId ? " (upstream root)" : ""}</td><td className="p-2">{row.publishedGrade} → {row.modeledScore === null ? "NR" : row.modeledGrade}</td><td className="p-2"><DependencyScenarioChange selection={selection} assetId={row.assetId} /></td></tr>)}</tbody></table>}
+      {selection.showNumbers && <TableFrame caption="Published and modeled grades for stored scenario rows" captionClassName="sr-only" tableClassName="w-full text-left text-sm">
+        <TableHeader><TableRow rowIntent="static"><TableHead className="p-2">Coin</TableHead><TableHead className="p-2">Published → modeled grade</TableHead><TableHead className="p-2">Modeled Safety Score change</TableHead></TableRow></TableHeader>
+        <TableBody>{selection.scenario?.results.map(row => <TableRow rowIntent="static" className="border-t border-border" key={row.assetId}>
+          <TableCell className="p-2">{label(row.assetId)}{row.assetId === selection.scenario?.rootId ? " (upstream root)" : ""}</TableCell>
+          <TableCell className="p-2">{row.publishedGrade} → {row.modeledScore === null ? "NR" : row.modeledGrade}</TableCell>
+          <TableCell className="p-2"><DependencyScenarioChange selection={selection} assetId={row.assetId} /></TableCell>
+        </TableRow>)}</TableBody>
+      </TableFrame>}
       {selection.showNumbers && selection.scenario?.failures.map(failure => <p key={failure.assetId} className="text-sm">{label(failure.assetId)}: modeled result unavailable ({failure.code})</p>)}
     </> : selection.showNumbers && <p className="text-sm">No modeled artifact rows for the selected upstream coins.</p>}
   </section>;

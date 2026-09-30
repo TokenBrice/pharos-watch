@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { formatCurrency } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { DEPENDENCY_ROLE_LABELS, EXPOSURE_BAND_LABELS } from "@shared/lib/classification";
@@ -51,7 +52,27 @@ export function DependencyExposureResults({ result, publication, roots, options,
     <DependencyScenarioView response={scenarios.data} roots={roots} selection={scenarioSelection} selectedId={selectedScenarioId} onSelect={setSelectedScenarioId} label={label} />
     {!result.reached ? <p className="text-sm text-muted-foreground">No mapped downstream exposure found. Other dependencies and transmission channels may be missing.</p> : <>
       <div className="flex flex-wrap items-center gap-4"><label className="text-sm">Sort <select className="min-h-11 rounded border border-border bg-background px-2" value={sort} onChange={event => setSort(event.target.value)}><option value="usd">Known USD</option><option value="share">Mapped share</option></select></label><label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={unknownOnly} onChange={event => setUnknownOnly(event.target.checked)} />Unknown supply</label></div>
-      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><caption className="sr-only">Mapped dependents, excluding roots</caption><thead><tr><th className="p-2">Coin</th><th className="p-2">Hops</th><th className="p-2">Share</th><th className="p-2">Band</th><th className="p-2">Exposure USD</th>{scenarioSelection.scenario && <th className="p-2">Modeled Safety Score change</th>}<th className="p-2">Actions</th></tr></thead><tbody>{rows.map(row => <tr key={row.id} className="border-t border-border"><td className="p-2">{label(row.id)}</td><td className="p-2">{row.minHop}</td><td className="p-2">{row.share === null ? "Unknown" : `${(row.share * 100).toFixed(2)}%`}</td><td className="p-2">{EXPOSURE_BAND_LABELS[row.band]}</td><td className="p-2">{row.exposureUsd === null ? "Unknown supply or share" : formatCurrency(row.exposureUsd, 2)}</td>{scenarioSelection.scenario && <td className="p-2"><DependencyScenarioChange selection={scenarioSelection} assetId={row.id} /></td>}<td className="p-2"><button type="button" className="pharos-focus-ring min-h-11 rounded px-2 underline" onClick={() => onInspect(row.id)}>Inspect path</button><Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded px-2 underline">Open coin</Link></td></tr>)}</tbody></table></div>
+      <TableFrame tableId="dependency-exposure-results" density="compact" chrome="embedded" tableClassName="min-w-[40rem] text-left text-sm">
+        <TableCaption className="sr-only">Mapped dependents, excluding roots</TableCaption>
+        <TableHeader><TableRow>
+          <TableHead scope="col">Coin</TableHead>
+          <TableHead scope="col">Hops</TableHead>
+          <TableHead scope="col">Share</TableHead>
+          <TableHead scope="col">Band</TableHead>
+          <TableHead scope="col">Exposure USD</TableHead>
+          {scenarioSelection.scenario && <TableHead scope="col">Modeled Safety Score change</TableHead>}
+          <TableHead scope="col">Actions</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>{rows.map(row => <TableRow key={row.id}>
+          <TableCell>{label(row.id)}</TableCell>
+          <TableCell>{row.minHop}</TableCell>
+          <TableCell>{row.share === null ? "Unknown" : `${(row.share * 100).toFixed(2)}%`}</TableCell>
+          <TableCell>{EXPOSURE_BAND_LABELS[row.band]}</TableCell>
+          <TableCell>{row.exposureUsd === null ? "Unknown supply or share" : formatCurrency(row.exposureUsd, 2)}</TableCell>
+          {scenarioSelection.scenario && <TableCell><DependencyScenarioChange selection={scenarioSelection} assetId={row.id} /></TableCell>}
+          <TableCell><button type="button" className="pharos-focus-ring min-h-11 rounded px-2 underline" onClick={() => onInspect(row.id)}>Inspect path</button><Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded px-2 underline">Open coin</Link></TableCell>
+        </TableRow>)}</TableBody>
+      </TableFrame>
     </>}
     {inspected && <div aria-live="polite" className="space-y-2 rounded border border-border p-3"><h4 className="font-semibold">Paths to {label(inspected.id)}</h4>{inspected.paths.length ? <ol className="space-y-1 text-sm">{inspected.paths.map((path, index) => <li key={index}>{path.map(label).join(" → ")}</li>)}</ol> : <p className="text-sm">No path details published for this row.</p>}</div>}
   </section>;
