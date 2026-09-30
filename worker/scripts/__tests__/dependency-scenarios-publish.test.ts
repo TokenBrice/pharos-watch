@@ -11,7 +11,8 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildSafetyScoreV9ReplayArtifact } from "../replay-safety-score-v9";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../../src/lib/report-cards-v9-cache";
-import { buildSafetyScoreV9PublicationReplayCapture, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-replay-capture";
+import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-codec";
 import { makeV9FixedInput, withV9WmReviewedDeploymentAttribution } from "../../src/test-helpers/v9-fixed-input";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 

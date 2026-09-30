@@ -15,10 +15,11 @@ import { parseJson } from "../json-parse";
 import {
   parseSafetyScoreV9Publication,
   publicationIdentityFromStorageEnvelope,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
   serializeSafetyScoreV9Publication,
 } from "./publication-codec";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "./publication-replay-capture";
 
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",

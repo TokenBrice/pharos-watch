@@ -3,10 +3,8 @@ import { buildFixedInputCacheEntry, FixedInputCacheEnvelopeFields, parseFixedInp
 import { normalizeSafetyScoreV9CompilerInput, type SafetyScoreV9CompilerInput } from "./native-input";
 import { parseSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "./publication-codec";
 
-// One retained accepted generation. Both rows advance atomically with publication.
-export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY = "report-cards:v9:accepted-replay:v1";
-export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY = "report-cards:v9:accepted-replay-base:v1";
 const envelopeSchema = z.object({ schemaVersion: z.literal(2), ...FixedInputCacheEnvelopeFields }).strict();
 const payloadSchema = z.object({
   schemaVersion: z.literal(1),
