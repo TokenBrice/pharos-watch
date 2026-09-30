@@ -248,8 +248,8 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it("keeps acknowledged long gaps missing, re-alerts at expiry, and ignores reviews for priced assets", () => {
-    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+  it.each(["wusd-worldwide", "tryb-bilira"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = evaluateStablecoinActivePriceCoverage(
       ids.map((id) => ({ id, price: null, circulating: { peggedUSD: 100 } })),

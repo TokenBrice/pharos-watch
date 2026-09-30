@@ -135,6 +135,21 @@ const PRICE_GAP_REVIEWED_AT_SEC = Date.UTC(2026, 8, 23) / 1000;
  * (and reported) so their gaps alert again until renewed or resolved. */
 export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [
   {
+    stablecoinId: "tryb-bilira",
+    owner: "ops",
+    reason:
+      "CoinGecko's last TRYB observation is 2026-09-23 10:13:20 UTC and expired the existing seven-day low-volume budget on September 30; its ticker list and DefiLlama coins quotes are empty. Reviewed Ethereum, BSC, Polygon and Solana DexScreener deployments have no pairs; Base and Avalanche pools have at most $85.12 liquidity and $14 daily volume, below the existing address-provider floors. Keep supply published without substituting the TRY FX reference for a market price; review upstream recovery or an identity-safe alternative by expiry.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=bilira&vs_currencies=usd&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/bilira/tickers",
+      "https://coins.llama.fi/prices/current/coingecko:bilira",
+      "https://dexscreener.com/base/0xead784afe3bdf564367d36debd3619a31ef2bd6a",
+      "https://dexscreener.com/avalanche/0x471163b54b5db0497cd9eafcb1b53cc569d71b76",
+    ],
+    reviewedAt: Date.UTC(2026, 8, 30) / 1000,
+    expiresAt: Date.UTC(2026, 9, 7) / 1000,
+  },
+  {
     stablecoinId: "wusd-worldwide",
     owner: "ops",
     reason:
