@@ -12,7 +12,11 @@ vi.mock("../../../lib/circuit-breaker", () => ({ shouldAttemptFetch: vi.fn(), re
 beforeEach(() => {
   vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
 });
-afterEach(() => vi.resetAllMocks());
+afterEach(() => {
+  vi.resetAllMocks();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 function mockCoingeckoPrices(quotes: Readonly<Record<string, number>>, observedAt: number): void {
   vi.mocked(fetchCoingeckoSimplePrices).mockResolvedValue({
@@ -40,6 +44,37 @@ describe("LOW_VOLUME_CG_FALLBACK_IDS registry invariant", () => {
 });
 
 describe("runCoingeckoLowVolumePass", () => {
+  it("recovers HBD on carried supply without renewing its upstream clock, then rejects it at expiry", async () => {
+    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
+      "../../../lib/coingecko-simple-price",
+    );
+    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
+    const observedAt = Date.UTC(2026, 8, 28, 18, 49, 20) / 1000;
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.UTC(2026, 8, 30, 15));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      hive_dollar: { usd: 0.990063, last_updated_at: observedAt },
+    }), { status: 200 })));
+    const carried = makePeggedAsset({
+      id: "hbd-hive", symbol: "HBD", price: null,
+      supplyRestored: true, supplySource: "coingecko-fallback",
+      supplyObservedAt: observedAt, circulating: { peggedUSD: 32_677_939 },
+    });
+
+    expect(await runCoingeckoLowVolumePass([carried], null, undefined)).toEqual({ resolved: 1, failures: [] });
+    expect(carried).toMatchObject({
+      price: 0.990063, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
+      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
+      supplyRestored: true, supplyObservedAt: observedAt,
+      circulating: { peggedUSD: 32_677_939 },
+    });
+
+    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
+    const expired = makePeggedAsset({ id: "hbd-hive", symbol: "HBD", price: null });
+    expect(await runCoingeckoLowVolumePass([expired], null, undefined)).toEqual({ resolved: 0, failures: [] });
+    expect(expired.price).toBeNull();
+  });
+
   it("enriches only allowlisted missing assets, preserving priced and unrelated peers", async () => {
     const assets = [
       makePeggedAsset({ id: "usdn-smardex", price: null }),

@@ -18,6 +18,11 @@ const STORAGE_SCHEMA_VERSION = 1;
 const EVIDENCE_RESPONSIBILITY_FACTS_POLICY_VERSION = "9.19";
 const PUBLISHED_EVIDENCE_EXPIRED_POLICY_VERSION = "9.4";
 
+// One retained accepted generation for offline scenario replay. Both rows
+// advance with the canonical publication batch (or neither does).
+export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY = "report-cards:v9:accepted-replay:v1";
+export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY = "report-cards:v9:accepted-replay-base:v1";
+
 const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES = 8_000_000;

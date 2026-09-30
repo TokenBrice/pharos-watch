@@ -15,6 +15,8 @@ import { parseJson } from "../json-parse";
 import {
   parseSafetyScoreV9Publication,
   publicationIdentityFromStorageEnvelope,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
   serializeSafetyScoreV9Publication,
 } from "./publication-codec";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
@@ -317,6 +319,8 @@ async function loadStoredSafetyScoreV9PublicationReference(
 
 export interface PersistSafetyScoreV9PublicationInput {
   publication?: SafetyScoreV9CurrentResponse;
+  publicationReplayCaptureValue?: string;
+  publicationReplayBaseValue?: string;
   publicationHealth: V9PublicationHealth;
   publicationAttempt: V9PublicationAttempt;
   publicationClockSec: number;
@@ -412,6 +416,9 @@ export async function persistSafetyScoreV9Publication(
   input: PersistSafetyScoreV9PublicationInput,
 ): Promise<void> {
   throwIfAborted(input.signal);
+  if ((input.publicationReplayCaptureValue !== undefined) !== (input.publicationReplayBaseValue !== undefined)) {
+    throw new Error("Accepted replay retention requires both base and delta or neither");
+  }
   validatePublicationAttemptInput(input);
   const health = V9PublicationHealthSchema.parse(input.publicationHealth);
   const attempt = V9PublicationAttemptSchema.parse(
@@ -540,6 +547,20 @@ export async function persistSafetyScoreV9Publication(
         input.publicationClockSec,
       ),
     );
+    if (input.publicationReplayCaptureValue !== undefined) {
+      statements.push(cacheStatement.bind(
+        SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+        input.publicationReplayCaptureValue,
+        input.publicationClockSec,
+      ));
+    }
+    if (input.publicationReplayBaseValue !== undefined) {
+      statements.push(cacheStatement.bind(
+        SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+        input.publicationReplayBaseValue,
+        input.publicationClockSec,
+      ));
+    }
   }
   if (health.status === "held" && health.acceptedAtSec !== null) {
     // Keep the retained-publication CAS in the same transaction as the sidecar

@@ -164,6 +164,7 @@ export async function computeSafetyScoreV9(
   }
 
   let baseArtifact: NativeV9InputCacheArtifact;
+  const fixedInputCacheValue = caches.get(NATIVE_V9_INPUT_CACHE_KEY)!.value;
   let v9Seed: SafetyScoreV9PegProvenanceSeed;
   try {
     v9Seed = parseSafetyScoreV9PegProvenanceSeed(
@@ -332,6 +333,7 @@ export async function computeSafetyScoreV9(
   const publication = await runSafetyScoreV9Publication({
     db,
     fixedInput: v9SeedInput,
+    fixedInputCacheValue,
     fixedInputAlreadyNormalized: true,
     // `prepareFixedInput` below spreads this normalized input and adds the two
     // loader-validated journal projections, so the runner must not re-normalize
