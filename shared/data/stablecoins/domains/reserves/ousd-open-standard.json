@@ -1,0 +1,115 @@
+{
+  "id": "ousd-open-standard",
+  "reserves": [
+    {
+      "sourceKey": "bridge-transparency:cash",
+      "name": "Cash",
+      "pct": 55.7456,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Bridge-approved bank counterparties",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "bridge-transparency:treasury",
+      "name": "Treasury",
+      "pct": 44.2544,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury and U.S. government money-market funds (fund identities undisclosed)",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos OUSD promotion reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Bridge OUSD transparency API, observation 2026-09-30T16:18:03Z",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/ousd"
+      },
+      {
+        "label": "Bridge Open USD dashboard, four deployment identities and reserve categories",
+        "url": "https://reserves.bridge.xyz/ousd"
+      },
+      {
+        "label": "Bridge supported transparency tickers and API semantics",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+      },
+      {
+        "label": "Bridge OUSD backing and named reserve institutions FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      },
+      {
+        "label": "Bridge reserve-management liquidity windows and provider roles",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+      },
+      {
+        "label": "Bridge Building Inc Stablecoin Terms, reserve segregation and eligible asset classes",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      },
+      {
+        "label": "Open Standard introduction and programme governance",
+        "url": "https://joinopenstandard.com/blog/introducing-open-usd"
+      },
+      {
+        "label": "Tempo Open USD live native issuance and liquidity overview",
+        "url": "https://tempo.xyz/ousd/"
+      },
+      {
+        "label": "Unbound Bridge open_usd API record, observation 2026-09-28T18:50:31Z",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/open_usd"
+      }
+    ],
+    "rationale": "The ousd API observation reports $477,309,854.37 of both reserves and aggregate on-chain liabilities: $266,079,146.49 cash and $211,230,707.88 Treasury. Normalizing the two amounts gives 55.7456% and 44.2544%; their dollar sum reconciles exactly. Both source keys and very-low legacy risk tiers match the existing bridge-transparency adapter, following the USDsui tier-parity review. The Treasury category includes money-market funds comprised of T-bill ladders with less than three-month duration; it is not evidence of a hard maximum maturity for every instrument. The dashboard identifies Open USD, joinopenstandard.com, and the exact Tempo, Ethereum, Base and Solana deployments in the registry. Its displayed $477,309,839 total is from an earlier 16:10 UTC update, so the newer API supplies the composition. Bridge's supported ticker list names ousd. The second API slug open_usd reports $40,008,735.98 liabilities and $40,008,737.98 reserves at 2026-09-28T18:50:31Z, but its dashboard route returns 404 and it is absent from the documented ticker list. The ousd dashboard uses an open_usd.svg icon; that asset filename does not prove the orphan API record binds to these contracts. Its historical purpose and contract identity remain unresolved, and none of its balances are included here. These are issuer-published measurements, not an independent reserve examination; no published independent OUSD report was found.",
+    "compositionBasis": "Bridge ousd API cash and Treasury dollar amounts divided by their reconciled $477,309,854.37 total; four-decimal percentage rounding",
+    "compositionAsOf": "2026-09-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both published asset-class categories account for all disclosed reserves. No asset-class notional is unclassified; bank allocations, specific Treasury/MMF holdings, fund identities, provider shares, and any repo or tokenized-instrument suballocation remain undisclosed. The eligible reserve envelope permits additional forms but does not establish that OUSD holds them. Cash banking-hour access and Treasury one-business-day redemption are provider statements, not independently measured exit capacity.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Lead Bank",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BlackRock",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BNY",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos OUSD promotion reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge FAQ, OUSD-specific BNY, BlackRock and Lead Bank reserve placement",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      },
+      {
+        "label": "Bridge reserve management, Lead Bank cash deposits and BlackRock institutional money-market funds",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+      },
+      {
+        "label": "Bridge Building Inc Stablecoin Terms, reserve segregation and absence of holder property interest",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      }
+    ],
+    "uncertainty": "Bridge's OUSD-specific FAQ names BNY, BlackRock and Lead Bank as reserve institutions without allocations. Its reserve-management documentation identifies Lead Bank as the USD cash bank and BlackRock as an institutional money-market-fund and Treasury manager; the schema has no asset-manager role, so BlackRock is recorded as other rather than assuming securities custody. BNY's exact OUSD function, account entity and jurisdiction are not established by the fetched primary evidence, so its role remains other. The generic FAQ states segregated bankruptcy-remote accounts; binding terms require segregation from BBI operating assets but do not supply an OUSD-specific insolvency opinion or explicit rehypothecation prohibition. Terms deny token holders a property interest in reserve assets and limit redemption rights to eligible Bridge Users. No provider shares, independent custody report or OUSD-specific legal structure was published in the reviewed sources. The FAQ promises quarterly third-party transparency reports; a monthly independent OUSD attestation cadence was not verified.",
+    "knownUnknownExposurePct": 100
+  }
+}
