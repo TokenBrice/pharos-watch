@@ -1,4 +1,4 @@
-import type { GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { DependencyType, GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
 import { PEG_HERO_CHIP_LABELS } from "./peg-taxonomy";
@@ -25,6 +25,13 @@ export const RESEARCH_REVIEW_CONFIDENCE_LABELS: Readonly<Record<ResearchReviewCo
   "manual-review": "Manual review",
   unknown: "Unknown",
 };
+
+export const DEPENDENCY_RELATIONSHIP_LABELS = {
+  wrapper: "Wrapper",
+  mechanism: "Mechanism",
+  collateral: "Collateral",
+  "serial-claim": "Serial claim",
+} as const satisfies Readonly<Record<DependencyType | "serial-claim", string>>;
 
 export { PEG_TAXONOMY } from "./peg-taxonomy";
 

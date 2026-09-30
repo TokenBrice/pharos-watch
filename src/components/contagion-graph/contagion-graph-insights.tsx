@@ -116,7 +116,7 @@ export function ContagionGraphInsights({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">{inspectedNode.symbol}</p>
             <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
-              {formatCurrency(inspectedNode.mcap, 1)}
+              {inspectedNode.mcap === null ? "mcap n/a" : formatCurrency(inspectedNode.mcap, 1)}
             </p>
           </div>
         </div>
@@ -124,8 +124,8 @@ export function ContagionGraphInsights({
         <div className="grid grid-cols-2 gap-1.5">
           <MiniMetric label="Dependents" value={String(dependentSummary.count)} />
           <MiniMetric label="Upstream" value={String(upstreamSummary.count)} />
-          <MiniMetric label="Dep weight" value={dependentSummary.weight.toFixed(2)} />
-          <MiniMetric label="Up weight" value={upstreamSummary.weight.toFixed(2)} />
+          <MiniMetric label="Dep weight" value={dependentSummary.weight > 0 && dependentSummary.weight < 0.01 ? "<0.01" : dependentSummary.weight.toFixed(2)} />
+          <MiniMetric label="Up weight" value={upstreamSummary.weight > 0 && upstreamSummary.weight < 0.01 ? "<0.01" : upstreamSummary.weight.toFixed(2)} />
         </div>
 
         <div className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">

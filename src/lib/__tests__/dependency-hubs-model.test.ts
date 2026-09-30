@@ -1,277 +1,54 @@
 import { describe, expect, it } from "vitest";
-import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import type { DependencyHubCard } from "@/lib/dependency-hubs-model";
-import {
-  buildDependencyHubsModel,
-  v9DependencyEdgeScoreKnown,
-  v9DependencyEdgeWeight,
-} from "@/lib/dependency-hubs-model";
+import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
+import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 
-const CARDS: readonly DependencyHubCard[] = [
-  { id: "usdc-circle", name: "USD Coin", symbol: "USDC", isDefunct: false },
-  { id: "dai-maker", name: "Dai", symbol: "DAI", isDefunct: false },
-  { id: "frax-france", name: "Frax", symbol: "FRAX", isDefunct: false },
-  { id: "ust-terra", name: "TerraClassicUSD", symbol: "USTC", isDefunct: true },
+const cards = [
+  { id: "usds-sky", name: "USDS", symbol: "USDS" },
+  { id: "susds-sky", name: "Savings USDS", symbol: "sUSDS" },
+  { id: "usdc-circle", name: "USD Coin", symbol: "USDC" },
+  { id: "dai-makerdao", name: "Dai", symbol: "DAI" },
 ];
-
-const V9_CARDS: readonly DependencyHubCard[] = [
-  ...CARDS.slice(0, 3),
-  { id: "usdp-paxos", name: "Pax Dollar", symbol: "USDP", isDefunct: false },
+const edges: ReportCardsV9DependencyEdge[] = [
+  { from: "usds-sky", to: "susds-sky", kind: "serial", materiality: "serial", weight: null, upstreamScore: 80 },
+  { from: "usdc-circle", to: "dai-makerdao", kind: "basket", materiality: "basket-weighted", weight: 0.4, upstreamScore: 80 },
 ];
-
-type V9Edge = ReportCardsV9Response["dependencyGraph"]["edges"][number];
-
 describe("buildDependencyHubsModel", () => {
-  it("dedupes direct dependents for count and market-cap context while summing direct edge weights", () => {
-    const model = buildDependencyHubsModel({
-      cards: CARDS,
-      edges: [
-        { from: "usdc-circle", to: "dai-maker", weight: 0.6, type: "collateral" },
-        { from: "usdc-circle", to: "dai-maker", weight: 0.2, type: "mechanism" },
-        { from: "usdc-circle", to: "frax-france", weight: 0.1, type: "wrapper" },
-        { from: "usdc-circle", to: "ust-terra", weight: 0.9, type: "collateral" },
-      ] satisfies readonly DependencyGraphEdge[],
-      mcapMap: new Map([
-        ["usdc-circle", 100],
-        ["dai-maker", 5],
-        ["frax-france", 2],
-        ["ust-terra", 1],
-      ]),
-    });
-
-    expect(model.directEdgeCount).toBe(3);
+  it("ranks v5 cards without shared-book metadata by known direct USD and classifies own-family wrappers", () => {
+    const model = buildDependencyHubsModel({ cards, edges, mcapMap: new Map([["susds-sky", 500], ["dai-makerdao", 1000]]) });
+    expect(model.hubs.map(hub => hub.id)).toEqual(["usds-sky", "usdc-circle"]);
+    expect(model.hubs[0].ownFamilyUsd).toBe(500);
+    expect(model.hubs[1].direct.knownUsd).toBe(400);
+    expect(model.mappedSupply.knownUsd).toBe(900);
+    expect(model.mappedSupply.complete).toBe(true);
+  });
+  it("keeps unknown supplies out of USD totals while preserving literal counts", () => {
+    const model = buildDependencyHubsModel({ cards, edges, mcapMap: new Map([["susds-sky", null], ["dai-makerdao", 1000]]) });
     expect(model.uniqueDirectDependentCount).toBe(2);
-    expect(model.uniqueDependentMcapUsd).toBe(7);
-
-    const usdcHub = model.hubs.find((hub) => hub.id === "usdc-circle");
-    expect(usdcHub).toBeTruthy();
-    expect(usdcHub?.dependentCount).toBe(2);
-    expect(usdcHub?.summedDirectDependencyWeight).toBeCloseTo(0.9);
-    expect(usdcHub?.uniqueDependentMcapUsd).toBe(7);
-    expect(usdcHub?.hubMcapUsd).toBe(100);
-    expect(usdcHub?.examples.map((example) => example.symbol)).toEqual(["DAI", "FRAX"]);
-    expect(usdcHub?.edgeTypeBreakdown).toEqual([
-      { type: "collateral", edgeCount: 1, summedDirectDependencyWeight: 0.6 },
-      { type: "mechanism", edgeCount: 1, summedDirectDependencyWeight: 0.2 },
-      { type: "wrapper", edgeCount: 1, summedDirectDependencyWeight: 0.1 },
-    ]);
+    expect(model.mappedSupply.excludedSupplyUnknownIds).toEqual(["susds-sky"]);
+    const usds = model.hubs.find(hub => hub.id === "usds-sky")!;
+    expect(usds.dependentCount).toBe(1);
+    expect(usds.hubMcapUsd).toBeNull();
+    expect(usds.direct.knownUsd).toBe(0);
+    expect(model.mappedSupply.knownUsd).toBe(400);
+  });
+  it("uses published wrapper forms to separate vault and pass-through amounts", () => {
+    const vault = makeV9Card({ id: "susds-sky" });
+    const trace = { ...vault.scoreTrace, wrapperParentLimit: { ...vault.scoreTrace?.wrapperParentLimit, form: "strategy-vault" } } as typeof vault.scoreTrace;
+    const model = buildDependencyHubsModel({ cards: cards.map(card => card.id === vault.id ? { ...card, scoreTrace: trace } : card), edges, mcapMap: new Map([["susds-sky", 500], ["dai-makerdao", 1000]]) });
+    expect(model.hubs[0].vaultClaimUsd).toBe(500);
+    expect(model.hubs[0].passThroughUsd).toBe(0);
   });
 
-  it("keeps hub market cap separate from modeled dependent market-cap context", () => {
-    const model = buildDependencyHubsModel({
-      cards: CARDS.slice(0, 2),
-      edges: [
-        { from: "usdc-circle", to: "dai-maker", weight: 0.75, type: "collateral" },
-      ] satisfies readonly DependencyGraphEdge[],
-      mcapMap: new Map([
-        ["usdc-circle", 100_000_000_000],
-      ]),
-    });
-
-    expect(model.hubs).toHaveLength(1);
-    expect(model.hubs[0]?.hubMcapUsd).toBe(100_000_000_000);
-    expect(model.hubs[0]?.uniqueDependentMcapUsd).toBe(0);
-    expect(model.uniqueDependentMcapUsd).toBe(0);
-  });
-
-  it("weights native V9 edges by kind and keeps materiality in the breakdown", () => {
-    const model = buildDependencyHubsModel({
-      cards: V9_CARDS,
-      edges: [
-        { from: "usdc-circle", to: "dai-maker", kind: "serial", materiality: "serial", weight: null, upstreamScore: 80 },
-        {
-          from: "usdc-circle",
-          to: "frax-france",
-          kind: "basket",
-          materiality: "basket-weighted",
-          weight: 0.4,
-          upstreamScore: 70,
-        },
-        {
-          from: "usdc-circle",
-          to: "usdp-paxos",
-          kind: "basket",
-          materiality: "basket-bounded-unknown",
-          weight: 0.4,
-          upstreamScore: null,
-        },
-      ] satisfies readonly V9Edge[],
-      mcapMap: new Map([["usdc-circle", 100]]),
-    });
-
-    const hub = model.hubs[0];
-    expect(hub?.dependentCount).toBe(3);
-    // Serial edges count as a full dependency, weighted baskets use their
-    // weight, and a bounded-unknown basket keeps its known weight — losing
-    // the upstream score does not erase known exposure.
-    expect(hub?.summedDirectDependencyWeight).toBeCloseTo(1.8);
-    expect(model.summedDirectDependencyWeight).toBeCloseTo(1.8);
-    expect(hub?.edgeTypeBreakdown).toEqual([
-      { type: "basket-bounded-unknown", edgeCount: 1, summedDirectDependencyWeight: 0.4 },
-      { type: "basket-weighted", edgeCount: 1, summedDirectDependencyWeight: 0.4 },
-      { type: "serial", edgeCount: 1, summedDirectDependencyWeight: 1 },
-    ]);
-  });
-
-  it("counts an absent-weight edge while excluding it from the summed magnitudes", () => {
-    const model = buildDependencyHubsModel({
-      cards: V9_CARDS,
-      edges: [
-        {
-          from: "usdc-circle",
-          to: "dai-maker",
-          kind: "basket",
-          materiality: "basket-weighted",
-          weight: 0.6,
-          upstreamScore: 70,
-        },
-        {
-          from: "usdc-circle",
-          to: "frax-france",
-          kind: "basket",
-          materiality: "basket-bounded-unknown",
-          weight: null,
-          upstreamScore: null,
-        },
-      ] satisfies readonly V9Edge[],
-      mcapMap: new Map([["usdc-circle", 100]]),
-    });
-
-    const hub = model.hubs[0];
-    expect(hub?.dependentCount).toBe(2);
-    expect(hub?.summedDirectDependencyWeight).toBeCloseTo(0.6);
-    expect(model.summedDirectDependencyWeight).toBeCloseTo(0.6);
-    expect(hub?.edgeTypeBreakdown).toEqual([
-      { type: "basket-bounded-unknown", edgeCount: 1, summedDirectDependencyWeight: 0 },
-      { type: "basket-weighted", edgeCount: 1, summedDirectDependencyWeight: 0.6 },
-    ]);
-  });
-
-  it("counts a dependent shared by two hubs once globally and once per hub", () => {
-    const model = buildDependencyHubsModel({
-      cards: V9_CARDS,
-      edges: [
-        { from: "usdc-circle", to: "dai-maker", kind: "serial", materiality: "serial", weight: null, upstreamScore: 80 },
-        {
-          from: "frax-france",
-          to: "dai-maker",
-          kind: "serial",
-          materiality: "serial",
-          weight: null,
-          upstreamScore: 60,
-        },
-      ] satisfies readonly V9Edge[],
-      mcapMap: new Map([
-        ["usdc-circle", 100],
-        ["frax-france", 2],
-        ["dai-maker", 5],
-      ]),
-    });
-
-    expect(model.directEdgeCount).toBe(2);
-    expect(model.uniqueDirectDependentCount).toBe(1);
-    expect(model.uniqueDependentMcapUsd).toBe(5);
-    expect(model.upstreamHubCount).toBe(2);
-    for (const hub of model.hubs) {
-      expect(hub.dependentCount, hub.id).toBe(1);
-      expect(hub.uniqueDependentMcapUsd, hub.id).toBe(5);
-    }
-  });
-
-  it("ranks more dependents above heavier weight and caps examples at three", () => {
-    const model = buildDependencyHubsModel({
-      cards: [
-        { id: "hub-a", name: "Hub A", symbol: "HUBA", isDefunct: false },
-        { id: "hub-b", name: "Hub B", symbol: "HUBB", isDefunct: false },
-        { id: "dep-1", name: "Dep One", symbol: "D1", isDefunct: false },
-        { id: "dep-2", name: "Dep Two", symbol: "D2", isDefunct: false },
-        { id: "dep-3", name: "Dep Three", symbol: "D3", isDefunct: false },
-        { id: "dep-4", name: "Dep Four", symbol: "D4", isDefunct: false },
-      ],
-      edges: [
-        { from: "hub-a", to: "dep-1", weight: 0.1, type: "collateral" },
-        { from: "hub-a", to: "dep-2", weight: 0.1, type: "collateral" },
-        { from: "hub-a", to: "dep-3", weight: 0.1, type: "collateral" },
-        { from: "hub-a", to: "dep-4", weight: 0.1, type: "collateral" },
-        { from: "hub-b", to: "dep-1", weight: 0.9, type: "collateral" },
-        { from: "hub-b", to: "dep-2", weight: 0.9, type: "collateral" },
-        { from: "hub-b", to: "dep-3", weight: 0.9, type: "collateral" },
-      ] satisfies readonly DependencyGraphEdge[],
-      mcapMap: new Map([
-        ["dep-1", 40],
-        ["dep-2", 30],
-        ["dep-3", 20],
-        // Non-finite and non-positive market caps contribute nothing.
-        ["dep-4", Number.NaN],
-        ["hub-a", -5],
-        ["hub-b", 7],
-      ]),
-    });
-
-    expect(model.hubs.map((hub) => hub.id)).toEqual(["hub-a", "hub-b"]);
-    expect(model.hubs[0]?.dependentCount).toBe(4);
-    expect(model.hubs[0]?.examples.map((example) => example.symbol)).toEqual(["D1", "D2", "D3"]);
-    expect(model.hubs[0]?.uniqueDependentMcapUsd).toBe(90);
-    expect(model.hubs[0]?.hubMcapUsd).toBe(0);
-    expect(model.hubs[1]?.hubMcapUsd).toBe(7);
-    expect(model.uniqueDependentMcapUsd).toBe(90);
-  });
-
-  it("breaks equal dependent counts by summed weight, then dependent market cap", () => {
-    const model = buildDependencyHubsModel({
-      cards: [
-        { id: "hub-x", name: "Hub X", symbol: "HUBX", isDefunct: false },
-        { id: "hub-y", name: "Hub Y", symbol: "HUBY", isDefunct: false },
-        { id: "hub-z", name: "Hub Z", symbol: "HUBZ", isDefunct: false },
-        { id: "dep-x", name: "Dep X", symbol: "DEPX", isDefunct: false },
-        { id: "dep-y", name: "Dep Y", symbol: "DEPY", isDefunct: false },
-        { id: "dep-z", name: "Dep Z", symbol: "DEPZ", isDefunct: false },
-      ],
-      edges: [
-        { from: "hub-x", to: "dep-x", weight: 0.5, type: "collateral" },
-        { from: "hub-y", to: "dep-y", weight: 0.5, type: "collateral" },
-        { from: "hub-z", to: "dep-z", weight: 0.9, type: "collateral" },
-      ] satisfies readonly DependencyGraphEdge[],
-      mcapMap: new Map([
-        ["dep-x", 10],
-        ["dep-y", 50],
-        ["dep-z", 1],
-      ]),
-    });
-
-    expect(model.hubs.map((hub) => hub.id)).toEqual(["hub-z", "hub-y", "hub-x"]);
-  });
-});
-
-function v9Edge(
-  kind: V9Edge["kind"],
-  materiality: V9Edge["materiality"],
-  weight: number | null,
-): V9Edge {
-  return { from: "up", to: "down", kind, materiality, weight, upstreamScore: null };
-}
-
-describe("v9DependencyEdgeWeight", () => {
-  it("treats serial claims as full pass-through and carries a basket's published weight", () => {
-    expect(v9DependencyEdgeWeight(v9Edge("serial", "serial", null))).toBe(1);
-    expect(v9DependencyEdgeWeight(v9Edge("serial", "serial-blocked", null))).toBe(1);
-    expect(v9DependencyEdgeWeight(v9Edge("basket", "basket-weighted", 0.4))).toBe(0.4);
-    expect(v9DependencyEdgeWeight(v9Edge("basket", "basket-bounded-unknown", 0.4))).toBe(0.4);
-  });
-
-  it("returns null only when the basket weight itself is absent", () => {
-    expect(v9DependencyEdgeWeight(v9Edge("basket", "basket-bounded-unknown", null))).toBe(null);
-    expect(v9DependencyEdgeWeight(v9Edge("basket", "basket-weighted", 0))).toBe(0);
-  });
-});
-
-describe("v9DependencyEdgeScoreKnown", () => {
-  it("reads materiality, never the weight", () => {
-    expect(v9DependencyEdgeScoreKnown(v9Edge("basket", "basket-bounded-unknown", 0.4))).toBe(false);
-    expect(v9DependencyEdgeScoreKnown(v9Edge("serial", "serial-blocked", null))).toBe(false);
-    expect(v9DependencyEdgeScoreKnown(v9Edge("basket", "basket-weighted", 0.4))).toBe(true);
-    expect(v9DependencyEdgeScoreKnown(v9Edge("basket", "basket-weighted", null))).toBe(true);
-    expect(v9DependencyEdgeScoreKnown(v9Edge("serial", "serial", null))).toBe(true);
+  it("uses v6 shared-book member supply as the fallback for both board and hero", () => {
+    const skyCards = cards.map(card => ({ ...card, sharedBookId: card.id === "dai-makerdao" || card.id === "usds-sky" ? "sky-maker" : null }));
+    const skyEdges: ReportCardsV9DependencyEdge[] = [
+      { from: "usdc-circle", to: "dai-makerdao", kind: "basket", materiality: "basket-weighted", weight: 0.4, upstreamScore: 80 },
+      { from: "usdc-circle", to: "usds-sky", kind: "basket", materiality: "basket-weighted", weight: 0.4, upstreamScore: 80 },
+    ];
+    const model = buildDependencyHubsModel({ cards: skyCards, edges: skyEdges, mcapMap: new Map([["dai-makerdao", 100], ["usds-sky", 200]]) });
+    expect(model.hubs[0].direct.knownUsd).toBe(120);
+    expect(model.hubs[0].dependentCount).toBe(2);
+    expect(model.mappedSupply.knownUsd).toBe(120);
   });
 });

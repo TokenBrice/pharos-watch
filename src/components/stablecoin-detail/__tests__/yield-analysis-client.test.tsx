@@ -103,7 +103,6 @@ function staticCoin(
       rwa: false,
       navToken: false,
     },
-    hasCollateralUsage: false,
   };
 }
 

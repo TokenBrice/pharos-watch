@@ -1,10 +1,28 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { installSvgCoordinateShim } from "./contagion-graph-test-support";
+import { buildGraphData, buildSupernodeState } from "@/lib/contagion-layout";
+import { trackEvent } from "@/lib/analytics";
+
+vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
+
+let desktop = false;
+let mediaListener: (() => void) | undefined;
+beforeEach(() => {
+  window.history.replaceState(null, "", "/dependency-map/");
+  vi.mocked(trackEvent).mockClear();
+  desktop = false;
+  mediaListener = undefined;
+  vi.stubGlobal("matchMedia", () => ({
+    get matches() { return desktop; },
+    addEventListener: (_: string, listener: () => void) => { mediaListener = listener; },
+    removeEventListener: () => { mediaListener = undefined; },
+  }));
+});
 
 vi.mock("@/lib/contagion-layout", async () => {
   const actual = await vi.importActual<typeof import("@/lib/contagion-layout")>("@/lib/contagion-layout");
@@ -17,6 +35,8 @@ vi.mock("@/lib/contagion-layout", async () => {
         ["usdtb-ethena", { x: 320, y: 300 }],
         ["usdc-circle", { x: 440, y: 300 }],
         ["dai-makerdao", { x: 560, y: 300 }],
+        ["dusd-alto", { x: 160, y: 240 }],
+        ["dusd-dialectic", { x: 340, y: 240 }],
       ]),
   };
 });
@@ -75,7 +95,114 @@ describe("ContagionGraph", () => {
     }
     return picker;
   }
+  it("does not promise fullscreen in a detail snapshot", () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} minimalChrome />);
+    expect(screen.getByText("Tap a node to inspect dependencies.")).toBeTruthy();
+    expect(screen.queryByText(/Use fullscreen/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Fullscreen graph" })).toBeNull();
+  });
 
+  it("shows small positive weights without rounding them to zero", () => {
+    const edges = [{ ...DEPENDENCY_EDGES[1], weight: 0.000148 }];
+    const { container } = render(<ContagionGraph cards={CARDS} dependencyEdges={edges} mcapMap={MCAP_MAP} />);
+    fireEvent.mouseEnter(container.querySelector('svg line[stroke="transparent"]')!);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("<1%");
+    fireEvent.mouseLeave(container.querySelector('svg line[stroke="transparent"]')!);
+    fireEvent.focus(screen.getByRole("button", { name: /USDC, Grade A/ }));
+    expect(screen.getAllByText("<0.01")).toHaveLength(2);
+  });
+
+  it("omits percentages on basket links with unavailable shares", () => {
+    const edges: ReportCardsV9DependencyEdge[] = [{ ...DEPENDENCY_EDGES[1], weight: null, materiality: "basket-bounded-unknown" }];
+    const { container } = render(<ContagionGraph cards={CARDS} dependencyEdges={edges} mcapMap={MCAP_MAP} />);
+    fireEvent.mouseEnter(container.querySelector('svg line[stroke="transparent"]')!);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("Collateral dependency");
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).not.toContain("%");
+  });
+
+
+  it("mounts one live graph in fullscreen and restores the opener on close", async () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
+    fireEvent.click(screen.getByRole("button", { name: "Fullscreen graph" }));
+    expect(document.querySelectorAll('[role="figure"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
+    expect(document.querySelectorAll("#clip-n-usdc-circle")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Close dependency map" })).toBeTruthy();
+    expect(trackEvent).toHaveBeenCalledWith("dependency_map_action", { action: "fullscreen_open", value: "graph" });
+    fireEvent.click(screen.getByRole("button", { name: "Close dependency map" }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Fullscreen graph" })));
+  });
+
+  it("closes fullscreen when the viewport enters desktop", async () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
+    fireEvent.click(screen.getByRole("button", { name: "Fullscreen graph" }));
+    desktop = true;
+    act(() => mediaListener?.());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.querySelectorAll('[role="figure"]')).toHaveLength(1);
+  });
+
+  it("shows unavailable market cap in the node label, announcement and inspection rail", () => {
+    const mcaps = new Map<string, number | null>(MCAP_MAP);
+    mcaps.set("usdc-circle", null);
+    const { container } = render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={mcaps} />);
+    fireEvent.focus(screen.getByRole("button", { name: /USDC, Grade A, mcap n\/a/ }));
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("mcap n/a");
+    expect(screen.getAllByText("mcap n/a").length).toBeGreaterThan(0);
+  });
+
+  it("disambiguates collision identities in picker and accessible node labels", () => {
+    const cards: ContagionGraphCard[] = [
+      { id: "dusd-alto", symbol: "DUSD", grade: "B" },
+      { id: "dusd-dialectic", symbol: "DUSD", grade: "B" },
+    ];
+    render(<ContagionGraph cards={cards} dependencyEdges={[{ ...DEPENDENCY_EDGES[1], from: "dusd-alto", to: "dusd-dialectic" }]} mcapMap={new Map()} />);
+    expect(screen.getByRole("option", { name: "DUSD (Alto DUSD)" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "DUSD (Dialectic USD)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /DUSD \(Alto DUSD\), Grade B/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /DUSD \(Dialectic USD\), Grade B/ })).toBeTruthy();
+  });
+
+  it("counts hubs only in the visible neighborhood", () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
+    fireEvent.change(getTraceCoinPicker(), { target: { value: "usdtb-ethena" } });
+    const { nodes, links } = buildGraphData(CARDS, MCAP_MAP, DEPENDENCY_EDGES);
+    const tiers = buildSupernodeState(nodes, links).tierById;
+    const visible = new Set(["usdtb-ethena", "usde-ethena"]);
+    const expected = nodes.filter((node) => visible.has(node.id) && (tiers.get(node.id) ?? 0) > 0).length;
+    expect(screen.getAllByText("Hubs").find((element) => element.tagName === "P")?.nextElementSibling?.textContent).toBe(String(expected));
+  });
+
+  it("round-trips URL controls and keeps unrelated parameters", async () => {
+    window.history.replaceState(null, "", "/dependency-map/?focus=usde-ethena&utm_source=detail");
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} syncUrlState />);
+    expect(getTraceCoinPicker().value).toBe("usde-ethena");
+    expect(screen.getByRole("button", { name: "Selected neighborhood" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Wrapper" }));
+    fireEvent.click(screen.getByRole("button", { name: "50" }));
+    fireEvent.change(getTraceCoinPicker(), { target: { value: "usdc-circle" } });
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(Object.fromEntries(params)).toEqual({ focus: "neighborhood", type: "wrapper", limit: "50", trace: "usdc-circle", utm_source: "detail" });
+    });
+    expect(trackEvent).toHaveBeenCalledWith("dependency_map_action", { action: "type", value: "wrapper" });
+    expect(trackEvent).toHaveBeenCalledWith("dependency_map_action", { action: "limit", value: "50" });
+    expect(trackEvent).toHaveBeenCalledWith("dependency_map_action", { action: "trace", value: "usdc-circle" });
+    fireEvent.click(within(screen.getByRole("group", { name: "Graph focus mode" })).getByRole("button", { name: "All" }));
+    expect(trackEvent).toHaveBeenCalledWith("dependency_map_action", { action: "focus", value: "all" });
+  });
+
+  it("ignores invalid URL controls and never syncs detail snapshots", () => {
+    window.history.replaceState(null, "", "/dependency-map/?focus=missing&type=nope&limit=17&trace=missing&campaign=keep");
+    const { unmount } = render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} syncUrlState />);
+    expect(within(screen.getByRole("group", { name: "Graph focus mode" })).getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
+    expect(new URLSearchParams(window.location.search).get("limit")).toBe("200");
+    unmount();
+    window.history.replaceState(null, "", "/stablecoin/usdc-circle/?focus=usde-ethena");
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} minimalChrome syncUrlState />);
+    expect(window.location.search).toBe("?focus=usde-ethena");
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
   it("renders no graph for an empty dataset", () => {
     const { container } = render(<ContagionGraph cards={[]} dependencyEdges={[]} mcapMap={new Map()} />);
 

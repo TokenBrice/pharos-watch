@@ -78,8 +78,7 @@ export function useContagionGraphDrag({
     return next;
   }, [basePositions, pinnedPositions]);
 
-  // The stage can be mounted twice at once (inline card + fullscreen dialog) over one shared
-  // model, so the owning <svg> is resolved from the event rather than from a single shared ref.
+  // Resolve coordinates against the event's SVG, including after fullscreen remounts.
   const handlePointerDown = useCallback((event: React.PointerEvent<SVGGElement>, nodeId: string) => {
     if (event.isPrimary === false) return;
     event.preventDefault();
@@ -164,6 +163,7 @@ export function useContagionGraphDrag({
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handlePointerCancel: handlePointerUp,
     consumeDragMovedSincePointerDown,
     unpinNode,
     unpinAll,

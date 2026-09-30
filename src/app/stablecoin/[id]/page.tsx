@@ -22,10 +22,8 @@ import aiSummaries from "@data/ai-summaries.json";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
-import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { buildStablecoinFaqItems, StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
 import { FaqSection } from "@/components/faq-section";
-import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
 import { buildMechanismBackingView } from "@/lib/mechanism-backing";
 import { buildMechanismCollateralizationView } from "@/lib/mechanism-collateralization";
@@ -47,38 +45,6 @@ function readDetailSnapshot(id: string): StablecoinDetailSnapshot | null {
   }
 }
 
-function buildCollateralUsageIndex(): Map<string, CollateralUsageEntry[]> {
-  const usageByStablecoinId = new Map<string, CollateralUsageEntry[]>();
-
-  for (const candidate of TRACKED_STABLECOINS) {
-    for (const dependency of deriveDependencies(candidate)) {
-      if (candidate.id === dependency.id || candidate.variantOf === dependency.id) continue;
-      const usage = usageByStablecoinId.get(dependency.id) ?? [];
-      usage.push({
-        coin: {
-          id: candidate.id,
-          name: candidate.name,
-          symbol: candidate.symbol,
-        },
-        weight: dependency.weight,
-        type: dependency.type ?? "collateral",
-      });
-      usageByStablecoinId.set(dependency.id, usage);
-    }
-  }
-
-  for (const usage of usageByStablecoinId.values()) {
-    usage.sort((a, b) => b.weight - a.weight);
-  }
-
-  return usageByStablecoinId;
-}
-
-const COLLATERAL_USAGE_BY_STABLECOIN_ID = buildCollateralUsageIndex();
-
-function buildCollateralUsageEntries(stablecoinId: string): CollateralUsageEntry[] {
-  return COLLATERAL_USAGE_BY_STABLECOIN_ID.get(stablecoinId) ?? [];
-}
 
 function DetailPageShellFallback({
   coin,
@@ -256,10 +222,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   }
 
   const related = getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS });
-  const collateralUsageEntries = buildCollateralUsageEntries(id);
-  const staticCoin = buildStablecoinStaticMeta(coin, {
-    hasCollateralUsage: collateralUsageEntries.length > 0,
-  });
+  const staticCoin = buildStablecoinStaticMeta(coin);
   const clientCoin = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
   const detailSnapshot = readDetailSnapshot(id);
   // Frozen coins never refresh provider detail, so their archived list row backs the hero
@@ -297,7 +260,6 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           summary={summary}
           staticCoin={staticCoin}
           logoSrc={getLogoSrc(logosById, coin.id)}
-          collateralUsageEntries={collateralUsageEntries}
           mechanismBacking={buildMechanismBackingView(id)}
           mechanismCollateralization={buildMechanismCollateralizationView(id)}
           mechanismReview={buildMechanismReviewView(id)}

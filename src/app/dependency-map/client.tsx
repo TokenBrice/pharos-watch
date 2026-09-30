@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { DependencyHero } from "./dependency-hero";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
@@ -26,17 +26,15 @@ export function DependencyMapClient() {
   } = reportCardsQuery;
   const {
     data: stablecoinsData,
-    isLoading: isLoadingCoins,
     error: stablecoinsError,
     refetch: refetchStablecoins,
   } = stablecoinsQuery;
   const logos = logosById;
-  const primaryError = reportCardsError ?? stablecoinsError;
 
   const mcapMap = useMemo(() => {
-    if (!stablecoinsData?.peggedAssets) return new Map<string, number>();
-    return new Map(stablecoinsData.peggedAssets.map((asset) => [asset.id, getCirculatingRaw(asset)]));
-  }, [stablecoinsData]);
+    if (!stablecoinsData?.peggedAssets || stablecoinsError) return new Map<string, number | null>();
+    return new Map(stablecoinsData.peggedAssets.map((asset) => [asset.id, getCirculatingRawOrNull(asset)]));
+  }, [stablecoinsData, stablecoinsError]);
 
   const dependencyEdges = useMemo(() => reportData?.dependencyGraph?.edges ?? [], [reportData]);
 
@@ -50,17 +48,19 @@ export function DependencyMapClient() {
           name: meta?.name ?? card.id,
           symbol: meta?.symbol ?? card.id,
           grade: card.grade,
+          scoreTrace: card.scoreTrace,
+          sharedBookId: card.sharedBookId,
         };
       }),
     [reportData],
   );
 
   const dependencyHubsModel = useMemo(
-    () => buildDependencyHubsModel({ cards, edges: dependencyEdges, mcapMap }),
-    [cards, dependencyEdges, mcapMap],
+    () => buildDependencyHubsModel({ cards, edges: dependencyEdges, mcapMap, marketCapAsOf: stablecoinsError ? null : stablecoinsQuery.meta?.updatedAt ?? null }),
+    [cards, dependencyEdges, mcapMap, stablecoinsError, stablecoinsQuery.meta?.updatedAt],
   );
 
-  if (isLoadingCards || isLoadingCoins) {
+  if (isLoadingCards && !reportData?.cards?.length) {
     return (
       <Card>
         <CardContent className="pt-4 pb-4">
@@ -70,17 +70,12 @@ export function DependencyMapClient() {
     );
   }
 
-  if (primaryError) {
+  if (reportCardsError && !reportData?.cards?.length) {
     return (
       <QueryErrorNotice
-        error={primaryError}
-        hasData={!!reportData?.cards?.length || !!stablecoinsData?.peggedAssets?.length}
-        onRetry={() => {
-          void Promise.all([
-            reportCardsError ? refetchReportCards() : Promise.resolve(),
-            stablecoinsError ? refetchStablecoins() : Promise.resolve(),
-          ]);
-        }}
+        error={reportCardsError}
+        hasData={!!reportData?.cards?.length}
+        onRetry={() => { void refetchReportCards(); }}
       />
     );
   }
@@ -98,8 +93,19 @@ export function DependencyMapClient() {
   return (
     <div className="space-y-4">
       <SafetyScoreV9StatusNotice response={reportData} />
+      {reportCardsError && (
+        <QueryErrorNotice error={reportCardsError} hasData={!!reportData.cards.length} onRetry={() => { void refetchReportCards(); }} />
+      )}
+      {stablecoinsError && (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Market-cap data is unavailable. The map remains available with default node sizes and unknown USD exposure.</p>
+          <QueryErrorNotice error={stablecoinsError} hasData={!!stablecoinsData?.peggedAssets?.length} onRetry={() => { void refetchStablecoins(); }} />
+        </div>
+      )}
       <DependencyHero
         model={dependencyHubsModel}
+        methodologyVersion={reportData.methodology.version}
+        publishedAt={reportData.updatedAt}
         cards={cards}
         dependencyEdges={dependencyEdges}
         mcapMap={mcapMap}

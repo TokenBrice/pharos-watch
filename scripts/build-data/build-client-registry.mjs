@@ -218,6 +218,9 @@ export function projectListCoin(coin, listFields, listingClass, sourceById) {
   if (mechanismArchetype !== undefined) projected.mechanismArchetype = mechanismArchetype;
   projected[CHAIN_IDS_FIELD] = projectChainIds(coin);
   projected[LISTING_CLASS_FIELD] = listingClass;
+  projected.hasAuthoredDependencyEvidence = !!coin?.variantOf ||
+    (coin?.dependencies?.length ?? 0) > 0 ||
+    (coin?.reserves?.some((reserve) => !!reserve.coinId) ?? false);
   const blacklistStatus = projectBlacklistStatus(coin);
   if (blacklistStatus !== undefined) projected[BLACKLIST_STATUS_FIELD] = blacklistStatus;
   const custodyModel = coin?.custodyModel;

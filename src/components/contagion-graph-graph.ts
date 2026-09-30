@@ -5,6 +5,7 @@ export interface ResolvedLink {
   srcId: string;
   tgtId: string;
   weight: number;
+  shareUnknown?: boolean;
   type: ContagionEdgeRelationship;
   srcTier: HubTier;
   tgtTier: HubTier;
@@ -35,6 +36,7 @@ export function resolveGraphLinks(links: readonly GraphLink[], tierById: Readonl
       srcId,
       tgtId,
       weight: link.weight,
+      shareUnknown: link.shareUnknown,
       type: link.type,
       srcTier: tierById.get(srcId) ?? 0,
       tgtTier: tierById.get(tgtId) ?? 0,

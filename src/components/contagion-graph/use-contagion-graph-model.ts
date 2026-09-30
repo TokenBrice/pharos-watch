@@ -27,13 +27,17 @@ import {
   type ContagionGraphCard,
 } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
+import { trackEvent } from "@/lib/analytics";
+import { NODE_LIMIT_OPTIONS } from "@/lib/contagion-layout";
 
 interface UseContagionGraphModelOptions {
   cards: readonly ContagionGraphCard[];
   dependencyEdges: readonly ReportCardsV9DependencyEdge[];
-  mcapMap: Map<string, number>;
+  mcapMap: ReadonlyMap<string, number | null>;
   focusCoinId?: string;
   maxNodes?: number;
+  syncUrlState?: boolean;
+  trackActions?: boolean;
 }
 
 const FOCUS_NEIGHBOR_RADIUS_X = 240;
@@ -93,7 +97,7 @@ function buildFocusLayoutTargets(
 export interface ContagionGraphNodeSelectOption {
   id: string;
   symbol: string;
-  mcap: number;
+  mcap: number | null;
 }
 
 function buildHubIdsByScore(nodes: readonly GraphNode[], supernodeState: SupernodeState): string[] {
@@ -105,7 +109,7 @@ function buildHubIdsByScore(nodes: readonly GraphNode[], supernodeState: Superno
 
 function buildNodeSelectOptions(nodes: readonly GraphNode[]): ContagionGraphNodeSelectOption[] {
   return [...nodes]
-    .sort((a, b) => b.mcap - a.mcap)
+    .sort((a, b) => (b.mcap ?? -1) - (a.mcap ?? -1))
     .map((node) => ({ id: node.id, symbol: node.symbol, mcap: node.mcap }));
 }
 
@@ -139,6 +143,8 @@ export function useContagionGraphModel({
   mcapMap,
   focusCoinId,
   maxNodes,
+  syncUrlState = false,
+  trackActions = true,
 }: UseContagionGraphModelOptions) {
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
@@ -174,6 +180,55 @@ export function useContagionGraphModel({
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
+  const [urlReady, setUrlReady] = useState(false);
+  const urlInitialized = useRef(false);
+  useEffect(() => {
+    if (!syncUrlState || urlInitialized.current || !cards.length) return;
+    urlInitialized.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const focus = params.get("focus");
+    const trace = params.get("trace");
+    const type = params.get("type");
+    const limit = params.get("limit");
+    const validTrace = (id: string | null): id is string =>
+      Boolean(id && cards.some((card) => card.id === id) && dependencyEdges.some((edge) => edge.from === id || edge.to === id));
+    const root = validTrace(focus) ? focus : validTrace(trace) ? trace : null;
+    // Browser URL state is read only after hydration, preserving static export.
+    setFocusMode(validTrace(focus) ? "neighborhood" : focus === "hub" || focus === "neighborhood" ? focus : "all");
+    setSelectedNeighborhoodId(root);
+    if (type === "all" || type === "collateral" || type === "wrapper") setEdgeTypeFilter(type);
+    const parsedLimit = NODE_LIMIT_OPTIONS.find((option) => String(option) === limit);
+    if (parsedLimit !== undefined) setNodeLimit(parsedLimit);
+    else if (root) setNodeLimit("all");
+    setUrlReady(true);
+  }, [syncUrlState, cards, dependencyEdges]);
+
+  useEffect(() => {
+    if (!syncUrlState || !urlReady) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("focus", focusMode);
+    url.searchParams.set("type", edgeTypeFilter);
+    url.searchParams.set("limit", String(nodeLimit));
+    if (selectedNeighborhoodId) url.searchParams.set("trace", selectedNeighborhoodId);
+    else url.searchParams.delete("trace");
+    window.history.replaceState(window.history.state, "", url);
+  }, [syncUrlState, urlReady, focusMode, edgeTypeFilter, nodeLimit, selectedNeighborhoodId]);
+
+  const changeFocusMode = useCallback((value: FocusMode) => {
+    if (value === focusMode) return;
+    setFocusMode(value);
+    if (trackActions) trackEvent("dependency_map_action", { action: "focus", value });
+  }, [focusMode, trackActions]);
+  const changeEdgeTypeFilter = useCallback((value: EdgeTypeFilter) => {
+    if (value === edgeTypeFilter) return;
+    setEdgeTypeFilter(value);
+    if (trackActions) trackEvent("dependency_map_action", { action: "type", value });
+  }, [edgeTypeFilter, trackActions]);
+  const changeNodeLimit = useCallback((value: NodeLimitOption) => {
+    if (value === nodeLimit) return;
+    setNodeLimit(value);
+    if (trackActions) trackEvent("dependency_map_action", { action: "limit", value: String(value) });
+  }, [nodeLimit, trackActions]);
   const hubIdsByScore = useMemo(() => buildHubIdsByScore(nodes, supernodeState), [nodes, supernodeState]);
   const nodeSelectOptions = useMemo(() => buildNodeSelectOptions(nodes), [nodes]);
   const effectiveSelectedNeighborhoodId = useMemo(
@@ -218,14 +273,16 @@ export function useContagionGraphModel({
 
   const handleTraceNodeChange = useCallback((nodeId: string | null) => {
     setSelectedNeighborhoodId(nodeId);
-    if (nodeId) setFocusMode("neighborhood");
-  }, []);
+    if (nodeId) changeFocusMode("neighborhood");
+    if (trackActions && nodeId !== selectedNeighborhoodId) trackEvent("dependency_map_action", { action: "trace", value: nodeId ?? "" });
+  }, [changeFocusMode, selectedNeighborhoodId, trackActions]);
 
   const handleNodeKeyDown = useCallback(
     (event: React.KeyboardEvent<SVGGElement>, nodeId: string) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         setSelectedNeighborhoodId(nodeId);
+        if (trackActions && nodeId !== selectedNeighborhoodId) trackEvent("dependency_map_action", { action: "trace", value: nodeId });
         setHoveredId((previous) => (previous === nodeId ? null : nodeId));
         return;
       }
@@ -245,7 +302,7 @@ export function useContagionGraphModel({
         : null;
       target?.focus();
     },
-    [drag.positions, resolvedLinks],
+    [drag.positions, resolvedLinks, trackActions, selectedNeighborhoodId],
   );
 
   const handleNodeMouseEnter = useCallback((nodeId: string) => {
@@ -267,8 +324,9 @@ export function useContagionGraphModel({
       if (drag.dragId) return;
       if (drag.consumeDragMovedSincePointerDown()) return;
       setSelectedNeighborhoodId(nodeId);
+      if (trackActions && nodeId !== selectedNeighborhoodId) trackEvent("dependency_map_action", { action: "trace", value: nodeId });
     },
-    [drag],
+    [drag, trackActions, selectedNeighborhoodId],
   );
   const handleNodeDoubleClick = useCallback(
     (nodeId: string) => {
@@ -281,10 +339,11 @@ export function useContagionGraphModel({
 
   const handleClearSelection = useCallback(() => {
     setSelectedNeighborhoodId(null);
+    if (trackActions && selectedNeighborhoodId) trackEvent("dependency_map_action", { action: "trace", value: "" });
     setHoveredId(null);
     setHoveredEdge(null);
     setFocusedId(null);
-  }, []);
+  }, [trackActions, selectedNeighborhoodId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -302,11 +361,11 @@ export function useContagionGraphModel({
     nodes,
     supernodeState,
     focusMode,
-    setFocusMode,
+    setFocusMode: changeFocusMode,
     edgeTypeFilter,
-    setEdgeTypeFilter,
+    setEdgeTypeFilter: changeEdgeTypeFilter,
     nodeLimit,
-    setNodeLimit,
+    setNodeLimit: changeNodeLimit,
     nodeSelectOptions,
     effectiveSelectedNeighborhoodId,
     pinnedSelectionId: selectedNeighborhoodId,

@@ -639,7 +639,7 @@ export function AboutPageContent() {
           <p>
             Pharos Safety Score V9 grades stablecoins across Backing Quality, Exit Strength, and Economic Control,
             then applies peg behavior, deployment adjustments, and binding caps. The methodology page covers the
-            full grading formula, peg score computation, DEX liquidity scoring, and contagion stress-test design.
+            full grading formula, peg score computation, DEX liquidity scoring, and dependency propagation.
           </p>
           <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
             <Link href="/methodology/">

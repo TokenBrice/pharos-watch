@@ -15,6 +15,10 @@ declare global {
 
 type EventMap = {
   // Tier 1 — Feature Adoption
+  dependency_map_action: {
+    action: "focus" | "type" | "limit" | "trace" | "fullscreen_open" | "hub_open_coin" | "hub_exposure" | "mode_switch" | "root_change" | "share" | "inspect_path";
+    value: string;
+  };
   comparison_created: { coin_count: number; coin_ids: string };
   comparison_preset_selected: { preset: string };
   comparison_exported: { method: string; coin_count: number };

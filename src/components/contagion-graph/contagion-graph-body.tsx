@@ -65,7 +65,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation }: Con
           />
         ) : (
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            Tap a node to inspect dependencies. Use fullscreen for a larger touch canvas.
+            Tap a node to inspect dependencies.{!detailNodePresentation && " Use fullscreen for a larger touch canvas."}
           </p>
         )}
       </div>

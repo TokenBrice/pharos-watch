@@ -14,7 +14,6 @@ import { ReserveQualitySection } from "@/components/stablecoin-detail/reserve-qu
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { LazySection } from "@/components/lazy-section";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
-import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import type { DetailSharedModules } from "./detail-shared-modules";
@@ -32,9 +31,7 @@ type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready"
 
 interface DetailRiskContextSectionsProps {
   activeBannerId: string;
-  collateralUsageEntries: readonly CollateralUsageEntry[];
   frozenNote: ReactNode;
-  hasCollateralUsage: boolean;
   mechanismReview: MechanismReviewView | null;
   sharedModules: DetailSharedModules;
   transferReview: TransferReviewView | null;
@@ -46,9 +43,7 @@ interface DetailRiskContextSectionsProps {
 
 export function DetailRiskContextSections({
   activeBannerId,
-  collateralUsageEntries,
   frozenNote,
-  hasCollateralUsage,
   mechanismReview,
   sharedModules,
   transferReview,
@@ -147,8 +142,6 @@ export function DetailRiskContextSections({
         <ContagionSnapshot
           stablecoinId={viewModel.id}
           variantRelationshipCard={variantRelationshipCard}
-          hasCollateralUsage={hasCollateralUsage}
-          collateralUsageEntries={collateralUsageEntries}
         />
         <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
         {viewModel.coin.reserveQualitySummary ? (

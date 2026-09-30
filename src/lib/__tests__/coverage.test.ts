@@ -352,8 +352,6 @@ describe("coverage helpers", () => {
         kind: "both",
         upstreamCount: 2,
         dependentCount: 1,
-        rawDependencyCount: 2,
-        mappedDependencyWeight: 0.9,
       }).kind,
     ).toBe("both");
     expect(
@@ -361,8 +359,6 @@ describe("coverage helpers", () => {
         kind: "dependent",
         upstreamCount: 1,
         dependentCount: 0,
-        rawDependencyCount: 1,
-        mappedDependencyWeight: 0.5,
       }).kind,
     ).toBe("dependent");
     expect(
@@ -370,8 +366,6 @@ describe("coverage helpers", () => {
         kind: "upstream",
         upstreamCount: 0,
         dependentCount: 2,
-        rawDependencyCount: 0,
-        mappedDependencyWeight: 0,
       }).kind,
     ).toBe("upstream");
     expect(
@@ -379,8 +373,6 @@ describe("coverage helpers", () => {
         kind: "resolved-none",
         upstreamCount: 0,
         dependentCount: 0,
-        rawDependencyCount: 0,
-        mappedDependencyWeight: 0,
       }).available,
     ).toBe(true);
     expect(
@@ -388,8 +380,6 @@ describe("coverage helpers", () => {
         kind: "unmapped-gap",
         upstreamCount: 0,
         dependentCount: 0,
-        rawDependencyCount: 1,
-        mappedDependencyWeight: 0,
       }).available,
     ).toBe(false);
   });
@@ -514,8 +504,6 @@ describe("coverage helpers", () => {
           kind: "unmapped-gap",
           upstreamCount: 0,
           dependentCount: 0,
-          rawDependencyCount: 1,
-          mappedDependencyWeight: 0,
         },
       }),
       makeCoverageRow(["unavailable", "DNA"], {

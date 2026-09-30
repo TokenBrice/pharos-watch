@@ -9,11 +9,12 @@ import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9"
 interface ContagionGraphProps {
   cards: readonly ContagionGraphCard[];
   dependencyEdges: readonly ReportCardsV9DependencyEdge[];
-  mcapMap: Map<string, number>;
+  mcapMap: ReadonlyMap<string, number | null>;
   logos?: Record<string, string>;
   focusCoinId?: string;
   minimalChrome?: boolean;
   maxNodes?: number;
+  syncUrlState?: boolean;
 }
 
 export function ContagionGraph({
@@ -24,8 +25,9 @@ export function ContagionGraph({
   focusCoinId,
   minimalChrome,
   maxNodes,
+  syncUrlState = false,
 }: ContagionGraphProps) {
-  const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId, maxNodes });
+  const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId, maxNodes, syncUrlState: syncUrlState && !minimalChrome, trackActions: !minimalChrome });
 
   if (graph.nodes.length === 0) return null;
 

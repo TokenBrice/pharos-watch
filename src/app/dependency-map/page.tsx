@@ -6,13 +6,13 @@ import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const description =
-  "Interactive graph of collateral dependencies between up to 200 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
+  "Interactive graph of collateral and wrapper dependencies between stablecoins. Node size reflects market cap; lines show direct dependency links.";
 
 const DEPENDENCY_MAP_FAQ_ITEMS = [
   {
     question: "What does the Dependency Map show?",
     answer:
-      "The Dependency Map shows stablecoins that depend on other stablecoins, collateral assets, wrappers, or shared infrastructure. It is designed to reveal correlated risk that is easy to miss when each asset is reviewed in isolation.",
+      "The Dependency Map shows direct collateral and wrapper dependencies between stablecoins with published Safety Scores. Bridges, custodians, and other shared infrastructure are not drawn as separate nodes.",
   },
   {
     question: "Why can dependency risk matter even when a coin holds its peg?",
@@ -22,7 +22,7 @@ const DEPENDENCY_MAP_FAQ_ITEMS = [
   {
     question: "How should I combine this with Safety Scores?",
     answer:
-      "Use the map to trace exposure paths, then use Safety Scores and the contagion simulator to see how those paths affect grades. The map explains the relationship; Safety Scores quantify the likely impact.",
+      "Use the map to trace collateral and wrapper relationships, then read each coin's grade and dependency inputs on Safety Scores.",
   },
 ] as const satisfies readonly FaqItem[];
 
@@ -31,8 +31,8 @@ const DEPENDENCY_MAP_STATIC_SECTION = (
     <p className="pharos-kicker">Dependency Lens</p>
     <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
       <p>
-        The most important stablecoin risk is often one step upstream: collateral, wrappers, bridges, custodians, and
-        shared issuance frameworks can create common-mode exposure.
+        The graph shows direct collateral and wrapper links between stablecoins. Bridges, custodians, and shared
+        issuance frameworks can also create common exposures, but are not drawn as separate nodes here.
       </p>
       <p>
         Start with the graph, then open{" "}
@@ -42,7 +42,7 @@ const DEPENDENCY_MAP_STATIC_SECTION = (
         >
           Safety Scores
         </Link>{" "}
-        for the grade impact and{" "}
+        for each coin&apos;s grade and dependency inputs and{" "}
         <Link
           href="/coverage/"
           className="pharos-prose-link"
@@ -52,8 +52,8 @@ const DEPENDENCY_MAP_STATIC_SECTION = (
         for per-coin data availability.
       </p>
       <p>
-        Large nodes are not automatically safer. They are larger sources or receivers of exposure, so their failure can
-        matter more across the rest of the stablecoin network.
+        Node size reflects market cap, not safety or a forecast of losses. A dependency link identifies a relationship,
+        not the outcome of an upstream failure.
       </p>
     </div>
   </section>
@@ -76,9 +76,8 @@ const route = createClientFeaturePage({
     ],
     headerSupplement: (
       <p className="pharos-lead hidden sm:block">
-        Stablecoins that look safe in isolation can collapse when their collateral fails. This graph maps transitive
-        collateral dependencies across the ecosystem. Drag nodes to trace exposure chains — then take the insight to
-        the Safety Scores contagion simulator to model the cascade.
+        This graph maps direct collateral and wrapper dependencies between stablecoins. Select a coin to inspect
+        its upstream assets and direct dependents, then read its grade and dependency inputs on Safety Scores.
       </p>
     ),
   },

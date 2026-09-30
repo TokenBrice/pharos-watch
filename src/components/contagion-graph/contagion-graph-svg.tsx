@@ -1,7 +1,7 @@
 "use client";
 
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode } from "react";
-import { gradeColor, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
+import { gradeColor, graphNodeLabel, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
 import type { FocusMode, ResolvedLink } from "@/components/contagion-graph-graph";
 import {
   GRAPH_DIM_EDGE_OPACITY,
@@ -284,7 +284,7 @@ function ContagionGraphNode({
   const tickerFontSize = HUB_LABEL_FONT_SIZE * nodeScale;
   const labelGap = showTickerLabels ? tickerFontSize * 0.7 : isCoreHub ? 12 : 10;
   const labelY = Math.max(PAD + 10, Math.min(HEIGHT - PAD - 2, position.y + visualR + labelGap));
-  const labelText = showTickerLabels ? node.symbol : `${node.symbol} · ${node.grade}`;
+  const labelText = showTickerLabels ? graphNodeLabel(node) : `${graphNodeLabel(node)} · ${node.grade}`;
   return (
     <g
       key={node.id}
@@ -292,7 +292,7 @@ function ContagionGraphNode({
       data-node-id={node.id}
       data-pinned={isPinnedPosition ? "true" : undefined}
       role="button"
-      aria-label={`${node.symbol} — Grade ${node.grade}, market cap ${formatCurrency(node.mcap)}${isPinnedPosition ? " (pinned)" : ""}`}
+      aria-label={`${graphNodeLabel(node)}, Grade ${node.grade}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}${pinnedSelectionId === node.id ? ", Selected" : ", Trace"}${isPinnedPosition ? ", Pinned position" : ""}`}
       style={{ cursor: nodeCursor }}
       onPointerDown={(event) => onPointerDown(event, node.id)}
       onMouseEnter={() => onMouseEnter(node.id)}
@@ -449,6 +449,7 @@ export function ContagionGraphSvg({
       style={{ cursor: dragId ? "grabbing" : "default" }}
       onPointerMove={graph.handlePointerMove}
       onPointerUp={graph.handlePointerUp}
+      onPointerCancel={graph.handlePointerCancel}
       onPointerLeave={graph.handlePointerUp}
       onClick={handleSvgClick}
     >

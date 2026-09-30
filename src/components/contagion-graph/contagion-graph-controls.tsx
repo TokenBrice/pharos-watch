@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph-graph";
-import { DEPENDENCY_TYPE_FILTERS } from "@/components/contagion-graph-model";
+import { DEPENDENCY_TYPE_FILTERS, graphNodeLabel } from "@/components/contagion-graph-model";
 import type { ContagionGraphNodeSelectOption } from "@/components/contagion-graph/use-contagion-graph-model";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { ALL_NODE_LIMIT, NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
@@ -132,7 +132,7 @@ export function ContagionGraphControls({
           >
             {nodeSelectOptions.map((node) => (
               <option key={node.id} value={node.id}>
-                {node.symbol}
+                {graphNodeLabel(node)}
               </option>
             ))}
           </select>
@@ -141,7 +141,7 @@ export function ContagionGraphControls({
 
       <p className="text-[10px] leading-relaxed text-muted-foreground">
         Focus narrows the visible subgraph; type filters which dependency edges are drawn; limit caps how many top-mcap
-        coins enter the map. Selecting a trace coin opens its neighborhood; clicking a node pins that target.
+        coins enter the map. Selecting a trace coin opens its neighborhood; clicking a node selects that target. Dragging pins its position.
       </p>
     </div>
   );

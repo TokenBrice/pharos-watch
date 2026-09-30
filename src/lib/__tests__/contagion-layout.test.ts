@@ -13,6 +13,7 @@ import {
   MAX_NODES,
   MAX_COLLISION_PASS_NODES,
   PAD,
+  MIN_RADIUS,
   SUPERNODE_CONFIG,
   type ContagionGraphCard,
   type GraphNode,
@@ -58,6 +59,16 @@ function serialEdge(from: string, to: string, blocked = false): ReportCardsV9Dep
     upstreamScore: null,
   };
 }
+
+it("preserves unavailable market cap without inflating node size", () => {
+  const { nodes } = buildGraphData(
+    [mockCard("known", "KNOWN"), mockCard("unknown", "UNKNOWN")],
+    new Map<string, number | null>([["known", 100], ["unknown", null]]),
+    [basketEdge("unknown", "known", 0.1)],
+  );
+  expect(nodes.find((node) => node.id === "unknown")).toMatchObject({ mcap: null, r: MIN_RADIUS });
+  expect(nodes.find((node) => node.id === "known")!.r).toBeGreaterThan(MIN_RADIUS);
+});
 
 // ---------------------------------------------------------------------------
 // minMaxNormalize

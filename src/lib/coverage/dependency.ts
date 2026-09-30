@@ -44,8 +44,8 @@ const DEPENDENCY_PRESETS: Record<DependencyCoverageKind, CoverageStatusPreset> =
     tone: "emerald",
     available: true,
     sortRank: 1,
-    detail: "The report-card snapshot resolved this asset with no tracked stablecoin dependency edge.",
-    spokenLabel: "Resolved with no tracked dependencies",
+    detail: "The snapshot has no tracked dependency edge, and no authored dependency evidence or published coverage row identifies a gap.",
+    spokenLabel: "No identified tracked dependencies",
   },
   "unmapped-gap": {
     kind: "unmapped-gap",
@@ -63,8 +63,6 @@ function legacyBooleanFact(hasDependencyCoverage: boolean): DependencyCoverageFa
     kind: hasDependencyCoverage ? "dependent" : "unmapped-gap",
     upstreamCount: hasDependencyCoverage ? 1 : 0,
     dependentCount: 0,
-    rawDependencyCount: hasDependencyCoverage ? 1 : 0,
-    mappedDependencyWeight: hasDependencyCoverage ? 1 : 0,
   };
 }
 
@@ -76,8 +74,6 @@ function normalizeDependencyInput(input: DependencyResolverInput): DependencyCov
     kind: "unmapped-gap",
     upstreamCount: 0,
     dependentCount: 0,
-    rawDependencyCount: 0,
-    mappedDependencyWeight: 0,
   };
 }
 
@@ -90,9 +86,8 @@ function formatDetail(fact: DependencyCoverageFact, fallback: string): string {
     case "upstream":
       return `Supports ${fact.dependentCount} tracked dependent asset${fact.dependentCount === 1 ? "" : "s"}.`;
     case "unmapped-gap":
-      if (fact.missingReportCard) return "No report-card row was available for this asset.";
-      return fact.rawDependencyCount > 0
-        ? `Has ${fact.rawDependencyCount} raw dependency input${fact.rawDependencyCount === 1 ? "" : "s"}, but no live graph edge after filtering.`
+      return fact.dependencyCoverageReasons?.length
+        ? `${fallback} Published coverage reasons: ${fact.dependencyCoverageReasons.join(", ")}.`
         : fallback;
     default:
       return fallback;
@@ -130,7 +125,7 @@ const DEPENDENCY_LEGEND: readonly CoverageLegendItem[] = [
   },
   {
     term: "No deps",
-    description: "The asset is resolved with no tracked stablecoin dependency edge.",
+    description: "No tracked graph role, authored dependency evidence, or published coverage row identifies a dependency.",
     kinds: ["resolved-none"],
   },
   {

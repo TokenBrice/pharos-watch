@@ -13,6 +13,8 @@ function DragHarness({ simulationKey = "stable" }: { simulationKey?: string }) {
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handlePointerCancel,
+    dragId,
     consumeDragMovedSincePointerDown,
   } = useContagionGraphDrag({
     nodeMap: new Map([["node-1", { r: 12 }]]),
@@ -24,8 +26,10 @@ function DragHarness({ simulationKey = "stable" }: { simulationKey?: string }) {
   return (
     <svg
       data-testid="drag-svg"
+      data-drag-id={dragId ?? ""}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
     >
       <g
         data-testid="drag-node"
@@ -72,6 +76,19 @@ describe("useContagionGraphDrag", () => {
 
     expect(circle?.getAttribute("cx")).toBe("140");
     expect(circle?.getAttribute("cy")).toBe("150");
+  });
+
+  it("ends a cancelled drag and ignores later pointer movement", () => {
+    const { container } = render(<DragHarness />);
+    const node = screen.getByTestId("drag-node");
+    const svg = screen.getByTestId("drag-svg");
+    fireEvent.pointerDown(node, { pointerId: 1, clientX: 100, clientY: 100, isPrimary: true });
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 140, clientY: 150 });
+    fireEvent.pointerCancel(svg, { pointerId: 1 });
+    expect(svg.getAttribute("data-drag-id")).toBe("");
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 240, clientY: 250 });
+    expect(container.querySelector("circle")?.getAttribute("cx")).toBe("140");
+    expect(container.querySelector("circle")?.getAttribute("cy")).toBe("150");
   });
 
   it("resets pinned positions when the simulation key changes", async () => {

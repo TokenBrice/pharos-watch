@@ -33,7 +33,6 @@ import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
-import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { alignAnchorAfterHydration } from "@/lib/anchor-reveal";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
@@ -58,7 +57,6 @@ const DETAIL_SECTIONS = [
 interface DetailContentProps {
   activeBannerId: string;
   activityGateRef: Ref<HTMLDivElement>;
-  collateralUsageEntries: readonly CollateralUsageEntry[];
   exploreNextContent: ReactNode;
   faqContent: ReactNode;
   feedbackOpen: boolean;
@@ -71,7 +69,6 @@ interface DetailContentProps {
   onActiveBannerChange: (id: string) => void;
   onFeedbackOpenChange: (open: boolean) => void;
   overviewGateRef: Ref<HTMLDivElement>;
-  staticHasCollateralUsage: boolean;
   viewModel: ReadyDetailViewModel;
 }
 
@@ -205,7 +202,6 @@ function DetailSummaryRail({
 export function DetailContent({
   activeBannerId,
   activityGateRef,
-  collateralUsageEntries,
   exploreNextContent,
   faqContent,
   feedbackOpen,
@@ -218,7 +214,6 @@ export function DetailContent({
   onActiveBannerChange,
   onFeedbackOpenChange,
   overviewGateRef,
-  staticHasCollateralUsage,
   viewModel,
 }: DetailContentProps) {
   // The scrollspy owns its top-level hashes. Nested direct links need the
@@ -311,9 +306,7 @@ export function DetailContent({
           <div className="mt-4 min-w-0 space-y-6">
             <DetailRiskContextSections
               activeBannerId={activeBannerId}
-              collateralUsageEntries={collateralUsageEntries}
               frozenNote={frozenNote}
-              hasCollateralUsage={staticHasCollateralUsage}
               mechanismReview={mechanismReview}
               sharedModules={sharedModules}
               transferReview={transferReview}

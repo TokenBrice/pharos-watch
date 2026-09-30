@@ -8,7 +8,7 @@ interface TooltipNode {
   id: string;
   symbol: string;
   grade: V9Grade;
-  mcap: number;
+  mcap: number | null;
   r: number;
 }
 
@@ -42,7 +42,8 @@ interface TooltipContext {
  */
 function describeLinkMateriality(link: ResolvedLink): string {
   const { label, showWeight } = DEPENDENCY_TYPE_PRESENTATION[link.type];
-  return showWeight && link.weight > 0 ? `${label} · ${Math.round(link.weight * 100)}%` : label;
+  if (!showWeight || link.shareUnknown || link.weight <= 0) return label;
+  return `${label} · ${link.weight < 0.01 ? "<1%" : `${Math.round(link.weight * 100)}%`}`;
 }
 
 export function buildTooltipAnnouncement({
@@ -63,7 +64,7 @@ export function buildTooltipAnnouncement({
   if (activeHoveredId) {
     const node = nodeMap.get(activeHoveredId);
     if (!node) return "";
-    return `${node.symbol}, Grade ${node.grade}, market cap ${formatCurrency(node.mcap)}`;
+    return `${node.symbol}, Grade ${node.grade}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}`;
   }
 
   return "";
@@ -94,7 +95,7 @@ export function buildNodeTooltipElement({
         Grade: {node.grade}
       </text>
       <text x={tx + 8} y={ty + 46} fill="currentColor" fontSize={10} opacity={0.7} fontFamily="var(--font-mono, monospace)">
-        {formatCurrency(node.mcap)}
+        {node.mcap === null ? "mcap n/a" : formatCurrency(node.mcap)}
       </text>
     </g>
   );

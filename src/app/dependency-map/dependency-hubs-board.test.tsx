@@ -1,57 +1,33 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
-import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
+import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import { trackEvent } from "@/lib/analytics";
+import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 
-const MODEL: DependencyHubsModel = {
-  upstreamHubCount: 1,
-  directEdgeCount: 3,
-  uniqueDirectDependentCount: 2,
-  summedDirectDependencyWeight: 0.9,
-  uniqueDependentMcapUsd: 7_000_000_000,
-  hubs: [
-    {
-      id: "usdc-circle",
-      label: "USD Coin",
-      symbol: "USDC",
-      dependentCount: 2,
-      summedDirectDependencyWeight: 0.9,
-      uniqueDependentMcapUsd: 7_000_000_000,
-      hubMcapUsd: 100_000_000_000,
-      examples: [
-        { id: "dai-maker", label: "Dai", symbol: "DAI", mcapUsd: 5_000_000_000 },
-        { id: "frax-france", label: "Frax", symbol: "FRAX", mcapUsd: 2_000_000_000 },
-      ],
-      edgeTypeBreakdown: [
-        { type: "collateral", edgeCount: 1, summedDirectDependencyWeight: 0.6 },
-        { type: "mechanism", edgeCount: 1, summedDirectDependencyWeight: 0.2 },
-        { type: "wrapper", edgeCount: 1, summedDirectDependencyWeight: 0.1 },
-      ],
-    },
-  ],
-};
+vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
+
+const cards = Array.from({ length: 8 }, (_, i) => ({ id: `coin-${i}`, name: `Coin ${i}`, symbol: `C${i}` }));
+const edges: ReportCardsV9DependencyEdge[] = cards.slice(0, 7).map(card => ({ from: card.id, to: "coin-7", kind: "basket", materiality: "basket-weighted", weight: 0.1, upstreamScore: 80 }));
+const model = buildDependencyHubsModel({ cards, edges, mcapMap: new Map([["coin-7", 1000]]), marketCapAsOf: 1790716625 });
 
 describe("DependencyHubsBoard", () => {
-  it("renders the dependency hub contract with exact modeled values", () => {
-    render(<DependencyHubsBoard model={MODEL} />);
-
-    expect(screen.getByRole("table", { name: "Direct dependency hubs" })).toBeTruthy();
-    expect(screen.getAllByText("Upstream hubs").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Direct dependency hubs").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Direct dependents").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Summed direct dependency weight").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Modeled dependent market-cap context").length).toBeGreaterThan(0);
-    expect(screen.getByText("USD Coin")).toBeTruthy();
-    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("0.90").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("$7.0B").length).toBeGreaterThan(0);
-    expect(screen.getByText(/Hub own market cap \$100\.0B/)).toBeTruthy();
-    expect(screen.getByText(/Example direct dependents:/)).toBeTruthy();
-    expect(screen.getByText("DAI, FRAX")).toBeTruthy();
-    expect(screen.getByText("Collateral")).toBeTruthy();
-    expect(screen.getByText("Mechanism")).toBeTruthy();
-    expect(screen.getByText("Wrapper")).toBeTruthy();
+  it("renders six rows without changing the full-graph scope or amounts", () => {
+    render(<DependencyHubsBoard model={model} />);
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByRole("row")).toHaveLength(7);
+    expect(within(table).getByText("Top 6 of 7")).toBeTruthy();
+    expect(within(table).getAllByText("$100.00")).toHaveLength(6);
+    expect(within(table).getAllByText("100% from C7")).toHaveLength(6);
+    expect(screen.queryByText("Coin 6")).toBeNull();
+  });
+  it("navigates to the selected coin and records the hub action", () => {
+    render(<DependencyHubsBoard model={model} />);
+    const link = screen.getByRole("link", { name: "Open coin Coin 0" });
+    expect(link.getAttribute("href")).toBe("/stablecoin/coin-0");
+    fireEvent.click(link);
+    expect(trackEvent).toHaveBeenCalledWith("dependency_map_action", { action: "hub_open_coin", value: "coin-0" });
   });
 });

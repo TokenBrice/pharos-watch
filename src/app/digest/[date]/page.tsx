@@ -42,7 +42,7 @@ const DIGEST_RESEARCH_LINKS = [
   {
     href: "/safety-scores/",
     label: "Safety scores",
-    description: "Current report-card grades and stress-test context for mentioned stablecoins.",
+    description: "Current Safety Scores and risk explanations for mentioned stablecoins.",
   },
 ] as const;
 

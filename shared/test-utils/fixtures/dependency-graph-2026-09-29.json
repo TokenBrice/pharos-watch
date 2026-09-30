@@ -1,0 +1,2226 @@
+{
+  "asOfSec": 1790716625,
+  "edges": [
+    {
+      "from": "usds-sky",
+      "to": "susds-sky",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 80
+    },
+    {
+      "from": "usdt-tether",
+      "to": "usdd-tron-dao-reserve",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.015,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "usde-ethena",
+      "to": "susde-ethena",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 78
+    },
+    {
+      "from": "usdc-circle",
+      "to": "usdf-falcon",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.013000000000000001,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "usdf-falcon",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.011000000000000001,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "buidl-blackrock",
+      "to": "usdgo-osl",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.27987907,
+      "upstreamScore": 76.177625
+    },
+    {
+      "from": "usdc-circle",
+      "to": "syrupusdc-maple",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "usdt-tether",
+      "to": "gho-aave",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.027000000000000003,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "m-m0",
+      "to": "usd0-usual",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.765,
+      "upstreamScore": 58.36062500000001
+    },
+    {
+      "from": "usyc-hashnote",
+      "to": "usd0-usual",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.235,
+      "upstreamScore": 61.20537500000001
+    },
+    {
+      "from": "buidl-blackrock",
+      "to": "usdtb-ethena",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.9890000000000001,
+      "upstreamScore": 76.177625
+    },
+    {
+      "from": "usdai-usd-ai",
+      "to": "susdai-usd-ai",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 64
+    },
+    {
+      "from": "usdc-circle",
+      "to": "pusd-polymarket",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "susdt-spark",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 74
+    },
+    {
+      "from": "buidl-blackrock",
+      "to": "ousg-ondo-finance",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.3253354262374296,
+      "upstreamScore": 76.177625
+    },
+    {
+      "from": "usdc-circle",
+      "to": "ousg-ondo-finance",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0015979077671745873,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdc-circle",
+      "to": "susdc-spark",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "susde-ethena",
+      "to": "reusd-re-protocol",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.26,
+      "upstreamScore": 78.5802675
+    },
+    {
+      "from": "usdt-tether",
+      "to": "syrupusdt-maple",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 74
+    },
+    {
+      "from": "pyusd-paypal",
+      "to": "usdai-usd-ai",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 85.03337161532625
+    },
+    {
+      "from": "usdd-tron-dao-reserve",
+      "to": "susdd-tron-dao-reserve",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 43
+    },
+    {
+      "from": "usds-sky",
+      "to": "stusds-sky",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 80
+    },
+    {
+      "from": "apxusd-apyx",
+      "to": "apyusd-apyx",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 0
+    },
+    {
+      "from": "gho-aave",
+      "to": "sgho-aave",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 71
+    },
+    {
+      "from": "dai-makerdao",
+      "to": "sdai-sky",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 81
+    },
+    {
+      "from": "usdc-circle",
+      "to": "aa-falconx-mev-capital",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "buidl-blackrock",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.057,
+      "upstreamScore": 76.177625
+    },
+    {
+      "from": "frxusd-frax",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.14300000000000002,
+      "upstreamScore": 71.38706469156251
+    },
+    {
+      "from": "reusd-re-protocol",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.002,
+      "upstreamScore": 52.56251399999999
+    },
+    {
+      "from": "sfrxusd-frax",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.092,
+      "upstreamScore": 71.3870646915625
+    },
+    {
+      "from": "usdc-circle",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.002,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usde-ethena",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.028999999999999998,
+      "upstreamScore": 78.58026749999999
+    },
+    {
+      "from": "usds-sky",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.001,
+      "upstreamScore": 77.68520199999998
+    },
+    {
+      "from": "usdt-tether",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.003,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ustb-superstate",
+      "to": "frax-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.077,
+      "upstreamScore": 76.58775000000001
+    },
+    {
+      "from": "thbill-theo",
+      "to": "thusd-theo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.2661,
+      "upstreamScore": 42.14
+    },
+    {
+      "from": "usdc-circle",
+      "to": "thusd-theo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0008,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "thusd-theo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0001,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "usdc-circle",
+      "to": "steakusdc-steakhouse",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "rusd-reservoir",
+      "to": "wsrusd-reservoir",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 19
+    },
+    {
+      "from": "ntbill-nest",
+      "to": "nopal-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.034,
+      "upstreamScore": 56.70888624156251
+    },
+    {
+      "from": "usdc-circle",
+      "to": "nopal-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.003,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "nopal-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.001,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "reusd-resupply",
+      "to": "dola-inverse-finance",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.027000000000000003,
+      "upstreamScore": 63.99499999999999
+    },
+    {
+      "from": "scrvusd-curve",
+      "to": "dola-inverse-finance",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.042,
+      "upstreamScore": 78.221
+    },
+    {
+      "from": "susde-ethena",
+      "to": "dola-inverse-finance",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.521,
+      "upstreamScore": 78.5802675
+    },
+    {
+      "from": "susds-sky",
+      "to": "dola-inverse-finance",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.057,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "susde-ethena",
+      "to": "onyc-onre",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.019588888,
+      "upstreamScore": 78.5802675
+    },
+    {
+      "from": "susds-sky",
+      "to": "onyc-onre",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0613817802,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "syrupusdc-maple",
+      "to": "onyc-onre",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0371260721,
+      "upstreamScore": 88.678955125
+    },
+    {
+      "from": "usdc-circle",
+      "to": "onyc-onre",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.045325421000000005,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdg-paxos",
+      "to": "onyc-onre",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.2872437979,
+      "upstreamScore": 77.16509779978
+    },
+    {
+      "from": "usyc-hashnote",
+      "to": "onyc-onre",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.001448849,
+      "upstreamScore": 61.20537500000001
+    },
+    {
+      "from": "avusd-avant",
+      "to": "savusd-avant",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 60
+    },
+    {
+      "from": "usdc-circle",
+      "to": "gtusdcp-gauntlet",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "usdc-circle",
+      "to": "usd3-3jane",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "buidl-blackrock",
+      "to": "frxusd-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.149,
+      "upstreamScore": 76.177625
+    },
+    {
+      "from": "ustb-superstate",
+      "to": "frxusd-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.19899999999999998,
+      "upstreamScore": 76.58775000000001
+    },
+    {
+      "from": "usdc-circle",
+      "to": "cusd-cap",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.9990000000000001,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "cusd-cap",
+      "to": "stcusd-cap",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 76
+    },
+    {
+      "from": "pyusd-paypal",
+      "to": "usdat-saturn",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "m-m0",
+      "to": "wm-m0",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "usd1-world-liberty-financial",
+      "to": "susd1plus-lorenzo",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 61
+    },
+    {
+      "from": "fxusd-f-x-protocol",
+      "to": "fxsave-f-x-protocol",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 73
+    },
+    {
+      "from": "usdt-tether",
+      "to": "steakusdt-steakhouse",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 74
+    },
+    {
+      "from": "yzusd-yuzu",
+      "to": "syzusd-yuzu",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 64
+    },
+    {
+      "from": "ausd-agora",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.066,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "gho-aave",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.10300000000000001,
+      "upstreamScore": 63.37506375116468
+    },
+    {
+      "from": "reusd-re-protocol",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.031,
+      "upstreamScore": 52.56251399999999
+    },
+    {
+      "from": "susde-ethena",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.085,
+      "upstreamScore": 78.5802675
+    },
+    {
+      "from": "syrupusdc-maple",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.054000000000000006,
+      "upstreamScore": 88.678955125
+    },
+    {
+      "from": "syrupusdt-maple",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.015,
+      "upstreamScore": 70.38521587362325
+    },
+    {
+      "from": "usde-ethena",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.436,
+      "upstreamScore": 78.58026749999999
+    },
+    {
+      "from": "usdg-paxos",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.1,
+      "upstreamScore": 77.16509779978
+    },
+    {
+      "from": "usdt-tether",
+      "to": "yzusd-yuzu",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.023,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "crvusd-curve",
+      "to": "reusd-resupply",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.971,
+      "upstreamScore": 78.22099999999999
+    },
+    {
+      "from": "frxusd-frax",
+      "to": "reusd-resupply",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.028999999999999998,
+      "upstreamScore": 71.38706469156251
+    },
+    {
+      "from": "susds-sky",
+      "to": "xdai-gnosis",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.983,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usds-sky",
+      "to": "xdai-gnosis",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.017,
+      "upstreamScore": 77.68520199999998
+    },
+    {
+      "from": "fxsave-f-x-protocol",
+      "to": "iusd-infinifi",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.179,
+      "upstreamScore": 66.46
+    },
+    {
+      "from": "mglobal-midas-fasanara",
+      "to": "iusd-infinifi",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.47100000000000003,
+      "upstreamScore": 57.83
+    },
+    {
+      "from": "usdc-circle",
+      "to": "iusd-infinifi",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.132,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdc-circle",
+      "to": "jupusd-jupiter",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.1,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdtb-ethena",
+      "to": "jupusd-jupiter",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.9,
+      "upstreamScore": 72.27283328468752
+    },
+    {
+      "from": "paxg-paxos",
+      "to": "zchf-frankencoin",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.01,
+      "upstreamScore": 84.2
+    },
+    {
+      "from": "xaut-tether",
+      "to": "zchf-frankencoin",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.018000000000000002,
+      "upstreamScore": 72.95
+    },
+    {
+      "from": "ybold-yearn",
+      "to": "zchf-frankencoin",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.001,
+      "upstreamScore": 81.68696
+    },
+    {
+      "from": "usn-noon",
+      "to": "susn-noon",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 59
+    },
+    {
+      "from": "usdc-circle",
+      "to": "spusd-soulpeg",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "frxusd-frax",
+      "to": "sfrxusd-frax",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "m-m0",
+      "to": "usdk-kast",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "usdc-circle",
+      "to": "gtusdc-gauntlet",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "usdc-circle",
+      "to": "eusd-electronic-usd",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.6669999999999999,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "eusd-electronic-usd",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.33299999999999996,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "usdc-circle",
+      "to": "yvusdc-yearn",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "usdc-circle",
+      "to": "aid-gaib",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.011425449999999998,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "aid-gaib",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 2.9e-7,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "usde-ethena",
+      "to": "srusde-strata",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 78
+    },
+    {
+      "from": "usdc-circle",
+      "to": "usdm-mega",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.9990000000000001,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdtb-ethena",
+      "to": "usdm-mega",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.001,
+      "upstreamScore": 72.27283328468752
+    },
+    {
+      "from": "dola-inverse-finance",
+      "to": "sdola-inverse-finance",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 57
+    },
+    {
+      "from": "aid-gaib",
+      "to": "said-gaib",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 40
+    },
+    {
+      "from": "ausd-agora",
+      "to": "cusd-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "cusd-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "cusd-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "cusd-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "cusd-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "cusd-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "crvusd-curve",
+      "to": "scrvusd-curve",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 73
+    },
+    {
+      "from": "buidl-blackrock",
+      "to": "usdo-openeden",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0853870643,
+      "upstreamScore": 76.177625
+    },
+    {
+      "from": "rlusd-ripple",
+      "to": "usdo-openeden",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0839469836,
+      "upstreamScore": 75.69060067467001
+    },
+    {
+      "from": "usdc-circle",
+      "to": "usdo-openeden",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0027632744999999998,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "vbill-vaneck",
+      "to": "usdo-openeden",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.034719364,
+      "upstreamScore": 63.65775000000001
+    },
+    {
+      "from": "usdc-circle",
+      "to": "bbqusdc-steakhouse",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "usdc-circle",
+      "to": "eearn-ember",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "usdc-circle",
+      "to": "suiusde-sui",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.09961,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usde-ethena",
+      "to": "suiusde-sui",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.90039,
+      "upstreamScore": 78.58026749999999
+    },
+    {
+      "from": "usdo-openeden",
+      "to": "cusdo-openeden",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 50
+    },
+    {
+      "from": "yusd-aegis",
+      "to": "syusd-aegis",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 62
+    },
+    {
+      "from": "dai-makerdao",
+      "to": "usdb-blast",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 80.38520199999999
+    },
+    {
+      "from": "usdc-circle",
+      "to": "yusd-yieldfi",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "usdt-tether",
+      "to": "usdx-kava",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.002,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "usdc-circle",
+      "to": "yousd-yield-optimizer",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "pyusd-paypal",
+      "to": "honey-berachain",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.00000111,
+      "upstreamScore": 85.03337161532625
+    },
+    {
+      "from": "usdc-circle",
+      "to": "honey-berachain",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1e-8,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usde-ethena",
+      "to": "honey-berachain",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.99999883,
+      "upstreamScore": 78.58026749999999
+    },
+    {
+      "from": "usdt-tether",
+      "to": "honey-berachain",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 5.0000000000000004e-8,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "usdc-circle",
+      "to": "autousd-auto-finance",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "frax-frax",
+      "to": "fpi-frax",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.87,
+      "upstreamScore": 49.90357579559261
+    },
+    {
+      "from": "bold-liquity",
+      "to": "ybold-yearn",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 84
+    },
+    {
+      "from": "m-m0",
+      "to": "xo-exodus",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "usdc-circle",
+      "to": "ousd-origin-protocol",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdf-astherus",
+      "to": "asusdf-astherus",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 39
+    },
+    {
+      "from": "m-m0",
+      "to": "usdsc-startale",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "jtrsy-anemoy",
+      "to": "ntbill-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.127,
+      "upstreamScore": 65.77762500000001
+    },
+    {
+      "from": "ustb-superstate",
+      "to": "ntbill-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.873,
+      "upstreamScore": 76.58775000000001
+    },
+    {
+      "from": "m-m0",
+      "to": "ctusd-citrea",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "bold-liquity",
+      "to": "sbold-k3-capital",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 84
+    },
+    {
+      "from": "usdc-circle",
+      "to": "ftusd-flying-tulip",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.636667,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "ftusd-flying-tulip",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.36080100000000004,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ussd-sonic-labs",
+      "to": "ftusd-flying-tulip",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.002532,
+      "upstreamScore": 71.3870646915625
+    },
+    {
+      "from": "usdc-circle",
+      "to": "stusd-stoneyield",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "pusd-plume",
+      "to": "nwisdom-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.001,
+      "upstreamScore": 61.2474
+    },
+    {
+      "from": "usdc-circle",
+      "to": "nwisdom-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.001,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "hbusdt-hyperbeat",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 74
+    },
+    {
+      "from": "usdc-circle",
+      "to": "pusd-plume",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "doc-money-on-chain",
+      "to": "usdrif-rif",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.000760840287,
+      "upstreamScore": 80.939
+    },
+    {
+      "from": "gho-aave",
+      "to": "stkgho-umbrella-aave",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 71
+    },
+    {
+      "from": "dai-makerdao",
+      "to": "nusd-nexus",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.255,
+      "upstreamScore": 80.38520199999999
+    },
+    {
+      "from": "usdc-circle",
+      "to": "nusd-nexus",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.272,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "nusd-nexus",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.473,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "usdc-circle",
+      "to": "dusd-dialectic",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "dllr-sovryn",
+      "to": "xusd-babelfish",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.892,
+      "upstreamScore": 69.375
+    },
+    {
+      "from": "doc-money-on-chain",
+      "to": "xusd-babelfish",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.036000000000000004,
+      "upstreamScore": 80.939
+    },
+    {
+      "from": "usdt-tether",
+      "to": "xusd-babelfish",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.07200000000000001,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "steakusdc-steakhouse",
+      "to": "usd3-reserve-protocol",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.25,
+      "upstreamScore": 88.678955125
+    },
+    {
+      "from": "susds-sky",
+      "to": "usd3-reserve-protocol",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.25,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "usd3-reserve-protocol",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.5,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "ausd-agora",
+      "to": "ceur-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "ceur-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "ceur-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "ceur-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "ceur-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "ceur-celo",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ausd-agora",
+      "to": "iusd-initia",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 72
+    },
+    {
+      "from": "m-m0",
+      "to": "usdn-noble",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "m-m0",
+      "to": "usdnr-nerona",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "usdc-circle",
+      "to": "lvusd-leverup",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "frxusd-frax",
+      "to": "dusd-alto",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.9167106318,
+      "upstreamScore": 71.38706469156251
+    },
+    {
+      "from": "susde-ethena",
+      "to": "dusd-alto",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0000024437,
+      "upstreamScore": 78.5802675
+    },
+    {
+      "from": "syrupusdc-maple",
+      "to": "dusd-alto",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.0000024450999999999997,
+      "upstreamScore": 88.678955125
+    },
+    {
+      "from": "usdt-tether",
+      "to": "uusd-youves",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.9412619999999999,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "frxusd-frax",
+      "to": "ussd-sonic-labs",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 70
+    },
+    {
+      "from": "frxusd-frax",
+      "to": "krwq-iq",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.711,
+      "upstreamScore": 71.38706469156251
+    },
+    {
+      "from": "usdc-circle",
+      "to": "krwq-iq",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.28900000000000003,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdc-circle",
+      "to": "xmd-metal-dollar",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.9654,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "cusdo-openeden",
+      "to": "susd-solayer",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 46.0539351077069
+    },
+    {
+      "from": "frxusd-frax",
+      "to": "usdp-parallel",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.00012377000000000002,
+      "upstreamScore": 71.38706469156251
+    },
+    {
+      "from": "sfrxusd-frax",
+      "to": "usdp-parallel",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.11599503,
+      "upstreamScore": 71.3870646915625
+    },
+    {
+      "from": "susde-ethena",
+      "to": "usdp-parallel",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.51868891,
+      "upstreamScore": 78.5802675
+    },
+    {
+      "from": "susds-sky",
+      "to": "usdp-parallel",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.23451576,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "usdp-parallel",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.12843738000000002,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usde-ethena",
+      "to": "usdp-parallel",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.00213577,
+      "upstreamScore": 78.58026749999999
+    },
+    {
+      "from": "usds-sky",
+      "to": "usdp-parallel",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.00010338,
+      "upstreamScore": 77.68520199999998
+    },
+    {
+      "from": "usdc-circle",
+      "to": "usdcx-movement",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 90
+    },
+    {
+      "from": "rusd-reservoir",
+      "to": "srusd-reservoir",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 19
+    },
+    {
+      "from": "dusd-dtrinity",
+      "to": "sdusd-dtrinity",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 43
+    },
+    {
+      "from": "zsd-zephyr-protocol",
+      "to": "zys-zephyr-protocol",
+      "kind": "serial",
+      "materiality": "serial",
+      "weight": null,
+      "upstreamScore": 58
+    },
+    {
+      "from": "cusd-celo",
+      "to": "gbpm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 68.39150957499999
+    },
+    {
+      "from": "bold-liquity",
+      "to": "usdaf-asymmetry",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.569,
+      "upstreamScore": 81.68695999999998
+    },
+    {
+      "from": "scrvusd-curve",
+      "to": "usdaf-asymmetry",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.115,
+      "upstreamScore": 78.221
+    },
+    {
+      "from": "sfrxusd-frax",
+      "to": "usdaf-asymmetry",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.085,
+      "upstreamScore": 71.3870646915625
+    },
+    {
+      "from": "susds-sky",
+      "to": "usdaf-asymmetry",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.077,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "ausd-agora",
+      "to": "rusd-reservoir",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.214,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "gho-aave",
+      "to": "rusd-reservoir",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.036000000000000004,
+      "upstreamScore": 63.37506375116468
+    },
+    {
+      "from": "usd1-world-liberty-financial",
+      "to": "rusd-reservoir",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.19899999999999998,
+      "upstreamScore": 56.279875000000004
+    },
+    {
+      "from": "usdc-circle",
+      "to": "rusd-reservoir",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.506,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "ausd-agora",
+      "to": "brlm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "brlm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "brlm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "brlm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "brlm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "brlm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "eutbl-spiko",
+      "to": "eur0-usual",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 73.68950000000001
+    },
+    {
+      "from": "pusd-plume",
+      "to": "nbasis-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.002,
+      "upstreamScore": 61.2474
+    },
+    {
+      "from": "usdc-circle",
+      "to": "nbasis-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.003,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "ustb-superstate",
+      "to": "nbasis-nest",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.111,
+      "upstreamScore": 76.58775000000001
+    },
+    {
+      "from": "cusd-celo",
+      "to": "jpym-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 68.39150957499999
+    },
+    {
+      "from": "cusd-celo",
+      "to": "chfm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 1,
+      "upstreamScore": 68.39150957499999
+    },
+    {
+      "from": "ausd-agora",
+      "to": "kesm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "kesm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "kesm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "kesm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "kesm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "kesm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "usdc-circle",
+      "to": "usdu-usdu-finance",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.242534,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdc-circle",
+      "to": "jpyt-dephaser",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.124,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "jpyt-dephaser",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.8759999999999999,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ausd-agora",
+      "to": "ghsm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "ghsm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "ghsm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "ghsm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "ghsm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "ghsm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "dai-makerdao",
+      "to": "euro3-3a-dao",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.00018999999999999998,
+      "upstreamScore": 80.38520199999999
+    },
+    {
+      "from": "usdc-circle",
+      "to": "euro3-3a-dao",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.65274,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "euro3-3a-dao",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.03567,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ausd-agora",
+      "to": "copm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "copm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "copm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "copm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "copm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "copm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ausd-agora",
+      "to": "xofm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "xofm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "xofm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "xofm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "xofm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "xofm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ausd-agora",
+      "to": "audm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "audm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "audm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "audm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "audm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "audm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ausd-agora",
+      "to": "cadm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "cadm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "cadm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "cadm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "cadm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "cadm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    },
+    {
+      "from": "ausd-agora",
+      "to": "zarm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.237,
+      "upstreamScore": 79.272293887205
+    },
+    {
+      "from": "eurc-circle",
+      "to": "zarm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.05,
+      "upstreamScore": 80.263375
+    },
+    {
+      "from": "europ-schuman",
+      "to": "zarm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.053,
+      "upstreamScore": 73.1057464635325
+    },
+    {
+      "from": "susds-sky",
+      "to": "zarm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.222,
+      "upstreamScore": 63.38136363636364
+    },
+    {
+      "from": "usdc-circle",
+      "to": "zarm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.039,
+      "upstreamScore": 88.67895512500002
+    },
+    {
+      "from": "usdt-tether",
+      "to": "zarm-mento",
+      "kind": "basket",
+      "materiality": "basket-weighted",
+      "weight": 0.106,
+      "upstreamScore": 73.3462691900525
+    }
+  ],
+  "supplyUsdById": {
+    "usds-sky": 6810852647.108172,
+    "susds-sky": 4599503608.381677,
+    "usdt-tether": 183850255725.4799,
+    "usdd-tron-dao-reserve": 1532642781.1671126,
+    "usde-ethena": 4903387315.526149,
+    "susde-ethena": 1293638372.9664292,
+    "usdc-circle": 74533058190.90788,
+    "usdf-falcon": 1208839794.795199,
+    "buidl-blackrock": 2244829721.767649,
+    "usdgo-osl": 1186873370.8303864,
+    "syrupusdc-maple": 1010325617.5615581,
+    "gho-aave": 698512086.3263569,
+    "m-m0": 201155054.062419,
+    "usd0-usual": 546066392.5889026,
+    "usyc-hashnote": 2404174562.2847753,
+    "usdtb-ethena": 537385885.4283084,
+    "usdai-usd-ai": 242395477.62775755,
+    "susdai-usd-ai": 501860068.88955826,
+    "pusd-polymarket": 487898059.83579105,
+    "susdt-spark": 398593069.0915217,
+    "ousg-ondo-finance": 312941563.1935469,
+    "susdc-spark": 312658916.5694287,
+    "reusd-re-protocol": 294752214.11742884,
+    "syrupusdt-maple": 250434679.17224222,
+    "pyusd-paypal": 2681280615.8287325,
+    "susdd-tron-dao-reserve": 211009634.04392543,
+    "stusds-sky": 194880660.30484194,
+    "apxusd-apyx": 313172253.43981266,
+    "apyusd-apyx": 170929877.04746407,
+    "sgho-aave": 167840205.94243243,
+    "dai-makerdao": 4800463641.483349,
+    "sdai-sky": 164490769.46749604,
+    "aa-falconx-mev-capital": 159829255.49260402,
+    "frax-frax": 149822532.8935621,
+    "frxusd-frax": 100029087.25559239,
+    "sfrxusd-frax": 32869762.73738443,
+    "ustb-superstate": 772734273.7899206,
+    "thbill-theo": 117228053.48773566,
+    "thusd-theo": 133515395.60538739,
+    "steakusdc-steakhouse": 122268942.94372496,
+    "rusd-reservoir": 230498.8191335223,
+    "wsrusd-reservoir": 113353904.95494007,
+    "ntbill-nest": 4358120.862724097,
+    "nopal-nest": 109771993.34926926,
+    "reusd-resupply": 47922735.237411045,
+    "dola-inverse-finance": 108616424.92494231,
+    "scrvusd-curve": 16301664.545469213,
+    "onyc-onre": 105887224.78679788,
+    "usdg-paxos": 3094201830.502683,
+    "avusd-avant": 124970224.33636118,
+    "savusd-avant": 105078480.03847441,
+    "gtusdcp-gauntlet": 101399625.14643924,
+    "usd3-3jane": 100113594.78419492,
+    "cusd-cap": 87112601.2014615,
+    "stcusd-cap": 85204622.37751365,
+    "usdat-saturn": 84395371.83444726,
+    "wm-m0": 80431655.13982946,
+    "usd1-world-liberty-financial": 4431886739.586445,
+    "susd1plus-lorenzo": 79648164.8279337,
+    "fxusd-f-x-protocol": 88537360.82750869,
+    "fxsave-f-x-protocol": 79296562.69322938,
+    "steakusdt-steakhouse": 74492985.91636375,
+    "yzusd-yuzu": 58266020.211633705,
+    "syzusd-yuzu": 66342560.114890136,
+    "ausd-agora": 255187858.66351932,
+    "crvusd-curve": 252245437.29311612,
+    "xdai-gnosis": 46998194.41868425,
+    "iusd-infinifi": 45071419.45071775,
+    "mglobal-midas-fasanara": 34064145.83613529,
+    "jupusd-jupiter": 43998863.784335196,
+    "paxg-paxos": 1820697435.2177336,
+    "zchf-frankencoin": 41390421.00196669,
+    "xaut-tether": 3383493465.920839,
+    "ybold-yearn": 6740970.936243756,
+    "usn-noon": 39026671.724025615,
+    "susn-noon": 36449263.35385526,
+    "spusd-soulpeg": 36446474.90589662,
+    "usdk-kast": 23939622.844939,
+    "gtusdc-gauntlet": 23021454.90209829,
+    "eusd-electronic-usd": 22695571.6148414,
+    "yvusdc-yearn": 19576723.84792987,
+    "aid-gaib": 18914939.007728387,
+    "srusde-strata": 18376075.59726852,
+    "usdm-mega": 17403211.59203006,
+    "sdola-inverse-finance": 17344316.308987625,
+    "said-gaib": 16809744.3699143,
+    "cusd-celo": 16614341.82333771,
+    "eurc-circle": 464737779.5662509,
+    "europ-schuman": 16821831.9092082,
+    "usdo-openeden": 14503239.753436193,
+    "rlusd-ripple": 2525386915.769308,
+    "vbill-vaneck": 57039803.379655,
+    "bbqusdc-steakhouse": 13520887.346842714,
+    "eearn-ember": 12741304.477776246,
+    "suiusde-sui": 12373979.067087824,
+    "cusdo-openeden": 11968795.004863095,
+    "yusd-aegis": 34851727.027910054,
+    "syusd-aegis": 11445637.152956508,
+    "usdb-blast": 11327754.303824596,
+    "yusd-yieldfi": 10860095.603891116,
+    "usdx-kava": 9976976,
+    "yousd-yield-optimizer": 8125697.612025113,
+    "honey-berachain": 7853087.62566905,
+    "autousd-auto-finance": 7629599.710665144,
+    "fpi-frax": 6987273.2760105925,
+    "bold-liquity": 36397207.36198819,
+    "xo-exodus": 6518550.251549,
+    "ousd-origin-protocol": 6108821.472128615,
+    "usdf-astherus": 111350367.76767372,
+    "asusdf-astherus": 5730246.531174965,
+    "usdsc-startale": 4470874.194423396,
+    "jtrsy-anemoy": 326061760.4923143,
+    "ctusd-citrea": 4220650.132461,
+    "sbold-k3-capital": 4187976.0069315266,
+    "ftusd-flying-tulip": 4038367.1929206536,
+    "ussd-sonic-labs": 970402.915901101,
+    "stusd-stoneyield": 2918648.946270497,
+    "pusd-plume": 2460566.5891811196,
+    "nwisdom-nest": 2725505.6211400703,
+    "hbusdt-hyperbeat": 2523317.248995997,
+    "doc-money-on-chain": 2881171.575520805,
+    "usdrif-rif": 2192778.8137828493,
+    "stkgho-umbrella-aave": 2111459.1638364787,
+    "nusd-nexus": 1972259.183593271,
+    "dusd-dialectic": 1914133.363823698,
+    "dllr-sovryn": 1538457.9707471759,
+    "xusd-babelfish": 1912694.843638848,
+    "usd3-reserve-protocol": 1693785.4556916226,
+    "ceur-celo": 1629402.410886,
+    "iusd-initia": 1621023.495619,
+    "usdn-noble": 1604093.793333,
+    "usdnr-nerona": 1529930.828477571,
+    "lvusd-leverup": 1395685.3392303213,
+    "dusd-alto": 1323896.0981448207,
+    "uusd-youves": 1085960.4849127457,
+    "krwq-iq": 854154.8316148464,
+    "xmd-metal-dollar": 835204.2538077802,
+    "susd-solayer": 818447.0488124136,
+    "usdp-parallel": 781313.8789212913,
+    "usdcx-movement": 752735.5911887867,
+    "srusd-reservoir": 651068.5635945427,
+    "dusd-dtrinity": 1389788.4646571674,
+    "sdusd-dtrinity": 458794.3638368147,
+    "zsd-zephyr-protocol": 398200.4312891916,
+    "zys-zephyr-protocol": 328579.46763802564,
+    "gbpm-mento": 309312.96608237503,
+    "usdaf-asymmetry": 236278.55946569564,
+    "brlm-mento": 217809.6162481729,
+    "eutbl-spiko": 705110368.4050518,
+    "eur0-usual": 216830.06429003304,
+    "nbasis-nest": 138780.09964857285,
+    "jpym-mento": 96199.83450844145,
+    "chfm-mento": 85057.38466841361,
+    "kesm-mento": 80094.70055043414,
+    "usdu-usdu-finance": 57621.083843120796,
+    "jpyt-dephaser": 45740.8706094452,
+    "ghsm-mento": 23475.91917322201,
+    "euro3-3a-dao": 22871.09403579952,
+    "copm-mento": 22848.406465456657,
+    "xofm-mento": 9272.351514938311,
+    "audm-mento": 6035.836220205321,
+    "cadm-mento": 688.1306715618189,
+    "zarm-mento": 672.3077951128128
+  }
+}

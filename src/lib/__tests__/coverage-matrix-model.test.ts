@@ -221,7 +221,11 @@ describe("buildCoverageMatrixModel", () => {
             }),
           ],
         }),
-        activeStablecoins: [trackedMeta("usdc-circle"), trackedMeta("dai-makerdao"), trackedMeta("usdt-tether")],
+        activeStablecoins: [
+          trackedMeta("usdc-circle"),
+          { ...trackedMeta("dai-makerdao"), hasAuthoredDependencyEvidence: true },
+          { ...trackedMeta("usdt-tether"), hasAuthoredDependencyEvidence: true },
+        ],
       }),
     );
 
@@ -229,6 +233,57 @@ describe("buildCoverageMatrixModel", () => {
     expect(dependencyKindById.get("usdc-circle")).toBe("upstream");
     expect(dependencyKindById.get("dai-makerdao")).toBe("dependent");
     expect(dependencyKindById.get("usdt-tether")).toBe("unmapped-gap");
+  });
+
+  it("distinguishes authored evidence gaps from resolved coins with no dependencies", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      reportCards: makeReportCardsV9Response({
+        cards: [
+          makeV9Card({ id: "usdc-circle", score: 90 }),
+          makeV9Card({ id: "usdt-tether", score: 85 }),
+        ],
+      }),
+      activeStablecoins: [
+        { ...trackedMeta("usdc-circle"), hasAuthoredDependencyEvidence: true },
+        { ...trackedMeta("usdt-tether"), hasAuthoredDependencyEvidence: false },
+      ],
+    }));
+
+    expect(model.rows.find((row) => row.id === "usdc-circle")?.statuses.dependency).toMatchObject({
+      kind: "unmapped-gap",
+      label: "Gap",
+      available: false,
+    });
+    expect(model.rows.find((row) => row.id === "usdt-tether")?.statuses.dependency).toMatchObject({
+      kind: "resolved-none",
+      label: "No deps",
+      available: true,
+    });
+    expect(model.featureSummaries.find((summary) => summary.feature.key === "dependency")?.breakdown)
+      .toContainEqual({ key: "gaps", label: "gaps", count: 1 });
+  });
+
+  it("joins published coverage reasons even when authored evidence is absent", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      reportCards: makeReportCardsV9Response({
+        cards: [makeV9Card({
+          id: "usdc-circle",
+          score: 90,
+          dependencyCoverage: [{
+            upstreamLabel: "Unverified reserve token",
+            upstreamAssetId: null,
+            share: null,
+            reason: "unreviewed-dependency-relationships",
+            sourceAsOf: null,
+            identityVerified: false,
+          }],
+        })],
+      }),
+      activeStablecoins: [{ ...trackedMeta("usdc-circle"), hasAuthoredDependencyEvidence: false }],
+    }));
+    const status = model.rows[0].statuses.dependency;
+    expect(status.kind).toBe("unmapped-gap");
+    expect(status.detail).toContain("unreviewed-dependency-relationships");
   });
 
   it("passes client mint-authority summaries into coverage rows", () => {

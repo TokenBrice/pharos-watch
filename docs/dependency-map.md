@@ -1,5 +1,7 @@
 # Dependency Map
 
+> **Agent navigation**: [Data inputs](#data-inputs) · [Dependency semantics](#dependency-semantics) · [Direct exposure and shared books](#direct-exposure-and-shared-books) · [Graph workspace](#graph-workspace-and-readability-controls) · [Detail-page snapshot](#detail-page-snapshot).
+
 ## Overview
 
 The dependency map route (`/dependency-map`) presents the canonical Safety Score V9 dependency graph two ways: an interactive force-directed graph of the coins that carry at least one live dependency edge, and ranked upstream hubs with direct dependent exposure. The same graph component renders a focused, single-asset view inside the Dependency Context section of each stablecoin detail page.
@@ -31,16 +33,18 @@ Primary files:
 The page combines:
 
 1. `useReportCardsV9()` (`GET /api/report-cards/v9`) for current cards and canonical dependency edges.
-2. `useStablecoins()` (`GET /api/stablecoins`) for circulating USD context through `getCirculatingRaw()`.
-3. `useLogos()` for static token logos.
+2. `useStablecoins()` (`GET /api/stablecoins`) for nullable circulating USD context through `getCirculatingRawOrNull()`.
+3. Static `logosById` for token logos.
 
 A held V9 publication is shown with the shared status notice. Missing or invalid V9 data renders unavailable; the page never falls back to V8 or reconstructs dependency edges from a retired card model. The graph takes its edge set only from `dependencyGraph.edges`; it has no static fallback source.
+
+Missing market caps remain `null`, never measured zero. Nodes without supply use `MIN_RADIUS` and display `mcap n/a`; USD totals exclude them and disclose the excluded count. If the market-cap query fails, the map client discards its supply projection even if cached data exists, keeps the published graph available with default node sizes and unknown USD exposure, and shows a retry notice. V9 publication failure without cards renders unavailable; failure with cards retains the graph with a notice.
 
 Since Safety Score methodology 9.49, variant parents, explicit wrapped-asset claims, and manual non-collateral relationships survive independently of reserve composition. The 9.48 no-revival rule remains in force for reserve weights: wholly unmapped live compositions contribute no reserve-derived edges rather than restoring old curated or manual collateral weights. Compiled dependency facts retain per-slice `rejectionReasons` (`no-match`, `expired`, or reviewed `non-link`) with zero-based `sliceIndex` and live mapping provenance even when a structural edge survives; curated reserve fallback is considered only when no live composition exists.
 
 ## Dependency Coverage Audit
 
-Run `npm run audit:coverage -- --domain=dependency-coverage` for the authored registry view, or add `--prod` to compare it with the current public V9 cards, live dependency graph, and stablecoin market-cap ordering. The production lane consumes the current report-v5 contract: cards publish `score`, while graph edges publish `kind` (`serial` or `basket`) and use a null weight for serial claims.
+Run `npm run audit:coverage -- --domain=dependency-coverage` for the authored registry view, or add `--prod` to compare it with the current public V9 cards, live dependency graph, and stablecoin market-cap ordering. Cards publish `score`; graph edges publish `kind` (`serial` or `basket`) and use a null weight for serial claims. Report-v6 adds relationship and provenance fields while retained v5 publications remain readable.
 
 The report separates graph invariants from curation queues. Self-edges, duplicate edges, cycles, invalid targets, stale reviews, malformed target dispositions, malformed dependency provenance, and missing reviews for dependency-producing live-reserve adapter mappings remain structural failures. The merge gate derives mapping requirements from the static authored graph when report cards are unavailable, so absence of a runtime capture cannot skip mapping coverage. Unlinked reserve slices, unique symbol-delimited active-target matches, sub-1% named exposures, and candidate IDs remain review leads: they can identify missing coverage, but never create an edge automatically. A curator must still establish current claim identity and either a measured basket weight or reviewed serial/mechanism semantics. Eligible assets, zero-balance routes, transformed strategy inputs, LP constituents, and same-symbol collisions are not dependencies by themselves.
 
@@ -71,7 +75,7 @@ Only `collateral` sets `showWeight`, so only a weighted backing share renders a 
 
 `DEPENDENCY_TYPE_PRESENTATION[type].description` carries the plain-English meaning and is surfaced as the `title` on both the legend swatches and the type-filter pills.
 
-`contagionEdgeWeight()` derives the dimensionless exposure magnitude used for stroke weight, link force, and hub scoring, matching `buildDependencyHubsModel`:
+`contagionEdgeWeight()` derives the dimensionless magnitude used for stroke weight and link force. The exposure module uses the same serial/basket share semantics, then multiplies known shares by dependent supply to rank hubs in USD:
 
 - a serial dependency (blocked or not) is full pass-through, weight `1`
 - a basket dependency carries its published weight — including when the upstream score is unrateable (`basket-bounded-unknown`): losing the upstream score does not erase a known exposure
@@ -80,6 +84,20 @@ Only `collateral` sets `showWeight`, so only a weighted backing share renders a 
 Two different unknowns must not be conflated here. An unknown **weight** means the exposure share was never established, so the edge contributes no magnitude anywhere. An unrateable upstream **score** (`serial-blocked`, `basket-bounded-unknown` in `materiality`) means the upstream could not be scored; the exposure weight is whatever was published, and the simulation keeps it. `v9DependencyEdgeWeight()` returns `null` only for the first case and `v9DependencyEdgeScoreKnown()` reads `materiality` — never the weight — for the second.
 
 Because an edge with no weight models to no magnitude, `contagion-graph-svg.tsx` floors stroke geometry at `MIN_EDGE_DISPLAY_WEIGHT` so the relationship still reads as a drawn edge, and the tooltip omits the percentage rather than showing a misleading `0%`.
+
+Report-v6 edges also publish `dependencyType`, nullable serial `wrapperForm`, and `provenance` with source, evidence date, and an optional bridge, wrapper-token, or vault-share intermediary. The detail-page Used by labels consume `dependencyType`. The map's graph still draws from `kind` and `materiality`, not these richer annotations, and its exposure claim split reads `scoreTrace.wrapperParentLimit.form`, not edge `wrapperForm`. Edge provenance and intermediary annotations are not currently rendered by the graph tooltip.
+
+## Direct Exposure And Shared Books
+
+`shared/lib/dependency-exposure.ts` owns direct hub exposures and the hero's gross mapped dependent supply. Both use the full published edge set. The hub board ranks known dependent supply multiplied by mapped share; a serial dependent counts once in the hero even when it has multiple parents. Missing supplies and unknown basket shares are excluded from USD sums and reported separately.
+
+The map client carries each published card's `sharedBookId` into `src/lib/dependency-hubs-model.ts`. Basket contributions from members of one shared book are accumulated once per book and upstream. A supplied measured holding replaces that combined contribution in both the hub and hero totals. Cards from v5 publications with an absent or null `sharedBookId` are not grouped.
+
+The current report publication identifies shared books but does not publish their measured holdings. The map therefore uses the sum of mapped weight multiplied by each member's market-cap-proxy supply. For Sky, DAI and USDS contribute to one combined USDC book amount, rather than each being assigned the whole holding. This fallback is not an exact LitePSM USDC balance: it reconciles to the measured holding only within the Sky adapter's timing and rounding reconciliation band and the difference between group-debt supply and the map's market-cap-proxy supply basis. The hero and board label the market-cap source clock separately from the V9 publication clock.
+
+Sky's adapter attributes verified LitePSM USDC to both DAI and USDS, whose published cards share `sharedBookId`. It does not assign exclusive ownership to either liability. If canonical identity or balance verification fails, `litepsm-attribution-unavailable` is an info-level warning. If measured USDC exceeds group debt beyond the 0.25 percentage-point reconciliation band, `litepsm-reconciliation-excess` is an info-level warning. In either case the classified PSM composition remains available for scoring without a USDC link.
+
+DOLA's adapter publishes LP-secured debt as named `LP-secured debt (undecomposed)` rows without `coinId`. These are not measured constituent holdings and do not create links to the tokens named in the pool; positively measured direct collateral rows remain separate.
 
 ## Graph Construction
 
@@ -94,19 +112,13 @@ Graph construction lives in `src/lib/contagion-layout.ts` and is called through 
 
 ## Dependency Hubs Model And Board
 
-`buildDependencyHubsModel({ cards, edges, mcapMap })` derives one shared desktop/mobile model from live V9 cards and edges.
+`buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf })` derives one shared desktop/mobile model from published V9 cards and edges whose endpoints are present and non-defunct.
 
-The model reports:
+The board is titled **Largest mapped direct exposures** and ranks by known direct USD exposure: dependent market-cap-proxy supply multiplied by mapped share. Ties use direct dependent count, then hub ID. It displays the top six hubs with hub market cap, direct dependent count, wrapper/collateral edge counts, own-family wrapper and vault-claim USD, and the largest direct dependent's share. The model also retains pass-through USD. This is descriptive direct exposure, not a transitive loss estimate or a systemic-risk score.
 
-- ranked upstream hubs
-- unique direct dependent count
-- summed direct dependency weight
-- direct dependent market-cap context, deduplicated per hub
-- the hub's own market cap
-- up to three direct dependent examples
-- direct edge counts and weights per V9 materiality (the hub board keeps the full four-value disposition; only the graph collapses it)
+The hero reports gross mapped dependent supply, upstream hub count, and unique direct dependent count. Its overlap line identifies the mapped fraction counted in more than one dependency layer; it is not subtracted from the gross figure. Serial dependents count once even with multiple parents. Unknown supply and unknown basket shares are disclosed separately, and excessive basket shares raise an integrity warning rather than silently clamping a published total.
 
-The market-cap figure is descriptive context, not a transitive loss estimate. Duplicate direct edges to the same dependent count once for dependent count and market-cap context, while each edge still contributes to summed relationship weight.
+Two clocks are explicit: methodology version and V9 publication time, then market-cap source time (or `unknown`). Graph filters and node limits never change these full-graph exposure totals.
 
 ## Adaptive Supernodes
 
@@ -132,10 +144,14 @@ The graph header exposes a single wrapping control row — Focus, Type, Limit, a
 - **Focus mode**: `All` (full graph), `Hubs` (only edges touching Tier 1/Tier 2 hubs; accessible name "Hub dependencies"), `Neighborhood` (only edges adjacent to the selected trace coin; accessible name "Selected neighborhood").
 - **Type filter**: `All`, `Collateral`, or `Wrapper`, filtering which edges are drawn while preserving the active focus mode.
 - **Node limit toggle**: `50`, `100`, `200` (default), or `All` top-mcap coins enter the map before isolated-node pruning.
-- **Trace coin picker**: always visible. Selecting a coin sets the neighborhood root and switches to `Neighborhood`. Clicking a node pins the same trace target without changing the active focus mode.
-- **Selection overlay**: renders only when a node is hovered or pinned, in the top-right of the SVG stage with the HUD chrome (`--graph-panel-bg`, hairline border in `--graph-grid-line`). It surfaces unique visible dependent and upstream counts, summed visible dependent/upstream weights, examples, and a "Trace neighborhood" action. It does not list systemic hubs — that surface belongs to the Dependency Hubs Board.
+- **Trace coin picker**: always visible. Selecting a coin sets the neighborhood root and switches to `Neighborhood`. Clicking a node selects the same trace target without changing the active focus mode. Trace selection is not position pinning: dragging pins a node's coordinates; double-click releases that position, and the header's `Pinned position` control releases all positions without clearing the trace.
+- **Selection overlay**: renders only when a node is hovered or selected as the trace target, in the top-right of the SVG stage with the HUD chrome (`--graph-panel-bg`, hairline border in `--graph-grid-line`). It surfaces unique visible dependent and upstream counts, summed visible dependent/upstream weights, examples, and a "Trace neighborhood" action. The ranked direct-exposure surface belongs to the Dependency Hubs Board.
 
-Below `sm`, a "Fullscreen graph" control opens the same graph inside a dialog for a larger touch canvas, and a compact inspection panel replaces the desktop overlay.
+Below `sm`, a "Fullscreen graph" control opens the graph inside a dialog for a larger touch canvas, and a compact inspection panel replaces the desktop overlay. The opener is hidden at `sm` and above, and crossing the 640px breakpoint closes the dialog. Only one live graph stage renders at a time: the inline card is removed while the fullscreen card is open, with the same graph model retaining interaction state.
+
+The map hero enables URL synchronization after hydration. `focus` stores `all`, `hub`, or `neighborhood`; `type` stores `all`, `collateral`, or `wrapper`; `limit` stores `50`, `100`, `200`, or `all`; and `trace` stores the selected coin ID. Updates use `history.replaceState`, preserving unrelated query parameters. Initial `?focus=<coinId>` selects a dependency-linked published coin in Neighborhood mode and defaults to All nodes unless an explicit valid limit is supplied. Detail snapshots do not synchronize URL state.
+
+The `dependency_map_action` analytics event records changed `focus`, `type`, `limit`, and `trace` values, `fullscreen_open`, and `hub_open_coin` from desktop/mobile hub links. These are inspection interactions, not simulator actions.
 
 ## Layout Algorithm
 
@@ -159,3 +175,7 @@ The post-simulation overlap pass is O(n²), so it is bounded to the top `MAX_COL
 - passes `focusCoinId`, `minimalChrome`, and a 500-node cap, which drops the header controls and renders only the focus coin's own neighborhood, ringed around it;
 - scales nodes up and shows ticker labels when the neighborhood is small — 1.5x at ≤10 visible nodes, 2x at ≤5. `MAX_RASTER_LOGO_RADIUS` in `contagion-graph-svg.tsx` caps the drawn image so sparse maps do not aggressively upscale legacy raster assets; vector (`.svg`) logos are exempt and keep filling the node. Dependency-graph raster logos are maintained at 250px or better where an authoritative source is available;
 - takes the wider column (`3fr`) when it shares the row with the variant-relationship card or collateral-usage list (`2fr`), and returns `null` when there is no graph, no supplemental context, and no source error.
+
+The **Used by** list comes from the same published neighborhood edges, selecting `edge.from === stablecoinId` and listing each dependent at `edge.to`; authored reserve names alone never add an entry. Relationship labels use published `dependencyType`. For v5 edges without it, basket means collateral; serial means wrapper only when the dependent's tracked variant parent matches the upstream, otherwise serial claim. Basket shares show `share unknown` for null, `n/a` for zero, `<1%` for positive sub-1% shares, and a percentage otherwise; serial entries omit shares.
+
+The section links to `/dependency-map/?focus=<coinId>`. Its market-cap map also retains nulls. On either query error it shows a shared retry notice and can retain published neighborhood data; unlike the map-route client, it does not discard cached market caps on a market-cap query error.

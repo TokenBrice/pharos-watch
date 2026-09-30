@@ -44,13 +44,6 @@ vi.mock("next/dynamic", () => ({
     },
 }));
 
-vi.mock("@/components/stablecoin-detail/collateral-usage-section", () => ({
-  CollateralUsageSection: ({ entries }: { entries: Array<{ coin: { id: string } }> }) => (
-    <div data-testid="collateral-usage-mock">
-      collateral-usage:{entries.map((entry) => entry.coin.id).join(",")}
-    </div>
-  ),
-}));
 
 import { ContagionSnapshot } from "../contagion-snapshot";
 
@@ -107,8 +100,6 @@ describe("ContagionSnapshot", () => {
       <ContagionSnapshot
         stablecoinId="usdc-circle"
         variantRelationshipCard={<Link href="/stablecoin/usde-ethena/">Related asset</Link>}
-        hasCollateralUsage
-        collateralUsageEntries={[]}
       />
     );
     const { rerender } = render(content());
@@ -116,7 +107,7 @@ describe("ContagionSnapshot", () => {
     expect(screen.getByText("Loading dependency graph...")).toBeTruthy();
     expect(screen.getByText("Dependency Context")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Related asset" }).getAttribute("href")).toBe("/stablecoin/usde-ethena");
-    expect(screen.getByTestId("collateral-usage-mock")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Used by 1" })).toBeTruthy();
 
     useNearViewportMock.mockReturnValue({ ref, near: true });
     rerender(content());
@@ -140,27 +131,97 @@ describe("ContagionSnapshot", () => {
     expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
   });
 
-  it("renders collateral usage beside the dependency map", () => {
-    render(
-      <ContagionSnapshot
-        stablecoinId="usdc-circle"
-        hasCollateralUsage
-        collateralUsageEntries={[
-          {
-            coin: { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" },
-            weight: 0.8,
-            type: "collateral",
-          },
-        ]}
-      />,
-    );
-
-    expect(screen.getByTestId("contagion-graph").getAttribute("data-focus")).toBe("usdc-circle");
-    expect(screen.getByTestId("collateral-usage-mock").textContent).toBe(
-      "collateral-usage:usde-ethena",
-    );
+  it("renders the published dependent beside the dependency map with a focused deep link", () => {
+    render(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    expect(screen.getByRole("heading", { name: "Used by 1" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /USDe Collateral 80%/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open in Dependency Map" }).getAttribute("href"))
+      .toBe("/dependency-map?focus=usdc-circle");
   });
 
+  it("distinguishes Spark's serial mechanism claim from its native wrapper parent", () => {
+    const data = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usds-sky" }),
+        makeV9Card({ id: "usdc-circle" }),
+        makeV9Card({ id: "susdc-spark", dependencies: {
+          serial: [
+            { upstreamAssetId: "usds-sky", score: 84, blocked: false, dependencyType: "mechanism", wrapperForm: null },
+            { upstreamAssetId: "usdc-circle", score: 84, blocked: false, dependencyType: "wrapper", wrapperForm: "pure" },
+          ],
+          basket: [], cycleBlocked: false, reasonCodes: [],
+        } }),
+      ],
+    });
+    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    const { rerender } = render(<ContagionSnapshot stablecoinId="usds-sky" />);
+    expect(screen.getByRole("link", { name: "spUSDC Mechanism" })).toBeTruthy();
+    expect(screen.queryByText("100%")).toBeNull();
+    rerender(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    expect(screen.getByRole("link", { name: "spUSDC Wrapper" })).toBeTruthy();
+  });
+
+  it("uses the published relationship type for plain wrappers even with no wrapper form or variantOf", () => {
+    const data = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle" }),
+        makeV9Card({ id: "pusd-polymarket", dependencies: {
+          serial: [{ upstreamAssetId: "usdc-circle", score: 84, blocked: false, dependencyType: "wrapper", wrapperForm: null }],
+          basket: [], cycleBlocked: false, reasonCodes: [],
+        } }),
+      ],
+    });
+    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    render(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    expect(screen.getByRole("link", { name: "PUSD Wrapper" })).toBeTruthy();
+  });
+
+  it.each([
+    { dependent: "susdc-spark", symbol: "spUSDC", wrapperForm: undefined, label: "Wrapper" },
+    { dependent: "pusd-polymarket", symbol: "PUSD", wrapperForm: undefined, label: "Serial claim" },
+    { dependent: "pusd-polymarket", symbol: "PUSD", wrapperForm: null, label: "Serial claim" },
+  ] as const)("uses $label for legacy $dependent without a published relationship type", ({ dependent, symbol, wrapperForm, label }) => {
+    const data = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle" }),
+        makeV9Card({ id: dependent, dependencies: {
+          serial: [{ upstreamAssetId: "usdc-circle", score: 84, blocked: false, ...(wrapperForm === undefined ? {} : { wrapperForm }) }],
+          basket: [], cycleBlocked: false, reasonCodes: [],
+        } }),
+      ],
+    });
+    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    render(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    expect(screen.getByRole("link", { name: `${symbol} ${label}` })).toBeTruthy();
+  });
+
+  it.each([
+    { upstream: "usyc-hashnote", dependent: "usd0-usual", symbol: "USD0", weight: 0.235 },
+    { upstream: "susde-ethena", dependent: "dola-inverse-finance", symbol: "DOLA", weight: 0.521 },
+  ])("uses the published basket share for $upstream rather than authored reserves", ({ upstream, dependent, symbol, weight }) => {
+    const data = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: upstream }),
+        makeV9Card({ id: dependent, dependencies: {
+          ...basketOn(upstream),
+          basket: [{ upstreamAssetId: upstream, weight, score: 84, boundedUnknown: false }],
+        } }),
+      ],
+    });
+    // An endpoint without a published card must not appear in either surface.
+    data.dependencyGraph.edges.push({
+      ...data.dependencyGraph.edges[0],
+      from: upstream,
+      to: "ebusd-ebisu",
+    });
+    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    render(<ContagionSnapshot stablecoinId={upstream} />);
+    expect(screen.getByRole("link", { name: (name) => name.includes(`${symbol} Collateral ${weight * 100}%`) })).toBeTruthy();
+    expect(screen.queryByText("100%")).toBeNull();
+    expect(screen.queryByText("ebUSD")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Used by 1" })).toBeTruthy();
+    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe(`${upstream}>${dependent}`);
+  });
   it("ignores edges whose counterparty is not a published V9 card", () => {
     useReportCardsV9Mock.mockReturnValue({
       data: makeReportCardsV9Response({

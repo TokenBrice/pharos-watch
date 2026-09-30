@@ -90,7 +90,7 @@ const coreDataLinks = [
 ] as const;
 
 const methodologyLinks = [
-  ["Methodology Hub", absolute("/methodology/"), "Full scoring model for safety, peg, liquidity, yield, contagion."],
+  ["Methodology Hub", absolute("/methodology/"), "Scoring methods for safety, peg, liquidity and yield; dependency limits through V9 parent and backing relationships, not a contagion simulator."],
   ...METHODOLOGY_CHANGELOG_REGISTRY.map((entry) => [
     entry.linkTitle ?? entry.markdownTitle,
     absolute(entry.publicPath),

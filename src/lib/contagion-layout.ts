@@ -11,7 +11,7 @@ import {
 import { percentileLinear } from "@shared/lib/stats";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type { V9Grade } from "@shared/types/safety-score-v9";
-import { v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@/lib/dependency-hubs-model";
+import { v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@shared/lib/dependency-exposure";
 import { deterministicHash } from "@/lib/layout-utils";
 
 // ---------------------------------------------------------------------------
@@ -38,12 +38,14 @@ export interface GraphNode extends SimulationNodeDatum {
   id: string;
   symbol: string;
   grade: V9Grade;
-  mcap: number;
+  mcap: number | null;
   r: number;
 }
 
 export interface GraphLink extends SimulationLinkDatum<GraphNode> {
   weight: number;
+  /** True when the basket share is unavailable; numeric weight is layout-only. */
+  shareUnknown?: boolean;
   /** Whether the upstream score resolved; set by `buildGraphData`, optional on hand-built links. */
   scoreKnown?: boolean;
   type: ContagionEdgeRelationship;
@@ -53,6 +55,7 @@ export interface RawGraphLink {
   source: string;
   target: string;
   weight: number;
+  shareUnknown?: boolean;
   /** Whether the upstream score resolved; set by `buildGraphData`, optional on hand-built links. */
   scoreKnown?: boolean;
   type: ContagionEdgeRelationship;
@@ -243,7 +246,7 @@ function contagionEdgeRelationship(edge: ReportCardsV9DependencyEdge): Contagion
 
 export function buildGraphData(
   cards: readonly ContagionGraphCard[],
-  mcapMap: Map<string, number>,
+  mcapMap: ReadonlyMap<string, number | null>,
   dependencyEdges: readonly ReportCardsV9DependencyEdge[],
   maxNodes: GraphNodeLimit = MAX_NODES,
 ): { nodes: GraphNode[]; links: GraphLink[] } {
@@ -263,6 +266,7 @@ export function buildGraphData(
       source: edge.to,
       target: edge.from,
       weight: contagionEdgeWeight(edge),
+      shareUnknown: edge.kind === "basket" && edge.weight === null,
       scoreKnown: v9DependencyEdgeScoreKnown(edge),
       type: contagionEdgeRelationship(edge),
     });
@@ -299,13 +303,13 @@ export function buildGraphData(
     if (removedCount === 0) break;
   }
 
-  const mcaps = selectedIds.map((id) => mcapMap.get(id) ?? 0);
+  const mcaps = selectedIds.map((id) => mcapMap.get(id)).filter((value): value is number => value != null);
   const maxMcap = mcaps.reduce((m, v) => Math.max(m, v), 1);
 
   const graphNodes: GraphNode[] = selectedIds.map((id) => {
     const card = cardMap.get(id)!;
-    const mcap = mcapMap.get(id) ?? 0;
-    const r = MIN_RADIUS + Math.sqrt(mcap / maxMcap) * (MAX_RADIUS - MIN_RADIUS);
+    const mcap = mcapMap.get(id) ?? null;
+    const r = mcap === null ? MIN_RADIUS : MIN_RADIUS + Math.sqrt(mcap / maxMcap) * (MAX_RADIUS - MIN_RADIUS);
     return { id, symbol: card.symbol, grade: card.grade, mcap, r };
   });
 
@@ -333,7 +337,7 @@ export function buildSupernodeState(
     inWeightById.set(node.id, 0);
     inDegreeById.set(node.id, 0);
     outDegreeById.set(node.id, 0);
-    mcapLogById.set(node.id, Math.log10(Math.max(0, node.mcap) + 1));
+    mcapLogById.set(node.id, node.mcap === null ? 0 : Math.log10(Math.max(0, node.mcap) + 1));
   }
 
   for (const link of links) {

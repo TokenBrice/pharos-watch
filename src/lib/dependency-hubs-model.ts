@@ -1,200 +1,79 @@
-import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9DependencyEdge, ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import { buildDirectHubExposures, mappedDependentSupply, type ExposureTotals, type HubExposure, type SupplyOf, type WrapperClaimForm } from "@shared/lib/dependency-exposure";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 export interface DependencyHubCard {
   id: string;
   name: string;
   symbol: string;
   isDefunct?: boolean;
+  scoreTrace?: ReportCardsV9Response["cards"][number]["scoreTrace"];
+  sharedBookId?: string | null;
 }
-
-export interface DependencyHubExample {
+export interface DependencyHub extends HubExposure {
   id: string;
   label: string;
   symbol: string;
-  mcapUsd: number;
+  hubMcapUsd: number | null;
+  topDependentSymbol: string | null;
+  edgeTypeBreakdown: { type: "Wrapper" | "Collateral"; edgeCount: number }[];
 }
-
-export interface DependencyHubEdgeTypeBreakdown {
-  type: DependencyMateriality;
-  edgeCount: number;
-  summedDirectDependencyWeight: number;
-}
-
-export interface DependencyHub {
-  id: string;
-  label: string;
-  symbol: string;
-  dependentCount: number;
-  summedDirectDependencyWeight: number;
-  uniqueDependentMcapUsd: number;
-  hubMcapUsd: number;
-  examples: DependencyHubExample[];
-  edgeTypeBreakdown: DependencyHubEdgeTypeBreakdown[];
-}
-
 export interface DependencyHubsModel {
   hubs: DependencyHub[];
   upstreamHubCount: number;
   directEdgeCount: number;
   uniqueDirectDependentCount: number;
-  summedDirectDependencyWeight: number;
-  uniqueDependentMcapUsd: number;
+  mappedSupply: ExposureTotals & { passThroughUsd: number; vaultClaimUsd: number };
+  marketCapAsOf: number | null;
 }
 
-interface BuildDependencyHubsModelArgs {
+export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf = null }: {
   cards: readonly DependencyHubCard[];
-  edges: readonly DependencyHubEdge[];
-  mcapMap: ReadonlyMap<string, number>;
-}
-
-interface HubAccumulator {
-  dependentIds: Set<string>;
-  summedDirectDependencyWeight: number;
-  typeBreakdown: Map<DependencyMateriality, DependencyHubEdgeTypeBreakdown>;
-}
-
-type V9DependencyEdge = ReportCardsV9Response["dependencyGraph"]["edges"][number];
-type DependencyHubEdge = DependencyGraphEdge | V9DependencyEdge;
-type DependencyMateriality = DependencyGraphEdge["type"] | V9DependencyEdge["materiality"];
-
-/**
- * Known exposure magnitude for one V9 edge. `null` means the weight itself is
- * absent — an unknown exposure, not a measured zero.
- */
-export function v9DependencyEdgeWeight(edge: V9DependencyEdge): number | null {
-  return edge.kind === "serial" ? 1 : edge.weight;
-}
-
-/**
- * Whether the upstream score resolved, read from `materiality` — never from
- * the weight. `serial-blocked` and `basket-bounded-unknown` mark an
- * unrateable upstream; a known exposure weight survives that.
- */
-export function v9DependencyEdgeScoreKnown(edge: V9DependencyEdge): boolean {
-  return edge.materiality === "serial" || edge.materiality === "basket-weighted";
-}
-
-function edgeWeight(edge: DependencyHubEdge): number | null {
-  return "kind" in edge ? v9DependencyEdgeWeight(edge) : edge.weight;
-}
-
-function edgeMateriality(edge: DependencyHubEdge): DependencyMateriality {
-  return "materiality" in edge ? edge.materiality : edge.type;
-}
-
-function compareDependencyExamples(a: DependencyHubExample, b: DependencyHubExample): number {
-  if (b.mcapUsd !== a.mcapUsd) return b.mcapUsd - a.mcapUsd;
-  if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
-  return a.label.localeCompare(b.label);
-}
-
-function compareDependencyHubs(a: DependencyHub, b: DependencyHub): number {
-  if (b.dependentCount !== a.dependentCount) return b.dependentCount - a.dependentCount;
-  if (b.summedDirectDependencyWeight !== a.summedDirectDependencyWeight) {
-    return b.summedDirectDependencyWeight - a.summedDirectDependencyWeight;
-  }
-  if (b.uniqueDependentMcapUsd !== a.uniqueDependentMcapUsd) {
-    return b.uniqueDependentMcapUsd - a.uniqueDependentMcapUsd;
-  }
-  if (b.hubMcapUsd !== a.hubMcapUsd) return b.hubMcapUsd - a.hubMcapUsd;
-  return a.label.localeCompare(b.label);
-}
-
-function getFiniteMcap(mcapMap: ReadonlyMap<string, number>, id: string): number {
-  const value = mcapMap.get(id);
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-export function buildDependencyHubsModel({
-  cards,
-  edges,
-  mcapMap,
-}: BuildDependencyHubsModelArgs): DependencyHubsModel {
-  const liveCards = cards.filter((card) => !card.isDefunct);
-  const liveIds = new Set(liveCards.map((card) => card.id));
-  const cardById = new Map(liveCards.map((card) => [card.id, card]));
-  const liveEdges = edges.filter((edge) => liveIds.has(edge.from) && liveIds.has(edge.to));
-  const hubMap = new Map<string, HubAccumulator>();
-  const allDependentIds = new Set<string>();
-
-  for (const edge of liveEdges) {
-    const hub = hubMap.get(edge.from) ?? {
-      dependentIds: new Set<string>(),
-      summedDirectDependencyWeight: 0,
-      typeBreakdown: new Map<DependencyMateriality, DependencyHubEdgeTypeBreakdown>(),
-    };
-    const edgeType = edgeMateriality(edge);
-    const weight = edgeWeight(edge);
-    const breakdown = hub.typeBreakdown.get(edgeType) ?? {
-      type: edgeType,
-      edgeCount: 0,
-      summedDirectDependencyWeight: 0,
-    };
-
-    hub.dependentIds.add(edge.to);
-    breakdown.edgeCount += 1;
-    if (weight !== null) {
-      hub.summedDirectDependencyWeight += weight;
-      breakdown.summedDirectDependencyWeight += weight;
-    }
-    hub.typeBreakdown.set(edgeType, breakdown);
-    hubMap.set(edge.from, hub);
-    allDependentIds.add(edge.to);
-  }
-
-  const hubs = [...hubMap.entries()]
-    .map(([id, hub]) => {
-      const hubCard = cardById.get(id);
-      const dependentIds = [...hub.dependentIds];
-      const examples = dependentIds
-        .map((dependentId): DependencyHubExample | null => {
-          const dependentCard = cardById.get(dependentId);
-          if (!dependentCard) return null;
-          return {
-            id: dependentCard.id,
-            label: dependentCard.name ?? dependentCard.symbol ?? dependentCard.id,
-            symbol: dependentCard.symbol ?? dependentCard.id,
-            mcapUsd: getFiniteMcap(mcapMap, dependentCard.id),
-          };
-        })
-        .filter((example): example is DependencyHubExample => example !== null)
-        .sort(compareDependencyExamples)
-        .slice(0, 3);
-      const uniqueDependentMcapUsd = dependentIds.reduce(
-        (sum, dependentId) => sum + getFiniteMcap(mcapMap, dependentId),
-        0,
-      );
-      const edgeTypeBreakdown = [...hub.typeBreakdown.values()].sort((a, b) => a.type.localeCompare(b.type));
-
-      return {
-        id,
-        label: hubCard?.name ?? hubCard?.symbol ?? id,
-        symbol: hubCard?.symbol ?? id,
-        dependentCount: dependentIds.length,
-        summedDirectDependencyWeight: hub.summedDirectDependencyWeight,
-        uniqueDependentMcapUsd,
-        hubMcapUsd: getFiniteMcap(mcapMap, id),
-        examples,
-        edgeTypeBreakdown,
-      };
-    })
-    .sort(compareDependencyHubs);
-
-  const uniqueDependentMcapUsd = [...allDependentIds].reduce(
-    (sum, dependentId) => sum + getFiniteMcap(mcapMap, dependentId),
-    0,
-  );
-
-  return {
-    hubs,
-    upstreamHubCount: hubs.length,
-    directEdgeCount: liveEdges.length,
-    uniqueDirectDependentCount: allDependentIds.size,
-    summedDirectDependencyWeight: liveEdges.reduce(
-      (sum, edge) => sum + (edgeWeight(edge) ?? 0),
-      0,
-    ),
-    uniqueDependentMcapUsd,
+  edges: readonly ReportCardsV9DependencyEdge[];
+  mcapMap: ReadonlyMap<string, number | null>;
+  marketCapAsOf?: number | null;
+}): DependencyHubsModel {
+  const cardById = new Map(cards.filter(card => !card.isDefunct).map(card => [card.id, card]));
+  const liveEdges = edges.filter(edge => cardById.has(edge.from) && cardById.has(edge.to));
+  const supplyOf: SupplyOf = id => {
+    const usd = mcapMap.get(id);
+    return usd === undefined || usd === null || !Number.isFinite(usd) || usd < 0 ? null : { usd, asOf: marketCapAsOf, basis: "market-cap-proxy" };
   };
+  const opts = {
+    sharedBooks: {
+      bookIdOf: (id: string) => cardById.get(id)?.sharedBookId ?? null,
+      // The publication identifies books but does not yet publish measured holdings.
+      measuredHoldingUsd: () => null,
+    },
+    familyOf: (id: string): string | null => {
+      let current = id;
+      for (let depth = 0; depth <= CLIENT_TRACKED_META_BY_ID.size; depth++) {
+        const parent = CLIENT_TRACKED_META_BY_ID.get(current)?.variantOf;
+        if (!parent) return current;
+        current = parent;
+      }
+      return null;
+    },
+    wrapperFormOf: (id: string): WrapperClaimForm => {
+      const form = cardById.get(id)?.scoreTrace?.wrapperParentLimit?.form;
+      if (!form) return "unknown";
+      return form === "pure" || form === "native-staked" || (form as string) === "staked" ? "pass-through" : "vault-claim";
+    },
+  };
+  const hubs = buildDirectHubExposures(liveEdges, supplyOf, opts).map(exposure => {
+    const card = cardById.get(exposure.hubId)!;
+    const hubEdges = liveEdges.filter(edge => edge.from === exposure.hubId);
+    const serialCount = hubEdges.filter(edge => edge.kind === "serial").length;
+    return { ...exposure, id: exposure.hubId, label: card.name, symbol: card.symbol,
+      hubMcapUsd: supplyOf(card.id)?.usd ?? null,
+      topDependentSymbol: exposure.topDependent ? cardById.get(exposure.topDependent.id)?.symbol ?? exposure.topDependent.id : null,
+      edgeTypeBreakdown: [
+        ...(serialCount ? [{ type: "Wrapper" as const, edgeCount: serialCount }] : []),
+        ...(hubEdges.length > serialCount ? [{ type: "Collateral" as const, edgeCount: hubEdges.length - serialCount }] : []),
+      ],
+    };
+  });
+  return { hubs, upstreamHubCount: hubs.length, directEdgeCount: liveEdges.length,
+    uniqueDirectDependentCount: new Set(liveEdges.map(edge => edge.to)).size,
+    mappedSupply: mappedDependentSupply(liveEdges, supplyOf, opts), marketCapAsOf };
 }
