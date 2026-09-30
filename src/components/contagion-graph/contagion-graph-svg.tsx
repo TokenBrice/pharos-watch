@@ -53,6 +53,7 @@ interface ContagionGraphSvgProps {
   nodeScale?: number;
   suppressHubLabels?: boolean;
   showTickerLabels?: boolean;
+  bottomInsetFraction?: number;
   fillHeight?: boolean;
   nodeTooltipEl: ReactNode;
   edgeTooltipEl: ReactNode;
@@ -465,6 +466,7 @@ export function ContagionGraphSvg({
   nodeScale = 1,
   suppressHubLabels = false,
   showTickerLabels = false,
+  bottomInsetFraction = 0,
   fillHeight = false,
   nodeTooltipEl,
   edgeTooltipEl,
@@ -491,7 +493,7 @@ export function ContagionGraphSvg({
   const reducedMotion = usePrefersReducedMotion();
   const arrowId = `upstream-arrow-${instanceId}`;
   const hatchId = `unknown-supply-${instanceId}`;
-  const fitBox = footprintViewBox(nodes, positions, graph.exposureOverlay ? graph.exposureNodeIds : visibleNodeIds);
+  const fitBox = footprintViewBox(nodes, positions, graph.exposureOverlay ? graph.exposureNodeIds : visibleNodeIds, { nodeScale, bottomInsetFraction });
   // Manual viewport survives coordinate updates. Only membership/root changes release it.
   const fitIdentity = JSON.stringify([
     [...(graph.exposureOverlay?.roots ?? [])].sort(),
