@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Delta-neutral gold carry (leased physical gold hedged with CME gold futures)",
-      "pct": 73.3,
+      "pct": 74.0045198,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Theo-managed strategy; gold leased to precious-metals businesses including the MG999 fund (FundBridge Capital as manager, Libeara tokenization, Vistra administration) and other independent lessees; CME short futures margined at a US-regulated Fortune-500 FCM in CFTC-segregated customer funds",
@@ -20,7 +20,7 @@
     },
     {
       "name": "Tokenized Treasury basket (thBILL)",
-      "pct": 26.61,
+      "pct": 25.7100372,
       "risk": "low",
       "coinId": "thbill-theo",
       "depType": "collateral",
@@ -40,7 +40,7 @@
     },
     {
       "name": "USDC redemption liquidity",
-      "pct": 0.08,
+      "pct": 0.2704497,
       "risk": "very-low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -49,7 +49,7 @@
     },
     {
       "name": "USDT redemption liquidity",
-      "pct": 0.0148486,
+      "pct": 0.0149933,
       "risk": "very-low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -59,25 +59,25 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewer": "Pharos reserve research 2026-09-30",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Theo transparency dashboard (reserve composition disclosed and accessed 2026-09-29)",
+        "label": "Theo rendered transparency dashboard (September 30, 2026 composition, accessed 2026-09-30)",
         "url": "https://app.theo.xyz/transparency"
       },
       {
-        "label": "Theo: How thUSD Turns Gold Market Carry Into Dollar-Denominated Yield",
+        "label": "Theo: How thUSD Turns Gold Market Carry Into Dollar-Denominated Yield (issuer claims, accessed 2026-09-30)",
         "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
       },
       {
-        "label": "Theo thUSD documentation",
+        "label": "Theo thUSD documentation (accessed 2026-09-30)",
         "url": "https://docs.theo.xyz/products/thusd.md"
       }
     ],
-    "rationale": "The 2026-09-29 dashboard disclosure reported $134,692,762 of reserves against about $133.67M of thUSD supply: $98.72M gold carry and $35.85M thBILL, plus about $124k of redemption liquidity. USDT was $20,000 / $134,692,762, or 0.0148486%; the other three disclosed percentages remain at their published precision. The four authored slices total 100.0048486%, within the 0.5 percentage-point composition tolerance. The gold carry slice remains one position because its internal allocation is not disclosed. This review corrects precision in the September 29 snapshot, rather than replacing it with the September 30 dashboard composition.",
-    "compositionBasis": "Theo transparency dashboard reserve composition read on 2026-09-29",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "The September 30 rendered dashboard discloses $98,716,576 gold carry, $34,295,295 thBILL, $360,760 USDC and $20,000 USDT, totaling $133,392,631. Each percentage is 100 times the displayed USD amount divided by $133,392,631, rounded to seven decimal places: 74.0045198%, 25.7100372%, 0.2704497% and 0.0149933%, respectively, totaling 100%. The dashboard's 74.22%/25.78% labels apply only to $133,011,871 of deployed assets, not all reserves. These are issuer-reported amounts, not an independently attested aggregate balance sheet. The internal gold-lease, futures-margin and Treasury-collateral allocations are not disclosed.",
+    "compositionBasis": "Theo rendered transparency dashboard reserve composition read on 2026-09-30; percentages calculated from displayed USD amounts",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The internal composition of the gold carry position (lease book versus CME futures margin versus T-bill collateral, and MG999 versus other lessees) is not published; the dashboard reports the position only as an aggregate. The reserve-side split of staked versus unstaked backing is likewise not published.",
     "knownUnknownExposurePct": 0,
@@ -85,7 +85,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "Delta-neutral gold carry (leased physical gold hedged with CME gold futures)",
-        "pct": 73.3,
+        "pct": 74.0045198,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The gold carry position is a managed strategy exposure across gold leases and exchange-traded futures, not a tracked stablecoin or tokenized-fund dependency with a linkable coin identity."
       }
@@ -94,7 +94,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Theo thUSD Cash Wallet (4-of-5 Safe)",
+        "name": "Theo thUSD Cash Wallet 0xec417ccb6dd26868cca993a92f37217b1d4b3c2f (4-of-5 Safe v1.4.1; no modules; zero guard; Ethereum block 26088438)",
         "role": "custodian"
       },
       {
@@ -114,26 +114,34 @@
       }
     ],
     "segregation": "unknown",
-    "bankruptcyRemoteness": "structured",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-29",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos reserve research 2026-09-30",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Theo roles and access control (thUSD Cash Wallet 4-of-5 Safe receives mint collateral)",
+        "label": "Theo roles and access control (Cash Wallet identity and mint-collateral control, accessed 2026-09-30)",
         "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
       },
       {
-        "label": "Theo: How thUSD Turns Gold Market Carry Into Dollar-Denominated Yield (custody and counterparties)",
+        "label": "Ethereum Cash Wallet (block 26088438 configuration from September 30 pinned RPC evidence: 4-of-5 Safe v1.4.1, no modules, zero guard)",
+        "url": "https://etherscan.io/address/0xec417ccb6dd26868cca993a92f37217b1d4b3c2f"
+      },
+      {
+        "label": "Theo gold-carry explanation (issuer custody, counterparties and fund-protection claims, accessed 2026-09-30)",
         "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
       },
       {
-        "label": "Theo thUSD risks (onchain backing in Safe, futures at Fortune-500 FCM)",
+        "label": "Theo thUSD risks (unnamed Fortune-500 FCM and custody risks; generic 4-of-6 Safe claim does not describe the Cash Wallet; accessed 2026-09-30)",
         "url": "https://docs.theo.xyz/products/thusd/risks.md"
+      },
+      {
+        "label": "Theo rendered transparency dashboard (June-dated attestation badges and auditor in progress; no account-level reports linked; accessed 2026-09-30)",
+        "url": "https://app.theo.xyz/transparency"
       }
     ],
-    "uncertainty": "Mint collateral is received by the 4-of-5 thUSD Cash Wallet Safe, and the strategy spreads custody across Standard Chartered/Libeara (gold side), a US-regulated Fortune-500 FCM holding CME margin in CFTC-segregated customer funds, and Wellington-managed Treasury funds. Provider share percentages, segregation, and rehypothecation terms are not published; the FCM is not named. Bankruptcy remoteness is structured at the MG999 fund level (gold outside lessee estates, insured and reinsured with a 20% first-loss buffer), not evidenced for every reserve leg.",
+    "uncertainty": "At Ethereum block 26088438, the disclosed Cash Wallet 0xec417ccb6dd26868cca993a92f37217b1d4b3c2f is a 4-of-5 Safe v1.4.1 with no modules and zero guard, receiving mint collateral. Theo's gold-carry explanation names Standard Chartered, Libeara, FundBridge and Wellington and claims CFTC-segregated futures margin at an unnamed US-regulated Fortune-500 FCM, but no account-level attestation, custody agreement or provider allocation is linked. These offchain provider roles and safeguards remain issuer claims; Libeara's tokenization role is not independent evidence of custody of every gold leg. MG999 bankruptcy remoteness and first-loss protection are issuer claims confined to that fund, not independently verified safeguards for the complete gold-carry slice or other reserve legs. The amount, availability and allocation of first-loss protection are not independently verified. Aggregate bankruptcy remoteness, segregation, rehypothecation terms and provider shares remain unknown.",
     "knownUnknownExposurePct": 100
   }
 }
