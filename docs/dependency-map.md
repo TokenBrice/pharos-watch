@@ -67,7 +67,7 @@ V9 dependency edges are serial or basket, and each carries a four-value `materia
 | `basket` | Collateral | solid slate | Weighted share of backing; risk inherited in proportion |
 | `serial` | Wrapper | dotted violet | Full pass-through claim; inherits the upstream's risk in full |
 
-Whether the upstream score resolved is **deliberately kept out of the legend**. It is a data-quality fact, and the detail modules that exist to report it already do. Encoding it in the legend split two relationships into four categories and made the map harder to read for no structural gain — the map's job is showing the relationships. The flag itself is not lost: `buildGraphData` stamps every link with `scoreKnown` (from `v9DependencyEdgeScoreKnown`), so downstream annotation can mark an unrateable upstream without splitting the drawn vocabulary.
+Whether the upstream score resolved stays out of the legend because it is a data-quality fact, not another relationship. Resolved links preserve `scoreKnown` from `v9DependencyEdgeScoreKnown`; edge tooltips, dependency inspection options, and live announcements mark an upstream not rateable when it is false. Known collateral shares remain visible regardless of score availability. Edge `upstreamScore` is not presented as the upstream asset's headline Safety Score.
 
 For reference, that distinction comes from one condition in `resolveV9DependencyInputs` — `cycleBlocked || unavailableDimensions.length > 0` — so an unscored edge means either a circular dependency or an upstream that is itself unrated. Both `blocked` (serial) and `boundedUnknown` (basket) are that same flag.
 
@@ -99,6 +99,12 @@ Sky's adapter attributes verified LitePSM USDC to both DAI and USDS, whose publi
 
 DOLA's adapter publishes LP-secured debt as named `LP-secured debt (undecomposed)` rows without `coinId`. These are not measured constituent holdings and do not create links to the tokens named in the pool; positively measured direct collateral rows remain separate.
 
+### Look-through footprint
+
+The same module exposes `lookThroughShares()` and `exposureFootprint()` for joint-root downstream footprints. Serial parents contribute their greatest upstream share; basket parents contribute the sum of weighted upstream shares; the resulting share is the greater of those two terms. Roots are excluded from downstream rows. Each reached asset appears once with its minimum hop, nullable share, nullable USD exposure, and `scoreUnknown` derived from edge materiality rather than missing supply.
+
+Cycles produce unknown shares and integrity flags. Null-weight basket edges are excluded from share sums and flag incomplete shares; basket sums above 1.000001 remain unclamped and flag integrity. Unavailable supply stays listed but is excluded from USD totals. Bands are material at the policy's 10% threshold, minor at 1%, trace above zero, and unknown for null or zero shares. Direct and indirect totals use the full edge set and the shared-book reconciliation path. Bounded best-first paths default to three per row and never limit totals. These are module semantics, not a transitive loss estimate displayed by the hub board.
+
 ## Graph Construction
 
 Graph construction lives in `src/lib/contagion-layout.ts` and is called through `useContagionGraphModel`:
@@ -106,7 +112,7 @@ Graph construction lives in `src/lib/contagion-layout.ts` and is called through 
 - Filters out cards marked `isDefunct`, then keeps only edges whose source and target are both live cards.
 - Removes coins with no incoming and no outgoing live dependency edge.
 - Sorts remaining coins by market cap descending.
-- Takes the top N coins where N comes from the runtime Limit toggle (50 / 100 / 200 / All; default `DEFAULT_NODE_LIMIT = 200`, and `All` uncaps to the full ranked set), then iteratively prunes coins that become isolated inside the displayed subset and backfills from lower-ranked candidates.
+- Admits each ranked coin when it connects to an admitted coin, or seeds a new component with that coin and its highest-ranked neighbor when two slots remain. This preserves connected pairs in disconnected ranking windows instead of pruning and permanently skipping their endpoints. `buildGraphData` defaults to `DEFAULT_NODE_LIMIT = 200`; the runtime Limit toggle selects 50 / 100 / 200 / All, and All admits every live graph participant.
 - Node radius uses square-root scaling between `MIN_RADIUS = 10` and `MAX_RADIUS = 34`.
 - Node ring color comes from the canonical grade band via `gradeRange()` in `shared/lib/report-card-core.ts` and `GRADE_RADAR_COLORS` in `shared/lib/classification`.
 
@@ -122,16 +128,16 @@ Two clocks are explicit: methodology version and V9 publication time, then marke
 
 ## Adaptive Supernodes
 
-To keep dense graphs readable, the map computes supernodes from the currently displayed node and edge set (no hardcoded coin IDs):
+Supernodes are computed over the full supplied published graph before node-limit, focus, type, and small-link display filtering, with no hardcoded coin IDs:
 
-- Metrics per node: incoming dependency weight (`inWeight`), incoming edge count (`inDegree`), total edge count (`totalDegree = in + out`), and log market cap (`log10(mcap + 1)`).
-- Normalization: min-max per metric across displayed nodes.
+- Metrics per node: `inWeight = log10(1 + known direct dependent exposure USD)` from the shared direct-exposure model, incoming edge count (`inDegree`), total edge count (`totalDegree = in + out`), and `log10(1 + market cap)`.
+- Normalization: min-max per metric over the full graph.
 - Score: `0.50*inWeight + 0.25*inDegree + 0.15*totalDegree + 0.10*mcap`.
 
-Tiering (with hysteresis):
+Tiers are a pure function of that graph, with coin ID breaking score ties and no render-history hysteresis:
 
-- Tier 1 (core hubs): enter at P90 + `inDegree >= 2`, stay until below P80.
-- Tier 2 (secondary hubs): enter at P75 + (`inDegree >= 1` or `inWeight >= 0.10`), stay until below P65.
+- Tier 1 (core hubs): P90 + `inDegree >= 2`.
+- Tier 2 (secondary hubs): P75 + (`inDegree >= 1` or `inWeight >= 0.10`).
 - Clamps: Tier 1 min 2 / max 3; Tier 2 min 3 / max 5.
 - Sparse fallback: if edge count < 12, use the top 2 by score as Tier 1.
 
@@ -143,11 +149,13 @@ The graph header exposes a single wrapping control row — Focus, Type, Limit, a
 
 - **Focus mode**: `All` (full graph), `Hubs` (only edges touching Tier 1/Tier 2 hubs; accessible name "Hub dependencies"), `Neighborhood` (only edges adjacent to the selected trace coin; accessible name "Selected neighborhood").
 - **Type filter**: `All`, `Collateral`, or `Wrapper`, filtering which edges are drawn while preserving the active focus mode.
-- **Node limit toggle**: `50`, `100`, `200` (default), or `All` top-mcap coins enter the map before isolated-node pruning.
+- **Node limit toggle**: `50`, `100`, `200` (default), or `All`, using connectivity-aware admission in market-cap order.
 - **Trace coin picker**: always visible. Selecting a coin sets the neighborhood root and switches to `Neighborhood`. Clicking a node selects the same trace target without changing the active focus mode. Trace selection is not position pinning: dragging pins a node's coordinates; double-click releases that position, and the header's `Pinned position` control releases all positions without clearing the trace.
-- **Selection overlay**: renders only when a node is hovered or selected as the trace target, in the top-right of the SVG stage with the HUD chrome (`--graph-panel-bg`, hairline border in `--graph-grid-line`). It surfaces unique visible dependent and upstream counts, summed visible dependent/upstream weights, examples, and a "Trace neighborhood" action. The ranked direct-exposure surface belongs to the Dependency Hubs Board.
+- **Selection overlay**: renders when a node is hovered or selected as the trace target, in the top-right of the SVG stage with HUD chrome. It reports full-graph direct dependent exposure in USD, full dependent/upstream counts with visible counts in parentheses, visible examples, and a "Trace neighborhood" action. Unavailable supply and unknown shares are disclosed separately. Focus, Type, Limit, and the small-link toggle do not change its full-graph exposure total.
 
 Below `sm`, a "Fullscreen graph" control opens the graph inside a dialog for a larger touch canvas, and a compact inspection panel replaces the desktop overlay. The opener is hidden at `sm` and above, and crossing the 640px breakpoint closes the dialog. Only one live graph stage renders at a time: the inline card is removed while the fullscreen card is open, with the same graph model retaining interaction state.
+
+Canvas edges with a known share below 0.1% of the dependent's backing are hidden initially. The "N small links hidden" count and toggle expose them; unknown-share links remain drawn. This is a display-only filter: exposure totals, the board, Used by, tooltips, and dependency inspection options retain every edge. The **Inspect dependency** native combobox provides keyboard access to every connection in the current Focus/Type/Limit result, including hidden small links. The polite live region announces inspection details and filter results.
 
 The map hero enables URL synchronization after hydration. `focus` stores `all`, `hub`, or `neighborhood`; `type` stores `all`, `collateral`, or `wrapper`; `limit` stores `50`, `100`, `200`, or `all`; and `trace` stores the selected coin ID. Updates use `history.replaceState`, preserving unrelated query parameters. Initial `?focus=<coinId>` selects a dependency-linked published coin in Neighborhood mode and defaults to All nodes unless an explicit valid limit is supplied. Detail snapshots do not synchronize URL state.
 
@@ -170,12 +178,21 @@ The post-simulation overlap pass is O(n²), so it is bounded to the top `MAX_COL
 
 `ContagionSnapshot` renders the Dependency Context section on `/stablecoin/[id]`. It:
 
-- keeps only edges that touch the current asset and whose endpoints are both published V9 cards, so the stage is never empty where the map belongs;
+- uses edges touching the current asset with published endpoints to decide whether to show the stage and populate Used by, but passes the full published edge set and all published cards to the graph so full-graph hub tiers and exposure remain consistent;
 - lazy-loads the graph with `next/dynamic` (`ssr: false`) behind a loading placeholder;
 - passes `focusCoinId`, `minimalChrome`, and a 500-node cap, which drops the header controls and renders only the focus coin's own neighborhood, ringed around it;
-- scales nodes up and shows ticker labels when the neighborhood is small — 1.5x at ≤10 visible nodes, 2x at ≤5. `MAX_RASTER_LOGO_RADIUS` in `contagion-graph-svg.tsx` caps the drawn image so sparse maps do not aggressively upscale legacy raster assets; vector (`.svg`) logos are exempt and keep filling the node. Dependency-graph raster logos are maintained at 250px or better where an authoritative source is available;
-- takes the wider column (`3fr`) when it shares the row with the variant-relationship card or collateral-usage list (`2fr`), and returns `null` when there is no graph, no supplemental context, and no source error.
+- scales nodes up and shows ticker labels when the neighborhood is small: 1.5x at ≤10 visible nodes, 2x at ≤5. `MAX_RASTER_LOGO_RADIUS = 46` in `contagion-graph-svg.tsx` caps the drawn raster image radius; `.svg` logos are exempt. Logos come from static `logosById`, with no minimum raster-source resolution guarantee;
+- takes the wider column (`3fr`) when it shares the row with the variant-relationship card or collateral-usage list (`2fr`), and returns `null` only when there is no focus card, no graph, no supplemental context, and no source error.
 
 The **Used by** list comes from the same published neighborhood edges, selecting `edge.from === stablecoinId` and listing each dependent at `edge.to`; authored reserve names alone never add an entry. Relationship labels use published `dependencyType`. For v5 edges without it, basket means collateral; serial means wrapper only when the dependent's tracked variant parent matches the upstream, otherwise serial claim. Basket shares show `share unknown` for null, `n/a` for zero, `<1%` for positive sub-1% shares, and a percentage otherwise; serial entries omit shares.
+
+The four context disclosures use published data:
+
+- **What depends on me** reports direct dependent count and known direct USD exposure from the shared exposure module over published edges. It weights dependent market caps, identifies the market-cap date when available, and discloses unavailable supply, unknown shares, and integrity warnings.
+- **What I depend on** lists published upstream links with relationship type, serial/basket kind, and backing share. Serial claims show "Full claim (100%)". The relationship fallback is the same as Used by.
+- **Scored role dependencies (not drawn)** lists `card.dependencies.roles`, including upstream, role, weight, and role score or unavailable status.
+- **Known, not in the scored graph** lists `card.dependencyCoverage`, including share, reason, identity verification, and source date. These rows never enter the graph or exposure totals.
+
+Absent role or coverage lists mean not published for this generation, including older retained payloads; empty lists mean no corresponding rows were published. The section can therefore render its disclosures even without a drawn neighborhood.
 
 The section links to `/dependency-map/?focus=<coinId>`. Its market-cap map also retains nulls. On either query error it shows a shared retry notice and can retain published neighborhood data; unlike the map-route client, it does not discard cached market caps on a market-cap query error.

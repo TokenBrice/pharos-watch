@@ -208,7 +208,7 @@ describe("ContagionSnapshot", () => {
         } }),
       ],
     });
-    // An endpoint without a published card must not appear in either surface.
+    // An endpoint without a published card must not enter usage or exposure totals.
     data.dependencyGraph.edges.push({
       ...data.dependencyGraph.edges[0],
       from: upstream,
@@ -220,7 +220,7 @@ describe("ContagionSnapshot", () => {
     expect(screen.queryByText("100%")).toBeNull();
     expect(screen.queryByText("ebUSD")).toBeNull();
     expect(screen.getByRole("heading", { name: "Used by 1" })).toBeTruthy();
-    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe(`${upstream}>${dependent}`);
+    expect(screen.getByRole("region", { name: "What depends on me" }).textContent).toContain("1 direct dependent");
   });
   it("ignores edges whose counterparty is not a published V9 card", () => {
     useReportCardsV9Mock.mockReturnValue({
@@ -249,11 +249,12 @@ describe("ContagionSnapshot", () => {
       refetch: vi.fn(),
     });
 
-    const { container } = render(<ContagionSnapshot stablecoinId="usde-ethena" />);
-    expect(container.firstChild).toBeNull();
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+    expect(screen.queryByTestId("contagion-graph")).toBeNull();
+    expect(screen.queryByRole("link", { name: "untracked-coin" })).toBeNull();
   });
 
-  it("returns null without dependencies, supplemental context, or an error", () => {
+  it("keeps publication coverage visible even when the scored graph has no links", () => {
     useReportCardsV9Mock.mockReturnValue({
       data: makeReportCardsV9Response({ cards: [makeV9Card({ id: "usde-ethena" })] }),
       error: null,
@@ -261,8 +262,10 @@ describe("ContagionSnapshot", () => {
       refetch: vi.fn(),
     });
 
-    const { container } = render(<ContagionSnapshot stablecoinId="usde-ethena" />);
-    expect(container.firstChild).toBeNull();
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+    expect(screen.queryByTestId("contagion-graph")).toBeNull();
+    expect(screen.getByRole("region", { name: "Known, not in the scored graph" }).textContent)
+      .toContain("No known relationships outside the scored graph published");
   });
 
   it("renders an unavailable notice instead of falling back to V8", () => {
@@ -299,28 +302,6 @@ describe("ContagionSnapshot", () => {
     expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
   });
 
-  it("hands the graph only the focus coin's own incoming and outgoing edges", () => {
-    useReportCardsV9Mock.mockReturnValue({
-      data: makeReportCardsV9Response({
-        cards: [
-          makeV9Card({ id: "usdc-circle" }),
-          makeV9Card({ id: "usds-sky" }),
-          makeV9Card({ id: "usde-ethena", dependencies: basketOn("usdc-circle") }),
-          makeV9Card({ id: "susde-ethena", dependencies: basketOn("usde-ethena") }),
-          makeV9Card({ id: "dai-makerdao", dependencies: basketOn("usds-sky") }),
-        ],
-      }),
-      error: null,
-      dataUpdatedAt: 1,
-      refetch: vi.fn(),
-    });
-
-    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
-
-    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe(
-      "usdc-circle>usde-ethena,usde-ethena>susde-ethena",
-    );
-  });
 
   it.each([
     [
@@ -403,5 +384,50 @@ describe("ContagionSnapshot", () => {
 
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+  });
+  it("counts a null-supply dependent but excludes it from direct USD exposure", () => {
+    const data = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle" }),
+        makeV9Card({ id: "usde-ethena", dependencies: basketOn("usdc-circle") }),
+        makeV9Card({ id: "susde-ethena", dependencies: basketOn("usdc-circle") }),
+      ],
+    });
+    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [...SUPPLY_DATA.peggedAssets, { id: "susde-ethena", circulating: null }] },
+      meta: { updatedAt: 1_752_534_000 }, error: null, dataUpdatedAt: 1, refetch: vi.fn(),
+    });
+    render(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    const summary = screen.getByRole("region", { name: "What depends on me" });
+    expect(summary.textContent).toContain("2 direct dependents");
+    expect(summary.textContent).toContain("$4.00B known direct exposure");
+    expect(summary.textContent).toContain("1 dependent has unavailable market cap");
+    expect(screen.getByRole("heading", { name: "Used by 2" })).toBeTruthy();
+  });
+
+  it("does not report zero USD exposure when every dependent's supply is unavailable", () => {
+    useStablecoinsMock.mockReturnValue({ data: undefined, error: null, dataUpdatedAt: 0, refetch: vi.fn() });
+    render(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    const summary = screen.getByRole("region", { name: "What depends on me" });
+    expect(summary.textContent).toContain("1 direct dependent");
+    expect(summary.textContent).toContain("Direct USD exposure unavailable");
+    expect(summary.textContent).not.toContain("$0");
+  });
+
+  it("renders a retained v5 payload with legacy upstream kind and unpublished coverage", () => {
+    const data = makeDependencyResponse();
+    data.schemaVersion = 5;
+    delete data.commonModeGroups;
+    data.dependencyGraph.edges.forEach((edge) => { delete edge.dependencyType; });
+    data.cards.forEach((card) => { delete card.dependencyCoverage; delete card.dependencies.roles; });
+    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+    const upstreams = screen.getByRole("region", { name: "What I depend on" });
+    expect(upstreams.textContent).toContain("USDC");
+    expect(upstreams.textContent).toContain("Collateral (basket)");
+    expect(upstreams.textContent).toContain("80%");
+    expect(screen.getByRole("region", { name: "Known, not in the scored graph" }).textContent)
+      .toContain("not published for this generation");
   });
 });

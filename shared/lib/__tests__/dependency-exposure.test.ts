@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import snapshot from "../../test-utils/fixtures/dependency-graph-2026-09-29.json";
-import { buildDirectHubExposures, edgeShare, mappedDependentSupply, v9DependencyEdgeScoreKnown, type ExposureOptions, type SupplyOf } from "../dependency-exposure";
+import { buildDirectHubExposures, edgeShare, exposureFootprint, lookThroughShares, mappedDependentSupply, v9DependencyEdgeScoreKnown, type ExposureOptions, type SupplyOf } from "../dependency-exposure";
 import type { ReportCardsV9DependencyEdge } from "../../types/report-cards-v9";
 
 const opts: ExposureOptions = {
@@ -108,5 +108,150 @@ describe("direct dependency exposure", () => {
     const supplyOf: SupplyOf = id => ({ usd: id === "dai" ? 100 : 200, asOf: null, basis: "market-cap-proxy" });
     expect(mappedDependentSupply(edges, supplyOf, sharedOpts).knownUsd).toBe(120);
     expect(buildDirectHubExposures(edges, supplyOf, sharedOpts)[0].direct.knownUsd).toBe(120);
+  });
+});
+
+describe("look-through dependency exposure", () => {
+  const capturedEdges = snapshot.edges as ReportCardsV9DependencyEdge[];
+  const capturedSupply: SupplyOf = id => {
+    const usd = (snapshot.supplyUsdById as Record<string, number>)[id];
+    return usd == null ? null : { usd, asOf: snapshot.asOfSec, basis: "market-cap-proxy" };
+  };
+
+  it("looks through the captured Yuzu basket and passes Spark's worst serial parent once", () => {
+    expect(lookThroughShares(["usde-ethena"], capturedEdges).get("syzusd-yuzu")?.share).toBeCloseTo(0.52906, 5);
+    const spark = [edge("usdc-circle", "susdc-spark", "serial", null), edge("usds-sky", "susdc-spark", "serial", null)];
+    for (const roots of [["usdc-circle"], ["usds-sky"], ["usdc-circle", "usds-sky"]]) {
+      expect(lookThroughShares(roots, spark).get("susdc-spark")).toEqual({ share: 1, minHop: 1, integrityFlag: false });
+      expect(exposureFootprint(roots, spark, supply, opts).direct.knownUsd).toBe(100);
+    }
+  });
+
+  it("keeps excess shares visible and marks the totals incomplete", () => {
+    const edges = [edge("root", "coin", "basket", 0.7), edge("other", "coin", "basket", 0.6)];
+    const share = lookThroughShares(["root", "other"], edges).get("coin")!;
+    expect(share.share).toBeCloseTo(1.3);
+    expect(share.minHop).toBe(1);
+    expect(share.integrityFlag).toBe(true);
+    const result = exposureFootprint(["root", "other"], edges, supply, opts);
+    expect(result.direct.knownUsd).toBeCloseTo(130);
+    expect(result.direct.integrityFlag).toBe(true);
+    expect(result.direct.complete).toBe(false);
+  });
+
+  it("counts a diamond once and bounds paths without changing full-graph totals", () => {
+    const edges = [edge("root", "a", "serial", null), edge("root", "b", "serial", null),
+      edge("a", "coin", "basket", 0.4), edge("b", "coin", "basket", 0.2)];
+    const result = exposureFootprint(["root"], edges, supply, opts);
+    expect(result.reached).toBe(3);
+    expect(result.direct.knownUsd).toBe(200);
+    expect(result.indirect.knownUsd).toBeCloseTo(60);
+    expect(result.indirect.overlapUsd).toBeCloseTo(60);
+    expect(result.rows.find(row => row.id === "coin")?.paths).toEqual([["root", "a", "coin"], ["root", "b", "coin"]]);
+    const bounded = exposureFootprint(["root"], edges, supply, { ...opts, topPaths: 1 });
+    expect(bounded.direct).toEqual(result.direct);
+    expect(bounded.indirect).toEqual(result.indirect);
+    expect(bounded.rows.find(row => row.id === "coin")?.paths).toEqual([["root", "a", "coin"]]);
+  });
+
+  it("lists unknown supply without treating it as zero and preserves materiality unknowns", () => {
+    const blocked = { ...edge("root", "missing", "basket", 0.2), materiality: "basket-bounded-unknown" as const };
+    const result = exposureFootprint(["root"], [blocked], supply, opts);
+    expect(result.rows).toEqual([{ id: "missing", minHop: 1, share: 0.2, band: "material", exposureUsd: null, scoreUnknown: true, paths: [["root", "missing"]] }]);
+    expect(result.direct.excludedSupplyUnknownIds).toEqual(["missing"]);
+    expect(result.direct.knownUsd).toBe(0);
+    expect(result.direct.complete).toBe(false);
+  });
+
+  it("excludes null basket weights from the known sum and flags the dependent", () => {
+    const edges = [edge("root", "coin", "basket", null), edge("root", "coin", "basket", 0.02)];
+    expect(lookThroughShares(["root"], edges).get("coin")).toEqual({ share: null, minHop: 1, integrityFlag: true });
+    const result = exposureFootprint(["root"], edges, supply, opts);
+    expect(result.direct.knownUsd).toBe(0);
+    expect(result.direct.unknownShareEdgeCount).toBe(1);
+    expect(result.rows[0].band).toBe("unknown");
+    expect(result.rows[0].exposureUsd).toBeNull();
+    const descendant = exposureFootprint(["root"], [...edges, edge("coin", "child", "serial", null)], supply, opts);
+    expect(descendant.rows.find(row => row.id === "child")?.share).toBeNull();
+    expect(descendant.indirect.complete).toBe(false);
+  });
+
+  it("terminates cycles, marks only their shares unknown, and propagates uncertainty", () => {
+    const edges = [edge("root", "a", "serial", null), edge("a", "b", "serial", null),
+      edge("b", "a", "serial", null), edge("b", "descendant", "serial", null)];
+    const shares = lookThroughShares(["root"], edges);
+    expect(shares.get("a")).toEqual({ share: null, minHop: 1, integrityFlag: true });
+    expect(shares.get("b")).toEqual({ share: null, minHop: 2, integrityFlag: true });
+    expect(shares.get("descendant")?.share).toBeNull();
+    const result = exposureFootprint(["root"], edges, supply, opts);
+    expect(result.bandCounts.unknown).toBe(3);
+    expect(result.rows.every(row => row.exposureUsd === null)).toBe(true);
+    expect(result.direct.complete).toBe(false);
+    expect(result.indirect.complete).toBe(false);
+  });
+
+  it("forms a joint root union without counting sUSDe as a dependent again", () => {
+    const single = exposureFootprint(["usde-ethena"], capturedEdges, capturedSupply, opts);
+    const joint = exposureFootprint(["usde-ethena", "susde-ethena"], capturedEdges, capturedSupply, opts);
+    expect(joint.rows.some(row => row.id === "usde-ethena" || row.id === "susde-ethena")).toBe(false);
+    expect(new Set(joint.rows.map(row => row.id)).size).toBe(joint.reached);
+    expect(joint.reached).toBe(single.reached - 1);
+  });
+
+  it("reconciles the Sky shared holding once, including across hop buckets", () => {
+    const edges = [edge("root", "bridge", "serial", null), edge("root", "dai", "basket", 0.4), edge("bridge", "usds", "basket", 0.4)];
+    const sharedOpts: ExposureOptions = { ...opts, sharedBooks: {
+      bookIdOf: id => id === "dai" || id === "usds" ? "sky" : null,
+      measuredHoldingUsd: (_book, upstream) => upstream === "root" || upstream === "bridge" ? 30 : null,
+    } };
+    const result = exposureFootprint(["root"], edges, supply, sharedOpts);
+    expect(result.direct.knownUsd).toBe(130);
+    expect(result.indirect.knownUsd).toBe(30);
+    expect(result.indirect.overlapUsd).toBe(30);
+    const sameUpstream = [edge("root", "dai", "basket", 0.4), edge("root", "usds", "basket", 0.4)];
+    expect(exposureFootprint(["root"], sameUpstream, supply, sharedOpts).direct.knownUsd).toBe(30);
+  });
+});
+
+describe("exposure band boundaries", () => {
+  it("uses material, minor, trace and unknown bands without using upstream scores as availability", () => {
+    const edges = [edge("root", "material", "basket", 0.1), edge("root", "minor", "basket", 0.01),
+      edge("root", "trace", "basket", 0.009), edge("root", "unknown", "basket", null)];
+    const result = exposureFootprint(["root"], edges, supply, opts);
+    expect(Object.fromEntries(result.rows.map(row => [row.id, row.band]))).toEqual({ material: "material", minor: "minor", trace: "trace", unknown: "unknown" });
+    expect(result.bandCounts).toEqual({ material: 1, minor: 1, trace: 1, unknown: 1 });
+    expect(result.rows.every(row => !row.scoreUnknown)).toBe(true);
+  });
+});
+
+describe("exposure uncertainty and reach", () => {
+  it("excludes known-zero rows and their zero-share descendants from reach and bands", () => {
+    const result = exposureFootprint(["root"], [
+      edge("root", "zero", "basket", 0), edge("zero", "child", "serial", null),
+      edge("root", "positive", "basket", 0.2),
+    ], supply, opts);
+    expect(result.rows.map(row => row.id)).toEqual(["positive"]);
+    expect(result.reached).toBe(1);
+    expect(result.bandCounts).toEqual({ material: 1, minor: 0, trace: 0, unknown: 0 });
+    expect(result.direct.knownUsd).toBe(20);
+    expect(result.indirect.knownUsd).toBe(0);
+  });
+
+  it("does not fabricate zero-weight paths through unknown basket edges", () => {
+    const result = exposureFootprint(["root"], [
+      edge("root", "unknown", "basket", null), edge("unknown", "child", "serial", null),
+    ], supply, opts);
+    expect(result.rows.map(row => [row.id, row.share, row.paths])).toEqual([
+      ["unknown", null, []], ["child", null, []],
+    ]);
+  });
+
+  it("derives scoreUnknown from all incoming edge materialities, not reaching shares", () => {
+    const result = exposureFootprint(["root"], [
+      edge("root", "coin", "basket", 0.2),
+      { ...edge("unreached", "coin", "basket", 0.1), materiality: "basket-bounded-unknown" },
+    ], supply, opts);
+    expect(result.rows[0].share).toBe(0.2);
+    expect(result.rows[0].scoreUnknown).toBe(true);
   });
 });

@@ -102,30 +102,78 @@ describe("ContagionGraph", () => {
     expect(screen.queryByRole("button", { name: "Fullscreen graph" })).toBeNull();
   });
 
-  it("shows small positive weights without rounding them to zero", () => {
+  it("hides small canvas links without changing full exposure or keyboard access", () => {
     const edges = [{ ...DEPENDENCY_EDGES[1], weight: 0.000148 }];
     const { container } = render(<ContagionGraph cards={CARDS} dependencyEdges={edges} mcapMap={MCAP_MAP} />);
-    fireEvent.mouseEnter(container.querySelector('svg line[stroke="transparent"]')!);
+    const picker = screen.getByRole("combobox", { name: "Inspect dependency" });
+    expect(container.querySelectorAll('svg line[stroke="transparent"]')).toHaveLength(0);
+    picker.focus();
+    expect(document.activeElement).toBe(picker);
+    fireEvent.change(picker, { target: { value: "0" } });
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("<1%");
-    fireEvent.mouseLeave(container.querySelector('svg line[stroke="transparent"]')!);
-    fireEvent.focus(screen.getByRole("button", { name: /USDC, Grade A/ }));
-    expect(screen.getAllByText("<0.01")).toHaveLength(2);
+    fireEvent.focus(screen.getByRole("button", { name: /USDe, Grade A/ }));
+    const exposureBefore = screen.getAllByText("Direct dependent exposure").map(label => label.nextElementSibling?.textContent);
+    expect(exposureBefore).toEqual(["$8.9M", "$8.9M"]);
+    fireEvent.click(screen.getByRole("button", { name: /1 small links hidden/ }));
+    expect(container.querySelectorAll('svg line[stroke="transparent"]')).toHaveLength(1);
+    expect(screen.getAllByText("Direct dependent exposure").map(label => label.nextElementSibling?.textContent)).toEqual(exposureBefore);
+    fireEvent.click(screen.getByRole("button", { name: /Hide 1 small links/ }));
+    expect(container.querySelectorAll('svg line[stroke="transparent"]')).toHaveLength(0);
+    expect(screen.getAllByText("Direct dependent exposure").map(label => label.nextElementSibling?.textContent)).toEqual(exposureBefore);
   });
 
   it("omits percentages on basket links with unavailable shares", () => {
     const edges: ReportCardsV9DependencyEdge[] = [{ ...DEPENDENCY_EDGES[1], weight: null, materiality: "basket-bounded-unknown" }];
     const { container } = render(<ContagionGraph cards={CARDS} dependencyEdges={edges} mcapMap={MCAP_MAP} />);
     fireEvent.mouseEnter(container.querySelector('svg line[stroke="transparent"]')!);
-    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("Collateral dependency");
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("upstream not rateable");
     expect(container.querySelector('[aria-live="polite"]')?.textContent).not.toContain("%");
   });
 
+  it("announces keyboard edge inspection and subsequent filter results", () => {
+    const edges: ReportCardsV9DependencyEdge[] = [{ ...DEPENDENCY_EDGES[1], materiality: "basket-bounded-unknown" }];
+    render(<ContagionGraph cards={CARDS} dependencyEdges={edges} mcapMap={MCAP_MAP} />);
+    const picker = screen.getByRole("combobox", { name: "Inspect dependency" });
+    const filterRegion = screen.getByLabelText("Graph filter announcements");
+    const filterBeforeInspection = filterRegion.textContent;
+    picker.focus();
+    fireEvent.change(picker, { target: { value: "0" } });
+    const liveRegion = screen.getByLabelText("Dependency inspection announcements");
+    expect(document.activeElement).toBe(picker);
+    expect(liveRegion?.textContent).toContain("USDC depends on USDe");
+    expect(liveRegion?.textContent).toContain("80%");
+    expect(liveRegion?.textContent).toContain("upstream not rateable");
+    expect(liveRegion.textContent).not.toContain("Filter results");
+    expect(filterRegion.textContent).toBe(filterBeforeInspection);
+    expect(filterRegion.textContent).not.toContain("80%");
+    fireEvent.click(screen.getByRole("button", { name: "Wrapper" }));
+    expect(filterRegion.textContent).toContain("0 connections");
+    expect(liveRegion.textContent).toBe("");
+    expect(within(picker).queryByRole("option", { name: /USDC depends on USDe/ })).toBeNull();
+  });
+  it("announces the effective detail limit rather than the unused control default", () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} maxNodes={2} minimalChrome />);
+    const filterRegion = screen.getByLabelText("Graph filter announcements");
+    expect(filterRegion.textContent).toContain("limit 2.");
+    expect(filterRegion.textContent).not.toContain("limit 200.");
+    expect(filterRegion.textContent).toContain("2 stablecoins");
+  });
+  it("keeps full direct exposure and counts when a type filter hides dependents", () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES.slice(0, 2)} mcapMap={MCAP_MAP} />);
+    fireEvent.click(screen.getByRole("button", { name: /USDe, Grade A/ }));
+    expect(screen.getAllByText("$48.0B")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Wrapper" }));
+    expect(screen.getAllByText("$48.0B")).toHaveLength(2);
+    expect(screen.getAllByText("1 (0 visible)")).toHaveLength(2);
+  });
 
   it("mounts one live graph in fullscreen and restores the opener on close", async () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
     fireEvent.click(screen.getByRole("button", { name: "Fullscreen graph" }));
     expect(document.querySelectorAll('[role="figure"]')).toHaveLength(1);
-    expect(document.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[aria-live="polite"]')).toHaveLength(2);
+    expect(screen.getAllByLabelText("Dependency inspection announcements")).toHaveLength(1);
+    expect(screen.getAllByLabelText("Graph filter announcements")).toHaveLength(1);
     expect(document.querySelectorAll("#clip-n-usdc-circle")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Close dependency map" })).toBeTruthy();
     expect(trackEvent).toHaveBeenCalledWith("dependency_map_action", { action: "fullscreen_open", value: "graph" });

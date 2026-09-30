@@ -29,6 +29,7 @@ import {
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { trackEvent } from "@/lib/analytics";
 import { NODE_LIMIT_OPTIONS } from "@/lib/contagion-layout";
+import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
 
 interface UseContagionGraphModelOptions {
   cards: readonly ContagionGraphCard[];
@@ -41,6 +42,7 @@ interface UseContagionGraphModelOptions {
 }
 
 const FOCUS_NEIGHBOR_RADIUS_X = 240;
+const SMALL_LINK_SHARE_THRESHOLD = 0.001;
 const FOCUS_NEIGHBOR_RADIUS_Y = 180;
 
 function resolveLinkEndpointId(endpoint: GraphLink["source"] | GraphLink["target"]): string {
@@ -146,7 +148,28 @@ export function useContagionGraphModel({
   syncUrlState = false,
   trackActions = true,
 }: UseContagionGraphModelOptions) {
-  const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
+  const fullGraph = useMemo(
+    () => buildGraphData(cards, mcapMap, dependencyEdges, "all"),
+    [cards, dependencyEdges, mcapMap],
+  );
+  const fullExposure = useMemo(() => buildDependencyHubsModel({
+    cards: cards.map(card => ({ ...card, name: card.symbol })),
+    edges: dependencyEdges,
+    mcapMap,
+  }), [cards, dependencyEdges, mcapMap]);
+  const directExposureById = useMemo(
+    () => new Map(fullExposure.hubs.map(hub => [hub.id, hub])),
+    [fullExposure],
+  );
+  const fullSupernodeState = useMemo(
+    () => buildSupernodeState(fullGraph.nodes, fullGraph.links,
+      new Map(fullExposure.hubs.map(hub => [hub.id, hub.direct.knownUsd]))),
+    [fullGraph, fullExposure],
+  );
+  const fullResolvedLinks = useMemo(
+    () => resolveGraphLinks(fullGraph.links, fullSupernodeState.tierById),
+    [fullGraph, fullSupernodeState],
+  );
 
   const [nodeLimit, setNodeLimit] = useState<NodeLimitOption>(DEFAULT_NODE_LIMIT);
   const effectiveNodeLimit = maxNodes ?? nodeLimit;
@@ -158,8 +181,7 @@ export function useContagionGraphModel({
   }, [cards, dependencyEdges, mcapMap, effectiveNodeLimit, focusCoinId]);
 
   const supernodeState = useMemo<SupernodeState>(() => {
-    // eslint-disable-next-line react-hooks/refs -- read-only hysteresis snapshot from previous render
-    const base = buildSupernodeState(nodes, links, prevTierByIdRef.current);
+    const base = fullSupernodeState;
     if (!focusCoinId || nodes.length === 0) return base;
     const layoutTargetById = buildFocusLayoutTargets(nodes, focusCoinId);
     const anchorStrengthById = new Map<string, number>();
@@ -167,11 +189,7 @@ export function useContagionGraphModel({
       anchorStrengthById.set(node.id, node.id === focusCoinId ? 1 : 0.2);
     }
     return { ...base, layoutTargetById, anchorStrengthById };
-  }, [nodes, links, focusCoinId]);
-
-  useEffect(() => {
-    prevTierByIdRef.current = new Map(supernodeState.tierById);
-  }, [supernodeState.tierById]);
+  }, [nodes, fullSupernodeState, focusCoinId]);
 
   const [focusMode, setFocusMode] = useState<FocusMode>("all");
   const [edgeTypeFilter, setEdgeTypeFilter] = useState<EdgeTypeFilter>("all");
@@ -179,6 +197,7 @@ export function useContagionGraphModel({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [showSmallLinks, setShowSmallLinks] = useState(false);
 
   const [urlReady, setUrlReady] = useState(false);
   const urlInitialized = useRef(false);
@@ -194,6 +213,7 @@ export function useContagionGraphModel({
       Boolean(id && cards.some((card) => card.id === id) && dependencyEdges.some((edge) => edge.from === id || edge.to === id));
     const root = validTrace(focus) ? focus : validTrace(trace) ? trace : null;
     // Browser URL state is read only after hydration, preserving static export.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Read browser URL state once after hydration so static-export markup stays identical on the server and first client render.
     setFocusMode(validTrace(focus) ? "neighborhood" : focus === "hub" || focus === "neighborhood" ? focus : "all");
     setSelectedNeighborhoodId(root);
     if (type === "all" || type === "collateral" || type === "wrapper") setEdgeTypeFilter(type);
@@ -266,6 +286,11 @@ export function useContagionGraphModel({
         hubIdsByScore,
       }),
     [edgeTypeFilter, focusMode, hubIdsByScore, neighborhoodFocusId, nodes, resolvedLinks],
+  );
+  const smallLinkCount = visibleLinks.filter(link => !link.shareUnknown && link.weight < SMALL_LINK_SHARE_THRESHOLD).length;
+  const canvasLinks = useMemo(
+    () => showSmallLinks ? visibleLinks : visibleLinks.filter(link => link.shareUnknown || link.weight >= SMALL_LINK_SHARE_THRESHOLD),
+    [showSmallLinks, visibleLinks],
   );
   const activeHoveredEdge = hoveredEdge !== null && visibleLinkIndices.has(hoveredEdge) ? hoveredEdge : null;
   const activeHoveredId = hoveredId !== null && visibleNodeIds.has(hoveredId) ? hoveredId : null;
@@ -365,6 +390,7 @@ export function useContagionGraphModel({
     edgeTypeFilter,
     setEdgeTypeFilter: changeEdgeTypeFilter,
     nodeLimit,
+    effectiveNodeLimit,
     setNodeLimit: changeNodeLimit,
     nodeSelectOptions,
     effectiveSelectedNeighborhoodId,
@@ -373,6 +399,12 @@ export function useContagionGraphModel({
     nodeMap,
     resolvedLinkByIndex,
     visibleLinks,
+    canvasLinks,
+    smallLinkCount,
+    showSmallLinks,
+    setShowSmallLinks,
+    directExposureById,
+    fullResolvedLinks,
     visibleNodeIds,
     activeHoveredEdge,
     activeHoveredId,

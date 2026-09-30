@@ -5,10 +5,13 @@ import type { ResolvedLink } from "@/components/contagion-graph-graph";
 import type { GraphNode } from "@/lib/contagion-layout";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
+import type { HubExposure } from "@shared/lib/dependency-exposure";
 
 interface ContagionGraphInsightsProps {
   inspectedNode: GraphNode | null;
   visibleLinks: readonly ResolvedLink[];
+  fullLinks: readonly ResolvedLink[];
+  directExposureById: ReadonlyMap<string, HubExposure>;
   nodeMap: ReadonlyMap<string, GraphNode>;
   logos?: Record<string, string>;
   onTraceNode: (nodeId: string) => void;
@@ -17,7 +20,6 @@ interface ContagionGraphInsightsProps {
 
 interface NodeLinkSummary {
   count: number;
-  weight: number;
   examples: string[];
 }
 
@@ -48,7 +50,6 @@ function summarizeNodeLinks({
 
   return {
     count: seenNodeIds.size,
-    weight: matchingLinks.reduce((sum, link) => sum + link.weight, 0),
     examples,
   };
 }
@@ -68,6 +69,8 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 export function ContagionGraphInsights({
   inspectedNode,
   visibleLinks,
+  fullLinks,
+  directExposureById,
   nodeMap,
   logos,
   onTraceNode,
@@ -87,6 +90,9 @@ export function ContagionGraphInsights({
     nodeMap,
     direction: "upstream",
   });
+  const dependentCount = new Set(fullLinks.filter(link => link.tgtId === inspectedNode.id).map(link => link.srcId)).size;
+  const upstreamCount = new Set(fullLinks.filter(link => link.srcId === inspectedNode.id).map(link => link.tgtId)).size;
+  const exposure = directExposureById.get(inspectedNode.id)?.direct;
 
   return (
     <aside
@@ -122,11 +128,16 @@ export function ContagionGraphInsights({
         </div>
 
         <div className="grid grid-cols-2 gap-1.5">
-          <MiniMetric label="Dependents" value={String(dependentSummary.count)} />
-          <MiniMetric label="Upstream" value={String(upstreamSummary.count)} />
-          <MiniMetric label="Dep weight" value={dependentSummary.weight > 0 && dependentSummary.weight < 0.01 ? "<0.01" : dependentSummary.weight.toFixed(2)} />
-          <MiniMetric label="Up weight" value={upstreamSummary.weight > 0 && upstreamSummary.weight < 0.01 ? "<0.01" : upstreamSummary.weight.toFixed(2)} />
+          <MiniMetric label="Dependents" value={`${dependentCount} (${dependentSummary.count} visible)`} />
+          <MiniMetric label="Upstream" value={`${upstreamCount} (${upstreamSummary.count} visible)`} />
+          <MiniMetric label="Direct dependent exposure" value={`${formatCurrency(exposure?.knownUsd ?? 0, 1)}${exposure && !exposure.complete ? " known" : ""}`} />
         </div>
+        {exposure && !exposure.complete && (
+          <p className="text-[11px] text-muted-foreground">
+            {exposure.excludedSupplyUnknownIds.length} supply unavailable; {exposure.unknownShareEdgeCount} shares unavailable.
+            {exposure.integrityFlag && " Published shares need review."}
+          </p>
+        )}
 
         <div className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
           <p>

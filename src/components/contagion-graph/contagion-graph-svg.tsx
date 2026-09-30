@@ -423,7 +423,7 @@ export function ContagionGraphSvg({
 }: ContagionGraphSvgProps) {
   const {
     nodes,
-    visibleLinks,
+    canvasLinks,
     visibleNodeIds,
     positions,
     dragId,
@@ -455,7 +455,7 @@ export function ContagionGraphSvg({
     >
       <ContagionGraphClipPaths nodes={nodes} positions={positions} nodeScale={nodeScale} />
 
-      {visibleLinks.map((link) => (
+      {canvasLinks.map((link) => (
         <ContagionGraphEdge
           key={`${link.srcId}-${link.tgtId}-${link.index}`}
           link={link}

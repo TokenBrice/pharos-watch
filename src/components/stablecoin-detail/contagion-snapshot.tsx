@@ -9,6 +9,8 @@ import { logosById } from "@/lib/logos";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CollateralUsageSection, type PublishedCollateralUsageEntry } from "./collateral-usage-section";
+import { buildDetailDependencyContext } from "./dependency-context-model";
+import { DependencyContextDetails } from "./dependency-context-details";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -57,9 +59,11 @@ export function ContagionSnapshot({
         id: card.id,
         symbol: CLIENT_TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id,
         grade: card.grade,
+        sharedBookId: card.sharedBookId,
       })),
     [rc?.cards],
   );
+  const focusCard = rc?.cards.find((card) => card.id === stablecoinId);
   // Both endpoints must be published cards, otherwise the graph would drop the
   // edge and leave an empty stage where the map belongs.
   const edges = useMemo(() => {
@@ -75,6 +79,11 @@ export function ContagionSnapshot({
     if (!peggedAssets) return EMPTY_MCAP_MAP;
     return new Map(peggedAssets.map((coin) => [coin.id, getCirculatingRawOrNull(coin)]));
   }, [list?.peggedAssets]);
+  const marketCapAsOf = stablecoinsQuery.meta?.updatedAt ?? null;
+  const dependencyContext = useMemo(
+    () => buildDetailDependencyContext(stablecoinId, rc?.cards ?? [], rc?.dependencyGraph.edges ?? [], mcapMap, marketCapAsOf),
+    [stablecoinId, rc?.cards, rc?.dependencyGraph.edges, mcapMap, marketCapAsOf],
+  );
   const collateralUsageEntries = useMemo<PublishedCollateralUsageEntry[]>(
     () => edges.filter((edge) => edge.from === stablecoinId).map((edge) => {
       const meta = CLIENT_TRACKED_META_BY_ID.get(edge.to);
@@ -98,7 +107,7 @@ export function ContagionSnapshot({
   );
   const sourceDataUpdatedAt = sourceUpdatedTimes.length > 0 ? Math.min(...sourceUpdatedTimes) : 0;
 
-  if (!hasContagion && !hasRightColumn && !sourceError) {
+  if (!focusCard && !hasContagion && !hasRightColumn && !sourceError) {
     return null;
   }
 
@@ -145,12 +154,13 @@ export function ContagionSnapshot({
             }}
           />
         ) : null}
+        {focusCard ? <DependencyContextDetails card={focusCard} context={dependencyContext} marketCapAsOf={marketCapAsOf} /> : null}
         <div className={layoutClass}>
           {hasContagion ? (
             <LazySection placeholder={<DependencyGraphPlaceholder />}>
               <ContagionGraph
                 cards={cards}
-                dependencyEdges={edges}
+                dependencyEdges={rc?.dependencyGraph.edges ?? []}
                 mcapMap={mcapMap}
                 logos={logos}
                 focusCoinId={stablecoinId}

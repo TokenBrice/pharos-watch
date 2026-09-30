@@ -10,7 +10,7 @@ import {
   runSimulation,
   WIDTH,
   HEIGHT,
-  MAX_NODES,
+  DEFAULT_NODE_LIMIT,
   MAX_COLLISION_PASS_NODES,
   PAD,
   MIN_RADIUS,
@@ -294,11 +294,23 @@ describe("buildGraphData", () => {
     }
   });
 
-  it("respects MAX_NODES limit", () => {
-    const allIds = TRACKED_STABLECOINS.map((s) => s.id);
-    const { cards, mcapMap } = makeCardsAndMcap(allIds);
-    const result = buildGraphData(cards, mcapMap, chainEdges(allIds));
-    expect(result.nodes.length).toBeLessThanOrEqual(MAX_NODES);
+  it("defaults to the largest bounded node limit", () => {
+    const ids = Array.from({ length: 230 }, (_, index) => `coin-${index}`);
+    const { cards, mcapMap } = makeCardsAndMcap(ids);
+    const result = buildGraphData(cards, mcapMap, chainEdges(ids));
+    if (typeof DEFAULT_NODE_LIMIT !== "number") {
+      throw new TypeError("The default graph limit must remain a bounded numeric option");
+    }
+    expect(result.nodes).toHaveLength(DEFAULT_NODE_LIMIT);
+  });
+
+  it("fills disconnected ranking windows with connected pairs instead of returning empty", () => {
+    const ids = ["a", "b", "c", "d"];
+    const cards = ids.map(id => mockCard(id, id));
+    const mcapMap = new Map(ids.map((id, index) => [id, 4 - index]));
+    const result = buildGraphData(cards, mcapMap, [basketEdge("a", "d", 1), basketEdge("b", "c", 1)], 2);
+    expect(result.nodes.map(node => node.id)).toEqual(["a", "d"]);
+    expect(result.links).toEqual([expect.objectContaining({ source: "d", target: "a" })]);
   });
 
   it("includes the full connected ranked graph for the all node limit", () => {
@@ -362,6 +374,33 @@ describe("buildGraphData", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildSupernodeState", () => {
+  it("breaks tied hub scores by identity rather than publication ordering", () => {
+    const nodes: GraphNode[] = Array.from({ length: 12 }, (_, index) => ({
+      id: `coin-${index}`, symbol: `C${index}`, grade: "B", mcap: 100, r: 10,
+    }));
+    const links: GraphLink[] = nodes.map((node, index) => ({
+      source: node.id, target: nodes[(index + 1) % nodes.length].id, weight: 1, type: "wrapper",
+    }));
+    const forward = buildSupernodeState(nodes, links);
+    const reversed = buildSupernodeState([...nodes].reverse(), [...links].reverse());
+    expect(reversed.tierById).toEqual(forward.tierById);
+    expect(reversed.layoutTargetById).toEqual(forward.layoutTargetById);
+  });
+  it("scores incoming magnitude as log10 direct dependent USD rather than summed shares", () => {
+    const nodes: GraphNode[] = [
+      { id: "low-hub", symbol: "L", grade: "B", mcap: null, r: 10 },
+      { id: "high-hub", symbol: "H", grade: "B", mcap: null, r: 10 },
+      { id: "small", symbol: "S", grade: "B", mcap: 9, r: 10 },
+      { id: "large", symbol: "B", grade: "B", mcap: 99, r: 10 },
+    ];
+    const links: GraphLink[] = [
+      { source: "small", target: "low-hub", weight: 1, type: "wrapper" },
+      { source: "large", target: "high-hub", weight: 1, type: "wrapper" },
+    ];
+    const state = buildSupernodeState(nodes, links);
+    expect(state.scoreById.get("low-hub")).toBeCloseTo(0.5);
+    expect(state.scoreById.get("high-hub")).toBeCloseTo(0.75);
+  });
   function makeSimpleGraph(): { nodes: GraphNode[]; links: GraphLink[] } {
     const ids = TRACKED_STABLECOINS.slice(0, 20).map((s) => s.id);
     const cards = ids.map((id) => {
@@ -373,15 +412,6 @@ describe("buildSupernodeState", () => {
     const edges = ids.slice(1).map((id) => basketEdge(ids[0], id, 0.5));
     return buildGraphData(cards, mcapMap, edges);
   }
-
-  it("returns the expected SupernodeState shape", () => {
-    const { nodes, links } = makeSimpleGraph();
-    const state = buildSupernodeState(nodes, links);
-    expect(state.tierById).toBeInstanceOf(Map);
-    expect(state.scoreById).toBeInstanceOf(Map);
-    expect(state.layoutTargetById).toBeInstanceOf(Map);
-    expect(state.anchorStrengthById).toBeInstanceOf(Map);
-  });
 
   it("assigns tier 2 to at least minTier1 nodes", () => {
     const { nodes, links } = makeSimpleGraph();
@@ -419,20 +449,6 @@ describe("buildSupernodeState", () => {
     }
   });
 
-  it("applies hysteresis when prevTierById is provided", () => {
-    const { nodes, links } = makeSimpleGraph();
-    expect(nodes.length).toBeGreaterThan(0);
-    const state1 = buildSupernodeState(nodes, links);
-
-    const state2 = buildSupernodeState(nodes, links, state1.tierById);
-    expect(state2.tierById).toBeInstanceOf(Map);
-
-    const tier2Ids1 = [...state1.tierById.entries()].filter(([, t]) => t === 2).map(([id]) => id);
-    for (const id of tier2Ids1) {
-      const stillTiered = (state2.tierById.get(id) ?? 0) > 0;
-      expect(stillTiered).toBe(true);
-    }
-  });
 
   it("handles empty nodes gracefully", () => {
     const state = buildSupernodeState([], []);

@@ -1,4 +1,5 @@
 import type { DependencyType, GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { V9DependencyEconomicRole } from "../types/dependency-types";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
 import { PEG_HERO_CHIP_LABELS } from "./peg-taxonomy";
@@ -32,6 +33,14 @@ export const DEPENDENCY_RELATIONSHIP_LABELS = {
   collateral: "Collateral",
   "serial-claim": "Serial claim",
 } as const satisfies Readonly<Record<DependencyType | "serial-claim", string>>;
+
+export const DEPENDENCY_ROLE_LABELS = {
+  "serial-claim": "Serial claim",
+  "basket-exposure": "Basket exposure",
+  "exit-dependency": "Exit dependency",
+  "control-operator": "Control operator",
+  "oracle-nav": "Oracle / NAV",
+} as const satisfies Readonly<Record<V9DependencyEconomicRole, string>>;
 
 export { PEG_TAXONOMY } from "./peg-taxonomy";
 
