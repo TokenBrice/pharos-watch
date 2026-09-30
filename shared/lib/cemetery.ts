@@ -75,7 +75,7 @@ function getDeathDateKey(deathDate: string): number | null {
  * Keys 2 and 3 are the same in both modes, and ids are unique, so identical
  * data always yields the same order regardless of input order.
  */
-export function sortCemeteryCoins<T extends DeadStablecoin>(
+export function sortCemeteryCoins<T extends Pick<DeadStablecoin, "id" | "symbol" | "deathDate" | "peakMcap">>(
   coins: T[],
   sortMode: CemeterySortMode = "newest",
 ): T[] {
