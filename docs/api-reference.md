@@ -323,7 +323,7 @@ For `GET /api/mint-burn-flows`, aggregate `coins[].netFlow24hUsd`, `netFlow7dUsd
 
 ### Public Endpoints Quick Reference
 
-Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operations: **41**.
+Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operations: **42**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -359,6 +359,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-grades` | Safety Score grades (no key) | Risk | exempt | — | 200, 400, 503 |
 | GET | `/api/dependency-graph/v1` | Dependency graph (no key) | Risk | exempt | — | 200, 400, 503 |
+| GET | `/api/dependency-scenarios/v1` | Modeled dependency scenarios (no key) | Risk | exempt | — | 200, 400, 503 |
 | GET | `/api/redemption-backstops` | Redemption backstops | Risk, Reserves | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history` | Safety score history | Risk, History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history-v2` | Safety score history (identity-aware) | Risk, History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
@@ -767,23 +768,13 @@ Dynamic social-card image routes are served by the Worker and intentionally omit
 
 ### `GET /api/report-cards/v9`
 
-Accepted V9 cards and their sorted serial/basket graph. Held snapshots return HTTP 200 with no-store and `X-Safety-Score-Status: held`. See [the publication contract](./report-cards.md#api).
+[V9 contract](./report-cards.md#api).
 
 - **Operation ID:** `reportCardsV9`
 - **Path:** `/api/report-cards/v9`
 - **Parameters:** None.
 - **Success response schema:** [`ReportCardsV9Response`](https://pharos.watch/openapi.json#/components/schemas/ReportCardsV9Response)
 - **Policy:** authentication `X-API-Key` required; bypass shared endpoint caching (`cacheBypass: true`).
-
-**Current methodology example**
-
-```json
-{
-  "methodology": {
-    "version": "9.98"
-  }
-}
-```
 
 ### `GET /api/safety-grades`
 
@@ -797,13 +788,23 @@ Returns one Safety Score and grade per tracked stablecoin from the same V9 publi
 
 ### `GET /api/dependency-graph/v1`
 
-Free accepted-publication graph with nullable evaluation supply, roles and coverage counts. Edges and optional common-mode groups pass through unchanged. See [the contract](./report-cards.md#api).
+[Graph contract](./dependency-map.md).
 
 - **Operation ID:** `dependencyGraphV1`
 - **Path:** `/api/dependency-graph/v1`
 - **Parameters:** None.
 - **Success response schema:** [`DependencyGraphResponse`](https://pharos.watch/openapi.json#/components/schemas/DependencyGraphResponse)
 - **Policy:** authentication exempt; shared endpoint caching allowed (`cacheBypass: false`).
+
+### `GET /api/dependency-scenarios/v1`
+
+[Modeled results](./dependency-map.md).
+
+- **Operation ID:** `dependencyScenariosV1`
+- **Path:** `/api/dependency-scenarios/v1`
+- **Parameters:** None.
+- **Success response schema:** [`DependencyScenariosResponse`](https://pharos.watch/openapi.json#/components/schemas/DependencyScenariosResponse)
+- **Policy:** authentication exempt; bypass shared endpoint caching (`cacheBypass: true`).
 
 ### `GET /api/redemption-backstops`
 

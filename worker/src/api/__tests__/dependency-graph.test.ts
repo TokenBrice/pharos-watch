@@ -54,6 +54,55 @@ describe("dependency graph projection", () => {
     expect(body).not.toHaveProperty("commonModeGroups");
   });
 
+  it("resolves common-mode cap and deployment adjustment prices without exposing evaluator detail", () => {
+    const snapshot = fixturePublication();
+    const card = snapshot.cards[0]!;
+    card.caps = [{ kind: "mint-control", limit: 60, binding: true, source: "structural", reason: "Reviewed control ceiling" }];
+    card.scoreTrace.deploymentRisk.adjustments = [{
+      signalKey: "signal-1", sourceSignalKeys: ["signal-1"], exposureKey: "exposure-1",
+      riskEventKey: "event-1", failureDomainKey: "mint-control:shared",
+      nominalExposureShare: 0.4, exposureShare: 0.4, exposedScore: 80,
+      scoreBefore: 80, scoreAfter: 72, adjustmentPoints: 8, modeledLossPoints: 8,
+      reason: "Reviewed deployment adjustment",
+    }];
+    snapshot.commonModeGroups![0]!.pricedEffects = [{ assetId: "child", capIndices: [0], deploymentAdjustmentIndices: [0] }];
+    const before = structuredClone(snapshot);
+    const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
+    expect(body.commonModeGroups![0]!.pricedEffects).toEqual([{
+      assetId: "child", capIndices: [0], deploymentAdjustmentIndices: [0],
+      resolvedCaps: [{ kind: "mint-control", limit: 60, binding: true }],
+      resolvedAdjustments: [{ scoreBefore: 80, scoreAfter: 72, adjustmentPoints: 8 }],
+    }]);
+    expect(snapshot).toEqual(before);
+  });
+
+  it.each(["missing-card", "missing-indices"] as const)("marks %s references unresolved without inventing a price or dropping other prices", (missing) => {
+    const snapshot = fixturePublication();
+    snapshot.cards[0]!.caps = [{ kind: "mint-control", limit: 60, binding: false, source: "structural", reason: "Reviewed control ceiling" }];
+    snapshot.commonModeGroups![0]!.pricedEffects = [
+      { assetId: "child", capIndices: [0], deploymentAdjustmentIndices: [] },
+      { assetId: "parent", capIndices: [0], deploymentAdjustmentIndices: [0] },
+    ];
+    if (missing === "missing-card") snapshot.cards = snapshot.cards.filter((card) => card.id !== "parent");
+    const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
+    expect(body.commonModeGroups![0]!.pricedEffects).toEqual([
+      { assetId: "child", capIndices: [0], deploymentAdjustmentIndices: [], resolvedCaps: [{ kind: "mint-control", limit: 60, binding: false }], resolvedAdjustments: [] },
+      { assetId: "parent", capIndices: [0], deploymentAdjustmentIndices: [0], resolvedCaps: [], resolvedAdjustments: [], referencesUnresolved: true },
+    ]);
+  });
+
+  it("omits only unresolved entries within a partly resolved effect", () => {
+    const snapshot = fixturePublication();
+    snapshot.cards[0]!.caps = [{ kind: "mint-control", limit: 60, binding: false, source: "structural", reason: "Reviewed control ceiling" }];
+    snapshot.commonModeGroups![0]!.pricedEffects = [{ assetId: "child", capIndices: [0, 2], deploymentAdjustmentIndices: [1] }];
+    const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
+    expect(body.commonModeGroups![0]!.pricedEffects![0]).toEqual({
+      assetId: "child", capIndices: [0, 2], deploymentAdjustmentIndices: [1],
+      resolvedCaps: [{ kind: "mint-control", limit: 60, binding: false }],
+      resolvedAdjustments: [], referencesUnresolved: true,
+    });
+  });
+
   it("serves the held accepted generation without caching and retains hold reasons", async () => {
     const current = fixturePublication();
     const snapshot = { ...current, publicationHealth: { ...current.publicationHealth, status: "held" as const, attemptedAtSec: current.updatedAt + 1800, heldSinceSec: current.updatedAt + 1800, reasons: [{ code: "dex-stale" as const }] } };

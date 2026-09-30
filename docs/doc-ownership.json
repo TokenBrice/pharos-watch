@@ -119,6 +119,16 @@
         "src/hooks/use-contagion-graph-drag.ts",
         "src/lib/contagion-layout.ts",
         "src/lib/dependency-hubs-model.ts",
+        "src/lib/shared-failure-domains-model.ts",
+        "src/hooks/use-dependency-graph.ts",
+        "src/hooks/use-dependency-exposure-mode.ts",
+        "src/hooks/use-dependency-scenarios.ts",
+        "shared/types/dependency-graph.ts",
+        "shared/types/dependency-scenarios.ts",
+        "worker/src/api/dependency-graph.ts",
+        "worker/src/api/dependency-scenarios.ts",
+        "worker/scripts/compute-dependency-scenarios.ts",
+        ".github/workflows/dependency-scenarios-refresh.yml",
         "shared/lib/dependency-exposure.ts",
         "shared/lib/dependency-graph.ts",
         "shared/lib/dependency-derivation.ts",
@@ -141,6 +151,10 @@
         { "path": "docs/live-reserves.md", "anchor": "snapshot-admission-gates" }
       ],
       "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-36" },
+        { "path": "docs/dependency-map.md", "anchor": "offline-modeled-scenarios" },
+        { "path": "docs/dependency-map.md", "anchor": "shared-failure-domains-board" },
+        { "path": "docs/runbooks/dependency-network.md", "anchor": "offline-scenario-workflow" },
         { "path": "docs/live-reserves.md", "anchor": "api-contract" },
         { "path": "docs/live-reserves.md", "anchor": "frontend-consumers" }
       ],

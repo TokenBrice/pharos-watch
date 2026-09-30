@@ -61,6 +61,45 @@ Resolve each claim from its latest dated decision; retain earlier entries as his
 
 **Curation rule:** leads never create edges. Require current claim identity plus a measured basket weight with the correct denominator, or reviewed serial/mechanism semantics. Symbol matches, LP debt, protocol-wide backing and settlement currency alone are insufficient. Unverified bridge/intermediary claims stay on the coverage list until escrow is proven; verified look-through retains annotation and provenance. Evidence-refreshed, retargeted and withheld outcomes must land through the normal registry/adapter/admission path, not ledger edits alone.
 
+## Offline Scenario Workflow
+
+This is a separate hypothetical lane, not Worker cron or canonical score publication. [ADR-36](../architecture.md#adr-36) owns placement and storage; [modeled scenarios](../dependency-map.md#offline-modeled-scenarios) owns reader behavior. `.github/workflows/dependency-scenarios-refresh.yml` runs hourly at minute 17, serializes non-canceling writers, and has a 15-minute deadline.
+
+For an authorized production refresh, dispatch the workflow on `main`:
+
+```bash
+gh workflow run dependency-scenarios-refresh.yml --ref main
+```
+
+The workflow uses existing `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `PHAROS_API_KEY`. To reproduce its stages from the repository root, use an ignored output directory:
+
+```bash
+node --import tsx worker/scripts/compute-dependency-scenarios.ts --mode plan --out-dir agents/dependency-scenarios/manual
+node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts --mode compute --out-dir agents/dependency-scenarios/manual --input agents/dependency-scenarios/manual/capture.json --publication agents/dependency-scenarios/manual/publication.json
+node --import tsx worker/scripts/compute-dependency-scenarios.ts --mode publish --out-dir agents/dependency-scenarios/manual
+```
+
+`plan` reads accepted public report cards with the API key and exports D1 `report-cards:fixed-input:exact`. `compute` requires replay publication/base-input/build identity and all captured published score/grade baselines to match. It runs three shocks per root for up to 15 publication-bound direct-exposure hubs, producing `artifact.json` and metrics including `acceptedPublicationVerified`, roots, scenarios, rows, and failures. Omitting `--publication` is a local replay only, not authorized publication evidence; use a fresh output directory without a retained `publication.json`, and do not run `publish` on it.
+
+The hosted workflow preserves the validated artifact for 14 days before publishing. `publish` requires the accepted-equivalence `artifact.verified.sha256` stamp binding source identities, methodology version, and exact payload hash, rechecks those identities before remote writes, schema-validates the artifact, writes the content-hashed payload, verifies exact readback, then advances and verifies the latest marker. New plan/compute attempts invalidate old stamps, preventing local replay-only publication. It subsequently retains the newest 24 payloads plus the marker target. Never advance the marker manually or edit artifact bytes to bypass equivalence.
+
+After the workflow completes, read the uncached public endpoint:
+
+```bash
+curl --fail-with-body https://api.pharos.watch/api/dependency-scenarios/v1
+```
+
+Verify `artifact.sourcePublicationGenerationId`, base-input/build identity, `computedAtSec`, cohort, assumptions, and per-asset failures against the run's saved artifact. The response freshness names both source and currently accepted publication generations, `ageSec`, `budgetSec: 7200`, and a machine-readable reason for every non-current status:
+
+- `current`: generations match and artifact age is within budget.
+- `earlier-generation`: accepted generation has changed within budget. Numbers must be labelled with modeled generation and age, never represented as current.
+- `stale`: age exceeds budget; modeled numbers are withheld.
+- `unavailable`: artifact or accepted identity is missing/unreadable, artifact validation failed, or artifact clock is in the future; modeled numbers are withheld.
+
+An accepted publication can rotate after a successful run; earlier-generation alone is not corruption. In Exposure mode, confirm the selected cohort root has the selector and assumptions, generation/age/budget labels, and Published → modeled view. NR and missing stored rows are not numeric changes. Canonical cards and journals remain independent.
+
+On failure, retain workflow logs and the saved capture/publication/artifact when available. Capture mismatch or baseline disagreement rejects compute: obtain a fresh coherent plan and rerun rather than weakening the gate. Artifact validation or payload readback failure must not advance latest; inspect the failing D1 operation and rerun the normal workflow after repair. Marker readback failure requires inspecting the marker and its payload before claiming publication. Pruning failure only logs a warning after verified publication and retries on the next successful run; do not roll back good data for that warning. Missing commit data or accepted identity yields unavailable; repair the source/read path, never fabricate a generation. Scheduling delay may leave committed data earlier-generation or stale. Record the first actual production run and endpoint freshness separately from deployment success.
+
 ## Verification and Handoff
 
 Follow [Testing: Smallest adequate check per area](../testing.md#smallest-adequate-check-per-area) for changed producers and registries. Run `npm run check:dependency-review-gaps` for local structural review, focused producer tests for behavior changes, then the production report and reconciliation against the new accepted publication. Record checks actually exercised, publication/supply clocks, outcomes, deferred prerequisites and remaining alert risk. The skill facade is maintained by `node scripts/maintenance/sync-agent-skills.mjs --write`; `npm run check:agent-skills` checks its frontmatter and mirrors.

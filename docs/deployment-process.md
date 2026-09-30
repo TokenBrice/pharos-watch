@@ -101,6 +101,7 @@ Production responsibility is split deliberately:
 - `.github/workflows/deploy-cloudflare.yml` selects and deploys the changed production surfaces after a protected `main` merge.
 - `.github/workflows/pages-release.yml` builds and publishes one exact Pages artifact.
 - `.github/workflows/rebuild-pages.yml` performs the one daily API-backed Pages data refresh.
+- `.github/workflows/dependency-scenarios-refresh.yml` independently computes and publishes offline modeled dependency artifacts hourly at minute 17 or on manual dispatch. It does not deploy code or add Worker cron work; [Dependency network operations](./runbooks/dependency-network.md#offline-scenario-workflow) owns its commands, retained artifacts, readback proof, and failure handling.
 
 PRs do not build the static site. A successful protected merge triggers the dependency-free production deploy classifier after Node setup without installing the workspace, and the production Pages workflow performs the one authoritative build. Worker mutation retains migration checks and activation proof, then records a best-effort write-once D1 activation marker keyed by the verified Cloudflare version ID and timestamped from the matched Cloudflare deployment's `created_on`; Pages publication retains artifact checks and the release-marker proof. Static, Next compiler, and Playwright caches are separate so a job restores only the state it can consume.
 

@@ -26,6 +26,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/stability-index",
   "/api/report-cards/v9",
   "/api/dependency-graph/v1",
+  "/api/dependency-scenarios/v1",
   "/api/depeg-resolver",
   "/api/depeg-resolver-review",
   "/api/redemption-backstops",
@@ -296,6 +297,14 @@ export const ENDPOINT_ASSERTIONS = {
     assert(typeof body.publicationGenerationId === "string" && body.publicationGenerationId.length > 0, "/api/dependency-graph/v1 missing publicationGenerationId");
     assert(body.publicationStatus === "current" || body.publicationStatus === "held", "/api/dependency-graph/v1 invalid publicationStatus");
     return `${body.nodes.length} nodes, ${body.edges.length} edges (${body.publicationStatus})`;
+  },
+  "/api/dependency-scenarios/v1": (result) => {
+    assert(result.status === 200, `/api/dependency-scenarios/v1 returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(["current", "earlier-generation", "stale", "unavailable"].includes(body?.freshness?.status), "Invalid scenario freshness");
+    assert(body.freshness.status === "current" ? body.artifact?.schemaVersion === 1 && body.freshness.reason === null && body.freshness.sourcePublicationGenerationId === body.freshness.acceptedPublicationGenerationId : typeof body.freshness.reason === "string", "Scenario freshness lacks generation, artifact or reason");
+    assert(Number.isInteger(body.freshness.budgetSec) && body.freshness.budgetSec > 0, "Scenario freshness lacks budget");
+    return `scenario artifact ${body.freshness.status}`;
   },
   "/api/depeg-resolver": (result) => {
     assert(result.status === 200, `/api/depeg-resolver returned ${result.status}`);

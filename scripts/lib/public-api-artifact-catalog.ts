@@ -463,6 +463,15 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     postman: { noAuth: true },
   },
   {
+    key: "dependency-scenarios",
+    summary: "Modeled dependency scenarios (no key)",
+    description:
+      "Offline production-evaluator scenarios from a V9 publication. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two hours, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores.",
+    tags: ["Risk"],
+    responseSchema: "DependencyScenariosResponse",
+    postman: { noAuth: true },
+  },
+  {
     key: "depeg-resolver",
     summary: "Depeg Duration Resolver",
     description:
