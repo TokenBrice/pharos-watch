@@ -205,4 +205,24 @@ describe("controlled exposure graph", () => {
     const positions = new Map([["coin-0", { x: 35, y: 35 }], ["coin-1", { x: 1565, y: 1165 }]]);
     expect(footprintViewBox(nodes, positions, new Set(["coin-0", "coin-1"]))).toBe("0 0 1600 1200");
   });
+  it("centers sparse nodes in the unobstructed area while preserving base scale", () => {
+    const nodes = cards.slice(0, 2).map(card => ({ ...card, r: 10, mcap: 1 }));
+    const positions = new Map([["coin-0", { x: 400, y: 150 }], ["coin-1", { x: 400, y: 300 }]]);
+    const [x, y, width, height] = footprintViewBox(nodes, positions, new Set(["coin-0", "coin-1"]), { bottomInsetFraction: 0.35 }).split(" ").map(Number);
+    expect([width, height]).toEqual([800, 600]);
+    expect(x).toBe(0);
+    expect(y + height * 0.65 / 2).toBe(225);
+    expect(y).toBeLessThanOrEqual(105);
+    expect(y + height * 0.65).toBeGreaterThanOrEqual(345);
+  });
+  it("expands large footprints for legend clearance without clipping their top", () => {
+    const nodes = cards.slice(0, 2).map(card => ({ ...card, r: 0, mcap: 1 }));
+    const positions = new Map([["coin-0", { x: 35, y: 35 }], ["coin-1", { x: 1565, y: 1165 }]]);
+    const [x, y, width, height] = footprintViewBox(nodes, positions, new Set(["coin-0", "coin-1"]), { bottomInsetFraction: 0.25 }).split(" ").map(Number);
+    expect(width / height).toBeCloseTo(800 / 600);
+    expect(y).toBeLessThanOrEqual(0);
+    expect(y + height * 0.75).toBeGreaterThanOrEqual(1200);
+    expect(x).toBeLessThanOrEqual(0);
+    expect(x + width).toBeGreaterThanOrEqual(1600);
+  });
 });

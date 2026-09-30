@@ -17,22 +17,23 @@ export function highlightedExposureEdges(paths: ExposureOverlay["highlightedPath
   return edges;
 }
 
-export function footprintViewBox(nodes: readonly GraphNode[], positions: ReadonlyMap<string, { x: number; y: number }>, ids: ReadonlySet<string>): string {
+export function footprintViewBox(nodes: readonly GraphNode[], positions: ReadonlyMap<string, { x: number; y: number }>, ids: ReadonlySet<string>, { nodeScale = 1, bottomInsetFraction = 0 }: { nodeScale?: number; bottomInsetFraction?: number } = {}): string {
   let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
   for (const node of nodes) {
     const p = positions.get(node.id);
     if (!p || !ids.has(node.id)) continue;
-    const pad = node.r + 35;
+    const pad = (node.r + 35) * nodeScale;
     left = Math.min(left, p.x - pad); top = Math.min(top, p.y - pad);
     right = Math.max(right, p.x + pad); bottom = Math.max(bottom, p.y + pad);
   }
   if (!Number.isFinite(left)) return `0 0 ${WIDTH} ${HEIGHT}`;
-  // Fit may zoom out, but never magnifies a sparse neighborhood. Preserve the
-  // stage aspect by expanding the shorter bound, centered on the footprint.
-  const scale = Math.max(1, (right - left) / WIDTH, (bottom - top) / HEIGHT);
+  // Grow, rather than merely shift, when a large footprint needs the space
+  // reserved for the legend. The top bound therefore remains fully visible.
+  const usableFraction = 1 - Math.max(0, Math.min(0.8, bottomInsetFraction));
+  const scale = Math.max(1, (right - left) / WIDTH, (bottom - top) / (HEIGHT * usableFraction));
   const width = WIDTH * scale;
   const height = HEIGHT * scale;
-  return `${(left + right - width) / 2} ${(top + bottom - height) / 2} ${width} ${height}`;
+  return `${(left + right - width) / 2} ${(top + bottom - height * usableFraction) / 2} ${width} ${height}`;
 }
 
 export function upstreamArrowPoint(source: { x: number; y: number }, upstream: { x: number; y: number }, radius: number) {
