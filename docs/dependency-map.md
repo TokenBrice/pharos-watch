@@ -216,6 +216,8 @@ The runtime invokes this same solver after render in cancellable idle chunks wit
 
 SVG nodes and edges are memoized by per-item presentation. Dragging updates node transforms, logo clips, and incident arrow geometry directly; pinned coordinates commit on pointer release rather than on every pointer move. During an active node drag, the position snapshot is held until pointerup/cancel so settled layout coordinates cannot move the drag frame.
 
+Auto-fit and **Fit** never magnify above base scale. The fitted viewBox is at least `WIDTH × HEIGHT`, centred on the visible footprint, and keeps the 4:3 stage aspect by expanding the shorter bound. **Zoom in** is the only way to exceed base scale, and it is capped at 4×. The SVG element's rendered size comes from a fixed 4:3 CSS aspect (on the detail page, from the desktop stage height), never from the viewBox. As a result, a sparse two-coin neighborhood cannot inflate one node to fill the card or stretch the stage.
+
 ## Detail-Page Snapshot
 
 `ContagionSnapshot` renders the Dependency Context section on `/stablecoin/[id]`. It:

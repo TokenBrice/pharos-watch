@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ContagionGraph } from "@/components/contagion-graph-root";
 import { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
-import { upstreamArrowPoint, type ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
+import { footprintViewBox, upstreamArrowPoint, type ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
 import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
@@ -182,5 +182,27 @@ describe("controlled exposure graph", () => {
     expect(svg.getAttribute("viewBox")).toBe("-20 -30 800 600");
     fireEvent.click(screen.getByRole("button", { name: "Fit" }));
     expect(svg.getAttribute("viewBox")).not.toBe("-20 -30 800 600");
+  });
+  it.each(["explore", "exposure", "detail"] as const)("never auto-magnifies a two-node %s neighborhood and keeps the viewport aspect stable", mode => {
+    const overlay = mode === "exposure" ? { roots: ["coin-0"], rows: new Map([["coin-1", exposureOverlay.rows.get("coin-1")!]]), highlightedPaths: [] } : null;
+    const { container } = render(<ContagionGraph cards={cards.slice(0, 2)} dependencyEdges={dependencyEdges.slice(0, 1)} mcapMap={mcapMap} focusCoinId="coin-0" minimalChrome={mode === "detail"} exposureOverlay={overlay} />);
+    const svg = container.querySelector("line[data-upstream-id]")!.closest("svg")!;
+    const [, , width, height] = svg.getAttribute("viewBox")!.split(" ").map(Number);
+    expect(width).toBeGreaterThanOrEqual(800);
+    expect(height).toBeGreaterThanOrEqual(600);
+    expect(width / height).toBeCloseTo(800 / 600);
+    expect(svg.style.aspectRatio).toBe("800 / 600");
+    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    const [, , zoomWidth, zoomHeight] = svg.getAttribute("viewBox")!.split(" ").map(Number);
+    expect(zoomWidth).toBeLessThan(800);
+    expect(zoomWidth / zoomHeight).toBeCloseTo(800 / 600);
+    expect(svg.style.aspectRatio).toBe("800 / 600");
+    fireEvent.click(screen.getByRole("button", { name: "Fit" }));
+    expect(svg.getAttribute("viewBox")!.split(" ").slice(2).map(Number)).toEqual([800, 600]);
+  });
+  it("fits a large footprint without clipping or altering an already-base-aspect bounding box", () => {
+    const nodes = cards.slice(0, 2).map(card => ({ ...card, r: 0, mcap: 1 }));
+    const positions = new Map([["coin-0", { x: 35, y: 35 }], ["coin-1", { x: 1565, y: 1165 }]]);
+    expect(footprintViewBox(nodes, positions, new Set(["coin-0", "coin-1"]))).toBe("0 0 1600 1200");
   });
 });
