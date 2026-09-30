@@ -55,6 +55,8 @@ For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-c
 
 The public Safety Score dependency explanation in `src/app/methodology/sections/core/safety-scores-overview.tsx` covers v9.95 identity/kind parity, withheld conflicting links, zero-balance row exclusion, intermediary annotations, and serial mechanism parents (including Spark's weaker-parent limit). It also explains that unresolved reviewed-static reserve dispositions withhold the whole curated envelope, with possible backing and downstream parent-limit consequences. The owning methodology contract remains [report-cards.md](./report-cards.md).
 
+The public Safety Score exit explanation in `src/app/methodology/sections/core/safety-scores-overview.tsx` covers v9.96 explicit issuer stablecoin payouts, captured output-price admission, conservative basket quality, and exact Uniswap V4 PoolId admission independent of indexed TVL; thUSD's executed rail is curation context, and producer-driven effects are distinguished from the frozen replay.
+
 ---
 
 ## Update Rules

@@ -43,6 +43,36 @@ function build(overrides: Partial<Parameters<typeof buildRedemptionExitRouteObse
   });
 }
 
+describe("issuer payout identity", () => {
+  it("retains the fiat default for an issuer without explicit outputs", () => {
+    expect(build({ config: { ...config, outputAssetType: "stable-single" } })?.output)
+      .toEqual({ kind: "fiat", currency: "USD" });
+  });
+
+  it("honors HLUSD's reviewed stablecoin basket", () => {
+    expect(build({
+      stablecoinId: "hlusd-hela",
+      config: getRedemptionBackstopConfig("hlusd-hela")!,
+    })?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["usdc-circle", "usdt-tether"],
+    });
+  });
+
+  it("does not infer an issuer payout from its variant parent", () => {
+    expect(build({
+      stablecoinId: "pusd-plume",
+      config: { ...config, outputAssetType: "stable-single" },
+    })?.output).toEqual({ kind: "fiat", currency: "USD" });
+  });
+
+  it("honors an explicit single stablecoin payout", () => {
+    expect(build({
+      config: { ...config, outputAssetType: "stable-single", outputAssets: ["usdc-circle"] },
+    })?.output).toEqual({ kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] });
+  });
+});
+
 describe("redemption same-notional route observations", () => {
   it("withholds live-direct scoring when its producing evidence time is missing", () => {
     const observation = build({

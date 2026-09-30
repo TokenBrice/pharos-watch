@@ -2265,6 +2265,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // supply/redemption reads are latest-state, so no source timestamp exists.
     validation: LATEST_STATE_VALIDATION,
   },
+  "theo-thusd-redemption": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    sourceOriginClass: "reviewed-curation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: LATEST_STATE_VALIDATION,
+  },
   "usdai-hub": declareAdapter(usdaiHubParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     sourceOriginClass: "onchain-observation",
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },

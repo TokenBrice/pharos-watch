@@ -143,6 +143,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "mxnb-juno": {
     ...issuerBase,
     ...reviewedIssuerApiExpansionSupplyFull,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     costModel: undisclosedReviewedFee(
       "Juno documents quote-based MXNB conversions into USDC or USDT with pair-specific min/max limits, but it does not publish a fixed redemption or conversion fee schedule",
     ),
@@ -167,6 +169,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("MXNB transparency", "https://mxnb.mx/transparency", ["capacity"]),
     ],
     notes: [
+      "Payout identity reviewed 2026-09-30 against Juno's conversion guide (updated 2026-03-14): the modeled MXNB conversion pairs pay USDC or USDT, not a bank-wire payout.",
       "Modeled as the documented Juno issuer conversion rail between MXNB and USDC/USDT rather than as a separate fiat bank-wire redemption flow",
       "The published conversion pairs expose explicit per-quote and per-pair min/max limits, which establish reviewed route availability without separately publishing a deterministic fixed-fee schedule",
     ],
@@ -433,10 +436,13 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "thbill-theo": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     costModel: documentedVariableFee(
       "KYC-gated mint/redemption processed instantly in USDC; underlying collateral settled within T+4 business days",
     ),
     docs: [
+      sourceRef("Theo thBILL payout documentation (reviewed 2026-09-30)", "https://docs.theo.xyz/products/thbill/mint-and-redeem.md", ["route", "access"]),
       sourceRef("Theo thBILL overview", "https://docs.theo.xyz/thbill", ["route", "capacity", "settlement", "access"]),
       sourceRef(
         "Theo minting service",
@@ -445,6 +451,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ),
     ],
     notes: [
+      "Payout identity reviewed 2026-09-30: Theo explicitly says holders receive USDC or USDT, not underlying fund units or Treasury securities.",
       "Direct minting and redemption require KYC; Theo describes optimistic issuance against USDC while issuer settlement completes asynchronously",
     ],
   },

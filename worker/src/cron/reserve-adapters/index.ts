@@ -88,6 +88,7 @@ import { fetchSolomonProtocolReserves } from "./solomon-protocol";
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSpikoApiReserves } from "./spiko-api";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
+import { fetchTheoThusdRedemptionReserves } from "./theo-thusd-redemption";
 import { fetchTetherTransparencyReserves } from "./tether-transparency";
 import { fetchUnitedPorReserves } from "./united-por";
 import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
@@ -206,6 +207,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "spiko-api": fetchSpikoApiReserves,
   "stoneyield-router-pool": fetchStoneyieldRouterPoolReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
+  "theo-thusd-redemption": fetchTheoThusdRedemptionReserves,
   "paxos-independent-assurance": fetchPaxosIndependentAssuranceReserves,
   "straitsx-independent-assurance": fetchIndependentAssuranceAdapter,
   "tether-transparency": fetchTetherTransparencyReserves,

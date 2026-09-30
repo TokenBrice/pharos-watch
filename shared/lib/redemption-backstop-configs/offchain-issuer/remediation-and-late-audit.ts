@@ -175,16 +175,20 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   },
   "dusd-standx": {
     ...issuerBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
     costModel: undisclosedReviewedFee(
       "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption; public fee schedule not disclosed",
     ),
     reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
+      sourceRef("StandX payout FAQ (reviewed 2026-09-30)", "https://docs.standx.com/docs/dusd-overview/product-faq", ["route"]),
       sourceRefRouteCapacity("StandX docs", "https://docs.standx.com/"),
       sourceRef("StandX website", "https://www.standx.com/", ["route"]),
     ],
     notes: [
+      "Payout identity reviewed 2026-09-30: StandX's product FAQ says holders get back USDT/USDC after redemption; the multi-output route retains conservative stable-basket semantics.",
       "Tracked metadata describes 1:1 USDT and USDC redemption from a delta-neutral strategy wrapper",
       "The reviewed 5% bound matches the tracked stability-reserve stablecoin fund rather than assuming the full hedged book is instantly withdrawable",
     ],

@@ -22,6 +22,33 @@ export function SafetyScoresOverview() {
         score and redemption route score describe their own modules; neither is the V9 Exit score.
       </p>
       <p>
+        Since methodology v9.96, issuer redemption routes honor reviewed explicit stablecoin payouts before the legacy
+        fiat projection. Reviewed USDC payouts cover pathUSD, USYC Teller, pUSD and USDO; USDC/USDT payouts cover
+        thBILL, MXNB&apos;s conversion rail and StandX DUSD, alongside HLUSD&apos;s existing basket. Unreviewed issuers
+        keep the legacy default without inferring a variant parent; USDN is unchanged because current sources do not
+        confirm USDC. Tracked payouts need captured price evidence rather than assumed $1 proceeds. A single payout
+        at par keeps output quality 100; multiple outputs retain conservative stable-basket quality 80 and the
+        weakest-priced component, a 3-point raw route difference at par. Missing output prices remain unresolved.
+      </p>
+      <p>
+        Uniswap V4 retained exact PoolIds are fetched without the subgraph&apos;s TVL floor and bypass its indexed-TVL
+        2% affinity guard; positive indexed TVL and the affinity guard remain required only for token/fee fallback.
+        Positive retained TVL, currency/PoolKey identity, zero hooks, active liquidity, independent price references
+        and existing quote/capacity gates still apply. The trigger was thUSD/USDC&apos;s -$222,031.94 indexed TVL.
+        The seven affected pool assets are thUSD, USDD, USDT, USDS, USP, AUDM and sUSDD. Identity admission is not
+        depth: at Ethereum block 26088713, a $1,000 thUSD sell returned $966.94. Standalone Liquidity Score arithmetic
+        and retained TVL/volume are unchanged.
+      </p>
+      <p>
+        As curation context, thUSD now uses an executed stablecoin-redeem rail consistent with USDe, with measured
+        Cash Wallet capacity from the theo-thusd-redemption adapter and no fallback. This adds no scoring rule.
+        On the frozen replay of generation report-cards:9.94:1790752511 at clock 1790752628, only thusd-theo moves,
+        from 38/F to 43/D from its configuration, with no quarantines. That capture still contains the old issuer-api
+        observation and lacks thUSD&apos;s live-reserve fallback observation. Payout and V4 effects require the first
+        production redemption and DEX cycles: the reviewed payout assets and seven V4 pool assets are movement
+        candidates, not guaranteed score or grade improvements.
+      </p>
+      <p>
         Since methodology v9.5, the binary $100K materiality gate uses producer-measured executable notional before
         output-value retention. Retention still discounts continuous capacity and output quality, so impaired proceeds
         remain penalized without being charged a second time at the threshold. Aggregate TVL and volume still do not

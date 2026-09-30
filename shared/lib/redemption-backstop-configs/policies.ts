@@ -79,6 +79,24 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
   },
   {
     kind: "degraded-sync-warning-exception",
+    stablecoinId: "thusd-theo",
+    warningCode: "theo-redemption-rail-closed",
+    capacityNote: "Retaining measured zero capacity behind readable Theo pause, zero-cap or unsupported-output guards",
+    reason: "The fixed-identity same-block observer establishes a closed rail, not a missing capacity read.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-30",
+  },
+  {
+    kind: "degraded-sync-warning-exception",
+    stablecoinId: "thusd-theo",
+    warningCode: "theo-redemption-buffer-empty",
+    capacityNote: "Retaining measured zero allowance-limited Theo spendable float",
+    reason: "A complete readable supported-asset probe with zero spendable float is an adverse capacity fact.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-30",
+  },
+  {
+    kind: "degraded-sync-warning-exception",
     stablecoinId: "gho-aave",
     warningCode: "aggregated-residual-issuance",
     capacityNote:

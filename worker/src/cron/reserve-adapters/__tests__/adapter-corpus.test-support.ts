@@ -600,3 +600,42 @@ CORPUS_CASES["ondo-ousg"] = {
     outcome: "error",
   },
 };
+
+// Reviewed Ethereum block 26088429 (2026-09-30), using the same raw six-decimal
+// observations as theo-thusd-redemption.test.ts. The allowance-limited float is
+// min(360760.446791, 200400) USDC + min(20000, 400300) USDT = 220400 USD;
+// the positive 200000 thUSD per-block cap is throughput context, not a float cap.
+const THEO_MINTER = "0x2d99ac801dc0edadd53f5688fef2317932e8696e";
+const THEO_THUSD = "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3";
+const THEO_CASH_WALLET = "0xec417ccb6dd26868cca993a92f37217b1d4b3c2f";
+const THEO_USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const THEO_USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
+const THEO_BLOCK = { number: 26_088_429, timestamp: 1_790_748_096 };
+const THEO_RPC: Record<string, AdapterRpcValue> = {
+  [`${THEO_MINTER}:thusd()`]: THEO_THUSD,
+  [`${THEO_MINTER}:redeemDestination()`]: THEO_CASH_WALLET,
+  [`${THEO_MINTER}:paused()`]: false,
+  [`${THEO_MINTER}:maxRedeemPerBlock()`]: 200_000_000000n,
+  [`${THEO_MINTER}:redeemedPerBlock(uint256)`]: 0n,
+  [`${THEO_MINTER}:redeemFeeBps()`]: 5n,
+  [`${THEO_MINTER}:MAX_FEE_BPS()`]: 10n,
+  [`${THEO_MINTER}:supportedAssets(address)`]: true,
+  [`${THEO_THUSD}:decimals()`]: 6n,
+  [`${THEO_THUSD}:totalSupply()`]: 132_370_676_056526n,
+  [`${THEO_USDC}:decimals()`]: 6n,
+  [`${THEO_USDC}:balanceOf(address)`]: 360_760_446791n,
+  [`${THEO_USDC}:allowance(address,address)`]: 200_400_000000n,
+  [`${THEO_USDT}:decimals()`]: 6n,
+  [`${THEO_USDT}:balanceOf(address)`]: 20_000_000000n,
+  [`${THEO_USDT}:allowance(address,address)`]: 400_300_000000n,
+};
+CORPUS_CASES["theo-thusd-redemption"] = {
+  coinId: "thusd-theo",
+  nowSec: THEO_BLOCK.timestamp + 60,
+  network: { block: THEO_BLOCK, rpc: THEO_RPC },
+  drift: {
+    label: "USDT decimals drift from the reviewed six-decimal units",
+    network: { block: THEO_BLOCK, rpc: { ...THEO_RPC, [`${THEO_USDT}:decimals()`]: 18n } },
+    outcome: "error",
+  },
+};

@@ -450,12 +450,14 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "pathusd-bridge": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    outputAssets: ["usdc-circle"],
     settlementModel: "same-day",
     routeStatus: "open",
     costModel: undisclosedReviewedFee(
       "Bridge-supported pathUSD exchange/redemption uses Bridge rails; public materials reviewed do not publish one fixed pathUSD redemption fee",
     ),
     docs: [
+      sourceRef("Tempo mainnet pathUSD payout (reviewed 2026-09-30)", "https://tempo.xyz/developers/docs/protocol/exchange/quote-tokens", ["route"]),
       sourceRef("Tempo pathUSD docs", "https://docs.tempo.xyz/protocol/exchange/pathUSD", ["route", "access", "fees"]),
       sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", [
         "capacity",
@@ -464,6 +466,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       ]),
     ],
     notes: [
+      "Payout identity reviewed 2026-09-30: Tempo's mainnet quote-token documentation explicitly states pathUSD is redeemed to USDC through Bridge.",
       "Modeled as verified Bridge/Tempo primary-market redeemability into USDC rather than independently measured instant on-chain liquidity",
     ],
   },

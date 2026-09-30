@@ -81,5 +81,21 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "theo-thusd-redemption",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://docs.theo.xyz/developers/contract-reference/mint-and-redeem.md",
+      "label": "On-chain exit capacity · curated reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    }
+  },
   "launchDate": "2026-04-27"
 }

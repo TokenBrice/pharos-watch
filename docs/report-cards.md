@@ -2,15 +2,15 @@
 
 Safety Score V9 is the sole active stablecoin safety model. It publishes evidence-backed grades from A+ through F, with NR reserved for assets whose required facts cannot be bounded honestly.
 
-> **Agent navigation**: Methodology Identity · V9 Model · [Dependency Coverage](#dependency-coverage) · Canonical Publication · API · Consumers · History · Frontend.
+> **Agent navigation**: Methodology Identity · V9 Model · [Dependency Coverage](#dependency-coverage) · [Exit Route Evidence](#exit-route-evidence) · Canonical Publication · API · Consumers · History · Frontend.
 
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.95`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.96`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `dee6f45829829042f34f5323452d4817e951d7d629c944e62b1acabba667a0ca` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `f15d10c560999336b58803ed8b3d00ae2d223e9ad518aa37920eb26702b8dbc3` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -187,6 +187,10 @@ Serial and basket summaries, and their exact graph projection, carry optional `d
 Coverage deduplication uses source-key identity and reason, or upstream identity, label, and reason for unkeyed rows. Distinct withheld slices or reasons sharing a display label remain visible.
 
 Pre-field v5 payloads still parse without fabricated defaults or rewritten graph edges. New producers emit schema version 6. Graph validation requires unique edges sorted by `(from, to, kind)` and continues to require exactly the serial/basket card projection; coverage cannot introduce external graph nodes.
+
+## Exit Route Evidence
+
+Methodology **9.96** makes two score-semantic changes. Issuer routes honor reviewed explicit stablecoin payouts ahead of the legacy fiat projection: pathUSD, USYC Teller, pUSD and USDO pay USDC; thBILL, MXNB's conversion rail and StandX DUSD pay USDC/USDT; HLUSD's existing basket is honored. Unreviewed issuers keep the legacy default without variant-parent inference, and USDN is unchanged because current sources do not confirm USDC. Tracked outputs require captured price evidence: a single payout at par keeps quality 100, while multi-output routes keep conservative stable-basket quality 80 and weakest-priced-component semantics, a 3-point raw route difference at par; missing prices remain unresolved. Uniswap V4 retained exact PoolIds are fetched without the subgraph TVL floor and bypass the indexed-TVL 2% affinity guard, which remains only for token/fee fallback. Positive retained TVL, PoolKey/currency identity, zero hooks, active liquidity and existing quote/capacity gates still apply. Trigger: thUSD/USDC's indexed TVL was -$222,031.94; seven pool assets are affected (thUSD, USDD, USDT, USDS, USP, AUDM and sUSDD). Measured is not deep: at Ethereum block 26088713, a $1,000 thUSD sell returned $966.94. As curation context, not a third semantic change, thUSD moves to an executed stablecoin-redeem rail consistent with USDe, with measured Cash Wallet capacity from `theo-thusd-redemption` and no fallback. On the frozen replay of generation `report-cards:9.94:1790752511` at clock `1790752628`, only `thusd-theo` moves, 38/F to 43/D from its configuration, with no quarantines; the capture still has its old issuer-api observation and lacks its live-reserve fallback observation. Output and V4 effects require the first production redemption and DEX cycles and are not shown by that replay. The reviewed payout assets and seven V4 pool assets are expected movement candidates, not guaranteed score or grade improvements; standalone Liquidity Score arithmetic is unchanged.
 
 ## Canonical Publication
 

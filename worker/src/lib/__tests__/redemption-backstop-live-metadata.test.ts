@@ -626,3 +626,47 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     );
   });
 });
+
+describe("Theo curated carrier with independent redemption probe", () => {
+  const metadata = {
+    freshnessMode: "not-applicable",
+    redemption: {
+      capacityUsd: 220400, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
+      sourceTimestamp: now - 120, blockNumber: 26088429, feeBps: 5,
+      routeStatus: "open", routeStatusSource: "onchain", settlementDelaySec: 0,
+    },
+  };
+
+  it("accepts nested current capacity and fee without promoting the curated composition", () => {
+    const result = readMetadata("thusd-theo", metadata, "static-validated");
+    expect(result).toMatchObject({
+      canUseCapacity: true, canUseFee: true, immediateRedeemableUsd: 220400,
+      redemptionFeeBps: 5, evidenceObservedAt: now - 120, settlementDelaySec: 0,
+      routeStatus: "open", routeStatusSource: "onchain",
+    });
+    expect(readMetadata("thusd-theo", {
+      freshnessMode: "not-applicable", immediateRedeemableUsd: 220400,
+    }, "static-validated").canUseCapacity).toBe(false);
+  });
+
+  it.each([
+    ["theo-redemption-rail-closed", true],
+    ["theo-redemption-buffer-empty", true],
+    ["source-total-gap", false],
+  ] as const)("allows only the reviewed zero-state warning %s", (code, accepted) => {
+    const snapshot = liveSnapshot("thusd-theo", {
+      ...metadata, redemption: { ...metadata.redemption, capacityUsd: 0, routeStatus: "paused" },
+    }, {
+      fetchedAt: now - 60, source: "theo-thusd-redemption", sourceModel: "validated-static",
+      evidenceClass: "static-validated", syncStatus: "degraded",
+      warningCount: 1, warnings: [{ code, severity: "warning", effect: "degraded", message: "adverse state" }],
+    });
+    const result = readRedemptionBackstopLiveMetadata("thusd-theo", snapshot, now);
+    expect(result.canUseCapacity).toBe(accepted);
+    expect(result.immediateRedeemableUsd).toBe(0);
+    expect(result.canUseFee).toBe(false);
+    expect(readRedemptionBackstopLiveMetadata("usde-ethena", snapshot, now).canUseCapacity).toBe(false);
+    snapshot.fetchedAt = now - 3 * 86400;
+    expect(readRedemptionBackstopLiveMetadata("thusd-theo", snapshot, now).canUseCapacity).toBe(false);
+  });
+});

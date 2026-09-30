@@ -357,10 +357,15 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdo-openeden": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     reviewedAt: "2026-08-14",
     costModel: fixedFee(10, "OpenEden docs list a 10 bps redemption fee"),
-    docs: [sourceRefRouteCapacityFees("OpenEden Transparency", "https://openeden.com/usdo/transparency")],
+    docs: [
+      sourceRefRouteCapacityFees("OpenEden Transparency", "https://openeden.com/usdo/transparency"),
+      sourceRef("USDO redemption guide (reviewed 2026-09-30)", "https://docs.openeden.com/usdo/guides/usdo-redemption-via-etherscan", ["route"]),
+    ],
     notes: [
+      "Payout identity reviewed 2026-09-30: OpenEden's redemption guide specifies USDC for both instant and manual redemptions; Treasury backing is not the holder payout.",
       "Live reserve-sync capacity telemetry remains suspended: a 2026-08-13 re-enable probe confirmed prod-gw.openeden.com serves ordinary clients but returns HTTP 500 to all Cloudflare Worker fetch strategies (first production cron, 2026-08-14). Falls back to documented 1:1 USDC redemption until the issuer unblocks Worker egress",
     ],
   },
@@ -434,65 +439,6 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRefFull("TrueUSD mint and redeem", "https://www.tusd.io/"),
     ],
   },
-  "thusd-theo": {
-    ...issuerBase,
-    reviewedAt: "2026-09-30",
-    holderEligibility: "whitelisted-primary",
-    executionModel: "deterministic-onchain",
-    costModel: fixedFee(
-      5,
-      "ThUSDMinter redeemFeeBps() is 5 bps at Ethereum block 26088429 (2026-09-30); fee = ceil(collateral_amount * 5 / 10000), retained in the Cash Wallet; MAX_FEE_BPS is 10",
-    ),
-    v9RouteReviewTerms: {
-      minRedeemUsd: 1,
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement"],
-      rationale:
-        "The contract atomically burns thUSD and pays USDC/USDT only after Theo's role-restricted API submits the depositor-signed order; no end-to-end processing SLA or full-supply executable liquidity bound is published. At Ethereum block 26088429 the Cash Wallet held 360760.446791 USDC and 20000 USDT, with minter allowances of 200400 USDC and 400300 USDT; a 200000-thUSD per-block cap also applies. These observations do not establish replenishment or a guaranteed same-day exit. Platform terms reserve account-specific transaction limits without a public numeric daily bound.",
-      reviewedAt: "2026-09-30",
-      docs: [
-        sourceRef(
-          "Theo mint and redeem (depositor-signed orders submitted through the API)",
-          "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
-          ["route", "capacity", "settlement", "access"],
-        ),
-        sourceRef(
-          "Verified ThUSDMinter source and state (Ethereum block 26088429)",
-          "https://eth.blockscout.com/api/v2/smart-contracts/0x2d99ac801dc0edadd53f5688fef2317932e8696e",
-          ["route", "capacity", "settlement", "fees", "access"],
-        ),
-        sourceRef(
-          "Theo terms (as-available services and account-specific transaction limits)",
-          "https://docs.theo.xyz/legal/terms.md",
-          ["capacity", "settlement", "access"],
-        ),
-      ],
-    },
-    docs: [
-      sourceRef("Theo thUSD mint and redeem documentation", "https://docs.theo.xyz/products/thusd/mint-and-redeem.md", [
-        "route",
-        "access",
-      ]),
-      sourceRef(
-        "Theo contract reference: Mint and Redeem (depositor signatures, atomic execution, caps and 5 bps fee)",
-        "https://docs.theo.xyz/developers/contract-reference/mint-and-redeem.md",
-        ["route", "capacity", "fees", "access", "settlement"],
-      ),
-      sourceRef("Theo roles and access control (TheoWhitelist gates mint and redeem)", "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md", [
-        "access",
-      ]),
-      sourceRef(
-        "Verified ThUSDMinter source (MAX_FEE_BPS = 10) and fee read at Ethereum block 26088429",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x2d99ac801dc0edadd53f5688fef2317932e8696e",
-        ["route", "capacity", "fees", "access", "settlement"],
-      ),
-    ],
-    notes: [
-      "KYC-whitelisted, non-blacklisted signers and recipients must submit depositor-signed EIP-712 orders through Theo's API; only MINTER_ROLE can execute them. The contract enforces at least 1 thUSD and 1 USDC/USDT gross collateral per order, with no on-chain redemption cooldown or daily counter.",
-      "Burn and collateral payout are atomic once submitted, but API submission timing is not bounded; the inherited same-day settlement category and full-supply capacity are diagnostic defaults, not verified executable terms. The V9 terms gap withholds route scoring until capacity and end-to-end settlement evidence are supplied.",
-      "The Cash Wallet at 0xec417ccb6dd26868cca993a92f37217b1d4b3c2f supplies USDC/USDT payouts through transferFrom. At Ethereum block 26088429 its balances totalled 380760.446791 USD nominal; allowances limited currently approved net payouts to 220400 USD nominal before replenishment or new approvals. Balances are observations, not a permanent liquidity floor.",
-    ],
-  },
   "eurs-stasis": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -561,12 +507,14 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "pusd-plume": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     costModel: fixedFee(0, "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation"),
     docs: [
       sourceRefRouteCapacityFees("Plume pUSD docs", "https://docs.plume.org/plume/tokens/plume-usd"),
       sourceRef("Plume pUSD page", "https://plume.org/pusd", ["route"]),
     ],
     notes: [
+      "Payout identity reviewed 2026-09-30: Plume's pUSD docs specify native USDC redemption and no fiat conversion within Plume.",
       "Route is modeled as the documented 1:1 issuer redemption rail into USDC; the single-asset reserve adapter remains reserve-detail telemetry only and is no longer treated as live redeemable-capacity evidence",
     ],
   },

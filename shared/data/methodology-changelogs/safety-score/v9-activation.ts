@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.96",
+    title: "Explicit issuer stablecoin payouts and exact Uniswap V4 identity",
+    date: "2026-09-30",
+    effectiveAt: 1790726400,
+    summary:
+      "Two score-semantic changes: issuer redemption routes honor reviewed explicit stablecoin payouts ahead of the legacy fiat projection, and retained Uniswap V4 exact PoolIds resolve independently of indexed USD valuation. Theo thUSD's executed stablecoin-redeem rail and measured Cash Wallet capacity are curation context, not a new scoring rule.",
+    impact: [
+      "Issuer redemption routes now honor reviewed explicit stablecoin payout identities before the legacy fiat projection. The bounded review identifies USDC payouts for pathUSD, USYC Teller, pUSD and USDO, and USDC/USDT payouts for thBILL, MXNB's conversion rail and StandX DUSD; HLUSD's existing explicit basket is honored. Unreviewed issuers retain the legacy default, with no variant-parent inference. Tracked outputs require captured valuation evidence rather than synthetic fiat par: a single payout remains quality 100 at par, while multi-output routes retain conservative stable-basket quality 80 and weakest-priced-component semantics (3 fewer raw route points at par). Missing output prices remain unresolved, not assumed $1. USDN remains unchanged because current primary evidence does not confirm the former Express USDC payout. Physical-delivery behavior is unchanged.",
+      "Uniswap V4 exact-identity admission now separates physical PoolId/PoolKey evidence from the subgraph's USD valuation. Retained exact IDs are queried without the indexer's TVL floor and may resolve despite finite zero, negative or materially divergent indexed TVL, while identity-poor token/fee fallback keeps positive indexed TVL, unique-candidate collision handling and the 2% affinity requirement. Positive retained TVL, zero hooks, active liquidity, currency/hash identity, independent references, the 1.02 favorable-output ceiling and all runtime/quote/capacity gates remain unchanged. Public source-repair candidates include USDD, USDT, USDS, USP, AUDM, sUSDD and thUSD; repaired identity coverage is not guaranteed depth or a score improvement. Ethereum remains active and other registered V4 chains remain shadow, with no pool allowlist or new shadow rollout machinery.",
+      "Trigger: the thUSD/USDC pool's subgraph TVL was -$222,031.94, which previously blocked exact identity despite a valid PoolKey and positive retained TVL. Measured does not mean deep: at Ethereum block 26088713, a $1,000 thUSD sell returned $966.94. The seven affected pool assets are thUSD, USDD, USDT, USDS, USP, AUDM and sUSDD; standalone Liquidity Score arithmetic and retained TVL/volume are unchanged.",
+      "Curation context: thUSD moves from an issuer route to an executed stablecoin-redeem rail, consistent with USDe. The new theo-thusd-redemption adapter measures Cash Wallet capacity without a fallback; this is route evidence under the existing model, not a third score-semantic change.",
+      "On the frozen replay of generation report-cards:9.94:1790752511 at clock 1790752628, only thusd-theo moves, from 38 F to 43 D, from its configuration, with no quarantines. The capture still carries the old issuer-api redemption observation and lacks thUSD's live-reserve fallback observation, so this is not proof of new measured capacity. Issuer-output and V4 effects are producer-driven and can appear only after the first production redemption and DEX cycles. Expected candidates for route or score movement are thBILL, MXNB, StandX DUSD, pathUSD, USYC, pUSD, USDO and HLUSD for payout treatment, and thUSD, USDD, USDT, USDS, USP, AUDM and sUSDD for exact V4 coverage; no direction, integer score change or grade improvement is guaranteed.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.95",
     title: "Reviewed dependency identity, relationship parity, and reserve precision",
     date: "2026-09-30",

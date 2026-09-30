@@ -135,7 +135,11 @@ function resolveOutput(
         : {}),
     };
   }
-  if (config.routeFamily === "offchain-issuer") {
+  if (
+    config.routeFamily === "offchain-issuer" &&
+    !(config.outputAssets?.length &&
+      (config.outputAssetType === "stable-single" || config.outputAssetType === "stable-basket"))
+  ) {
     return { kind: "fiat", ...(meta?.flags.pegCurrency ? { currency: meta.flags.pegCurrency } : {}) };
   }
   if (config.outputAssetType === "stable-single") {

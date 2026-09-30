@@ -16,6 +16,7 @@ import {
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "../safety-score-v9/extension-routes";
+import { buildRedemptionExitRouteObservation } from "../redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { dexRouteObservation, withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
 
@@ -1398,5 +1399,109 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     expect(reviews.find((review) => review.routeId.includes("reserve-based-amm-simulation"))).toMatchObject({
       modelConfidence: "medium",
     });
+  });
+});
+
+describe("issuer stablecoin payout valuation", () => {
+  it("requires actual captured USDC prices rather than synthesizing fiat par", () => {
+    withRedemptionBackstopConfig("usdo-openeden", {
+      outputAssetType: "stable-single",
+      outputAssets: ["usdc-circle"],
+      reviewedAt: "2026-07-13",
+    }, () => {
+      const { fixedInput, row } = redemptionPegFixture({
+        rowOverrides: { stablecoinId: "usdo-openeden", routeFamily: "offchain-issuer" },
+        pegDataById: {
+          "usdc-circle": { currentDeviationBps: -100, priceObservedAt: NOW },
+        },
+      });
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toMatchObject({
+        kind: "tracked-stablecoin",
+        assetKeys: ["usdc-circle"],
+        valuation: { basis: "price", unitValueUsd: 0.99, expectedUnitValueUsd: 1 },
+      });
+      setPegData(fixedInput, {});
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output?.valuation).toBeNull();
+    });
+  });
+
+  it("withholds basket valuation when one issuer payout has no price", () => {
+    withRedemptionBackstopConfig("hlusd-hela", { reviewedAt: "2026-07-13" }, () => {
+      const { fixedInput, row } = redemptionPegFixture({
+        rowOverrides: {
+          stablecoinId: "hlusd-hela", routeFamily: "offchain-issuer", outputAssetType: "stable-basket",
+        },
+        pegDataById: {
+          "usdc-circle": { currentDeviationBps: 0, priceObservedAt: NOW },
+        },
+      });
+      const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
+      expect(review.output).toMatchObject({
+        kind: "tracked-stablecoin", assetKeys: ["usdc-circle", "usdt-tether"], valuation: null,
+      });
+    });
+  });
+});
+
+describe("Theo executed eligible-cohort rail", () => {
+  it.each([
+    ["onchain", 5, "exact-lower-bound"],
+    ["onchain", 10, "exact-lower-bound"],
+    ["static-config", 5, "diagnostic"],
+  ] as const)("projects %s openness with %s bps costs as %s", (routeStatusSource, feeBps, coverageClass) => {
+    const clock = 1790748096;
+    const row = makeSupplyFullRedemption({
+      stablecoinId: "thusd-theo", routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain", holderEligibility: "whitelisted-primary",
+      settlementModel: "immediate", settlementDelaySec: 0, executionModel: "deterministic-onchain",
+      outputAssetType: "stable-basket", sourceMode: "dynamic", provider: "reserve-sync-metadata",
+      capacityKind: "live-direct-bounded", capacityConfidence: "live-direct",
+      freshnessKind: "same-run-onchain", capacitySemantics: "immediate-bounded",
+      capacityProfile: {
+        immediateUsd: 220400, scoringUsd: 220400, scoringHorizon: "immediate",
+        capacityProfileConfidence: "live-direct", modeledExitSizeUsd: 10_000_000,
+      },
+      modelConfidence: "high", routeStatus: "open", routeStatusSource,
+      feeBps, feeModelKind: "fixed-bps", feeConfidence: "fixed",
+      immediateCapacityUsd: 220400, updatedAt: clock, sourceTimestamp: clock,
+    });
+    const fixed = fixedInputStub(row, clock);
+    const observation = buildRedemptionExitRouteObservation({
+      stablecoinId: row.stablecoinId,
+      config: getRedemptionBackstopConfig(row.stablecoinId)!,
+      capacityProfile: row.capacityProfile,
+      scoringCapacityUsd: row.immediateCapacityUsd,
+      supplyUsd: 132_370_676.056526,
+      routeStatus: row.routeStatus,
+      resolutionState: row.resolutionState,
+      sourceMode: row.sourceMode,
+      capacityConfidence: row.capacityConfidence,
+      capacityKind: row.capacityKind,
+      freshnessKind: row.freshnessKind,
+      evidenceObservedAt: clock,
+      settlementDelaySec: row.settlementDelaySec,
+      resolvedFeeBps: row.feeBps,
+      now: clock,
+    });
+    expect(observation).not.toBeNull();
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      immediateUsd: 220400, scoringUsd: 220400, scoringHorizon: "immediate",
+      exitRouteObservations: [{
+        ...observation!, modelConfidence: "high",
+      }],
+    };
+    setPegData(fixed, {
+      "usdc-circle": { currentDeviationBps: 0, priceObservedAt: clock },
+      "usdt-tether": { currentDeviationBps: 0, priceObservedAt: clock },
+    });
+    const review = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]!;
+    expect(review).toMatchObject({
+      coverageClass, settlementModel: "bounded-delay", settlementSlaSec: 0,
+      minRedeemUsd: 1, modelConfidence: "high",
+    });
+    expect(review.output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: ["usdc-circle", "usdt-tether"] });
+    expect(review.executionCosts).toContainEqual({ requestedNotionalUsd: 10_000_000, maxCostBps: 200, executionCostBps: feeBps });
+    expect(getRedemptionBackstopConfig("thusd-theo")?.v9RouteReviewTerms?.scoringDisposition).toBeUndefined();
   });
 });
