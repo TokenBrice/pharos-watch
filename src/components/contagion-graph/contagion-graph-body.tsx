@@ -10,14 +10,17 @@ import {
 } from "@/components/contagion-graph-tooltips";
 import { HEIGHT, PAD, WIDTH } from "@/lib/contagion-layout";
 import { graphNodeLabel } from "@/components/contagion-graph-model";
+import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
+import { FAILURE_DOMAIN_KIND_LABELS } from "@shared/lib/classification";
 
 interface ContagionGraphBodyProps {
   graph: ReturnType<typeof useContagionGraphModel>;
   logos?: Record<string, string>;
   detailNodePresentation?: boolean;
+  commonModeGroups?: SharedFailureDomainGroups | null;
 }
 
-export function ContagionGraphBody({ graph, logos, detailNodePresentation }: ContagionGraphBodyProps) {
+export function ContagionGraphBody({ graph, logos, detailNodePresentation, commonModeGroups }: ContagionGraphBodyProps) {
   const tooltipContext = {
     activeHoveredId: graph.activeHoveredId,
     activeHoveredEdge: graph.activeHoveredEdge,
@@ -34,6 +37,17 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation }: Con
   const overlayInspectedId = graph.activeHoveredId ?? graph.pinnedSelectionId;
   const inspectedNode = graph.nodeMap.get(overlayInspectedId ?? "") ?? null;
   const mobileInspectedNode = graph.nodeMap.get(graph.pinnedSelectionId ?? graph.activeHoveredId ?? "") ?? null;
+  if (graph.emptyFocusCoin) {
+    const memberships = commonModeGroups?.filter(group => group.memberAssetIds.includes(graph.emptyFocusCoin!.id));
+    return <div role="status" className="space-y-2 rounded-lg border p-6 text-sm">
+      <p className="font-semibold">{graph.emptyFocusCoin.name} has no published dependency links in this publication.</p>
+      <p className="text-muted-foreground">This is not evidence of no dependencies or shared risks.</p>
+      {memberships === undefined ? <p>Shared failure-domain memberships were not published for this generation.</p> : memberships.length === 0 ? <p>No shared failure-domain memberships are listed for this coin in this publication.</p> : <>
+        <p>Published shared failure-domain memberships:</p>
+        <ul className="list-inside list-disc">{memberships.map(group => <li key={group.id}>{FAILURE_DOMAIN_KIND_LABELS[group.kind]}: {group.key}</li>)}</ul>
+      </>}
+    </div>;
+  }
 
   return (
     <>

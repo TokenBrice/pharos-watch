@@ -89,7 +89,7 @@ export function computeVisibleGraph(params: {
   } else if (params.focusMode === "hub") {
     for (const id of params.hubIdsByScore) nodeIds.add(id);
   } else {
-    if (params.neighborhoodFocusId) nodeIds.add(params.neighborhoodFocusId);
+    if (params.neighborhoodFocusId && params.nodes.some(node => node.id === params.neighborhoodFocusId)) nodeIds.add(params.neighborhoodFocusId);
   }
 
   return {

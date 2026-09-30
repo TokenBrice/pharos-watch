@@ -6,6 +6,8 @@ import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
 import { DependencyExposureWorkspace, type DependencyExposureWorkspaceState } from "./dependency-exposure-workspace";
+import { stablecoinLabel } from "@/lib/stablecoin-label";
+import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
 
 interface DependencyHeroProps {
   model: DependencyHubsModel;
@@ -16,9 +18,10 @@ interface DependencyHeroProps {
   methodologyVersion: string;
   publishedAt: number;
   workspace: DependencyExposureWorkspaceState;
+  commonModeGroups?: SharedFailureDomainGroups | null;
 }
 
-export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, methodologyVersion, publishedAt, workspace }: DependencyHeroProps) {
+export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, methodologyVersion, publishedAt, workspace, commonModeGroups }: DependencyHeroProps) {
   const supply = model.mappedSupply;
   const hasKnownSupply = model.uniqueDirectDependentCount > supply.excludedSupplyUnknownIds.length;
   return (
@@ -45,8 +48,8 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
           </dl>
         </div>
       </section>
-      <DependencyExposureWorkspace workspace={workspace} options={cards.map(card => ({ id: card.id, label: card.symbol }))}>
-        <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} syncUrlState modeControls={workspace.modeControls} exposureOverlay={workspace.overlay} onUseAsExposureRoot={workspace.addRoot} hubExposures={model.hubs} />
+      <DependencyExposureWorkspace workspace={workspace} options={cards.map(card => ({ id: card.id, label: stablecoinLabel(card) }))}>
+        <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} syncUrlState modeControls={workspace.modeControls} exposureOverlay={workspace.overlay} onUseAsExposureRoot={workspace.addRoot} hubExposures={model.hubs} commonModeGroups={commonModeGroups} />
       </DependencyExposureWorkspace>
     </div>
   );

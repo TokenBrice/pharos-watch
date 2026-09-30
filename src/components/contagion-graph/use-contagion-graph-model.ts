@@ -32,6 +32,7 @@ import { NODE_LIMIT_OPTIONS } from "@/lib/contagion-layout";
 import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
 import { highlightedExposureEdges, type ExposureOverlay } from "./contagion-graph-exposure";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 interface UseContagionGraphModelOptions {
   cards: readonly ContagionGraphCard[];
@@ -240,7 +241,7 @@ export function useContagionGraphModel({
     const type = params.get("type");
     const limit = params.get("limit");
     const validTrace = (id: string | null): id is string =>
-      Boolean(id && cards.some((card) => card.id === id) && dependencyEdges.some((edge) => edge.from === id || edge.to === id));
+      Boolean(id && (CLIENT_TRACKED_META_BY_ID.has(id) || cards.some((card) => card.id === id)));
     const root = validTrace(focus) ? focus : validTrace(trace) ? trace : null;
     // Browser URL state is read only after hydration, preserving static export.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Read browser URL state once after hydration so static-export markup stays identical on the server and first client render.
@@ -256,13 +257,14 @@ export function useContagionGraphModel({
   useEffect(() => {
     if (!syncUrlState || !urlReady) return;
     const url = new URL(window.location.href);
-    url.searchParams.set("focus", focusMode);
+    const edgeFreeFocus = focusMode === "neighborhood" && selectedNeighborhoodId && !fullGraph.nodes.some(node => node.id === selectedNeighborhoodId);
+    url.searchParams.set("focus", edgeFreeFocus ? selectedNeighborhoodId : focusMode);
     url.searchParams.set("type", edgeTypeFilter);
     url.searchParams.set("limit", String(nodeLimit));
     if (selectedNeighborhoodId) url.searchParams.set("trace", selectedNeighborhoodId);
     else url.searchParams.delete("trace");
     window.history.replaceState(window.history.state, "", url);
-  }, [syncUrlState, urlReady, focusMode, edgeTypeFilter, nodeLimit, selectedNeighborhoodId]);
+  }, [syncUrlState, urlReady, focusMode, edgeTypeFilter, nodeLimit, selectedNeighborhoodId, fullGraph]);
 
   const changeFocusMode = useCallback((value: FocusMode) => {
     if (value === focusMode) return;
@@ -280,9 +282,20 @@ export function useContagionGraphModel({
     if (trackActions) trackEvent("dependency_map_action", { action: "limit", value: String(value) });
   }, [nodeLimit, trackActions]);
   const hubIdsByScore = useMemo(() => buildHubIdsByScore(nodes, supernodeState), [nodes, supernodeState]);
-  const nodeSelectOptions = useMemo(() => buildNodeSelectOptions(nodes), [nodes]);
+  const nodeSelectOptions = useMemo(() => {
+    const options = buildNodeSelectOptions(fullGraph.nodes);
+    if (syncUrlState) {
+      const ids = new Set(options.map(node => node.id));
+      for (const coin of CLIENT_TRACKED_META_BY_ID.values()) {
+        if (!ids.has(coin.id)) options.push({ id: coin.id, symbol: coin.symbol, mcap: mcapMap.get(coin.id) ?? null });
+      }
+    }
+    return options;
+  }, [fullGraph.nodes, syncUrlState, mcapMap]);
   const effectiveSelectedNeighborhoodId = useMemo(
-    () => resolveSelectedNeighborhoodId({ nodes, hubIdsByScore, selectedNeighborhoodId }),
+    () => selectedNeighborhoodId && CLIENT_TRACKED_META_BY_ID.has(selectedNeighborhoodId)
+      ? selectedNeighborhoodId
+      : resolveSelectedNeighborhoodId({ nodes, hubIdsByScore, selectedNeighborhoodId }),
     [hubIdsByScore, nodes, selectedNeighborhoodId],
   );
   const nodeMap = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
@@ -327,6 +340,9 @@ export function useContagionGraphModel({
       }),
     [edgeTypeFilter, focusMode, hubIdsByScore, neighborhoodFocusId, nodes, resolvedLinks, exposureOverlay],
   );
+  const emptyFocusCoin = !exposureOverlay && focusMode === "neighborhood" && effectiveSelectedNeighborhoodId
+    && !fullGraph.nodes.some(node => node.id === effectiveSelectedNeighborhoodId)
+    ? CLIENT_TRACKED_META_BY_ID.get(effectiveSelectedNeighborhoodId) ?? null : null;
   const smallLinkCount = visibleLinks.filter(link => !link.shareUnknown && link.weight < SMALL_LINK_SHARE_THRESHOLD).length;
   const canvasLinks = useMemo(() => {
     const highlighted = highlightedExposureEdges(exposureOverlay?.highlightedPaths ?? []);
@@ -431,6 +447,7 @@ export function useContagionGraphModel({
 
   return {
     nodes,
+    emptyFocusCoin,
     supernodeState,
     focusMode,
     setFocusMode: changeFocusMode,

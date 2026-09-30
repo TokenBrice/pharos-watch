@@ -47,6 +47,12 @@ const coin = {
 };
 
 describe("FlowTable", () => {
+  it("labels colliding tickers by registry identity even when only one collision member is shown", () => {
+    const html = renderToStaticMarkup(<FlowTable coins={[{ ...coin, stablecoinId: "ousd-open-standard", symbol: "OUSD" }]} isLoading={false} />);
+    expect(html).toContain("OUSD (Open USD)");
+    expect(html).toContain('aria-label="Open OUSD (Open USD) flow detail"');
+  });
+
   it("renders coverage badge and partial long-window indicators", () => {
     const html = renderToStaticMarkup(<FlowTable coins={[coin]} isLoading={false} />);
 

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   CompareMobileSelectionControls,
+  CompareClient,
 } from "@/components/compare/compare-client";
 import { buildCompareSelectionInsights } from "@/lib/compare-selection-insights";
 import type { CoinOption } from "@/lib/compare-types";
@@ -41,6 +42,41 @@ vi.mock("@/components/coin-selector", () => ({
     </button>
   ),
 }));
+
+const collisionCoins = [
+  { id: "ousd-open-standard", name: "Open USD", symbol: "OUSD" },
+  { id: "ousd-origin-protocol", name: "Origin Dollar", symbol: "OUSD" },
+];
+
+vi.mock("@/hooks/use-compare-selection", () => ({
+  useCompareSelection: () => ({
+    coinOptions: collisionCoins, selectedCoins: collisionCoins,
+    selectedIds: collisionCoins.map(coin => coin.id), disabledIds: new Set(),
+    applyPreset: vi.fn(), handleRemove: vi.fn(), handleSelect: vi.fn(),
+    setSelectedIds: vi.fn(), setFlowHours: vi.fn(), setRange: vi.fn(),
+  }),
+}));
+vi.mock("@/hooks/use-compare-data-model", () => ({
+  useCompareDataModel: () => ({
+    comparisonCoins: [], detailErrors: [], flowCardData: [], flowSeries: [],
+    freshnessQueries: [], radarCards: [], supplySeries: [], pegRates: {},
+  }),
+}));
+vi.mock("@/hooks/use-compare-share-actions", () => ({
+  useCompareShareActions: () => ({}),
+}));
+vi.mock("@/hooks/use-preferences", () => ({
+  usePreference: () => ["peg", vi.fn()],
+}));
+
+describe("CompareClient collision identities", () => {
+  it("identifies both selected assets in the heading and canonical detail links", () => {
+    render(<CompareClient />);
+    expect(screen.getByText("OUSD (Open USD) vs OUSD (Origin Dollar)")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "OUSD (Open USD) detail" }).getAttribute("href")).toMatch(/^\/stablecoin\/ousd-open-standard\/?$/);
+    expect(screen.getByRole("link", { name: "OUSD (Origin Dollar) detail" }).getAttribute("href")).toMatch(/^\/stablecoin\/ousd-origin-protocol\/?$/);
+  });
+});
 
 const coins: CoinOption[] = [
   { id: "usdt-tether", name: "Tether", symbol: "USDT" },

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { formatCurrency } from "@shared/lib/format";
 import type { V9Grade } from "@shared/types/safety-score-v9";
-import { DEPENDENCY_TYPE_PRESENTATION } from "@/components/contagion-graph-model";
+import { DEPENDENCY_TYPE_PRESENTATION, graphNodeLabel } from "@/components/contagion-graph-model";
 import type { ResolvedLink } from "@/components/contagion-graph-graph";
 
 interface TooltipNode {
@@ -60,13 +60,13 @@ export function buildTooltipAnnouncement({
     const fromNode = nodeMap.get(link.tgtId);
     const toNode = nodeMap.get(link.srcId);
     if (!fromNode || !toNode) return "";
-    return `${toNode.symbol} depends on ${fromNode.symbol}, ${describeLinkMateriality(link)} dependency`;
+    return `${graphNodeLabel(toNode)} depends on ${graphNodeLabel(fromNode)}, ${describeLinkMateriality(link)} dependency`;
   }
 
   if (activeHoveredId) {
     const node = nodeMap.get(activeHoveredId);
     if (!node) return "";
-    return `${node.symbol}, Grade ${node.grade}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}`;
+    return `${graphNodeLabel(node)}, Grade ${node.grade}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}`;
   }
 
   return "";
@@ -84,14 +84,16 @@ export function buildNodeTooltipElement({
   const node = nodeMap.get(activeHoveredId);
   const position = positions.get(activeHoveredId);
   if (!node || !position) return null;
-  const tx = Math.min(position.x + node.r + 8, width - 135);
+  const label = graphNodeLabel(node);
+  const tooltipWidth = Math.max(125, label.length * 7 + 16);
+  const tx = Math.min(position.x + node.r + 8, width - tooltipWidth - pad);
   const ty = Math.max(pad, position.y - 20);
   return (
     <g pointerEvents="none">
-      <rect x={tx} y={ty} width={125} height={52} rx={6}
+      <rect x={tx} y={ty} width={tooltipWidth} height={52} rx={6}
         fill="var(--color-card, #f8f9fa)" stroke="var(--color-border, #e2e5e9)" strokeWidth={1} />
       <text x={tx + 8} y={ty + 18} fill="currentColor" fontSize={12} fontWeight={600}>
-        {node.symbol}
+        {label}
       </text>
       <text x={tx + 8} y={ty + 34} fill="currentColor" fontSize={10} opacity={0.7}>
         Grade: {node.grade}
@@ -122,7 +124,8 @@ export function buildEdgeTooltipElement({
   if (!fromPos || !toPos || !fromNode || !toNode) return null;
   const mx = (fromPos.x + toPos.x) / 2;
   const my = (fromPos.y + toPos.y) / 2;
-  const tooltipWidth = link.scoreKnown === false ? 250 : 180;
+  const label = `${graphNodeLabel(toNode)} depends on ${graphNodeLabel(fromNode)}`;
+  const tooltipWidth = Math.max(link.scoreKnown === false ? 250 : 180, label.length * 6.5 + 16);
   const tx = Math.min(Math.max(mx + 8, pad), width - tooltipWidth - pad);
   const ty = Math.min(Math.max(my - 20, pad), height - 44);
   return (
@@ -130,7 +133,7 @@ export function buildEdgeTooltipElement({
       <rect x={tx} y={ty} width={tooltipWidth} height={38} rx={6}
         fill="var(--color-card, #f8f9fa)" stroke="var(--color-border, #e2e5e9)" strokeWidth={1} />
       <text x={tx + 8} y={ty + 15} fill="currentColor" fontSize={11} fontWeight={600}>
-        {toNode.symbol} depends on {fromNode.symbol}
+        {label}
       </text>
       <text x={tx + 8} y={ty + 30} fill="currentColor" fontSize={10} opacity={0.7}>
         {describeLinkMateriality(link)}
