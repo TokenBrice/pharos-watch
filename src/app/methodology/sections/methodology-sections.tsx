@@ -1,4 +1,5 @@
 import { PricingPipelineMethodologySection } from "./core-sections-pricing";
+import { DependencyExposureMethodologySection } from "./dependency-exposure-section";
 import { InfrastructureMethodologySection } from "./core/infrastructure-section";
 import { LifecyclePhasesMethodologySection } from "./core/lifecycle-phases-section";
 import { LiquidityMethodologySection } from "./core/liquidity-section";
@@ -21,6 +22,7 @@ export function MethodologySections() {
       <PricingPipelineMethodologySection />
       <StabilityIndexMethodologySection />
       <SafetyScoresMethodologySection />
+      <DependencyExposureMethodologySection />
       <MintAuthorityScoreMethodologySection />
       <InfrastructureMethodologySection />
       <LiquidityMethodologySection />

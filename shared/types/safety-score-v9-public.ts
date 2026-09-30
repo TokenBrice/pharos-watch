@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { scoreToGrade } from "./safety-score-v9-grade";
-import { V9DependencyEconomicRoleSchema } from "./dependency-types";
+import { V9DependencyEconomicRoleSchema, DependencyTypeSchema } from "./dependency-types";
 import {
   V9EvidenceLevelSchema,
   V9GradeSchema,
@@ -26,6 +26,74 @@ import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
 import { SafetyScoreV9BreakdownsSchema } from "./safety-score-v9-public-breakdowns";
 import { SafetyScoreV9ScoreTraceSchema } from "./safety-score-v9-public-trace";
+import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
+import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
+import { ReserveSliceSchema } from "./reserves";
+
+export const SafetyScoreV9DependencyProvenanceSchema = z.object({
+  source: V9EffectiveDependenciesV3Schema.shape.source,
+  evidenceAsOf: z.string().min(1).nullable(),
+  intermediary: ReserveSliceSchema.shape.intermediary.unwrap().nullable(),
+}).strict();
+
+const SafetyScoreV9DependencyCoverageSchema = z.object({
+  upstreamLabel: z.string().min(1),
+  upstreamAssetId: z.string().min(1).nullable(),
+  share: z.number().finite().min(0).max(1).nullable(),
+  reason: z.string().min(1),
+  sourceAsOf: z.string().min(1).nullable(),
+  identityVerified: z.boolean(),
+}).strict().superRefine((row, ctx) => {
+  if (!row.identityVerified && row.upstreamAssetId !== null) {
+    ctx.addIssue({ code: "custom", path: ["upstreamAssetId"], message: "Unverified identities cannot name a tracked upstream" });
+  }
+});
+
+/**
+ * Planner groups with at least two distinct assets. Optional pricedEffects
+ * contain only nonempty references to prices already published on the card.
+ * pricedEffectsIncomplete marks an evaluated cap/adjustment missing its reference.
+ */
+export const SafetyScoreV9CommonModeGroupsSchema = z.array(z.object({
+  id: z.string().min(1),
+  kind: V9FailureDomainRefSchema.shape.kind,
+  key: V9FailureDomainRefSchema.shape.key,
+  memberAssetIds: z.array(z.string().min(1)).min(2),
+  pricedEffectsIncomplete: z.literal(true).optional(),
+  pricedEffects: z.array(z.object({
+    assetId: z.string().min(1),
+    capIndices: z.array(z.number().int().nonnegative()),
+    deploymentAdjustmentIndices: z.array(z.number().int().nonnegative()),
+  }).strict()).min(1).optional(),
+}).strict().superRefine((group, ctx) => {
+  if (group.id !== `${group.kind}:${group.key}`) {
+    ctx.addIssue({ code: "custom", path: ["id"], message: "Common-mode ID must match its canonical failure domain" });
+  }
+  if (!isUniqueSorted(group.memberAssetIds)) {
+    ctx.addIssue({ code: "custom", path: ["memberAssetIds"], message: "Common-mode member IDs must be unique and sorted" });
+  }
+  if (!isUniqueSorted((group.pricedEffects ?? []).map((effect) => effect.assetId))) {
+    ctx.addIssue({ code: "custom", path: ["pricedEffects"], message: "Common-mode effects must have unique, sorted asset IDs" });
+  }
+  group.pricedEffects?.forEach((effect, index) => {
+    if (!group.memberAssetIds.includes(effect.assetId)) {
+      ctx.addIssue({ code: "custom", path: ["pricedEffects", index], message: "Common-mode effects must belong to group members" });
+    }
+    for (const field of ["capIndices", "deploymentAdjustmentIndices"] as const) {
+      if (!effect[field].every((value, i, values) => i === 0 || values[i - 1]! < value)) {
+        ctx.addIssue({ code: "custom", path: ["pricedEffects", index, field], message: "Common-mode effect references must be unique and sorted" });
+      }
+    }
+    if (effect.capIndices.length === 0 && effect.deploymentAdjustmentIndices.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["pricedEffects", index], message: "Common-mode priced effects require a nonempty reference list" });
+    }
+  });
+})).superRefine((groups, ctx) => {
+  if (!isUniqueSorted(groups.map((group) => group.id))) {
+    ctx.addIssue({ code: "custom", message: "Common-mode groups must have unique, sorted IDs" });
+  }
+});
+export type SafetyScoreV9CommonModeGroups = z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
 
 export {
   findSafetyScoreV9ParentAttributionIssues,
@@ -41,6 +109,9 @@ const SafetyScoreV9SerialDependencySchema = z
     upstreamAssetId: z.string().min(1),
     score: ScoreSchema.nullable(),
     blocked: z.boolean(),
+    dependencyType: DependencyTypeSchema.optional(),
+    wrapperForm: V9WrapperFormSchema.nullable().optional(),
+    provenance: SafetyScoreV9DependencyProvenanceSchema.optional(),
   })
   .strict();
 
@@ -50,6 +121,9 @@ const SafetyScoreV9BasketDependencySchema = z
     weight: z.number().finite().min(0).max(1),
     score: ScoreSchema.nullable(),
     boundedUnknown: z.boolean(),
+    dependencyType: DependencyTypeSchema.optional(),
+    wrapperForm: z.null().optional(),
+    provenance: SafetyScoreV9DependencyProvenanceSchema.optional(),
   })
   .strict();
 
@@ -174,6 +248,13 @@ const SafetyScoreV9CardShape = {
    * Worker can continue reading the last pre-field publication during rollout.
    */
   backingFromLiveReserves: z.boolean().optional(),
+  supply: z.object({
+    circulatingUsdAtEvaluation: z.number().finite().nonnegative().nullable(),
+    asOfSec: z.number().int().nonnegative().nullable(),
+    generationId: z.string().min(1).nullable(),
+  }).strict().optional(),
+  sharedBookId: z.string().min(1).nullable().optional(),
+  dependencyCoverage: z.array(SafetyScoreV9DependencyCoverageSchema).optional(),
   score: ScoreSchema.nullable(),
   grade: V9GradeSchema,
   qualityScore: ScoreSchema.nullable(),
@@ -333,6 +414,7 @@ const SafetyScoreV9ResponseShape = {
   asOfSec: z.number().int().nonnegative(),
   publishedAtSec: z.number().int().nonnegative(),
   completeness: SafetyScoreV9CompletenessSchema,
+  commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
 } as const;
 function refineResponse(
   response: {

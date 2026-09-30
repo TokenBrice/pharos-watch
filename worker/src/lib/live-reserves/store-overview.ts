@@ -342,7 +342,13 @@ export async function loadFreshIndependentLiveReserveMap(
     value: new Map(
       eligibleSnapshots.map(([coinId, snapshot]) => [
         coinId,
-        { source: snapshot.source, fetchedAt: snapshot.fetchedAt },
+        {
+          source: snapshot.source,
+          fetchedAt: snapshot.fetchedAt,
+          ...(snapshot.metadata.balanceSheetScope === undefined ? {} : { balanceSheetScope: snapshot.metadata.balanceSheetScope }),
+          ...(snapshot.metadata.sharedBookAssetIds === undefined ? {} : { sharedBookAssetIds: snapshot.metadata.sharedBookAssetIds }),
+          ...(snapshot.metadata.sharedBookMeasuredHoldings === undefined ? {} : { sharedBookMeasuredHoldings: snapshot.metadata.sharedBookMeasuredHoldings }),
+        },
       ]),
     ),
     enumerable: false,

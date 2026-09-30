@@ -4,7 +4,7 @@
     {
       "sourceKey": "midas-mtbill:ustb",
       "name": "Superstate Short Duration US Government Securities Fund (USTB)",
-      "pct": 93.67,
+      "pct": 93.69915148717834,
       "risk": "low",
       "coinId": "ustb-superstate",
       "depType": "collateral",
@@ -23,7 +23,7 @@
     {
       "sourceKey": "midas-mtbill:buidl",
       "name": "BlackRock USD Institutional Digital Liquidity Fund (BUIDL)",
-      "pct": 6.3,
+      "pct": 6.298067468250501,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -42,7 +42,7 @@
     {
       "sourceKey": "midas-mtbill:unclassified-residual",
       "name": "Unclassified portfolio residual and position rounding",
-      "pct": 0.03,
+      "pct": 0.002781044571167425,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Unidentified mTBILL portfolio assets and counterparties",
@@ -56,8 +56,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
-    "reviewer": "OpenAI Codex reserve disclosure review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos Dependency Map WS1.D issuer-portfolio review",
     "confidence": "verified",
     "sources": [
       {
@@ -77,21 +77,21 @@
         "url": "https://midas.app/transparency?token=mtbill"
       },
       {
-        "label": "Midas mTBILL issuer portfolio API",
+        "label": "Midas mTBILL issuer portfolio API (accessed 2026-09-30; source updatedAt 2026-09-18T12:06:10.121Z)",
         "url": "https://api-prod.midas.app/api/transparency?token=mTBILL"
       }
     ],
-    "rationale": "The September 14 issuer transparency API identifies USTB and BUIDL in an unleveraged Ethereum wallet portfolio. Named positions are reported in USD millions to $1,000 precision; total equity is more precise. The difference is retained as an unclassified residual rather than assigned to named funds. Static percentages are rounded to two decimals; live weights use the source amounts and total. This is issuer-reported portfolio evidence, not independent examination.",
-    "compositionBasis": "Midas mTBILL transparency API updatedAt 2026-09-14T13:06:24.130Z; USD-million position values and reconciled total equity, with explicit residual",
-    "compositionAsOf": "2026-09-14",
+    "rationale": "Accessed 2026-09-30: the API still reports source updatedAt 2026-09-18T12:06:10.121Z, not the access time. Named USTB and BUIDL positions are $71.501 million and $4.806 million; total equity is $76.3091221907 million. Weights use named values divided by total equity and retain the $2,122.1907 residual, rather than renormalizing rounded positions. These are issuer-reported fund holdings, not independent examination. NC-113 remains blocked on source freshness: both exact keyed fund identities already exist, and the September 18 source is outside the dashboard admission window. Next evidence: a newly dated reconciled portfolio disclosure or independent same-checkpoint holdings and fund NAV capture. Neither a new review timestamp nor a duplicate manual dependency makes the live source current.",
+    "compositionBasis": "Midas mTBILL transparency API updatedAt 2026-09-18T12:06:10.121Z; USD-million position values divided by total equity with explicit residual",
+    "compositionAsOf": "2026-09-18",
     "scope": "full-composition",
-    "knownUnknownExposure": "Approximately 0.0323% of source equity is the difference between total equity and rounded named positions. Smaller holdings, rounding and their custody identities remain unresolved; the live adapter preserves the full residual.",
-    "knownUnknownExposurePct": 0.03,
+    "knownUnknownExposure": "The $2,122.1907 difference between total equity and rounded USTB/BUIDL positions is 0.002781044571167425% of source equity. Its instruments and custody identities remain unresolved. Source freshness prevents this disclosure being treated as a current live portfolio.",
+    "knownUnknownExposurePct": 0.002781044571167425,
     "nonLinkDispositions": [
       {
         "reserveIndex": 2,
         "reserveName": "Unclassified portfolio residual and position rounding",
-        "pct": 0.03,
+        "pct": 0.002781044571167425,
         "disposition": "insufficient-evidence",
         "rationale": "Smaller positions and display rounding are not assigned a token, bank or custodian identity."
       }

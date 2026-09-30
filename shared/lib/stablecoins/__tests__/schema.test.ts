@@ -12,6 +12,78 @@ import { makeSafeControl } from "./schema.test-support";
 const baseFlags = CANONICAL_STABLECOIN_FLAGS;
 
 
+describe("StablecoinMeta schema — reserve and manual dependency roles", () => {
+  function roleFixture(economicRole: "control-operator" | "basket-exposure") {
+    return makeCoin({
+      id: "usdm-mega",
+      reserves: [{ name: "USDtb backing", pct: 100, risk: "low", coinId: "usdtb-ethena", depType: "collateral" }],
+      dependencies: [{ id: "usdtb-ethena", weight: 0.001, type: "collateral" }],
+      dependencyReview: {
+        reviewedAt: "2026-09-30", reviewer: "Fixture reviewer", confidence: "verified",
+        sources: [{ label: "Issuer rails", url: "https://example.com/rails" }],
+        rationale: "The issuer's operator is separate from the measured reserve share.",
+        relationships: [{
+          id: "usdtb-ethena", weight: 0.001, type: "collateral", economicRole,
+          reason: "Reviewed issuer operator role.",
+        }],
+      },
+    });
+  }
+
+  it("admits a sourced control-operator review alongside reserves for the same upstream", () => {
+    const parsed = parseStablecoinMetaAssets([roleFixture("control-operator")], "fixture");
+    expect(parsed[0].dependencyReview?.relationships[0].economicRole).toBe("control-operator");
+    expect(parsed[0].dependencies).toEqual([{ id: "usdtb-ethena", weight: 0.001, type: "collateral" }]);
+  });
+
+  it("rejects a redundant manual collateral basket review for a reserve-owned upstream", () => {
+    expect(() => parseStablecoinMetaAssets([roleFixture("basket-exposure")], "fixture"))
+      .toThrow(/redundant reserve metadata/);
+  });
+
+  it("admits a variant parent wrapper review when reserves express the same serial claim", () => {
+    const parsed = parseStablecoinMetaAssets([makeCoin({
+      id: "iusd-initia",
+      variantOf: "ausd-agora",
+      variantKind: "pure-wrapper",
+      mintAuthority: makeMintAuthority({
+        mintPath: "wrapped-or-variant-inherited",
+        authorityPosture: "none-resolved",
+        inheritedFrom: "ausd-agora",
+        controls: undefined,
+      }),
+      reserves: [{
+        name: "Agora AUSD", pct: 100, risk: "low",
+        coinId: "ausd-agora", depType: "wrapper",
+      }],
+      dependencyReview: {
+        reviewedAt: "2026-09-30", reviewer: "Fixture reviewer", confidence: "verified",
+        sources: [{ label: "Issuer wrapper", url: "https://example.com/wrapper" }],
+        rationale: "The reserve identity also documents the variant's serial parent.",
+        relationships: [{
+          id: "ausd-agora", weight: 1, type: "wrapper", economicRole: "serial-claim",
+          reason: "The variant is a claim on its AUSD parent.",
+        }],
+      },
+    }), makeCoin({
+      id: "ausd-agora",
+      mintAuthority: makeMintAuthority({
+        mintPath: "immutable-user-collateralized",
+        authorityPosture: "none-resolved",
+        controls: undefined,
+      }),
+    })], "fixture");
+    expect(parsed[0].variantOf).toBe("ausd-agora");
+    expect(parsed[0].dependencyReview?.relationships[0].economicRole).toBe("serial-claim");
+  });
+
+  it("rejects mixed-source collateral that has no linked reserve identity", () => {
+    const fixture = roleFixture("control-operator");
+    fixture.dependencies = [{ id: "missing-upstream", weight: 0.001, type: "collateral" }];
+    expect(() => parseStablecoinMetaAssets([fixture], "fixture")).toThrow(/manual-collateral-not-in-reserves/);
+  });
+});
+
 describe("StablecoinMeta schema — MiCA profile", () => {
   it("requires source references for assessed in-scope MiCA statuses", () => {
     expect(() => parseStablecoinMetaAssets([
@@ -960,6 +1032,14 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
 // is not a tracked coin. Curator fix needed before this invariant can be added.
 // See: shared/data/stablecoins/coins/srusd-reservoir.json reserves[0]
 describe("StablecoinMeta schema — reserves depType valid cases", () => {
+  it("rejects authored linked reserves without depType", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ id: "fixture-untyped", reserves: [
+        { name: "Parent token", pct: 100, risk: "low", coinId: "usdt-tether" },
+      ] }),
+    ], "fixture")).toThrow(/linked reserve slices require depType/);
+  });
+
   it("accepts a reserves entry with depType 'wrapper' and coinId set", () => {
     const json = [
       makeCoin({ id: "fixture-wrapper-ok", reserves: [

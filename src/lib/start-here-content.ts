@@ -105,13 +105,13 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
     tone: "frost",
   },
   {
-    title: "Stress-test my portfolio",
+    title: "Review my portfolio risk",
     description:
-      "Add your stablecoin mix to the portfolio view to see a blended risk grade, hidden shared-backing exposure, and how the basket holds up if one issuer fails.",
-    mobileDescription: "Blend your stablecoins, see shared-backing exposure, and stress-test an issuer failure.",
+      "Add your stablecoin mix to the portfolio view to review holdings grades and upstream collateral exposure.",
+    mobileDescription: "Review your holdings grades and upstream collateral exposure.",
     href: "/portfolio/",
     cta: "Open portfolio",
-    destinations: ["Portfolio", "Dependency Map", "Contagion test"],
+    destinations: ["Portfolio", "Dependency Map", "Safety Scores"],
     icon: ArrowLeftRight,
     tone: "emerald",
   },

@@ -62,7 +62,7 @@ export function adaptMegausdCustody(payload: MegausdBackingAndSupplyPayload): Ad
   }
 
   const warnings: LiveReserveWarning[] = [];
-  const sliceInputs: Array<{ value: number; sourceKey: string; name: string; risk: ReserveSlice["risk"]; coinId?: string }> = [];
+  const sliceInputs: Array<{ value: number; sourceKey: string; name: string; risk: ReserveSlice["risk"]; coinId?: string; depType?: ReserveSlice["depType"] }> = [];
 
   for (const [assetKey, entries] of Object.entries(backingAssets)) {
     const amount = sumBackingAssetAmounts("megausd-custody", assetKey, entries);
@@ -90,7 +90,7 @@ export function adaptMegausdCustody(payload: MegausdBackingAndSupplyPayload): Ad
       continue;
     }
 
-    sliceInputs.push({ sourceKey: `megausd-custody:${normalizedKey.toLowerCase()}`, name: config.name, value: amount, risk: config.risk, coinId: config.coinId });
+    sliceInputs.push({ sourceKey: `megausd-custody:${normalizedKey.toLowerCase()}`, name: config.name, value: amount, risk: config.risk, coinId: config.coinId, depType: "collateral" });
   }
 
   if (sliceInputs.length === 0) {

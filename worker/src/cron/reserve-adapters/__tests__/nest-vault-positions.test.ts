@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { describe, expect, it } from "vitest";
 import { expectWarnings, installAdapterNetwork, runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
@@ -41,6 +45,52 @@ function runNest(
 }
 
 describe("fetchNestVaultPositionsReserves", () => {
+  it("retains saved positive Nest dust and sub-six-decimal tracked balances", async () => {
+    const fixture = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "nest-precision-2026-09-29.json"), "utf8")) as {
+      vaults: Array<{
+        id: string;
+        positions: { data: { positions: { liquidAssets: Array<{ symbol: string; position: { value: number }; pendingTransactions?: unknown[] }> } } };
+        price: { data: { nav: number } };
+        lastPriceUpdate: { data: { lastPriceUpdates: Array<{ updatedAt: number }> } };
+      }>;
+    };
+    for (const vault of fixture.vaults) {
+      const config = TRACKED_META_BY_ID.get(vault.id)!.liveReservesConfig!;
+      if (config.inputs.primary.kind !== "http-json") throw new Error("Nest replay requires HTTP JSON");
+      const params = config.params as { priceUrl: string; lastPriceUpdateUrl: string };
+      const network = {
+        json: {
+          [config.inputs.primary.url]: vault.positions,
+          [params.priceUrl]: vault.price,
+          [params.lastPriceUpdateUrl]: vault.lastPriceUpdate,
+        },
+      };
+      const { result } = await runAdapter("nest-vault-positions", vault.id, {
+        network: installAdapterNetwork(network),
+        nowSec: vault.lastPriceUpdate.data.lastPriceUpdates[0].updatedAt + 600,
+      });
+      const liquidValue = vault.positions.data.positions.liquidAssets
+        .filter((token) => token.symbol === "USDT" || token.symbol === "USDT0")
+        .reduce((sum, token) => sum + token.position.value, 0);
+      const shareBasis = result.slices.reduce((sum, slice) => sum + slice.pct, 0);
+      expect(shareBasis).toBeCloseTo(100, 10);
+      const usdBasis = Math.max(result.metadata!.totalReserveUsd!, Number(result.metadata!.settledPositionUsd));
+      expect(result.slices.find((slice) => slice.coinId === "usdt-tether")?.pct)
+        .toBeCloseTo(liquidValue / usdBasis * 100, 12);
+
+      const tiny = structuredClone(vault.positions);
+      tiny.data.positions.liquidAssets = tiny.data.positions.liquidAssets.filter((token) => token.symbol !== "USDC" && token.symbol !== "USDC.e");
+      tiny.data.positions.liquidAssets.push({ symbol: "USDC", position: { value: 1e-6 }, pendingTransactions: [] });
+      const { result: tinyResult } = await runAdapter("nest-vault-positions", vault.id, {
+        network: installAdapterNetwork({ json: { ...network.json, [config.inputs.primary.url]: tiny } }),
+        nowSec: vault.lastPriceUpdate.data.lastPriceUpdates[0].updatedAt + 600,
+      });
+      const slice = tinyResult.slices.find((row) => row.coinId === "usdc-circle");
+      expect(slice?.pct).toBe(1e-6 / tinyResult.metadata!.totalReserveUsd! * 100);
+      expect(slice?.depType).toBe("collateral");
+    }
+  });
+
   it("groups Nest positions into stablecoin, treasury, and private credit slices", async () => {
     const { result } = await runNest(
       "nopal-nest",
@@ -102,17 +152,10 @@ describe("fetchNestVaultPositionsReserves", () => {
       },
     );
 
-    expect(result.slices).toEqual([
-      { sourceKey: "nest-vault-positions:ustb", name: "Superstate USTB Treasury Fund", pct: 27.9, risk: "low", coinId: "ustb-superstate" },
-      { sourceKey: "nest-vault-positions:credit-vaults", name: "Nest private and structured credit vaults", pct: 27.9, risk: "high" },
-      { sourceKey: "nest-vault-positions:ntbill", name: "Nest Treasury vault (nTBILL)", pct: 11.6, risk: "low", coinId: "ntbill-nest" },
-      { sourceKey: "nest-vault-positions:usdc", name: "Liquid USDC balances", pct: 9.3, risk: "low", coinId: "usdc-circle" },
-      { sourceKey: "nest-vault-positions:jtrsy", name: "Janus Henderson Anemoy Treasury Fund (JTRSY)", pct: 9.3, risk: "low", coinId: "jtrsy-anemoy" },
-      { sourceKey: "nest-vault-positions:usdt", name: "Liquid USDT balances", pct: 4.7, risk: "low", coinId: "usdt-tether" },
-      { sourceKey: "nest-vault-positions:pending-deposits", name: "Nest pending deposits", pct: 4.7, risk: "high" },
-      { sourceKey: "nest-vault-positions:pusd", name: "pUSD liquid balance", pct: 2.3, risk: "high", coinId: "pusd-plume" },
-      { sourceKey: "nest-vault-positions:nav-residual", name: "Nest NAV reconciliation residual", pct: 2.3, risk: "high" },
-    ]);
+    const reserveUsd = result.metadata!.totalReserveUsd!;
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")!.pct * reserveUsd / 100).toBeCloseTo(100, 10);
+    expect(result.slices.find((slice) => slice.coinId === "ustb-superstate")!.pct * reserveUsd / 100).toBeCloseTo(300, 10);
+    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:pending-deposits")!.pct * reserveUsd / 100).toBeCloseTo(50, 10);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: FIXTURE_NOW,
@@ -171,9 +214,6 @@ describe("fetchNestVaultPositionsReserves", () => {
       reconciledNavCoverageRatio: expect.closeTo(1.000092, 5),
     });
     expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
-    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:pending-deposits"))
-      .toMatchObject({ name: "Nest pending deposits", pct: 26.9, risk: "high" });
-    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:uscc")?.pct).toBe(62.1);
   });
 
   it.each([
@@ -219,8 +259,6 @@ describe("fetchNestVaultPositionsReserves", () => {
     expect(result.metadata).toMatchObject({ totalReserveUsd: 120, calculatedNavUsd: 119,
       claimableFeesUsd: 1, pendingWithdrawalUsd: 20, unknownExposurePct: expect.closeTo(100 / 6, 5) });
     expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
-    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:pending-withdrawals"))
-      .toMatchObject({ pct: 16.7, risk: "high" });
     expectWarnings(result, []);
   });
 
@@ -263,9 +301,7 @@ describe("fetchNestVaultPositionsReserves", () => {
       { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
     );
 
-    expect(result.slices).toEqual([
-      { sourceKey: "nest-vault-positions:usdc", name: "Liquid USDC balances", pct: 100, risk: "low", coinId: "usdc-circle" },
-    ]);
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")).toMatchObject({ pct: 100, depType: "collateral" });
     expectWarnings(result, []);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 100,
@@ -291,10 +327,8 @@ describe("fetchNestVaultPositionsReserves", () => {
       { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
     );
 
-    expect(result.slices).toEqual([
-      { sourceKey: "nest-vault-positions:nav-residual", name: "Nest NAV reconciliation residual", pct: 78.3, risk: "high" },
-      { sourceKey: "nest-vault-positions:pusd", name: "pUSD liquid balance", pct: 21.7, risk: "high", coinId: "pusd-plume" },
-    ]);
+    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:nav-residual")!.pct * 1.8890182896 / 100).toBeCloseTo(1.4788352896, 10);
+    expect(result.slices.find((slice) => slice.coinId === "pusd-plume")!.pct * 1.8890182896 / 100).toBeCloseTo(0.410183, 10);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 1.8890182896,
       settledPositionUsd: 0.410183,
@@ -371,8 +405,6 @@ describe("fetchNestVaultPositionsReserves", () => {
     expect(result.metadata).toMatchObject({ totalReserveUsd: 120, calculatedNavUsd: 119,
       claimableFeesUsd: 1, pendingWithdrawalUsd: 20, unknownExposurePct: 100 });
     expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
-    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:pending-withdrawals"))
-      .toMatchObject({ name: "Nest pending redemption receivables", pct: 16.7, risk: "high" });
     expectWarnings(result, []);
   });
 

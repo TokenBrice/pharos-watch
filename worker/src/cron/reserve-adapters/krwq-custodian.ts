@@ -222,6 +222,7 @@ export function adaptKrwqCustodian(
     name: string;
     risk: ReserveSlice["risk"];
     coinId: string;
+    depType: "collateral";
   }> = [];
 
   for (const leg of KRWQ_LEGS) {
@@ -265,7 +266,7 @@ export function adaptKrwqCustodian(
     }
 
     if (value === 0) continue;
-    sliceInputs.push({ sourceKey: `krwq-custodian:${leg.key}`, name: leg.name, value, risk: leg.risk, coinId: leg.coinId });
+    sliceInputs.push({ sourceKey: `krwq-custodian:${leg.key}`, name: leg.name, value, risk: leg.risk, coinId: leg.coinId, depType: "collateral" });
   }
 
   if (sliceInputs.length === 0) {

@@ -1,0 +1,63 @@
+name: Dependency Scenarios Refresh
+
+# Offline Node compute only. This does not add work to Worker publication or cron.
+# Existing stablecoin-db cache stores immutable artifacts, then a latest commit marker.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-scenarios-refresh
+  cancel-in-progress: false
+
+jobs:
+  scenarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SCENARIO_OUT_DIR: agents/dependency-scenarios/ci
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: $/.github/actions/setup-workspace
+        with:
+          browser-cache: "false"
+          bootstrap-generated: "false"
+          install-playwright-firefox: "false"
+      - name: Plan from accepted publication and export the exact compiler capture
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+        run: >-
+          node --import tsx worker/scripts/compute-dependency-scenarios.ts
+          --mode plan --out-dir "${SCENARIO_OUT_DIR}"
+      - name: Recompile, verify accepted-generation equivalence and compute the matrix
+        run: >-
+          node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts
+          --mode compute --out-dir "${SCENARIO_OUT_DIR}"
+          --input "${SCENARIO_OUT_DIR}/capture.json"
+          --publication "${SCENARIO_OUT_DIR}/publication.json"
+      - name: Preserve validated modeled artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-scenarios-${{ github.run_id }}
+          path: |
+            ${{ env.SCENARIO_OUT_DIR }}/artifact.json
+            ${{ env.SCENARIO_OUT_DIR }}/artifact.verified.sha256
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish immutable payload then commit marker with readback verification
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: >-
+          node --import tsx worker/scripts/compute-dependency-scenarios.ts
+          --mode publish --out-dir "${SCENARIO_OUT_DIR}"

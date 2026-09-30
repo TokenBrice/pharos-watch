@@ -321,6 +321,10 @@ export const LiveReserveSnapshotMetadataSchema = z
     /** Absent on retained legacy snapshots: unknown, not coin-exclusive. */
     balanceSheetScope: z.literal("shared-sky-maker").optional(),
     sharedBookAssetIds: z.array(z.string().min(1)).optional(),
+    sharedBookMeasuredHoldings: z.record(z.string(), z.number().finite().nonnegative()).optional(),
+    reconciliationExcessUsd: z.number().finite().nonnegative().optional(),
+    reconciliationExcessShare: z.number().finite().nonnegative().optional(),
+    reconciliationIssue: z.literal("litepsm-reconciliation-excess").optional(),
     liquidationCapacityRatio: z.number().finite().nonnegative().optional(),
     /**
      * Legacy flat redemption-telemetry fields, superseded by the nested

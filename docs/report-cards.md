@@ -2,15 +2,15 @@
 
 Safety Score V9 is the sole active stablecoin safety model. It publishes evidence-backed grades from A+ through F, with NR reserved for assets whose required facts cannot be bounded honestly.
 
-> **Agent navigation** — Methodology Identity · V9 Model · Canonical Publication · API · Consumers · History · Frontend.
+> **Agent navigation**: Methodology Identity · V9 Model · [Dependency Coverage](#dependency-coverage) · [Exit Route Evidence](#exit-route-evidence) · Canonical Publication · API · Consumers · History · Frontend.
 
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.94`<!-- GENERATED-END: methodology-version-safety-score -->
-- Public response schema: report v5 with score trace v3
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.98`<!-- GENERATED-END: methodology-version-safety-score -->
+- Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `b71d07a90353dcc730f3f6c3bbba87b5b59f5460b05407e5c420dd6f7e5dfdb1` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `9c304f5c6d96238e37baded4a5e7029bb68921accebe3ec16a58daf8dc019c63` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -166,6 +166,48 @@ The 2026-09-23 TRON re-review replaced the three dead or bot-blocked citation UR
 
 The public premium is intentionally not inherited. `applyV9AssetPremium` does not reassign `inheritableScore`, and `projectV9DependencyScore` returns that pre-premium value. Therefore USDT's public card can show 87 while children such as `steakusdt-steakhouse` and `susdt-spark` correctly inherit 83. A child snapshot carrying 83 is not stale and must not be resynchronized to the parent's premium-adjusted public score.
 
+## Dependency Coverage
+
+Keyed zero-percent categories retain their captured provenance and consume matching reviewed classifications, but emit neither dependency edges nor positive-weight backing exposure facts. A zero balance cannot quarantine the asset solely by violating the compiled exposure-weight bound.
+
+Reserve-derived basket exposure can coexist with an independently reviewed non-default role to the same upstream. A subset role review must explicitly name a non-default role and match an exact authored identity, type, and weight anchor in the sourced derivation. Reserve weights remain basket exposures; the role uses its own authored anchor. An unanchored subset remains a dependency-review mismatch. Relationships merge by identity, type, and role, so a reviewed default replaces rather than duplicates the same edge.
+
+Authored and runtime reserve schemas deliberately differ. `AuthoredReserveSliceSchema` and `FullAuthoredReserveCompositionSchema` require `depType` whenever a slice carries `coinId`; registry and reserve-sidecar validation use that strict boundary. `ReserveSliceSchema` and the runtime composition schema remain permissive so legacy persisted live snapshots remain readable rather than failing the whole response. Derivation never defaults an untyped link to collateral. A legacy live row inherits only one uniquely authored kind for the same coin id from reserve rows or adapter identity declarations; unresolved or conflicting kinds withhold that row's link with `coinId-without-depType` and increment `coinIdWithoutDepTypeCount`. The coverage gate treats that counter as zero-tolerance. Other rows and structural relationships survive, and wholly unmapped live reserves do not revive curated collateral weights. Until adapters resync, cached legacy rows without unique reviewed-kind inheritance can transiently lose links.
+
+Methodology **9.98** makes linked reserve kinds explicit without refreshing historical reserve evidence. Mento separates native USDC/EURC/USDT from axlUSDC/axlEUROC/USDT0, aggregates reviewed canonical-parent shares, and retains partial intermediary contributions in slices and producer metadata instead of a false whole-edge tag. USDat retains PYUSD with immediate PYUSDx annotated; Frankencoin retains yBOLD with ysyBOLD annotated. Representation identity verification is not independent bridge solvency assurance. Avant exposes measured gross-positive-long holdings, retains debt and NAV separately, and withholds tracked links pending exact position-to-contract, receipt, or bridge joins. Source-label matching, fabricated netting, and NAV-normalized dependency shares are not permitted. Cached legacy-row withholding can change backing and downstream scores until typed producer rows arrive; the reviewed removal of ReUSD's old pooled USDe link is not a missing-type regression. Fixture replacements are diagnostic inputs, not production freshness evidence or score forecasts.
+
+Methodology **9.97** retains scoring weights, materiality thresholds, and evidence admission rules while correcting reserve attribution and precision. Accountable reconciles reviewed nested leaves; OnRe identifies Solomon's replacement USDv mint; Reservoir identifies the high-risk Sentora PRIME PYUSD claim; Re keeps protocol-pooled holdings unlinked without an attributable off-chain denominator and tranche waterfall. Frax, Nest, and InfiniFi preserve positive measured dust, and ftUSD validates present exact collateral identities without a fixed row count. Producer recovery does not establish scoring admission: weak probes, unverified freshness, and reconciliation failures retain their existing gates. Agora's Fern discovery repair preserves the exact reviewed July report and integrity checks.
+
+### Report schema v6
+
+Report v6 is additive. New publications carry `card.supply` with `circulatingUsdAtEvaluation`, `asOfSec`, and `generationId`. The amount is the evaluated compiled supply fact, not a current market-cap lookup. Unknown supply remains null, including its unavailable clock and identity. Observed zero remains zero. The supply clock is the fingerprint whose generation matches that fact; it is distinct from the publication clock.
+
+Cards carry nullable `sharedBookId`. The stable scope mapping assigns `sky-maker` only to captured `balanceSheetScope: "shared-sky-maker"` members named in `sharedBookAssetIds`; unknown scopes publish null. The adapter's measured holdings remain in the captured reserve provenance. Consumers must not add shared-book liabilities as independent holdings.
+
+Serial and basket summaries, and their exact graph projection, carry optional `dependencyType` from the compiled relationship using the existing `wrapper`, `mechanism`, and `collateral` vocabulary. The field is absent in v5; edge identity remains `(from, to, kind)`. Nullable `wrapperForm` comes from `scoreTrace.wrapperParentLimit.form` only on wrapper claims. Mechanism and basket claims publish null; a wrapper without a parent-limit form also publishes null, so consumers distinguish claim types with `dependencyType`, not form presence.
+
+`provenance` uses the existing dependency-source vocabulary (`live-reserve`, `live-unmapped`, `curated-reserve`, `manual`, `none`, `variant`), the dependency evidence observation date as `evidenceAsOf`, and a nullable reserve-slice `intermediary`. An intermediary retains kind, label, optional chain/contract/source URL, and verification status. Structural and manual serial claims also retain matching slice annotations. Identical annotations across all contributing slices publish that annotation. Any unverified annotation takes precedence, using the first unverified slice. Otherwise mixed native/bridged or differing verified routes publish null; Plume's aggregate claim does not inherit its partial USDC.e route annotation.
+
+`dependencyCoverage` is an optional disclosure list, separate from scoring admission and graph edges. Rows carry `upstreamLabel`, nullable `upstreamAssetId`, nullable fractional `share`, an existing producer rejection or admission `reason`, nullable `sourceAsOf`, and `identityVerified`. Unverified identity never publishes a tracked upstream ID. Reasons retain producer codes such as `no-match`, `expired`, `non-link`, `coinId-without-depType`, native reviewed identity/type conflicts, `manual-collateral-not-in-reserves`, `outside-active-set:<id>`, and compiled reserve-envelope gaps. These relationships never contribute to graph totals. An absent list means this generation did not publish coverage, not that no relationships were withheld.
+
+Coverage deduplication uses source-key identity and reason, or upstream identity, label, and reason for unkeyed rows. Distinct withheld slices or reasons sharing a display label remain visible.
+
+Top-level `commonModeGroups` optionally projects the evaluated V9 dependency plan as compact `{ id, kind, key, memberAssetIds, pricedEffects? }` rows. The canonical ID is `kind:key`, using the existing failure-domain vocabulary. Groups and member IDs are unique and sorted. Only groups with at least two distinct assets publish; several paths on one asset do not qualify. All qualifying groups remain visible, even without a referenced priced effect.
+
+Optional `pricedEffects` contains sorted unique receiving `assetId` rows with zero-based `capIndices` into that card's `caps` and `deploymentAdjustmentIndices` into `scoreTrace.deploymentRisk.adjustments`. Each row has at least one nonempty reference list; the field is omitted when none exist. Consumers resolve the existing prices through those references. Membership is not an additive loss estimate, a counterfactual score change, or a new penalty, and an omitted effect list does not prove no risk. Report v5 omits `commonModeGroups`; absence means not published, while `[]` means a published census with no qualifying multi-asset groups. The coin-to-coin graph is unchanged.
+
+A group carries `pricedEffectsIncomplete: true` when a member has an evaluated structural signal for that failure domain that the evaluator prices through a hard cap (`structuralSignalNeedsHardCap`), but no matching cap or deployment-adjustment reference can be joined. Evaluator cap deduplication keeps one domain's reason when several domains produce the same source, kind and limit, so the other domains cannot be referenced; on the 2026-09-29 capture this affects 6 of 519 groups. The flag is presentation-only: it never withholds the publication or changes a score, and each affected group also emits a `safety_score_v9_common_mode_priced_effects_incomplete` warning naming the group and member assets.
+
+The standalone Dependency Map and its Shared failure domains board consume `GET /api/dependency-graph/v1`, not full evaluator internals. Its optional common-mode effects preserve published `capIndices` and `deploymentAdjustmentIndices`, adding `resolvedCaps` (`kind`, `limit`, `binding`) and `resolvedAdjustments` (`scoreBefore`, `scoreAfter`, `adjustmentPoints`). Missing references omit only unresolved entries and set `referencesUnresolved: true`; they never invent prices or erase resolved entries. The board ranks known member supply with publication-bound supply preferred and explicitly labelled market-cap fallback, discloses partial subtotals, and keeps unresolved references separate from `pricedEffectsIncomplete`. Group totals overlap and must not be added.
+
+The separate offline `GET /api/dependency-scenarios/v1` artifact is **not canonical**. It reuses the production evaluator for generation-bound modeled shocks, but never changes canonical cards, journals, publication identity, graph membership, or score policy. Its modeled changes are not forecasts and are displayed only under the scenario freshness contract.
+
+Pre-field v5 payloads still parse without fabricated defaults or rewritten graph edges. New producers emit schema version 6. Graph validation requires unique edges sorted by `(from, to, kind)` and continues to require exactly the serial/basket card projection; coverage cannot introduce external graph nodes.
+
+## Exit Route Evidence
+
+Methodology **9.96** makes two score-semantic changes. Issuer routes honor reviewed explicit stablecoin payouts ahead of the legacy fiat projection: pathUSD, USYC Teller, pUSD and USDO pay USDC; thBILL, MXNB's conversion rail and StandX DUSD pay USDC/USDT; HLUSD's existing basket is honored. Unreviewed issuers keep the legacy default without variant-parent inference, and USDN is unchanged because current sources do not confirm USDC. Tracked outputs require captured price evidence: a single payout at par keeps quality 100, while multi-output routes keep conservative stable-basket quality 80 and weakest-priced-component semantics, a 3-point raw route difference at par; missing prices remain unresolved. Uniswap V4 retained exact PoolIds are fetched without the subgraph TVL floor and bypass the indexed-TVL 2% affinity guard, which remains only for token/fee fallback. Positive retained TVL, PoolKey/currency identity, zero hooks, active liquidity and existing quote/capacity gates still apply. Trigger: thUSD/USDC's indexed TVL was -$222,031.94; seven pool assets are affected (thUSD, USDD, USDT, USDS, USP, AUDM and sUSDD). Measured is not deep: at Ethereum block 26088713, a $1,000 thUSD sell returned $966.94. As curation context, not a third semantic change, thUSD moves to an executed stablecoin-redeem rail consistent with USDe, with measured Cash Wallet capacity from `theo-thusd-redemption` and no fallback. On the frozen replay of generation `report-cards:9.94:1790752511` at clock `1790752628`, only `thusd-theo` moves, 38/F to 43/D from its configuration, with no quarantines; the capture still has its old issuer-api observation and lacks its live-reserve fallback observation. Output and V4 effects require the first production redemption and DEX cycles and are not shown by that replay. The reviewed payout assets and seven V4 pool assets are expected movement candidates, not guaranteed score or grade improvements; standalone Liquidity Score arithmetic is unchanged.
+
 ## Canonical Publication
 
 Publication follows rule R8 (ADR-35 in [architecture.md](./architecture.md#architectural-decision-records)): one unusable asset is quarantined by id and field path, not allowed to hold the cohort. `compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension` is the reference implementation of that rule for the whole repository.
@@ -231,7 +273,7 @@ Both scheduled events of the `:22` minute died together on 2026-09-23: the compi
 
 ## API
 
-`GET /api/report-cards/v9` is the only live Safety Score API.
+`GET /api/report-cards/v9` is the full live Safety Score API. `GET /api/dependency-graph/v1` exposes a free, no-key graph projection of the same accepted publication, not another scoring authority.
 
 The handler reads the canonical publication and health row, validates the complete current response, and never recomputes or falls back to V8. Missing, malformed, or incomplete accepted state returns `503`; an identity mismatch between otherwise valid rows serves the authenticated publication as explicitly held. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
@@ -251,6 +293,9 @@ The response includes:
 - per-card `backingFromLiveReserves` provenance for score-grade reserve coverage
 - the canonical serial/basket dependency graph
 - accepted `updatedAt`
+
+See [Dependency Coverage](#dependency-coverage) for the additive report v6 fields and v5 readability contract.
+
 
 Each pillar row on a card carries a `freshness` value: `current`, `stale`, or `unknown`. The Exit
 pillar's value is the age of the DEX liquidity input the exit-route evidence was observed at,

@@ -9,6 +9,7 @@ import { expectValidAdapterOutput, expectWarnings, installAdapterNetwork, runAda
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-series.html"), "utf8");
+const CURRENT_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-2026-09-30.html"), "utf8");
 
 function mutateFixtureField<T>(key: string, mutate: (value: T) => void): string {
   const anchor = `\\"${key}\\":`;
@@ -25,24 +26,35 @@ type FixtureReserveRow = { tokenSymbol?: unknown; valueWei?: unknown; valueKnown
 type FixtureBreakdowns = Record<string, { rows: FixtureReserveRow[] }>;
 
 describe("adaptReMetrics", () => {
+  it("withholds token-specific dependencies when the issuer only supplies byAsset numerators", () => {
+    const result = adaptReMetrics(CURRENT_HTML);
+    expect(result.slices.every((slice) => slice.coinId == null && slice.depType == null)).toBe(true);
+    expect(result.slices.find((slice) => slice.sourceKey === "re-metrics:token:susde")?.pct).toBeGreaterThan(0);
+    expect(result.slices.find((slice) => slice.sourceKey === "re-metrics:token:susds")?.pct).toBeGreaterThan(0);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+    expect(result.metadata).toMatchObject({
+      compositionScope: "protocol-pooled",
+      tokenAttribution: "withheld-offchain-denominator-and-tranche-waterfall",
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "re-metrics-token-attribution-withheld",
+      effect: "info",
+    }));
+  });
   it("maps the Re metrics payload into live reserve slices", () => {
     const result = adaptReMetrics(SAMPLE_HTML);
 
-    expect(result.slices).toEqual([
-      { sourceKey: "re-metrics:offchain-capital", name: "Off-chain insurance / reinsurance capital", pct: 81.6, risk: "medium" },
-      {
-        sourceKey: "re-metrics:token:susde",
-        name: "sUSDe (delta-neutral ETH basis)",
-        pct: 15,
-        risk: "high",
-        coinId: "susde-ethena",
-        depType: "collateral",
-      },
-      { sourceKey: "re-metrics:token:usdc", name: "USDC reserves", pct: 2.5, risk: "low", coinId: "usdc-circle" },
-      { sourceKey: "re-metrics:token:reusd/susde", name: "reUSD / sUSDe LP position", pct: 0.7, risk: "high" },
-      { sourceKey: "re-metrics:token:usdt", name: "USDT reserves", pct: 0.1, risk: "low", coinId: "usdt-tether" },
-      { sourceKey: "re-metrics:token:usde", name: "USDe (delta-neutral ETH basis)", pct: 0.1, risk: "high", coinId: "usde-ethena" },
-    ]);
+    expect(result.slices.every((slice) => slice.coinId == null && slice.depType == null)).toBe(true);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+    const breakdowns = JSON.parse(extractEscapedJsonValueAfterKey(
+      SAMPLE_HTML, '\\"initialChainBreakdowns\\":', "re-metrics",
+    )) as Record<string, { rows: Array<{ tokenSymbol: string; valueWei: string }> }>;
+    const rows = Object.values(breakdowns).flatMap(({ rows }) => rows);
+    const total = rows.reduce((sum, row) => sum + Number(BigInt(row.valueWei)) / 1e18, 179595196.93262026);
+    const susde = rows.filter((row) => row.tokenSymbol.toLowerCase() === "susde")
+      .reduce((sum, row) => sum + Number(BigInt(row.valueWei)) / 1e18, 0);
+    expect(result.slices.find((slice) => slice.sourceKey === "re-metrics:token:susde")?.pct)
+      .toBeCloseTo(susde / total * 100, 10);
     expect(result.metadata).toMatchObject({
       chainBreakdownCount: 4,
       trackedTokenCount: 6,
@@ -61,7 +73,7 @@ describe("adaptReMetrics", () => {
         holderEligibility: "any-holder",
       },
     });
-    expectWarnings(result, ["re-metrics-offchain-capital-branch"]);
+    expectWarnings(result, ["re-metrics-offchain-capital-branch", "re-metrics-token-attribution-withheld"]);
   });
 
   it.each(["initialCards", "initialTvlData", "both"] as const)("parses %s with initialCards taking precedence and warns which branch fired", (format) => {
@@ -77,7 +89,7 @@ describe("adaptReMetrics", () => {
     const html = `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
     const result = adaptReMetrics(html);
     expect(result.metadata?.offchainCapitalUsd).toBe(format === "initialTvlData" ? 100 : 300);
-    expect(result.slices.find(({ coinId }) => coinId === "usdc-circle")?.pct).toBe(format === "initialTvlData" ? 50 : 25);
+    expect(result.slices.find(({ sourceKey }) => sourceKey === "re-metrics:token:usdc")?.pct).toBe(format === "initialTvlData" ? 50 : 25);
     expect(result.warnings).toContainEqual(expect.objectContaining({
       code: "re-metrics-offchain-capital-branch",
       effect: "info",
@@ -102,7 +114,6 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
       effect: "info",
       message: expect.stringContaining("initialCards series"),
     }));
-    expect(result.warnings).toHaveLength(1);
   });
 
   it("maps sUSDS explicitly instead of degrading as an unmapped token", () => {
@@ -114,7 +125,7 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
     const result = adaptReMetrics(html);
 
     expect(result.slices).toEqual([
-      { sourceKey: "re-metrics:token:susds", name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
+      { sourceKey: "re-metrics:token:susds", name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low" },
       { sourceKey: "re-metrics:offchain-capital", name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
     ]);
     expect(result.warnings).toContainEqual(expect.objectContaining({
@@ -122,7 +133,6 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
       effect: "info",
       message: expect.stringContaining("initialCards series"),
     }));
-    expect(result.warnings).toHaveLength(1);
   });
 
   it("extracts instant redemption vault capacity from redemptionRows", () => {
@@ -163,10 +173,11 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
 
     expect(result.metadata?.stableAssetUsd).toBe(100_000_000_000);
     expect(result.slices[0]).toMatchObject({
-      name: "USDC reserves",
+      sourceKey: "re-metrics:token:usdc",
       risk: "low",
-      coinId: "usdc-circle",
     });
+    expect(result.slices[0].coinId).toBeUndefined();
+    expect(result.slices[0].depType).toBeUndefined();
   });
 
   it("throws when the page no longer exposes the expected metrics payload", () => {

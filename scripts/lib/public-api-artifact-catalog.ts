@@ -454,6 +454,24 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     },
   },
   {
+    key: "dependency-graph-v1",
+    summary: "Dependency graph (no key)",
+    description:
+      "Free projection of the accepted V9 publication: publication-bound node supply, grades, role summaries and coverage counts, with the published dependency edges unchanged. Held snapshots return no-store and X-Safety-Score-Status: held.",
+    tags: ["Risk"],
+    responseSchema: "DependencyGraphResponse",
+    postman: { noAuth: true },
+  },
+  {
+    key: "dependency-scenarios",
+    summary: "Modeled dependency scenarios (no key)",
+    description:
+      "Offline production-evaluator scenarios from a V9 publication. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two hours, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores.",
+    tags: ["Risk"],
+    responseSchema: "DependencyScenariosResponse",
+    postman: { noAuth: true },
+  },
+  {
     key: "depeg-resolver",
     summary: "Depeg Duration Resolver",
     description:

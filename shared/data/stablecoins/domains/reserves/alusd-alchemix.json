@@ -6,6 +6,7 @@
       "pct": 80.2263,
       "risk": "low",
       "coinId": "dai-makerdao",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "MakerDAO/Sky (DAI) via Alchemix-registered Yearn and Aave yield strategies",
       "riskFactors": [
@@ -20,6 +21,7 @@
       "pct": 15.9306,
       "risk": "low",
       "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle (USDC) via Alchemix-registered Yearn and Aave yield strategies",
       "riskFactors": [
@@ -34,6 +36,7 @@
       "pct": 0.3867,
       "risk": "low",
       "coinId": "usdt-tether",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether (USDT) via Alchemix-registered Yearn and Aave yield strategies",
       "riskFactors": [
@@ -48,6 +51,7 @@
       "pct": 3.4564,
       "risk": "low",
       "coinId": "frax-frax",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax (FRAX) via Alchemix-registered yield strategies",
       "riskFactors": [
@@ -59,8 +63,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Codex Alchemix pinned on-chain reserve review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos Dependency Map WS1.D primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -88,7 +92,7 @@
     "compositionBasis": "Ethereum AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters().expectedValue aggregated by underlying token at Ethereum block 25627228",
     "compositionAsOf": "2026-07-27",
     "scope": "selected-slices",
-    "knownUnknownExposure": "All registered yield-token expected values in the observed Ethereum Alchemist were attributed to their on-chain underlying stablecoins; asset-wide L2, bridge, Transmuter, and AMO exposure remains unreconciled outside this selected slice.",
+    "knownUnknownExposure": "NET02-3 / NC-083: collateral-depegging documentation accessed 2026-09-30 confirms DAI, USDC and USDT loss transmission, not current portfolio weights. The four authored claims remain a July 27 controller-local snapshot, not an August 29 composition. Next evidence: fresh pinned getSupportedYieldTokens/getYieldTokenParameters and independently valued underlying balances, reconciled with Transmuter, AMO, L2/bridge custody and asset-wide liabilities. Keep selected-slices admission and do not revive expired 80.2263/15.9306/0.3867/3.4564 percentages as manual edges.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

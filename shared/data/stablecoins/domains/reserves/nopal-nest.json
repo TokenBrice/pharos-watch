@@ -22,6 +22,7 @@
       "pct": 4.2769,
       "risk": "low",
       "coinId": "ntbill-nest",
+      "depType": "collateral",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Nest Treasury Vault (short-term U.S. Treasury exposure)",
       "riskFactors": [

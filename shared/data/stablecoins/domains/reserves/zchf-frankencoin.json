@@ -223,6 +223,14 @@
       "risk": "medium",
       "coinId": "ybold-yearn",
       "depType": "collateral",
+      "intermediary": {
+        "kind": "vault-share",
+        "label": "ysyBOLD (Staked yBOLD)",
+        "chain": "ethereum",
+        "contract": "0x23346b04a7f55b8760e5860aa5a77383d63491cd",
+        "verified": true,
+        "sourceUrl": "https://ydaemon.yearn.fi/1/vaults/0x23346b04a7f55b8760e5860aa5a77383d63491cd"
+      },
       "assetClass": "protocol-position",
       "issuerOrObligor": "Yearn ysyBOLD and yBOLD vaults; Liquity V2 Stability Pools",
       "riskFactors": [
@@ -235,8 +243,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review W3",
     "confidence": "verified",
     "sources": [
       {
@@ -262,10 +270,14 @@
       {
         "label": "Yearn ysyBOLD vault record",
         "url": "https://ydaemon.yearn.fi/1/vaults/0x23346b04a7f55b8760e5860aa5a77383d63491cd"
+      },
+      {
+        "label": "Ethereum RPC: ysyBOLD asset() at block 26089449 (2026-09-30)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Each weight matches the 2026-09-04 live capture of open, non-denied Frankencoin collateral positions valued through the protocol's CHF price mapping. The ysyBOLD collateral is the tracked Yearn yBOLD wrapper over Liquity BOLD, so its direct dependency is ybold-yearn; PAXG and XAUt are exact tracked upstreams; CRV and all other rows are explicitly classified exogenous collateral and do not create stablecoin dependency edges.",
-    "compositionBasis": "Latest active collateral balances from Frankencoin's positions API valued by its price-mapping API",
+    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is now explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. PAXG and XAUt remain exact tracked upstreams; other rows remain classified exogenous collateral.",
+    "compositionBasis": "Retained 2026-09-04 Frankencoin collateral balances and prices; ysyBOLD-to-yBOLD identity refreshed by fixed-block asset() read on 2026-09-30",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
     "knownUnknownExposure": "All active collateral assets with positive balances and available prices are identified.",

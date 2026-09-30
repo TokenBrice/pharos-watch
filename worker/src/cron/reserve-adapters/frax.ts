@@ -230,7 +230,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
         name: config.label,
         pct: (usd / shareBasisUsd) * 100,
         risk: config.risk,
-        ...(config.coinId && config.coinId !== subjectId ? { coinId: config.coinId } : {}),
+        ...(config.coinId && config.coinId !== subjectId ? { coinId: config.coinId, depType: "collateral" as const } : {}),
       });
     }
   }
@@ -270,7 +270,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   }
 
   return {
-    slices: normalizeSlices(slices),
+    slices: normalizeSlices(slices, null),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       totalCollateralUsd: total,
@@ -497,7 +497,7 @@ export function adaptFraxFpiCollateral(
       name: config.label,
       pct: (usd / totalCollateralUsd) * 100,
       risk: config.risk,
-      ...(config.coinId ? { coinId: config.coinId } : {}),
+      ...(config.coinId ? { coinId: config.coinId, depType: "collateral" as const } : {}),
     });
   }
 
@@ -547,7 +547,7 @@ export function adaptFraxFpiCollateral(
   }
 
   return {
-    slices: normalizeSlices(slices),
+    slices: normalizeSlices(slices, null),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...(compositionComplete ? { totalCollateralUsd } : { knownCollateralUsd: totalCollateralUsd }),

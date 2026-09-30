@@ -2,30 +2,330 @@
   "id": "avusd-avant",
   "reserves": [
     {
-      "sourceKey": "avant-reserves-api:stablecoin-long",
-      "name": "Long stablecoin positions (gross)",
-      "pct": 98.078,
+      "sourceKey": "avant-reserves-api:stablecoin-long:usde",
+      "name": "usde long positions (gross; identity unverified)",
+      "pct": 74.02177474531894,
       "risk": "medium",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Avant Protocol market-neutral strategy contracts across Aave, Morpho, Kamino, Ethena, and other DeFi protocols",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "concentration", "leverage"],
-      "liquidityHorizon": "seven-days"
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:syrupusdt",
+      "name": "syrupusdt long positions (gross; identity unverified)",
+      "pct": 10.027793360780908,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:syrupusdc",
+      "name": "syrupusdc long positions (gross; identity unverified)",
+      "pct": 5.392619191904968,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:amonusde",
+      "name": "amonusde long positions (gross; identity unverified)",
+      "pct": 4.246372211628566,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:usdc",
+      "name": "usdc long positions (gross; identity unverified)",
+      "pct": 3.7939428242491497,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "avant-reserves-api:other-long",
       "name": "Long altcoin, token and derivative positions (gross)",
-      "pct": 1.922,
+      "pct": 1.9089327532669818,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Avant Protocol market-neutral strategy contracts",
-      "riskFactors": ["market", "basis", "counterparty", "smart-contract", "leverage"],
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "smart-contract",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:causd",
+      "name": "causd long positions (gross; identity unverified)",
+      "pct": 0.6059544108571472,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:hyausd",
+      "name": "hyausd long positions (gross; identity unverified)",
+      "pct": 0.0024718689389712934,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:usdtb",
+      "name": "usdtb long positions (gross; identity unverified)",
+      "pct": 0.00009839245569395177,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:usdat-pt-8-27-26",
+      "name": "usdat pt 8/27/26 long positions (gross; identity unverified)",
+      "pct": 0.000010065792978082718,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:usdat",
+      "name": "usdat long positions (gross; identity unverified)",
+      "pct": 0.000009859494363370973,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:usdt0",
+      "name": "usdt0 long positions (gross; identity unverified)",
+      "pct": 0.000009352832283220982,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:dai",
+      "name": "dai long positions (gross; identity unverified)",
+      "pct": 0.0000034971503408450043,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:susde",
+      "name": "susde long positions (gross; identity unverified)",
+      "pct": 0.000002217554496247021,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:usds",
+      "name": "usds long positions (gross; identity unverified)",
+      "pct": 0.0000017377714383437608,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:wsrusd",
+      "name": "wsrusd long positions (gross; identity unverified)",
+      "pct": 0.0000012612050351053754,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:savusd",
+      "name": "savusd long positions (gross; identity unverified)",
+      "pct": 9.142220755388864e-7,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:usdt",
+      "name": "usdt long positions (gross; identity unverified)",
+      "pct": 8.433854113762452e-7,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:usdf",
+      "name": "usdf long positions (gross; identity unverified)",
+      "pct": 3.905191440301204e-7,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "avant-reserves-api:stablecoin-long:re_pend_pt_susde_25sep2025_eth",
+      "name": "re_pend_pt_susde_25sep2025_eth long positions (gross; identity unverified)",
+      "pct": 1.0067110112643781e-7,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant-disclosed strategy position; exact token or receipt contract unverified",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration",
+        "leverage"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv13)",
-    "confidence": "verified",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review W3",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Avant Protocol avUSD transparency API (breakdown, location, leverage, NAV)",
@@ -38,28 +338,194 @@
       {
         "label": "Avant Protocol docs: The Role of avUSD",
         "url": "https://docs.avantprotocol.com/overview/core-tokens"
+      },
+      {
+        "label": "Avant strategy wallet registry (accessed 2026-09-30; no per-position token or receipt mapping)",
+        "url": "https://docs.avantprotocol.com/yield-strategies-and-revenue/strategy-addresses"
       }
     ],
-    "rationale": "Reviewed 2026-09-21 against Avant's 2026-09-15T23:59:59Z reserve snapshot. The leveraged book is expressed gross, without netting debt into reserve slices: gross long positions total $1,025,779,722.01, including $1,006,064,509.05 of stablecoin long positions and $19,715,212.96 of altcoin, token, and derivative long positions. Gross debt is $896,527,325.91, including $19,654,153.78 of perpetual shorts, while net NAV is $129,252,410.69 and leverage coverage is 114.42%. Percentages normalize the two adapter-owned gross-long categories to the gross-long total. The API still aggregates the leveraged stablecoin strategy legs under one source key, so that slice remains unresolved for dependency attribution and the review cannot enter curated-composition admission.",
-    "compositionBasis": "Avant Protocol avUSD transparency API gross long positions dated 2026-09-15, normalized to the gross-long total; gross debt and net NAV retained as disclosure totals",
-    "compositionAsOf": "2026-09-15",
+    "rationale": "The single-checkpoint issuer disclosure reconciles gross long assets $1013103133.459377, financing debt $887428455.3230357 and net NAV $125674691.9077302. Each positive stablecoin source identity is retained in a separate keyed gross-long row; non-stable strategy categories remain explicitly exogenous. No borrowing is silently netted against holdings and no gross/NAV leverage multiplier is applied to mapped shares. USDe is 74.02177474531894% of gross long assets. The feed exposes names and chains but no contract addresses or receipt-asset joins. The issuer separately lists strategy wallets, without assigning the disclosed holdings to token contracts, venue receipts or chain-specific wallets. These names therefore remain research candidates rather than tracked edges. An RPC read of a known canonical token cannot prove the issuer's complete disclosed held claim.",
+    "compositionBasis": "Avant avUSD metrics detailedData, snapshot 2026-09-22T23:59:59Z captured 2026-09-30; positive long values divided by gross long assets, with debt and NAV disclosed separately",
+    "compositionAsOf": "2026-09-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "The stablecoin gross-long slice spans multiple stablecoins and protocol receipt tokens with matching debt legs. The adapter emits one stablecoin source key and the disclosure does not supply a holder-exitable net allocation by tracked stablecoin. Avant also reports $17,492,375.32 in bridge positions without itemized venue chains.",
-    "knownUnknownExposurePct": 98.078,
+    "knownUnknownExposure": "Every stablecoin long amount has a source identity and gross weight, but its exact held token, receipt-claim structure and bridge escrow remain unverified. Debt names do not establish enforceable cross-venue netting; no net loss coefficient is published.",
+    "knownUnknownExposurePct": 98.091067246733,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Long stablecoin positions (gross)",
-        "pct": 98.078,
-        "disposition": "basket-needs-split",
-        "rationale": "The API reports gross long strategy legs across USDe, syrupUSDT, syrupUSDC, USDC, USDT, and other stable assets under one adapter source key, with matching debt legs but no holder-exitable net allocation by tracked stablecoin."
+        "reserveName": "usde long positions (gross; identity unverified)",
+        "pct": 74.02177474531894,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "usde-ethena"
+        ]
       },
       {
         "reserveIndex": 1,
+        "reserveName": "syrupusdt long positions (gross; identity unverified)",
+        "pct": 10.027793360780908,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "syrupusdt-maple"
+        ]
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "syrupusdc long positions (gross; identity unverified)",
+        "pct": 5.392619191904968,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "syrupusdc-maple"
+        ]
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "amonusde long positions (gross; identity unverified)",
+        "pct": 4.246372211628566,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "usdc long positions (gross; identity unverified)",
+        "pct": 3.7939428242491497,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "usdc-circle"
+        ]
+      },
+      {
+        "reserveIndex": 5,
         "reserveName": "Long altcoin, token and derivative positions (gross)",
-        "pct": 1.922,
+        "pct": 1.9089327532669818,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Long HYPE, sENA, ENA, and other token positions plus ETH, AVAX, and BTC derivative longs are untracked exogenous hedged-crypto strategy exposure."
+        "rationale": "Identified non-stable leveraged strategy collateral remains exogenous."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "causd long positions (gross; identity unverified)",
+        "pct": 0.6059544108571472,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "hyausd long positions (gross; identity unverified)",
+        "pct": 0.0024718689389712934,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts."
+      },
+      {
+        "reserveIndex": 8,
+        "reserveName": "usdtb long positions (gross; identity unverified)",
+        "pct": 0.00009839245569395177,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "usdtb-ethena"
+        ]
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "usdat pt 8/27/26 long positions (gross; identity unverified)",
+        "pct": 0.000010065792978082718,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "usdat long positions (gross; identity unverified)",
+        "pct": 0.000009859494363370973,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "usdat-saturn"
+        ]
+      },
+      {
+        "reserveIndex": 11,
+        "reserveName": "usdt0 long positions (gross; identity unverified)",
+        "pct": 0.000009352832283220982,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "usdt-tether"
+        ]
+      },
+      {
+        "reserveIndex": 12,
+        "reserveName": "dai long positions (gross; identity unverified)",
+        "pct": 0.0000034971503408450043,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "dai-makerdao"
+        ]
+      },
+      {
+        "reserveIndex": 13,
+        "reserveName": "susde long positions (gross; identity unverified)",
+        "pct": 0.000002217554496247021,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "susde-ethena"
+        ]
+      },
+      {
+        "reserveIndex": 14,
+        "reserveName": "usds long positions (gross; identity unverified)",
+        "pct": 0.0000017377714383437608,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "usds-sky"
+        ]
+      },
+      {
+        "reserveIndex": 15,
+        "reserveName": "wsrusd long positions (gross; identity unverified)",
+        "pct": 0.0000012612050351053754,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts."
+      },
+      {
+        "reserveIndex": 16,
+        "reserveName": "savusd long positions (gross; identity unverified)",
+        "pct": 9.142220755388864e-7,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "savusd-avant"
+        ]
+      },
+      {
+        "reserveIndex": 17,
+        "reserveName": "usdt long positions (gross; identity unverified)",
+        "pct": 8.433854113762452e-7,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts.",
+        "candidateCoinIds": [
+          "usdt-tether"
+        ]
+      },
+      {
+        "reserveIndex": 18,
+        "reserveName": "usdf long positions (gross; identity unverified)",
+        "pct": 3.905191440301204e-7,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts."
+      },
+      {
+        "reserveIndex": 19,
+        "reserveName": "re_pend_pt_susde_25sep2025_eth long positions (gross; identity unverified)",
+        "pct": 1.0067110112643781e-7,
+        "disposition": "insufficient-evidence",
+        "rationale": "Measured source-labelled holding retained; exact token contract and strategy claim are undisclosed. Withhold tracked linkage until issuer holdings join to verified contracts."
       }
     ]
   },

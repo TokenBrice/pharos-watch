@@ -577,3 +577,55 @@ describe("resolveRedemptionCapacity — reserve-sync live capacity confidence ov
     expect(result.immediateCapacityUsd).toBe(800_000);
   });
 });
+
+describe("Theo no-fallback measured capacity", () => {
+  it.each([220400, 0])("preserves measured %s and uses the canonical supply denominator", async (capacityUsd) => {
+    const supplyUsd = 132370676.056526;
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database, "thusd-theo", { kind: "reserve-sync-metadata", basis: "hot-buffer", fallbackRatio: 0.005 }, supplyUsd, now,
+      { reserveSnapshotMetadata: liveSnapshot("thusd-theo", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
+          routeStatus: "open", routeStatusSource: "onchain", settlementDelaySec: 0,
+        },
+      }, { fetchedAt: now - 60, source: "theo-thusd-redemption", sourceModel: "validated-static", evidenceClass: "static-validated" }) },
+    );
+    expect(result).toMatchObject({
+      resolutionState: "resolved", immediateCapacityUsd: capacityUsd, scoringCapacityUsd: capacityUsd,
+      immediateCapacityRatio: capacityUsd / supplyUsd, scoringCapacityRatio: capacityUsd / supplyUsd,
+      capacityConfidence: "live-direct",
+    });
+  });
+
+  it.each(["missing", "stale"] as const)("does not invent a cash floor for %s telemetry", async (state) => {
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database, "thusd-theo", { kind: "reserve-sync-metadata", basis: "hot-buffer" }, 132370676.056526, now,
+      { reserveSnapshotMetadata: state === "missing" ? null : liveSnapshot("thusd-theo", {
+        freshnessMode: "not-applicable",
+        redemption: { capacityUsd: 220400, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain" },
+      }, { fetchedAt: now - 3 * 86400, source: "theo-thusd-redemption", sourceModel: "validated-static", evidenceClass: "static-validated" }) },
+    );
+    expect(result).toMatchObject({
+      resolutionState: "missing-capacity", immediateCapacityUsd: null, scoringCapacityUsd: null,
+    });
+  });
+});
+
+describe("Theo rejected producer admission", () => {
+  it.each(["config-mismatch", "inconsistent-snapshot", "invalid-freshness"] as const)("cannot reuse telemetry rejected for %s", async (reason) => {
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database, "thusd-theo", { kind: "reserve-sync-metadata", basis: "hot-buffer" }, 132370676.056526, now,
+      { reserveSnapshotMetadata: liveSnapshot("thusd-theo", {
+        freshnessMode: "not-applicable",
+        redemption: { capacityUsd: 220400, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain" },
+      }, {
+        fetchedAt: now - 60, source: "theo-thusd-redemption", sourceModel: "validated-static",
+        evidenceClass: "static-validated", admission: { eligible: false, reasons: [reason], freshness: null },
+      }) },
+    );
+    expect(result).toMatchObject({
+      resolutionState: "missing-capacity", immediateCapacityUsd: null, scoringCapacityUsd: null,
+    });
+  });
+});

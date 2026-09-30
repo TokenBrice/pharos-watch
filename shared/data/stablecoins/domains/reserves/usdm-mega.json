@@ -2,26 +2,39 @@
   "id": "usdm-mega",
   "reserves": [
     {
-      "name": "USDC and USDtb reserve basket",
-      "pct": 100,
+      "sourceKey": "megausd-custody:usdc",
+      "name": "USDC cash-equivalent reserves",
+      "pct": 99.9,
       "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial and Anchorage Digital Bank",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "legal",
-        "concentration",
-        "smart-contract"
-      ],
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": ["counterparty", "custody", "legal", "concentration", "smart-contract"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "megausd-custody:usdtb",
+      "name": "USDtb cash-equivalent reserves",
+      "pct": 0.1,
+      "risk": "low",
+      "coinId": "usdtb-ethena",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Anchorage Digital Bank",
+      "riskFactors": ["counterparty", "custody", "legal", "concentration", "smart-contract"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "confidence": "verified",
     "sources": [
+      {
+        "label": "MegaUSD transparency backing-and-supply API (disclosure 2026-09-29T14:53:11Z; accessed 2026-09-29)",
+        "url": "https://app.megausd.money/api/transparency/backing-and-supply/current"
+      },
       {
         "label": "MegaUSD reserve-composition disclosure",
         "url": "https://megausd.money/"
@@ -31,25 +44,12 @@
         "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
       }
     ],
-    "rationale": "MegaUSD identifies USDC and USDtb as the direct reserve assets. MegaETH's dated launch announcement says USDm v1 begins on USDtb rails and separately describes USDtb's target allocation to BUIDL, but neither source publishes current USDm weights between USDC and USDtb. The direct reserve is therefore retained as one unresolved stablecoin basket; USDtb's underlying BUIDL and redemption-liquid assets are not duplicated as measured USDm slices. Write-time re-open 2026-07-28: megausd.money still markets USDtb/BlackRock BUIDL-linked reserve design; MegaETH USDm announcement corroborates product. No public instrument weights \u2192 ku=100.",
-    "compositionBasis": "MegaUSD's disclosed USDC and USDtb reserve envelope; current weights undisclosed",
+    "rationale": "The issuer transparency API disclosed USDC $17,439,383.81 and USDtb $20,915.84 against $17,460,299.65 total backing at 2026-09-29T14:53:11Z, or 99.8803% and 0.1197%. The authored 99.9/0.1 rows match the megausd-custody adapter's captured rounding and stable source identities; admitted live measurements own subsequent weights. USDtb's underlying BUIDL and liquid assets are not duplicated as direct MegaUSD reserves. MegaETH's launch announcement describes Ethena's USDtb rails historically, without proving that they remain today's operative mint path.",
+    "compositionBasis": "Dated issuer backing-and-supply API amounts, normalized by the megausd-custody live adapter on 2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve assets are named, but the current USDC/USDtb weights are undisclosed. Any residual outside USDtb remains unknown, and USDtb's upstream target mix is not treated as a measured USDm composition.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "USDC and USDtb reserve basket",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The issuer names both direct reserve assets but publishes no dated current allocation between them.",
-        "candidateCoinIds": [
-          "usdc-circle",
-          "usdtb-ethena"
-        ]
-      }
-    ],
-    "compositionAsOf": "2026-07-28"
+    "knownUnknownExposure": "Direct reserve identities and dated allocation are disclosed. Custodian wallet labels do not independently establish account control, legal segregation, insolvency treatment, or reuse terms; allocation changes are remeasured by the live adapter.",
+    "knownUnknownExposurePct": 0,
+    "compositionAsOf": "2026-09-29"
   },
   "custodyProfile": {
     "providers": [
@@ -78,7 +78,7 @@
         "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
       }
     ],
-    "uncertainty": "USDM is issued on Ethena's USDtb rails with reserves described as roughly 90% USDtb plus liquid stablecoins; the custodians, account segregation, and any reuse terms behind the USDtb and stablecoin legs are not disclosed in the reviewed Mega sources.",
+    "uncertainty": "The issuer's dated backing API reports USDC and USDtb held across named custody addresses. Their legal custodians, account segregation, insolvency treatment, and reuse terms are not independently established by those wallet labels. USDtb's underlying BUIDL custody is upstream context, not a separately measured direct MegaUSD holding.",
     "knownUnknownExposurePct": 100
   }
 }

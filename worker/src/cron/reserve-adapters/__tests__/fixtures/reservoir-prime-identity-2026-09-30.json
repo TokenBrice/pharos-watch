@@ -1,0 +1,25 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-30T07:37:44.764Z -->",
+  "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xC21b08C16458202593D4D9B26b9984Ee67b38BbD",
+  "chainId": 1,
+  "address": "0xC21b08C16458202593D4D9B26b9984Ee67b38BbD",
+  "is_verified": true,
+  "decoded_constructor_args": [
+    [
+      "0x13DE0cEE0B83562CBfD46682e10FfA4E3c5090e1",
+      {
+        "internalType": "address",
+        "name": "_owner",
+        "type": "address"
+      }
+    ],
+    [
+      "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+      {
+        "internalType": "address",
+        "name": "_asset",
+        "type": "address"
+      }
+    ]
+  ]
+}

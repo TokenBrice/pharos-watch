@@ -85,8 +85,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Pharos reserve research (production-capture alignment)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map WS1.D reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -96,13 +96,17 @@
       {
         "label": "USDD Data Platform Tron collateral history",
         "url": "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=tron"
+      },
+      {
+        "label": "USDD global allocator assets and chain-specific debt (accessed 2026-09-30)",
+        "url": "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview"
       }
     ],
-    "rationale": "The configured USDD Data Platform Tron latest-collateral feed capture on 2026-09-04 reports five positive lockedValue categories. Normalizing the current rows (total collateral $1,910,128,975.51) yields TRX 59.9512430832%, Smart Allocator 37.9258008380%, USDT PSM vaults 1.4780536939%, USDT direct vaults 0.0346107749%, and sTRX direct vaults 0.6102916101%. These percentages are the live classification scaffold, not liability shares; TRX includes borrower-owned overcollateralization. Smart Allocator remains an unresolved aggregate because its constituent holdings churn and do not reconcile exactly to reported debt.",
+    "rationale": "The authored composition remains the dated 2026-09-04 Tron lockedValue scaffold, not a refreshed liability allocation. Research accessed 2026-09-30 confirms the current Tron SA001-A lockedValue and allocator Tron debt both equal $774,431,711, while global allocator debt is $989,941,607 including $215,509,896 Ethereum debt. Positive USDS, USDT, USDT0 and dust USDC positions are disclosed globally across destination chains and operator addresses. The API provides no position-to-origin-debt attribution, constituent token contracts, or shared checkpoint with latest-collateral. Matching the Tron debt alone cannot attribute the cross-chain assets to that envelope. No global fraction is multiplied by the Tron category.",
     "compositionBasis": "Normalized gross lockedValue rows from the configured USDD Data Platform Tron latest-collateral feed captured on 2026-09-04",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 37.9258008380% Smart Allocator live slice is identified as an aggregate protocol position, but its constituent holdings change dynamically and do not reconcile exactly to reported debt; it remains aggregated rather than forcing transient constituent percentages or failure-domain weights.",
+    "knownUnknownExposure": "Smart Allocator remains explicitly upstream-exposed and unmapped. Blocker: global deployed assets cannot be attributed to the Tron debt envelope at a common checkpoint, and operator addresses do not establish the direct asset or receipt contracts. Dated authored share retained; live adapter owns current composition. Issuer questionnaire pending.",
     "knownUnknownExposurePct": 37.925800838,
     "nonLinkDispositions": [
       {
@@ -117,7 +121,8 @@
         "reserveName": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
         "pct": 37.925800838,
         "disposition": "basket-needs-split",
-        "rationale": "The live allocator feed identifies USDS, USDT, USDT0, and USDC positions, but its debt and deployed holdings do not reconcile exactly at every observation; retain one explicitly upstream-exposed protocol-position slice instead of forcing transient dependency weights."
+        "rationale": "Blocked on scope and checkpoint reconciliation. The global allocator API accessed 2026-09-30 names positive USDS, USDT, USDT0 and USDC claims, but separates debt by origin chain rather than attributing asset positions to that debt. No same-checkpoint Tron asset envelope or token/receipt contract identities are disclosed; zero routes are not candidates for edges.",
+        "candidateCoinIds": ["usds-sky", "usdt-tether", "usdc-circle"]
       },
       {
         "reserveIndex": 4,

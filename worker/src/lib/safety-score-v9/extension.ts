@@ -566,6 +566,9 @@ function prepareDependency(
     ) &&
     !hasAdmissibleCuratedReserveComposition(meta, clockSec);
   const issueCodes: string[] = [];
+  issueCodes.push(...derived.rejectionReasons
+    .filter((rejection) => rejection.reason === "coinId-without-depType" || rejection.reason === "reviewed-dependency-type-conflict" || rejection.reason === "reviewed-dependency-identity-conflict" || rejection.reason === "manual-collateral-not-in-reserves")
+    .map((rejection) => rejection.reason));
   const expectedRelationships = derived.dependencies
     .map((dependency) => ({
       id: dependency.id,
@@ -583,9 +586,26 @@ function prepareDependency(
       reviewedBaseRelationships.map((relationship) => [`${relationship.type}:${relationship.id}`, relationship]),
     ).values(),
   ];
+  // Reserve composition owns basket weights; separately reviewed roles need
+  // an exact authored anchor and cannot replace those measured exposures.
+  const roleReviewCoexists =
+    (derived.baseSource === "live-reserve" || derived.baseSource === "curated-reserve") &&
+    meta.dependencyReview !== undefined &&
+    meta.dependencyReview.relationships.every((relationship) =>
+      relationship.economicRole != null &&
+      relationship.economicRole !== defaultV9DependencyEconomicRole(relationship.type) &&
+      meta.dependencies?.some((anchor) =>
+        anchor.id === relationship.id &&
+        (anchor.type ?? "collateral") === relationship.type &&
+        anchor.weight === relationship.weight,
+      ) === true &&
+      derived.dependencies.some((dependency) =>
+        dependency.id === relationship.id && (dependency.type ?? "collateral") === relationship.type,
+      ),
+    );
   const reviewMatchesDerived =
     meta.dependencyReview !== undefined &&
-    stableJsonStringifyV1(expectedRelationships) === stableJsonStringifyV1(uniqueReviewedBaseRelationships);
+    (roleReviewCoexists || stableJsonStringifyV1(expectedRelationships) === stableJsonStringifyV1(uniqueReviewedBaseRelationships));
   if (derived.source === "manual" && !meta.dependencyReview) {
     issueCodes.push("dependency-review-missing");
   }
@@ -609,23 +629,30 @@ function prepareDependency(
           return {
             id: relationship.id,
             type: relationship.type,
-            weight: derivedRelationship.weight,
+            weight: roleReviewCoexists ? relationship.weight : derivedRelationship.weight,
             economicRole: relationship.economicRole ?? defaultV9DependencyEconomicRole(relationship.type),
+            ...(derivedRelationship.intermediary === undefined ? {} : { intermediary: derivedRelationship.intermediary }),
           };
         })
       : null;
-  const dependencyRelationships = (
-    reviewedRelationships ??
-    derived.dependencies.map((dependency) => {
+  const defaultRelationships = derived.dependencies.map((dependency) => {
       const dependencyType = dependency.type ?? "collateral";
       return {
         id: dependency.id,
         type: dependencyType,
         weight: dependency.weight,
         economicRole: defaultV9DependencyEconomicRole(dependencyType),
+        ...(dependency.intermediary === undefined ? {} : { intermediary: dependency.intermediary }),
       };
-    })
-  ).filter(
+    });
+  const dependencyRelationships = [...new Map((
+    roleReviewCoexists
+      ? [...defaultRelationships, ...(reviewedRelationships ?? [])]
+      : reviewedRelationships ?? defaultRelationships
+  ).map((relationship) => [
+    `${relationship.id}\u0000${relationship.type}\u0000${relationship.economicRole}`,
+    relationship,
+  ] as const)).values()].filter(
     (dependency) =>
       !suppressCuratedBasketEdges || dependency.economicRole !== "basket-exposure",
   );
@@ -666,6 +693,7 @@ function prepareDependency(
         weight: dependency.weight,
         economicRole: dependency.economicRole,
         failureDomains: dependencyFailureDomains(dependency, dependency.economicRole),
+        ...(dependency.intermediary === undefined ? {} : { intermediary: dependency.intermediary }),
       },
     ];
   });

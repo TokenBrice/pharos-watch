@@ -315,6 +315,10 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       entry.id === "usyc-hashnote"
         ? {
             ...entry.config,
+            outputAssets: ["usdc-circle"],
+            notes: [
+              "Payout identity reviewed 2026-09-30: https://usyc.docs.hashnote.com/overview/subscription-and-redemption specifies that the modeled USYC Teller burns USYC and returns USDC; Private Liquidity Teller terms are separate.",
+            ],
             costModel: {
               ...documentedVariableFee("Redemption fee 0.03%"),
               feeBpsMax: 3,

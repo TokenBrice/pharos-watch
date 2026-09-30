@@ -82,6 +82,7 @@ function candidate(
 function target() {
   const result = buildUniswapV4MeasuredExecutionTarget({
     stablecoinId: "usdc-circle",
+    identityMatch: "exact-pool-id",
     candidate: candidate(),
     stablecoinPriceById: new Map([
       ["usdc-circle", 1],
@@ -270,6 +271,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     expect(
       buildUniswapV4MeasuredExecutionTarget({
         stablecoinId: "usdc-circle",
+        identityMatch: "exact-pool-id",
         candidate: candidate("0x0000000000000000000000000000000000000001"),
         stablecoinPriceById: new Map([["usdc-circle", 1]]),
         chainAddressToId: new Map([[`ethereum:${USDC}`, "usdc-circle"]]),
@@ -283,6 +285,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     expect(
       buildUniswapV4MeasuredExecutionTarget({
         stablecoinId: "usdc-circle",
+        identityMatch: "exact-pool-id",
         candidate: { ...candidate(), activeLiquidity: "0" },
         stablecoinPriceById: new Map([
           ["usdc-circle", 1],
@@ -300,6 +303,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     expect(
       buildUniswapV4MeasuredExecutionTarget({
         stablecoinId: "usdc-circle",
+        identityMatch: "exact-pool-id",
         candidate: { ...candidate(), token0Price: 0.97, token1Price: 1 / 0.97 },
         stablecoinPriceById: new Map([
           ["usdc-circle", 1],

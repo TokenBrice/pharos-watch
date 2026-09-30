@@ -9,7 +9,7 @@
     "rwa": true
   },
   "collateral": "Delta-neutral gold carry position (long leased physical gold, short CME gold futures, Treasury-bill margin) plus thBILL tokenized Treasuries and USDC/USDT redemption liquidity; per the live transparency dashboard the reserve is roughly three-quarters gold carry and one-quarter thBILL",
-  "pegMechanism": "1:1 mint and redemption against USDC or USDT through the whitelisted ThUSDMinter contract using EIP-712 signed backend orders with per-block caps and on-chain collateral invariants; unstaked backing sits in cash equivalents and T-bills while staked thUSD (sthUSD) receives the gold carry yield; secondary liquidity on Uniswap and Curve",
+  "pegMechanism": "Nominal 1:1 mint and redemption against USDC or USDT through ThUSDMinter using depositor-signed EIP-712 orders quoted by Theo and submitted by the privileged minter, with whitelist checks, per-block caps and one-sided on-chain amount checks (a mint never issues more thUSD than the collateral deposited, and a redemption never pays out more collateral than the thUSD burned); redemption is subject to a fee and available collateral in the Cash Wallet. Backing is deployed into gold carry, thBILL and stablecoin liquidity; yield accrues to sthUSD stakers, not thUSD holders. Secondary liquidity is concentrated in an Ethereum Uniswap v4 thUSD/USDC pool.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -32,7 +32,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.theo.xyz/transparency",
-    "provider": "Theo Protocol Corp real-time attestation dashboard with custodian corroborations (Libeara thBILL holdings attestation, Standard Chartered gold-side attestation, clearing-FCM CME account attestation, Wellington T-bill NAV); an independent reserve auditor is listed as in progress",
+    "provider": "Theo Protocol Corp issuer-operated reserve dashboard; the displayed attestations are Theo Protocol Corp (2026-06-22) and Libeara thBILL holdings (2026-06-01), with Accountable's auditor engagement in progress. Theo describes additional gold-side, clearing-FCM and Treasury-NAV corroboration, but no aggregate independent reserve report is linked.",
     "attestorTier": "self",
     "cadence": "real-time"
   },
@@ -81,5 +81,21 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "theo-thusd-redemption",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://docs.theo.xyz/developers/contract-reference/mint-and-redeem.md",
+      "label": "On-chain exit capacity · curated reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    }
+  },
   "launchDate": "2026-04-27"
 }

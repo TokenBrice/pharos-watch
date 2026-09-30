@@ -22,6 +22,7 @@ function runPhase() {
     graphApiKey: "graph-key",
     symbolToChainScopedIds: new Map(),
     chainAddressToId: new Map(),
+    uniswapV4ExactPoolIdsByChain: new Map(),
     validationReferences: VALIDATION_REFERENCES,
   });
 }

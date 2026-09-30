@@ -87,18 +87,10 @@ const REVIEWED_LABELS = new Set([
   "Perpetuals",
 ]);
 
-// Reviewed gross-long bucket identities. The Stablecoins bucket is the long
-// leg of the leveraged book; short/borrowed positions never net into it and
-// are published as debt totals instead. The three tiny derivative buckets are
-// folded into the "other" long slice because their values round below the
-// slice precision; per-category amounts stay in metadata.details.
+// Non-stable strategy categories retain their reviewed gross-long grouping.
+// Stablecoin source labels are split below; the issuer feed has no token
+// contracts, so names alone never establish a tracked claim.
 const SLICE_META: Record<string, CategorySliceMeta> = {
-  Stablecoins: {
-    sourceKey: "avant-reserves-api:stablecoin-long",
-    name: "Long stablecoin positions (gross)",
-    risk: "medium",
-    assetClass: "stablecoin",
-  },
   Other: {
     sourceKey: "avant-reserves-api:other-long",
     name: "Long altcoin, token and derivative positions (gross)",
@@ -253,8 +245,8 @@ export function adaptAvantReserves(payload: AvantPayload): AdapterResult {
   const warnings = [
     reserveInfoWarning(
       "gross-leverage-disclosed",
-      "Gross long positions ($1.02bn) and gross debt ($891.97m, including $19.91m perpetual shorts) "
-      + "are published as separate totals; debt is never netted into the stablecoin slice.",
+      `Gross long positions ($${longSum}) and gross debt ($${debtSum}) `
+      + "are published as separate totals; gross-normalized shares are not leveraged net-NAV loss coefficients.",
     ),
   ];
   if (bridgesUsd > 0) {
@@ -267,21 +259,45 @@ export function adaptAvantReserves(payload: AvantPayload): AdapterResult {
     );
   }
 
-  const values = Array.from(categoryTotals.entries())
-    .filter(([, totals]) => totals.longUsd > 0)
-    .map(([category, totals]) => {
-      const meta = SLICE_META[category];
-      if (!meta) {
-        throw new Error(`Avant category ${category} has long positions but no reviewed slice identity`);
+  const values: Array<ReserveSlice & { value: number }> = [];
+  const stableLongs = new Map<string, { name: string; value: number }>();
+  for (const detail of breakdown.detailedData) {
+    if (detail.category === "Stablecoins") {
+      for (const entry of detail.entries) {
+        if (entry.isDebt || entry.value <= 0) continue;
+        const key = entry.name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-|-$/g, "");
+        if (!key) throw new Error("Avant stablecoin identity has no usable source key");
+        const existing = stableLongs.get(key);
+        if (existing && existing.name !== entry.name) {
+          throw new Error(`Avant stablecoin source-key collision: ${entry.name}`);
+        }
+        if (existing) existing.value += entry.value;
+        else stableLongs.set(key, { name: entry.name, value: entry.value });
       }
-      return {
-        value: totals.longUsd,
-        sourceKey: meta.sourceKey,
-        name: meta.name,
-        risk: meta.risk,
-        assetClass: meta.assetClass,
-      };
+      continue;
+    }
+    const totals = categoryTotals.get(detail.category)!;
+    if (totals.longUsd <= 0) continue;
+    const meta = SLICE_META[detail.category];
+    if (!meta) throw new Error(`Avant category ${detail.category} has no reviewed slice identity`);
+    values.push({ ...meta, pct: 0, value: totals.longUsd });
+  }
+  for (const [key, entry] of stableLongs) {
+    values.push({
+      sourceKey: `avant-reserves-api:stablecoin-long:${key}`,
+      name: `${entry.name} long positions (gross; identity unverified)`,
+      value: entry.value,
+      pct: 0,
+      risk: "medium",
+      assetClass: "stablecoin",
     });
+  }
+  if (stableLongs.size > 0) {
+    warnings.push(reserveInfoWarning(
+      "unverified-avant-token-identities",
+      "Stablecoin long positions retain measured source identities; token contracts, receipt claims and bridge escrow are undisclosed, so tracked dependencies are withheld.",
+    ));
+  }
 
   const sourceTimestamp = Math.floor(Date.parse(breakdown.updatedAtIso) / 1000);
   if (!Number.isFinite(sourceTimestamp)) {
@@ -289,7 +305,7 @@ export function adaptAvantReserves(payload: AvantPayload): AdapterResult {
   }
 
   return {
-    slices: slicesFromValues(values, 1),
+    slices: slicesFromValues(values, null),
     warnings,
     metadata: {
       referenceNavUsd: nav.netNav,
@@ -301,6 +317,8 @@ export function adaptAvantReserves(payload: AvantPayload): AdapterResult {
         grossLeverageCoverageRatio: leverage.assetsUsd / leverage.liabilitiesUsd,
         navPeriodEnd: nav.periodEnd,
         leverageCoveragePct: leverage.coveragePercent,
+        dependencyExposureBasis: "gross-positive-long-share",
+        identityResolution: "unverified-source-labels",
         perpShortsUsd,
         bridgesUsd,
         pendingDeploymentUsd,

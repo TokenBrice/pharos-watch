@@ -30,7 +30,7 @@ import {
   ExitRouteObservationSchema,
   RedemptionExitRouteObservationSchema,
 } from "@shared/types/exit-route";
-import { ReserveSliceSchema } from "@shared/types/reserves";
+import { ReserveSliceSchema, ReserveIntermediarySchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
 import { SafetyScoreV9WrapperAllocationReviewSchema } from "./extension-wrapper-allocation";
@@ -133,6 +133,7 @@ const DependencyEdgeOverlaySchema = z
     weight: z.number().finite().positive().max(1),
     economicRole: V9DependencyEconomicRoleSchema.optional(),
     failureDomains: CanonicalFailureDomainsSchema,
+    intermediary: ReserveIntermediarySchema.optional(),
   })
   .strict()
   .superRefine((edge, ctx) => {

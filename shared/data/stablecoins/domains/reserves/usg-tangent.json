@@ -6,6 +6,7 @@
       "pct": 10.38,
       "risk": "low",
       "coinId": "frxusd-frax",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax Finance frxUSD, held through Tangent-supported Curve LP collateral",
       "riskFactors": [

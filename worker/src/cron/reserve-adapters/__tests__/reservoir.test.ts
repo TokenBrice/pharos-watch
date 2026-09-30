@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
@@ -7,6 +10,8 @@ import { adaptReservoirReserves, type ReservoirReservesResponse } from "../reser
 import { RESERVOIR_ENDPOINT, reservoirSnapshot, runReservoir } from "./reservoir.test-support";
 
 afterEach(() => vi.unstubAllGlobals());
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+
 
 const SAMPLE_RESPONSE: ReservoirReservesResponse = {
   assets: [
@@ -27,6 +32,28 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("adaptReservoirReserves", () => {
+  it("replays the issuer PRIME vault as a PYUSD claim without losing its credit risk", () => {
+    const payload = JSON.parse(readFileSync(join(FIXTURES_DIR, "reservoir-2026-09-30.json"), "utf8")) as ReservoirReservesResponse;
+    const result = adaptReservoirReserves(payload);
+    const prime = result.slices.find((slice) => slice.sourceKey === "reservoir:prime");
+    const value = payload.assets.find((row) => row.address?.toLowerCase() === "0xc21b08c16458202593d4d9b26b9984ee67b38bbd")!;
+    expect(prime).toMatchObject({ coinId: "pyusd-paypal", depType: "collateral", risk: "high" });
+    expect(prime?.pct).toBeCloseTo(Number(value.totalBalanceValue) / Number(payload.totalAssets) * 100, 10);
+  });
+
+  it.each([
+    { chainId: 1, address: "0x0000000000000000000000000000000000000001" },
+    { chainId: 8453, address: "0xC21b08C16458202593D4D9B26b9984Ee67b38BbD" },
+    {},
+  ])("does not infer PYUSD from a PRIME label with unverified identity %j", (identity) => {
+    const result = adaptReservoirReserves({
+      assets: [{ label: "Morpho - Sentora PRIME", totalBalanceValue: "1", ...identity }],
+      liabilities: [], totalAssets: "1", totalLiabilities: "1", equity: "0",
+    });
+    expect(result.slices).toEqual([expect.objectContaining({ sourceKey: "reservoir:prime-unverified", pct: 100, risk: "high" })]);
+    expect(result.slices[0].coinId).toBeUndefined();
+    expect(result.slices[0].depType).toBeUndefined();
+  });
   it("declares the timestamp-less balance-sheet API as unverified freshness", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation.allowedFreshnessModes).toContain("unverified");
   });
@@ -120,7 +147,7 @@ describe("adaptReservoirReserves", () => {
     });
 
     expect(slices).toEqual([
-      { sourceKey: "reservoir:prime", name: "Hastra / Sentora PRIME credit allocations", pct: 75, risk: "high" },
+      expect.objectContaining({ sourceKey: "reservoir:prime-unverified", pct: 75, risk: "high" }),
       {
         sourceKey: "reservoir:usdat",
         name: "Pendle PT USDat tokenized-treasury principal token",

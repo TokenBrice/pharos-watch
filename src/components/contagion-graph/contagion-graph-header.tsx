@@ -10,7 +10,7 @@ interface ContagionGraphHeaderProps {
 }
 
 function countVisibleHubs(graph: ContagionGraphModel): number {
-  return graph.nodes.filter((node) => (graph.supernodeState.tierById.get(node.id) ?? 0) > 0).length;
+  return graph.nodes.filter((node) => graph.visibleNodeIds.has(node.id) && (graph.supernodeState.tierById.get(node.id) ?? 0) > 0).length;
 }
 
 export function ContagionGraphHeader({ graph }: ContagionGraphHeaderProps) {
@@ -32,10 +32,10 @@ export function ContagionGraphHeader({ graph }: ContagionGraphHeaderProps) {
             <button
               type="button"
               onClick={graph.unpinAll}
-              aria-label={`Unpin all ${graph.pinnedNodeIds.size} pinned nodes`}
+              aria-label={`Release all ${graph.pinnedNodeIds.size} pinned positions`}
               className="pharos-focus-ring pharos-control-pill h-11 gap-1.5 px-3 md:h-9"
             >
-              <span>Pinned · {graph.pinnedNodeIds.size}</span>
+              <span>Pinned position · {graph.pinnedNodeIds.size}</span>
               <span aria-hidden="true">×</span>
             </button>
           )}

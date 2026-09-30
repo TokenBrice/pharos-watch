@@ -115,8 +115,8 @@ const SAFETY_SCORES_NAV_ITEM: NavItem = {
   href: "/safety-scores/",
   label: "Safety Scores",
   icon: ShieldCheck,
-  description: "Safety grades and contagion scenarios",
-  keywords: "safety score grade rating risk report card bluechip contagion",
+  description: "Safety grades and upstream risk",
+  keywords: "safety score grade rating risk report card bluechip",
 };
 
 const YIELD_NAV_ITEM: NavItem = {
@@ -242,7 +242,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer power to freeze your balance", keywords: "freeze blacklist seize censorship issuer control frozen" },
       { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA and GENIUS status, coin by coin", keywords: "compliance mica genius regulation regulated license authorized" },
-      { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral graph of upstream risk", keywords: "dependency map contagion collateral graph exposure" },
+      { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral and wrapper dependency graph", keywords: "dependency map contagion collateral wrapper graph exposure" },
       { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and their lessons", keywords: "cemetery dead failed collapsed defunct graveyard" },
     ],
   },

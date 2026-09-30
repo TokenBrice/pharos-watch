@@ -357,10 +357,15 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdo-openeden": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     reviewedAt: "2026-08-14",
     costModel: fixedFee(10, "OpenEden docs list a 10 bps redemption fee"),
-    docs: [sourceRefRouteCapacityFees("OpenEden Transparency", "https://openeden.com/usdo/transparency")],
+    docs: [
+      sourceRefRouteCapacityFees("OpenEden Transparency", "https://openeden.com/usdo/transparency"),
+      sourceRef("USDO redemption guide (reviewed 2026-09-30)", "https://docs.openeden.com/usdo/guides/usdo-redemption-via-etherscan", ["route"]),
+    ],
     notes: [
+      "Payout identity reviewed 2026-09-30: OpenEden's redemption guide specifies USDC for both instant and manual redemptions; Treasury backing is not the holder payout.",
       "Live reserve-sync capacity telemetry remains suspended: a 2026-08-13 re-enable probe confirmed prod-gw.openeden.com serves ordinary clients but returns HTTP 500 to all Cloudflare Worker fetch strategies (first production cron, 2026-08-14). Falls back to documented 1:1 USDC redemption until the issuer unblocks Worker egress",
     ],
   },
@@ -434,34 +439,6 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRefFull("TrueUSD mint and redeem", "https://www.tusd.io/"),
     ],
   },
-  "thusd-theo": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-09-29"),
-    executionModel: "deterministic-onchain",
-    costModel: documentedVariableFee(
-      "1:1 redemption in USDC or USDT through the whitelisted ThUSDMinter using backend-signed EIP-712 orders with per-block caps; the redemption fee is hard-capped on-chain but the rate is not published",
-    ),
-    docs: [
-      sourceRef("Theo thUSD mint and redeem documentation", "https://docs.theo.xyz/products/thusd/mint-and-redeem.md", [
-        "route",
-        "capacity",
-        "access",
-        "settlement",
-        "fees",
-      ]),
-      sourceRef(
-        "Theo contract reference: Mint and Redeem (EIP-712 orders, caps, hard-capped redemption fee)",
-        "https://docs.theo.xyz/developers/contract-reference/mint-and-redeem.md",
-        ["route", "fees"],
-      ),
-      sourceRef("Theo roles and access control (TheoWhitelist gates mint and redeem)", "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md", [
-        "access",
-      ]),
-    ],
-    notes: [
-      "Minting and redemption are limited to KYC-whitelisted entities and settle from the thUSD Cash Wallet's USDC/USDT balances, so the route is an institutional primary-market exit; ordinary holders exit through Uniswap or Curve liquidity",
-    ],
-  },
   "eurs-stasis": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -530,12 +507,14 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "pusd-plume": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     costModel: fixedFee(0, "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation"),
     docs: [
       sourceRefRouteCapacityFees("Plume pUSD docs", "https://docs.plume.org/plume/tokens/plume-usd"),
       sourceRef("Plume pUSD page", "https://plume.org/pusd", ["route"]),
     ],
     notes: [
+      "Payout identity reviewed 2026-09-30: Plume's pUSD docs specify native USDC redemption and no fiat conversion within Plume.",
       "Route is modeled as the documented 1:1 issuer redemption rail into USDC; the single-asset reserve adapter remains reserve-detail telemetry only and is no longer treated as live redeemable-capacity evidence",
     ],
   },

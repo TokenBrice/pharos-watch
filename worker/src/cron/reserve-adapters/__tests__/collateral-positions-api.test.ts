@@ -179,8 +179,8 @@ describe("adaptCollateralPositions", () => {
     );
 
     expect(result.slices).toEqual([
-      { sourceKey: "collateral-positions-api:paxg", name: "PAXG (Paxos Gold)", pct: 60, risk: "medium", coinId: "paxg-paxos" },
-      { sourceKey: "collateral-positions-api:xaut", name: "XAUt (Tether Gold)", pct: 40, risk: "medium", coinId: "xaut-tether" },
+      { sourceKey: "collateral-positions-api:paxg", name: "PAXG (Paxos Gold)", pct: 60, risk: "medium", coinId: "paxg-paxos", depType: "collateral" },
+      { sourceKey: "collateral-positions-api:xaut", name: "XAUt (Tether Gold)", pct: 40, risk: "medium", coinId: "xaut-tether", depType: "collateral" },
     ]);
   });
 
@@ -203,7 +203,7 @@ describe("adaptCollateralPositions", () => {
 
     expect(result.warnings).toBeUndefined();
     expect(result.slices).toEqual([
-      { sourceKey: "collateral-positions-api:chfau", name: "CHFAU (AllUnity CHF)", pct: 100, risk: "low", coinId: "chfau-allunity" },
+      { sourceKey: "collateral-positions-api:chfau", name: "CHFAU (AllUnity CHF)", pct: 100, risk: "low", coinId: "chfau-allunity", depType: "collateral" },
     ]);
   });
 
@@ -361,8 +361,8 @@ describe("adaptCollateralPositions", () => {
       activePositionCount: 2,
     });
     expect(result.slices).toEqual([
-      { sourceKey: "collateral-positions-api:usdc", name: "USDC (USD Coin)", pct: 50, risk: "low", coinId: "usdc-circle" },
-      { sourceKey: "collateral-positions-api:dai", name: "DAI (Dai Stablecoin)", pct: 50, risk: "low", coinId: "dai-makerdao" },
+      { sourceKey: "collateral-positions-api:usdc", name: "USDC (USD Coin)", pct: 50, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "collateral-positions-api:dai", name: "DAI (Dai Stablecoin)", pct: 50, risk: "low", coinId: "dai-makerdao", depType: "collateral" },
     ]);
   });
 
@@ -396,7 +396,7 @@ describe("adaptCollateralPositions", () => {
       activePositionCount: 1,
     });
     expect(result.slices).toEqual([
-      { sourceKey: "collateral-positions-api:usdc", name: "USDC (USD Coin)", pct: 100, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "collateral-positions-api:usdc", name: "USDC (USD Coin)", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
     ]);
   });
 });

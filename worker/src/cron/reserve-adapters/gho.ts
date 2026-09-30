@@ -531,7 +531,7 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
     : 0;
 
   return {
-    slices: slicesFromValues(values),
+    slices: slicesFromValues(values, 12),
     ...(data.totalSupply != null && issuedRaw > data.totalSupply
       ? { warnings: [reserveDegradedWarning(
           "facilitator-issuance-exceeds-supply",

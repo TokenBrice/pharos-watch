@@ -2265,6 +2265,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // supply/redemption reads are latest-state, so no source timestamp exists.
     validation: LATEST_STATE_VALIDATION,
   },
+  "theo-thusd-redemption": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    sourceOriginClass: "reviewed-curation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: LATEST_STATE_VALIDATION,
+  },
   "usdai-hub": declareAdapter(usdaiHubParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     sourceOriginClass: "onchain-observation",
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
@@ -2663,9 +2675,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // make the adapter's output coin-specific, so results can no longer be
     // shared across coins within a run.
     sharedSourceMode: "none",
-    // v2: a dashboard payload without per-stablecoin `cdp_backings` totals
-    // degrades the snapshot instead of silently skipping the coherence gate.
-    configValidation: CONFIG_COLLATERAL_V1_V2,
+    // v3: keyed collateral identities preserve native/bridge contributions;
+    // dashboard-vs-CDP coherence and collateral-mix semantics are unchanged.
+    configValidation: configPolicy(["collateral-mix"], [3]),
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: DASHBOARD_VALIDATION,
   },
@@ -2729,7 +2741,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V2,
+    configValidation: configPolicy(["collateral-mix"], [3]),
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: DASHBOARD_VALIDATION,
   },
@@ -2764,7 +2776,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // and wsrUSD exit through the SavingModule), while the shared-source cache
     // key deliberately omits the coin id.
     sharedSourceMode: "none",
-    configValidation: CONFIG_PROTOCOL_V1,
+    configValidation: configPolicy(["protocol-reserve"], [2]),
     // Capacity comes from a same-run read of the terminal USDC PSM balance, not
     // from the balance-sheet payload; the adapter withholds the redemption
     // block entirely when that read fails. The fee is the SavingModule's
@@ -3155,7 +3167,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: configPolicy(["collateral-mix"], [2]),
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       // Weekly Tuesday reserve snapshots (2026-08-25, 2026-09-01) with grace

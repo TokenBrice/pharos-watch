@@ -156,6 +156,9 @@ export interface AuthoritativeReserveSnapshot {
 export interface LiveReserveSnapshotProvenance {
   source: string;
   fetchedAt: number;
+  balanceSheetScope?: "shared-sky-maker";
+  sharedBookAssetIds?: string[];
+  sharedBookMeasuredHoldings?: Record<string, number>;
 }
 
 export interface LiveReserveScoringMap extends Map<string, ReserveSlice[]> {

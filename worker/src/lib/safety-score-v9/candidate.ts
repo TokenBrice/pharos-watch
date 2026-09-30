@@ -1,4 +1,7 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { V9ExtensionRegistryMeta } from "./extension";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import {
   evaluateValidatedV9FactSet,
@@ -13,6 +16,7 @@ import {
 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type {
   CompiledV9FactSetV3,
   V9BridgeJoinDiagnosticsV1,
@@ -467,6 +471,103 @@ function exitPillarFreshnessFromDexInput(
   return fixedInput.clockSec - updatedAt <= dexMaxAgeSec ? "current" : "stale";
 }
 
+const SHARED_BOOK_ID_BY_SCOPE: Readonly<Record<string, string>> = {
+  "shared-sky-maker": "sky-maker",
+};
+
+/** Capture disclosure before releasing the compiled fact graph. No scoring inputs change. */
+export function publicDependencyMetadata(
+  asset: CompiledV9FactSetV3["assets"][number],
+  factSet: CompiledV9FactSetV3,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  meta: V9ExtensionRegistryMeta | undefined,
+) {
+  const live = fixedInput.liveReserveMap[asset.assetId];
+  const slices = live ?? meta?.reserves ?? [];
+  const reviewedSliceOf = (slice: (typeof slices)[number]) => meta?.reserves?.find((row) =>
+    slice.sourceKey ? row.sourceKey === slice.sourceKey : row.name.trim().toLowerCase() === slice.name.trim().toLowerCase(),
+  );
+  const source = asset.dependencies.dependencyFromLive ? factSet.sourceFingerprints.liveReserves : factSet.sourceFingerprints.researchOverlays;
+  const evidence = asset.evidence.filter((row) => asset.dependencies.status.evidenceRefIds.includes(row.evidenceId));
+  const evidenceAsOf = evidence.length === 0 ? null : new Date(Math.max(...evidence.map((row) => row.observedAtSec)) * 1000).toISOString();
+  const sourceAsOf = asset.dependencies.dependencyFromLive
+    ? new Date((fixedInput.liveReserveProvenanceMap[asset.assetId]?.fetchedAt ?? source.observedAtSec) * 1000).toISOString()
+    : meta?.dependencyReview?.reviewedAt ?? meta?.reserveReview?.reviewedAt ?? null;
+  const dependencyProvenance = new Map(asset.dependencies.edges.map((edge) => {
+    const matchingSlices = slices.filter((slice) => (slice.coinId ?? reviewedSliceOf(slice)?.coinId) === edge.upstreamAssetId);
+    const contributingSlices = matchingSlices.length > 0 ? matchingSlices : meta?.reserves?.filter((slice) => slice.coinId === edge.upstreamAssetId) ?? [];
+    const annotations = contributingSlices.map((slice) => slice.intermediary ?? reviewedSliceOf(slice)?.intermediary ?? null);
+    const unverified = annotations.find((annotation) => annotation?.verified === false);
+    const first = annotations[0] ?? null;
+    const intermediary = unverified ?? (annotations.length === 0
+      ? edge.intermediary ?? null
+      : annotations.every((annotation) => stableJsonStringifyV1(annotation) === stableJsonStringifyV1(first)) ? first : null);
+    return [edge.upstreamAssetId, {
+      source: edge.dependencyType === "wrapper" && (meta?.variantOf === edge.upstreamAssetId || asset.dependencies.source === "variant") ? "variant" as const : asset.dependencies.baseSource,
+      evidenceAsOf,
+      intermediary,
+    }] as const;
+  }));
+  const dependencyCoverage: NonNullable<SafetyScoreV9CurrentCard["dependencyCoverage"]> = [];
+  const coveredIdentities = new Set<string>();
+  const addCoverage = (label: string, id: string | undefined, share: number | null, reason: string, verified: boolean, sourceKey?: string) => {
+    if (reason !== "coinId-without-depType" && id && asset.dependencies.edges.some((edge) => edge.upstreamAssetId === id)) return;
+    const key = `${sourceKey ?? `${id ?? ""}\u0000${label}`}\u0000${reason}`;
+    if (coveredIdentities.has(key)) return;
+    coveredIdentities.add(key);
+    dependencyCoverage.push({ upstreamLabel: label, upstreamAssetId: verified ? id ?? null : null, share, reason, sourceAsOf, identityVerified: verified });
+  };
+  for (const rejection of asset.dependencies.rejectionReasons ?? []) {
+    const slice = slices[rejection.sliceIndex];
+    const reviewed = slice && reviewedSliceOf(slice);
+    const id = rejection.upstreamAssetId ?? slice?.coinId ?? reviewed?.coinId;
+    if (id === undefined && slice?.assetClass !== "stablecoin" && !slice?.intermediary) continue;
+    addCoverage(slice?.name ?? id ?? "Unresolved reserve relationship", id, rejection.share ?? (slice ? slice.pct / 100 : null), rejection.reason, rejection.reason !== "reviewed-dependency-identity-conflict" && id !== undefined && (slice?.intermediary ?? reviewed?.intermediary)?.verified !== false, slice?.sourceKey);
+  }
+  for (const slice of slices) {
+    if (!slice.coinId) continue;
+    const outside = asset.dependencies.diagnostics.issueCodes.find((code) => code === `outside-active-set:${slice.coinId}`);
+    const envelope = asset.gaps.find((gap) => gap.reasonCode === "missing-reserve-composition" || gap.reasonCode === "partial-reserve-review");
+    if (outside || envelope) addCoverage(slice.name, slice.coinId, slice.pct / 100, outside ?? envelope!.reasonCode, slice.intermediary?.verified !== false, slice.sourceKey);
+  }
+  for (const code of asset.dependencies.diagnostics.issueCodes) {
+    const idCode = /^(?:outside-active-set|invalid-serial-weight|invalid-serial-type|invalid-basket-type|invalid-role-type):(.+)$/.exec(code);
+    if (!idCode) continue;
+    const id = idCode[1]!;
+    if (!dependencyCoverage.some((row) => row.upstreamAssetId === id && row.reason === code)) {
+      const relationship = meta?.dependencies?.find((dependency) => dependency.id === id);
+      addCoverage(id, id, relationship?.weight ?? null, code, true);
+    }
+  }
+  for (const relationship of meta?.dependencies ?? []) {
+    const code = asset.dependencies.diagnostics.issueCodes.find((issue) =>
+      issue === "collateral-weight-exceeds-one" || (issue === "self-dependency" && relationship.id === asset.assetId),
+    );
+    if (code && !dependencyCoverage.some((row) => row.upstreamAssetId === relationship.id && row.reason === code)) {
+      addCoverage(relationship.id, relationship.id, relationship.weight, code, true);
+    }
+  }
+  dependencyCoverage.sort((left, right) => compareText(`${left.upstreamLabel}:${left.reason}`, `${right.upstreamLabel}:${right.reason}`));
+  const supplyKnown = asset.supply.status.observationState === "known" && asset.supply.circulatingUsd !== null;
+  const supplySource = Object.values(factSet.sourceFingerprints).find((identity) => identity.generationId === asset.supply.sourceGenerationId);
+  const provenance = fixedInput.liveReserveProvenanceMap[asset.assetId];
+  return {
+    supply: {
+      circulatingUsdAtEvaluation: supplyKnown ? asset.supply.circulatingUsd : null,
+      asOfSec: supplyKnown ? supplySource?.observedAtSec ?? null : null,
+      generationId: supplyKnown ? asset.supply.sourceGenerationId : null,
+    },
+    sharedBookId: provenance?.balanceSheetScope && provenance.sharedBookAssetIds?.includes(asset.assetId)
+      ? SHARED_BOOK_ID_BY_SCOPE[provenance.balanceSheetScope] ?? null
+      : null,
+    dependencyProvenance,
+    dependencyTypes: new Map(asset.dependencies.edges
+      .filter((edge) => edge.economicRole === "serial-claim" || edge.economicRole === "basket-exposure")
+      .map((edge) => [`${edge.economicRole === "serial-claim" ? "serial" : "basket"}:${edge.upstreamAssetId}`, edge.dependencyType] as const)),
+    dependencyCoverage,
+  };
+}
+
 /**
  * Compile, evaluate, and project one exact V9 publication without storage,
  * network access, wall-clock access, or mutation of another publication.
@@ -598,6 +699,10 @@ function buildSafetyScoreV9CandidatePipeline(
       .filter((asset) => asset.reserveExposures.some((exposure) => exposure.provenance === "live"))
       .map((asset) => asset.assetId),
   );
+  const dependencyMetadataByAssetId = new Map(compiledFacts.assets.map((asset) => [
+    asset.assetId,
+    publicDependencyMetadata(asset, compiledFacts!, fixedInput, (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
+  ]));
 
   // The published response does not expose replay intermediates. Release each
   // large graph as soon as its compact projection has been captured; replay and
@@ -630,9 +735,11 @@ function buildSafetyScoreV9CandidatePipeline(
     policyVersion,
     publicationGenerationId,
     publishedAtSec: input.publishedAtSec,
+    commonModeGroups: evaluatedSet.dependencyPlan.commonModeGroups,
     results: evaluatedSet.assets.map((asset) => ({
       trace: asset.trace,
       backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),
+      ...dependencyMetadataByAssetId.get(asset.assetId),
       scoreInput: asset.scoreInput,
       access: asset.access,
       dependencyInputs: asset.dependencyInputs,

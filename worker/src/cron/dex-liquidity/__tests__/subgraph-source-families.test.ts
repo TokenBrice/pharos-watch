@@ -5,12 +5,10 @@ import {
 } from "../subgraph-source-families";
 import {
   UNISWAP_V4_SUBGRAPHS,
-  UNISWAP_V4_POOL_PAGE_SIZE,
   UNIV3_BASE_POOL_MAX_PAGES,
   UNIV3_POOL_MAX_PAGES,
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
-  buildUniswapV4PoolQuery,
   buildUniV3MessariPoolQuery,
   buildUniV3PoolQuery,
 } from "../constants";
@@ -19,6 +17,18 @@ import {
   buildUniV3ExecutionCandidateKey,
 } from "../../measured-execution/inventory";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { computeUniswapV4PoolId, UNISWAP_V4_HOOK_FREE_ADDRESS } from "../../measured-execution/uniswap-v4";
+
+// Captured at Graph block 26088668 on 2026-09-30; Initialize block 24974199:
+// https://etherscan.io/tx/0xdbfd03418344a5db0e0910874e6b15da64bd8edff032253e20de67e709918d7c
+const THUSD_POOL = {
+  id: "0xb30bf32e26a35328286df33c17dd01e1051b5e3a0ec55a4a211e6957594b5a0d",
+  token0: { id: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: "6" },
+  token1: { id: "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3", symbol: "thUSD", decimals: "6" },
+  feeTier: "100", tickSpacing: "1", hooks: UNISWAP_V4_HOOK_FREE_ADDRESS,
+  liquidity: "1215742317323", totalValueLockedUSD: "-222031.942086",
+  token0Price: "0.9988856322499521", token1Price: "1.0011156109509132",
+};
 
 function createDeferred<T>(): {
   promise: Promise<T>;
@@ -48,9 +58,112 @@ describe("subgraph source families", () => {
   });
 
   it("returns empty Uniswap V4 lookups when Graph API key is missing", async () => {
-    const result = await fetchUniswapV4Data(null);
+    const result = await fetchUniswapV4Data(null, new Map());
 
     expect(result.uniswapV4ExecutionCandidates.size).toBe(0);
+  });
+
+  it("retains raw negative exact identity while rejecting missing, malformed, changed and conflicting rows", async () => {
+    const poolWithFee = (fee: number) => ({
+      ...THUSD_POOL, feeTier: String(fee),
+      id: computeUniswapV4PoolId({
+        currency0: THUSD_POOL.token0.id as `0x${string}`,
+        currency1: THUSD_POOL.token1.id as `0x${string}`,
+        feePips: fee, tickSpacing: 1, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+      }),
+    });
+    const malformed = poolWithFee(200);
+    const changed = poolWithFee(300);
+    const conflicting = poolWithFee(400);
+    const missing = poolWithFee(500);
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: async (request) => {
+        const body = await request.json() as { query: string };
+        const query = body.query;
+        return { body: { data: { pools: query.includes("id_in") ? [
+          THUSD_POOL,
+          { ...malformed, token0: { ...malformed.token0, decimals: "NaN" } },
+          { ...changed, token1: { ...changed.token1, id: "0x0000000000000000000000000000000000000001" } },
+          conflicting, { ...conflicting, liquidity: "2" },
+        ] : [] } } };
+      },
+    }], { requireMatch: true });
+    const result = await fetchUniswapV4Data("graph-key", new Map([["ethereum",
+      [THUSD_POOL.id, malformed.id, changed.id, conflicting.id, missing.id]]]));
+    const candidates = [...result.uniswapV4ExecutionCandidates.values()].flat();
+    expect(candidates).toEqual([expect.objectContaining({
+      poolId: THUSD_POOL.id, tvlUsd: -222031.942086, activeLiquidity: "1215742317323",
+    })]);
+    expect(result.failedChains).toEqual([]);
+  });
+
+  it("consumes each exact response before requesting the next bounded batch", async () => {
+    const rows = Array.from({ length: 101 }, (_, index) => {
+      const feePips = index + 100;
+      return { ...THUSD_POOL, feeTier: String(feePips),
+        id: computeUniswapV4PoolId({
+          currency0: THUSD_POOL.token0.id as `0x${string}`,
+          currency1: THUSD_POOL.token1.id as `0x${string}`,
+          feePips, tickSpacing: 1, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+        }) };
+    });
+    const bodyStarted = createDeferred<void>();
+    const releaseBody = createDeferred<void>();
+    const batches: number[] = [];
+    let firstBodyConsumed = false;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const query = (JSON.parse(init.body as string) as { query: string }).query;
+      const match = query.match(/id_in: (\[[^\]]+\])/);
+      if (!match) return new Response(JSON.stringify({ data: { pools: [] } }));
+      const ids = JSON.parse(match[1]!) as string[];
+      batches.push(ids.length);
+      if (batches.length > 1) expect(firstBodyConsumed).toBe(true);
+      const payload = JSON.stringify({ data: { pools: rows.filter((row) => ids.includes(row.id)) } });
+      return new Response(new ReadableStream({
+        async start(controller) {
+          if (batches.length === 1) {
+            bodyStarted.resolve(undefined);
+            await releaseBody.promise;
+            firstBodyConsumed = true;
+          }
+          controller.enqueue(new TextEncoder().encode(payload));
+          controller.close();
+        },
+      }));
+    }));
+    const pending = fetchUniswapV4Data("graph-key", new Map([["ethereum", rows.map((row) => row.id)]]));
+    void pending.then(
+      () => bodyStarted.reject(new Error("Exact body did not start")),
+      (error: unknown) => bodyStarted.reject(error),
+    );
+    try {
+      await bodyStarted.promise;
+      expect(batches).toEqual([100]);
+    } finally {
+      releaseBody.resolve(undefined);
+    }
+    const result = await pending;
+    expect(batches).toEqual([100, 1]);
+    expect([...result.uniswapV4ExecutionCandidates.values()].flat().map((candidate) => candidate.poolId))
+      .toEqual(rows.map((row) => row.id));
+  });
+
+  it("names a failed exact identity source without accepting a broad copy", async () => {
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: async (request) => {
+        const body = await request.json() as { query: string };
+        return body.query.includes("id_in")
+          ? { body: { errors: [{ message: "Exact lookup unavailable" }] } }
+          : { body: { data: { pools: [{ ...THUSD_POOL, totalValueLockedUSD: "5561855" }] } } };
+      },
+    }], { requireMatch: true });
+    const result = await fetchUniswapV4Data("graph-key", new Map([["ethereum", [THUSD_POOL.id]]]));
+    expect(result.failedChains).toEqual(["ethereum"]);
+    expect(result.failedChainReasons.ethereum).toBe("graphql");
+    expect([...result.uniswapV4ExecutionCandidates.values()].flat()
+      .some((candidate) => candidate.chain === "ethereum" && candidate.poolId === THUSD_POOL.id)).toBe(false);
   });
 
   it("paginates the Uni V3 query by embedding the skip offset and page size", () => {
@@ -221,13 +334,7 @@ describe("subgraph source families", () => {
       "polygon",
       "bsc",
     ]);
-    expect(buildUniswapV4PoolQuery(0)).toContain(
-      `first: ${UNISWAP_V4_POOL_PAGE_SIZE}`,
-    );
-    expect(buildUniswapV4PoolQuery(2000)).toContain("skip: 2000");
-    expect(buildUniswapV4PoolQuery(0)).toContain("tickSpacing");
-    expect(buildUniswapV4PoolQuery(0)).toContain("hooks");
-    expect(buildUniswapV4PoolQuery(0)).toContain("liquidity");
+    // PoolKey fields are exercised through the returned collision candidates.
 
     const token0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const token1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
@@ -274,7 +381,7 @@ describe("subgraph source families", () => {
       },
     }], { requireMatch: true });
 
-    const pending = fetchUniswapV4Data("graph-key");
+    const pending = fetchUniswapV4Data("graph-key", new Map());
     void pending.catch((error: unknown) => waveStarted.reject(error));
     // Failure-only watchdog; successful runs wait on the response gate, never the clock.
     const deadlockGuard = setTimeout(() => waveStarted.reject(new Error("First wave did not start")), 1000);

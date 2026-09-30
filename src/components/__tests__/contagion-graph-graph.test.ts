@@ -35,36 +35,13 @@ function makeResolvedLinks(): ResolvedLink[] {
 }
 
 describe("contagion graph helpers", () => {
-  it("resolves graph links with stable indices and hub tiers", () => {
-    expect(makeResolvedLinks()).toEqual([
-      {
-        index: 0,
-        srcId: "usdt",
-        tgtId: "usdc",
-        weight: 0.8,
-        type: "collateral",
-        srcTier: 1,
-        tgtTier: 2,
-      },
-      {
-        index: 1,
-        srcId: "usde",
-        tgtId: "usdt",
-        weight: 0.6,
-        type: "collateral",
-        srcTier: 0,
-        tgtTier: 1,
-      },
-      {
-        index: 2,
-        srcId: "susde",
-        tgtId: "usde",
-        weight: 1,
-        type: "wrapper",
-        srcTier: 0,
-        tgtTier: 0,
-      },
-    ]);
+  it("retains score availability independently of a known share", () => {
+    const links = resolveGraphLinks([
+      { source: "usdt", target: "usdc", type: "collateral", weight: 0.25, scoreKnown: false },
+      { source: "susde", target: "usde", type: "wrapper", weight: 1, scoreKnown: true },
+    ], new Map());
+    expect(links[0]).toMatchObject({ weight: 0.25, scoreKnown: false });
+    expect(links[1]).toMatchObject({ weight: 1, scoreKnown: true });
   });
 
   it("computes visible links and nodes for hub focus", () => {

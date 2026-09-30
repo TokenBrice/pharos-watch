@@ -12,6 +12,7 @@ import {
   runAdapter,
   type AdapterNetworkSpec,
 } from "./reserve-adapter.test-support";
+import captureDerived from "./fixtures/sky-makercore-capture-derived.json";
 
 const SKY_URL = "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt";
 const SKY_NOW = Date.parse("2026-04-05T17:34:24Z") / 1000;
@@ -29,6 +30,8 @@ function encodeAddressWord(address: string): string {
 interface SkyNetworkOptions {
   capacity?: boolean;
   balance?: bigint;
+  gem?: string;
+  pocket?: string;
   tin?: bigint | null;
   tout?: bigint | null;
 }
@@ -38,8 +41,8 @@ function skyNetwork(groups: SkyGroupResult[], options: SkyNetworkOptions = {}): 
   return {
     json: { [SKY_URL]: { count: groups.length, results: groups } },
     rpc: {
-      [`ethereum:${GEM_SELECTOR}`]: capacityAvailable ? encodeAddressWord(SKY_LITE_PSM_USDC_ADDRESS) : null,
-      [`ethereum:${POCKET_SELECTOR}`]: capacityAvailable ? encodeAddressWord(SKY_LITE_PSM_USDC_POCKET) : null,
+      [`ethereum:${GEM_SELECTOR}`]: capacityAvailable ? encodeAddressWord(options.gem ?? SKY_LITE_PSM_USDC_ADDRESS) : null,
+      [`ethereum:${POCKET_SELECTOR}`]: capacityAvailable ? encodeAddressWord(options.pocket ?? SKY_LITE_PSM_USDC_POCKET) : null,
       [`ethereum:${TIN_SELECTOR}`]: capacityAvailable ? (options.tin === undefined ? 0n : options.tin) : null,
       [`ethereum:${TOUT_SELECTOR}`]: capacityAvailable ? (options.tout === undefined ? 0n : options.tout) : null,
       "ethereum:0x70a08231": capacityAvailable ? (options.balance ?? 123_456_000000n) : null,
@@ -118,23 +121,12 @@ describe("adaptSkyModules", () => {
     await expect(runSky(groups)).rejects.toThrow(/stablecoins.collateral/);
   });
 
-  it("produces 7 slices from all known modules", () => {
-    const slices = adaptSkyModules(SAMPLE_GROUPS);
-    expect(slices).toHaveLength(7);
-    const total = slices.reduce((sum, s) => sum + s.pct, 0);
-    expect(total).toBe(100);
-  });
-
   it("assigns correct risk levels per module", () => {
     const slices = adaptSkyModules(SAMPLE_GROUPS);
     const byName = Object.fromEntries(slices.map((s) => [s.name, s]));
 
-    expect(byName["Stablecoins (PSM)"].risk).toBe("very-low");
-    expect(byName["Stablecoins (PSM)"].sourceKey).toBe("sky-makercore:module:stablecoins");
-    // Sky PSM aggregates multiple stables (USDC/USDT/USDP) without per-stable
-    // breakdown; the slice is intentionally unattributed.
-    expect(byName["Stablecoins (PSM)"].coinId).toBeUndefined();
-    expect(byName["Stablecoins (PSM)"].depType).toBeUndefined();
+    expect(byName["Unattributed stablecoins (PSM)"].risk).toBe("very-low");
+    expect(byName["Unattributed stablecoins (PSM)"].coinId).toBeUndefined();
 
     expect(byName["Spark (lending)"].risk).toBe("low");
     expect(byName["Spark (lending)"].sourceKey).toBe("sky-makercore:module:spark");
@@ -148,13 +140,6 @@ describe("adaptSkyModules", () => {
     expect(byName["Staking Engine"].sourceKey).toBe("sky-makercore:module:staked");
     expect(byName["Legacy RWA"].risk).toBe("low");
     expect(byName["Legacy RWA"].sourceKey).toBe("sky-makercore:module:legacy-rwa");
-  });
-
-  it("stablecoins slice is the largest by percentage", () => {
-    const slices = adaptSkyModules(SAMPLE_GROUPS);
-    const stableSlice = slices.find((s) => s.name === "Stablecoins (PSM)")!;
-    const maxPct = Math.max(...slices.map((s) => s.pct));
-    expect(stableSlice.pct).toBe(maxPct);
   });
 
   it("omits modules with zero debt", () => {
@@ -303,6 +288,65 @@ describe("resolveSkyTimestampSummary", () => {
 });
 
 describe("fetchSkyMakercoreReserves PSM attribution", () => {
+  it.each(["usds-sky", "dai-makerdao"])("reconciles the capture-derived reconstruction for %s", async (coinId) => {
+    const measuredUsd = Number(captureDerived.measuredUsdcBalanceRaw) / 1e6;
+    const groupDebt = Number(captureDerived.groups[0].debt);
+    const { result } = await runAdapter("sky-makercore", coinId, {
+      network: installAdapterNetwork(skyNetwork(captureDerived.groups, {
+        balance: BigInt(captureDerived.measuredUsdcBalanceRaw),
+      })),
+      nowSec: Date.parse(captureDerived.groups[0].datetime) / 1000 + 60,
+    });
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct).toBeCloseTo(39.4, 10);
+    expect(result.slices.some((slice) => typeof slice.sourceKey === "string"
+      && slice.sourceKey.endsWith("stablecoins-residual"))).toBe(false);
+    expect(result.metadata).toMatchObject({
+      balanceSheetScope: "shared-sky-maker",
+      sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
+      sharedBookMeasuredHoldings: { "usdc-circle": measuredUsd },
+      reconciliationExcessUsd: measuredUsd - groupDebt,
+    });
+    expect(result.metadata?.reconciliationExcessShare).toBeCloseTo((measuredUsd - groupDebt) / captureDerived.totalGroupDebtUsd, 12);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+    expect(result.slices.some((slice) => ["usdt-tether", "usdp-paxos"].includes(slice.coinId ?? ""))).toBe(false);
+  });
+
+  it.each([
+    [40_249_999n, true],
+    [40_250_000n, true],
+    [40_250_001n, false],
+  ] as const)("applies the absolute 0.25 percentage-point reconciliation boundary (%s)", async (balance, admitted) => {
+    const { result } = await runSky([
+      { group: "stablecoins", group_name: "Stablecoins", debt: "40", collateral: "40", datetime: "2026-04-05T17:33:24" },
+      { group: "spark", group_name: "Spark", debt: "60", collateral: "60", datetime: "2026-04-05T17:33:24" },
+    ], { balance });
+    expect(result.slices.some((slice) => slice.coinId === "usdc-circle")).toBe(admitted);
+    if (admitted) {
+      expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct).toBe(40);
+    } else {
+      expect(result.metadata?.reconciliationIssue).toBe("litepsm-reconciliation-excess");
+      expectWarningEffect(result, "litepsm-reconciliation-excess", "info");
+      expect(result.slices.find((slice) => slice.sourceKey === "sky-makercore:module:stablecoins-residual"))
+        .toMatchObject({ pct: 40, risk: "very-low", assetClass: "stablecoin" });
+    }
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+  });
+
+  it("does not create legacy edges or a USDC edge for a verified zero pocket", async () => {
+    const { result } = await runSky(SAMPLE_GROUPS, { balance: 0n });
+    expect(result.slices.filter((slice) => slice.coinId)).toEqual([]);
+    expect(result.slices.find((slice) => slice.sourceKey === "sky-makercore:module:stablecoins-residual")?.pct)
+      .toBeCloseTo(Number(SAMPLE_GROUPS[0].debt) / SAMPLE_GROUPS.reduce((sum, row) => sum + Number(row.debt), 0) * 100, 10);
+  });
+  it.each(["gem", "pocket"] as const)("withholds attribution when the pinned %s identity differs", async (field) => {
+    const { result } = await runSky(SAMPLE_GROUPS, { [field]: "0x0000000000000000000000000000000000000001" });
+    expect(result.slices.filter((slice) => slice.coinId)).toEqual([]);
+    expect(result.metadata?.sharedBookMeasuredHoldings).toBeUndefined();
+    expect(result.slices.find((slice) => slice.sourceKey === "sky-makercore:module:stablecoins-residual")?.risk)
+      .toBe("very-low");
+  });
+
+
   it.each(["", "invalid"])("withholds verified freshness for 90%% undated debt (%s)", async (datetime) => {
     const { result } = await runSky([
       { group: "stablecoins", group_name: "Stablecoins", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
@@ -334,12 +378,13 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
       expect(result.metadata).toMatchObject({
         balanceSheetScope: "shared-sky-maker",
         sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
+        sharedBookMeasuredHoldings: { "usdc-circle": 123456 },
         totalLiabilitiesUsd: Math.round(SAMPLE_GROUPS.reduce((sum, row) => sum + Number(row.debt), 0)),
       });
     }
   });
 
-  it("PSM slice carries no coinId attribution and metadata surfaces the multi-stable note", async () => {
+  it("attributes only measured canonical USDC and leaves the remainder unlinked", async () => {
     const groups: SkyGroupResult[] = [
       {
         group: "stablecoins",
@@ -357,13 +402,15 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
       },
     ];
     const { result, network } = await runSky(groups);
-    const psmSlice = result.slices.find((s) => s.name === "Stablecoins (PSM)");
-    expect(psmSlice).toBeDefined();
-    expect(psmSlice?.coinId).toBeUndefined();
-    expect(psmSlice?.depType).toBeUndefined();
-
-    const details = result.metadata?.details as { psmComposition?: string };
-    expect(details?.psmComposition).toMatch(/USDC.*USDT.*USDP/);
+    const usdc = result.slices.find((slice) => slice.coinId === "usdc-circle");
+    const residual = result.slices.find((slice) => slice.sourceKey === "sky-makercore:module:stablecoins-residual");
+    expect(usdc).toMatchObject({ depType: "collateral", sourceKey: "sky-makercore:lite-psm:usdc" });
+    expect(usdc?.pct).toBeCloseTo(123456 / 7000000000 * 100, 10);
+    expect(residual?.pct).toBeCloseTo((4000000000 - 123456) / 7000000000 * 100, 10);
+    expect(residual).toMatchObject({ risk: "very-low", assetClass: "stablecoin" });
+    expect(residual?.coinId).toBeUndefined();
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+    expect(result.slices.filter((slice) => slice.coinId && slice.coinId !== "usdc-circle")).toEqual([]);
     expect(result.metadata?.skyStablecoinsModuleCollateralUsd).toBe(4000000000);
     expect(result.metadata?.totalReserveUsd).toBe(7000000000);
     expect(result.metadata?.totalLiabilitiesUsd).toBe(7000000000);
@@ -425,6 +472,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     const { result } = await runSky(groups, { capacity: false });
 
     expect(result.metadata?.redemption).toBeUndefined();
+    expectWarningEffect(result, "litepsm-attribution-unavailable", "info");
     expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
     expect(result.metadata?.skyStablecoinsModuleCollateralUsd).toBe(4000000000);
     expect(result.metadata?.details).toMatchObject({ litePsmCapacity: "unavailable" });

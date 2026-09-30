@@ -1,0 +1,51 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-30T07:28:56.388Z -->",
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "apiVersion": "4.2.2",
+      "slot": 451897337
+    },
+    "value": {
+      "data": {
+        "parsed": {
+          "info": {
+            "extensions": [
+              {
+                "extension": "immutableOwner"
+              },
+              {
+                "extension": "transferHookAccount",
+                "state": {
+                  "transferring": false
+                }
+              },
+              {
+                "extension": "pausableAccount"
+              }
+            ],
+            "isNative": false,
+            "mint": "USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk",
+            "owner": "45YnzauhsBM8CpUz96Djf8UG5vqq2Dua62wuW9H3jaJ5",
+            "state": "initialized",
+            "tokenAmount": {
+              "amount": "1001000000000",
+              "decimals": 6,
+              "uiAmount": 1001000,
+              "uiAmountString": "1001000"
+            }
+          },
+          "type": "account"
+        },
+        "program": "spl-token-2022",
+        "space": 179
+      },
+      "executable": false,
+      "lamports": 1559560,
+      "owner": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "rentEpoch": 18446744073709552000,
+      "space": 179
+    }
+  },
+  "id": 1
+}

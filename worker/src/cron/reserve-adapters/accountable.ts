@@ -13,6 +13,7 @@ import {
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromValues,
+  sourceKeySlug,
 } from "./helpers";
 import { buildBrowserHeaders } from "./request";
 import { toFiniteNumber } from "../../lib/number-utils";
@@ -37,6 +38,7 @@ interface AccountableDashboardResponse {
       exposure_split?: Record<string, unknown>;
       exposure_split_ts?: unknown;
       protocol_split?: Record<string, unknown>;
+      nested_split?: Record<string, unknown>;
       timeline?: AccountableTimelinePoint[];
     };
     /** Root-level category breakdown used by the `asset-breakdown` layout. Each key is a
@@ -69,6 +71,8 @@ interface AccountableParams {
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
 const TOTAL_RESERVES_RELATIVE_TOLERANCE = 0.01;
 const TOTAL_RESERVES_ABSOLUTE_TOLERANCE = 1;
+const NESTED_HOLDINGS_ABSOLUTE_TOLERANCE_USD = 0.01;
+const NESTED_HOLDINGS_RELATIVE_TOLERANCE = 1e-9;
 const EXPOSURE_SPLIT_TIMELINE_MAX_GAP_SECONDS = 24 * 60 * 60;
 /** The dashboard publishes `collateralization` to six decimals, so cent-level rounding of the
  *  reserve/supply inputs moves a derived ratio by <1e-6. This stays far below the ~2e-2 spread
@@ -125,6 +129,42 @@ function extractRecordBucketEntries(
     name,
     value: requireAccountableBucketValue(name, value, bucket),
   }));
+}
+
+/** Split only categories with explicitly reviewed descendant keys. Tori's dashboard
+ * carries the chain totals in assetBreakdown and the constituent values in nested_split. */
+function extractAssetBreakdownEntries(
+  data: NonNullable<AccountableDashboardResponse["data"]>,
+  params: AccountableParams,
+): Array<{ name: string; value: number }> {
+  const entries: Array<{ name: string; value: number }> = [];
+  const walk = (name: string, value: unknown): void => {
+    const reviewedChildren = Object.keys(params.riskMap ?? {}).some((key) => key.startsWith(`${name}/`));
+    if (!reviewedChildren) {
+      entries.push({ name, value: requireAccountableBucketValue(name, value, "asset-breakdown") });
+      return;
+    }
+    const tree = typeof value === "object" && value != null
+      ? value
+      : data.reserves?.nested_split?.[name.slice(name.lastIndexOf("/") + 1)];
+    if (!tree || typeof tree !== "object" || Array.isArray(tree)) {
+      throw new Error(`Accountable nested holdings unavailable for "${name}"`);
+    }
+    const children = Object.entries(tree);
+    const childTotal = children.reduce((sum, [key, child]) =>
+      sum + requireAccountableBucketValue(`${name}/${key}`, child, "asset-breakdown"), 0);
+    const parentTotal = requireAccountableBucketValue(name, value, "asset-breakdown");
+    const tolerance = Math.max(
+      NESTED_HOLDINGS_ABSOLUTE_TOLERANCE_USD,
+      NESTED_HOLDINGS_RELATIVE_TOLERANCE * Math.abs(parentTotal),
+    );
+    if (children.length === 0 || Math.abs(childTotal - parentTotal) > tolerance) {
+      throw new Error(`Accountable nested holdings do not reconcile for "${name}"`);
+    }
+    for (const [key, child] of children) walk(`${name}/${key}`, child);
+  };
+  for (const [name, value] of Object.entries(data.assetBreakdown ?? {})) walk(name, value);
+  return entries;
 }
 
 function extractReservesSplitEntries(value: unknown): Array<{ name: string; value: number }> {
@@ -438,8 +478,9 @@ export function adaptAccountableDashboard(
   const bucket = params.bucket ?? "type";
   const breakdownBucket = layout === "asset-breakdown" ? "asset-breakdown" : bucket;
   const breakdown = layout === "asset-breakdown"
-    ? extractRecordBucketEntries(payload.data.assetBreakdown, "asset-breakdown")
+    ? extractAssetBreakdownEntries(payload.data, params)
     : extractBucketEntries(payload.data.reserves, bucket);
+  const nestedHoldings = layout === "asset-breakdown" && Object.keys(params.riskMap ?? {}).some((key) => key.includes("/"));
   if (breakdown.length === 0) {
     throw new Error(
       layout === "asset-breakdown"
@@ -539,21 +580,22 @@ export function adaptAccountableDashboard(
         ...(coinIdMap[name] ? { coinId: coinIdMap[name] } : {}),
         ...(depTypeMap[name] ? { depType: depTypeMap[name] } : {}),
       })),
-      ...(unknownValue > 0
-        ? [{
-            name: "Unknown / unmapped Accountable buckets",
-            value: unknownValue,
+      ...(nestedHoldings
+        ? unknown.map(({ name, value }) => ({
+            sourceKey: `accountable:asset-breakdown:${sourceKeySlug(name)}`,
+            name,
+            value,
             risk: "high" as const,
-          }]
-        : []),
-    ].map(({ sourceKey, name, value, risk, coinId, depType }) => ({
-      ...(sourceKey ? { sourceKey } : {}),
-      name,
-      value,
-      risk,
-      ...(coinId ? { coinId } : {}),
-      ...(depType ? { depType } : {}),
-    })),
+          }))
+        : unknownValue > 0
+          ? [{
+              name: "Unknown / unmapped Accountable buckets",
+              value: unknownValue,
+              risk: "high" as const,
+            }]
+          : []),
+    ],
+    nestedHoldings ? null : 1,
   );
 
   const sourceTimestamp = exposureSplitSourceTimestamp ?? parseTimestampLikeToUnixSeconds(payload.data.ts);
@@ -568,9 +610,11 @@ export function adaptAccountableDashboard(
       ? {
           warnings: [
             ...(unknownExposurePct > 0
-              ? [buildUnknownExposureWarning({ adapterKey: "accountable", code: "unmapped-bucket",
-              message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
-              unknownExposurePct, })]
+              ? [nestedHoldings
+                ? reserveInfoWarning("unmapped-nested-holding", `Accountable holdings remain unlinked: ${unknown.map((entry) => entry.name).sort().join(", ")}`)
+                : buildUnknownExposureWarning({ adapterKey: "accountable", code: "unmapped-bucket",
+                    message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
+                    unknownExposurePct, })]
               : []),
             ...(signedBucketWarning ? [signedBucketWarning] : []),
             ...(protocolOwnedWarning ? [protocolOwnedWarning] : []),

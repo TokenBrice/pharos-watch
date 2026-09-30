@@ -40,6 +40,23 @@ const BALANCE_SHEET_SAMPLE: FraxBalanceSheetResponse = {
 };
 
 describe("adaptFraxBalanceSheet", () => {
+  it("retains saved positive dust and the source USDS ratio without display rounding", () => {
+    const payload = JSON.parse(readFileSync(join(FIXTURES_DIR, "frax-precision-2026-09-29.json"), "utf8")) as FraxBalanceSheetResponse;
+    const result = adaptFraxBalanceSheet(payload, "frax-frax");
+    for (const symbol of ["USDS", "USDC", "FPI", "AUSD"]) {
+      const usd = payload.assets!.filter((asset) => asset.tokenSymbol === symbol && asset.category?.startsWith("asset:"))
+        .reduce((sum, asset) => sum + asset.totalValueUsd, 0);
+      expect(result.slices.find((slice) => slice.sourceKey === `frax-balance-sheet:${symbol.toLowerCase()}`)?.pct)
+        .toBe(usd / payload.totalAssets! * 100);
+    }
+    const tiny = structuredClone(payload);
+    tiny.assets = tiny.assets!.filter((asset) => asset.tokenSymbol !== "USDC");
+    tiny.assets.push({ tokenSymbol: "USDC", totalValueUsd: 1e-6, category: "asset:owned:usd" });
+    const tinySlice = adaptFraxBalanceSheet(tiny).slices.find((slice) => slice.sourceKey === "frax-balance-sheet:usdc");
+    expect(tinySlice?.pct).toBe(1e-6 / tiny.totalAssets! * 100);
+    expect(tinySlice?.depType).toBe("collateral");
+  });
+
   it("aggregates by tokenSymbol and produces correct slices", () => {
     const result = adaptFraxBalanceSheet(BALANCE_SHEET_SAMPLE);
     expect(result.slices.length).toBe(5);
@@ -204,11 +221,6 @@ describe("adaptFraxBalanceSheet", () => {
     expect(result.slices.find((s) => s.name.includes("frxUSD"))).toBeUndefined();
   });
 
-  it("normalizes slice percentages to sum to 100", () => {
-    const result = adaptFraxBalanceSheet(BALANCE_SHEET_SAMPLE);
-    const sum = result.slices.reduce((a, s) => a + s.pct, 0);
-    expect(sum).toBe(100);
-  });
 
   it("accepts a numeric millisecond asOfTimestamp payload", () => {
     const msPayload: FraxBalanceSheetResponse = {

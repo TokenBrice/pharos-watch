@@ -1,0 +1,416 @@
+{
+  "_capture": "<!-- captured-at: 2026-09-29T00:00:00Z -->",
+  "_source": "https://eth-api.infinifi.xyz/api/protocol/data",
+  "_capturePrecision": "Review date only; exact capture time not recorded.",
+  "code": "OK",
+  "data": {
+    "stats": {
+      "asset": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "totalTVLAsset": "45161432876027",
+        "totalTVLAssetNormalized": 45161432.876027,
+        "totalLiquidAsset": "5273446036781",
+        "totalLiquidAssetNormalized": 5273446.036781,
+        "totalIlliquidAsset": "39887986839246",
+        "totalIlliquidAssetNormalized": 39887986.839246,
+        "pendingRedemptionsAsset": "0",
+        "pendingRedemptionsAssetNormalized": 0
+      },
+      "receipt": {
+        "name": "iUSD",
+        "address": "0x48f9e38f3070AD8945DFEae3FA70987722E3D89c",
+        "decimals": 18,
+        "totalSupply": "45161221597611851575157623",
+        "totalSupplyNormalized": 45161221.59761185,
+        "totalStaked": "30802402875394610904565237",
+        "totalStakedNormalized": 30802402.875394613,
+        "totalLocked": "14013264225498227318042386",
+        "totalLockedNormalized": 14013264.225498227,
+        "totalUnwinding": "2009460811122126353533278",
+        "totalUnwindingNormalized": 2009460.8111221264,
+        "receiptExchangeRate": "1000000000000000000",
+        "receiptExchangeRateNormalized": 1,
+        "totalYield": "9115829229972879235994351",
+        "totalYieldNormalized": 9115829.229972878
+      },
+      "staked": {
+        "name": "siUSD",
+        "address": "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
+        "decimals": 18,
+        "totalSupply": "28211392864413579191364684",
+        "totalSupplyNormalized": 28211392.864413578,
+        "exchangeRate": "1091842682969736814",
+        "exchangeRateNormalized": 1.0918426829697367,
+        "lastWeekAPY": 0.05921358973362256,
+        "average1dAPY": 0.054533680311368515,
+        "average7dAPY": 0.05921358973362256,
+        "average30dAPY": 0.06390614917285098
+      },
+      "locked": {
+        "0x12b004719fb632f1E7c010c6F5D6009Fb4258442": {
+          "name": "liUSD-1w",
+          "address": "0x12b004719fb632f1E7c010c6F5D6009Fb4258442",
+          "decimals": 18,
+          "bucketMaturity": 1,
+          "totalSupply": "840109047961260047231931",
+          "totalSupplyNormalized": 840109.0479612601,
+          "exchangeRate": "1201677538000113549",
+          "exchangeRateNormalized": 1.2016775380001135,
+          "lastWeekAPY": 0.062064340890757075,
+          "totalLocked": "1009540172405706286846278",
+          "totalLockedNormalized": 1009540.1724057063,
+          "average1dAPY": 0.057401502709587104,
+          "average7dAPY": 0.062064340890757075,
+          "average30dAPY": 0.06606424857668936
+        },
+        "0xf1839BeCaF586814D022F16cDb3504ff8D8Ff361": {
+          "name": "liUSD-2w",
+          "address": "0xf1839BeCaF586814D022F16cDb3504ff8D8Ff361",
+          "decimals": 18,
+          "bucketMaturity": 2,
+          "totalSupply": "22220542374410876800329",
+          "totalSupplyNormalized": 22220.542374410878,
+          "exchangeRate": "1205484165810085366",
+          "exchangeRateNormalized": 1.2054841658100854,
+          "lastWeekAPY": 0.06335642812788267,
+          "totalLocked": "26786511988064349392023",
+          "totalLockedNormalized": 26786.51198806435,
+          "average1dAPY": 0.05859330659720796,
+          "average7dAPY": 0.06335642812788267,
+          "average30dAPY": 0.06744504777804528
+        },
+        "0xed2a360FfDC1eD4F8df0bd776a1FfbbE06444a0A": {
+          "name": "liUSD-3w",
+          "address": "0xed2a360FfDC1eD4F8df0bd776a1FfbbE06444a0A",
+          "decimals": 18,
+          "bucketMaturity": 3,
+          "totalSupply": "1000000000000000000",
+          "totalSupplyNormalized": 1,
+          "exchangeRate": "1209208052941582979",
+          "exchangeRateNormalized": 1.209208052941583,
+          "lastWeekAPY": 0.06335642812788267,
+          "totalLocked": "1209208052941582979",
+          "totalLockedNormalized": 1.209208052941583,
+          "average1dAPY": 0.058593306597183537,
+          "average7dAPY": 0.06335642812788267,
+          "average30dAPY": 0.06744504777804528
+        },
+        "0x66bCF6151D5558AfB47c38B20663589843156078": {
+          "name": "liUSD-4w",
+          "address": "0x66bCF6151D5558AfB47c38B20663589843156078",
+          "decimals": 18,
+          "bucketMaturity": 4,
+          "totalSupply": "2196369553339140743467623",
+          "totalSupplyNormalized": 2196369.553339141,
+          "exchangeRate": "1221736355130899804",
+          "exchangeRateNormalized": 1.2217363551308997,
+          "lastWeekAPY": 0.07493164858469026,
+          "totalLocked": "2683384532617044235649856",
+          "totalLockedNormalized": 2683384.532617044,
+          "average1dAPY": 0.06926442253693321,
+          "average7dAPY": 0.07493164858469026,
+          "average30dAPY": 0.07982481672428876
+        },
+        "0xf0c4A78fEbf4062aeD39A02BE8a4C72E9857d7d1": {
+          "name": "liUSD-5w",
+          "address": "0xf0c4A78fEbf4062aeD39A02BE8a4C72E9857d7d1",
+          "decimals": 18,
+          "bucketMaturity": 5,
+          "totalSupply": "1000000000000000000",
+          "totalSupplyNormalized": 1,
+          "exchangeRate": "1225508086646441312",
+          "exchangeRateNormalized": 1.2255080866464414,
+          "lastWeekAPY": 0.07493164858469026,
+          "totalLocked": "1225508086646441312",
+          "totalLockedNormalized": 1.2255080866464414,
+          "average1dAPY": 0.06926442253695786,
+          "average7dAPY": 0.07493164858469026,
+          "average30dAPY": 0.07982481672428876
+        },
+        "0xb06Cc4548FebfF3D66a680F9c516381c79bC9707": {
+          "name": "liUSD-6w",
+          "address": "0xb06Cc4548FebfF3D66a680F9c516381c79bC9707",
+          "decimals": 18,
+          "bucketMaturity": 6,
+          "totalSupply": "11855375240352622811895",
+          "totalSupplyNormalized": 11855.375240352623,
+          "exchangeRate": "1229643175216441117",
+          "exchangeRateNormalized": 1.2296431752164412,
+          "lastWeekAPY": 0.07817274176020517,
+          "totalLocked": "14577881253929577898753",
+          "totalLockedNormalized": 14577.881253929578,
+          "average1dAPY": 0.07225053106043622,
+          "average7dAPY": 0.07817274176020517,
+          "average30dAPY": 0.08329434588125673
+        },
+        "0x3A744A6b57984eb62AeB36eB6501d268372cF8bb": {
+          "name": "liUSD-7w",
+          "address": "0x3A744A6b57984eb62AeB36eB6501d268372cF8bb",
+          "decimals": 18,
+          "bucketMaturity": 7,
+          "totalSupply": "1000000000000000000",
+          "totalSupplyNormalized": 1,
+          "exchangeRate": "1231749674155231810",
+          "exchangeRateNormalized": 1.2317496741552318,
+          "lastWeekAPY": 0.07817274176020517,
+          "totalLocked": "1231749674155231810",
+          "totalLockedNormalized": 1.2317496741552318,
+          "average1dAPY": 0.07225053106048573,
+          "average7dAPY": 0.07817274176020517,
+          "average30dAPY": 0.08329434588125673
+        },
+        "0xf68b95b7e851170c0e5123a3249dD1Ca46215085": {
+          "name": "liUSD-8w",
+          "address": "0xf68b95b7e851170c0e5123a3249dD1Ca46215085",
+          "decimals": 18,
+          "bucketMaturity": 8,
+          "totalSupply": "4066688886285141342734155",
+          "totalSupplyNormalized": 4066688.886285141,
+          "exchangeRate": "1237844236263429920",
+          "exchangeRateNormalized": 1.2378442362634299,
+          "lastWeekAPY": 0.08468425247739542,
+          "totalLocked": "5033927398564609191589906",
+          "totalLockedNormalized": 5033927.398564609,
+          "average1dAPY": 0.07824735646538006,
+          "average7dAPY": 0.08468425247739542,
+          "average30dAPY": 0.09026896512245708
+        },
+        "0xBB5cA732fAfEd8870F9C0e8406Ad707939c912E1": {
+          "name": "liUSD-9w",
+          "address": "0xBB5cA732fAfEd8870F9C0e8406Ad707939c912E1",
+          "decimals": 18,
+          "bucketMaturity": 9,
+          "totalSupply": "1000000000000000000",
+          "totalSupplyNormalized": 1,
+          "exchangeRate": "1239539855092230852",
+          "exchangeRateNormalized": 1.2395398550922307,
+          "lastWeekAPY": 0.08468425247739542,
+          "totalLocked": "1239539855092230852",
+          "totalLockedNormalized": 1.2395398550922307,
+          "average1dAPY": 0.07824735646539249,
+          "average7dAPY": 0.08468425247739542,
+          "average30dAPY": 0.09026896512245708
+        },
+        "0xd15fbf48c6dDdADC9Ef0693B060d80aF51cC26d5": {
+          "name": "liUSD-10w",
+          "address": "0xd15fbf48c6dDdADC9Ef0693B060d80aF51cC26d5",
+          "decimals": 18,
+          "bucketMaturity": 10,
+          "totalSupply": "1000000000000000000",
+          "totalSupplyNormalized": 1,
+          "exchangeRate": "1239539855092230852",
+          "exchangeRateNormalized": 1.2395398550922307,
+          "lastWeekAPY": 0.08468425247739542,
+          "totalLocked": "1239539855092230852",
+          "totalLockedNormalized": 1.2395398550922307,
+          "average1dAPY": 0.07824735646539249,
+          "average7dAPY": 0.08468425247739542,
+          "average30dAPY": 0.09026896512245708
+        },
+        "0xed030a37Ec6EB308A416Dc64dD4b649A2BBE4FCd": {
+          "name": "liUSD-11w",
+          "address": "0xed030a37Ec6EB308A416Dc64dD4b649A2BBE4FCd",
+          "decimals": 18,
+          "bucketMaturity": 11,
+          "totalSupply": "1000000000000000000",
+          "totalSupplyNormalized": 1,
+          "exchangeRate": "1239539855092230852",
+          "exchangeRateNormalized": 1.2395398550922307,
+          "lastWeekAPY": 0.08468425247739542,
+          "totalLocked": "1239539855092230852",
+          "totalLockedNormalized": 1.2395398550922307,
+          "average1dAPY": 0.07824735646539249,
+          "average7dAPY": 0.08468425247739542,
+          "average30dAPY": 0.09026896512245708
+        },
+        "0x3D360aB96B942c1251Ab061178F731eFEbc2d644": {
+          "name": "liUSD-12w",
+          "address": "0x3D360aB96B942c1251Ab061178F731eFEbc2d644",
+          "decimals": 18,
+          "bucketMaturity": 12,
+          "totalSupply": "1000000000000000000",
+          "totalSupplyNormalized": 1,
+          "exchangeRate": "1239539855092230852",
+          "exchangeRateNormalized": 1.2395398550922307,
+          "lastWeekAPY": 0.08468425247739542,
+          "totalLocked": "1239539855092230852",
+          "totalLockedNormalized": 1.2395398550922307,
+          "average1dAPY": 0.07824735646539249,
+          "average7dAPY": 0.08468425247739542,
+          "average30dAPY": 0.09026896512245708
+        },
+        "0xbd3f9814eB946E617f1d774A6762cDbec0bf087A": {
+          "name": "liUSD-13w",
+          "address": "0xbd3f9814eB946E617f1d774A6762cDbec0bf087A",
+          "decimals": 18,
+          "bucketMaturity": 13,
+          "totalSupply": "2590365296465235776902300",
+          "totalSupplyNormalized": 2590365.2964652358,
+          "exchangeRate": "1249081856268196253",
+          "exchangeRateNormalized": 1.2490818562681962,
+          "lastWeekAPY": 0.09123505878043492,
+          "totalLocked": "3235578292921513210952783",
+          "totalLockedNormalized": 3235578.2929215133,
+          "average1dAPY": 0.08427714063109293,
+          "average7dAPY": 0.09123505878043492,
+          "average30dAPY": 0.09729128360056882
+        }
+      }
+    },
+    "farms": [
+      {
+        "name": "MintController",
+        "label": "Mint Controller",
+        "assetsNormalized": 0,
+        "type": "PROTOCOL"
+      },
+      {
+        "name": "RedeemController",
+        "label": "Redeem Controller",
+        "assetsNormalized": 0.000917,
+        "type": "PROTOCOL"
+      },
+      {
+        "name": "SwapFarm",
+        "label": "Multi Farm",
+        "assetsNormalized": 0,
+        "type": "LIQUID"
+      },
+      {
+        "name": "aavev3",
+        "label": "Aave USDC",
+        "assetsNormalized": 2550238.910764,
+        "type": "LIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "aavev3-horizon-usdc",
+        "label": "Horizon USDC",
+        "assetsNormalized": 0,
+        "type": "LIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "euler-gauntlet-yield",
+        "label": "Euler Gauntlet Yield",
+        "assetsNormalized": 0,
+        "type": "LIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "euler-sentora-usdc",
+        "label": "Euler Sentora USDC",
+        "assetsNormalized": 0,
+        "type": "LIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "spark-sUSDC-refcode",
+        "label": "Spark sUSDC",
+        "assetsNormalized": 2723207.1251,
+        "type": "LIQUID",
+        "underlyingAssetSymbol": "sUSDC"
+      },
+      {
+        "name": "liquid-cap",
+        "label": "Liquid Cap stcUSD",
+        "assetsNormalized": 0,
+        "type": "LIQUID",
+        "underlyingAssetSymbol": "stcUSD"
+      },
+      {
+        "name": "morpho-steakUSDCinfinifi",
+        "label": "Morpho infiniFi Ecosystem Vault",
+        "assetsNormalized": 659927.916466,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "steakUSDCinfinifi"
+      },
+      {
+        "name": "fasanara-rwa-farm",
+        "label": "Fasanara Genesis Fund",
+        "assetsNormalized": 2606672.462389,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "fasanara-gdaf",
+        "label": "Fasanara mGLOBAL (GDADF)",
+        "assetsNormalized": 21270977.334602,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "morpho-v2-sentora-pyusd",
+        "label": "Sentora PYUSD",
+        "assetsNormalized": 14.611656,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "senPYUSDmain"
+      },
+      {
+        "name": "morpho-v2-sentora-prime",
+        "label": "Sentora PRIME Main",
+        "assetsNormalized": 9.490953,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "senPYUSDPRIMEv2"
+      },
+      {
+        "name": "falconx-farm",
+        "label": "FalconX Institutional",
+        "assetsNormalized": 2023040.369709,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "cowswap-fxSave",
+        "label": "f(x) fxSAVE",
+        "assetsNormalized": 8065313.696181,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "fxSAVE"
+      },
+      {
+        "name": "new-silver-junior",
+        "label": "New Silver",
+        "assetsNormalized": 5192507.904857,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "new-silver-senior",
+        "label": "New Silver 2 Senior",
+        "assetsNormalized": 0,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "aave-v4-usdg",
+        "label": "Aave USDG",
+        "assetsNormalized": 8.698868,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "USDG"
+      },
+      {
+        "name": "3f-farm",
+        "label": "3F Bridge Facilitator",
+        "assetsNormalized": 0,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "USDC"
+      },
+      {
+        "name": "base-morpho-steakhouse-prime",
+        "label": "Steakhouse Prime USDC",
+        "assetsNormalized": 69351.401665,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "steakUSDC"
+      },
+      {
+        "name": "monad-aavev3",
+        "label": "Aave USDC",
+        "assetsNormalized": 10.000364,
+        "type": "ILLIQUID",
+        "underlyingAssetSymbol": "USDC"
+      }
+    ]
+  }
+}

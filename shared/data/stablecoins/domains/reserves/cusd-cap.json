@@ -6,6 +6,7 @@
       "pct": 91.7,
       "risk": "low",
       "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial",
       "riskFactors": [

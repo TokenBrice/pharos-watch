@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
+import firmMarketsCapture from "./fixtures/dola-fixed-markets-2026-09-29.json";
 import {
   resolveBaseSymbol,
   bucketForAsset,
@@ -163,34 +164,40 @@ describe("adaptFirmMarkets", () => {
     expect(btcSlice?.pct).toBe(20);
   });
 
-  it("maps reUSD-paired markets to the tracked Resupply dependency", () => {
+  it("keeps issuer-captured LP debt unlinked and links only direct sUSDe debt", () => {
+    const result = adaptFirmMarkets(firmMarketsCapture, 108_602_244.0893683);
+    expect(result.slices.filter((slice) => slice.coinId)).toEqual([
+      expect.objectContaining({ sourceKey: "dola-inverse:susde", pct: 0.4, coinId: "susde-ethena", depType: "collateral" }),
+    ]);
+    const lpSlices = result.slices.filter((slice) => slice.sourceKey?.startsWith("dola-inverse:lp:"));
+    expect(lpSlices).toEqual(expect.arrayContaining([
+      expect.objectContaining({ sourceKey: "dola-inverse:lp:dola-susde", pct: 51.7 }),
+      expect.objectContaining({ sourceKey: "dola-inverse:lp:dola-susds", pct: 5.7 }),
+      expect.objectContaining({ sourceKey: "dola-inverse:lp:sdola-scrvusd", pct: 4.2 }),
+      expect.objectContaining({ sourceKey: "dola-inverse:lp:reusd-sdola", pct: 2.7 }),
+    ]));
+    for (const slice of lpSlices) {
+      expect(slice.coinId).toBeUndefined();
+      expect(slice.depType).toBeUndefined();
+    }
+    expect(result.metadata?.unknownExposurePct).toBeGreaterThan(98);
+  });
+
+  it("does not turn LP symbols or Yearn LP wrappers into direct stablecoin claims", () => {
     const result = adaptFirmMarkets({
       markets: [
-        makeMarket("reUSD-sDOLA clp", 1_500_000),
-        makeMarket("yv-reUSD-sDOLA", 500_000),
-        makeMarket("sDOLA-scrvUSD clp", 2_000_000),
+        makeMarket("reUSD-sDOLA clp", 150),
+        makeMarket("yv-reUSD-sDOLA", 50),
+        makeMarket("sDOLA-scrvUSD clp", 200),
+        makeMarket("reUSD", 100),
+        { ...makeMarket("sUSDe", 100), underlying: { symbol: "sUSDe", isLP: true } },
       ],
       timestamp: 1000,
-    }, 4_000_000);
-
-    const reusdSlice = result.slices.find((s) => s.name === "reUSD collateral");
-    expect(reusdSlice).toMatchObject({
-      pct: 50,
-      coinId: "reusd-resupply",
-      depType: "collateral",
-      risk: "high",
-    });
-    const scrvusdSlice = result.slices.find((s) => s.name === "scrvUSD collateral");
-    expect(scrvusdSlice).toMatchObject({ pct: 50, coinId: "scrvusd-curve" });
-    expect(result.metadata?.unknownExposurePct).toBe(0);
-    expect(listUnexpectedDolaAssets({
-      markets: [
-        makeMarket("reUSD-sDOLA clp", 1_500_000),
-        makeMarket("yv-reUSD-sDOLA", 500_000),
-        makeMarket("sDOLA-scrvUSD clp", 2_000_000),
-      ],
-      timestamp: 1000,
-    })).toEqual([]);
+    }, 600);
+    expect(result.slices.filter((slice) => slice.coinId)).toEqual([
+      expect.objectContaining({ coinId: "reusd-resupply", pct: 16.7 }),
+    ]);
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(500 / 600 * 100);
   });
 
   it("includes non-FiRM issuance in unknown exposure rather than normalizing it away", () => {

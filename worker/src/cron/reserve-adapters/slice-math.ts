@@ -144,12 +144,12 @@ export function assertFiniteNonNegativeReserveRows<Value>(
 }
 
 /**
- * Deduplicate and normalize reserve slices so percentages sum to exactly 100%.
- * Slices sharing every identity and risk field are merged by summing pct.
- * After rounding, the largest slice absorbs any remainder to maintain the 100% invariant.
- * Returns slices sorted by pct descending.
+ * Deduplicate reserve slices, merging every identity and risk field by pct.
+ * Rounded mode repairs the remainder to 100%; null preserves source percentages
+ * without quantization or remainder correction. Both modes validate source totals
+ * and return slices sorted by pct descending.
  */
-export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSlice[] {
+export function normalizeSlices(slices: ReserveSlice[], decimals: number | null = 1): ReserveSlice[] {
   assertFiniteNonNegativeReserveRows(slices, (slice) => slice.pct, "reserve percentages");
   const rawTotal = slices.reduce((sum, slice) => sum + slice.pct, 0);
   if (rawTotal > 0 && Math.abs(rawTotal - 100) > PCT_SUM_ERROR_TOLERANCE) {
@@ -157,7 +157,6 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
       `reserve percentages sum to ${rawTotal.toFixed(1)}% (expected 100% ± ${PCT_SUM_ERROR_TOLERANCE}%)`,
     );
   }
-  const factor = 10 ** decimals;
   const grouped = new Map<string, ReserveSlice>();
 
   for (const slice of slices) {
@@ -183,6 +182,12 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
       grouped.set(key, { ...slice });
     }
   }
+
+  // Preserve source percentages, including positive dust, when precision is
+  // explicitly unrounded. The same input-total and identity gates still apply.
+  if (decimals === null) return [...grouped.values()].sort((a, b) => b.pct - a.pct);
+
+  const factor = 10 ** decimals;
 
   const normalized = Array.from(grouped.values())
     .map((slice) => ({ ...slice, pctUnits: Math.round(slice.pct * factor) }))
@@ -320,7 +325,7 @@ export function slicesFromValues(
     issuerOrObligor?: string;
     blacklistable?: boolean;
   }>,
-  decimals = 1,
+  decimals: number | null = 1,
 ): ReserveSlice[] {
   assertFiniteNonNegativeReserveRows(values, (value) => value.value, "reserve values");
   const filtered = values.filter((value) => value.value > 0);

@@ -22,6 +22,33 @@ export function SafetyScoresOverview() {
         score and redemption route score describe their own modules; neither is the V9 Exit score.
       </p>
       <p>
+        Since methodology v9.96, issuer redemption routes honor reviewed explicit stablecoin payouts before the legacy
+        fiat projection. Reviewed USDC payouts cover pathUSD, USYC Teller, pUSD and USDO; USDC/USDT payouts cover
+        thBILL, MXNB&apos;s conversion rail and StandX DUSD, alongside HLUSD&apos;s existing basket. Unreviewed issuers
+        keep the legacy default without inferring a variant parent; USDN is unchanged because current sources do not
+        confirm USDC. Tracked payouts need captured price evidence rather than assumed $1 proceeds. A single payout
+        at par keeps output quality 100; multiple outputs retain conservative stable-basket quality 80 and the
+        weakest-priced component, a 3-point raw route difference at par. Missing output prices remain unresolved.
+      </p>
+      <p>
+        Uniswap V4 retained exact PoolIds are fetched without the subgraph&apos;s TVL floor and bypass its indexed-TVL
+        2% affinity guard; positive indexed TVL and the affinity guard remain required only for token/fee fallback.
+        Positive retained TVL, currency/PoolKey identity, zero hooks, active liquidity, independent price references
+        and existing quote/capacity gates still apply. The trigger was thUSD/USDC&apos;s -$222,031.94 indexed TVL.
+        The seven affected pool assets are thUSD, USDD, USDT, USDS, USP, AUDM and sUSDD. Identity admission is not
+        depth: at Ethereum block 26088713, a $1,000 thUSD sell returned $966.94. Standalone Liquidity Score arithmetic
+        and retained TVL/volume are unchanged.
+      </p>
+      <p>
+        As curation context, thUSD now uses an executed stablecoin-redeem rail consistent with USDe, with measured
+        Cash Wallet capacity from the theo-thusd-redemption adapter and no fallback. This adds no scoring rule.
+        On the frozen replay of generation report-cards:9.94:1790752511 at clock 1790752628, only thusd-theo moves,
+        from 38/F to 43/D from its configuration, with no quarantines. That capture still contains the old issuer-api
+        observation and lacks thUSD&apos;s live-reserve fallback observation. Payout and V4 effects require the first
+        production redemption and DEX cycles: the reviewed payout assets and seven V4 pool assets are movement
+        candidates, not guaranteed score or grade improvements.
+      </p>
+      <p>
         Since methodology v9.5, the binary $100K materiality gate uses producer-measured executable notional before
         output-value retention. Retention still discounts continuous capacity and output quality, so impaired proceeds
         remain penalized without being charged a second time at the threshold. Aggregate TVL and volume still do not
@@ -73,6 +100,39 @@ export function SafetyScoresOverview() {
         older curated or manual collateral weights. Dependency facts distinguish unmatched identities, expired
         matching classifications, and explicitly reviewed non-links. Curated reserve fallback applies only when
         there is no live composition; partial live mappings retain their live weights.
+      </p>
+      <p>
+        Since methodology v9.95, a live reserve link must agree with its reviewed upstream identity and relationship
+        kind; conflicts withhold the link rather than silently choosing one. Keyed zero-balance rows remain evidence
+        but never create reserve-derived edges. Intermediary annotations identify a bridge, wrapper token, or vault
+        share without creating another measured holding. Serial mechanism claims inherit the required parent&apos;s
+        final score: Spark&apos;s native-asset and USDS parents both apply, so the weaker parent limits the claim.
+      </p>
+      <p>
+        Since methodology v9.97, reserve producers reconcile reviewed nested holdings, correct immediate claim
+        identities, and preserve positive measured dust without display rounding. Pooled holdings do not create
+        token-specific dependencies without attributable backing and tranche loss allocation. Producer recovery
+        does not bypass evidence admission: weak probes, unverified freshness, and reconciliation failures retain
+        their existing gates. Optional report-v6 multi-asset common-mode groups reference existing priced effects
+        without adding a penalty. Scoring weights and materiality thresholds are unchanged.
+      </p>
+      <p>
+        Since methodology v9.98, authored linked reserve rows require an explicit relationship kind. Legacy live
+        rows may inherit only a unique reviewed kind for the same coin identity; unresolved or conflicting kinds
+        withhold that row&apos;s link rather than silently treating it as collateral. Other rows remain available,
+        but cached legacy withholding can change backing and downstream scores until typed producer rows arrive.
+        Historical reserve evidence is not refreshed by adding a kind. Mento separates native and bridged holdings
+        while retaining their canonical parents; USDat&apos;s PYUSDx and Frankencoin&apos;s ysyBOLD are intermediary
+        annotations, not additional holdings. Representation identity verification does not establish independent
+        bridge solvency assurance. Avant discloses measured gross-positive-long holdings and separate debt and NAV,
+        but withholds tracked links until exact token, receipt, and bridge claims are joined. Labels do not establish
+        identities, and gross shares are not leveraged net-NAV loss coefficients. Diagnostic fixture replacements
+        are not production freshness evidence or score forecasts.
+      </p>
+      <p>
+        Reviewed curated compositions require verified, complete evidence. An unresolved reserve disposition or known
+        unknown exposure withholds the whole curated reserve envelope, not just the disputed link. That can change
+        backing scores and downstream parent limits even when the unresolved share is tiny.
       </p>
       <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level

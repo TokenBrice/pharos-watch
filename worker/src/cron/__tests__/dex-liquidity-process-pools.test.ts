@@ -961,6 +961,48 @@ describe("processPoolMetrics", () => {
     }
   });
 
+  it("keeps DL TVL and volume while measuring the negative-indexed thUSD exact pool", () => {
+    // Initialize block 24974199 / Graph block 26088668, captured 2026-09-30:
+    // https://etherscan.io/tx/0xdbfd03418344a5db0e0910874e6b15da64bd8edff032253e20de67e709918d7c
+    const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const thusd = "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3";
+    const poolId = "0xb30bf32e26a35328286df33c17dd01e1051b5e3a0ec55a4a211e6957594b5a0d";
+    const candidate: UniswapV4ExecutionCandidate = {
+      chain: "ethereum", poolId, feePips: 100, tickSpacing: 1,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS, activeLiquidity: "1215742317323",
+      tvlUsd: -222031.942086, token0Price: 0.9988856322499521, token1Price: 1.0011156109509132,
+      tokens: [{ address: usdc, symbol: "USDC", decimals: 6 },
+        { address: thusd, symbol: "thUSD", decimals: 6 }],
+    };
+    const key = buildUniswapV4ExecutionCandidateKey("ethereum", [usdc, thusd], 100)!;
+    const run = (candidates: UniswapV4ExecutionCandidate[]) => processPoolMetrics({
+      pools: [makePool({ pool: poolId, project: "uniswap-v4", symbol: "USDC-THUSD",
+        tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
+        underlyingTokens: [usdc, thusd], poolMeta: "0.01%" })],
+      dexProjects: new Set(["uniswap-v4"]), symbolToChainScopedIds: new Map(),
+      chainAddressToId: new Map([[`ethereum:${usdc}`, "usdc-circle"], [`ethereum:${thusd}`, "thusd-theo"]]),
+      curvePoolMap: new Map(), uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(),
+      stablecoinPriceById: new Map([["usdc-circle", 1], ["thusd-theo", 1]]),
+      measuredTargetCapturedAt: 1_790_748_609,
+      uniswapV4ExecutionCandidates: new Map([[key, candidates]]),
+    }).metrics.get("thusd-theo")!;
+    const measured = run([candidate]);
+    const unresolved = run([]);
+    expect(measured.topPools).toHaveLength(1);
+    expect(measured.topPools[0]).toMatchObject({ poolId: `ethereum:${poolId}`,
+      tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
+      extra: { measuredExecutionTarget: { poolId: `ethereum:${poolId}`,
+        tokenIn: { trackedAssetId: "thusd-theo" } } } });
+    expect(rebuildMetricsFromPools(measured.topPools)).toMatchObject({
+      totalTvlUsd: 5_561_855, poolCount: 1,
+    });
+    expect(unresolved.topPools[0]).toMatchObject({
+      tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
+    });
+    expect(unresolved.topPools).toHaveLength(1);
+    expect(unresolved.topPools[0]?.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
+  });
+
   it("attaches V4 targets only for one exact hook-free candidate", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";

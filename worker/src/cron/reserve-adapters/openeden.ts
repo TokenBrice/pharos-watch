@@ -90,12 +90,14 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       value: payload.totalTbillAmountInUsd,
       risk: "very-low",
       coinId: "tbill-openeden",
+      depType: "collateral",
     },
     {
       name: "BlackRock BUIDL",
       value: payload.buidlAmount,
       risk: "low",
       coinId: "buidl-blackrock",
+      depType: "collateral",
     },
     {
       name: "OpenEden VBILL",
@@ -107,24 +109,28 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       value: payload.usdcAmount,
       risk: "low",
       coinId: "usdc-circle",
+      depType: "collateral",
     },
     {
       name: "Pending USDC",
       value: payload.pendingUsdc ?? 0,
       risk: "very-low",
       coinId: "usdc-circle",
+      depType: "collateral",
     },
     {
       name: "RLUSD buffer",
       value: payload.rlusdAmount ?? 0,
       risk: "low",
       coinId: "rlusd-ripple",
+      depType: "collateral",
     },
     {
       name: "Hashnote USYC",
       value: payload.usycAmountInUsd,
       risk: "low",
       coinId: "usyc-hashnote",
+      depType: "collateral",
     },
     {
       name: "Franklin Templeton BENJI",

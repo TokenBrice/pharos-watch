@@ -11,10 +11,11 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map evidence review",
     "confidence": "verified",
     "sources": [
+      {"label": "Ethereum asset() and cooldownDuration() at block 26088256 (2026-09-30)", "url": "https://ethereum-rpc.publicnode.com"},
       {
         "label": "Aegis sYUSD documentation",
         "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
@@ -24,8 +25,9 @@
         "url": "https://aegis.accountable.capital/"
       }
     ],
-    "rationale": "Aegis documents sYUSD as an ERC-4626-style staking receipt backed by YUSD, with a seven-day cooldown. The named YUSD wrapper relationship is complete; reward accrual changes the exchange rate rather than the backing asset identity.",
-    "compositionBasis": "Aegis sYUSD staking and proof-of-reserve disclosure",
+    "rationale": "At Ethereum block 26088256 on 2026-09-30, asset() on the tracked sYUSD vault 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 returned tracked YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a and cooldownDuration() returned 604800 seconds. This independently confirms the exact wrapper parent and seven-day redemption cooldown. Reward accrual changes the exchange rate rather than the backing identity.",
+    "compositionBasis": "Exact Ethereum vault asset() and cooldownDuration() reads at block 26088256",
+    "compositionAsOf": "2026-09-30",
     "scope": "dependency-relationships",
     "knownUnknownExposure": "The linked YUSD backing is disclosed; dynamic reward accrual is not modeled as a separate reserve slice.",
     "knownUnknownExposurePct": 0

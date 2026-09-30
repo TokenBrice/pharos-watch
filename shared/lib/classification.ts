@@ -1,4 +1,7 @@
-import type { GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { DependencyType, GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { V9DependencyEconomicRole } from "../types/dependency-types";
+import type { V9FailureDomainRef } from "../types/safety-score-v9-fact-primitives";
+import type { ContagionShock } from "../types/contagion";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
 import { PEG_HERO_CHIP_LABELS } from "./peg-taxonomy";
@@ -25,6 +28,52 @@ export const RESEARCH_REVIEW_CONFIDENCE_LABELS: Readonly<Record<ResearchReviewCo
   "manual-review": "Manual review",
   unknown: "Unknown",
 };
+
+export const DEPENDENCY_RELATIONSHIP_LABELS = {
+  wrapper: "Wrapper",
+  mechanism: "Mechanism",
+  collateral: "Collateral",
+  "serial-claim": "Serial claim",
+} as const satisfies Readonly<Record<DependencyType | "serial-claim", string>>;
+
+export const DEPENDENCY_ROLE_LABELS = {
+  "serial-claim": "Serial claim",
+  "basket-exposure": "Basket exposure",
+  "exit-dependency": "Exit dependency",
+  "control-operator": "Control operator",
+  "oracle-nav": "Oracle / NAV",
+} as const satisfies Readonly<Record<V9DependencyEconomicRole, string>>;
+
+export const EXPOSURE_BAND_LABELS = {
+  material: "Material",
+  minor: "Minor",
+  trace: "Trace",
+  unknown: "Unknown",
+} as const satisfies Readonly<Record<"material" | "minor" | "trace" | "unknown", string>>;
+
+export const FAILURE_DOMAIN_KIND_LABELS = {
+  "reserve-issuer": "Reserve issuer",
+  "reserve-custodian": "Reserve custodian",
+  "mint-control": "Mint control",
+  "upgrade-control": "Upgrade control",
+  "oracle-feed": "Oracle feed",
+  "bridge-route": "Bridge route",
+  "redemption-rail": "Redemption rail",
+  "output-asset": "Output asset",
+  chain: "Chain",
+  "dex-protocol": "DEX protocol",
+} as const satisfies Readonly<Record<V9FailureDomainRef["kind"], string>>;
+
+export const DEPENDENCY_SCENARIO_KIND_LABELS = {
+  "score-limit": "Score limit",
+  depeg: "Depeg",
+  "mint-control-compromise": "Mint-control compromise",
+} as const satisfies Readonly<Record<ContagionShock["kind"], string>>;
+
+export const DEPENDENCY_SCENARIO_DIMENSION_LABELS = {
+  final: "final",
+  backing: "backing",
+} as const satisfies Readonly<Record<Extract<ContagionShock, { kind: "score-limit" }>["dimension"], string>>;
 
 export { PEG_TAXONOMY } from "./peg-taxonomy";
 

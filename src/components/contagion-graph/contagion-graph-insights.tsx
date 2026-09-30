@@ -5,19 +5,22 @@ import type { ResolvedLink } from "@/components/contagion-graph-graph";
 import type { GraphNode } from "@/lib/contagion-layout";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
+import type { HubExposure } from "@shared/lib/dependency-exposure";
 
 interface ContagionGraphInsightsProps {
   inspectedNode: GraphNode | null;
   visibleLinks: readonly ResolvedLink[];
+  fullLinks: readonly ResolvedLink[];
+  directExposureById: ReadonlyMap<string, HubExposure>;
   nodeMap: ReadonlyMap<string, GraphNode>;
   logos?: Record<string, string>;
   onTraceNode: (nodeId: string) => void;
+  onUseAsExposureRoot?: (coinId: string) => void;
   variant?: "overlay" | "panel";
 }
 
 interface NodeLinkSummary {
   count: number;
-  weight: number;
   examples: string[];
 }
 
@@ -48,7 +51,6 @@ function summarizeNodeLinks({
 
   return {
     count: seenNodeIds.size,
-    weight: matchingLinks.reduce((sum, link) => sum + link.weight, 0),
     examples,
   };
 }
@@ -68,9 +70,12 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 export function ContagionGraphInsights({
   inspectedNode,
   visibleLinks,
+  fullLinks,
+  directExposureById,
   nodeMap,
   logos,
   onTraceNode,
+  onUseAsExposureRoot,
   variant = "overlay",
 }: ContagionGraphInsightsProps) {
   if (!inspectedNode) return null;
@@ -87,6 +92,9 @@ export function ContagionGraphInsights({
     nodeMap,
     direction: "upstream",
   });
+  const dependentCount = new Set(fullLinks.filter(link => link.tgtId === inspectedNode.id).map(link => link.srcId)).size;
+  const upstreamCount = new Set(fullLinks.filter(link => link.srcId === inspectedNode.id).map(link => link.tgtId)).size;
+  const exposure = directExposureById.get(inspectedNode.id)?.direct;
 
   return (
     <aside
@@ -116,17 +124,22 @@ export function ContagionGraphInsights({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">{inspectedNode.symbol}</p>
             <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
-              {formatCurrency(inspectedNode.mcap, 1)}
+              {inspectedNode.mcap === null ? "mcap n/a" : formatCurrency(inspectedNode.mcap, 1)}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-1.5">
-          <MiniMetric label="Dependents" value={String(dependentSummary.count)} />
-          <MiniMetric label="Upstream" value={String(upstreamSummary.count)} />
-          <MiniMetric label="Dep weight" value={dependentSummary.weight.toFixed(2)} />
-          <MiniMetric label="Up weight" value={upstreamSummary.weight.toFixed(2)} />
+          <MiniMetric label="Dependents" value={`${dependentCount} (${dependentSummary.count} visible)`} />
+          <MiniMetric label="Upstream" value={`${upstreamCount} (${upstreamSummary.count} visible)`} />
+          <MiniMetric label="Direct dependent exposure" value={`${formatCurrency(exposure?.knownUsd ?? 0, 1)}${exposure && !exposure.complete ? " known" : ""}`} />
         </div>
+        {exposure && !exposure.complete && (
+          <p className="text-[11px] text-muted-foreground">
+            {exposure.excludedSupplyUnknownIds.length} supply unavailable; {exposure.unknownShareEdgeCount} shares unavailable.
+            {exposure.integrityFlag && " Published shares need review."}
+          </p>
+        )}
 
         <div className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
           <p>
@@ -145,12 +158,17 @@ export function ContagionGraphInsights({
 
         <button
           type="button"
-          className="pharos-focus-ring inline-flex h-8 w-full items-center justify-center rounded-sm border font-mono text-[10px] uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-muted/40"
+          className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border font-mono text-[10px] uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-muted/40"
           style={{ borderColor: "var(--graph-grid-line)" }}
           onClick={() => onTraceNode(inspectedNode.id)}
         >
           Trace neighborhood
         </button>
+        {onUseAsExposureRoot && (
+          <button type="button" data-use-exposure-root className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border text-xs" onClick={() => onUseAsExposureRoot(inspectedNode.id)}>
+            Use as exposure root
+          </button>
+        )}
       </div>
     </aside>
   );

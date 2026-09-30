@@ -21,6 +21,8 @@ import { rethrowIfAborted } from "../../lib/abort";
 
 interface ReservoirBalanceItem {
   label: string;
+  chainId?: number;
+  address?: string;
   description?: string;
   iconPath?: string;
   totalBalanceValue: string;
@@ -34,7 +36,7 @@ export interface ReservoirReservesResponse {
   equity: string;
 }
 
-type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "usdat";
+type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "prime-unverified" | "usdat";
 
 
 // Stable buckets that provide broader balance-sheet liquidity context. This
@@ -54,6 +56,18 @@ const RESERVOIR_STABLE_BUCKET_KEYS: readonly ReservoirBucketKey[] = [
 // labels (e.g. "PYUSD/USDC") the first matching rule wins, so wrappers
 // (USD1/PYUSD/RLUSD/GHO) are listed before USDT/USDC.
 const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, ReservoirBucketKey>[] = [
+  {
+    key: "prime",
+    name: "PYUSD deposited in Morpho Sentora PRIME vault",
+    risk: "high",
+    sourceKey: "reservoir:prime",
+    coinId: "pyusd-paypal",
+    depType: "collateral",
+    // Verified vault constructor fixes _asset to native Ethereum PYUSD.
+    // PRIME names borrower collateral, not the asset held by Reservoir.
+    match: (item) => item.chainId === 1
+      && item.address?.toLowerCase() === "0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+  },
   {
     key: "agua",
     name: "Agua Global Carry Vault (USDC-denominated ERC-4626)",
@@ -132,10 +146,10 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     match: (item) => /\bRUSD\b/.test(item.label),
   },
   {
-    key: "prime",
-    name: "Hastra / Sentora PRIME credit allocations",
+    key: "prime-unverified",
+    name: "Unverified PRIME credit allocations",
     risk: "high",
-    sourceKey: "reservoir:prime",
+    sourceKey: "reservoir:prime-unverified",
     match: (item) => /\bPRIME\b/.test(item.label),
   },
   {
@@ -303,6 +317,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     getValue: (asset) => Number(asset.totalBalanceValue),
     getUnknownLabel: (asset) => asset.label,
     totalValue: totalAssets,
+    decimals: null,
     unknownSliceName: "Unmapped reserve positions",
     unknownSourceKey: "reservoir:unknown",
   });
@@ -386,6 +401,12 @@ export async function fetchReservoirReserves(
         ]
       : [];
   if (adapted.rowsExceedTotalWarning) warnings.push(adapted.rowsExceedTotalWarning);
+  if (adapted.slices.some((slice) => slice.sourceKey === "reservoir:prime-unverified")) {
+    warnings.push(reserveInfoWarning(
+      "reservoir-prime-identity-unverified",
+      "PRIME position does not match the reviewed Ethereum Sentora vault; its composition remains unlinked",
+    ));
+  }
   if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     warnings.push(
       buildUnknownExposureWarning({ adapterKey: "reservoir", code: "source-total-gap",

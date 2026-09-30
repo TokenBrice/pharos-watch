@@ -35,10 +35,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSkySpark)",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Spark Savings V2 backing and risk architecture (accessed 2026-09-30)",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
       {
         "label": "Spark Savings",
         "url": "https://sparkprotocol.io/"

@@ -3,89 +3,83 @@
   "reserves": [
     {
       "sourceKey": "agora-independent-assurance:ausd:us-treasury-securities",
-      "name": "Short-dated U.S. Treasury Bills",
-      "pct": 31.66,
+      "name": "Short-dated U.S. Treasury securities held in the Agora Reserve Fund",
+      "pct": 25.41239,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
-      "riskFactors": [
-        "duration",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "seven-days",
-      "maturityDaysMax": 60
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "seven-days"
     },
     {
       "sourceKey": "agora-independent-assurance:ausd:us-treasury-repos",
-      "name": "U.S. Treasury Repurchase Agreements",
-      "pct": 60.79,
+      "name": "Overnight U.S. Treasury repurchase agreements held in the Agora Reserve Fund",
+      "pct": 47.595951,
       "risk": "very-low",
       "assetClass": "repo",
-      "issuerOrObligor": "Undisclosed repo counterparties",
-      "riskFactors": [
-        "counterparty",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "unknown"
+      "issuerOrObligor": "Undisclosed overnight repo counterparties",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
-      "name": "Cash at regulated financial institutions and Agora Reserve Fund cash",
-      "pct": 3.89,
+      "sourceKey": "agora-independent-assurance:ausd:company-cash",
+      "name": "Cash held by Agora Bermuda Limited at regulated financial institutions",
+      "pct": 20.127998,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed regulated financial institutions",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "concentration"
-      ],
+      "riskFactors": ["counterparty", "custody", "concentration"],
       "liquidityHorizon": "immediate"
     },
     {
       "sourceKey": "agora-independent-assurance:ausd:stablecoins",
-      "name": "Stablecoins held in segregated wallets",
-      "pct": 3.66,
+      "name": "Stablecoin cash equivalents held in segregated wallets",
+      "pct": 2.511124,
       "risk": "low",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Undisclosed stablecoin issuers",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "smart-contract",
-        "liquidity"
-      ],
+      "issuerOrObligor": "Circle USDC and Paxos-issued PYUSD; individual split undisclosed",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "agora-independent-assurance:ausd:fund-cash",
+      "name": "Cash held in the Agora Reserve Fund at regulated financial institutions",
+      "pct": 4.352537,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed regulated financial institutions",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map WS1.D reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Grant Thornton Agora Dollar Reserve Report - May 31, 2026",
-        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+        "label": "Grant Thornton July 31, 2026 Agora reserve examination (accessed 2026-09-30)",
+        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/377372bfa35fa0c22ea1113fde44f99459f3c5f3dfa547bbf3ab692d71aac53d/docs/assets/2026%20Jul%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
       },
       {
-        "label": "Agora reserve transparency index",
+        "label": "Agora transparency index (accessed 2026-09-30)",
         "url": "https://docs.agora.finance/developer/transparency"
       }
     ],
-    "rationale": "Grant Thornton's May 31 report lists $41,638,712 of U.S. Treasury securities, $79,954,061 of U.S. Treasury repurchase agreements, $5,111,541 of direct cash at regulated financial institutions plus $666 of cash held in the Agora Reserve Fund ($5,112,207 combined), and $4,813,320 of stablecoins held in segregated wallets, totaling $131,518,300. The normalized weights are 31.66%, 60.79%, 3.89%, and 3.66%. The CUSIP table's latest Treasury maturity is July 30, 2026, 60 days after the report date. The report does not disclose repo term, counterparties, or stablecoin issuers.",
-    "compositionBasis": "Grant Thornton examination of AUSD reserve assets as of May 31, 2026",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "The July 31 examination, signed September 1, reports $61,365,065 Treasury securities, $114,933,254 overnight Treasury repos, $48,604,476 company cash, $10,510,374 fund cash and $6,063,786 stablecoins, totaling $241,476,955 against $240,745,867 AUSD in circulation. Five source-keyed rows match the live adapter categories. Page 9 explicitly names USDC and PYUSD within the combined stablecoin balance but discloses neither individual amount; no token allocation is inferred. The latest reported Treasury maturity, October 27, is 88 days after the report date. This dated examination does not refresh live composition beyond July 31.",
+    "compositionBasis": "Grant Thornton examination at July 31, 2026 23:59 UTC, normalized by $241,476,955 total reserve assets; source-key alignment with independently assured adapter",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report does not name the repo counterparties or term, nor the stablecoin issuers; the 3.66% stablecoin slice cannot be split further from the cited primary source.",
-    "knownUnknownExposurePct": 3.66,
+    "knownUnknownExposure": "USDC and PYUSD are positively named in the combined 2.511124% stablecoin category. Individual balances and any other included constituents remain undisclosed. Repo and bank identities also remain unresolved. Issuer questionnaire pending.",
+    "knownUnknownExposurePct": 2.511124,
     "nonLinkDispositions": [
       {
         "reserveIndex": 3,
-        "reserveName": "Stablecoins held in segregated wallets",
-        "pct": 3.66,
-        "disposition": "insufficient-evidence",
-        "rationale": "The attestation identifies a stablecoin balance but does not identify the token issuers or individual weights."
+        "reserveName": "Stablecoin cash equivalents held in segregated wallets",
+        "pct": 2.511124,
+        "disposition": "basket-needs-split",
+        "rationale": "Blocked on issuer balances: page 9 names USDC and PYUSD, but the $6,063,786 category has no individual weights or exhaustive constituent inventory. This shared budget cannot be assigned twice or split by assumption.",
+        "candidateCoinIds": ["usdc-circle", "pyusd-paypal"]
       }
     ]
   },

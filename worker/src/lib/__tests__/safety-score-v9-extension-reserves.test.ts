@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
+import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
@@ -202,6 +203,44 @@ describe("reviewed curated reserve admission", () => {
 });
 
 describe("curated reserve dependency admission", () => {
+  it.each([undefined, "collateral"] as const)(
+    "publishes reviewed native mechanism as a serial claim or withholds a conflict (%s)",
+    (nativeType) => {
+      const base = makeV9TwoAssetFixedInput({ clockSec: DEPENDENCY_CLOCK_SEC });
+      const {
+        schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
+        redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
+        inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
+        ...draft
+      } = base;
+      const metaById = dependencyMetaById("2026-08-19");
+      metaById.get("alpha")!.reserves = [{
+        sourceKey: "fixture:beta", name: "Beta reserve", pct: 100, risk: "low",
+        coinId: "beta", depType: "mechanism",
+      }];
+      const fixed = createReportCardsFixedInput({
+        ...draft,
+        liveReserveMap: { ...base.liveReserveMap, alpha: [{
+          sourceKey: "fixture:beta", name: "Beta live reserve", pct: 100, risk: "low", coinId: "beta",
+          ...(nativeType ? { depType: nativeType } : {}),
+        }] },
+      });
+      const dependency = buildSafetyScoreV9BaselineExtension(fixed, { metaById })
+        .assets.find((asset) => asset.assetId === "alpha")!.dependencies;
+      expect(dependency).not.toBeNull();
+      if (dependency === null) throw new Error("Expected alpha dependency admission facts");
+      if (nativeType) {
+        expect(dependency.edges).toEqual([]);
+        expect(dependency.diagnostics.graphState).toBe("invalid");
+        expect(dependency.diagnostics.issueCodes).toContain("reviewed-dependency-type-conflict");
+      } else {
+        expect(dependency.edges).toEqual([expect.objectContaining({
+          upstreamAssetId: "beta", dependencyType: "mechanism", weight: 1, economicRole: "serial-claim",
+        })]);
+      }
+    },
+  );
+
   it.each(["no-match", "expired", "non-link"] as const)(
     "does not restore curated weights after a live %s rejection",
     (reason) => {
@@ -316,8 +355,8 @@ describe("curated reserve dependency admission", () => {
   // `defaultV9DependencyEconomicRole` maps any non-"collateral" type to
   // "serial-claim", which requires weight === 1 and drops any lesser weight
   // as `invalid-serial-weight`, poisoning the whole graph to `"invalid"`.
-  // A dust-weight coinId slice on a live-reserve branch must default (or be
-  // curated) to "collateral" so it lands as a valid basket-exposure edge.
+  // A dust-weight coinId slice declares "collateral" explicitly so it lands
+  // as a valid basket-exposure edge rather than an untyped withheld link.
   it("keeps a live-reserve branch with a dust-weight coinId slice as a valid basket edge", () => {
     const base = makeV9TwoAssetFixedInput({
       omitAlphaReserve: true,
@@ -344,6 +383,7 @@ describe("curated reserve dependency admission", () => {
             pct: 0.0068,
             risk: "low" as const,
             coinId: "beta",
+            depType: "collateral" as const,
           },
           {
             name: "Custodied cash",
@@ -374,6 +414,45 @@ describe("curated reserve dependency admission", () => {
 });
 
 describe("buildReviewedReserveClassifications", () => {
+  it.each([
+    { sourceKey: "fixture:beta", name: "Renamed live row" },
+    { sourceKey: undefined, name: "Beta reserve" },
+  ])("inherits reviewed mechanism on native coinId rows with matching identity: %j", (identity) => {
+    const intermediary = { kind: "vault-share" as const, label: "DSR", verified: true };
+    const reviewed = reviewedMeta([{
+      sourceKey: identity.sourceKey, name: "Beta reserve", pct: 100, risk: "low",
+      coinId: "beta", depType: "mechanism", intermediary,
+    }]);
+    const mapping = dependencyReserveSlices([{
+      ...identity, pct: 100, risk: "low", coinId: "beta",
+    }], reviewed, CLOCK_SEC);
+    expect(mapping.rejectionReasons).toEqual([]);
+    expect(deriveEffectiveDependencySet(reviewed, {
+      liveReserveSlices: mapping.slices, rejectionReasons: mapping.rejectionReasons,
+    }).dependencies).toEqual([{ id: "beta", weight: 1, type: "mechanism", intermediary }]);
+  });
+
+  it.each([
+    { coinId: "beta", depType: "collateral" as const, reason: "reviewed-dependency-type-conflict" },
+    { coinId: "other", depType: "mechanism" as const, reason: "reviewed-dependency-identity-conflict" },
+  ])("withholds a native reviewed conflict with a named reason: %j", ({ coinId, depType, reason }) => {
+    const reviewed = reviewedMeta([{
+      sourceKey: "fixture:beta", name: "Beta reserve", pct: 100, risk: "low",
+      coinId: "beta", depType: "mechanism",
+    }]);
+    const mapping = dependencyReserveSlices([{
+      sourceKey: "fixture:beta", name: "Beta reserve", pct: 100, risk: "low", coinId, depType,
+    }], reviewed, CLOCK_SEC);
+    expect(mapping.slices[0].coinId).toBeUndefined();
+    expect(mapping.slices[0].depType).toBeUndefined();
+    expect(mapping.rejectionReasons).toEqual([{
+      sliceIndex: 0, reason, upstreamAssetId: coinId, reviewedUpstreamAssetId: "beta",
+    }]);
+    expect(deriveEffectiveDependencySet(reviewed, {
+      liveReserveSlices: mapping.slices, rejectionReasons: mapping.rejectionReasons,
+    }).dependencies).toEqual([]);
+  });
+
   const classifiedCash: ReserveSlice = {
     name: "Cash",
     pct: 100,

@@ -7,6 +7,14 @@
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "wrapper",
+      "intermediary": {
+        "kind": "bridge",
+        "label": "Binance-Peg USDC (BSC)",
+        "chain": "bsc",
+        "contract": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+        "verified": false,
+        "sourceUrl": "https://www.binance.com/en/collateral-btokens"
+      },
       "assetClass": "protocol-position",
       "issuerOrObligor": "StoneYield StrategyRouter and Venus Protocol",
       "riskFactors": [
@@ -20,10 +28,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T12 safety-v9 unknown-reduction w2",
-    "confidence": "verified",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map evidence review",
+    "confidence": "probable",
     "sources": [
+      {"label": "BSC Venus vault asset() at block 124853997 (2026-09-30)", "url": "https://bsc-rpc.publicnode.com"},
+      {"label": "Binance B-token collateral page, token rows unavailable (accessed 2026-09-30)", "url": "https://www.binance.com/en/collateral-btokens"},
       {
         "label": "StoneYield contract design",
         "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
@@ -33,11 +43,11 @@
         "url": "https://docs.stoneyield.io/docs/protocol/yield-generation"
       }
     ],
-    "rationale": "StoneYield documents that USDC deposits are routed by its StrategyRouter into a Venus-integrated ERC-4626 vault, where vUSDC accrues lending yield. The current strategy position is retained as one linked USDC protocol-position slice because the disclosures do not publish a durable allocation among Venus positions or future strategy modules. Write-time re-open 2026-07-30: StoneYield contract-design and yield-generation pages still describe the USDC deposit flow StakeableAsset\u2192StrategyRouter\u2192VenuSTUSDVault\u2192Venus with a 7% protocol fee, and the public contract repository still lists StrategyRouter 0x563f48aAD50a75Ef3662827a4d536dbd46aBb5a2 and VenusUSDCVault 0x375Defe9293671a4459CF7206Ac6f440d0Eb0970 as the reserve path; 100% USDC/protocol-position envelope retained. No audit report, proof-of-reserves, or third-party attestation over the reserve path is published (stoneyield.io claims 'Audited BSC contracts' without naming an auditor or report), so the latest assurance scope remains issuer documentation plus verified on-chain contract sources only.",
-    "compositionBasis": "Current StoneYield contract-design and yield-generation documentation",
-    "compositionAsOf": "2026-07-30",
+    "rationale": "StoneYield's current contract-design documentation identifies an 18-decimal BSC USDC deposit route into Venus. At BSC block 124853997 on 2026-09-30, asset() on the documented Venus vault 0x375defe9293671a4459cf7206ac6f440d0eb0970 returned Binance-Peg USDC 0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d; asset() on the tracked stUSD token reverted. The Binance B-token collateral page exposed no token-level escrow rows in the retrieved response, so escrow coverage is unverified. The strategy-vault USDC lineage is retained and annotated per the wave-1 owner ruling: D3 preserves variantOf-derived serial claims even when the intermediary remains unverified. This is not native Circle USDC custody or a 100% idle-USDC balance assertion.",
+    "compositionBasis": "Issuer contract-design disclosure accessed 2026-09-30 and exact documented Venus vault asset() read at BSC block 124853997",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve relationship is USDC routed through the documented StrategyRouter and Venus path. Current vUSDC balances, allocation weights, and any later strategy-module allocation are not published as a durable composition.",
+    "knownUnknownExposure": "Binance-Peg USDC bridge escrow and custody coverage remain unverified; current Venus balances and complete strategy allocation are not independently reconciled.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

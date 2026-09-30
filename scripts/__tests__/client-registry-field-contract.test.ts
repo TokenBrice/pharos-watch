@@ -105,6 +105,24 @@ describe("client registry field contract", () => {
     expect(detailCoins.some((coin) => heavyFields.some((field) => field in coin))).toBe(true);
   });
 
+  it.each([
+    [{ variantOf: "parent" }, true],
+    [{ dependencies: [{ coinId: "parent", type: "serial" }] }, true],
+    [{ reserves: [{ name: "USDC", pct: 10, coinId: "usdc-circle" }] }, true],
+    [{ dependencies: [], reserves: [{ name: "Cash", pct: 100 }] }, false],
+    [{ variantOf: null, reserves: [{ name: "Cash", coinId: "" }] }, false],
+    [{}, false],
+  ])("projects authored dependency evidence without shipping heavy inputs (%j)", (evidence, expected) => {
+    const projected = projectListCoin(
+      { id: "fixture", ...evidence },
+      readCanonicalClientFields(),
+      "core-stablecoin",
+    ) as { hasAuthoredDependencyEvidence?: unknown };
+    expect(projected.hasAuthoredDependencyEvidence).toBe(expected);
+    expect(projected).not.toHaveProperty("dependencies");
+    expect(projected).not.toHaveProperty("reserves");
+  });
+
   it("reads the canonical ordered field list from the shared TypeScript contract", () => {
     expect(readCanonicalClientFields()).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
   });

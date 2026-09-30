@@ -136,7 +136,13 @@ export function createFixedInputPayloadFields<
     liveReserveMap: z.record(z.string(), z.array(ReserveSliceSchema)),
     liveReserveProvenanceMap: z.record(
       z.string(),
-      z.object({ source: z.string().min(1), fetchedAt: z.number().int().nonnegative() }),
+      z.object({
+        source: z.string().min(1),
+        fetchedAt: z.number().int().nonnegative(),
+        balanceSheetScope: z.literal("shared-sky-maker").optional(),
+        sharedBookAssetIds: z.array(z.string().min(1)).optional(),
+        sharedBookMeasuredHoldings: z.record(z.string(), z.number().finite().nonnegative()).optional(),
+      }),
     ),
     chainCirculatingById: options.chainCirculatingByIdSchema,
     // DefiLlama list buckets are already USD-denominated. Consumers must use

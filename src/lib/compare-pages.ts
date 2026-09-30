@@ -302,8 +302,8 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
       label: "Review yield context",
     },
     {
-      href: "/safety-scores/",
-      label: "Compare live Safety Scores and contagion exposure",
+      href: "/dependency-map/",
+      label: "Trace collateral and wrapper dependencies",
     },
     {
       href: "/liquidity/",

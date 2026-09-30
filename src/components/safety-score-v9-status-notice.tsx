@@ -10,7 +10,7 @@ import { describeDataCoverageHoldCauses } from "@/lib/safety-score-data-coverage
 export function SafetyScoreV9StatusNotice({
   response,
 }: {
-  response: ReportCardsV9CurrentResponse | null | undefined;
+  response: Pick<ReportCardsV9CurrentResponse, "publicationHealth"> | null | undefined;
 }) {
   if (response?.publicationHealth?.status !== "held") return null;
 

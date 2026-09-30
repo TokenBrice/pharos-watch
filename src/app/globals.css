@@ -1849,6 +1849,7 @@
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
   scroll-behavior: auto !important;
 }
 
@@ -1864,6 +1865,7 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 
@@ -1888,5 +1890,20 @@
     --page-glow-bottom: none;
     --card-shell-highlight: none;
     --dews-radar-calm-dot-bloom: transparent;
+  }
+}
+
+/* Exposure reveals follow the engine's hop count, without a display hop cap. */
+@keyframes graph-exposure-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.graph-exposure-halo {
+  animation: graph-exposure-reveal 200ms var(--motion-ease-standard) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .graph-exposure-halo {
+    animation: none !important;
+    opacity: 1;
   }
 }

@@ -37,8 +37,8 @@ export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
   },
   {
     id: "dependency-is-contagion",
-    title: "Dependency is contagion.",
-    body: "Safety grades cap composite scores at the upstream asset the coin depends on. A stablecoin backed by a stablecoin backed by a money-market fund inherits the weakest grade in that chain. The dependency map exists because the 2023 USDC depeg showed that derivative coins move with their collateral.",
+    title: "Dependency propagates risk.",
+    body: "Safety Scores apply dependency limits through V9 parent and backing relationships. Serial claims inherit the required parent's final score, while collateral baskets inherit upstream backing quality in proportion to their mapped shares. The dependency map shows direct collateral and wrapper links, not a failure simulator. The 2023 USDC depeg showed why those links matter.",
   },
   {
     id: "failed-coins-stay-visible",

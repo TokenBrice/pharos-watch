@@ -58,14 +58,14 @@ The page is organized into these sections, in order:
 - `/about/` remains a top-level route in the `Resources` menu's `About Pharos` column (the `NAV_GROUPS` entry keyed `"more"`).
 - `/about/` is the reference hub for low-frequency reference surfaces. `Start Here`, `Funding`, and `PharosVille` sit beside it in that column; `Daily Digest`, `Timeline`, `Changelog`, and `Blog` fill the `Updates` column; `Methodology`, `Coverage`, and `System Status` fill the `Transparency` column; and the Learn surfaces fill the `Research` column. `Upcoming` lives in the `Markets` menu; `Alert Bot` and `API Access` live in the `Tools` menu. The lighthouse button is gone: the masthead icon beside search now controls appearance only.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
-- `Contagion Map` must link to `/dependency-map/`
-- `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
+- `Dependency Map` must link to `/dependency-map/` and describe mapped collateral and wrapper links. Exposure mode traces linked coins using publication-bound supply and does not estimate losses or changes in Safety Scores. The computed-feature roster has no failure-scenario scoreboard or stress panel.
 - `Methodology`, broadcast, Telegram, GitHub, and profile links are explicit CTAs; `Funding` and the public `/docs/listing-policy/` reference are inline prose links.
 - Trust-policy links use `/about/#principles`, `/about/#editorial-ai-policy`, and `/about/#corrections-policy`.
 
 ## Content Notes
 
 - The page is public-facing product copy, so internal workflow references should stay clear and non-novelty-first.
+- The dependency principle in `src/lib/about-principles-content.ts` is titled `Dependency propagates risk.` It distinguishes serial parent final-score limits from proportional upstream backing inheritance and describes the map as direct links, not a failure simulator.
 - Cemetery counts in the `Why Pharos?` copy, tracked-feature copy, and FAQ use the generated lightweight `DEAD_STABLECOIN_COUNT`: curated obituaries plus frozen tracked profiles, matching the public cemetery and export cohort rather than the curated-only source file. The root layout's cemetery description shares that projection.
 - The `Get in Touch` copy describes Pharos as MIT-licensed open source and links to the GitHub repository.
 - When adding a new major data source or externally visible feature surfaced on this page, update this document and the route copy together. The visible source roster lives in `DATA_SOURCE_GROUPS` in `src/lib/about-content.ts`; keep that module as the current roster source instead of duplicating long provider lists here.

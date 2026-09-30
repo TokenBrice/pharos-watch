@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { adaptOnReSchedule, parseCsvRows, parseOnReSchedule } from "../onre-holdings-csv";
 import { expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+import capturedSchedule from "./fixtures/onre-holdings-2026-09-30.json";
 
 
 const ONRE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true";
@@ -53,6 +54,29 @@ describe("parseOnReSchedule", () => {
 });
 
 describe("adaptOnReSchedule", () => {
+  it("replays the replacement USDv holding while retaining the issuer's AUM reconciliation failure", () => {
+    const result = adaptOnReSchedule(parseOnReSchedule(capturedSchedule.csv));
+    const usdv = result.slices.find((slice) => slice.sourceKey === "onre-holdings-csv:usdv-solomon-v2")!;
+    expect(usdv).toMatchObject({ coinId: "usdv-solomon-v2", depType: "collateral" });
+    expect(usdv.pct).toBeCloseTo(1000849.82 / 292040550.05 * 100, 10);
+    expect(result.slices.some((slice) => slice.coinId === "usdv-solomon")).toBe(false);
+    expect(result.slices.some((slice) => slice.sourceKey === "onre-holdings-csv:unmapped-schedule-rows")).toBe(false);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "total-aum-mismatch", effect: "degraded" }));
+    expect(result.metadata?.details).toMatchObject({ totalVsAumUsd: expect.closeTo(-1007314.51, 4) });
+  });
+
+  it("retains a positive sub-millionth-percent USDv holding", () => {
+    const schedule = parseOnReSchedule(capturedSchedule.csv);
+    const row = schedule.assetRows.find((asset) => asset.name === "USDv")!;
+    const removed = row.amountUsd - 0.000001;
+    row.amountUsd = 0.000001;
+    schedule.assetRows.find((asset) => asset.name === "USDG")!.amountUsd += removed;
+    const result = adaptOnReSchedule(schedule);
+    expect(result.slices.find((slice) => slice.coinId === "usdv-solomon-v2")?.pct)
+      .toBeCloseTo(0.000001 / 292040550.05 * 100, 20);
+    expect(result.slices.find((slice) => slice.coinId === "usdv-solomon-v2")?.pct).toBeGreaterThan(0);
+  });
+
   it("publishes 11 normalized slices with the known drift degraded, not hidden", () => {
     const result = adaptOnReSchedule(parseOnReSchedule(CSV));
 

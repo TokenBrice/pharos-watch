@@ -79,6 +79,24 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
   },
   {
     kind: "degraded-sync-warning-exception",
+    stablecoinId: "thusd-theo",
+    warningCode: "theo-redemption-rail-closed",
+    capacityNote: "Retaining measured zero capacity behind readable Theo pause, zero-cap or unsupported-output guards",
+    reason: "The fixed-identity same-block observer establishes a closed rail, not a missing capacity read.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-30",
+  },
+  {
+    kind: "degraded-sync-warning-exception",
+    stablecoinId: "thusd-theo",
+    warningCode: "theo-redemption-buffer-empty",
+    capacityNote: "Retaining measured zero allowance-limited Theo spendable float",
+    reason: "A complete readable supported-asset probe with zero spendable float is an adverse capacity fact.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-30",
+  },
+  {
+    kind: "degraded-sync-warning-exception",
     stablecoinId: "gho-aave",
     warningCode: "aggregated-residual-issuance",
     capacityNote:
@@ -138,6 +156,14 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
       "HCHF's HLiquity adapter publishes same-run debt-bounded redemption capacity, but the CHF-denominated route has no reviewed public redemption backstop config yet; the telemetry is reserve evidence only until a route is configured.",
     owner: POLICY_OWNER,
     reviewedAt: "2026-09-09",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "musd-metamask",
+    reason:
+      "mUSD's M-wrapper producer measures M backing and a sampled whitelisted SwapFacility redemption cohort; this capacity does not establish the liquidity of the configured Bridge fiat-redemption rail, so it remains reserve evidence rather than that route's redemption capacity.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-30",
   },
 ];
 

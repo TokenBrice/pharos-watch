@@ -11,7 +11,7 @@ import {
 import { percentileLinear } from "@shared/lib/stats";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type { V9Grade } from "@shared/types/safety-score-v9";
-import { v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@/lib/dependency-hubs-model";
+import { buildDirectHubExposures, v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@shared/lib/dependency-exposure";
 import { deterministicHash } from "@/lib/layout-utils";
 
 // ---------------------------------------------------------------------------
@@ -32,18 +32,21 @@ export interface ContagionGraphCard {
   symbol: string;
   grade: V9Grade;
   isDefunct?: boolean;
+  sharedBookId?: string | null;
 }
 
 export interface GraphNode extends SimulationNodeDatum {
   id: string;
   symbol: string;
   grade: V9Grade;
-  mcap: number;
+  mcap: number | null;
   r: number;
 }
 
 export interface GraphLink extends SimulationLinkDatum<GraphNode> {
   weight: number;
+  /** True when the basket share is unavailable; numeric weight is layout-only. */
+  shareUnknown?: boolean;
   /** Whether the upstream score resolved; set by `buildGraphData`, optional on hand-built links. */
   scoreKnown?: boolean;
   type: ContagionEdgeRelationship;
@@ -53,6 +56,7 @@ export interface RawGraphLink {
   source: string;
   target: string;
   weight: number;
+  shareUnknown?: boolean;
   /** Whether the upstream score resolved; set by `buildGraphData`, optional on hand-built links. */
   scoreKnown?: boolean;
   type: ContagionEdgeRelationship;
@@ -79,7 +83,6 @@ export interface SupernodeState {
 export const WIDTH = 800;
 export const HEIGHT = 600;
 export const PAD = 44;
-export const MAX_NODES = 50;
 export const ALL_NODE_LIMIT = "all";
 export const NODE_LIMIT_OPTIONS = [50, 100, 200, ALL_NODE_LIMIT] as const;
 export type NodeLimitOption = (typeof NODE_LIMIT_OPTIONS)[number];
@@ -115,9 +118,6 @@ export const SUPERNODE_CONFIG = {
 
   corePercentile: 0.9,
   secondaryPercentile: 0.75,
-
-  coreHoldPercentile: 0.8,
-  secondaryHoldPercentile: 0.65,
 
   minCoreInDegree: 2,
   minSecondaryInDegree: 1,
@@ -243,9 +243,9 @@ function contagionEdgeRelationship(edge: ReportCardsV9DependencyEdge): Contagion
 
 export function buildGraphData(
   cards: readonly ContagionGraphCard[],
-  mcapMap: Map<string, number>,
+  mcapMap: ReadonlyMap<string, number | null>,
   dependencyEdges: readonly ReportCardsV9DependencyEdge[],
-  maxNodes: GraphNodeLimit = MAX_NODES,
+  maxNodes: GraphNodeLimit = DEFAULT_NODE_LIMIT,
 ): { nodes: GraphNode[]; links: GraphLink[] } {
   const cardMap = new Map(cards.map((c) => [c.id, c]));
   const liveIds = [...cardMap.keys()].filter((id) => !cardMap.get(id)!.isDefunct);
@@ -263,6 +263,7 @@ export function buildGraphData(
       source: edge.to,
       target: edge.from,
       weight: contagionEdgeWeight(edge),
+      shareUnknown: edge.kind === "basket" && edge.weight === null,
       scoreKnown: v9DependencyEdgeScoreKnown(edge),
       type: contagionEdgeRelationship(edge),
     });
@@ -272,40 +273,40 @@ export function buildGraphData(
     .filter((id) => (inboundCounts.get(id) ?? 0) > 0 || (outboundCounts.get(id) ?? 0) > 0)
     .sort((a, b) => (mcapMap.get(b) ?? 0) - (mcapMap.get(a) ?? 0));
 
-  const maxSelectedNodes = maxNodes === ALL_NODE_LIMIT ? rankedIds.length : maxNodes;
-  let selectedIds = rankedIds.slice(0, maxSelectedNodes);
-  let nextCandidateIdx = selectedIds.length;
-  let selectedLinks: RawGraphLink[] = [];
-
-  while (selectedIds.length > 0) {
-    const idSet = new Set(selectedIds);
-    selectedLinks = liveLinks.filter((link) => idSet.has(link.source) && idSet.has(link.target));
-
-    const connectedIds = new Set<string>();
-    for (const link of selectedLinks) {
-      connectedIds.add(link.source);
-      connectedIds.add(link.target);
-    }
-
-    const prunedIds = selectedIds.filter((id) => connectedIds.has(id));
-    const removedCount = selectedIds.length - prunedIds.length;
-    selectedIds = prunedIds;
-
-    while (selectedIds.length < maxSelectedNodes && nextCandidateIdx < rankedIds.length) {
-      selectedIds.push(rankedIds[nextCandidateIdx]);
-      nextCandidateIdx++;
-    }
-
-    if (removedCount === 0) break;
+  const maxSelectedNodes = maxNodes === ALL_NODE_LIMIT ? rankedIds.length : Math.max(0, Math.floor(maxNodes));
+  const rankById = new Map(rankedIds.map((id, index) => [id, index]));
+  const neighbors = new Map<string, Set<string>>();
+  for (const link of liveLinks) {
+    if (!neighbors.has(link.source)) neighbors.set(link.source, new Set());
+    if (!neighbors.has(link.target)) neighbors.set(link.target, new Set());
+    neighbors.get(link.source)!.add(link.target);
+    neighbors.get(link.target)!.add(link.source);
   }
+  const selected = new Set<string>();
+  // Admit a ranked node with an existing neighbor, or seed a new component
+  // with its highest-ranked partner. No node is admitted as an isolate.
+  for (const id of rankedIds) {
+    if (selected.size >= maxSelectedNodes) break;
+    if (selected.has(id)) continue;
+    const adjacent = neighbors.get(id)!;
+    if ([...adjacent].some(neighbor => selected.has(neighbor))) {
+      selected.add(id);
+    } else if (maxSelectedNodes - selected.size >= 2) {
+      const partner = [...adjacent].sort((a, b) => rankById.get(a)! - rankById.get(b)!)[0];
+      selected.add(id);
+      selected.add(partner);
+    }
+  }
+  const selectedIds = rankedIds.filter(id => selected.has(id));
+  const selectedLinks = liveLinks.filter(link => selected.has(link.source) && selected.has(link.target));
 
-  const mcaps = selectedIds.map((id) => mcapMap.get(id) ?? 0);
+  const mcaps = selectedIds.map((id) => mcapMap.get(id)).filter((value): value is number => value != null);
   const maxMcap = mcaps.reduce((m, v) => Math.max(m, v), 1);
 
   const graphNodes: GraphNode[] = selectedIds.map((id) => {
     const card = cardMap.get(id)!;
-    const mcap = mcapMap.get(id) ?? 0;
-    const r = MIN_RADIUS + Math.sqrt(mcap / maxMcap) * (MAX_RADIUS - MIN_RADIUS);
+    const mcap = mcapMap.get(id) ?? null;
+    const r = mcap === null ? MIN_RADIUS : MIN_RADIUS + Math.sqrt(mcap / maxMcap) * (MAX_RADIUS - MIN_RADIUS);
     return { id, symbol: card.symbol, grade: card.grade, mcap, r };
   });
 
@@ -321,26 +322,44 @@ export function buildGraphData(
 export function buildSupernodeState(
   nodes: GraphNode[],
   links: GraphLink[],
-  prevTierById?: Map<string, HubTier>,
+  directExposureById?: ReadonlyMap<string, number>,
 ): SupernodeState {
   const ids = nodes.map((n) => n.id);
+  if (!directExposureById) {
+    const nodeById = new Map(nodes.map(node => [node.id, node]));
+    const edges: ReportCardsV9DependencyEdge[] = links.map(link => ({
+      from: typeof link.target === "object" ? link.target.id : String(link.target),
+      to: typeof link.source === "object" ? link.source.id : String(link.source),
+      kind: link.type === "wrapper" ? "serial" : "basket",
+      materiality: link.type === "wrapper" ? "serial" : "basket-weighted",
+      weight: link.shareUnknown ? null : link.weight,
+      upstreamScore: null,
+    }));
+    directExposureById = new Map(buildDirectHubExposures(edges, id => {
+      const usd = nodeById.get(id)?.mcap;
+      return usd == null ? null : { usd, asOf: null, basis: "market-cap-proxy" };
+    }, {
+      sharedBooks: { bookIdOf: () => null, measuredHoldingUsd: () => null },
+      familyOf: () => null,
+      wrapperFormOf: () => "unknown",
+    }).map(hub => [hub.hubId, hub.direct.knownUsd]));
+  }
   const inWeightById = new Map<string, number>();
   const inDegreeById = new Map<string, number>();
   const outDegreeById = new Map<string, number>();
   const mcapLogById = new Map<string, number>();
 
   for (const node of nodes) {
-    inWeightById.set(node.id, 0);
+    inWeightById.set(node.id, Math.log10(1 + (directExposureById.get(node.id) ?? 0)));
     inDegreeById.set(node.id, 0);
     outDegreeById.set(node.id, 0);
-    mcapLogById.set(node.id, Math.log10(Math.max(0, node.mcap) + 1));
+    mcapLogById.set(node.id, node.mcap === null ? 0 : Math.log10(Math.max(0, node.mcap) + 1));
   }
 
   for (const link of links) {
     const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
     const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
     if (!inWeightById.has(tgtId) || !outDegreeById.has(srcId)) continue;
-    inWeightById.set(tgtId, (inWeightById.get(tgtId) ?? 0) + link.weight);
     inDegreeById.set(tgtId, (inDegreeById.get(tgtId) ?? 0) + 1);
     outDegreeById.set(srcId, (outDegreeById.get(srcId) ?? 0) + 1);
   }
@@ -365,13 +384,11 @@ export function buildSupernodeState(
     scoreById.set(id, score);
   }
 
-  const sortedByScore = [...ids].sort((a, b) => (scoreById.get(b) ?? 0) - (scoreById.get(a) ?? 0));
+  const sortedByScore = [...ids].sort((a, b) => (scoreById.get(b) ?? 0) - (scoreById.get(a) ?? 0) || a.localeCompare(b));
   const scores = sortedByScore.map((id) => scoreById.get(id) ?? 0);
 
   const pCoreEnter = percentileLinear(scores, SUPERNODE_CONFIG.corePercentile * 100) ?? 0;
-  const pCoreHold = percentileLinear(scores, SUPERNODE_CONFIG.coreHoldPercentile * 100) ?? 0;
   const pSecondaryEnter = percentileLinear(scores, SUPERNODE_CONFIG.secondaryPercentile * 100) ?? 0;
-  const pSecondaryHold = percentileLinear(scores, SUPERNODE_CONFIG.secondaryHoldPercentile * 100) ?? 0;
 
   const tierById = new Map<string, HubTier>(ids.map((id) => [id, 0]));
 
@@ -388,19 +405,15 @@ export function buildSupernodeState(
       const score = scoreById.get(id) ?? 0;
       const inDegree = inDegreeById.get(id) ?? 0;
       const inWeight = inWeightById.get(id) ?? 0;
-      const prevTier = prevTierById?.get(id) ?? 0;
 
       const coreEnter = score >= pCoreEnter && inDegree >= SUPERNODE_CONFIG.minCoreInDegree;
-      const coreStay = score >= pCoreHold && inDegree >= SUPERNODE_CONFIG.minCoreInDegree;
       const secondaryEnter = score >= pSecondaryEnter
-        && (inDegree >= SUPERNODE_CONFIG.minSecondaryInDegree || inWeight >= SUPERNODE_CONFIG.minSecondaryInWeight);
-      const secondaryStay = score >= pSecondaryHold
         && (inDegree >= SUPERNODE_CONFIG.minSecondaryInDegree || inWeight >= SUPERNODE_CONFIG.minSecondaryInWeight);
 
       let tier: HubTier = 0;
-      if ((prevTier === 2 && coreStay) || coreEnter) {
+      if (coreEnter) {
         tier = 2;
-      } else if ((prevTier >= 1 && secondaryStay) || secondaryEnter) {
+      } else if (secondaryEnter) {
         tier = 1;
       }
       entryTierById.set(id, tier);
@@ -482,11 +495,11 @@ export function buildSupernodeState(
 // runSimulation
 // ---------------------------------------------------------------------------
 
-export function runSimulation(
+function* simulationSteps(
   nodes: GraphNode[],
   links: GraphLink[],
   supernodeState: SupernodeState,
-): Map<string, { x: number; y: number }> {
+): Generator<void, Map<string, { x: number; y: number }>> {
   if (nodes.length === 0) return new Map();
 
   const simNodes = nodes.map((n) => ({ ...n }));
@@ -532,7 +545,10 @@ export function runSimulation(
     )
     .stop();
 
-  for (let i = 0; i < 300; i++) sim.tick();
+  for (let i = 0; i < 300; i++) {
+    sim.tick();
+    yield;
+  }
 
   const MAX_PASSES = 100;
   const xMin = PAD;
@@ -577,6 +593,7 @@ export function runSimulation(
           }
         }
       }
+      yield;
     }
 
     for (const n of simNodes) {
@@ -597,4 +614,53 @@ export function runSimulation(
   }
 
   return posMap;
+}
+
+export function runSimulation(
+  nodes: GraphNode[],
+  links: GraphLink[],
+  supernodeState: SupernodeState,
+): Map<string, { x: number; y: number }> {
+  const steps = simulationSteps(nodes, links, supernodeState);
+  let result = steps.next();
+  while (!result.done) result = steps.next();
+  return result.value;
+}
+
+/** Same deterministic solver, with bounded work slices and cancellation between slices. */
+export function runSimulationInChunks(
+  nodes: GraphNode[],
+  links: GraphLink[],
+  supernodeState: SupernodeState,
+  onComplete: (positions: Map<string, { x: number; y: number }>) => void,
+): () => void {
+  const steps = simulationSteps(nodes, links, supernodeState);
+  let cancelled = false;
+  let timer: number | NodeJS.Timeout | undefined;
+  let idle: number | undefined;
+  const schedule = () => {
+    if (typeof requestIdleCallback === "function") {
+      idle = requestIdleCallback(slice, { timeout: 100 });
+    } else {
+      timer = setTimeout(slice, 0);
+    }
+  };
+  const slice = () => {
+    if (cancelled) return;
+    const start = performance.now();
+    do {
+      const result = steps.next();
+      if (result.done) {
+        onComplete(result.value);
+        return;
+      }
+    } while (performance.now() - start < 8);
+    schedule();
+  };
+  schedule();
+  return () => {
+    cancelled = true;
+    clearTimeout(timer);
+    if (idle !== undefined) cancelIdleCallback(idle);
+  };
 }

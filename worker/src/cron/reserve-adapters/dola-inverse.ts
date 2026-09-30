@@ -14,6 +14,7 @@ import {
   reserveInfoWarning,
   sameRunRenderClockFreshnessMetadata,
   slicesFromValues,
+  sourceKeySlug,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 import { accumulateBucketedExposure } from "./classification";
@@ -23,7 +24,7 @@ import { encodeAddressCallData } from "../../lib/evm-selectors";
 
 export interface FirmMarket {
   name: string;
-  underlying: { symbol: string };
+  underlying: { symbol: string; isLP?: boolean };
   totalDebt: number;
   borrowPaused: boolean;
 }
@@ -100,6 +101,14 @@ export function resolveBaseSymbol(market: FirmMarket): string {
   return sym;
 }
 
+/** LP-secured debt is not a measured holding of either pool constituent. */
+function lpSymbol(market: FirmMarket): string | null {
+  const symbol = market.underlying.symbol;
+  if (!market.underlying.isLP && !/ (?:clp|lp)$/.test(symbol)
+    && !/^yv-.*(?:DOLA-|sDOLA-|-(?:sDOLA|DOLA)$)/.test(symbol)) return null;
+  return symbol.replace(/^yv-/, "").replace(/ (?:clp|lp)$/, "");
+}
+
 export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: number): AdapterResult {
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.timestamp);
   const {
@@ -110,16 +119,23 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: numbe
     items: payload.markets,
     getValue: (market) => market.totalDebt,
     getBucket: (market) => {
+      if (lpSymbol(market) != null) return "lp";
       const symbol = resolveBaseSymbol(market);
       if (getTrackedStablecoinAsset(symbol)) return "stablecoin";
       return bucketForAsset(symbol);
     },
-    isUnknown: (market) => !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
+    isUnknown: (market) => lpSymbol(market) != null || !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
   });
   const trackedStableValues = new Map<string, number>();
+  const lpValues = new Map<string, number>();
   for (const market of payload.markets) {
     const value = market.totalDebt;
     if (!Number.isFinite(value) || value <= 0) continue;
+    const lp = lpSymbol(market);
+    if (lp != null) {
+      lpValues.set(lp, (lpValues.get(lp) ?? 0) + value);
+      continue;
+    }
     const symbol = resolveBaseSymbol(market);
     if (!getTrackedStablecoinAsset(symbol)) continue;
     trackedStableValues.set(symbol, (trackedStableValues.get(symbol) ?? 0) + value);
@@ -129,6 +145,12 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: numbe
 
   const slices = slicesFromValues([
     { sourceKey: "dola-inverse:unattributed", name: "Unattributed non-FiRM issuance", value: unattributedUsd, risk: "high" },
+    ...Array.from(lpValues, ([symbol, value]) => ({
+      sourceKey: `dola-inverse:lp:${sourceKeySlug(symbol)}`,
+      name: `${symbol} LP-secured debt (undecomposed)`,
+      value,
+      risk: "high" as const,
+    })),
     ...Array.from(trackedStableValues, ([symbol, value]) => {
       const config = getTrackedStablecoinAsset(symbol)!;
       return {
@@ -203,7 +225,7 @@ export function listUnexpectedDolaAssets(payload: FirmMarketsResponse): string[]
       items: payload.markets,
       getValue: (market) => market.totalDebt,
       getBucket: (market) => bucketForAsset(resolveBaseSymbol(market)),
-      isUnknown: (market) => !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
+      isUnknown: (market) => lpSymbol(market) == null && !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
       getUnknownKey: (market) => resolveBaseSymbol(market),
     }).unknownValuesByKey.keys(),
   );

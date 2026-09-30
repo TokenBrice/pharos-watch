@@ -41,8 +41,8 @@ describe("deriveDependencies", () => {
     const meta = makeMeta({
       dependencies: [{ id: "usdc-circle", weight: 0.1 }], // stale manual entry
       reserves: [
-        { name: "USDtb", pct: 90, risk: "low", coinId: "usdtb-ethena" },
-        { name: "USDC buffer", pct: 10, risk: "low", coinId: "usdc-circle" },
+        { name: "USDtb", pct: 90, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
+        { name: "USDC buffer", pct: 10, risk: "low", coinId: "usdc-circle", depType: "collateral" },
       ],
     });
     const result = deriveDependencies(meta);
@@ -58,8 +58,8 @@ describe("deriveDependencies", () => {
         { name: "ETH / stETH", pct: 45, risk: "low" },
         { name: "BTC", pct: 25, risk: "very-low" },
         { name: "SOL", pct: 10, risk: "high" },
-        { name: "USDC", pct: 15, risk: "low", coinId: "usdc-circle" },
-        { name: "USDT", pct: 5, risk: "low", coinId: "usdt-tether" },
+        { name: "USDC", pct: 15, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+        { name: "USDT", pct: 5, risk: "low", coinId: "usdt-tether", depType: "collateral" },
       ],
     });
     const result = deriveDependencies(meta);

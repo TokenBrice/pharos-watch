@@ -70,7 +70,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "mento",
-    "version": 2,
+    "version": 3,
     "semantics": "collateral-mix",
     "breakerScope": "mento-reserve-ceur",
     "display": {

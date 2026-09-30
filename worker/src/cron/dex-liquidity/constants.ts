@@ -237,6 +237,31 @@ export const buildUniswapV4PoolQuery = (skip: number): string => `{
   }
 }`;
 
+/** Retained physical identities are independent of the indexer's USD accounting. */
+export function buildUniswapV4ExactPoolQuery(poolIds: readonly string[]): string {
+  if (
+    poolIds.length === 0 || poolIds.length > 100 ||
+    poolIds.some((id) => !/^0x[a-f0-9]{64}$/.test(id))
+  ) {
+    throw new Error("Invalid Uniswap V4 exact PoolId batch");
+  }
+  return `{
+  pools(first: ${poolIds.length}, where: { id_in: ${JSON.stringify(poolIds)} }) {
+    id
+    token0 { id symbol decimals }
+    token1 { id symbol decimals }
+    feeTier
+    tickSpacing
+    hooks
+    liquidity
+    totalValueLockedUSD
+    token0Price
+    token1Price
+  }
+  _meta { block { number hash } }
+}`;
+}
+
 /** Quality score for non-stablecoin pairing assets */
 export const VOLATILE_PAIR_QUALITY: Record<string, number> = {
   WETH: 0.65,

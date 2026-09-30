@@ -7,6 +7,7 @@
       "pct": 98.9927,
       "risk": "low",
       "coinId": "buidl-blackrock",
+      "depType": "collateral",
       "assetClass": "fund-share",
       "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund (BVI)",
       "riskFactors": [

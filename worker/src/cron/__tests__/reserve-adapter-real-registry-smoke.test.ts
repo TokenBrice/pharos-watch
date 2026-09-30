@@ -14,13 +14,13 @@ const SAMPLE_PAYLOAD = {
     assets: [
       { symbol: "sUSDS", percentage: 50 },
       { symbol: "EURC", percentage: 10 },
-      { symbol: "axlEUROC", percentage: 5 },
+      { symbol: "axlEUROC", chain: "celo", percentage: 5 },
       { symbol: "CELO", percentage: 15 },
       { symbol: "USDGLO", percentage: 5 },
       { symbol: "stETH", percentage: 3 },
       { symbol: "USDT", percentage: 4 },
       { symbol: "USDC", percentage: 2 },
-      { symbol: "axlUSDC", percentage: 1 },
+      { symbol: "axlUSDC", chain: "celo", percentage: 1 },
       { symbol: "AUSD", percentage: 4 },
       { symbol: "WETH", percentage: 1 },
     ],
@@ -116,7 +116,14 @@ describe("reserve adapter real-registry smoke", () => {
     const slices = JSON.parse(String(compositionInsert!.binds[1])) as Array<Record<string, unknown>>;
     expect(slices).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "sUSDS (Sky savings USDS)", pct: 50, coinId: "susds-sky" }),
-      expect.objectContaining({ name: "EURC (Circle euro stablecoin)", pct: 15, coinId: "eurc-circle" }),
+      expect.objectContaining({ name: "EURC (Circle euro stablecoin)", pct: 10, coinId: "eurc-circle" }),
+      expect.objectContaining({
+        sourceKey: "mento:reserve:axleuroc",
+        pct: 5,
+        coinId: "eurc-circle",
+        depType: "collateral",
+        intermediary: expect.objectContaining({ kind: "bridge", chain: "celo", verified: true }),
+      }),
       expect.objectContaining({ name: "CELO", pct: 15 }),
     ]));
 

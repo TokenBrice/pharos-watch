@@ -18,6 +18,7 @@ import {
 import { getL2BeatInfrastructureContext } from "@shared/lib/chains/l2beat-audit";
 import { buildReserveSymbolMatcher } from "@shared/lib/reserve-symbol-matchers";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type {
   DependencyType,
   DependencyWeight,
@@ -143,6 +144,7 @@ export interface RawAuthoredDuplicateRow {
   source: "dependencies" | "reserves";
   indices: number[];
   totalWeight: number;
+  classification: "duplicates" | "split positions";
 }
 
 export interface OverweightDependencySetRow {
@@ -245,6 +247,9 @@ export interface DependencyCoverageAudit {
   generatedAt: string;
   mode: "static" | "input" | "api" | "prod";
   summary: {
+    publicationComparisonStatus: "not-evaluated" | "matched" | "checkout-production-skew";
+    checkoutMethodologyVersion: string;
+    publicationMethodologyVersion: string | null;
     activeCount: number;
     staticEdgeCount: number;
     staticActiveEdgeCount: number;
@@ -259,6 +264,10 @@ export interface DependencyCoverageAudit {
     manualOnlyDependencyCount: number;
     reserveSlicesMissingCoinId: number;
     depTypeWithoutCoinIdWarnings: number;
+    coinIdWithoutDepTypeCount: number;
+    publishedCoinIdWithoutDepTypeCount: number | null;
+    publishedKindMismatchCount: number | null;
+    mixedSourceGuardCount: number;
     staticSelfEdgeCount: number;
     staticDuplicateEdgeCount: number;
     staticStronglyConnectedComponentCount: number;
@@ -267,6 +276,7 @@ export interface DependencyCoverageAudit {
     reportCardStronglyConnectedComponentCount: number | null;
     rawAuthoredDuplicateCount: number;
     overweightEffectiveSetCount: number;
+    invalidSerialDependencyWeightCount: number;
     unknownTargetEdgeCount: number;
     unavailableTargetEdgeCount: number;
     unavailableTargetDispositionGapCount: number;
@@ -348,11 +358,13 @@ interface ParsedReportCardEdge extends DependencyGraphEdge {
   reportKind: ReportCardEdgeKind;
   reportMateriality: ReportCardEdgeMateriality;
   reportedWeight: number | null;
+  dependencySource: DependencyDerivationSource | null;
 }
 
 interface ParsedReportCardInput {
   cardsById: Map<string, ReportCard>;
   edges: ParsedReportCardEdge[];
+  methodologyVersion: string;
 }
 
 function malformedReportCard(path: string, expectation: string): never {
@@ -379,6 +391,7 @@ function parseReportCardInput(payload: unknown): ParsedReportCardInput {
   }
 
   return {
+    methodologyVersion: parsed.data.safetyScoreIdentity.methodologyVersion,
     cardsById: new Map(parsed.data.cards.map((card) => [card.id, card])),
     edges: parsed.data.dependencyGraph.edges.map((edge) => ({
       from: edge.from,
@@ -388,6 +401,7 @@ function parseReportCardInput(payload: unknown): ParsedReportCardInput {
       reportKind: edge.kind,
       reportMateriality: edge.materiality,
       reportedWeight: edge.weight,
+      dependencySource: edge.provenance?.source ?? null,
     })),
   };
 }
@@ -492,6 +506,11 @@ function findRawAuthoredDuplicates(activeCoins: readonly StablecoinMeta[]): RawA
           dependencyId: entries[0].dependencyId,
           dependencyType: entries[0].dependencyType,
           source: group.source,
+          classification: group.source === "reserves"
+            && entries[0].dependencyType === "collateral"
+            && new Set(entries.map((entry) => coin.reserves![entry.index]!.name)).size === entries.length
+            ? "split positions"
+            : "duplicates",
           indices: entries.map((entry) => entry.index),
           totalWeight: entries.reduce((sum, entry) => sum + entry.weight, 0),
         });
@@ -514,8 +533,10 @@ function findOverweightEffectiveSets(
   const rows: OverweightDependencySetRow[] = [];
   for (const coin of activeCoins) {
     const dependencies = deriveEffectiveDependencySet(coin).dependencies;
-    const totalWeight = dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
-    if (totalWeight <= 1 + WEIGHT_EPSILON) continue;
+    const totalWeight = dependencies.reduce((sum, dependency) => (
+      sum + ((dependency.type ?? "collateral") === "collateral" ? dependency.weight : 0)
+    ), 0);
+    if (totalWeight <= 1.000001) continue;
     rows.push({
       coinId: coin.id,
       symbol: coin.symbol,
@@ -708,7 +729,7 @@ function findReserveReviewRows(input: {
   const subMaterialActiveSymbolLeads: ActiveReserveSymbolLeadRow[] = [];
   input.activeCoins.forEach((coin, coinIndex) => {
     (coin.reserves ?? []).forEach((reserve, reserveIndex) => {
-      if (reserve.coinId) return;
+      if (reserve.coinId || reserve.pct <= 0) return;
       const matched = matchers.filter((matcher) => matcher.matches(reserve.name));
       const disposition = dispositionBySlice.get(`${coin.id}::${reserveIndex}`);
       const reviewStatus: MaterialUnlinkedReserveRow["reviewStatus"] = disposition == null
@@ -1053,7 +1074,7 @@ function findReserveSlicesMissingCoinId(
 
   activeCoins.forEach((coin, coinIndex) => {
     (coin.reserves ?? []).forEach((reserve, reserveIndex) => {
-      if (reserve.coinId) return;
+      if (reserve.coinId || reserve.pct <= 0) return;
       rows.push({
         coinId: coin.id,
         symbol: coin.symbol,
@@ -1148,6 +1169,14 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   const hasReportCards = parsedReportCards !== null;
   const cardsById = parsedReportCards?.cardsById ?? new Map<string, ReportCard>();
   const warnings: string[] = [];
+  const publicationComparisonStatus = parsedReportCards == null
+    ? "not-evaluated" as const
+    : parsedReportCards.methodologyVersion === SAFETY_SCORE_METHODOLOGY_VERSION
+      ? "matched" as const
+      : "checkout-production-skew" as const;
+  if (publicationComparisonStatus === "checkout-production-skew") {
+    warnings.push(`checkout-production-skew: publication methodology ${parsedReportCards!.methodologyVersion} differs from checkout ${SAFETY_SCORE_METHODOLOGY_VERSION}; weekly cross-checkout counters are advisory until publication catches up.`);
+  }
   if (input.stablecoins !== undefined && marketCapById?.size === 0) {
     warnings.push("Stablecoin payload did not contain any pegged asset rows.");
   }
@@ -1182,6 +1211,30 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   });
   const reserveMissing = findReserveSlicesMissingCoinId(activeCoins, marketCapById);
   const depTypeWithoutCoinIdWarnings = reserveMissing.filter((row) => row.depType != null);
+  const coinIdWithoutDepTypeCount = activeCoins.reduce((count, coin) => (
+    count + (coin.reserves ?? []).filter((slice) => slice.coinId && slice.depType == null).length
+  ), 0);
+  const publishedCoinIdWithoutDepTypeCount = parsedReportCards == null ? null
+    : [...parsedReportCards.cardsById.values()].reduce((count, card) => (
+        count + (card.dependencyCoverage ?? []).filter((row) => row.reason === "coinId-without-depType").length
+      ), 0);
+  const publishedKindMismatchCount = parsedReportCards == null ? null : activeCoins.reduce((count, coin) => (
+    count + (coin.reserves ?? []).filter((slice) => {
+      if (!slice.coinId || !slice.depType) return false;
+      const expectedKind = slice.depType === "collateral" ? "basket" : "serial";
+      if (parsedReportCards.edges.some((edge) => (
+        edge.to === coin.id && edge.from === slice.coinId && edge.reportKind === expectedKind
+      ))) return false;
+      return parsedReportCards.edges.some((edge) => (
+        edge.to === coin.id && edge.from === slice.coinId && edge.reportKind !== expectedKind
+      ));
+    }).length
+  ), 0);
+  const mixedSourceGuardCount = activeCoins.reduce((count, coin) => (
+    count + deriveEffectiveDependencySet(coin).rejectionReasons.filter(
+      (issue) => issue.reason === "manual-collateral-not-in-reserves",
+    ).length
+  ), 0);
   const manualReview = findManualDependencyReviewRows(activeCoins);
   const reserveReview = findReserveReviewRows({
     activeCoins,
@@ -1191,12 +1244,25 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   });
   const rawAuthoredDuplicates = findRawAuthoredDuplicates(activeCoins);
   const overweightEffectiveSets = findOverweightEffectiveSets(activeCoins, cardsById, hasReportCards);
+  const invalidSerialDependencyWeightCount = activeCoins.reduce((count, coin) => (
+    count + deriveEffectiveDependencySet(coin).dependencies.filter((dependency) => (
+      (dependency.type ?? "collateral") !== "collateral" && dependency.weight !== 1
+    )).length
+  ), 0);
   const dependencyProvenance = extractDependencyProvenance(activeCoins, cardsById, hasReportCards);
   const activeById = new Map(activeCoins.map((coin) => [coin.id, coin]));
   const requiredAdapterMappings: AdapterMappingRequirement[] = dependencyProvenance.flatMap((row) => {
     const coin = activeById.get(row.coinId);
     const requiresMappingReview = hasReportCards
-      ? row.baseSource === "live-reserve"
+      ? parsedReportCards!.edges.some((edge) => (
+          edge.to === row.coinId && (
+            edge.dependencySource === "live-reserve"
+            || (edge.dependencySource == null && row.baseSource === "live-reserve"
+              && (edge.reportKind === "basket" || coin?.reserves?.some(
+                (slice) => slice.coinId === edge.from && slice.depType != null,
+              )))
+          )
+        ))
       : coin?.liveReservesConfig != null && row.baseSource !== "none";
     if (!requiresMappingReview) return [];
     return [{
@@ -1240,6 +1306,9 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
     generatedAt: input.generatedAt ?? new Date().toISOString(),
     mode: input.mode ?? "static",
     summary: {
+      publicationComparisonStatus,
+      checkoutMethodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publicationMethodologyVersion: parsedReportCards?.methodologyVersion ?? null,
       activeCount: activeCoins.length,
       staticEdgeCount: staticGraph.edgeCount,
       staticActiveEdgeCount: staticGraph.activeEdgeCount,
@@ -1254,6 +1323,10 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
       manualOnlyDependencyCount: manualReview.manualOnlyDependencies.length,
       reserveSlicesMissingCoinId: reserveMissing.length,
       depTypeWithoutCoinIdWarnings: depTypeWithoutCoinIdWarnings.length,
+      coinIdWithoutDepTypeCount,
+      publishedCoinIdWithoutDepTypeCount,
+      publishedKindMismatchCount,
+      mixedSourceGuardCount,
       staticSelfEdgeCount: staticGraphDiagnostics.selfEdges.length,
       staticDuplicateEdgeCount: staticGraphDiagnostics.duplicateEdges.length,
       staticStronglyConnectedComponentCount: staticGraphDiagnostics.stronglyConnectedComponents.length,
@@ -1261,8 +1334,9 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
       reportCardDuplicateEdgeCount: reportCardGraphDiagnostics?.duplicateEdges.length ?? null,
       reportCardStronglyConnectedComponentCount:
         reportCardGraphDiagnostics?.stronglyConnectedComponents.length ?? null,
-      rawAuthoredDuplicateCount: rawAuthoredDuplicates.length,
+      rawAuthoredDuplicateCount: rawAuthoredDuplicates.filter((row) => row.classification === "duplicates").length,
       overweightEffectiveSetCount: overweightEffectiveSets.length,
+      invalidSerialDependencyWeightCount,
       unknownTargetEdgeCount: dependencyEdges.filter((edge) => edge.targetLifecycle === "unknown").length,
       unavailableTargetEdgeCount: unavailableTargetEdges.length,
       unavailableTargetDispositionGapCount: unavailableTargetDispositionGaps.size,
@@ -1434,12 +1508,12 @@ function renderFindingRows(
 
 function renderRawDuplicateRows(rows: readonly RawAuthoredDuplicateRow[]): string[] {
   return renderBoundedTable(
-    ["coin", "source", "upstream", "type", "indices", "total weight"],
+    ["coin", "source", "classification", "upstream", "type", "indices", "total weight"],
     rows,
-    (row) => [`${row.symbol} (${row.coinId})`, row.source, row.dependencyId, row.dependencyType, row.indices.join(", "), row.totalWeight],
+    (row) => [`${row.symbol} (${row.coinId})`, row.source, row.classification, row.dependencyId, row.dependencyType, row.indices.join(", "), row.totalWeight],
     FINDING_LIMIT,
     false,
-    ["left", "left", "left", "left", "left", "right"],
+    ["left", "left", "left", "left", "left", "left", "right"],
   );
 }
 
@@ -1495,6 +1569,7 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     "## Summary",
     "",
     `- Active stablecoins: ${audit.summary.activeCount}`,
+    `- Publication comparison: ${audit.summary.publicationComparisonStatus} (checkout ${audit.summary.checkoutMethodologyVersion}; publication ${audit.summary.publicationMethodologyVersion ?? "not supplied"})`,
     `- Static dependency edges: ${audit.summary.staticEdgeCount}`,
     `- Static active-to-active dependency edges: ${audit.summary.staticActiveEdgeCount}`,
     `- Static graph participants: ${audit.summary.staticParticipantCount}`,
@@ -1505,10 +1580,15 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     `- Manual-only dependency entries: ${audit.summary.manualOnlyDependencyCount}`,
     `- Reserve slices missing coinId: ${audit.summary.reserveSlicesMissingCoinId}`,
     `- depType without coinId warnings: ${audit.summary.depTypeWithoutCoinIdWarnings}`,
+    `- coinId without depType (zero tolerance): ${audit.summary.coinIdWithoutDepTypeCount}`,
+    `- Published runtime coinId without depType: ${audit.summary.publishedCoinIdWithoutDepTypeCount ?? "not supplied"}`,
+    `- Published kind mismatches: ${audit.summary.publishedKindMismatchCount ?? "not supplied"}`,
+    `- Mixed-source authoring guard findings: ${audit.summary.mixedSourceGuardCount}`,
     `- Static self / duplicate / SCC findings: ${audit.summary.staticSelfEdgeCount} / ${audit.summary.staticDuplicateEdgeCount} / ${audit.summary.staticStronglyConnectedComponentCount}`,
     `- Report-card self / duplicate / SCC findings: ${audit.summary.reportCardSelfEdgeCount ?? "not supplied"} / ${audit.summary.reportCardDuplicateEdgeCount ?? "not supplied"} / ${audit.summary.reportCardStronglyConnectedComponentCount ?? "not supplied"}`,
     `- Raw authored duplicate groups: ${audit.summary.rawAuthoredDuplicateCount}`,
     `- Overweight effective dependency sets: ${audit.summary.overweightEffectiveSetCount}`,
+    `- Invalid serial dependency weights (must equal 1): ${audit.summary.invalidSerialDependencyWeightCount}`,
     `- Unknown target edges: ${audit.summary.unknownTargetEdgeCount}`,
     `- Unavailable target edges: ${audit.summary.unavailableTargetEdgeCount}`,
     `- Unavailable target disposition gaps: ${audit.summary.unavailableTargetDispositionGapCount}`,
@@ -1535,7 +1615,7 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     ...renderGraphDiagnostics("Static", audit.staticGraphDiagnostics),
     ...renderGraphDiagnostics("Report-card", audit.reportCardGraphDiagnostics),
     "",
-    "## Raw Authored Duplicate Groups",
+    "## Raw Authored Duplicate / Split Position Groups",
     "",
     ...renderRawDuplicateRows(audit.rawAuthoredDuplicates),
     "",
@@ -1618,16 +1698,39 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
  */
 export function evaluateDependencyCoverageStructure(
   audit: DependencyCoverageAudit,
-  options: { requireAdapterMappingCoverage?: boolean } = {},
+  options: { requireAdapterMappingCoverage?: boolean; publishedOnly?: boolean } = {},
 ): string[] {
   const failures: string[] = [];
+  const publicationSkew = options.publishedOnly
+    && audit.summary.publicationComparisonStatus === "checkout-production-skew";
   if (
-    options.requireAdapterMappingCoverage
+    options.requireAdapterMappingCoverage && !publicationSkew
     && !audit.summary.adapterMappingReviewCoverageEvaluated
   ) {
     failures.push("adapter mapping review coverage was not evaluated");
   }
-  const zeroTolerance: Array<[string, number]> = [
+  const publishedCounters: Array<[string, number]> = [
+    ["report-card self-edge", audit.summary.reportCardSelfEdgeCount ?? 0],
+    ["report-card duplicate-edge group", audit.summary.reportCardDuplicateEdgeCount ?? 0],
+    ["report-card strongly connected component", audit.summary.reportCardStronglyConnectedComponentCount ?? 0],
+    ["target disposition validation issue", publicationSkew
+      ? audit.targetDispositionValidationIssues.filter((issue) => (
+          issue.reason === "duplicate-disposition" || issue.reason === "invalid-provenance"
+        )).length
+      : audit.summary.targetDispositionValidationIssueCount],
+    ["adapter mapping review gap", publicationSkew
+      ? audit.adapterMappingReviewGaps.filter((gap) => (
+          gap.reason === "duplicate-review" || gap.reason === "invalid-provenance"
+        )).length
+      : audit.summary.adapterMappingReviewGapCount],
+    ["published kind mismatch", publicationSkew ? 0 : audit.summary.publishedKindMismatchCount ?? 0],
+    ["coinId without depType", audit.summary.coinIdWithoutDepTypeCount],
+    ["published runtime coinId without depType", publicationSkew ? 0 : audit.summary.publishedCoinIdWithoutDepTypeCount ?? 0],
+  ];
+  if (options.publishedOnly && audit.reportCardGraph == null) {
+    failures.push("published dependency graph was not supplied");
+  }
+  const zeroTolerance: Array<[string, number]> = options.publishedOnly ? publishedCounters : [
     ["static self-edge", audit.summary.staticSelfEdgeCount],
     ["static duplicate-edge group", audit.summary.staticDuplicateEdgeCount],
     ["static strongly connected component", audit.summary.staticStronglyConnectedComponentCount],
@@ -1635,13 +1738,18 @@ export function evaluateDependencyCoverageStructure(
     ["report-card duplicate-edge group", audit.summary.reportCardDuplicateEdgeCount ?? 0],
     ["report-card strongly connected component", audit.summary.reportCardStronglyConnectedComponentCount ?? 0],
     ["overweight effective dependency set", audit.summary.overweightEffectiveSetCount],
+    ["invalid serial dependency weight", audit.summary.invalidSerialDependencyWeightCount],
     ["unknown dependency target edge", audit.summary.unknownTargetEdgeCount],
     ["depType without coinId", audit.summary.depTypeWithoutCoinIdWarnings],
+    ["coinId without depType", audit.summary.coinIdWithoutDepTypeCount],
+    ["published runtime coinId without depType", audit.summary.publishedCoinIdWithoutDepTypeCount ?? 0],
     ["manual dependency review gap", audit.summary.manualDependencyReviewGapCount],
     ["stale reserve disposition", audit.summary.staleReserveDispositionCount],
     ["unavailable target disposition gap", audit.summary.unavailableTargetDispositionGapCount],
     ["target disposition validation issue", audit.summary.targetDispositionValidationIssueCount],
     ["adapter mapping review gap", audit.summary.adapterMappingReviewGapCount],
+    ["published kind mismatch", audit.summary.publishedKindMismatchCount ?? 0],
+    ["mixed-source authoring guard", audit.summary.mixedSourceGuardCount],
   ];
   for (const [label, count] of zeroTolerance) {
     if (count > 0) failures.push(`${label} invariant failed with ${count} finding${count === 1 ? "" : "s"}`);

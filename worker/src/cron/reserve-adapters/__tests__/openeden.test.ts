@@ -35,10 +35,10 @@ describe("adaptOpenEdenUsdo", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "OpenEden TBILL", pct: 74.9, risk: "very-low", coinId: "tbill-openeden" },
+      { name: "OpenEden TBILL", pct: 74.9, risk: "very-low", coinId: "tbill-openeden", depType: "collateral" },
       { name: "OpenEden VBILL", pct: 10.2, risk: "low" },
-      { name: "USDC buffer", pct: 7.6, risk: "low", coinId: "usdc-circle" },
-      { name: "BlackRock BUIDL", pct: 7.3, risk: "low", coinId: "buidl-blackrock" },
+      { name: "USDC buffer", pct: 7.6, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { name: "BlackRock BUIDL", pct: 7.3, risk: "low", coinId: "buidl-blackrock", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
@@ -82,6 +82,7 @@ describe("adaptOpenEdenUsdo", () => {
       pct: 1.8,
       risk: "very-low",
       coinId: "usdc-circle",
+      depType: "collateral",
     });
     expect(result.metadata?.componentTotalUsd).toBeCloseTo(49_084_898.00, 2);
     expect(result.metadata).toMatchObject({
@@ -97,6 +98,7 @@ describe("adaptOpenEdenUsdo", () => {
       pct: 5,
       risk: "low",
       coinId: "rlusd-ripple",
+      depType: "collateral",
     });
   });
 
@@ -159,7 +161,7 @@ describe("fetchOpenEdenUsdoReserves", () => {
       nowSec: FIXTURE_NOW,
     });
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 15 });
-    expect(result.slices).toContainEqual({ name: "OpenEden TBILL", pct: 70, risk: "very-low", coinId: "tbill-openeden" });
+    expect(result.slices).toContainEqual({ name: "OpenEden TBILL", pct: 70, risk: "very-low", coinId: "tbill-openeden", depType: "collateral" });
     expect(observed).toEqual(["browser", "neutral", "default"].slice(0, ["browser", "neutral", "default"].indexOf(successfulIdentity) + 1));
     expect(unexpected).toEqual([]);
   });

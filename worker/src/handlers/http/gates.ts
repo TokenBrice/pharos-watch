@@ -202,7 +202,7 @@ export async function evaluateAccessGate(
     return gateResult("public-api", notFoundResponse());
   }
 
-  if (url.pathname === API_PATHS.safetyGrades()) {
+  if (url.pathname === API_PATHS.safetyGrades() || url.pathname === API_PATHS.dependencyGraph()) {
     try {
       const result = await env.SAFETY_GRADES_RATE_LIMIT.limit({
         key: request.headers.get("CF-Connecting-IP") ?? "unknown",

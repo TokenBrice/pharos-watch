@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Pillars,
@@ -31,7 +32,7 @@ const REPORT_CARD_PRESET = {
   safetyScoreIdentity: {
     model: "v9",
     schemaVersion: 1,
-    methodologyVersion: "9.0",
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     policyId: "safety-score-v9",
     policyDigest: "a".repeat(64),
     evaluationBuildDigest: "b".repeat(64),
@@ -53,6 +54,7 @@ interface ReportCardInput {
   score?: number | null;
   overallScore?: number | null;
   backingFromLiveReserves?: boolean;
+  dependencyCoverage?: SafetyScoreV9CurrentCard["dependencyCoverage"];
 }
 
 interface ReportCardEdgeInput {
@@ -67,6 +69,7 @@ interface ReportCardEdgeInput {
 function reportCardFixture(input: {
   cards: ReportCardInput[];
   dependencyGraph: { edges: ReportCardEdgeInput[] };
+  methodologyVersion?: string;
 }) {
   const scoreById = new Map(input.cards.map((card) => [card.id, card.score ?? card.overallScore ?? null]));
   const cards = input.cards
@@ -94,6 +97,7 @@ function reportCardFixture(input: {
         id: inputCard.id,
         score,
         backingFromLiveReserves: inputCard.backingFromLiveReserves,
+        dependencyCoverage: inputCard.dependencyCoverage,
         ...(unrated ? {
           grade: "NR",
           qualityScore: null,
@@ -113,7 +117,14 @@ function reportCardFixture(input: {
       });
     })
     .sort((left, right) => left.id.localeCompare(right.id));
-  return makeReportCardsV9Response(REPORT_CARD_PRESET, () => makeReportCardsV9Card(), { cards });
+  const preset = {
+    ...REPORT_CARD_PRESET,
+    safetyScoreIdentity: {
+      ...REPORT_CARD_PRESET.safetyScoreIdentity,
+      methodologyVersion: input.methodologyVersion ?? SAFETY_SCORE_METHODOLOGY_VERSION,
+    },
+  };
+  return makeReportCardsV9Response(preset, () => makeReportCardsV9Card(), { cards });
 }
 
 const activeCoins: StablecoinMeta[] = [
@@ -122,7 +133,7 @@ const activeCoins: StablecoinMeta[] = [
   coin({
     id: "wrap-usdc",
     symbol: "wUSDC",
-    reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
+    reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" }],
   }),
   coin({
     id: "manual-usdt",
@@ -164,6 +175,147 @@ const stablecoinsPayload = {
 
 
 describe("generate-dependency-coverage-audit", () => {
+  it("warns on publication skew while retaining provenance failures and deferring authored-kind checks", () => {
+    const activeCoins = [
+      coin({ id: "upstream" }),
+      coin({ id: "dependent", reserves: [
+        { name: "Mechanism claim", pct: 100, risk: "low", coinId: "upstream", depType: "mechanism" },
+      ] }),
+    ];
+    const reportCards = reportCardFixture({
+      methodologyVersion: `${SAFETY_SCORE_METHODOLOGY_VERSION}.1`,
+      cards: [{ id: "upstream", score: 80 }, { id: "dependent", score: 70 }],
+      dependencyGraph: { edges: [{ from: "upstream", to: "dependent", kind: "basket", weight: 1 }] },
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins, reportCards,
+      targetDispositions: [targetDisposition("upstream", "active", { reviewer: "" })],
+    });
+    expect(audit.summary.publicationComparisonStatus).toBe("checkout-production-skew");
+    expect(audit.summary.publishedKindMismatchCount).toBe(1);
+    expect(audit.warnings.some((warning) => warning.startsWith("checkout-production-skew:"))).toBe(true);
+    expect(evaluateDependencyCoverageStructure(audit, { publishedOnly: true })).toEqual([
+      "target disposition validation issue invariant failed with 1 finding",
+    ]);
+    expect(evaluateDependencyCoverageStructure(audit)).toContain(
+      "published kind mismatch invariant failed with 1 finding",
+    );
+    const matched = buildDependencyCoverageAudit({ activeCoins, reportCards: reportCardFixture({
+      cards: [{ id: "upstream", score: 80 }, { id: "dependent", score: 70 }],
+      dependencyGraph: { edges: [{ from: "upstream", to: "dependent", kind: "basket", weight: 1 }] },
+    }) });
+    expect(matched.summary.publicationComparisonStatus).toBe("matched");
+    expect(evaluateDependencyCoverageStructure(matched, { publishedOnly: true })).toEqual([
+      "published kind mismatch invariant failed with 1 finding",
+    ]);
+  });
+
+  it("accepts several unit-weight serial parents while rejecting overweight baskets and partial serial claims", () => {
+    const audit = buildDependencyCoverageAudit({ activeCoins: [
+      coin({ id: "parent-a" }), coin({ id: "parent-b" }),
+      coin({ id: "serial", dependencies: [
+        { id: "parent-a", weight: 1, type: "wrapper" },
+        { id: "parent-b", weight: 1, type: "mechanism" },
+      ] }),
+      coin({ id: "basket", dependencies: [
+        { id: "parent-a", weight: 0.6, type: "collateral" },
+        { id: "parent-b", weight: 0.6, type: "collateral" },
+      ] }),
+      coin({ id: "partial-serial", dependencies: [{ id: "parent-a", weight: 0.9, type: "mechanism" }] }),
+    ] });
+    expect(audit.overweightEffectiveSets).toEqual([
+      expect.objectContaining({ coinId: "basket", totalWeight: 1.2 }),
+    ]);
+    expect(audit.summary.invalidSerialDependencyWeightCount).toBe(1);
+    expect(evaluateDependencyCoverageStructure(audit)).toContain(
+      "invalid serial dependency weight invariant failed with 1 finding",
+    );
+  });
+
+  it("does not turn zero-exposure classification rows into missing-link leads", () => {
+    const audit = buildDependencyCoverageAudit({ activeCoins: [
+      coin({ id: "upstream", symbol: "USDC" }),
+      coin({ id: "subject", reserves: [
+        { name: "USDC classification", pct: 0, risk: "low", sourceKey: "classification:usdc" },
+        { name: "Stablecoin residual classification", pct: 0, risk: "low", sourceKey: "classification:residual" },
+        { name: "Cash", pct: 100, risk: "very-low" },
+      ] }),
+    ] });
+    expect(audit.reserveSlicesMissingCoinId.map((row) => row.reserveName)).toEqual(["Cash"]);
+    expect(audit.materialUnlinkedReserveSlices).toEqual([]);
+    expect(audit.subMaterialActiveUnlinkedReserveSymbolLeads).toEqual([]);
+  });
+
+  it("gates missing authored types and published kind disagreements", () => {
+    const upstream = coin({ id: "upstream" });
+    const dependent = coin({ id: "dependent", reserves: [
+      { name: "Legacy untyped", pct: 20, risk: "low", coinId: "upstream" },
+      { name: "Reviewed mechanism", pct: 80, risk: "low", coinId: "upstream", depType: "mechanism" },
+    ] });
+    const reportCards = reportCardFixture({
+      cards: [{ id: "upstream", score: 80 }, { id: "dependent", score: 70 }],
+      dependencyGraph: { edges: [{ from: "upstream", to: "dependent", kind: "basket", weight: 0.8 }] },
+    });
+    const audit = buildDependencyCoverageAudit({ activeCoins: [upstream, dependent], reportCards });
+    expect(audit.summary.coinIdWithoutDepTypeCount).toBe(1);
+    expect(audit.summary.publishedKindMismatchCount).toBe(1);
+    expect(evaluateDependencyCoverageStructure(audit, { publishedOnly: true })).toEqual([
+      "published kind mismatch invariant failed with 1 finding",
+      "coinId without depType invariant failed with 1 finding",
+    ]);
+    const staticAudit = buildDependencyCoverageAudit({ activeCoins: [upstream, dependent] });
+    expect(staticAudit.summary.publishedKindMismatchCount).toBeNull();
+    expect(evaluateDependencyCoverageStructure(staticAudit)).toEqual([
+      "invalid serial dependency weight invariant failed with 1 finding",
+      "coinId without depType invariant failed with 1 finding",
+    ]);
+  });
+
+  it("gates untyped published runtime coverage even when authored reserves are typed", () => {
+    const activeCoins = [
+      coin({ id: "upstream" }),
+      coin({ id: "dependent", reserves: [
+        { name: "USDC", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" },
+      ] }),
+    ];
+    const cards: ReportCardInput[] = [{ id: "upstream", score: 80 }, {
+      id: "dependent", score: 70, dependencyCoverage: [{
+        upstreamLabel: "USDC", upstreamAssetId: "upstream", share: 1,
+        reason: "coinId-without-depType", sourceAsOf: null, identityVerified: true,
+      }],
+    }];
+    const audit = buildDependencyCoverageAudit({
+      activeCoins, reportCards: reportCardFixture({ cards, dependencyGraph: { edges: [] } }),
+    });
+    expect(audit.summary.coinIdWithoutDepTypeCount).toBe(0);
+    expect(audit.summary.publishedCoinIdWithoutDepTypeCount).toBe(1);
+    expect(evaluateDependencyCoverageStructure(audit, { publishedOnly: true })).toEqual([
+      "published runtime coinId without depType invariant failed with 1 finding",
+    ]);
+    const skewedAudit = buildDependencyCoverageAudit({
+      activeCoins, reportCards: reportCardFixture({
+        cards, dependencyGraph: { edges: [] }, methodologyVersion: "0.0",
+      }),
+    });
+    expect(skewedAudit.summary.publicationComparisonStatus).toBe("checkout-production-skew");
+    expect(skewedAudit.summary.publishedCoinIdWithoutDepTypeCount).toBe(1);
+    expect(evaluateDependencyCoverageStructure(skewedAudit, { publishedOnly: true })).toEqual([]);
+  });
+
+  it("counts manual collateral omitted by the linked reserve identity set", () => {
+    const audit = buildDependencyCoverageAudit({ activeCoins: [
+      coin({ id: "represented" }), coin({ id: "omitted" }),
+      coin({ id: "dependent", reserves: [
+        { name: "Represented reserve", pct: 80, risk: "low", coinId: "represented", depType: "collateral" },
+      ], dependencies: [{ id: "omitted", type: "collateral", weight: 0.2 }],
+      dependencyReview: dependencyReview([{ id: "omitted", type: "collateral", weight: 0.2, reason: "Manual holding." }]) }),
+    ] });
+    expect(audit.summary.mixedSourceGuardCount).toBe(1);
+    expect(evaluateDependencyCoverageStructure(audit)).toContain(
+      "mixed-source authoring guard invariant failed with 1 finding",
+    );
+  });
+
   it("counts static graph coverage and reserve/dependency audit rows", () => {
     const audit = buildDependencyCoverageAudit({
       activeCoins,
@@ -369,7 +521,7 @@ describe("generate-dependency-coverage-audit", () => {
         id: "overweight",
         dependencies: [
           { id: "target-a", weight: 0.7, type: "collateral" },
-          { id: "target-b", weight: 0.4, type: "mechanism" },
+          { id: "target-b", weight: 0.5, type: "collateral" },
         ],
       }),
       coin({
@@ -383,8 +535,8 @@ describe("generate-dependency-coverage-audit", () => {
       coin({
         id: "split-reserve",
         reserves: [
-          { name: "Route one", pct: 40, risk: "low", coinId: "target-a" },
-          { name: "Route two", pct: 30, risk: "medium", coinId: "target-a" },
+          { name: "Route one", pct: 40, risk: "low", coinId: "target-a", depType: "collateral" },
+          { name: "Route two", pct: 30, risk: "medium", coinId: "target-a", depType: "collateral" },
         ],
       }),
     ];
@@ -394,13 +546,13 @@ describe("generate-dependency-coverage-audit", () => {
       staticSelfEdgeCount: 1,
       staticDuplicateEdgeCount: 1,
       staticStronglyConnectedComponentCount: 1,
-      rawAuthoredDuplicateCount: 2,
+      rawAuthoredDuplicateCount: 1,
       overweightEffectiveSetCount: 1,
     });
     expect(audit.staticGraphDiagnostics.stronglyConnectedComponents).toEqual([["cycle-a", "cycle-b"]]);
     expect(audit.rawAuthoredDuplicates).toEqual(expect.arrayContaining([
       expect.objectContaining({ coinId: "duplicate", source: "dependencies", indices: [0, 1] }),
-      expect.objectContaining({ coinId: "split-reserve", source: "reserves", indices: [0, 1] }),
+      expect.objectContaining({ coinId: "split-reserve", source: "reserves", classification: "split positions", indices: [0, 1] }),
     ]));
     expect(audit.overweightEffectiveSets.map((row) => row.coinId)).toEqual(["overweight"]);
   });
@@ -699,7 +851,7 @@ describe("generate-dependency-coverage-audit", () => {
     const upstream = coin({ id: "upstream" });
     const dependent = coin({
       id: "dependent",
-      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream" }],
+      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" }],
     });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [upstream, dependent],
@@ -715,11 +867,11 @@ describe("generate-dependency-coverage-audit", () => {
     ]);
   });
 
-  it("fails mapping coverage deterministically for a new unmapped live-reserve adapter", () => {
+  it("does not require adapter mapping review for live backing without a published mapped dependency", () => {
     const upstream = coin({ id: "upstream" });
     const mapped = coin({
       id: "mapped",
-      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream" }],
+      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" }],
       liveReservesConfig: liveConfig("accountable"),
     });
     const reportCards = reportCardFixture({
@@ -755,9 +907,9 @@ describe("generate-dependency-coverage-audit", () => {
       adapterMappingReviewCoverageStatus: "evaluated-clean",
     });
     expect(reportCardGap.summary).toMatchObject({
-      adapterMappingReviewGapCount: 1,
+      adapterMappingReviewGapCount: 0,
       adapterMappingReviewCoverageEvaluated: true,
-      adapterMappingReviewCoverageStatus: "evaluated-with-gaps",
+      adapterMappingReviewCoverageStatus: "evaluated-clean",
     });
     expect(staticGap.summary).toMatchObject({
       adapterMappingReviewGapCount: 1,
@@ -765,9 +917,7 @@ describe("generate-dependency-coverage-audit", () => {
       adapterMappingReviewCoverageStatus: "evaluated-with-gaps",
     });
     expect(evaluateDependencyCoverageStructure(evaluatedClean)).toEqual([]);
-    expect(evaluateDependencyCoverageStructure(reportCardGap)).toEqual([
-      "adapter mapping review gap invariant failed with 1 finding",
-    ]);
+    expect(evaluateDependencyCoverageStructure(reportCardGap)).toEqual([]);
     expect(evaluateDependencyCoverageStructure(staticGap, {
       requireAdapterMappingCoverage: true,
     })).toEqual(["adapter mapping review gap invariant failed with 1 finding"]);
@@ -841,7 +991,7 @@ describe("generate-dependency-coverage-audit", () => {
     const withEdge = buildDependencyCoverageAudit({
       activeCoins: [
         coin({ id: "upstream", symbol: "UP" }),
-        coin({ id: "dependent", symbol: "DEP", reserves: [{ name: "UP", pct: 100, risk: "low", coinId: "upstream" }] }),
+        coin({ id: "dependent", symbol: "DEP", reserves: [{ name: "UP", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" }] }),
       ],
     });
     const withoutWrongEdge = buildDependencyCoverageAudit({

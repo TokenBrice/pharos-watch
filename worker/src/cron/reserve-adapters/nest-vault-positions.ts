@@ -160,6 +160,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
       name: "Liquid USDC balances",
       risk: "low",
       coinId: "usdc-circle",
+      depType: "collateral",
     };
   }
   if (symbol === "USDT" || symbol === "USDT0") {
@@ -169,6 +170,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
       name: "Liquid USDT balances",
       risk: "low",
       coinId: "usdt-tether",
+      depType: "collateral",
     };
   }
   if (symbol === "pUSD") {
@@ -178,6 +180,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
       name: "pUSD liquid balance",
       risk: "high",
       coinId: "pusd-plume",
+      depType: "collateral",
     };
   }
   return {
@@ -200,6 +203,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
       name: "Nest Treasury vault (nTBILL)",
       risk: "low",
       coinId: "ntbill-nest",
+      depType: "collateral",
     };
   }
   if (slug === "janus-henderson-fund" || symbol === "JTRSY") {
@@ -209,6 +213,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
       name: "Janus Henderson Anemoy Treasury Fund (JTRSY)",
       risk: "low",
       coinId: "jtrsy-anemoy",
+      depType: "collateral",
     };
   }
   if (slug === "superstate-ustb" || symbol === "USTB") {
@@ -218,6 +223,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
       name: "Superstate USTB Treasury Fund",
       risk: "low",
       coinId: "ustb-superstate",
+      depType: "collateral",
     };
   }
   if (slug === "superstate-uscc" || symbol === "USCC") {
@@ -431,7 +437,7 @@ export async function fetchNestVaultPositionsReserves(
   });
 
   return {
-    slices: slicesFromValues(values),
+    slices: slicesFromValues(values, null),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...verifiedFreshnessMetadata(sourceTimestamp),

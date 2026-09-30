@@ -82,7 +82,7 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
   }
 
   const warnings: LiveReserveWarning[] = [];
-  const sliceInputs: Array<{ value: number; sourceKey: string; name: string; risk: ReserveSlice["risk"]; coinId?: string }> = [];
+  const sliceInputs: Array<{ value: number; sourceKey: string; name: string; risk: ReserveSlice["risk"]; coinId?: string; depType?: ReserveSlice["depType"] }> = [];
 
   for (const [assetKey, entries] of Object.entries(backingAssets)) {
     const amount = sumBackingAssetAmounts("usdtb-transparency", assetKey, entries);
@@ -110,7 +110,7 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
       continue;
     }
 
-    sliceInputs.push({ sourceKey: config.sourceKey, name: config.name, value: amount, risk: config.risk, coinId: config.coinId });
+    sliceInputs.push({ sourceKey: config.sourceKey, name: config.name, value: amount, risk: config.risk, coinId: config.coinId, depType: "collateral" });
   }
 
   let assetsInMotionUsd = 0;

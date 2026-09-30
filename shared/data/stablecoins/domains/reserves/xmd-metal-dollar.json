@@ -5,8 +5,6 @@
       "name": "XUSDC (bridge-wrapped USDC) held by the xmd.treasury contract",
       "pct": 96.220617,
       "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle (upstream USDC); Metallicus xtokens bridge contract on XPR Network (wrapper issuer, swapscold 2-of-4 multisig)",
@@ -24,22 +22,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "Pharos reserve research agent (2026-08-20 current-source refresh)",
-    "confidence": "verified",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map evidence review",
+    "confidence": "probable",
     "sources": [
+      {"label": "XPR treasury XUSDC balance and xtokens account authority, head block 406113096 (accessed 2026-09-30)", "url": "https://proton.eosusa.io/v1/chain/get_currency_balance"},
       {"label": "XPR Network Antelope API - xmd.treasury token balances (get_currency_balance, head block 399093779)", "url": "https://proton.eosusa.io/v1/chain/get_currency_balance"},
       {"label": "XPR Network explorer - xmd.treasury", "url": "https://explorer.xprnetwork.org/account/xmd.treasury"},
       {"label": "XPR Network Metal Dollar overview", "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"},
       {"label": "Metallicus Metal Dollar product page", "url": "https://www.metallicus.com/metal-dollar"}
     ],
-    "rationale": "On-chain read on 2026-08-20 via the public XPR Network Antelope API (chain_id 384da888112027f0321850a169f737c33e53b388aad48b5adace4bab97f437e0, head block 399093779, head_block_time 2026-08-20T14:16:39.500 UTC): xmd.treasury holds 2,545,934.333239 XUSDC, 100,000.000000 MPD, 0.000085 XPAX, and 0.000002 XPYUSD against an xmd.token stat supply of 2,645,818.860223 XMD (treasury-basket ratio ~1.00004364). Weights are computed against the total measured treasury balance of 2,645,934.333326 basket units: XUSDC 96.220617% and MPD 3.779383%; XPAX and XPYUSD are dust below 0.000000004% each and are documented here rather than allocated as slices. Issuer disclosures (XPR Network help center, metallicus.com, metaldollar.com) describe a USDC, PYUSD, and USDP/XPAX basket with 1:1 mint and redeem; none mention MPD, which the on-chain xmd.treasury tokens whitelist includes at a 2% maxTreasuryPercent cap (contract mpd.token, controlled by the same swapscold 2-of-4 Metallicus multisig, with a pausempd action and no public backing disclosure). XUSDC, XPYUSD, and XPAX are xtokens bridge wrappers whose upstream assets are Circle USDC and Paxos PYUSD/USDP; that wrapping describes the reserve asset's own form, not XMD's claim on Circle, so the XUSDC slice carries depType collateral rather than wrapper. XMD is not a 1:1 serial claim on USDC. It is a proportional claim on the measured two-asset treasury basket. The MPD slice is classified as an untracked exogenous asset; its undisclosed backing is captured in the high risk tier and risk factors, not as an unallocated residual.",
+    "rationale": "The dated 2026-08-20 treasury composition is retained as a fallback, not refreshed to today's weights. On 2026-09-30, the XPR API at head block 406113096 returned 2,797,236.513852 XUSDC in xmd.treasury and xtokens authority delegated to swapscold. These observations prove local token holdings and operator authority, but do not identify a canonical USDC escrow or reconcile its balance against outstanding XUSDC. The former USDC link is withheld until that bridge backing is independently verified. MPD remains an untracked Metallicus-issued token. No canonical USDC exposure is asserted from the XUSDC symbol alone.",
     "compositionBasis": "On-chain xmd.treasury token balances read via the XPR Network Antelope API at head block 399093779 (2026-08-20)",
     "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "Treasury balances and weights are fully measured on-chain; the upstream bridge reserves backing the xtokens wrappers and any off-chain custody arrangements are not published, and no dated independent attestation exists.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [{"reserveIndex": 1, "reserveName": "MPD (Metallicus-issued mpd.token dollar token) held by the xmd.treasury contract", "pct": 3.779383, "disposition": "untracked-exogenous-asset", "rationale": "MPD is a Metallicus-issued XPR Network token held in the xmd.treasury basket; it is not a Pharos-tracked stablecoin dependency, and its backing is priced through the high-risk slice classification rather than a dependency edge."}]
+    "knownUnknownExposure": "XUSDC bridge custody, canonical USDC escrow identity and escrow coverage remain unverified. Local treasury balances do not establish upstream backing.",
+    "knownUnknownExposurePct": 96.220617,
+    "nonLinkDispositions": [
+      {"reserveIndex": 0, "reserveName": "XUSDC (bridge-wrapped USDC) held by the xmd.treasury contract", "pct": 96.220617, "disposition": "insufficient-evidence", "rationale": "XPR head block 406113096 on 2026-09-30 confirms treasury XUSDC but not a canonical USDC escrow or collateral reconciliation. Withhold the canonical issuer edge until bridge backing is verified."},
+      {"reserveIndex": 1, "reserveName": "MPD (Metallicus-issued mpd.token dollar token) held by the xmd.treasury contract", "pct": 3.779383, "disposition": "untracked-exogenous-asset", "rationale": "MPD is a Metallicus-issued XPR Network token, not a Pharos-tracked stablecoin dependency."}
+    ]
   },
   "custodyProfile": {
     "providers": [{"name": "xmd.treasury smart contract on XPR Network (reserve treasury account; controlled by the swapscold 2-of-4 Metallicus operator multisig)", "role": "other"}],

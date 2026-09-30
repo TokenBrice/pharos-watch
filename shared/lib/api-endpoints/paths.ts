@@ -88,6 +88,8 @@ export const API_PATHS = {
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
   reportCardsV9: () => "/api/report-cards/v9",
   safetyGrades: () => "/api/safety-grades",
+  dependencyGraph: () => "/api/dependency-graph/v1",
+  dependencyScenarios: () => "/api/dependency-scenarios/v1",
   donorKeyClaims: () => "/api/donor-key-claims",
   depegResolver: () => "/api/depeg-resolver",
   depegResolverReview: () => "/api/depeg-resolver-review",

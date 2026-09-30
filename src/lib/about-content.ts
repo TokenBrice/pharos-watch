@@ -9,7 +9,6 @@ import {
   FlaskConical,
   Gauge,
   Globe,
-  Layers,
   Network,
   Newspaper,
   Rocket,
@@ -153,20 +152,12 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
     linkLabel: "Open scorecards",
   },
   {
-    title: "Contagion Map",
+    title: "Dependency Map",
     description:
-      "A live dependency graph showing how collateral relationships can transmit stress through the ecosystem.",
+      "Explore mapped collateral and wrapper dependencies. Exposure mode traces linked coins using publication-bound supply, without estimating losses or changes in Safety Scores.",
     icon: Network,
     href: "/dependency-map/",
     linkLabel: "Open dependency map",
-  },
-  {
-    title: "Systemic Risk Scoreboard",
-    description:
-      "The highest-impact single-coin failure scenarios (part of Safety Scores), surfaced inside the scorecard stress panel before a crisis makes them obvious.",
-    icon: Layers,
-    href: "/safety-scores/",
-    linkLabel: "Open stress panel",
   },
   {
     title: "Depeg Early Warning (DEWS)",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  FullAuthoredReserveCompositionSchema,
   FullReserveCompositionSchema,
   PartialKnownExposureReserveCompositionSchema,
   RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
@@ -11,6 +12,14 @@ describe("reserve composition validation", () => {
     { name: "USDC", pct: 40, risk: "low" as const },
     { name: "T-bills", pct: 20, risk: "very-low" as const },
   ];
+
+  it("rejects an authored linked row without a relationship type", () => {
+    const schema = FullAuthoredReserveCompositionSchema;
+    const result = schema.safeParse([{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }]);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues).toContainEqual(expect.objectContaining({ path: [0, "depType"] }));
+    expect(schema.safeParse([{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" }]).success).toBe(true);
+  });
 
   it("accepts full compositions that sum to 100 within tolerance", () => {
     expect(FullReserveCompositionSchema.safeParse([

@@ -111,7 +111,7 @@ describe("adaptUsddLatestCollateral", () => {
       { sourceKey: "usdd-data-platform:trx", name: "TRX", pct: 39.7, risk: "high" },
       { sourceKey: "usdd-data-platform:psm-usdt", name: "USDT (PSM vaults)", pct: 8, risk: "low", coinId: "usdt-tether", depType: "collateral" },
       { sourceKey: "usdd-data-platform:staked-trx", name: "sTRX (direct vaults)", pct: 1.8, risk: "high" },
-      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 0.1, risk: "high", coinId: "usdt-tether" },
+      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 0.1, risk: "high", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       vaultCount: 7,
@@ -184,7 +184,7 @@ describe("fetchUsddDataPlatformReserves", () => {
     });
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 100, risk: "high", coinId: "usdt-tether" },
+      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 100, risk: "high", coinId: "usdt-tether", depType: "collateral" },
     ]);
   });
 

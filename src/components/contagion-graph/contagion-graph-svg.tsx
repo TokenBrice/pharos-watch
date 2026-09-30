@@ -1,7 +1,10 @@
 "use client";
 
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode } from "react";
-import { gradeColor, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
+import { memo, useId, useRef, useState } from "react";
+import { footprintViewBox, upstreamArrowPoint } from "./contagion-graph-exposure";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { gradeColor, graphNodeLabel, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
 import type { FocusMode, ResolvedLink } from "@/components/contagion-graph-graph";
 import {
   GRAPH_DIM_EDGE_OPACITY,
@@ -17,7 +20,6 @@ import {
   HUB_LABEL_FONT_SIZE,
   PAD,
   RING_WIDTH,
-  WIDTH,
   type GraphNode,
   type HubTier,
 } from "@/lib/contagion-layout";
@@ -64,6 +66,11 @@ interface EdgeRenderProps {
   edgeDistance: Map<number, number>;
   onMouseEnter: (edgeIndex: number) => void;
   onMouseLeave: () => void;
+  arrowId: string;
+  targetRadius: number;
+  highlighted: boolean;
+  revealHop: number | null;
+  reducedMotion: boolean;
 }
 
 interface NodeRenderProps {
@@ -109,7 +116,7 @@ function ContagionGraphClipPaths({
         const innerR = Math.max(node.r * nodeScale - RING_WIDTH, 3);
         return (
           <clipPath key={node.id} id={`clip-n-${node.id}`}>
-            <circle cx={pos.x} cy={pos.y} r={innerR} />
+            <circle data-clip-node={node.id} cx={pos.x} cy={pos.y} r={innerR} />
           </clipPath>
         );
       })}
@@ -165,7 +172,7 @@ function getEdgePresentation({
   };
 }
 
-function ContagionGraphEdge({
+const ContagionGraphEdge = memo(function ContagionGraphEdge({
   link,
   positions,
   activeHoveredId,
@@ -173,6 +180,11 @@ function ContagionGraphEdge({
   connectedEdges,
   edgeDistance,
   onMouseEnter,
+  arrowId,
+  targetRadius,
+  highlighted,
+  revealHop,
+  reducedMotion,
   onMouseLeave,
 }: EdgeRenderProps) {
   const posA = positions.get(link.srcId);
@@ -186,9 +198,10 @@ function ContagionGraphEdge({
     connectedEdges,
     edgeDistance,
   });
+  const arrowTip = upstreamArrowPoint(posA, posB, targetRadius);
 
   return (
-    <g key={`${link.srcId}-${link.tgtId}-${link.index}`}>
+    <g key={`${link.srcId}-${link.tgtId}-${link.index}`} data-edge-source={link.srcId} data-edge-target={link.tgtId} data-target-radius={targetRadius} data-exposure-edge={revealHop !== null || undefined} className={revealHop !== null ? "graph-exposure-halo" : undefined} style={revealHop !== null ? { animation: reducedMotion ? "none" : undefined, animationDelay: `${revealHop * GRAPH_RIPPLE_HOP_DELAY_MS}ms` } : undefined}>
       <line
         x1={posA.x} y1={posA.y} x2={posB.x} y2={posB.y}
         stroke="transparent" strokeWidth={14}
@@ -197,10 +210,13 @@ function ContagionGraphEdge({
         onMouseLeave={onMouseLeave}
       />
       <line
-        x1={posA.x} y1={posA.y} x2={posB.x} y2={posB.y}
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        opacity={edgeOpacity}
+        x1={posA.x} y1={posA.y} x2={arrowTip.x} y2={arrowTip.y}
+        markerEnd={`url(#${arrowId})`}
+        data-upstream-id={link.tgtId}
+        data-highlighted-path={highlighted || undefined}
+        stroke={highlighted ? "var(--p-frost-blue)" : strokeColor}
+        strokeWidth={highlighted ? Math.max(3, strokeWidth) : strokeWidth}
+        opacity={highlighted ? 1 : edgeOpacity}
         strokeDasharray={TYPE_DASH[link.type]}
         pointerEvents="none"
         style={{
@@ -209,7 +225,20 @@ function ContagionGraphEdge({
       />
     </g>
   );
-}
+}, (previous, next) => {
+  const id = next.link.index;
+  return previous.link === next.link
+    && previous.positions.get(next.link.srcId) === next.positions.get(next.link.srcId)
+    && previous.positions.get(next.link.tgtId) === next.positions.get(next.link.tgtId)
+    && (previous.activeHoveredId === null) === (next.activeHoveredId === null)
+    && (previous.activeHoveredEdge === id) === (next.activeHoveredEdge === id)
+    && previous.connectedEdges.has(id) === next.connectedEdges.has(id)
+    && previous.edgeDistance.get(id) === next.edgeDistance.get(id)
+    && previous.onMouseEnter === next.onMouseEnter && previous.onMouseLeave === next.onMouseLeave
+    && previous.arrowId === next.arrowId && previous.targetRadius === next.targetRadius
+    && previous.highlighted === next.highlighted && previous.revealHop === next.revealHop
+    && previous.reducedMotion === next.reducedMotion;
+});
 
 function getNodePresentation({
   node,
@@ -242,7 +271,7 @@ function getNodePresentation({
   return { isHovered, isHub, isCoreHub, color, nodeDelay, nodeOpacity };
 }
 
-function ContagionGraphNode({
+const ContagionGraphNode = memo(function ContagionGraphNode({
   node,
   position,
   focusMode,
@@ -284,7 +313,7 @@ function ContagionGraphNode({
   const tickerFontSize = HUB_LABEL_FONT_SIZE * nodeScale;
   const labelGap = showTickerLabels ? tickerFontSize * 0.7 : isCoreHub ? 12 : 10;
   const labelY = Math.max(PAD + 10, Math.min(HEIGHT - PAD - 2, position.y + visualR + labelGap));
-  const labelText = showTickerLabels ? node.symbol : `${node.symbol} · ${node.grade}`;
+  const labelText = showTickerLabels ? graphNodeLabel(node) : `${graphNodeLabel(node)} · ${node.grade}`;
   return (
     <g
       key={node.id}
@@ -292,7 +321,7 @@ function ContagionGraphNode({
       data-node-id={node.id}
       data-pinned={isPinnedPosition ? "true" : undefined}
       role="button"
-      aria-label={`${node.symbol} — Grade ${node.grade}, market cap ${formatCurrency(node.mcap)}${isPinnedPosition ? " (pinned)" : ""}`}
+      aria-label={`${graphNodeLabel(node)}, Grade ${node.grade}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}${pinnedSelectionId === node.id ? ", Selected" : ", Trace"}${isPinnedPosition ? ", Pinned position" : ""}`}
       style={{ cursor: nodeCursor }}
       onPointerDown={(event) => onPointerDown(event, node.id)}
       onMouseEnter={() => onMouseEnter(node.id)}
@@ -408,7 +437,25 @@ function ContagionGraphNode({
       )}
     </g>
   );
-}
+}, (previous, next) => {
+  const id = next.node.id;
+  return previous.node === next.node && previous.position === next.position
+    && previous.focusMode === next.focusMode && previous.logos === next.logos
+    && (previous.activeHoveredId === null) === (next.activeHoveredId === null)
+    && (previous.activeHoveredId === id) === (next.activeHoveredId === id)
+    && (previous.focusedId === id) === (next.focusedId === id)
+    && (previous.pinnedSelectionId === id) === (next.pinnedSelectionId === id)
+    && previous.isPinnedPosition === next.isPinnedPosition
+    && previous.connectedNodes.has(id) === next.connectedNodes.has(id)
+    && previous.nodeDistance.get(id) === next.nodeDistance.get(id)
+    && previous.tierById.get(id) === next.tierById.get(id)
+    && previous.logoZoom === next.logoZoom && previous.nodeScale === next.nodeScale
+    && previous.suppressHubLabels === next.suppressHubLabels && previous.showTickerLabels === next.showTickerLabels
+    && previous.onPointerDown === next.onPointerDown && previous.onKeyDown === next.onKeyDown
+    && previous.onMouseEnter === next.onMouseEnter && previous.onMouseLeave === next.onMouseLeave
+    && previous.onFocus === next.onFocus && previous.onBlur === next.onBlur
+    && previous.onClick === next.onClick && previous.onDoubleClick === next.onDoubleClick;
+});
 
 export function ContagionGraphSvg({
   graph,
@@ -423,7 +470,7 @@ export function ContagionGraphSvg({
 }: ContagionGraphSvgProps) {
   const {
     nodes,
-    visibleLinks,
+    canvasLinks,
     visibleNodeIds,
     positions,
     dragId,
@@ -439,22 +486,72 @@ export function ContagionGraphSvg({
     nodeDistance,
     edgeDistance,
   } = graph;
+  const instanceId = useId().replace(/:/g, "");
+  const reducedMotion = usePrefersReducedMotion();
+  const arrowId = `upstream-arrow-${instanceId}`;
+  const hatchId = `unknown-supply-${instanceId}`;
+  const fitBox = footprintViewBox(nodes, positions, graph.exposureOverlay ? graph.exposureNodeIds : visibleNodeIds);
+  // Manual viewport survives coordinate updates. Only membership/root changes release it.
+  const fitIdentity = JSON.stringify([
+    [...(graph.exposureOverlay?.roots ?? [])].sort(),
+    [...(graph.exposureOverlay?.rows.keys() ?? [])].sort(),
+    [...visibleNodeIds].sort(),
+  ]);
+  const [viewport, setViewport] = useState<{ identity: string; box: string } | null>(null);
+  const viewBox = viewport?.identity === fitIdentity ? viewport.box : fitBox;
+  const pan = useRef<{ x: number; y: number; box: number[]; pointerId: number } | null>(null);
+  const panMoved = useRef(false);
+  const zoom = (factor: number) => {
+    const [x, y, width, height] = viewBox.split(" ").map(Number);
+    const w = Math.max(80, Math.min(2400, width * factor));
+    const h = height * w / width;
+    setViewport({ identity: fitIdentity, box: `${x + (width - w) / 2} ${y + (height - h) / 2} ${w} ${h}` });
+  };
   const handleSvgClick = (event: ReactMouseEvent<SVGSVGElement>) => {
+    if (panMoved.current) { panMoved.current = false; return; }
     if (event.target === event.currentTarget) graph.handleClearSelection();
   };
   return (
+    <>
+    <div className="flex flex-wrap items-center gap-2 px-2 py-1">
+      <button type="button" className="pharos-focus-ring min-h-11 min-w-11 rounded-sm border px-3 text-xs" onClick={() => setViewport(null)}>Fit</button>
+      <button type="button" aria-label="Zoom in" className="pharos-focus-ring min-h-11 min-w-11 rounded-sm border px-3 text-xs" onClick={() => zoom(0.8)}>Zoom in</button>
+      <button type="button" aria-label="Zoom out" className="pharos-focus-ring min-h-11 min-w-11 rounded-sm border px-3 text-xs" onClick={() => zoom(1.25)}>Zoom out</button>
+      <p className="text-xs text-muted-foreground">Drag the background to pan. Tap a coin to select. Mouse-drag a coin to pin it.</p>
+    </div>
     <svg
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      viewBox={viewBox}
       className={fillHeight ? "w-full lg:h-full" : "w-full"}
-      style={{ cursor: dragId ? "grabbing" : "default" }}
-      onPointerMove={graph.handlePointerMove}
-      onPointerUp={graph.handlePointerUp}
-      onPointerLeave={graph.handlePointerUp}
+      style={{ cursor: dragId ? "grabbing" : "default", touchAction: "none" }}
+      onPointerDown={event => {
+        if ((event.target as Element).closest("[data-node-id]")) return;
+        pan.current = { x: event.clientX, y: event.clientY, box: viewBox.split(" ").map(Number), pointerId: event.pointerId };
+        panMoved.current = false;
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }}
+      onPointerMove={event => {
+        if (!pan.current) { graph.handlePointerMove(event); return; }
+        const rect = event.currentTarget.getBoundingClientRect();
+        const [x, y, w, h] = pan.current.box;
+        const scale = Math.max(w / rect.width, h / rect.height);
+        if (Math.hypot(event.clientX - pan.current.x, event.clientY - pan.current.y) > 4) panMoved.current = true;
+        setViewport({ identity: fitIdentity, box: `${x - (event.clientX - pan.current.x) * scale} ${y - (event.clientY - pan.current.y) * scale} ${w} ${h}` });
+      }}
+      onPointerUp={() => { pan.current = null; graph.handlePointerUp(); }}
+      onPointerCancel={() => { pan.current = null; graph.handlePointerCancel(); }}
       onClick={handleSvgClick}
     >
       <ContagionGraphClipPaths nodes={nodes} positions={positions} nodeScale={nodeScale} />
+      <defs>
+        <marker id={arrowId} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0 0 L8 4 L0 8 Z" fill="var(--color-muted-foreground)" opacity="0.65" />
+        </marker>
+        <pattern id={hatchId} width="6" height="6" patternUnits="userSpaceOnUse">
+          <path d="M-1 1 L1 -1 M0 6 L6 0 M5 7 L7 5" stroke="currentColor" strokeWidth="1.5" />
+        </pattern>
+      </defs>
 
-      {visibleLinks.map((link) => (
+      {canvasLinks.map((link) => (
         <ContagionGraphEdge
           key={`${link.srcId}-${link.tgtId}-${link.index}`}
           link={link}
@@ -463,6 +560,11 @@ export function ContagionGraphSvg({
           activeHoveredEdge={activeHoveredEdge}
           connectedEdges={connectedEdges}
           edgeDistance={edgeDistance}
+          arrowId={arrowId}
+          targetRadius={(graph.nodeMap.get(link.tgtId)?.r ?? 8) * nodeScale}
+          highlighted={graph.highlightedPathEdges.has(`${link.srcId}\0${link.tgtId}`)}
+          revealHop={graph.exposureOverlay ? graph.exposureOverlay.rows.get(link.srcId)?.minHop ?? 0 : null}
+          reducedMotion={reducedMotion}
           onMouseEnter={graph.handleEdgeMouseEnter}
           onMouseLeave={graph.handleEdgeMouseLeave}
         />
@@ -472,6 +574,19 @@ export function ContagionGraphSvg({
         const position = positions.get(node.id);
         if (!position) return null;
         return (
+          <g key={node.id} data-drag-node={node.id} className={graph.exposureNodeIds.has(node.id) ? "graph-exposure-halo" : undefined} style={graph.exposureNodeIds.has(node.id) ? { animation: reducedMotion ? "none" : undefined, animationDelay: `${(graph.exposureOverlay?.rows.get(node.id)?.minHop ?? 0) * GRAPH_RIPPLE_HOP_DELAY_MS}ms` } : undefined}>
+          {graph.exposureNodeIds.has(node.id) && (
+            <circle
+              data-exposure-halo={node.id}
+              data-min-hop={graph.exposureOverlay?.rows.get(node.id)?.minHop ?? 0}
+              data-unknown-supply={graph.exposureOverlay?.rows.get(node.id)?.exposureUsd === null || undefined}
+              cx={position.x} cy={position.y} r={node.r * nodeScale + 8}
+              fill={graph.exposureOverlay?.rows.get(node.id)?.exposureUsd === null ? `url(#${hatchId})` : "none"}
+              stroke="var(--p-frost-blue)" strokeWidth={3}
+              strokeDasharray={graph.exposureOverlay?.roots.includes(node.id) ? undefined : "4 2"}
+              pointerEvents="none"
+            />
+          )}
           <ContagionGraphNode
             key={node.id}
             node={node}
@@ -498,11 +613,13 @@ export function ContagionGraphSvg({
             onClick={graph.handleNodeClick}
             onDoubleClick={graph.handleNodeDoubleClick}
           />
+          </g>
         );
       })}
 
       {nodeTooltipEl}
       {edgeTooltipEl}
     </svg>
+    </>
   );
 }

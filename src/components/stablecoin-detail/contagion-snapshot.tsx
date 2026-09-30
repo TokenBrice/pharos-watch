@@ -2,12 +2,15 @@
 
 import { useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { CollateralUsageSection } from "./collateral-usage-section";
+import { CollateralUsageSection, type PublishedCollateralUsageEntry } from "./collateral-usage-section";
+import { buildDetailDependencyContext } from "./dependency-context-model";
+import { DependencyContextDetails } from "./dependency-context-details";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -15,20 +18,17 @@ import {
   DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
 } from "@/components/stablecoin-detail/section-title-class";
-import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { LazySection } from "@/components/lazy-section";
 
 interface ContagionSnapshotProps {
   stablecoinId: string;
   variantRelationshipCard?: ReactNode;
-  hasCollateralUsage?: boolean;
-  collateralUsageEntries?: readonly CollateralUsageEntry[];
 }
 
 /** Detail pages only draw the focus coin's own neighborhood, so the cap is generous. */
 const DETAIL_NODE_LIMIT = 500;
-const EMPTY_MCAP_MAP = new Map<string, number>();
+const EMPTY_MCAP_MAP: ReadonlyMap<string, number | null> = new Map();
 
 function DependencyGraphPlaceholder() {
   return (
@@ -46,8 +46,6 @@ const ContagionGraph = dynamic(() => import("@/components/contagion-graph-root")
 export function ContagionSnapshot({
   stablecoinId,
   variantRelationshipCard,
-  hasCollateralUsage,
-  collateralUsageEntries = [],
 }: ContagionSnapshotProps) {
   const reportCardsQuery = useReportCardsV9();
   const stablecoinsQuery = useStablecoins();
@@ -55,16 +53,17 @@ export function ContagionSnapshot({
   const { data: list } = stablecoinsQuery;
   const logos = logosById;
   const hasVariantCard = Boolean(variantRelationshipCard);
-  const hasRightColumn = hasVariantCard || Boolean(hasCollateralUsage);
   const cards = useMemo(
     () =>
       (rc?.cards ?? []).map((card) => ({
         id: card.id,
         symbol: CLIENT_TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id,
         grade: card.grade,
+        sharedBookId: card.sharedBookId,
       })),
     [rc?.cards],
   );
+  const focusCard = rc?.cards.find((card) => card.id === stablecoinId);
   // Both endpoints must be published cards, otherwise the graph would drop the
   // edge and leave an empty stage where the map belongs.
   const edges = useMemo(() => {
@@ -75,11 +74,32 @@ export function ContagionSnapshot({
     );
   }, [cards, rc?.dependencyGraph.edges, stablecoinId]);
   const hasContagion = edges.length > 0;
-  const mcapMap = useMemo(() => {
+  const mcapMap = useMemo<ReadonlyMap<string, number | null>>(() => {
     const peggedAssets = list?.peggedAssets;
     if (!peggedAssets) return EMPTY_MCAP_MAP;
-    return new Map(peggedAssets.map((coin) => [coin.id, getCirculatingRaw(coin)]));
+    return new Map(peggedAssets.map((coin) => [coin.id, getCirculatingRawOrNull(coin)]));
   }, [list?.peggedAssets]);
+  const marketCapAsOf = stablecoinsQuery.meta?.updatedAt ?? null;
+  const dependencyContext = useMemo(
+    () => buildDetailDependencyContext(stablecoinId, rc?.cards ?? [], rc?.dependencyGraph.edges ?? [], mcapMap, marketCapAsOf),
+    [stablecoinId, rc?.cards, rc?.dependencyGraph.edges, mcapMap, marketCapAsOf],
+  );
+  const collateralUsageEntries = useMemo<PublishedCollateralUsageEntry[]>(
+    () => edges.filter((edge) => edge.from === stablecoinId).map((edge) => {
+      const meta = CLIENT_TRACKED_META_BY_ID.get(edge.to);
+      return {
+        coin: { id: edge.to, name: meta?.name ?? edge.to, symbol: meta?.symbol ?? edge.to },
+        edgeType: edge.kind,
+        relationshipType: edge.dependencyType ?? (edge.kind === "basket" ? "collateral"
+          : meta?.variantOf === edge.from ? "wrapper" : "serial-claim"),
+        weight: edge.weight,
+        marketCap: mcapMap.get(edge.to) ?? null,
+      };
+    }),
+    [edges, stablecoinId, mcapMap],
+  );
+  const hasCollateralUsage = collateralUsageEntries.length > 0;
+  const hasRightColumn = hasVariantCard || hasCollateralUsage;
   const sourceError = reportCardsQuery.error ?? stablecoinsQuery.error;
   const hasSourceData = rc !== undefined && list !== undefined;
   const sourceUpdatedTimes = [reportCardsQuery.dataUpdatedAt, stablecoinsQuery.dataUpdatedAt].filter(
@@ -87,7 +107,7 @@ export function ContagionSnapshot({
   );
   const sourceDataUpdatedAt = sourceUpdatedTimes.length > 0 ? Math.min(...sourceUpdatedTimes) : 0;
 
-  if (!hasContagion && !hasRightColumn && !sourceError) {
+  if (!focusCard && !hasContagion && !hasRightColumn && !sourceError) {
     return null;
   }
 
@@ -115,6 +135,13 @@ export function ContagionSnapshot({
     <section className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency Context</StablecoinModuleTitle>
+        <Link
+          href={`/dependency-map/?focus=${encodeURIComponent(stablecoinId)}`}
+          className="pharos-focus-ring inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"
+        >
+          Open in Dependency Map
+        </Link>
+        <p className="text-xs text-muted-foreground sm:hidden">Open the map for the neighborhood list, fullscreen Graph tab, Fit and Zoom controls.</p>
       </div>
       <div className={DETAIL_MODULE_BODY_CLASS}>
         {sourceError ? (
@@ -128,12 +155,13 @@ export function ContagionSnapshot({
             }}
           />
         ) : null}
+        {focusCard ? <DependencyContextDetails card={focusCard} context={dependencyContext} marketCapAsOf={marketCapAsOf} /> : null}
         <div className={layoutClass}>
           {hasContagion ? (
             <LazySection placeholder={<DependencyGraphPlaceholder />}>
               <ContagionGraph
                 cards={cards}
-                dependencyEdges={edges}
+                dependencyEdges={rc?.dependencyGraph.edges ?? []}
                 mcapMap={mcapMap}
                 logos={logos}
                 focusCoinId={stablecoinId}

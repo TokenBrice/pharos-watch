@@ -3,7 +3,7 @@ import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const description =
-  "Build your stablecoin portfolio, see your weighted safety grade, upstream collateral exposure, and simulate how a major stablecoin failure would affect your holdings.";
+  "Build your stablecoin portfolio and review your holdings' safety grades and upstream collateral exposure.";
 
 const route = createClientFeaturePage({
   path: "/portfolio/",

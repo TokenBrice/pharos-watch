@@ -6,6 +6,7 @@ import {
   type SafetyScoreV9PublicReason,
   type SafetyScoreV9CurrentResponse,
   type SafetyScoreV9CurrentCard,
+  type SafetyScoreV9CommonModeGroups,
 } from "../../types/safety-score-v9-public";
 import type { SafetyScoreV9PillarAdjustment } from "../../types/safety-score-v9-public-breakdowns";
 import type {
@@ -21,8 +22,9 @@ import type { V9DependencyEconomicRole } from "../../types/dependency-types";
 import type { V9AccessPostureResult } from "./access-posture";
 import type { V9BackingResult } from "./backing-primitives";
 import type { V9EconomicControlResult } from "./control-primitives";
-import type { V9ResolvedDependencyInputs } from "./dependencies";
+import type { V9CommonModeGroup, V9ResolvedDependencyInputs } from "./dependencies";
 import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
+import { structuralSignalNeedsHardCap } from "./formula";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
 import { computeV9ResultDigest } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
@@ -35,6 +37,11 @@ export interface V9PublicCardProjectionInput {
   trace: V9ProductionScoreTrace;
   /** Exact fact-set provenance; absent only in compatibility/test callers. */
   backingFromLiveReserves?: boolean;
+  supply?: SafetyScoreV9CurrentCard["supply"];
+  sharedBookId?: string | null;
+  dependencyCoverage?: SafetyScoreV9CurrentCard["dependencyCoverage"];
+  dependencyProvenance?: ReadonlyMap<string, NonNullable<SafetyScoreV9CurrentCard["dependencies"]["serial"][number]["provenance"]>>;
+  dependencyTypes?: ReadonlyMap<string, NonNullable<SafetyScoreV9CurrentCard["dependencies"]["serial"][number]["dependencyType"]>>;
   scoreInput: Pick<V9ProductionScoreInput, "pillars" | "peg" | "dependencyReasons" | "methodologyReasons">;
   access: V9PublicAccessProjectionInput;
   dependencyInputs: V9ResolvedDependencyInputs;
@@ -72,6 +79,7 @@ export interface BuildSafetyScoreV9ResponseArgs {
   publicationGenerationId: string;
   publishedAtSec: number;
   results: readonly V9PublicCardProjectionInput[];
+  commonModeGroups?: readonly V9CommonModeGroup[];
 }
 
 export interface SafetyScoreV9TopDriver {
@@ -524,10 +532,20 @@ function projectDependencies(input: V9PublicCardProjectionInput): SafetyScoreV9C
   return {
     serial: [...input.dependencyInputs.serial]
       .sort((left, right) => compareText(left.upstreamAssetId, right.upstreamAssetId))
-      .map((dependency) => ({ ...dependency })),
+      .map((dependency) => ({
+        ...dependency,
+        wrapperForm: input.dependencyTypes?.get(`serial:${dependency.upstreamAssetId}`) === "wrapper" ? input.trace.wrapperParentLimit?.form ?? null : null,
+        ...(input.dependencyTypes?.get(`serial:${dependency.upstreamAssetId}`) === undefined ? {} : { dependencyType: input.dependencyTypes.get(`serial:${dependency.upstreamAssetId}`) }),
+        ...(input.dependencyProvenance?.get(dependency.upstreamAssetId) === undefined ? {} : { provenance: input.dependencyProvenance.get(dependency.upstreamAssetId) }),
+      })),
     basket: [...input.dependencyInputs.basket]
       .sort((left, right) => compareText(left.upstreamAssetId, right.upstreamAssetId))
-      .map((dependency) => ({ ...dependency })),
+      .map((dependency) => ({
+        ...dependency,
+        wrapperForm: null,
+        ...(input.dependencyTypes?.get(`basket:${dependency.upstreamAssetId}`) === undefined ? {} : { dependencyType: input.dependencyTypes.get(`basket:${dependency.upstreamAssetId}`) }),
+        ...(input.dependencyProvenance?.get(dependency.upstreamAssetId) === undefined ? {} : { provenance: input.dependencyProvenance.get(dependency.upstreamAssetId) }),
+      })),
     roles: [...(input.dependencyInputs.roleInputs ?? [])]
       .sort(
         (left, right) =>
@@ -770,6 +788,9 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
   const bindingCap = isRateable ? (caps.find((cap) => cap.binding) ?? null) : null;
   return {
     id: input.trace.assetId,
+    supply: input.supply ?? { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
+    sharedBookId: input.sharedBookId ?? null,
+    ...(input.dependencyCoverage === undefined ? {} : { dependencyCoverage: input.dependencyCoverage }),
     ...(input.backingFromLiveReserves === undefined
       ? {}
       : { backingFromLiveReserves: input.backingFromLiveReserves }),
@@ -880,6 +901,61 @@ function assertConsistentResultIdentity(results: readonly V9PublicCardProjection
   }
 }
 
+/** Pure publication projection: never regrades a group or reruns the scorer. */
+export function projectSafetyScoreV9CommonModeGroups(
+  groups: readonly V9CommonModeGroup[],
+  results: readonly V9PublicCardProjectionInput[],
+  cards: readonly SafetyScoreV9CurrentCard[],
+): SafetyScoreV9CommonModeGroups {
+  const resultById = new Map(results.map((result) => [result.trace.assetId, result]));
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+  return groups.flatMap((group) => {
+    const id = `${group.failureDomain.kind}:${group.failureDomain.key}`;
+    const memberAssetIds = uniqueSorted(group.members.map((member) => member.assetId));
+    if (memberAssetIds.length < 2) return [];
+    const unjoinedAssetIds: string[] = [];
+    const pricedEffects = memberAssetIds.flatMap((assetId) => {
+      const trace = resultById.get(assetId)?.trace;
+      const card = cardById.get(assetId);
+      if (!trace || !card) throw new Error(`Common-mode member ${assetId} has no evaluated public card`);
+      const signals = trace.structuralSignals.filter((signal) => signal.failureDomainKeys.includes(id));
+      const capIndices = card.caps.flatMap((cap, index) =>
+        cap.source === "structural" && (signals.some((signal) => signal.reason === cap.reason) ||
+          (cap.kind === "signal:common-mode-oracle" && cap.reason.endsWith(`share ${id}.`))) ? [index] : []);
+      const deploymentAdjustmentIndices = card.scoreTrace.deploymentRisk.adjustments.flatMap(
+        (adjustment, index) => adjustment.failureDomainKey === id ? [index] : [],
+      );
+      // The evaluator's emitted cap/adjustment census is authoritative. Merely
+      // present signals can be diagnostic or already priced solely in a pillar.
+      // additionalHardCapRisk explicitly prices a residual beyond that pillar.
+      const expectedCap = signals.some((signal) =>
+        structuralSignalNeedsHardCap(signal) &&
+        trace.caps.some((cap) => cap.source === "structural" &&
+          (cap.kind === `signal:${signal.kind}:${signal.severity}` ||
+            (cap.kind === "signal:common-mode-oracle" && signal.kind === "weak-oracle-branch"))));
+      const expectedAdjustment = trace.deploymentAdjustments.some((adjustment) => adjustment.failureDomainKey === id);
+      if ((expectedCap || expectedAdjustment) && capIndices.length === 0 && deploymentAdjustmentIndices.length === 0) {
+        unjoinedAssetIds.push(assetId);
+      }
+      return capIndices.length || deploymentAdjustmentIndices.length
+        ? [{ assetId, capIndices, deploymentAdjustmentIndices }]
+        : [];
+    });
+    if (unjoinedAssetIds.length > 0) {
+      console.warn("safety_score_v9_common_mode_priced_effects_incomplete", {
+        groupId: id,
+        assetIds: unjoinedAssetIds,
+        reason: "evaluated-price-without-published-effect-reference",
+      });
+    }
+    return [{
+      id, ...group.failureDomain, memberAssetIds,
+      ...(pricedEffects.length ? { pricedEffects } : {}),
+      ...(unjoinedAssetIds.length ? { pricedEffectsIncomplete: true as const } : {}),
+    }];
+  }).sort((left, right) => compareText(left.id, right.id));
+}
+
 export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs): SafetyScoreV9CurrentResponse {
   assertConsistentResultIdentity(args.results);
   const ordered = [...args.results].sort((left, right) => compareText(left.trace.assetId, right.trace.assetId));
@@ -909,5 +985,8 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
       notRatedIds,
     },
     cards,
+    ...(args.commonModeGroups === undefined ? {} : {
+      commonModeGroups: projectSafetyScoreV9CommonModeGroups(args.commonModeGroups, ordered, cards),
+    }),
   });
 }

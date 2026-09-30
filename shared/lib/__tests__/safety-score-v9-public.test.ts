@@ -18,6 +18,7 @@ import {
   SafetyScoreV9EvidenceSummarySchema,
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
+import { V9_WRAPPER_LOCAL_FACT_KEYS } from "../../types/safety-score-v9-wrapper";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -258,6 +259,34 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("publishes wrapper forms only on wrapper claims, not sibling mechanism claims", () => {
+    const input = fixture("dependent", {
+      score: 64, grade: "C+",
+      caps: [cap({ kind: "parent", limit: 64, source: "parent", reason: "Parent limit.", binding: true })],
+      dependency: {
+        assetId: "dependent", basket: [], cycleBlocked: false,
+        serial: [
+          { upstreamAssetId: "mechanism", score: 64, blocked: false },
+          { upstreamAssetId: "wrapper", score: 64, blocked: false },
+        ],
+      },
+    });
+    input.dependencyTypes = new Map([["serial:mechanism", "mechanism"], ["serial:wrapper", "wrapper"]]);
+    input.trace.wrapperParentLimit = {
+      schemaVersion: 1, parentScore: 64, form: "pure", treatment: "local-facts",
+      localRiskDiscount: 0, fallbackDiscount: 0, appliedDiscount: 0, limit: 64,
+      riskTransfer: { disposition: "not-applicable", mechanism: "none", requestedCredit: 0, appliedCredit: 0 },
+      factsComplete: true, missingFacts: [],
+      adjustments: V9_WRAPPER_LOCAL_FACT_KEYS.map((factKey) => ({
+        factKey, disposition: "not-applicable", assessment: null, maximumDiscountPoints: 1, discountPoints: 0,
+      })),
+    };
+    expect(projectSafetyScoreV9Card(input).dependencies.serial).toMatchObject([
+      { upstreamAssetId: "mechanism", dependencyType: "mechanism", wrapperForm: null },
+      { upstreamAssetId: "wrapper", dependencyType: "wrapper", wrapperForm: "pure" },
+    ]);
+  });
+
   it("projects cap-bound, pillar-bound, and withheld top drivers from the card", () => {
     const capBound = projectSafetyScoreV9Card(fixture("cap-bound", {
       score: 64,

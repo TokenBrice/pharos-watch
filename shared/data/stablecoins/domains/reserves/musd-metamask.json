@@ -2,21 +2,31 @@
   "id": "musd-metamask",
   "reserves": [
     {
-      "sourceKey": "m0:eligible-collateral",
-      "name": "U.S. Treasury bills & cash (M0 eligible collateral)",
+      "sourceKey": "m0-wrapper-underlying:m",
+      "name": "M token held by MetaMask mUSD",
       "pct": 100,
-      "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "M0 permissioned minters and eligible collateral SPVs",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "risk": "low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 permissioned issuers via the mUSD M-extension and SwapFacility",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Consensys Diligence mUSD audit, sections 3 and 4 (accessed 2026-09-30)",
+        "url": "https://diligence.security/audits/2025/08/metamask-usd-token/"
+      },
+      {
+        "label": "Ethereum mUSD mToken() at block 26086007 (observed 2026-09-29)",
+        "url": "https://etherscan.io/address/0xaca92e438df0b2401ff60da7e4337b687a2435da#readProxyContract"
+      },
       {
         "label": "MetaMask mUSD introduction",
         "url": "https://metamask.io/en-GB/news/introducing-metamask-usd-your-dollar-your-wallet"
@@ -34,11 +44,11 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "MetaMask states that mUSD is backed by short-term Treasury collateral. M0 now exposes only the on-chain-indexed Minter Gateway total: its off-chain CollateralCurrent composition feed was retired in August 2026, as recorded in the adapter comment in worker/src/cron/reserve-adapters/m0.ts. The reviewed composition therefore contains one 100% keyed aggregate classified as other because no current cash/Treasury split is published; the former 97.9% tokenized-Treasury / 2.1% cash snapshot is not treated as live. Minter-specific provider allocations and account-level custody terms remain undisclosed by Bridge/M0 and remain separate custody uncertainty.",
-    "compositionBasis": "Current first-party M0 Protocol API on-chain-indexed Minter Gateway total for the collateral pool backing $M and its extensions",
-    "compositionAsOf": "2026-08-29",
+    "rationale": "mUSD wraps M through the M0 SwapFacility: equivalent M deposits mint mUSD and mUSD burns return M. The Ethereum deployment's mToken() returned tracked M 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b at block 26086007. The reserve envelope records the immediate M claim rather than duplicating M's Treasury/cash collateral. Fresh 2026-09-30 RPC reads also identify the same M parent and 6-decimal mUSD on Ethereum, Linea and Monad; Ethereum swapFacility() returns 0xb6807116b3b1b321a390594e31ecd6e0076f6278 and canSwapViaPath(0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, mUSD, M) returns true. That existing M0 swapper is a sampled approved redemption cohort, not a claim that every holder can redeem or that it operates MetaMask distribution. The independent producer rechecks all catalog deployments, balances and the sampled route; mUSD-specific upgrade, freeze, forced-transfer and SwapFacility controls remain applicable.",
+    "compositionBasis": "Audited M-extension wrapping lifecycle and mToken() identity at Ethereum block 26086007; live balances owned by the independent m0-wrapper-underlying producer",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current M0 source exposes the full aggregate total but not its internal cash/Treasury allocation, minter-level provider shares, or mUSD-specific custody terms; the retired 97.9/2.1 composition is not current.",
+    "knownUnknownExposure": "The immediate reserve parent is tracked M. M's internal cash/Treasury split and provider allocations remain parent-level uncertainty. Permissioned SwapFacility redemption and mUSD-specific administrative controls remain local risks; no additional USDC edge is inferred from distribution routes.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

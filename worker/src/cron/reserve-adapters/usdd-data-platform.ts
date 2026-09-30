@@ -172,6 +172,7 @@ export function adaptUsddLatestCollateral(
       risk: "high",
       sourceKey: "usdd-data-platform:direct-usdt",
       coinId: "usdt-tether",
+      depType: "collateral",
     },
     {
       name: "sTRX (direct vaults)",

@@ -87,6 +87,20 @@ export const SAFETY_SCORES_SECTION_CONTENT = defineMethodologySectionContent({
   ],
 });
 
+export const DEPENDENCY_EXPOSURE_SECTION_CONTENT = defineMethodologySectionContent({
+  id: "dependency-exposure-methodology",
+  title: "Dependency Exposure Lookup",
+  markdownParagraphs: [
+    "Exposure mode on the [Dependency Map](/dependency-map/?mode=exposure) finds coins linked to selected upstream assets through mapped collateral and wrapper relationships. Linked coins; not a loss forecast. It does not estimate losses or changes in Safety Scores.",
+    "The lookup uses the full published edge set, regardless of Explore Focus, Type, Limit, or small-link visibility. Selected roots are listed separately and excluded from dependent counts and USD totals. Direct dependents are one link away; indirect dependents are reached through longer chains.",
+    "Each root starts with a share of 100%. Basket relationships sum mapped weights multiplied by their upstream look-through shares. Serial relationships take the maximum upstream share, not a sum. When both channels apply, the lookup takes the larger of the serial maximum and the basket sum. Each dependent appears once across selected roots. A published shared backing book counts once in USD totals; direct and indirect totals can still include the same underlying value at several layers, so the headline states that overlap. These gross layer totals are not additive independent holdings.",
+    "USD equals the mapped share multiplied by circulating USD at evaluation from the accepted publication. The result names its generation, methodology version, publication time, and supply clock, and labels held snapshots. It never silently substitutes current market cap. When evaluation supply was not published, USD remains unknown with the reason 'Supply at evaluation not published for this generation'. Unknown supply is not zero: the row remains visible and known-USD totals exclude its unavailable amount.",
+    "Coverage is limited to published relationships and their measured or reviewed weights, which may differ from current composition. Unknown weights and cycles leave shares unresolved rather than guessed or clamped. Role dependencies are listed as 'Role dependencies (not drawn)'; 'Known, not in the scored graph' relationships are outside the lookup and totals. An absent coverage field means not published, not no gaps. Peg, liquidity, confidence, and other transmission channels are not modeled. No mapped downstream exposure found does not establish that other dependencies are absent.",
+    "History examples are [case-study links](/learn/case-studies/), not runnable presets or a historical replay.",
+    "Separate offline modeled scenarios are available in Exposure mode. An hourly Node workflow reuses the production Safety Score evaluator, including role dependencies, for up to 15 hubs ranked by mapped direct exposure USD from publication-bound supply and published dependencies, with shared backing books counted once. The three D1b shocks limit the root's downstream-consumed final score to 40, model a 1,000 bps one-day depeg with captured peg history and exit facts held fixed, or model mint-control compromise. Each selection shocks one root, not all selected roots together. Results name their source publication, artifact age, and two-hour freshness budget. Earlier-generation results are explicitly labelled; stale or unavailable results withhold modeled numbers. NR remains NR. Modeled with the production Safety Score evaluator; not a forecast. These artifacts do not change canonical cards, journals, publication identity, or scoring policy. Structural exposure lookup remains separate and adds no scoring override.",
+  ],
+});
+
 export const MINT_AUTHORITY_SCORE_SECTION_CONTENT = defineMethodologySectionContent({
   id: "mint-authority-score",
   title: "Mint Authority Score",
@@ -201,6 +215,7 @@ export const METHODOLOGY_INDEX_SECTION_CONTENT = [
   PRICING_PIPELINE_SECTION_CONTENT,
   STABILITY_INDEX_SECTION_CONTENT,
   SAFETY_SCORES_SECTION_CONTENT,
+  DEPENDENCY_EXPOSURE_SECTION_CONTENT,
   MINT_AUTHORITY_SCORE_SECTION_CONTENT,
   INFRASTRUCTURE_SECTION_CONTENT,
   LIQUIDITY_SECTION_CONTENT,

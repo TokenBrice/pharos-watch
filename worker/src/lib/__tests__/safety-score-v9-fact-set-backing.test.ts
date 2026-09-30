@@ -6,6 +6,7 @@ import {
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { eligibleReserveMeta, mintMeta } from "./safety-score-v9-reserve-admission.test-support";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 
 const ASSET_ID = "alpha";
 /** Far past the fixture composition, so its published evidence has expired. */
@@ -55,6 +56,20 @@ function compileWithEmptyLiveReserves(
 }
 
 describe("Safety Score v9 backing fact-set reserve history", () => {
+  it("retains keyed zero-balance classifications without emitting zero-weight backing facts or quarantining the asset", () => {
+    const rows = [
+      { sourceKey: "fixture:cash", name: "Custodied cash", pct: 100, risk: "very-low" as const, assetClass: "cash" as const, issuerOrObligor: "issuer:alpha", riskFactors: ["custody" as const], liquidityHorizon: "immediate" as const, maturityDaysMax: 0 },
+      { sourceKey: "fixture:residual", name: "Residual allowance", pct: 0, risk: "low" as const, assetClass: "other" as const, issuerOrObligor: "issuer:alpha", riskFactors: ["custody" as const], liquidityHorizon: "unknown" as const },
+    ];
+    const fixedInput = makeV9FixedInput({ assetId: ASSET_ID, clockSec: NO_HISTORY_CLOCK_SEC, reserves: rows });
+    const meta = { ...baseMeta(), reserves: rows };
+    const extension = buildSafetyScoreV9BaselineExtension(fixedInput, { metaById: new Map([[ASSET_ID, meta]]) });
+    const result = buildSafetyScoreV9Candidate({ fixedInput, extension, publishedAtSec: fixedInput.clockSec + 10 });
+    expect(result.quarantines.filter((quarantine) => quarantine.assetId === ASSET_ID)).toEqual([]);
+    expect(result.compiledFacts.assets[0]!.reserveExposures.map((exposure) => ({ name: exposure.name, weight: exposure.weight }))).toEqual([{ name: "Custodied cash", weight: 1 }]);
+    expect(result.fixedInput.liveReserveMap[ASSET_ID]).toEqual(rows);
+  });
+
   it("reports expired published reserve composition evidence as stale", () => {
     const { fixed, extension, asset } = compileWithEmptyLiveReserves(
       expiredReserveMeta(),

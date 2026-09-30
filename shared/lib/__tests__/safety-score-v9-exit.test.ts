@@ -1134,3 +1134,40 @@ describe("stale exit-route observations", () => {
     expect(stale.score!).toBeLessThanOrEqual(current.score! * staleFactor * 1.05);
   });
 });
+
+describe("issuer payout output quality", () => {
+  it("scores a tracked USDC payout at par like fiat and conservatively discounts a two-output basket", () => {
+    const fiatFact = makeNormalizedExitRoute();
+    const singleFact = makeNormalizedExitRoute({
+      output: {
+        ...fiatFact.output,
+        kind: "tracked-stablecoin",
+        assetKeys: ["usdc-circle"],
+        valuation: {
+          ...fiatFact.output.valuation!,
+          basis: "price",
+          referenceAssetKey: "usdc-circle",
+        },
+      },
+    });
+    const basketFact = makeNormalizedExitRoute({
+      output: { ...singleFact.output, assetKeys: ["usdc-circle", "usdt-tether"] },
+    });
+    const projected = [fiatFact, singleFact, basketFact].map(projectV9ExitEvaluationRoute);
+    expect(projected.map((candidate) => candidate.outputQuality))
+      .toEqual(["stable-single", "stable-single", "stable-basket"]);
+    // Isolate output economics from holder/confidence/family caps.
+    const traces = projected.map((candidate) => evaluateV9Exit({
+      circulatingUsd: 20_000_000,
+      routes: [route({
+        outputQuality: candidate.outputQuality,
+        outputValueRetention: candidate.outputValueRetention,
+        outputResolved: candidate.outputResolved,
+      })],
+    }, V9_CANDIDATE_POLICY_V1).routes[0]!);
+    expect(traces[1].components?.outputAssetQuality).toBe(100);
+    expect(traces[1].score).toBe(traces[0].score);
+    expect(traces[2].components?.outputAssetQuality).toBe(80);
+    expect(traces[1].score! - traces[2].score!).toBeCloseTo(3, 10);
+  });
+});

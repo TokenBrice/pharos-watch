@@ -25,6 +25,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
   graphApiKey: string | null;
   symbolToChainScopedIds: SymbolLookups["symbolToChainScopedIds"];
   chainAddressToId: SymbolLookups["chainAddressToId"];
+  uniswapV4ExactPoolIdsByChain: ReadonlyMap<string, readonly string[]>;
   signal?: AbortSignal;
   validationReferences: PriceValidationReferences;
 }): Promise<SubgraphEnrichmentPhaseResult & { failedSources: string[] }> {
@@ -60,6 +61,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
   try {
     const uniswapV4Data = await fetchUniswapV4Data(
       params.graphApiKey,
+      params.uniswapV4ExactPoolIdsByChain,
       params.signal,
     );
     uniswapV4ExecutionCandidates =

@@ -23,7 +23,7 @@
 
 ## Methodology
 
-- [Methodology Hub](https://pharos.watch/methodology/): Full scoring model for safety, peg, liquidity, yield, contagion.
+- [Methodology Hub](https://pharos.watch/methodology/): Scoring methods for safety, peg, liquidity and yield; dependency limits through V9 parent and backing relationships, not a contagion simulator.
 - [Safety Scores Changelog](https://pharos.watch/methodology/scoring-changelog/): Every weight change since v1.0.
 - [Depeg + DEWS Changelog](https://pharos.watch/methodology/depeg-changelog/): Peg-deviation detection and early-warning stress methodology history.
 - [Depeg Duration Resolver Changelog](https://pharos.watch/methodology/depeg-resolver-changelog/): Forecasting, resolution, and review methodology history for confirmed depeg incidents.

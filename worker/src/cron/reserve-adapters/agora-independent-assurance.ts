@@ -31,27 +31,32 @@ function isAgoraReportCandidate(href: string, text: string): boolean {
 }
 
 /**
- * The official Fern index links the July report through an expiring S3-signed
- * URL whose path is content-addressed: the path segment is the PDF's SHA-256.
- * Runtime pins that identity by rewriting the signed July link to the reviewed
- * stable Fern mirror URL only when the path hash matches the reviewed bytes;
- * the shared verifier then fetches the mirror and re-verifies the bytes.
- * A missing, drifted, or duplicated July link fails closed.
+ * Fern serves report links as either signed S3 URLs, stable mirror URLs, or
+ * same-origin /_fern-files/ paths. Match the complete reviewed asset path,
+ * including the content hash and report filename, before rewriting to the
+ * stable mirror. The shared verifier still checks dates and PDF bytes.
+ * A missing, drifted, or duplicated reviewed link fails closed.
  */
 async function prepareAgoraIndexHtml(html: string): Promise<string> {
   const manifest = getIndependentAssuranceManifest("AUSD");
-  const reviewedPathPrefix = `/agora.docs.buildwithfern.com/${manifest.reportSha256.toLowerCase()}/`;
+  const reviewedPath = new URL(manifest.reportUrl).pathname;
+  const indexUrl = "https://docs.agora.finance/developer/transparency";
   let reviewedCount = 0;
   const rewritten = html.replace(/href="([^"]*\.pdf[^"]*)"/gi, (attribute, href: string) => {
     const decoded = href.replaceAll("&amp;", "&");
-    if (decoded === manifest.reportUrl) return attribute;
-    let pathname: string;
+    let url: URL;
     try {
-      pathname = new URL(decoded).pathname;
+      url = new URL(decoded, indexUrl);
     } catch {
       return attribute;
     }
-    if (!pathname.startsWith(reviewedPathPrefix)) return attribute;
+    const fernPath = url.hostname === "docs.agora.finance" && url.pathname.startsWith("/_fern-files/")
+      ? url.pathname.slice("/_fern-files".length)
+      : url.pathname;
+    const reviewedHost = url.hostname === "docs.agora.finance"
+      || url.hostname === "files.buildwithfern.com"
+      || url.hostname === "fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com";
+    if (url.protocol !== "https:" || !reviewedHost || fernPath !== reviewedPath) return attribute;
     reviewedCount += 1;
     return `href="${manifest.reportUrl}"`;
   });
@@ -100,11 +105,11 @@ export const AGORA_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
       liquidityHorizon: "immediate",
     },
     stablecoins: {
-      name: "U.S. dollar stablecoins (USDC and PYUSD) held in segregated wallets",
+      name: "Stablecoin cash equivalents held in segregated wallets",
       risk: "low",
-      assetClass: "other",
-      issuerOrObligor: "USDC and PayPal USD issuers",
-      riskFactors: ["credit", "counterparty", "custody", "concentration"],
+      assetClass: "stablecoin",
+      issuerOrObligor: "Circle USDC and Paxos-issued PYUSD; individual split undisclosed",
+      riskFactors: ["counterparty", "custody", "smart-contract", "liquidity"],
       liquidityHorizon: "unknown",
     },
   },

@@ -17,8 +17,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Grok wave-8 reserve research; Kimi R05 underbacking disclosure re-verify",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos Dependency Map WS1.D primary-evidence review",
     "confidence": "probable",
     "sources": [
       {
@@ -38,10 +38,10 @@
         "url": "https://paragraph.com/@metronomedao/post-mortem-msethmsusd-underbacking"
       }
     ],
-    "rationale": "Re-opened Metronome primary docs and the 2026-07-30 post-mortem on 2026-08-08. Deposit/mintage caps still enumerate eligible msUSD collateral (USDC, DAI, FRAX, ETH, WBTC, sfrxETH, and Vesper va-tokens) with per-asset caps and CF-based mintage formula. The post-mortem discloses that the synth swap module accumulated unbacked float, leaving ~4.57 million msUSD (and ~6,367 msETH) in circulation without matching debt positions at the time of disclosure; the protocol has deployed protocol-owned liquidity and defensive positions sized to close the gap if msUSD/msETH depeg by roughly 30%. Because pools are cross-margin multi-synth, DepositToken balances still cannot be attributed solely to msUSD without debt-side attribution the issuer does not publish. No public dashboard, attestation, or dual-source on-chain snapshot of current msUSD-specific weights was found, so the documented eligible envelope is retained as one 100% basket-needs-split row rather than a fabricated allocation.",
-    "compositionBasis": "Metronome Synth collateral-cap, supported-assets, liquidation documentation, and July 2026 underbacking post-mortem (re-opened 2026-08-08)",
+    "rationale": "Accessed 2026-09-30: the issuer supported-assets table names Ethereum DAI, USDC, FRAX, ETH, WBTC, sfrxETH and Vesper receipts, and Optimism/Base USDC and ETH-family collateral. These are eligible assets, not positive measured msUSD holdings. The July 30 post-mortem still describes approximately 4.57 million msUSD unbacked float and a remediation strategy involving looped treasury positions, LPs and buyback/burn; those July amounts do not establish current backing or a recovery guarantee. The public disclosure supplies no msUSD-only allocation rule for shared multi-synth collateral and no reconciled current debt/float/treasury statement. NC-136 remains basket-needs-split. Next evidence: obtain the issuer's synth-specific loss/claim allocation rule and reconciled dated debt, circulating float, and net treasury backing; then independently measure exact DepositToken and held-receipt claims at the same chain checkpoints. No eligible token is promoted to an edge.",
+    "compositionBasis": "Historical eligible collateral envelope; supported-assets and July 30 underbacking post-mortem re-read 2026-09-30, without a new measured composition",
     "compositionAsOf": "2026-08-08",
-    "scope": "full-composition",
+    "scope": "selected-slices",
     "knownUnknownExposure": "Current deposited balances and weights across the eligible collateral set are not published in the reviewed issuer documentation, cross-margin multi-synth pooling prevents treating raw DepositToken supplies as msUSD-only composition, and the July 2026 post-mortem confirms a period of underbacking in the synth swap module that left approximately 4.57 million msUSD without matching debt positions.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
@@ -50,7 +50,7 @@
         "reserveName": "Metronome Synth eligible CDP collateral basket (stablecoins, ETH, WBTC, and Vesper yield-bearing tokens)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The issuer names eligible collateral and deposit/mintage limits but does not disclose current composition weights; multi-synth cross-margin pools prevent inventing an msUSD-only split from pool TVL."
+        "rationale": "NC-136: eligible collateral and multi-synth pool balances do not establish an msUSD-only measured share. Await a documented claim-allocation rule and debt/float/treasury reconciliation before computing weights. The historical composition date is unchanged."
       }
     ]
   },

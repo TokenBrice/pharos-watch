@@ -6,6 +6,7 @@
       "pct": 93.4,
       "risk": "high",
       "coinId": "crvusd-curve",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Curve Lend vaults and crvUSD",
       "riskFactors": [
@@ -22,6 +23,7 @@
       "pct": 6.6,
       "risk": "high",
       "coinId": "frxusd-frax",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Fraxlend vaults and frxUSD",
       "riskFactors": [

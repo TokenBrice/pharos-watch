@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSlicesWithDiagnostics, normalizeSlices, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
+import { normalizeSlicesWithDiagnostics, normalizeSlices, slicesFromValues, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
 import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
 import type { ReserveSlice } from "@shared/types/core";
 
@@ -75,6 +75,39 @@ describe("worseRisk", () => {
 });
 
 describe("reserve identity and input integrity", () => {
+  it("preserves positive sub-six-decimal shares and merges identical rows without repairing source drift", () => {
+    const dust: ReserveSlice = { sourceKey: "dust", name: "Dust", risk: "low", coinId: "usdc-circle", depType: "collateral", pct: 1e-12 };
+    const slices = normalizeSlices([
+      { name: "Main", risk: "low", pct: 99 },
+      dust,
+      dust,
+      { name: "Zero", risk: "low", pct: 0 },
+    ], null);
+    expect(slices.find((slice) => slice.sourceKey === "dust")?.pct).toBe(2e-12);
+    expect(slices.find((slice) => slice.name === "Main")?.pct).toBe(99);
+    expect(slices.find((slice) => slice.name === "Zero")).toBeUndefined();
+    expect(() => normalizeSlices([{ ...dust, pct: -1 }], null)).toThrow(/invalid value/);
+    expect(() => normalizeSlices([{ ...dust, pct: 80 }], null)).toThrow(/sum/);
+  });
+
+  it("preserves tiny positive values through bucket aggregation", () => {
+    const values = [{ name: "Main", value: 1e9 }, { name: "Dust", value: 1e-6 }, { name: "Zero", value: 0 }];
+    const slices = slicesFromValues(values.map((value) => ({ ...value, risk: "low" as const })), null);
+    expect(slices.find((slice) => slice.name === "Dust")?.pct).toBe(1e-6 / (1e9 + 1e-6) * 100);
+    expect(slices.find((slice) => slice.name === "Zero")).toBeUndefined();
+    const classified = classifyBucketedValues({
+      items: values,
+      rules: [
+        { key: "main", name: "Main", risk: "low", match: (item: typeof values[number]) => item.name === "Main" },
+        { key: "dust", name: "Dust", risk: "low", match: (item: typeof values[number]) => item.name === "Dust" },
+      ],
+      getValue: (item) => item.value,
+      getUnknownLabel: (item) => item.name,
+      decimals: null,
+    });
+    expect(classified.slices.find((slice) => slice.name === "Dust")?.pct).toBe(1e-6 / (1e9 + 1e-6) * 100);
+  });
+
   it("keeps every distinct scoring identity separate", () => {
     const base: ReserveSlice = { name: "Bond", risk: "low", pct: 50 };
     const identities: Partial<ReserveSlice>[] = [

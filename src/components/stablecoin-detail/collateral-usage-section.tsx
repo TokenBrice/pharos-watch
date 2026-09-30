@@ -6,80 +6,69 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
+import type { DependencyType } from "@shared/types";
+import { DEPENDENCY_RELATIONSHIP_LABELS } from "@shared/lib/classification";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+
+export interface PublishedCollateralUsageEntry {
+  coin: { id: string; name: string; symbol: string };
+  edgeType: ReportCardsV9DependencyEdge["kind"];
+  relationshipType: DependencyType | "serial-claim";
+  weight: number | null;
+  marketCap: number | null;
+}
 
 const PREVIEW_COUNT = 9;
 
-const TIER_DEFS = [
-  { key: "primary", label: "Primary backing", test: (w: number) => w >= 0.5 },
-  { key: "partial", label: "Partial", test: (w: number) => w >= 0.1 && w < 0.5 },
-  { key: "minor", label: "Minor exposure", test: (w: number) => w < 0.1 },
-] as const;
-
-function CollateralUsageItem({ entry, logoSrc }: { entry: CollateralUsageEntry; logoSrc: string | undefined }) {
-  const pct = Math.round(entry.weight * 100);
+function CollateralUsageItem({ entry }: { entry: PublishedCollateralUsageEntry }) {
+  const share = entry.weight === null
+    ? "share unknown"
+    : entry.weight === 0
+      ? "n/a"
+      : entry.weight > 0 && entry.weight < 0.01
+        ? "<1%"
+        : `${Number((entry.weight * 100).toFixed(1))}%`;
+  const relationshipLabel = DEPENDENCY_RELATIONSHIP_LABELS[entry.relationshipType];
 
   return (
     <Link
       href={buildStablecoinUrl(entry.coin.id)}
+      aria-label={`${entry.coin.symbol} ${relationshipLabel}${entry.edgeType === "basket" ? ` ${share}` : ""}`}
       className="pharos-focus-ring flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted/40"
     >
-      <StablecoinLogo src={logoSrc} name={entry.coin.name} size={24} />
+      <StablecoinLogo src={logosById[entry.coin.id]} name={entry.coin.name} size={24} />
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        {/* Tickers are short bounded strings — never ellipsize them; the type
-            chip is the flexible element if the cell ever runs out of room. */}
         <span className="shrink-0 text-sm font-medium">{entry.coin.symbol}</span>
-        {entry.type !== "collateral" && (
-          <span className="min-w-0 truncate rounded-sm bg-muted/50 px-1.5 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
-            {entry.type}
-          </span>
-        )}
+        <span className="min-w-0 truncate rounded-sm bg-muted/50 px-1.5 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+          {relationshipLabel}
+        </span>
       </div>
-      <span className="shrink-0 font-mono text-sm tabular-nums text-foreground">
-        {pct}%
-      </span>
+      {entry.edgeType === "basket" ? (
+        <span className="shrink-0 font-mono text-sm tabular-nums text-foreground">{share}</span>
+      ) : null}
     </Link>
   );
 }
 
-interface CollateralUsageSectionProps {
-  entries: readonly CollateralUsageEntry[];
-}
-
-export function CollateralUsageSection({ entries }: CollateralUsageSectionProps) {
-  const usage = useMemo(() => [...entries].sort((a, b) => b.weight - a.weight), [entries]);
-  const logos = logosById;
+export function CollateralUsageSection({ entries }: { entries: readonly PublishedCollateralUsageEntry[] }) {
+  const usage = useMemo(() => [...entries].sort((a, b) => {
+    if (a.edgeType !== b.edgeType) return a.edgeType === "basket" ? -1 : 1;
+    const aValue = a.edgeType === "basket" ? a.weight : a.marketCap;
+    const bValue = b.edgeType === "basket" ? b.weight : b.marketCap;
+    if (aValue === null && bValue !== null) return 1;
+    if (bValue === null && aValue !== null) return -1;
+    return (bValue ?? 0) - (aValue ?? 0) || a.coin.id.localeCompare(b.coin.id);
+  }), [entries]);
   const [showAll, setShowAll] = useState(false);
 
   if (usage.length === 0) return null;
 
   const needsCollapse = usage.length > PREVIEW_COUNT;
   const visible = showAll ? usage : usage.slice(0, PREVIEW_COUNT);
-
-  const wrapperCount = usage.filter((e) => e.type === "wrapper").length;
-  const collateralCount = usage.length - wrapperCount;
-
-  // Group visible items into weight tiers
-  const tierSections = TIER_DEFS
-    .map((def) => ({ key: def.key, label: def.label, items: visible.filter((e) => def.test(e.weight)) }))
-    .filter((t) => t.items.length > 0);
-
-  // Show tier labels only when items span multiple weight tiers
-  const showTierLabels = usage.length > 3 && tierSections.length > 1;
-
-  // <=3 items: compact flex row; >3: structured grid (with optional tiers)
-  const isCompact = usage.length <= 3;
-
-  const renderItem = (entry: CollateralUsageEntry) => (
-    <CollateralUsageItem key={entry.coin.id} entry={entry} logoSrc={logos?.[entry.coin.id]} />
-  );
-
-  // Container-query columns: this section mounts both full-width and inside
-  // the half-width Dependency Context split, so viewport breakpoints
-  // over-column the narrow case and squeeze tickers into ellipsis.
-  const GRID_CLASSES = "grid grid-cols-1 gap-0.5 @lg:grid-cols-2 @3xl:grid-cols-3";
-  const showsTypeBreakdown = usage.length > 3 && wrapperCount > 0;
+  const relationshipCounts = Object.entries(DEPENDENCY_RELATIONSHIP_LABELS)
+    .map(([kind, label]) => ({ label, count: usage.filter((entry) => entry.relationshipType === kind).length }))
+    .filter(({ count }) => count > 0);
 
   return (
     <section id="collateral-usage" className="@container animate-in fade-in space-y-2.5 duration-300">
@@ -87,40 +76,22 @@ export function CollateralUsageSection({ entries }: CollateralUsageSectionProps)
         <h3 className={DETAIL_MODULE_TITLE_CLASS}>
           Used by <span className="ml-1 font-normal text-muted-foreground tabular-nums">{usage.length}</span>
         </h3>
-        {showsTypeBreakdown && (
+        {usage.length > 3 && relationshipCounts.length > 1 ? (
           <span className="pharos-meta">
-            {collateralCount > 0 && `${collateralCount} collateral`}
-            {collateralCount > 0 && wrapperCount > 0 && " · "}
-            {wrapperCount > 0 && `${wrapperCount} wrapper${wrapperCount !== 1 ? "s" : ""}`}
+            {relationshipCounts.map(({ label, count }) => `${count} ${label}`).join(" · ")}
           </span>
-        )}
+        ) : null}
       </div>
       <div className={showAll ? "max-h-96 overflow-y-auto" : undefined}>
-        {isCompact ? (
-          <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4">
-            {visible.map(renderItem)}
-          </div>
-        ) : showTierLabels ? (
-          <div className="space-y-3">
-            {tierSections.map((tier) => (
-              <div key={tier.key}>
-                <p className="pharos-kicker mb-1 px-2.5">{tier.label}</p>
-                <div className={GRID_CLASSES}>{tier.items.map(renderItem)}</div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className={GRID_CLASSES}>{visible.map(renderItem)}</div>
-        )}
+        <div className={usage.length <= 3
+          ? "flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4"
+          : "grid grid-cols-1 gap-0.5 @lg:grid-cols-2 @3xl:grid-cols-3"}>
+          {visible.map((entry) => <CollateralUsageItem key={`${entry.coin.id}:${entry.edgeType}`} entry={entry} />)}
+        </div>
       </div>
-      {needsCollapse && (
-        <ShowAllToggle
-          open={showAll}
-          onToggle={() => setShowAll((prev) => !prev)}
-          total={usage.length}
-          noun="stablecoins"
-        />
-      )}
+      {needsCollapse ? (
+        <ShowAllToggle open={showAll} onToggle={() => setShowAll((prev) => !prev)} total={usage.length} noun="stablecoins" />
+      ) : null}
     </section>
   );
 }

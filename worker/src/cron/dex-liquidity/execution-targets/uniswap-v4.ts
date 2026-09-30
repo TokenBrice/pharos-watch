@@ -45,7 +45,10 @@ export function buildUniswapV4RegisteredExecutionTarget(
   }
 
   const measuredExecutionTarget = buildUniswapV4MeasuredExecutionTarget(
-    buildRegisteredTargetInput(input, matchingCandidates[0]!),
+    {
+      ...buildRegisteredTargetInput(input, matchingCandidates[0]!),
+      identityMatch: exactPoolId ? "exact-pool-id" : "token-fee",
+    },
   );
   return toRegisteredTargetOutput(measuredExecutionTarget);
 }

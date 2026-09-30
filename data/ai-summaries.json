@@ -2933,31 +2933,35 @@
   },
   "thusd-theo": {
     "title": "A Dollar Running a Gold Carry Trade",
-    "text": "thUSD is Theo's dollar stablecoin, minted and redeemed 1:1 against USDC or USDT by whitelisted parties through a backend-signed minter contract, while most users buy it on Uniswap or Curve. The central trade-off sits in the backing: per Theo's transparency dashboard on 29 September 2026, 73.3% of reserves ran a delta-neutral gold carry (leased physical gold hedged with short CME futures and Treasury margin) and 26.6% sat in thBILL, so a dollar peg rests on gold-lease credit, futures basis, and margin risk rather than bank deposits. Yield accrues only to sthUSD stakers, leaving the token itself non-yield-bearing. {{term:redemption}}redemption{{/term}} is issuer-gated rather than open, and the whitelist, per-block caps, and two-day timelock governing mint-logic changes are the durable constraints on exit. The coin carries a {{grade}} report-card verdict.",
-    "updatedAt": "2026-09-29",
+    "text": "thUSD is Theo's non-yield-bearing dollar token, backed mainly by a managed, hedged gold-carry book, with thBILL as the smaller reserve leg and little USDC/USDT liquidity. Gold leasing, short CME futures and Treasury margin expose the backing to lease credit, futures basis and margin risk. Only sthUSD earns yield. Theo's reserve dashboard is issuer-run; independent aggregate assurance remains unfinished. Whitelisted depositors sign Theo's quoted USDC/USDT orders, which a privileged minter submits. The contract prevents minting more thUSD than collateral deposited or redeeming for more collateral than thUSD burned, but does not enforce exact 1:1 pricing. Pharos therefore reviews pricing as privileged internal control and current minting as collateral-gated. Mint authorization, minter replacement and upgrades require a two-day timelock controlled by Theo's Safe. That delay governs administrative changes, not redemption processing; the Guardian can pause minting and redemption instantly. Primary {{term:redemption}}redemption{{/term}} remains issuer-gated, fee-bearing and capped per block, with payouts dependent on the Cash Wallet. Pharos' retained DEX liquidity is concentrated in one Ethereum Uniswap v4 thUSD/USDC pool, without measured executable depth. The {{grade}} report-card verdict reflects backing risk and unproven exit terms. Without a published processing SLA or full-supply liquidity bound, holders cannot establish how quickly the managed reserves can become spendable stablecoins.",
+    "updatedAt": "2026-09-30",
     "authoredBy": "ai",
-    "model": "glm-5.3",
-    "factsAsOf": "2026-09-29",
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-09-30",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-09-29"
+        "factsAsOf": "2026-09-30"
       }
     ],
     "sources": [
       {
-        "label": "Theo thUSD documentation (delta-neutral gold strategy, 1:1 mint/redeem)",
+        "label": "Theo thUSD documentation (gold-carry backing and sthUSD yield)",
         "url": "https://docs.theo.xyz/products/thusd.md"
       },
       {
-        "label": "Theo transparency dashboard (reserve composition, Sep 29 2026)",
+        "label": "Theo rendered transparency dashboard (reserves and assurance status, Sep 30 2026)",
         "url": "https://app.theo.xyz/transparency"
       },
       {
-        "label": "Theo roles and access control (whitelist, timelock, caps)",
+        "label": "Theo roles and access control (mint governance, timelock and emergency pause; read Sep 30 2026)",
         "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
+      },
+      {
+        "label": "Theo mint-and-redeem contract reference (depositor signatures, privileged submission and ratio checks; read Sep 30 2026)",
+        "url": "https://docs.theo.xyz/developers/contract-reference/mint-and-redeem.md"
       }
     ]
   },

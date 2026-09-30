@@ -12,6 +12,25 @@
   "variantOf": "usdc-circle",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "usdc-circle",
+  "dependencies": [
+    { "id": "usds-sky", "weight": 1, "type": "mechanism" }
+  ],
+  "dependencyReview": {
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spark Savings V2 backing and risk architecture (accessed 2026-09-30)",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      }
+    ],
+    "rationale": "Spark identifies spUSDC and spUSDT as V2 vaults fully backed by USDS, separately from legacy sUSDC V1. The documented waterfall starts with Prime-internal and Prime-external junior capital at equal preference, followed by external senior srUSDS capital (described as planned), the Sky Surplus Buffer, the Aggregate Surplus Buffer and SKY-token recapitalization. Only after the available capital and token backstops are exhausted are residual losses socialized equally across USDS holders, including Spark Savings stablecoin vaults. The USDS mechanism claim and native USDC wrapper parent are serial constraints combined by the worse parent, not additive portfolio weights or an immediate loss coefficient.",
+    "relationships": [
+      { "id": "usds-sky", "weight": 1, "type": "mechanism", "reason": "Issuer-documented full USDS backing and residual loss socialization after the junior/senior capital and token-backstop waterfall; no current USDS custody percentage is inferred." },
+      { "id": "usdc-circle", "weight": 1, "type": "wrapper", "reason": "The V2 USDC vault remains a USDC-denominated ERC-4626 claim; the structural native-asset parent is retained alongside USDS backing." }
+    ]
+  },
   "collateral": "USDC deposited into Spark Savings Vault V2 (ERC-4626 asset=USDC); idle USDC is deployed by the Spark Liquidity Layer. Spark documents V2 USD vaults as economically fully backed by USDS / Sky balance-sheet liquidity for redemptions.",
   "pegMechanism": "Deposit USDC to mint spUSDC; share price appreciates against USDC as the Vault Savings Rate (vsr) accrues while SLL deploys idle assets. Withdrawals burn spUSDC for USDC subject to vault idle liquidity or Savings Liquidity Intents for large exits.",
   "mechanismArchetypeReview": {

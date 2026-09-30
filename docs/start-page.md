@@ -91,6 +91,7 @@ Goal-card rules:
 - each card represents a distinct user job, not a generic feature link
 - goal cards render in a uniform responsive grid (`sm:grid-cols-2`, `xl:grid-cols-3`)
 - each card carries its own primary route, CTA label, and destination chips
+- The portfolio goal is a holdings-risk review. It links to the Portfolio, Dependency Map, and Safety Scores without promising issuer-failure simulations.
 
 ### Glossary
 

@@ -20,6 +20,7 @@
       "pct": 0.023661291,
       "risk": "medium",
       "coinId": "doc-money-on-chain",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Money on Chain protocol",
       "riskFactors": [

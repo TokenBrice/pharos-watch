@@ -1,0 +1,1378 @@
+{
+  "schemaVersion": 1,
+  "description": "Durable dependency coverage review history. The 16 open WS1.E seed entries are retained as history; appended W3 decisions record W1/W2 implemented dispositions and W4 decisions record primary-source research rechecks without granting scoring admission or closing residual evidence gaps. Audit regeneration never deletes this history.",
+  "seededAt": "2026-09-30",
+  "decisionFields": [
+    "claimGroupId",
+    "taskIds",
+    "dependentId",
+    "upstreamId",
+    "workType",
+    "resolutionMode",
+    "status",
+    "decision",
+    "deferState",
+    "firstSeenAt",
+    "reviewedAt",
+    "reviewer",
+    "evidence",
+    "rationale",
+    "changeRefs",
+    "sentinels",
+    "nextReviewTrigger",
+    "factsClosed"
+  ],
+  "allowedStatuses": [
+    "open",
+    "resolved",
+    "deferred",
+    "rejected"
+  ],
+  "allowedDecisions": [
+    "evidence-refreshed",
+    "retargeted",
+    "withheld",
+    "deferred",
+    "rejected"
+  ],
+  "decisions": [
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aa-falconx-mev-capital->usdc-circle",
+      "taskIds": [
+        "NC-144"
+      ],
+      "dependentId": "aa-falconx-mev-capital",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Exact Ethereum facility token/tranche claim identity needs verification.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-144"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:syusd-aegis->yusd-aegis",
+      "taskIds": [
+        "NC-146"
+      ],
+      "dependentId": "syusd-aegis",
+      "upstreamId": "yusd-aegis",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Exact vault asset/redemption relationship needs primary verification.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-146"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:xmd-metal-dollar->usdc-circle",
+      "taskIds": [
+        "NC-143"
+      ],
+      "dependentId": "xmd-metal-dollar",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "XUSDC bridge escrow and canonical USDC claim need verification.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-143"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:spusd-soulpeg->usdc-circle",
+      "taskIds": [
+        "NC-148"
+      ],
+      "dependentId": "spusd-soulpeg",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "BSC representation and soul-bound sUSDC backing need verification.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-148"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:reusd-re-protocol->susde-ethena",
+      "taskIds": [
+        "NC-116"
+      ],
+      "dependentId": "reusd-re-protocol",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Pooled protocol backing does not establish this tranche weight.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-116"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->susde-ethena",
+      "taskIds": [
+        "NC-169"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify issuer identity and dependent backing; LP debt is not a measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-169"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->susds-sky",
+      "taskIds": [
+        "NC-170"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "susds-sky",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify issuer identity and dependent backing; LP debt is not a measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-170"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->reusd-resupply",
+      "taskIds": [
+        "NC-167"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "reusd-resupply",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify issuer identity and dependent backing; LP debt is not a measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-167"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->scrvusd-curve",
+      "taskIds": [
+        "NC-168"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "scrvusd-curve",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify issuer identity and dependent backing; LP debt is not a measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-168"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aid-gaib->usdc-circle",
+      "taskIds": [
+        "NC-174"
+      ],
+      "dependentId": "aid-gaib",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify current exact claim identity and measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-174"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aid-gaib->usdt-tether",
+      "taskIds": [
+        "NC-175"
+      ],
+      "dependentId": "aid-gaib",
+      "upstreamId": "usdt-tether",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify current exact claim identity and measured backing share.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-175"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:stusd-stoneyield->usdc-circle",
+      "taskIds": [
+        "NC-177"
+      ],
+      "dependentId": "stusd-stoneyield",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify serial/mechanism semantics; deposit currency alone is insufficient.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-177"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:hbusdt-hyperbeat->usdt-tether",
+      "taskIds": [
+        "NC-178"
+      ],
+      "dependentId": "hbusdt-hyperbeat",
+      "upstreamId": "usdt-tether",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Verify serial/mechanism semantics; deposit currency alone is insufficient.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-178"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->susde-ethena",
+      "taskIds": [
+        "NC-164"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Refresh issuer mint-market values together with pinned USM frxUSD balance; borrow-market collateral is out of scope.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-164"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->syrupusdc-maple",
+      "taskIds": [
+        "NC-165"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "syrupusdc-maple",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Refresh issuer mint-market values together with pinned USM frxUSD balance; borrow-market collateral is out of scope.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-165"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->frxusd-frax",
+      "taskIds": [
+        "NC-163"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "frxusd-frax",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "open",
+      "decision": null,
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": null,
+      "reviewer": null,
+      "evidence": [],
+      "rationale": "Third DUSD-alto edge in WS1.E: refresh issuer mint-market values and independently read pinned USM frxUSD balance atomically.",
+      "changeRefs": [],
+      "sentinels": [
+        "evidence not independently verified"
+      ],
+      "nextReviewTrigger": "Monthly dependency coverage drain in dependent market-cap order, or new primary claim evidence.",
+      "factsClosed": 0,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-163"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aa-falconx-mev-capital->usdc-circle",
+      "taskIds": [
+        "NC-144"
+      ],
+      "dependentId": "aa-falconx-mev-capital",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "Old Ethereum CDO token() returns canonical USDC and AATranche() returns tracked AA at block 26088256 on 2026-09-30; strategy-vault lineage retained.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/coins/aa-falconx-mev-capital.json"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Material contract/claim change or next scheduled evidence refresh.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-144"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:syusd-aegis->yusd-aegis",
+      "taskIds": [
+        "NC-146"
+      ],
+      "dependentId": "syusd-aegis",
+      "upstreamId": "yusd-aegis",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "Exact sYUSD asset() returns tracked YUSD and cooldownDuration() is 604800 seconds at Ethereum block 26088256 on 2026-09-30.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/syusd-aegis.json"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Material contract/claim change or next scheduled evidence refresh.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-146"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:xmd-metal-dollar->usdc-circle",
+      "taskIds": [
+        "NC-143"
+      ],
+      "dependentId": "xmd-metal-dollar",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "withheld",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://proton.eosusa.io/v1/chain/get_currency_balance",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 withheld canonical USDC linkage: XPR treasury XUSDC balance at head 406113096 does not establish canonical bridge escrow backing.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/xmd-metal-dollar.json"
+      ],
+      "sentinels": [
+        "XUSDC canonical escrow reconciliation absent"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-143"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:spusd-soulpeg->usdc-circle",
+      "taskIds": [
+        "NC-148"
+      ],
+      "dependentId": "spusd-soulpeg",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "withheld",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://docs.soulpeg.io/docs/protocol/contract-design",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 withheld canonical USDC linkage: SoulPeg documentation identifies soul-bound sUSDC; BSC probes at 124853997 and 124854221 reverted and no underlying/escrow identity was proven.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/spusd-soulpeg.json"
+      ],
+      "sentinels": [
+        "sUSDC underlying and escrow unverified"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-148"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:reusd-re-protocol->susde-ethena",
+      "taskIds": [
+        "NC-116"
+      ],
+      "dependentId": "reusd-re-protocol",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "withheld",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://app.re.xyz/metrics",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/AdaptersB3b.md"
+        }
+      ],
+      "rationale": "W2 retains all Re protocol-pooled asset numerators unlinked. The pooled composition is not tranche-specific reUSD backing and supplies no validated reUSD denominator.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/AdaptersB3b.md",
+        "shared/data/stablecoins/domains/reserves/reusd-re-protocol.json"
+      ],
+      "sentinels": [
+        "tranche-specific holdings and liability attribution absent"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-116"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->susde-ethena",
+      "taskIds": [
+        "NC-169"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://www.inverse.finance/api/f2/fixed-markets",
+          "accessedAt": "2026-09-29",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/DolaJupusd.md"
+        }
+      ],
+      "rationale": "W1 retains only direct sUSDe-secured debt ($422722), at 0.4% in the captured rounded composition. $56.003M DOLA-sUSDe LP debt remains an undecomposed unlinked protocol position.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/DolaJupusd.md",
+        "shared/data/stablecoins/domains/reserves/dola-inverse-finance.json"
+      ],
+      "sentinels": [
+        "LP constituent look-through remains unresolved"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-169"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->susds-sky",
+      "taskIds": [
+        "NC-170"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "susds-sky",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "withheld",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://www.inverse.finance/api/f2/fixed-markets",
+          "accessedAt": "2026-09-29",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/DolaJupusd.md"
+        }
+      ],
+      "rationale": "W1 removes false full-issuer attribution from DOLA-sUSDS LP debt; the measured LP category remains unlinked pending constituent decomposition.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/DolaJupusd.md",
+        "shared/data/stablecoins/domains/reserves/dola-inverse-finance.json"
+      ],
+      "sentinels": [
+        "LP constituents and issuer backing share unmeasured"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-170"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->reusd-resupply",
+      "taskIds": [
+        "NC-167"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "reusd-resupply",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "withheld",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://www.inverse.finance/api/f2/fixed-markets",
+          "accessedAt": "2026-09-29",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/DolaJupusd.md"
+        }
+      ],
+      "rationale": "W1 removes false full-issuer attribution from reUSD-sDOLA LP debt; the measured LP category remains unlinked pending constituent decomposition.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/DolaJupusd.md",
+        "shared/data/stablecoins/domains/reserves/dola-inverse-finance.json"
+      ],
+      "sentinels": [
+        "LP constituents and issuer backing share unmeasured"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-167"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dola-inverse-finance->scrvusd-curve",
+      "taskIds": [
+        "NC-168"
+      ],
+      "dependentId": "dola-inverse-finance",
+      "upstreamId": "scrvusd-curve",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "withheld",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://www.inverse.finance/api/f2/fixed-markets",
+          "accessedAt": "2026-09-29",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/DolaJupusd.md"
+        }
+      ],
+      "rationale": "W1 removes false full-issuer attribution from sDOLA-scrvUSD LP debt; the measured LP category remains unlinked pending constituent decomposition.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/DolaJupusd.md",
+        "shared/data/stablecoins/domains/reserves/dola-inverse-finance.json"
+      ],
+      "sentinels": [
+        "LP constituents and issuer backing share unmeasured"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-168"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aid-gaib->usdc-circle",
+      "taskIds": [
+        "NC-174"
+      ],
+      "dependentId": "aid-gaib",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 reweights exact AID USDC liquid balances to 1.13622166% using issuer principal-allocation denominator, with RPC census at Ethereum 26088275, Arbitrum 510256611 and Base 51978808.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/aid-gaib.json"
+      ],
+      "sentinels": [
+        "issuer principal allocation is not independently audited NAV"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-174"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:aid-gaib->usdt-tether",
+      "taskIds": [
+        "NC-175"
+      ],
+      "dependentId": "aid-gaib",
+      "upstreamId": "usdt-tether",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "withheld",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://bsc-rpc.publicnode.com",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 withholds AID canonical USDT edge: BSC 124854510 confirms Binance-Peg USDT balance, but canonical issuer escrow coverage remains unverified.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/aid-gaib.json"
+      ],
+      "sentinels": [
+        "Binance-Peg USDT escrow coverage unverified"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-175"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:stusd-stoneyield->usdc-circle",
+      "taskIds": [
+        "NC-177"
+      ],
+      "dependentId": "stusd-stoneyield",
+      "upstreamId": "usdc-circle",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://docs.stoneyield.io/docs/protocol/contract-design",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        },
+        {
+          "url": "https://bsc-rpc.publicnode.com",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 retains the strategy-vault parent under the owner D3 ruling and annotates Binance-Peg USDC with verified:false. Documented Venus vault asset() resolves the BSC representation at block 124853997; it does not establish escrow coverage or deployed allocations.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/stusd-stoneyield.json"
+      ],
+      "sentinels": [
+        "bridge escrow unverified",
+        "strategy constituents unreconciled"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-177"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:hbusdt-hyperbeat->usdt-tether",
+      "taskIds": [
+        "NC-178"
+      ],
+      "dependentId": "hbusdt-hyperbeat",
+      "upstreamId": "usdt-tether",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        },
+        {
+          "url": "https://docs.usdt0.to/technical-documentation/deployments",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 retains the strategy-vault parent under the owner D3 ruling and annotates USDT0 with verified:false. Exact issuer vault and exit documentation plus historical deposit-token read at HyperEVM 40439370 establish settlement lineage; current depositor asset() reverted at 47265526.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/hbusdt-hyperbeat.json"
+      ],
+      "sentinels": [
+        "bridge escrow unverified",
+        "current deployed portfolio unreconciled"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-178"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->susde-ethena",
+      "taskIds": [
+        "NC-164"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "susde-ethena",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 reweights Alto DUSD sUSDe issuance path to 0.0006234% from issuer snapshot 2026-09-30T04:59:16.540Z and USM frxUSD at Ethereum block 26088256. Borrow-market collateral is excluded.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/dusd-alto.json"
+      ],
+      "sentinels": [
+        "issuer API and RPC observations are dated but not atomic"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-164"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->syrupusdc-maple",
+      "taskIds": [
+        "NC-165"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "syrupusdc-maple",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 reweights Alto DUSD syrupUSDC issuance path to 0.00062376% using the same issuer mint-market and pinned USM denominator.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/dusd-alto.json"
+      ],
+      "sentinels": [
+        "issuer API and RPC observations are dated but not atomic"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-165"
+      ]
+    },
+    {
+      "claimGroupId": "PUBLISHED_EDGE:dusd-alto->frxusd-frax",
+      "taskIds": [
+        "NC-163"
+      ],
+      "dependentId": "dusd-alto",
+      "upstreamId": "frxusd-frax",
+      "workType": "unverifiable-published-edge",
+      "resolutionMode": "agent-curation",
+      "status": "resolved",
+      "decision": "evidence-refreshed",
+      "deferState": null,
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W3 ledger drain (W1/W2 implementation evidence)",
+      "evidence": [
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "accessedAt": "2026-09-30",
+          "reviewSource": "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md"
+        }
+      ],
+      "rationale": "W1 refreshes Alto DUSD frxUSD issuance path to 78.75210279%; USM holds 223104.611770924639631386 frxUSD at Ethereum 26088256, combined with issuer mint-market debt. This is Alto, not Dialectic DUSD.",
+      "changeRefs": [
+        "agents/2026-09-29-dependency-map-review/execution/results/ResearchE.md",
+        "shared/data/stablecoins/domains/reserves/dusd-alto.json"
+      ],
+      "sentinels": [
+        "issuer API and RPC observations are dated but not atomic"
+      ],
+      "nextReviewTrigger": "New exact-contract, escrow, tranche or constituent evidence; monthly review of remaining sentinels.",
+      "factsClosed": 1,
+      "seedRefs": [
+        "agents/2026-09-29-dependency-map-review/IMPLEMENTATION-PLAN.md#ws1e",
+        "agents/2026-09-29-dependency-map-review/findings/network-corrections-ledger.md:NC-163"
+      ]
+    },
+    {
+      "claimGroupId": "WS1D:usdd-tron-dao-reserve",
+      "taskIds": ["WS1.D"],
+      "dependentId": "usdd-tron-dao-reserve",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "questionnaire pending",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview", "accessedAt": "2026-09-30", "sourceAsOf": null}],
+      "rationale": "Positive global allocator positions still lack origin-debt attribution, exact held-token contracts and a shared checkpoint. No global fraction is applied to Tron debt.",
+      "changeRefs": [],
+      "sentinels": ["No new measured Tron constituent envelope."],
+      "nextReviewTrigger": "Issuer response with same-checkpoint origin-debt attribution and exact held-token inventory.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:usde-ethena",
+      "taskIds": ["WS1.D"],
+      "dependentId": "usde-ethena",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "questionnaire pending",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [
+        {"url": "https://app.ethena.fi/api/positions/current/collateral", "accessedAt": "2026-09-30", "sourceAsOf": "2026-09-30T05:58:54Z"},
+        {"url": "https://app.ethena.fi/api/collateral-breakdown", "accessedAt": "2026-09-30", "sourceAsOf": null}
+      ],
+      "rationale": "New collateral clock reports $4,909,222,156.11 backing. Category endpoint still reports $1,404,244,668 Liquid Stables naming USDT, USDC, USDtb and PYUSD without constituent amounts or a reconciled shared denominator. No constituent edge admitted.",
+      "changeRefs": [],
+      "sentinels": ["New collateral timestamp does not date the separate category endpoint."],
+      "nextReviewTrigger": "Issuer response with per-token balances at a reconciled collateral/category checkpoint.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:gho-aave",
+      "taskIds": ["WS1.D"],
+      "dependentId": "gho-aave",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "questionnaire pending",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://governance.aave.com/t/arfc-launch-remotegsm-on-arbitrum/24986", "accessedAt": "2026-09-30", "sourceAsOf": "2026-08-17"}],
+      "rationale": "Latest visible issuer update proposes replacing Arbitrum USDC.e GSM with USDCn. Deployment intent establishes no current remote allocation. Existing measured mainnet claims remain unchanged.",
+      "changeRefs": [],
+      "sentinels": ["Mainnet residual and remote portfolios remain unreconciled."],
+      "nextReviewTrigger": "Reconciled mainnet residual and deployed remote GSM holdings at shared checkpoints.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:ausd-agora",
+      "taskIds": ["WS1.D"],
+      "dependentId": "ausd-agora",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "questionnaire pending",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://docs.agora.finance/developer/transparency", "accessedAt": "2026-09-30", "sourceAsOf": "2026-07-31"}],
+      "rationale": "Issuer index still lists July as newest examination. No newer USDC/PYUSD split disclosed; dated July category and PoR remain unchanged.",
+      "changeRefs": [],
+      "sentinels": ["Source date refers to newest listed examination, not index publication."],
+      "nextReviewTrigger": "New examination or issuer response with individual stablecoin amounts.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:u-united-stables",
+      "taskIds": ["WS1.D"],
+      "dependentId": "u-united-stables",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "questionnaire pending",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://u.tech/u-client-api/v1/public/u/por", "accessedAt": "2026-09-30", "sourceAsOf": "2026-09-30T11:09:06.134Z"}],
+      "rationale": "New source clock retains $1,540,127,120.98 reserves and $1,497,830,391.63 tokens, ripcord false. Source remains genuinely single-bucket with no constituent or custody schedule.",
+      "changeRefs": [],
+      "sentinels": ["Aggregate PoR cannot establish reserve weights."],
+      "nextReviewTrigger": "Issuer response with exhaustive dated reserve composition and claim/custody schedule.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:usdy-ondo-finance",
+      "taskIds": ["WS1.D"],
+      "dependentId": "usdy-ondo-finance",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "questionnaire pending",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [
+        {"url": "https://bin.bnbstatic.com/images/web3-data/public/token/ondo/pdf/daily-2026-09-22.pdf", "accessedAt": "2026-09-30", "sourceAsOf": "2026-09-22", "document": "Ondo Stocks daily verification-agent report", "pages": [1]},
+        {"url": "https://ondo.finance/usdy", "accessedAt": "2026-09-30", "sourceAsOf": null, "document": "Issuer USDY holdings and Daily Attestation Reports locator"},
+        {"url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=1", "accessedAt": "2026-09-30", "sourceAsOf": "2026-09-24", "document": "Ondo USDY LLC_ATCAttest_260924.pdf", "pages": [1, 2]}
+      ],
+      "rationale": "Primary exchange-hosted September 22 OGM BVI report, page 1, records USDY market-value liabilities of $198,949,893.44 within $1,437,389,833.73 total liabilities and a $1,532,537,048.33 shared asset pool; it supplies no USDY-specific allocation. The issuer USDY page provides the Daily Attestation Reports locator. Ondo USDY LLC_ATCAttest_260924.pdf, page 1, dated September 24, records $2,082,911,466.72 permitted assets and $2,066,700,997.67 token principal outstanding (coverage 1.007844). Page 2, footnote 1, explicitly excludes USDY issued by Ondo Global Markets (BVI) Limited. These recorded figures preserve the scope finding if the archive locator changes. No new LLC numerator is mixed with historical consolidated supply.",
+      "changeRefs": [],
+      "sentinels": ["New LLC report does not resolve BVI claim allocation or same-close consolidated liabilities."],
+      "nextReviewTrigger": "Issuer response with USDY-specific BVI pool allocation and same-close consolidated reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:msusd-metronome",
+      "taskIds": ["WS1.D", "NC-136"],
+      "dependentId": "msusd-metronome",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "questionnaire pending",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets", "accessedAt": "2026-09-30", "sourceAsOf": null}],
+      "rationale": "Supported-assets table still discloses multi-synth eligibility only. No msUSD-specific current balances, loss allocation or net debt/float/treasury reconciliation supplied.",
+      "changeRefs": [],
+      "sentinels": ["Undated eligible collateral table does not date composition."],
+      "nextReviewTrigger": "Issuer response with synth-specific claim allocation and dated net-backing reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:mai-qidao",
+      "taskIds": ["WS1.D", "NC-090"],
+      "dependentId": "mai-qidao",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "still blocked",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://docs.mai.finance/docs/functions/smart-contract-addresses", "accessedAt": "2026-09-30", "sourceAsOf": null}],
+      "rationale": "Registry names PSM/vault addresses without refreshed positive balances or a globally valued liability envelope. Historical partial multi-block census cannot authorize PSM weights.",
+      "changeRefs": [],
+      "sentinels": ["Unpriced collateral, legacy markets and treasury/bridge liability exclusions remain unresolved."],
+      "nextReviewTrigger": "Pinned per-chain full asset/receipt/debt census with global liability reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:alusd-alchemix",
+      "taskIds": ["WS1.D", "NC-083", "NET02-3"],
+      "dependentId": "alusd-alchemix",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "still blocked",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging", "accessedAt": "2026-09-30", "sourceAsOf": null}],
+      "rationale": "Loss documentation confirms DAI/USDC/USDT transmission, without current balances or asset-wide Alchemist/AMO/Transmuter/L2 reconciliation. July controller-local weights remain historical.",
+      "changeRefs": [],
+      "sentinels": ["Documentation review does not renew expired controller composition."],
+      "nextReviewTrigger": "Current pinned portfolio with asset-wide liability and bridge reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:mtbill-midas",
+      "taskIds": ["WS1.D", "NC-113"],
+      "dependentId": "mtbill-midas",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "producer-runtime",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "still blocked",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://api-prod.midas.app/api/transparency?token=mTBILL", "accessedAt": "2026-09-30", "sourceAsOf": "2026-09-18T12:06:10.121Z"}],
+      "rationale": "Direct primary API fetch succeeds after reader 403; still reports September 18 USTB $71.501M, BUIDL $4.806M and equity $76.3091221907M. Existing exact keyed weights unchanged; source clock remains stale.",
+      "changeRefs": [],
+      "sentinels": ["Access date does not refresh source timestamp or admission."],
+      "nextReviewTrigger": "Newly dated reconciled portfolio inside the source-age admission budget.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:susd-hedgecore",
+      "taskIds": ["WS1.D", "N04-07"],
+      "dependentId": "susd-hedgecore",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "still blocked",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://docs.hedgecore.io/docs/protocol/yield-generation", "accessedAt": "2026-09-30", "sourceAsOf": null}],
+      "rationale": "Venus route remains documented without measured current allocation or proof of held BSC USDC representation custody. Historical strategy context is not renewed.",
+      "changeRefs": [],
+      "sentinels": ["No current assets/liabilities or representation escrow census."],
+      "nextReviewTrigger": "Same-block assets/receipts/liabilities and verified BSC representation escrow.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:usdh-hubble",
+      "taskIds": ["WS1.D", "N04-07"],
+      "dependentId": "usdh-hubble",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "still blocked",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module", "accessedAt": "2026-09-30", "sourceAsOf": null}],
+      "rationale": "PSM documentation establishes USDC swap and freeze risk without updated minted/deposited or borrowing-market balances. August composition remains historical.",
+      "changeRefs": [],
+      "sentinels": ["No finalized same-slot complete reserve census."],
+      "nextReviewTrigger": "Same-slot PSM, borrowing-market debt, collateral valuations and circulating supply reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:deuro-deuro",
+      "taskIds": ["WS1.D", "NC-098"],
+      "dependentId": "deuro-deuro",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "producer-runtime",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "still blocked",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [
+        {"url": "https://api.deuro.com/ecosystem/collateral/positions/details", "accessedAt": "2026-09-30", "sourceAsOf": null},
+        {"url": "https://docs.deuro.com/reserve", "accessedAt": "2026-09-30", "sourceAsOf": null}
+      ],
+      "rationale": "Fresh positions API remains a CDP inventory without shared bridge checkpoint. Reserve documentation includes bridge stablecoins and excludes borrower collateral from the system balance sheet. No bridge fractions appended to normalized historical CDP rows.",
+      "changeRefs": [],
+      "sentinels": ["W1 bridge census and current HTTP positions are not one reconciled producer envelope."],
+      "nextReviewTrigger": "Combined pinned positions/bridge minted/inventory/reserve-pool/supply producer envelope.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:yzusd-yuzu",
+      "taskIds": ["WS1.D", "NC-097"],
+      "dependentId": "yzusd-yuzu",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "still blocked",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Pharos dependency-map W4 primary-source recheck",
+      "evidence": [{"url": "https://cache.accountable.capital/dashboard/yuzu", "accessedAt": "2026-09-30", "sourceAsOf": "2026-09-30T09:19:41Z"}],
+      "rationale": "New split reports PT_USDG_Loop $1,852,089.9399398 without held PT contract, chain, expiry, SY/redemption identity or loop-debt accounting. New label amount does not authorize a USDG weight; authored historical composition unchanged.",
+      "changeRefs": [],
+      "sentinels": ["No exact held-claim identity or reconciled contemporaneous denominator."],
+      "nextReviewTrigger": "Dated exact held PT/SY redemption identity, loop debt and contemporaneous backing denominator.",
+      "factsClosed": 0
+    }
+  ]
+}

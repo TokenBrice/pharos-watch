@@ -50,6 +50,16 @@ const RESERVE_LIQUIDITY_HORIZON_VALUES = ["immediate", "one-day", "seven-days", 
 export type ReserveLiquidityHorizon = (typeof RESERVE_LIQUIDITY_HORIZON_VALUES)[number];
 const ReserveLiquidityHorizonSchema = z.enum(RESERVE_LIQUIDITY_HORIZON_VALUES);
 
+export const ReserveIntermediarySchema = z.object({
+  kind: z.enum(["bridge", "wrapper-token", "vault-share"]),
+  label: z.string().trim().min(1),
+  chain: z.string().trim().min(1).optional(),
+  contract: z.string().trim().min(1).optional(),
+  verified: z.boolean(),
+  sourceUrl: z.string().url().optional(),
+}).strict();
+export type ReserveIntermediary = z.output<typeof ReserveIntermediarySchema>;
+
 export const ReserveSliceSchema = z.object({
   sourceKey: z.string()
     .trim()
@@ -58,10 +68,11 @@ export const ReserveSliceSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._:/-]*$/)
     .optional(),
   name: z.string(),
-  pct: z.number().finite().positive().max(100),
+  pct: z.number().finite().nonnegative().max(100),
   risk: ReserveRiskSchema,
   coinId: z.string().optional(),
   depType: DependencyTypeSchema.optional(),
+  intermediary: ReserveIntermediarySchema.optional(),
   blacklistable: z.boolean().optional(),
   blacklistabilityExposure: ReserveBlacklistabilityExposureSchema.optional(),
   assetClass: ReserveAssetClassSchema.optional(),
@@ -70,6 +81,20 @@ export const ReserveSliceSchema = z.object({
   liquidityHorizon: ReserveLiquidityHorizonSchema.optional(),
   maturityDaysMax: z.number().finite().int().nonnegative().optional(),
 }).strict().superRefine((slice, ctx) => {
+  if (slice.pct === 0 && !slice.sourceKey) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "zero-percent reviewed reserve slices require sourceKey",
+      path: ["pct"],
+    });
+  }
+  if (slice.intermediary && !slice.coinId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "reserve intermediary requires coinId",
+      path: ["intermediary"],
+    });
+  }
   if (
     slice.blacklistable === true &&
     (slice.blacklistabilityExposure === "no" || slice.blacklistabilityExposure === "unknown")
@@ -82,6 +107,18 @@ export const ReserveSliceSchema = z.object({
   }
 });
 export type ReserveSlice = z.infer<typeof ReserveSliceSchema>;
+
+// Authored evidence must classify every linked identity. Runtime snapshots
+// remain readable so derivation can quarantine an untyped link row by row.
+export const AuthoredReserveSliceSchema = ReserveSliceSchema.superRefine((slice, ctx) => {
+  if (slice.coinId && !slice.depType) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "linked reserve slices require depType",
+      path: ["depType"],
+    });
+  }
+});
 
 export type ReserveCompositionValidationMode = "full" | "partial-known-exposure";
 
@@ -104,8 +141,9 @@ export function validateReserveCompositionTotal(
 
 function createReserveCompositionSchema(
   mode: ReserveCompositionValidationMode,
+  sliceSchema: z.ZodType<ReserveSlice> = ReserveSliceSchema,
 ): z.ZodType<ReserveSlice[]> {
-  return z.array(ReserveSliceSchema).superRefine((reserves, ctx) => {
+  return z.array(sliceSchema).superRefine((reserves, ctx) => {
     if (validateReserveCompositionTotal(reserves, mode)) return;
 
     const totalPct = getReserveCompositionTotalPct(reserves);
@@ -120,5 +158,6 @@ function createReserveCompositionSchema(
 }
 
 export const FullReserveCompositionSchema = createReserveCompositionSchema("full");
+export const FullAuthoredReserveCompositionSchema = createReserveCompositionSchema("full", AuthoredReserveSliceSchema);
 export const PartialKnownExposureReserveCompositionSchema =
   createReserveCompositionSchema("partial-known-exposure");
