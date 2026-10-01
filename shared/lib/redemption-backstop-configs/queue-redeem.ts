@@ -858,19 +858,19 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     executionModel: "deterministic-onchain",
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
-    reviewedAt: "2026-08-13",
+    reviewedAt: "2026-10-01",
     costModel: undisclosedReviewedFee(
       "Monetrix public docs specify 1:1 redemption and cooldown but no numeric redemption fee; network gas remains separate",
     ),
     routeExitCorrelation: "same-protocol-liquidity",
     docs: [
-      sourceRef("Redeem guide", "https://doc.monetrix.xyz/guide/redeem.md", ["route", "settlement", "access"]),
-      sourceRefRouteCapacityAccess("Mint guide", "https://doc.monetrix.xyz/guide/mint.md"),
+      sourceRef("Redeem guide", "https://doc.monetrix.xyz/guide/getting-started/redeem.md", ["route", "settlement", "access"]),
+      sourceRefRouteCapacityAccess("Mint guide", "https://doc.monetrix.xyz/guide/getting-started/mint.md"),
       sourceRef("Delta-neutral strategy", "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy.md", [
         "capacity",
         "route",
       ]),
-      sourceRef("FAQ", "https://doc.monetrix.xyz/guide/faq.md", ["route", "settlement", "fees"]),
+      sourceRef("FAQ", "https://doc.monetrix.xyz/guide/getting-started/faq.md", ["route", "settlement", "fees"]),
       sourceRef("Audits and contracts", "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts.md", [
         "route",
         "access",
@@ -878,7 +878,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "USDM redemption is a permissionless request/claim flow: requestRedeem burns USDM and locks a 1:1 USDC claim, then claimRedeem transfers USDC after the governance-set three-day cooldown.",
-      "The reviewed 10% strategy-buffer heuristic avoids treating Monetrix's delta-neutral positions as immediately redeemable full supply; the cooldown, pause, deposit limits, and TVL-cap controls can also block or constrain the route.",
+      "Capacity re-reviewed 2026-10-01: the current redemption guide still documents the USDC request/claim rail and a governance-adjustable three-day cooldown, but publishes no hard executable USDC buffer. The 10% strategy-buffer ratio therefore remains heuristic, not a live balance or full-supply promise. The guide expressly says the TVL cap is mint-side and should not affect redemption.",
     ],
   }),
 };

@@ -535,6 +535,33 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it.each([
+    { routeStatus: "unknown", routeStatusSource: "static-config" },
+    { routeStatus: "open", routeStatusSource: "static-config" },
+    { routeStatus: "paused", routeStatusSource: "onchain" },
+    { routeStatus: "unknown", routeStatusSource: "protocol-api" },
+  ] as const)(
+    "withholds discounted credit from non-score-eligible $routeStatus/$routeStatusSource live-direct routes",
+    ({ routeStatus, routeStatusSource }) => {
+      const row = liveDirectRow(routeStatusSource);
+      row.routeStatus = routeStatus;
+      row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
+
+      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+        coverageClass: "diagnostic",
+      });
+    },
+  );
+
+  it("preserves discounted credit for an unscored live-direct route with current-open evidence", () => {
+    const row = liveDirectRow("onchain");
+    row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+      coverageClass: "exact-lower-bound",
+    });
+  });
+
+  it.each([
     { routeStatusSource: "onchain" },
     { routeStatusSource: "protocol-api" },
   ] as const)(

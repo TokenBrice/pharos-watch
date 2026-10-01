@@ -451,15 +451,19 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "scrvusd-curve": erc4626InstantConfig({
     symbol: "crvUSD",
-    reviewedAt: "2026-05-17",
+    outputAssets: ["crvusd-curve"],
+    reviewedAt: "2026-10-01",
     feeDescription:
       "Curve docs describe scrvUSD as a Yearn V3 vault with idle crvUSD always available for redemption; yield accrues through share price rather than a separate exit fee.",
     docs: [
       sourceRefRouteCapacity("Curve scrvUSD month-in-review", "https://news.curve.finance/savings-crvusd-a-month-in-review/"),
-      sourceRef("Curve resources", "https://resources.curve.finance/", ["route"]),
+      sourceRefFull(
+        "Curve direct scrvUSD withdrawal guide",
+        "https://docs.curve.finance/docs/user/yield/guides/withdraw-scrvusd.md",
+      ),
     ],
     notes: [
-      "scrvUSD is Curve's savings wrapper over crvUSD and exits into the underlying at the live vault exchange rate",
+      "Output reviewed 2026-10-01: Curve's direct withdrawal guide states that the vault pays underlying crvUSD, with no delays or lock-ups on Ethereum. This is a single crvUSD output at the vault exchange rate, not fiat or a collateral basket; cross-chain market swaps are separate routes.",
       "Fresh ERC-4626 reserve telemetry reads the vault's idle crvUSD balance as current direct wrapper capacity; actual par-exit quality then depends on the underlying crvUSD redemption and peg-defense surface.",
     ],
   }),
@@ -537,7 +541,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     executionModel: "rules-based-nav",
     capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "heuristic" },
     costModel: undisclosedReviewedFee(
-      "Noon's fees page states the dApp charges no fees, but the binding USN Terms of Service Section 7 reserve the right to charge minting and redemption fees with current fees 'published on the Website' — no fee schedule is published today and any increase takes effect no sooner than 14 days after publication, while Sections 2 and 6 pay redemptions 'less any applicable fees (including applicable swap fees)'",
+      "Noon's current Mint & Redeem and Fees pages publish zero protocol fees, excluding gas. Binding USN Terms of Service Sections 2 and 6 still allow applicable swap fees, and Section 7 permits fee increases with fourteen days' publication notice; a complete all-in redemption cost ceiling is not established.",
     ),
     reviewedAt: REVIEWED_NOON_USN_TERMS_AT,
     v9RouteReviewTerms: {
@@ -547,7 +551,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       docs: [
         sourceRef(
           "Noon USN Terms of Service",
-          "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service",
+          "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
           ["route", "settlement"],
         ),
       ],
@@ -555,34 +559,42 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     docs: [
       sourceRefRouteCapacity(
         "Noon USN documentation",
-        "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/return-generation",
+        "https://docs.noon.capital/3.-the-yield-engine/return-generation.md",
       ),
-      sourceRef("Noon smart contract audits", "https://docs.noon.capital/built-for-safety/smart-contract-audits", [
+      sourceRef("Noon smart contract audits", "https://docs.noon.capital/5.-the-security-framework/smart-contract-security-and-audits.md", [
         "route",
         "access",
       ]),
       sourceRef("Noon Accountable dashboard", "https://noon.accountable.capital/", ["capacity"]),
       sourceRef(
         "Noon USN Terms of Service",
-        "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service",
+        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
         ["route", "access", "fees", "settlement"],
       ),
       sourceRef(
         "Noon fees and other charges",
-        "https://docs.noon.capital/built-for-high-yields/fees-and-other-charges",
+        "https://docs.noon.capital/2.-usdusn-and-usdsusn/fees.md",
         ["fees"],
       ),
-      sourceRef("Noon liquidity", "https://docs.noon.capital/noon-the-basics/liquidity", [
+      sourceRef("Noon liquidity", "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md", [
         "route",
         "capacity",
+        "settlement",
+      ]),
+      sourceRef("Noon mint and redeem", "https://docs.noon.capital/2.-usdusn-and-usdsusn/mint-and-redeem.md", [
+        "route",
+        "access",
+        "capacity",
+        "fees",
         "settlement",
       ]),
     ],
     notes: [
       "Direct mint and redemption are issuer-processed off-chain through the Company's designated interface for KYC-verified users only: ToS Section 6 commits to 1:1 redemption less applicable fees within five Business Days while reserving the right to delay redemptions, Section 29 reserves absolute and unfettered discretion to gate redemptions, and a submitted redemption request is unsecured debt owed by the Company",
-      "The reviewed reserve mix is majority Fasanara FTAC private credit with a three-month redemption window (61.9% of the 2026-09-22 Accountable attestation), with delta-neutral funding-rate arbitrage a listed ToS Section 5 reserve category but a 13.40% minority slice ($5.37M HYPE book), so the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
+      "The reviewed reserve mix is majority Fasanara FTAC private credit with a three-month redemption window (61.9% of the 2026-09-22 Accountable attestation), with delta-neutral funding-rate arbitrage a listed ToS Section 5 reserve category but a 13.40% minority slice ($5.37M HYPE book). The 15% capacity ratio remains a historical heuristic estimate, not an observed immediate buffer or an issuer-guaranteed floor.",
       "Noon's published liquidity waterfall (20% of TVL same-day, 60% at T+3, 100% at T+5) is non-binding: it is stated in calendar days against the ToS Business-Day SLA and rests on an undisclosed multi-party PLMS facility, so it is not credited as settlement or capacity evidence",
       "The published collateral wallets are not read as live capacity: their balances are transient ($3.05M of USDC/USDT at the cited 2026-09-14 block fell to $0.57M by 2026-09-22), one listed wallet is a plain EOA ops account, and they do not reconcile with Accountable's Undeployed bucket",
+      "The recovered operational mint/redeem documentation states a TVL-relative redemption quota, not a fixed USD amount. No same-run protocol TVL measurement or equivalence to circulating USN supply is established, so dailyLimitUsd remains unconfigured; the exact published percentage is recorded in the redemption-backstops documentation. Operational same-day settlement does not supersede the binding five-Business-Day terms and extraordinary gating.",
     ],
   }),
   "aid-gaib": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
@@ -884,16 +896,41 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "apxusd-apyx": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     accessModel: "whitelisted-onchain",
+    outputAssetType: "stable-single",
+    outputAssets: ["usdc-circle"],
+    executionModel: "rules-based-nav",
+    reviewedAt: "2026-10-01",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale:
+        "The apxUSD product docs explicitly identify USDC settlement after preferred-share liquidation at Redemption Value, but do not establish an atomic payout or a finite completion SLA.",
+      reviewedAt: "2026-10-01",
+      docs: [
+        sourceRef(
+          "Apyx apxUSD redemption output",
+          "https://docs.apyx.fi/product-overview/apxusd-overview",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     costModel: documentedVariableFee(
       "Apyx docs describe mint and redeem against approved assets for whitelisted participants, with offchain execution spreads and expenses reflected in the price rather than a fixed protocol fee",
     ),
     docs: [
+      sourceRef(
+        "Apyx apxUSD redemption output",
+        "https://docs.apyx.fi/product-overview/apxusd-overview",
+        ["route", "settlement"],
+      ),
       sourceRef("How to Buy apxUSD", "https://docs.apyx.fi/app-guide/how-to-buy-apxusd", ["route", "access"]),
       sourceRefRouteCapacityFees("How Apyx Works", "https://docs.apyx.fi/apyx-overview/how-apyx-works"),
       sourceRefRouteCapacity("Peg Stability Model", "https://docs.apyx.fi/solution-overview/peg-stability-model"),
     ],
     notes: [
       "Retail users primarily access apxUSD via the Curve pool, while direct minting and redemption are reserved for whitelisted participants who rebalance the market",
+      "Output reviewed 2026-10-01: the product docs state 'the protocol liquidates preferred shares to USDC to settle redemption obligations; holders do not receive preferred shares directly.' The direct payout is USDC, not the reserve share basket or an assumed USDC/USDT choice. No basket weights are required.",
+      "Redemption occurs at Redemption Value. Preferred-share liquidation does not establish immediate atomic settlement, so V9 retains an explicit settlement terms gap rather than promoting the output identity into a guaranteed execution SLA.",
     ],
   }),
   "pusd-polymarket": defineStablecoinRedeemConfig({

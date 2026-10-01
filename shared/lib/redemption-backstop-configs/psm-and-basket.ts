@@ -536,11 +536,11 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   "iusd-indigo-protocol": {
     ...psmSwapBase,
     outputAssetType: "stable-basket",
-    outputAssets: ["usdm-moneta", "usda-anzens", "usdc-circle"],
+    outputAssets: ["usdm-moneta", "usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.15577082, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: fixedFee(100, "Indigo's current iUSD PSM data and app quote show a 1% redemption fee"),
     routeExitCorrelation: "same-protocol-liquidity",
-    reviewedAt: "2026-08-13",
+    reviewedAt: "2026-10-01",
     docs: [
       sourceRef("Indigo redemptions", "https://docs.indigoprotocol.io/readme/redemptions", [
         "route",
@@ -565,10 +565,10 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       ),
     ],
     notes: [
-      "The modeled holder-facing route is Indigo's funded PSM swap: iUSD exits to USDM, USDA, or USDCx at a 1% redemption fee; the separate CDP redemption signer path is not included.",
-      "Output resolved 2026-09-01: USDM and USDA are the exact tracked Cardano deployments under `usdm-moneta` and `usda-anzens`; Circle's xReserve registry identifies Cardano USDCx policy `1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378`, the six-decimal deployment tracked under `usdc-circle`. The complete three-member PSM output set therefore has canonical price identities without treating UI symbols as evidence.",
-      "The 0.15577082 ratio is iUSD PSM supply divided by iUSD total supply from the reviewed Indigo analytics snapshot, representing a funded-PSM share rather than an immediate promise that all iUSD can exit.",
-      "The current PSM assets data reports redemption enabled for all three pools, a 1% fee, and a 10,000-unit minimum order; wallet connection is normal permissionless onchain access rather than an allowlist.",
+      "Output re-reviewed 2026-10-01 from the official assets API: iUSD's complete current stablePools array contains USDM and USDCx, both redemption-enabled with a 1% fee. USDA appeared in the earlier September snapshot but is absent from the current holder-route list; the separate CDP redemption signer path is not included.",
+      "The API identifies USDM as `c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad.0014df105553444d` and USDCx as `1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e34.5553444378`, the exact tracked Cardano deployments. A sale chooses one funded pool; no equal-weight basket or pro-rata output weights are inferred.",
+      "The 0.15577082 capacity ratio remains an explicitly historical heuristic, not a current inventory observation or lower bound. The 2026-10-01 analytics API reports psmSupply 80,450.178256 and totalSupply 1,409,341.531656; neither liability share nor a one-off availableLiquidity read is a durable executable-capacity floor. A reusable same-run pool observer is required before capacity-confidence promotion.",
+      "Both current pools report minRedemptionOrderAmount 10000 in raw API units. This is not evidence of a 10,000-token minimum; the former token-sized assertion is removed. Wallet connection remains ordinary onchain access rather than an allowlist.",
     ],
   },
 };

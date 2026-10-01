@@ -597,7 +597,6 @@ function redemptionExecutionCertainty(
 
 function redemptionCoverageClass(
   entry: RedemptionBackstopEntry,
-  observation: ExitRouteObservation,
 ): RouteReview["coverageClass"] {
   // A reviewed bounded-terms gap keeps the captured mechanism and capacity
   // curve visible, but it cannot lend score credit to settlement/cost values
@@ -609,8 +608,10 @@ function redemptionCoverageClass(
   ) {
     return "diagnostic";
   }
+  // Non-score-eligible observations can still receive the evaluator's
+  // discounted redemption credit. They must satisfy the same current-open
+  // gate as the immediate path rather than bypassing it through that fallback.
   const requiresCurrentOpenAttribution =
-    observation.scoreEligible &&
     entry.sourceMode === "dynamic" &&
     (entry.capacityKind === "live-direct" || entry.capacityKind === "live-direct-bounded") &&
     (entry.settlementModel === "atomic" || entry.settlementModel === "immediate");
@@ -786,7 +787,7 @@ function buildRedemptionRouteReview(
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
     modelConfidence,
-    coverageClass: redemptionCoverageClass(entry, observation),
+    coverageClass: redemptionCoverageClass(entry),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
     settlementHorizonSec: reviewedTerms.overridesCapturedSettlementHorizon

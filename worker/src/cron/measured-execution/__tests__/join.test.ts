@@ -32,6 +32,7 @@ import {
   joinDexMeasuredExecutionEvidence,
   releaseDexMeasuredExecutionProofFields,
   stripDexMeasuredExecutionInternalFields,
+  type DexMeasuredExecutionJoinDiagnostics,
 } from "../join";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { getDexMeasuredExecutionDeployment } from "../registry";
@@ -40,6 +41,7 @@ import {
   CURVE_CRYPTOSWAP_SHADOW_COHORT,
   encodeCurveCryptoSwapGetDy,
 } from "../curve-cryptoswap";
+import * as curveCryptoSwap from "../curve-cryptoswap";
 import {
   CURVE_3POOL_STABLESWAP_POLICY,
 } from "../curve-stableswap";
@@ -681,20 +683,27 @@ describe("measured execution join activation", () => {
     expect(diagnostics).toMatchObject({ measuredCount: 0, lastKnownGoodCount: 0, gatedCount: 1 });
   });
 
-  it("admits a valid proof from an active Curve CryptoSwap pool", () => {
-    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find(
-      (entry) => entry.poolAddress === "0x6e5492f8ea2370844ee098a56dd88e1717e4a9c2",
-    );
-    if (!policy?.expectedPoolCodeHash) throw new Error("missing active Curve policy");
+  it.each([
+    { description: "a pinned pool", poolAddress: "0x6e5492f8ea2370844ee098a56dd88e1717e4a9c2", missingPin: false },
+    { description: "a reviewed deployment family", poolAddress: "0x384ca8992f955009bdd94849488e580559590157", missingPin: false },
+    { description: "a pinned policy missing its hash", poolAddress: "0x6e5492f8ea2370844ee098a56dd88e1717e4a9c2", missingPin: true },
+  ])("preserves endpoint admission for $description", ({ poolAddress, missingPin }) => {
+    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find((entry) => entry.poolAddress === poolAddress);
+    if (!policy) throw new Error("missing active Curve policy");
+    const familyAnchored = policy.identityAnchor === "reviewed-deployment-family";
+    const endpointCodeHash = familyAnchored
+      ? "0x12aa5e0c6b126a29cf3f4ac61c317feddb54c59ead667daf444abce8679d0c54"
+      : policy.expectedPoolCodeHash!;
     const amountInRaw = 1_000n * 10n ** 18n;
-    const amountOutRaw = 400_000_000_000_000_000n;
-    const tokenAddresses = [
-      "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
-      "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-    ] as [`0x${string}`, `0x${string}`];
+    const amountOutRaw = familyAnchored ? amountInRaw : 400_000_000_000_000_000n;
+    const largeAmountOutRaw = familyAnchored ? 100_000n * 10n ** 18n : 40n * 10n ** 18n;
+    const tokenAddresses = (familyAnchored
+      ? ["0x16f93ebc5320c89efc8701577efe49d14a276a06", "0xcacd6fd266af91b8aed52accc382b4e165586e29"]
+      : ["0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"]
+    ) as [`0x${string}`, `0x${string}`];
     const input = {
       schemaVersion: "dex-measured-target-v1" as const,
-      stablecoinId: "crvusd-curve",
+      stablecoinId: familyAnchored ? "cadd-cad-digital" : "crvusd-curve",
       adapterProfileId: CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
       protocol: "curve",
       chain: "ethereum",
@@ -702,16 +711,16 @@ describe("measured execution join activation", () => {
       poolTokenAddresses: tokenAddresses,
       tokenIn: {
         address: tokenAddresses[0],
-        symbol: "crvUSD",
+        symbol: familyAnchored ? "CADD" : "crvUSD",
         decimals: 18,
         referencePriceUsd: 1,
-        trackedAssetId: "crvusd-curve",
+        trackedAssetId: familyAnchored ? "cadd-cad-digital" : "crvusd-curve",
       },
       tokenOut: {
         address: tokenAddresses[1],
-        symbol: "WETH",
+        symbol: familyAnchored ? "frxUSD" : "WETH",
         decimals: 18,
-        referencePriceUsd: 2_500,
+        referencePriceUsd: familyAnchored ? 1 : 2_500,
       },
       retainedTvlUsd: 100_000,
       retainedPoolPriceUsd: 1,
@@ -739,7 +748,7 @@ describe("measured execution join activation", () => {
       quotedAt: 1_060,
       blockNumber: 25_550_158,
       endpointAddress: policy.poolAddress,
-      endpointCodeHash: policy.expectedPoolCodeHash,
+      endpointCodeHash,
       points: [
         {
           amountInRaw: amountInRaw.toString(),
@@ -753,13 +762,13 @@ describe("measured execution join activation", () => {
         },
         {
           amountInRaw: (100_000n * 10n ** 18n).toString(),
-          amountOutRaw: (40n * 10n ** 18n).toString(),
+          amountOutRaw: largeAmountOutRaw.toString(),
           callData: encodeCurveCryptoSwapGetDy({
             inputIndex: 0,
             outputIndex: 1,
             amountInRaw: 100_000n * 10n ** 18n,
           }),
-          returnData: `0x${(40n * 10n ** 18n).toString(16).padStart(64, "0")}`,
+          returnData: `0x${largeAmountOutRaw.toString(16).padStart(64, "0")}`,
           inputUsd: 100_000,
           outputUsd: 100_000,
           costBps: 0,
@@ -782,7 +791,7 @@ describe("measured execution join activation", () => {
       },
     };
 
-    const diagnostics = joinDexMeasuredExecutionEvidence({
+    const joinInput = {
       poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
       evidence: {
         quoteGenerationId: "quote-generation",
@@ -790,21 +799,51 @@ describe("measured execution join activation", () => {
         publishedAt: 1_060,
         byTargetId: new Map([[measuredTarget.targetId, {
           quotedTarget: measuredTarget,
-          status: "measured",
+          status: "measured" as const,
           failureReason: null,
           profile,
           quoteGenerationId: "quote-generation",
           targetGenerationId: "target-generation",
-          resolution: "latest",
+          resolution: "latest" as const,
           latestFailureReason: null,
         }]]),
       },
       nowSec: 1_060,
-    });
+    };
 
-    expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 0 });
-    expect(pool.extra?.measuredExecution).toBeDefined();
-    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    let diagnostics: DexMeasuredExecutionJoinDiagnostics;
+    if (missingPin) {
+      const originalResolver = curveCryptoSwap.getCurveCryptoSwapShadowPolicy;
+      const resolver = vi.spyOn(curveCryptoSwap, "getCurveCryptoSwapShadowPolicy").mockImplementation(
+        (chain, address) => {
+          const resolved = originalResolver(chain, address);
+          return resolved ? { ...resolved, expectedPoolCodeHash: undefined } : null;
+        },
+      );
+      try {
+        diagnostics = joinDexMeasuredExecutionEvidence(joinInput);
+      } finally {
+        resolver.mockRestore();
+      }
+      expect(diagnostics).toMatchObject({ measuredCount: 0, gatedCount: 1 });
+      expect(pool.extra?.measuredExecution).toBeUndefined();
+      expect(pool.extra?.executionCapabilityGate).toEqual({
+        family: "measured-execution",
+        reason: "deployment-code-mismatch",
+      });
+      expect(pool.extra?.measuredExecutionDiagnostic?.detail).toBe("endpoint-code-hash-mismatch");
+    } else {
+      diagnostics = joinDexMeasuredExecutionEvidence(joinInput);
+      expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 0 });
+      expect(pool.extra?.measuredExecution?.capacityCurve).toContainEqual({
+        requestedNotionalUsd: 100_000,
+        maxCostBps: 200,
+        executableUsd: 100_000,
+        completionRatio: 1,
+        executionCostBps: 0,
+      });
+      expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    }
   });
 });
 

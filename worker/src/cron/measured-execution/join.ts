@@ -118,10 +118,14 @@ function quoteFailureGateReason(
     : "quote-failed";
 }
 
-/** Curve pool policies name the same fields poolAddress/expectedPoolCodeHash; an absent hash joins as a mismatch. */
+/** Fixed-code policies require their pin; reviewed families prove dependencies at quote time. */
 type ResolvedDeploymentEndpoint =
   | { endpointAddress: string; expectedCodeHash: string }
-  | { poolAddress: string; expectedPoolCodeHash?: string };
+  | {
+      poolAddress: string;
+      expectedPoolCodeHash?: string;
+      identityAnchor?: "pinned-pool-code" | "reviewed-deployment-family";
+    };
 
 interface DeploymentEndpointBinding {
   resolve(profile: DexMeasuredExecutionProfile): ResolvedDeploymentEndpoint | null;
@@ -179,7 +183,10 @@ function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
   if (profile.executionEndpoint.address !== endpointAddress) {
     issues.push("endpoint-address-mismatch");
   }
-  if (profile.executionEndpoint.codeHash !== expectedCodeHash) {
+  if (
+    !(poolPolicy && deployment.identityAnchor === "reviewed-deployment-family") &&
+    profile.executionEndpoint.codeHash !== expectedCodeHash
+  ) {
     issues.push("endpoint-code-hash-mismatch");
   }
   issues.push(...binding.validate(profile));

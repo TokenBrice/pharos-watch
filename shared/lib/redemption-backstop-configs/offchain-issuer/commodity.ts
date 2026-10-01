@@ -152,10 +152,18 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   "vnxau-vnx": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    reviewedAt: "2026-10-01",
+    routeStatus: "unknown",
+    unresolvedOutputDisposition: "issuer-undisclosed",
     costModel: documentedVariableFee(
-      "VNX platform supports sell/redemption and physical collection or delivery from one-kilogram gold bars; public materials reviewed do not expose one fixed VNXAU redemption fee",
+      "The historical VNX platform offered sell/redemption and physical collection or delivery from one-kilogram gold bars; current VNXAU-specific payout terms and a fixed redemption fee are not established after the platform suspension",
     ),
     docs: [
+      sourceRef(
+        "VNX platform suspension notice",
+        "https://vnx.li/blog",
+        ["route", "access", "settlement"],
+      ),
       sourceRefRouteCapacityAccess("VNX Gold executive summary", "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"),
       sourceRefRouteCapacityFees("VNX Gold token details", "https://vnx.gitbook.io/vnx-platform/vnx-gold/token-details"),
       sourceRef(
@@ -170,7 +178,8 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
     ],
     notes: [
-      "Primary route is VNX platform redemption or physical gold collection/delivery for verified users; physical delivery minimums make the backstop operationally slower than spot exchange liquidity",
+      "The historical VNX platform route offered fiat or supported cryptocurrency sale proceeds and physical bars starting at 1 kg; this is not a fixed complete payout basket or an atomic stablecoin redemption.",
+      "Re-reviewed 2026-10-01: VNX's current primary notice suspends platform exchange operations from June 30, 2026 and ends the remaining-balance withdrawal window on July 31. Current VNX Global mint/redeem docs cover VCHF/VGBP, not VNXAU. Route status is therefore unknown pending a maintained VNXAU-specific exit; historical gold-delivery terms are not promoted as a currently executable route.",
     ],
   },
   "xagm-matrixdock": {
@@ -201,7 +210,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   "ggbr-goldfish-gold": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull("2026-08-09"),
-    reviewedAt: "2026-09-21",
+    reviewedAt: "2026-10-01",
     outputAssetType: "physical-commodity-delivery",
     physicalCommodityDelivery: {
       commodity: "XAU", deliverableOuncesPerToken: 0.001, minimumDeliveryTokens: 13500,
@@ -233,7 +242,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "Current app minimum 13,500 GGBR and 3% fee supersede the older support FAQ's 8,818.49 GGBR minimum and 2%-3% processing/delivery range; additional shipping and insurance remain unbounded.",
-      "Settlement timing and eligible jurisdictions are not published on Goldfish's public pages; the earlier five-to-seven-business-day figure came from the sign-in-gated redemption dashboard and could not be re-verified from public sources on 2026-08-09.",
+      "Re-reviewed 2026-10-01: the public redemption app now displays 'Processing Time 5-7 Business Days' alongside the 13,500 GGBR minimum and 3% fee. Processing time is not a final physical-delivery SLA or proof of a same-notional USD payout; eligible jurisdictions and additional delivery costs remain unbounded.",
     ],
   },
   "euroe-membrane": {
