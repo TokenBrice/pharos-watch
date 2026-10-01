@@ -598,6 +598,52 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     });
   });
 
+  it.each([
+    ["blacklist 06:03 deploy before the first slot heartbeat", 11, 55, 29, "skipped_neutral"],
+    ["child progress leads the slot by exactly one heartbeat interval", 11, 71, 29, "skipped_neutral"],
+    ["child progress leads the slot by more than one heartbeat interval", 11, 72, 29, "error"],
+    ["slot heartbeat follows child progress by exactly 15 seconds", 70, 55, 29, "skipped_neutral"],
+    ["slot heartbeat follows child progress by more than 15 seconds", 71, 55, 29, "error"],
+    ["latest life evidence precedes activation by exactly 15 seconds", 11, 55, 70, "skipped_neutral"],
+    ["latest life evidence precedes the activation window", 11, 55, 71, "error"],
+  ] as const)("attributes deploy interruption directionally: %s", async (_shape, slotOffset, progressOffset, activationOffset, expectedStatus) => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_790_835_073;
+    const slotStartedAt = nowSec - 3_600;
+    seedStaleSlotWithDeadChild(sqlite, nowSec, {
+      firstSeenAt: slotStartedAt + activationOffset + 5,
+      activatedAt: slotStartedAt + activationOffset,
+      progressStartedOffset: 11,
+      progressUpdatedOffset: progressOffset,
+      slotUpdatedOffset: slotOffset,
+    });
+
+    await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "halfHourlyMeasuredExecution",
+      reconcilerWorkerVersion: "worker-new",
+    });
+    const run = sqlite.prepare(
+      "SELECT status, error, duration_ms, metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'",
+    ).get() as { status: string; error: string | null; duration_ms: number; metadata: string };
+    const interrupted = expectedStatus === "skipped_neutral";
+    expect(run.status).toBe(expectedStatus);
+    expect(run.error).toBe(interrupted ? null : "scheduled slot heartbeat stale; child job progress abandoned");
+    expect(run.duration_ms).toBe((progressOffset - 11) * 1_000);
+    expect(JSON.parse(run.metadata)).toMatchObject({
+      failureCategory: interrupted ? "platform-interrupted" : "platform-abandoned",
+      childDisposition: interrupted ? "interrupted-by-deploy" : "abandoned",
+      interruptedByWorkerVersionChange: interrupted,
+      progressUpdatedAt: slotStartedAt + progressOffset,
+      reconciledByWorkerVersionActivatedAt: slotStartedAt + activationOffset,
+    });
+    const outcome = sqlite.prepare(
+      "SELECT outcome FROM worker_producer_history WHERE job = 'sync-cl-exit-depth' AND slot_started_at = ?",
+    ).get(slotStartedAt);
+    expect(outcome).toEqual({ outcome: interrupted ? "skipped_neutral" : "abandoned" });
+  });
+
   it("classifies a mid-run deploy eviction as neutral (2026-09-23 sync-yield-data shape)", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;

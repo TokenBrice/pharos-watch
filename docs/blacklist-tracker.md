@@ -123,6 +123,8 @@ The producer summary cache is admitted fail-closed against the shared response s
 
 The producer returns `itemCount` as rows actually inserted into `blacklist_events`. Its `eventsFetched` metadata counts parsed rows before `INSERT OR IGNORE` deduplication. The remaining bounded counters and failure samples are defined beside `SyncBlacklistResult` and its metadata assembly in `sync-blacklist.ts`; do not duplicate that key inventory here.
 
+The final retained-decode diagnostic read uses the shared abort-aware D1 transient-error retry policy (up to three retries), like cursor claims and finalization. A single D1 internal/overload error must not discard an otherwise completed scan's result while assembling `decodeRetryCounts`; exhausted retries and non-transient errors still fail the run.
+
 Current-balance cache telemetry preserves the canonical `skippedDueBudget` count and `budgetExhausted` flag; neither is replaced by a synthetic deletion counter.
 
 ### Provider Paths

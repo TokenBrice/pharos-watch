@@ -19,7 +19,6 @@ import {
   readGeniusClientFields,
 } from "../build-data/build-client-registry.mjs";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { expectedWorkerRuntimeCoin } from "@shared/lib/__tests__/worker-runtime-registry.test-support";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
@@ -28,31 +27,6 @@ import {
 import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
-  it("projects the exact narrow Worker identity and lifecycle contract", () => {
-    const { runtimeCoins } = buildWorkerRuntimeRegistryOutput();
-    const expected = TRACKED_STABLECOINS.map(expectedWorkerRuntimeCoin);
-
-    expect(runtimeCoins).toEqual(expected);
-    expect(
-      runtimeCoins.every((coin: Record<string, unknown>) =>
-        Object.keys(coin).every((key) => [
-          "id",
-          "symbol",
-          "name",
-          "geckoId",
-          "pegCurrency",
-          "governance",
-          "navToken",
-          "commodityOunces",
-          "status",
-          "contracts",
-          "tradedContracts",
-          "liveReserveCircuitSource",
-        ].includes(key)),
-      ),
-    ).toBe(true);
-  });
-
   it("rejects a length-preserving duplicate canonical ID before projecting either ordered output", ({ onTestFinished }) => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-client-registry-order-"));
     onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));

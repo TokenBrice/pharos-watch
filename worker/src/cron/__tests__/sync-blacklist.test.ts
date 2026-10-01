@@ -675,6 +675,54 @@ describe("syncBlacklist", () => {
     expect(JSON.parse(result.metadata).decodeRetryCounts).toEqual({ [evmKey]: 2, [tronKey]: 1 });
   });
 
+  it.each([
+    { error: "D1_ERROR: internal error; reference = transient", failures: 1, attempts: 2, recovers: true },
+    { error: "D1_ERROR: internal error; reference = persistent", failures: 4, attempts: 4, recovers: false },
+    { error: "D1_ERROR: no such table: cache", failures: 1, attempts: 1, recovers: false },
+  ])("handles final decode diagnostics failure: $error", async ({ error, failures, attempts, recovers }) => {
+    const diagnosticRows = [{ configKey: CONTRACT_CONFIGS[0].configKey, count: 2 }];
+    const diagnosticFixture = {
+      match: "blacklist:decode-retry:",
+      rows: diagnosticRows,
+      throwError: undefined as Error | undefined,
+    };
+    const db = mockD1([
+      diagnosticFixture,
+      { match: "blacklist_sync_state", rows: [] },
+      { match: "blacklist_events", rows: [] },
+    ]);
+    const prepare = db.prepare.bind(db);
+    let diagnosticAttempts = 0;
+    vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      if (sql.includes("blacklist:decode-retry:")) {
+        diagnosticFixture.throwError = ++diagnosticAttempts <= failures ? new Error(error) : undefined;
+      }
+      return prepare(sql);
+    });
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    const outcomePromise = syncBlacklist(buildTestOpts({ db })).then(
+      (result) => ({ result, error: null }),
+      (caught: unknown) => ({ result: null, error: caught }),
+    );
+    await vi.runAllTimersAsync();
+    const outcome = await outcomePromise;
+    if (recovers) {
+      expect(outcome.error).toBeNull();
+      expect(outcome.result?.status).toBe("ok");
+      expect(JSON.parse(outcome.result!.metadata)).toMatchObject({
+        configsSucceeded: CONTRACT_CONFIGS.length,
+        decodeRetryCounts: { [CONTRACT_CONFIGS[0].configKey]: 2 },
+      });
+    } else {
+      expect(outcome.result).toBeNull();
+      expect(outcome.error).toEqual(new Error(error));
+    }
+    expect(diagnosticAttempts).toBe(attempts);
+  });
+
   it("returns zero events when all APIs return empty", async () => {
     const db = makeDb(
       CONTRACT_CONFIGS.map((config) => ({

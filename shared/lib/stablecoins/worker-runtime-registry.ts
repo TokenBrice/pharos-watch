@@ -1,5 +1,5 @@
 import workerRuntimeAsset from "../../data/stablecoins/coins.worker-runtime.generated.json";
-import type { PegCurrency } from "../../types/core";
+import type { PegCurrency, StablecoinMeta } from "../../types/core";
 import type { StablecoinStatus } from "../../types/stablecoin-taxonomy";
 import { buildStablecoinRegistryIndexes } from "./registry-indexes";
 import {
@@ -30,6 +30,21 @@ export interface WorkerRuntimeStablecoinMeta {
   contracts?: WorkerRuntimeContractDeployment[];
   tradedContracts?: WorkerRuntimeContractDeployment[];
   liveReserveCircuitSource?: string;
+  // DDR consumes these small structural/lifecycle slices, not issuer evidence.
+  flags: Pick<StablecoinMeta["flags"], "pegCurrency" | "governance" | "navToken">;
+  mechanismArchetype?: StablecoinMeta["mechanismArchetype"];
+  windDownAnnouncedAt?: string;
+  collateralQuality?: StablecoinMeta["collateralQuality"];
+  custodyModel?: StablecoinMeta["custodyModel"];
+  mintAuthority?: Pick<NonNullable<StablecoinMeta["mintAuthority"]>, "mintPath" | "authorityPosture"> & {
+    mintIncidents?: Pick<NonNullable<NonNullable<StablecoinMeta["mintAuthority"]>["mintIncidents"]>[number],
+      "date" | "status" | "resolvedAt">[];
+  };
+  reserves?: Pick<NonNullable<StablecoinMeta["reserves"]>[number], "risk" | "pct">[];
+  blacklistabilityReview?: Pick<NonNullable<StablecoinMeta["blacklistabilityReview"]>, "reviewedStatus">;
+  dependencies?: Pick<NonNullable<StablecoinMeta["dependencies"]>[number], "id" | "weight">[];
+  frozenAt?: string;
+  obituary?: Pick<NonNullable<StablecoinMeta["obituary"]>, "deathDate">;
 }
 
 const registry = buildStablecoinRegistryIndexes(workerRuntimeAsset as WorkerRuntimeStablecoinMeta[], {

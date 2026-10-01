@@ -7,11 +7,19 @@ import {
   DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/methodology-versions/depeg-resolver";
 import { curatedMintPostureBand, resolveV9MintPostureBand } from "@shared/lib/safety-score-v9/mint-posture";
-import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  WORKER_FROZEN_IDS as FROZEN_IDS,
+  WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
+  type WorkerRuntimeStablecoinMeta,
+} from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
-import type { StablecoinMeta } from "@shared/types/core";
 import type { DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection } from "../depeg-resolver-v2-contracts";
 import type { DdrEventDbRow } from "./types";
+
+type DdrRegistryMeta = Pick<WorkerRuntimeStablecoinMeta,
+  "id" | "symbol" | "name" | "flags" | "status" | "mechanismArchetype" |
+  "mintAuthority" | "windDownAnnouncedAt" | "collateralQuality" | "custodyModel" |
+  "reserves" | "blacklistabilityReview" | "dependencies">;
 
 
 export interface DdrV9DependencyCard {
@@ -65,7 +73,7 @@ export function clearV9DependencyImpairment(): void {
   v9MintPostureProjectionInstalled = false;
 }
 
-export function toStructural(meta: StablecoinMeta, dependencyImpaired?: boolean | null): DdrCoinStructural {
+export function toStructural(meta: DdrRegistryMeta, dependencyImpaired?: boolean | null): DdrCoinStructural {
   const v9DependencyImpaired = dependencyImpaired ?? v9DependencyImpairmentByCoin.get(meta.id);
   const derivedPosture = v9MintPostureByCoin.get(meta.id);
   // V9 proves absence on this token, not automatically on its upstream supply.
@@ -169,7 +177,7 @@ function eventPolicyIncluded(row: DdrEventDbRow): boolean {
   );
 }
 
-function buildRegistrySnapshot(meta: StablecoinMeta | undefined): Record<string, unknown> {
+function buildRegistrySnapshot(meta: DdrRegistryMeta | undefined): Record<string, unknown> {
   if (!meta) return { publicTracked: false };
   return {
     publicTracked: true,

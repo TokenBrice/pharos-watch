@@ -1,7 +1,7 @@
-import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { DdrrActualEventInput } from "@shared/lib/depeg-resolver-review";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isRecord, numberValue, readRecord, stringValue } from "@shared/lib/type-guards";
 import { buildInClause, chunkArray } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
@@ -116,7 +116,7 @@ function exactTerminalEvidenceFromTapeTs(tsMs: number | null | undefined): Termi
   };
 }
 
-const CEMETERY_BY_ID = new Map(CEMETERY_ENTRIES.map((entry) => [entry.id, entry]));
+const CEMETERY_BY_ID = new Map(DEAD_STABLECOINS.map((entry) => [entry.id, entry]));
 
 function registryTerminalEvidence(stablecoinId: string): TerminalEvidence | null {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);

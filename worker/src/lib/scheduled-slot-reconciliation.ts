@@ -12,6 +12,7 @@ import {
   getWorkerVersionActivatedAt,
   getWorkerVersionFirstSeenAt,
 } from "./worker-version-first-seen";
+import { SLOT_EXECUTION_HEARTBEAT_SEC } from "./scheduled-slot-fence";
 
 
 export interface StaleSlotExecutionArtifact {
@@ -149,10 +150,9 @@ export function getExpectedJobsForScheduledSlot(slotKey: string): readonly strin
 // this bound a dead child's lease keeps its slot un-reconcilable for the whole
 // TTL after an OOM kill.
 const CHILD_LEASE_HEARTBEAT_STALE_SEC = 5 * 60;
-// Slot policies heartbeat every 30-60 seconds (45 seconds for measured
-// execution), while the fence clamps custom cadences to at least 15 seconds.
-// Keep the deploy-interruption alignment window below the measured cadence so
-// even one later slot heartbeat disproves that the slot and child died together.
+// Child progress may lead the slot's last heartbeat by one fence interval,
+// including an eviction before the first tick. A slot heartbeat more than
+// 15 seconds newer than the child still disproves that they stopped together.
 const DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC = 15;
 // A dead child's second-resolution heartbeat may appear up to 15 seconds
 // before Cloudflare's deployment timestamp because of clock/write skew. Once
@@ -417,17 +417,18 @@ async function insertSyntheticStaleCronRun(
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
   const activeDurationMs = Math.max(0, progress.updated_at - startedAt) * 1000;
   const reconciliationDelayMs = Math.max(0, nowSec - progress.updated_at) * 1000;
-  // Progress timestamps are second-resolution. Treat a version change as a
-  // deploy interruption only when the old slot's own heartbeat also stopped
-  // with the child. A later slot heartbeat proves the isolate survived the
-  // child failure; missing or ambiguous timestamps remain abandoned.
+  // Progress timestamps are second-resolution. Child progress can advance
+  // between slot ticks, but a slot heartbeat after the child's last progress
+  // (beyond clock/write skew) proves the isolate survived the child failure.
+  // Missing or ambiguous timestamps remain abandoned.
   const slotHeartbeatStoppedWithChild =
     Number.isSafeInteger(slot.updated_at)
     && slot.updated_at > 0
     && Number.isSafeInteger(progress.updated_at)
     && progress.updated_at > 0
     && slot.updated_at < nowSec - CHILD_LEASE_HEARTBEAT_STALE_SEC
-    && Math.abs(slot.updated_at - progress.updated_at) <= DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC;
+    && slot.updated_at - progress.updated_at <= DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC
+    && progress.updated_at - slot.updated_at <= SLOT_EXECUTION_HEARTBEAT_SEC;
   // `cron_slot_executions.worker_version` is the direct drift evidence, but a
   // stale-takeover row can be NULL (older claims, transplanted rows). The
   // dying invocation stamps its own `workerVersion` into every progress write
@@ -455,9 +456,8 @@ async function insertSyntheticStaleCronRun(
   // life. Requiring zero progress (progress.updated_at === startedAt) matched
   // only children killed inside their first second, so every mid-run eviction
   // was misclassified as an in-place kill (2026-09-23 sync-yield-data@17:55,
-  // duration_ms 1000). The heartbeat alignment above is the death bound: the
-  // slot's own heartbeat and the child's last progress write must have
-  // stopped together, which a later heartbeat disproves.
+  // duration_ms 1000). The directional heartbeat alignment above allows one
+  // unsent slot tick; a later slot heartbeat still disproves co-death.
   const correlatedDeathWithVersionDrift = hasWorkerVersionDrift && slotHeartbeatStoppedWithChild;
   // First-seen is retained as forensic evidence only. The deploy workflow's
   // activation marker is the classification boundary because it is written
@@ -470,16 +470,15 @@ async function insertSyntheticStaleCronRun(
   const reconcilerWorkerVersionActivatedAt = hasWorkerVersionDrift
     ? await readWorkerVersionMarker(() => getWorkerVersionActivatedAt(db, currentWorkerVersion))
     : null;
-  // The death instant is bounded by the slot's own last heartbeat and the
-  // child's last progress write; both must fall inside the single activation
-  // window (up to 15 seconds of clock skew before, up to 120 seconds of
-  // isolate drain after). Any other death stays abandoned.
+  // Bound death by the latest durable life evidence. An older slot timestamp
+  // can legitimately precede activation when eviction happens between ticks.
+  // The latest timestamp must lie within 15 seconds before activation through
+  // 120 seconds after; any other death stays abandoned.
+  const latestLifeAt = Math.max(slot.updated_at, progress.updated_at);
   const deathWithinActivationWindow =
     reconcilerWorkerVersionActivatedAt != null
-    && progress.updated_at >= reconcilerWorkerVersionActivatedAt - DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC
-    && progress.updated_at <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
-    && slot.updated_at >= reconcilerWorkerVersionActivatedAt - DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC
-    && slot.updated_at <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
+    && latestLifeAt >= reconcilerWorkerVersionActivatedAt - DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC
+    && latestLifeAt <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
     && reconcilerWorkerVersionActivatedAt <= nowSec;
   const interruptedByWorkerDeploy = correlatedDeathWithVersionDrift && deathWithinActivationWindow;
   return insertSyntheticCronRun(
