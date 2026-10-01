@@ -113,17 +113,6 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       0,
       "Bridge states it will not charge fees for OUSD minting or redemption; bank, partner-service, and network charges may still apply",
     ),
-    v9RouteReviewTerms: {
-      settlementDelaySec: 345_600,
-      reviewedAt: "2026-10-01",
-      docs: [
-        sourceRef(
-          "Bridge stablecoin terms: two-business-day processing after compliance acceptance",
-          "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
-          ["settlement"],
-        ),
-      ],
-    },
     docs: [
       sourceRef("Open Standard introduces Open USD", "https://joinopenstandard.com/blog/introducing-open-usd", ["route", "capacity", "fees"]),
       sourceRef("Open Standard OUSD is live (reviewed 2026-10-01)", "https://joinopenstandard.com/blog/ousd-is-live", ["route", "capacity", "fees"]),
@@ -142,7 +131,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Bridge burns received tokens and releases equivalent fiat value through its API. Its OUSD reserve page lists Tempo, Ethereum, Base, and Solana deployments; a chain-specific redemption intake/burn rail list was not verified. The public redemption portal lists USDH, DKUSD, and EURR, not OUSD.",
       "Capacity remains documented full-supply eventual redeemability. Bridge's live cash and Treasury balances are self-reported backing, not measured executable capacity. Open Standard promises monthly attestations, but no independent OUSD reserve report was published at review; the 25% major-issuer hot-buffer precedent requires independently attested highly liquid reserves.",
       "Open Standard states no artificial volume limits; Bridge user terms still permit risk-based amount and frequency limits. No numeric OUSD minimum or daily cap was verified.",
-      "Settlement remains days. V9 models Bridge's two-business-day processing commitment as four calendar days, including a weekend, following Noon's processing-SLA calendarization precedent. The clock starts after compliance acceptance; bank holidays, delays outside Bridge's reasonable control, and final bank receipt remain outside this normal processing estimate. Open status records the documented partner route, not public-portal support or live telemetry.",
+      "Settlement remains days with no reviewed completion SLA. Bridge stablecoin terms Section 3 commits only to processing an Order within two business days after Bridge determines it compliant, unless delayed by factors outside its reasonable control; it does not bound when the USD payout completes, and the compliance-determination start is itself unbounded. Unlike Noon's terms, which define processing as transferring the redemption value, this is not a settlement-completion bound, so V9 keeps the `days` default horizon. Open status records the documented partner route, not public-portal support or live telemetry.",
       "Bridge's OUSD-specific launch statement says it will not charge minting or redemption fees, and Open Standard says all integration paths support 1:1 mint and burn at no cost. The fixed zero issuer fee follows the Paxos/Gemini precedent; Bridge User Terms Section 7.1 still requires review of partner-account fees, and third-party bank, partner-service, and network charges are not promised to be zero.",
       "Tempo DEX exchange liquidity is secondary-market liquidity, outside this direct-redemption registry; no OUSD/pathUSD protocol redemption or PSM is modeled.",
     ],
