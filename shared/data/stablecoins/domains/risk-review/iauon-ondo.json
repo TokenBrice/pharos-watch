@@ -321,20 +321,22 @@
           "protocol:layerzero-oft-v2",
           "contract:ethereum:0x8ffe0da486a4075e7bbb5763fad4732d41f9667c",
           "contract:ethereum:0xbc6d5c103a3f586e68bd475942a49d041b171c3e",
+          "contract:ethereum:0x58d73026c64da97ce858766384477d2e8775e9ec",
           "eoa:ethereum:0x71a4d411b5f7941dee020417fca30413712f1646",
           "eoa:ethereum:0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc"
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "bypassSurfaces": [
-          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE member: 0x71a4d411b5f7941dee020417fca30413712f1646",
-          "INSPECTOR_ADMIN_ROLE member: 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc",
-          "RATE_LIMITER_ADMIN_ROLE member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN member: 0x71a4d411b5f7941dee020417fca30413712f1646",
+          "Additional MESSENGER_ADMIN member: BridgeRegistrar 0x58d73026c64da97ce858766384477d2e8775e9ec (Ethereum block 26095805)",
+          "INSPECTOR_ADMIN member: 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc",
+          "RATE_LIMITER_ADMIN member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
         ],
         "routeChecks": {
-          "trustedPeerOrRemote": "OndoOwner holds MESSENGER_ADMIN_ROLE for LayerZero route administration, but the current IAUon-specific peer was not independently decoded.",
-          "rateLimits": "RATE_LIMITER_ADMIN_ROLE is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; current numeric limits are recorded as a separate route control and were not published.",
-          "pausersAdminsUpgraders": "At Ethereum block 25,770,668, OndoOFT owner() returned this OndoOwner. Its current role members were DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE 0x71a4d411b5f7941dee020417fca30413712f1646, INSPECTOR_ADMIN_ROLE 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc, and RATE_LIMITER_ADMIN_ROLE 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; Ondo documents emergency pause for the bridge."
+          "trustedPeerOrRemote": "MESSENGER_ADMIN controls route administration. At Ethereum block 26095805, Ondo Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3 peers(30102) returned BSC Messenger 0x5f7d50242206993a4476c76b21950219a4ed2c91 and peers(30367) returned HyperEVM Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f; IAUon-specific DVN/quorum configuration remains unresolved.",
+          "rateLimits": "RATE_LIMITER_ADMIN is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Ondo publishes approximate guidance of $450,000 per day per Ondo Stocks asset per direction, with approximately $180,000 per day as the Hyperliquid default except for named high-volume tokens. Exact current IAUon pathway parameters were not independently pinned; the shared rate-limit authority is recorded as a separate route control.",
+          "pausersAdminsUpgraders": "Historical Ethereum block 25770668 inventory recorded DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN 0x71a4d411b5f7941dee020417fca30413712f1646, INSPECTOR_ADMIN 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc, and RATE_LIMITER_ADMIN 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Current block 26095805 also identifies BridgeRegistrar as MESSENGER_ADMIN, recorded in bypassSurfaces; Ondo documents emergency pause."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 25770668,
@@ -348,7 +350,7 @@
             "url": "https://docs.ondo.finance/tools/ondo-bridge"
           }
         ],
-        "evidence": "At Ethereum block 25,770,668, OndoOFT owner() returned OndoOwner 0xbc6d5c103a3f586e68bd475942a49d041b171c3e. Live role inventory identified the exact DEFAULT_ADMIN/MESSENGER, INSPECTOR, and RATE_LIMITER members above. This controller governs Ethereum bridge administration and messaging, not native GMTokenManager issuance."
+        "evidence": "At Ethereum block 25,770,668, OndoOFT owner() returned this OndoOwner; that historical control review is retained. On 2026-10-01 at block 26095805, MESSENGER_ADMIN count was two: 0x71a4d411b5f7941dee020417fca30413712f1646 and BridgeRegistrar 0x58d73026c64da97ce858766384477d2e8775e9ec. INSPECTOR_ADMIN and RATE_LIMITER_ADMIN retained the members above. Role constants use MESSENGER_ADMIN, INSPECTOR_ADMIN, and RATE_LIMITER_ADMIN without a _ROLE suffix. The new contract controller's own authorization path remains unresolved."
       },
       {
         "id": "iauon-bsc-ondo-owner",
@@ -367,20 +369,22 @@
           "protocol:layerzero-oft-v2",
           "contract:bsc:0xeb8ceb319463fdc97f7860211042e2e1abc81f88",
           "contract:bsc:0x4d4e562d6882dc523b8d629d2e9df9230b699933",
+          "contract:bsc:0x72c697d72beb419152ed457b9f1eee29c12e0ccb",
           "safe:bsc:0xa307e57ca7f9712af3557af8c5624bef214aa913",
           "safe:bsc:0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97"
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "unknown",
         "bypassSurfaces": [
-          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE member: 0xa307e57ca7f9712af3557af8c5624bef214aa913 (4-of-7 Safe)",
-          "INSPECTOR_ADMIN_ROLE member: 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 (1-of-9 Safe)",
-          "RATE_LIMITER_ADMIN_ROLE member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN member: 0xa307e57ca7f9712af3557af8c5624bef214aa913 (historically observed 4-of-7 Safe)",
+          "Additional MESSENGER_ADMIN member: contract 0x72c697d72beb419152ed457b9f1eee29c12e0ccb (BSC block 125057090)",
+          "INSPECTOR_ADMIN member: 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 (historically observed 1-of-9 Safe)",
+          "RATE_LIMITER_ADMIN member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
         ],
         "routeChecks": {
-          "trustedPeerOrRemote": "OndoOwner holds MESSENGER_ADMIN_ROLE for LayerZero route administration, but the current IAUon-specific peer was not independently decoded.",
-          "rateLimits": "RATE_LIMITER_ADMIN_ROLE is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; current numeric limits are recorded as a separate route control and were not published.",
-          "pausersAdminsUpgraders": "At BSC block 116,353,763, OndoOFT owner() returned this OndoOwner. Current role members were DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE 0xa307e57ca7f9712af3557af8c5624bef214aa913, INSPECTOR_ADMIN_ROLE 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97, and RATE_LIMITER_ADMIN_ROLE 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The 4-of-7 Safe threshold and seven-owner count were confirmed; current module/guard probes reverted with Safe GS106. Ondo documents emergency pause for the bridge."
+          "trustedPeerOrRemote": "OndoOwner MESSENGER_ADMIN controls route administration. Current BSC Messenger peer/configuration reads were unavailable from the pinned RPC state; the IAUon-specific remote and DVN quorum remain unresolved.",
+          "rateLimits": "RATE_LIMITER_ADMIN is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Ondo publishes approximate guidance of $450,000 per day per Ondo Stocks asset per direction, with approximately $180,000 per day as the Hyperliquid default except for named high-volume tokens. Exact current IAUon pathway parameters were not independently pinned; the shared rate-limit authority is recorded as a separate route control.",
+          "pausersAdminsUpgraders": "Historical BSC block 116353763 inventory recorded DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN 0xa307e57ca7f9712af3557af8c5624bef214aa913, INSPECTOR_ADMIN 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97, and RATE_LIMITER_ADMIN 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The 4-of-7 Safe and failed GS106 module/guard probes are historical, not re-pinned here. Current block 125057090 also identifies the contract messenger administrator recorded in bypassSurfaces; emergency pause is documented."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 116353763,
@@ -394,7 +398,7 @@
             "url": "https://docs.ondo.finance/tools/ondo-bridge"
           }
         ],
-        "evidence": "At BSC block 116,353,763, OndoOFT owner() returned OndoOwner 0x4d4e562d6882dc523b8d629d2e9df9230b699933. Its live role members and the 4-of-7 Safe relationship are recorded above; current Safe guard/module probes reverted with GS106, so that state remains an evidence gap. This controller governs the BSC bridge overlay, not native GMTokenManager issuance."
+        "evidence": "At BSC block 116,353,763, OndoOFT ownership, the Safe relationship, and failed guard/module probes were recorded; that historical evidence is retained. On 2026-10-01 at block 125057090, MESSENGER_ADMIN count was two: 0xa307e57ca7f9712af3557af8c5624bef214aa913 and contract 0x72c697d72beb419152ed457b9f1eee29c12e0ccb. INSPECTOR_ADMIN and RATE_LIMITER_ADMIN retained the members above. The new contract controller's own authorization path and current Safe module/guard state remain unresolved."
       },
       {
         "id": "iauon-hyperevm-ondo-owner",
@@ -413,20 +417,22 @@
           "protocol:layerzero-oft-v2",
           "contract:hyperevm:0xce61f9246755cc399fd7f37d6b3478590b75aace",
           "contract:hyperevm:0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d",
+          "contract:hyperevm:0xe3153764ab2a0a928a59c3805503b2ac56b802a3",
           "safe:hyperevm:0xa307e57ca7f9712af3557af8c5624bef214aa913",
           "safe:hyperevm:0xd484422208b1020c83a155336d2b13ce883e5a21"
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "unknown",
         "bypassSurfaces": [
-          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE member: 0xa307e57ca7f9712af3557af8c5624bef214aa913 (4-of-7 Safe)",
-          "INSPECTOR_ADMIN_ROLE member: 0xd484422208b1020c83a155336d2b13ce883e5a21 (1-of-9 Safe)",
-          "RATE_LIMITER_ADMIN_ROLE member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN member: 0xa307e57ca7f9712af3557af8c5624bef214aa913 (historically observed 4-of-7 Safe)",
+          "Additional MESSENGER_ADMIN member: contract 0xe3153764ab2a0a928a59c3805503b2ac56b802a3 (HyperEVM block 47357499)",
+          "INSPECTOR_ADMIN member: 0xd484422208b1020c83a155336d2b13ce883e5a21 (historically observed 1-of-9 Safe)",
+          "RATE_LIMITER_ADMIN member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
         ],
         "routeChecks": {
-          "trustedPeerOrRemote": "OndoOwner holds MESSENGER_ADMIN_ROLE for LayerZero route administration, but the current IAUon-specific peer was not independently decoded.",
-          "rateLimits": "RATE_LIMITER_ADMIN_ROLE is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; current numeric limits are recorded as a separate route control and were not published.",
-          "pausersAdminsUpgraders": "At HyperEVM block 43,374,894, OndoOFT owner() returned this OndoOwner. Current role members were DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE 0xa307e57ca7f9712af3557af8c5624bef214aa913, INSPECTOR_ADMIN_ROLE 0xd484422208b1020c83a155336d2b13ce883e5a21, and RATE_LIMITER_ADMIN_ROLE 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The 4-of-7 Safe threshold and seven-owner count were confirmed; current module/guard probes reverted with Safe GS106. Ondo documents emergency pause for the bridge."
+          "trustedPeerOrRemote": "MESSENGER_ADMIN controls route administration. At HyperEVM block 47357499, Ondo Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f peers(30101) returned Ethereum Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3 and peers(30102) returned BSC Messenger 0x5f7d50242206993a4476c76b21950219a4ed2c91; IAUon-specific DVN/quorum configuration remains unresolved.",
+          "rateLimits": "RATE_LIMITER_ADMIN is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Ondo publishes approximate guidance of $450,000 per day per Ondo Stocks asset per direction, with approximately $180,000 per day as the Hyperliquid default except for named high-volume tokens. Exact current IAUon pathway parameters were not independently pinned; the shared rate-limit authority is recorded as a separate route control.",
+          "pausersAdminsUpgraders": "Historical HyperEVM block 43374894 inventory recorded DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN 0xa307e57ca7f9712af3557af8c5624bef214aa913, INSPECTOR_ADMIN 0xd484422208b1020c83a155336d2b13ce883e5a21, and RATE_LIMITER_ADMIN 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The 4-of-7 Safe and failed GS106 module/guard probes are historical, not re-pinned here. Current block 47357499 also identifies the contract messenger administrator recorded in bypassSurfaces; emergency pause is documented."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 43374894,
@@ -440,7 +446,7 @@
             "url": "https://docs.ondo.finance/tools/ondo-bridge"
           }
         ],
-        "evidence": "At HyperEVM block 43,374,894, OndoOFT owner() returned OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d. Its live role members and the 4-of-7 Safe relationship are recorded above; current Safe guard/module probes reverted with GS106, so that state remains an evidence gap. This controller governs the HyperEVM bridge representation, not native issuance."
+        "evidence": "At HyperEVM block 43,374,894, OndoOFT ownership, the Safe relationship, and failed guard/module probes were recorded; that historical evidence is retained. On 2026-10-01 at block 47357499, MESSENGER_ADMIN count was two: 0xa307e57ca7f9712af3557af8c5624bef214aa913 and contract 0xe3153764ab2a0a928a59c3805503b2ac56b802a3. INSPECTOR_ADMIN and RATE_LIMITER_ADMIN retained the members above. The new contract controller's own authorization path and current Safe module/guard state remain unresolved."
       },
       {
         "id": "iauon-shared-rate-limiter-admin",
@@ -459,10 +465,10 @@
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "This EOA holds RATE_LIMITER_ADMIN_ROLE on the Ethereum OndoOwner contract; current numeric IAUon path limits were not published.",
+        "capDescription": "This EOA holds RATE_LIMITER_ADMIN on the Ethereum OndoOwner contract. Ondo publishes approximate per-asset/per-direction daily bridge limits; exact current IAUon pathway parameters remain unverified.",
         "canRaiseCap": true,
         "routeChecks": {
-          "rateLimits": "The live role inventory at Ethereum block 25,770,668 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE on the Ethereum OndoOwner. Ondo documents custom bridge rate limiting, but current IAUon values were not published.",
+          "rateLimits": "The historical role inventory at Ethereum block 25770668 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN. Ondo publishes approximately $450,000 per day per Ondo Stocks asset per direction, with approximately $180,000 per day as the Hyperliquid default except for named high-volume tokens. Exact current IAUon pathway parameters remain unverified.",
           "unsupportedReason": "No route-specific inbound/outbound capacity or aggregate limit was independently decoded in this review."
         },
         "observedAt": "2026-08-16",
@@ -477,7 +483,7 @@
             "url": "https://eth.blockscout.com/address/0xbc6d5c103a3f586e68bd475942a49d041b171c3e"
           }
         ],
-        "evidence": "The Ethereum OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE. This chain-qualified control avoids treating the same-address BSC and HyperEVM deployments as Ethereum authority and does not govern native GMTokenManager issuance."
+        "evidence": "The Ethereum OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN. This chain-qualified control avoids treating same-address BSC and HyperEVM deployments as Ethereum authority and does not govern native GMTokenManager issuance."
       },
       {
         "id": "iauon-bsc-rate-limiter-admin",
@@ -496,10 +502,10 @@
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "This EOA holds RATE_LIMITER_ADMIN_ROLE on the BSC OndoOwner contract; current numeric IAUon path limits were not published.",
+        "capDescription": "This EOA holds RATE_LIMITER_ADMIN on the BSC OndoOwner contract. Ondo publishes approximate per-asset/per-direction daily bridge limits; exact current IAUon pathway parameters remain unverified.",
         "canRaiseCap": true,
         "routeChecks": {
-          "rateLimits": "The live role inventory at BSC block 116,353,763 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE on the BSC OndoOwner. Ondo documents custom bridge rate limiting, but current IAUon values were not published.",
+          "rateLimits": "The historical role inventory at BSC block 116353763 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN. Ondo publishes approximately $450,000 per day per Ondo Stocks asset per direction, with approximately $180,000 per day as the Hyperliquid default except for named high-volume tokens. Exact current IAUon pathway parameters remain unverified.",
           "unsupportedReason": "No route-specific inbound/outbound capacity or aggregate limit was independently decoded in this review."
         },
         "observedAt": "2026-08-16",
@@ -514,7 +520,7 @@
             "url": "https://bscscan.com/address/0x4d4e562d6882dc523b8d629d2e9df9230b699933"
           }
         ],
-        "evidence": "The BSC OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE. This chain-qualified control records the known controller without implying that the current IAUon validator or DVN authority is known."
+        "evidence": "The BSC OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN. This chain-qualified control records the known controller without implying that current IAUon validator or DVN authority is known."
       },
       {
         "id": "iauon-hyperevm-rate-limiter-admin",
@@ -533,10 +539,10 @@
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "This EOA holds RATE_LIMITER_ADMIN_ROLE on the HyperEVM OndoOwner contract; current numeric IAUon path limits were not published.",
+        "capDescription": "This EOA holds RATE_LIMITER_ADMIN on the HyperEVM OndoOwner contract. Ondo publishes approximate per-asset/per-direction daily bridge limits; exact current IAUon pathway parameters remain unverified.",
         "canRaiseCap": true,
         "routeChecks": {
-          "rateLimits": "The live role inventory at HyperEVM block 43,374,894 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE on the HyperEVM OndoOwner. Ondo documents custom bridge rate limiting, but current IAUon values were not published.",
+          "rateLimits": "The historical role inventory at HyperEVM block 43374894 identifies 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN. Ondo publishes approximately $450,000 per day per Ondo Stocks asset per direction, with approximately $180,000 per day as the Hyperliquid default except for named high-volume tokens. Exact current IAUon pathway parameters remain unverified.",
           "unsupportedReason": "No route-specific inbound/outbound capacity or aggregate limit was independently decoded in this review."
         },
         "observedAt": "2026-08-16",
@@ -551,7 +557,7 @@
             "url": "https://www.hyperscan.com/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d"
           }
         ],
-        "evidence": "The HyperEVM OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE. This chain-qualified control records the known controller without implying that the current IAUon validator or DVN authority is known."
+        "evidence": "The HyperEVM OndoOwner role inventory identifies EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN. This chain-qualified control records the known controller without implying that current IAUon validator or DVN authority is known."
       },
       {
         "id": "iauon-ethereum-beacon-bridge-upgrade",

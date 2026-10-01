@@ -8,7 +8,8 @@
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
-        "ethereum:0x16f93ebc5320c89efc8701577efe49d14a276a06"
+        "ethereum:0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "base:0x16f93ebc5320c89efc8701577efe49d14a276a06"
       ],
       "proxyAddresses": [
         "0x16f93ebc5320c89efc8701577efe49d14a276a06"
@@ -82,7 +83,7 @@
         ],
         "observedAt": "2026-08-17",
         "observedBlock": 25774447,
-        "evidence": "At Ethereum block 25774447 (2026-08-17 UTC), hasRole(DEFAULT_ADMIN_ROLE, 0xb3a77dd7...) and the RoleGranted history confirm this address holds DEFAULT_ADMIN_ROLE. eth_getCode returns the Fireblocks UniversalGaslessDelegate indicator. The verified implementation assigns upgrades to a distinct UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE. The corresponding Base role administrator is retained in Bridge Risk because Base is not proven to create independently reconciled native liabilities."
+        "evidence": "At Ethereum block 26095808 and Base block 52024186 on 2026-10-01, hasRole(DEFAULT_ADMIN_ROLE, 0xb3a77dd7c30cdf4f30ae515f73d96f3f41593fce) returned true. The role holder retains the Fireblocks UniversalGaslessDelegate EIP-7702 delegation indicator. The verified implementation assigns upgrades to UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE. Base administration is a native Mint Authority control, consistent with the August Baker Tilly report's pooled Base, Tempo and Ethereum liability scope; the earlier representation wording is superseded."
       },
       {
         "chain": "ethereum",
@@ -116,7 +117,7 @@
             "url": "https://eips.ethereum.org/EIPS/eip-7702"
           }
         ],
-        "evidence": "At Ethereum block 25774447 (2026-08-17 UTC), the verified ERC20F implementation gates _authorizeUpgrade() with UPGRADER_ROLE 0x189ab7a9.... RoleGranted history and current hasRole calls identify 0x9367b51c... as the Ethereum holder. The Ethereum proxy resolves to implementation 0x0f25045d.... The upgrader account delegates to Fireblocks UniversalGaslessDelegate; no timelock is present and the underlying signer custody remains undisclosed. The same Base upgrade authority is recorded in Bridge Risk for the representation route."
+        "evidence": "At Ethereum block 26095808 and Base block 52024186 on 2026-10-01, hasRole(UPGRADER_ROLE, 0x9367b51c7833f4ea32898079e7f4318e4f412b78) returned true, and both proxies resolved to implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62. The verified ERC20F source gates _authorizeUpgrade() with UPGRADER_ROLE. The role holder retains the Fireblocks UniversalGaslessDelegate EIP-7702 delegation indicator; signer custody remains undisclosed. Base upgrade authority belongs to native Mint Authority, consistent with the pooled reserve liability scope, rather than Bridge Risk."
       },
       {
         "chain": "base",

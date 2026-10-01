@@ -58,6 +58,8 @@
         ],
         "capDescription": "Only onlyOwner can call mint() on the LPToken; the sole owner is the SwapFlashLoan pool; minting occurs only when LPs add liquidity. There is no independent fixed supply cap, so the native path is bounded by pool deposit/accounting logic. Pool ownership is held by the separately reviewed 2-of-3 Safe.",
         "evidence": "At Ethereum block 25770804 (2026-08-16), NUSD token 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f remained the fixed LPToken clone and owner() returned SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8. The LPToken mint() path is onlyOwner and new shares require liquidity deposited into the pool; the pool's owner is the 2-of-3 Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
         "sources": [
           {
             "label": "NUSD LPToken (Blockscout)",

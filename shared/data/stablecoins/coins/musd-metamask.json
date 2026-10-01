@@ -39,7 +39,7 @@
     "m0"
   ],
   "collateral": "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol",
-  "pegMechanism": "1:1 mint and redemption via Bridge using M0 protocol infrastructure; reserves continuously validated on-chain by independent validators; arbitrage corrects price drift; monthly public attestations",
+  "pegMechanism": "1:1 mint and redemption via Bridge using M0 protocol infrastructure; reserves validated on-chain by independent validators; approved M0 wrapping and unwrapping routes support arbitrage; MetaMask states that the independent attestation history is still being built.",
   "mechanismArchetype": "tbill",
   "llamaId": "313",
   "detailProvider": "defillama",

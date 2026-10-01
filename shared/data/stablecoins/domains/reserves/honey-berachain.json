@@ -33,13 +33,17 @@
       {
         "label": "HoneyFactory read contract at block 23506303",
         "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401#readProxyContract"
+      },
+      {
+        "label": "Bera USD current redeemable collateral display",
+        "url": "https://busd.berachain.com/"
       }
     ],
     "rationale": "The current Pharos fixed input captured at 2026-07-15T12:13:08Z (live-reserves:v1:b665aae3ca6cbc5c1c46f95ba6a6aff5cbd93bc19020e86fff3259f4481467e9) reports one live Honey reserve row, USDe (Ethena), at exactly 100%. The prior Berachain block 23506303 review remains preserved here as historical evidence: registered vaults then reported 24.603167 USDC.e, 0.000391 BYUSD, 695.783951 USDt0, and 11,288,159.771823145610901027 USDe against 11,285,263.733856488020121526 HONEY outstanding. The reviewed classification follows the exact current live row rather than carrying those obsolete trace weights forward.",
     "compositionBasis": "Pharos evm-branch-balances live reserve capture, generation live-reserves:v1:b665aae3ca6cbc5c1c46f95ba6a6aff5cbd93bc19020e86fff3259f4481467e9",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "All registered collateral vaults and their balances were resolved on-chain; governance can change the collateral set or designate external custodians after the reviewed block.",
+    "knownUnknownExposure": "On 2026-10-01 the official BUSD app displayed redeemable collateral as USDe (99.99%), BYUSD (<0.01%), USD₮0 (<0.01%) and USDC.e (<0.01%). This is an instantaneous app display, not a newly reviewed reserve composition or reserve-to-liability reconciliation. The July 15 100% USDe row remains a historical adapter capture. Governance can change the collateral set or designate external custodians; external custody operator identity and legal safeguards remain unverified.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -48,10 +52,15 @@
         "name": "Berachain Honey collateral vault contracts",
         "role": "custodian",
         "jurisdiction": "On-chain"
+      },
+      {
+        "name": "USDC.e vault custody address 0x83e672c9949af428687ecc9b6a3ba74db7bb0ed0 (operator identity unverified)",
+        "role": "custodian",
+        "jurisdiction": "On-chain"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "conditional",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
@@ -66,6 +75,6 @@
         "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401#readProxyContract"
       }
     ],
-    "uncertainty": "Each collateral has a dedicated vault, but governance may configure a vault to forward assets to an external custodian. The reviewed public documentation does not provide a block-specific list of any enabled external custodians."
+    "uncertainty": "At Berachain block 26911429 on 2026-10-01, custodyInfo() on the USDC.e vault 0x90bc07408f5b5eac4de38af76ea6069e1fcee363 returned isCustodyVault=true and custodyAddress=0x83e672c9949af428687ecc9b6a3ba74db7bb0ed0. The USDe, USDt0, and BYUSD vaults returned false and zero address. The external custody address's operator identity, legal safeguards, and balances remain unverified. Governance can change custody settings; the existing profile's legal safeguard classifications have not been re-established by these reads."
   }
 }

@@ -159,23 +159,28 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Neutrl reserve wallets and custodial accounts tracked by the Accountable dashboard",
-        "role": "other"
+        "name": "Caverna Auctus Inc. (issuer and contractual asset owner; operational custodians undisclosed)",
+        "role": "other",
+        "jurisdiction": "Panama"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB14NUSD)",
+    "confidence": "verified",
     "sources": [
+      {
+        "label": "Neutrl Terms of Use: minting transfers asset ownership to the Company",
+        "url": "https://www.neutrl.finance/legal/terms-of-use"
+      },
       {
         "label": "Neutrl Accountable dashboard",
         "url": "https://accountable.neutrl.finance/"
       }
     ],
-    "uncertainty": "The Accountable reserve dashboard tracks Neutrl's reserve wallets and category balances but does not name the custody providers, account segregation, insolvency treatment, or rehypothecation terms behind the Stablecoin, OTC, JLP, Other, and Protocol Owned Liquidity buckets.",
+    "uncertainty": "Neutrl's current terms identify Caverna Auctus Inc. in Panama and state that minting transfers deposited stablecoin ownership to the Company; NUSD and sNUSD represent a claim on yield, not on the originally transferred digital assets. This identifies the contractual asset owner rather than an independently verified custodian. Current operational custody providers, provider allocations, segregation, insolvency protections, and rehypothecation terms remain unverified. The Accountable API returned HTTP 503 and the linked dashboard failed DNS resolution on 2026-10-01; neither source supplied a current custody schedule.",
     "knownUnknownExposurePct": 100
   }
 }

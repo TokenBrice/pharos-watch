@@ -8,7 +8,7 @@
     "governance": "centralized"
   },
   "collateral": "A dynamic leveraged market-neutral portfolio spanning basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals. USDC is the mint/redemption asset, not the complete currently held reserve; the avUSDx junior tranche and separate reserve fund absorb strategy losses ahead of savUSD.",
-  "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1 to 7 day settlement window; avUSD itself receives no yield, while staking into the separate savUSD token is the yield-bearing route",
+  "pegMechanism": "1:1 redemption for USDC via Avant Protocol; redemptions can take up to 7 days depending on market liquidity and other conditions, with the current fee displayed before confirmation. avUSD receives no yield; staking into savUSD is the yield-bearing route",
   "llamaId": "271",
   "detailProvider": "defillama",
   "geckoId": "avant-usd",
@@ -84,7 +84,7 @@
     },
     "params": {}
   },
-  "launchDate": "2024-11-15",
+  "launchDate": "2025-01-01",
   "mechanismArchetype": "synthetic-delta-neutral",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

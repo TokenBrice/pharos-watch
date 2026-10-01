@@ -2,10 +2,19 @@
   "id": "u-united-stables",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: U resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified Ethereum U implementation, Stablecoin.sol freeze and transfer controls",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbef21313c69c009fd7d9510a8d3a481a32473dfc"
+      },
+      {
+        "label": "United Stables terms, blocked addresses",
+        "url": "https://u.tech/terms/"
+      }
+    ],
+    "evidence": "At Ethereum block 26095796 and BSC block 125055771, the token implementation slot resolves to 0xbef21313c69c009fd7d9510a8d3a481a32473dfc. Its verified Stablecoin.sol exposes owner-only freeze(address) and unfreeze(address); transfers require both endpoints notFrozen. Issuer terms section 7.4 also permit freezing or restricting blocked addresses. The Yes verdict is directly evidenced rather than inferred from centralization.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA18U)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

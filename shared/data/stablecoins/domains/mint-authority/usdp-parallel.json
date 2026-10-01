@@ -232,7 +232,8 @@
           "role-10-admin-can-reassign-role-110",
           "diamond-upgrade-can-change-mint-path"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095938,
         "sources": [
           {
             "label": "ParallelAccessManager (Ethereum)",
@@ -268,7 +269,8 @@
           "role-10-admin-can-reassign-role-110",
           "diamond-upgrade-can-change-mint-path"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024958,
         "sources": [
           {
             "label": "ParallelAccessManager (Base)",
@@ -300,7 +302,8 @@
           "role-10-admin-can-reassign-role-110",
           "diamond-upgrade-can-change-mint-path"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 80180064,
         "sources": [
           {
             "label": "Sonic USDp route and authority read",
@@ -348,7 +351,8 @@
           "role-10-admin-can-reassign-role-110",
           "diamond-upgrade-can-change-mint-path"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96512688,
         "sources": [
           {
             "label": "Current Avalanche USDp explorer source",
@@ -380,7 +384,8 @@
           "role-10-admin-can-reassign-role-110",
           "diamond-upgrade-can-change-mint-path"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94756083,
         "sources": [
           {
             "label": "Polygon USDp route and authority read",
@@ -425,7 +430,8 @@
         "failureDomainKeys": [
           "safe:polygon:0x2046c0416a558c40cb112e5ebb0ca764c3c5c32a"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94756083,
         "sources": [
           {
             "label": "Parallel governance Safe inventory",
@@ -470,7 +476,8 @@
         "failureDomainKeys": [
           "safe:plume:0xd22b9e8ee5b6490c667d90c6819e53e9503ee139"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96624736,
         "sources": [
           {
             "label": "Parallel governance Safe inventory",
@@ -517,7 +524,8 @@
         "failureDomainKeys": [
           "safe:fraxtal:0xf6cd93af204947c9aaf55b15d907f8f4d08b91a3"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 42014292,
         "sources": [
           {
             "label": "Parallel governance Safe inventory",
@@ -564,7 +572,8 @@
         "failureDomainKeys": [
           "safe:sei:0x1ad681fa147f35ab7b35c7a289b1938bc0171e8b"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 235110659,
         "sources": [
           {
             "label": "Parallel governance Safe inventory",

@@ -40,13 +40,13 @@
         "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
       }
     ],
-    "evidence": "Corrected 2026-08-08 across all three tracked deployments. At Ethereum block 25712116, immutable VaultV2 0x8c106eedad96553e64287a5a6839c3cc78afa3d0 had zero sendSharesGate and receiveSharesGate. Although the source exposes timelocked share-gate setters, timelock(selector) was 604800 and abdicated(selector) was true for both setSendSharesGate(address) and setReceiveSharesGate(address); verified source states an abdicated function cannot be executed, so the curator cannot activate those gates. Base MetaMorpho at block 49712686 and Arbitrum MetaMorphoV1_1 at block 492482369 retain ordinary ERC-20 share transfers with no pause, blacklist, freeze, or gate mechanism. All three vaults are immutable and mint shares only against their chain-local USDC asset. Direct gtUSDCp transfers are therefore permissionless; freeze exposure is inherited from the named usdc-circle parent and its chain-local USDC contracts.",
-    "reviewer": "OpenAI Codex C03 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Historical review 2026-08-08 established permissionless local share transfers across the three tracked deployments. Re-verified at Ethereum block 26095807 on 2026-10-01: sendSharesGate() and receiveSharesGate() returned zero; abdicated(selector) returned true and timelock(selector) returned 604800 seconds for both setSendSharesGate(address) and setReceiveSharesGate(address). The exact verified source prevents execution of an abdicated function. Base MetaMorpho and Arbitrum MetaMorphoV1_1 retain ordinary ERC-20 share-transfer code, and pinned asset() reads at Base block 52024171 and Arbitrum block 510584559 confirm chain-local native USDC. Freeze exposure remains inherited from usdc-circle; this review does not remove upstream USDC blacklist powers.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA57DOLA)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "gtUSDCp has three independent native ERC-4626 vault-share issuance deployments on Ethereum, Base, and Arbitrum. No direct gtUSDCp bridge representation, adapter, lockbox, escrow, or token-specific Across route is currently verified; the three reviewed routes are deposit-only native vault issuance, not bridge burn/mint.",
+    "summary": "gtUSDCp has three independent native ERC-4626 vault-share issuance deployments on Ethereum, Base and Arbitrum. Deposits and contract fee accrual issue local shares; no direct gtUSDCp bridge representation, adapter, lockbox, escrow or token-specific Across route is currently verified.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge-boundary migration; verified finding 2026-08-16",
     "confidence": "verified",
@@ -74,8 +74,8 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "gtUSDCp on ethereum explorer (owner()/asset() probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+            "label": "Exact Ethereum Gauntlet USDC Prime VaultV2 verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
           }
         ]
       },
@@ -96,8 +96,8 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "gtUSDCp on base explorer (owner()/asset() probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+            "label": "Exact Base Gauntlet USDC Prime MetaMorpho verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
           }
         ]
       },
@@ -118,8 +118,8 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "gtUSDCp on arbitrum explorer (owner()/asset() probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+            "label": "Exact Arbitrum Gauntlet USDC Prime MetaMorphoV1_1 verified source",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
           }
         ]
       }

@@ -8,13 +8,13 @@
         "url": "https://docs.cap.app/"
       },
       {
-        "label": "Cap Ethereum cUSD deployment",
-        "url": "https://etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc#code"
+        "label": "Current verified CapToken implementation at Ethereum block 26095806",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97"
       }
     ],
-    "evidence": "The verified CapToken implementation behind the tracked Ethereum cUSD proxy exposes pauseProtocol() and pauseAsset(), which can halt transfers at the protocol or individual reserve-asset scope. Cap's documentation identifies the tracked cUSD deployment and its governance-controlled vault; the reviewed source therefore establishes direct system-wide transfer-pause capability for cUSD. Reserve and route dependencies add separate upstream exposure.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 26095806, the cUSD proxy resolves to CapToken implementation 0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97. Its verified Vault source applies whenNotPaused to mint, burn, redeem, borrow and repay, while pauseAsset restricts reserve-asset operations. ERC20 transfers are inherited without that pause modifier, so pauseProtocol alone does not establish direct cUSD transfer-freeze capability. The existing conservative Yes verdict is retained pending a full multi-deployment and upstream access review.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA07USD1)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

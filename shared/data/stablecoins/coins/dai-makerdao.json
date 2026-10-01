@@ -191,7 +191,6 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-top",
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "sky-makercore",

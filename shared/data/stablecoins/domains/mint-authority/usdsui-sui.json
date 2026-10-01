@@ -15,12 +15,12 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Bridge Sui mint-package UpgradeCap owner",
-      "observedAt": "2026-07-14",
-      "observedBlock": 298463699,
+      "observedAt": "2026-10-01",
+      "observedBlock": 328957731,
       "sources": [
         {
-          "label": "Sui mainnet RPC: Bridge mint-package UpgradeCap",
-          "url": "https://fullnode.mainnet.sui.io:443"
+          "label": "Sui mainnet GraphQL: checkpoint-pinned Bridge mint-package UpgradeCap",
+          "url": "https://graphql.mainnet.sui.io/graphql"
         },
         {
           "label": "Sui package upgrade documentation",
@@ -42,8 +42,14 @@
         "address": "0xd4fc1ca0b4a21bc15bacd5d21bf0e0964dfe17e90fc1a1a8294a2e9f4991f407",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "present",
-        "evidence": "Sui RPC: tx CRwtcn7FYUu7Sr7EzVToa1nbDRzVfmB1djFqJWyVJEjv called stablecoin_manager::register_stablecoin shortly after deploy, wrapping TreasuryCap 0x57eafc43... into a Stablecoin<RESERVE_LEDGER, USDSUI> struct (object 0x80954159...) stored in the TokenAuthority's tokens ObjectBag. TreasuryCap is non-transferable while wrapped; total_supply.value = 73,574,877,360,000 (73.57M USDsui at 6 decimals). TokenAuthority owner = Shared (initial_shared_version 741908290). Package 0x94e8cb8df... contains modules: reserve_ledger, token_authority, stablecoin_manager, minter, burner, blocklist, bridge_ecosystem_minter. Init bytecode constant string: 'USDsui is Sui's native, USD-backed stablecoin, issued via Bridge's Open Issuance platform'.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 328957731,
+        "evidence": "At Sui checkpoint 328957731, TokenAuthority 0xd4fc1ca0b4a21bc15bacd5d21bf0e0964dfe17e90fc1a1a8294a2e9f4991f407 remained shared with initialSharedVersion 741908290. Its tokens ObjectBag contains Stablecoin<RESERVE_LEDGER, USDSUI> object 0x80954159a8616660f73468919a2f372dcc9ac366931d50c1e378f0f5e342dfa5, with wrapped TreasuryCap 0x57eafc43f82765f6481723d03f81eed98ef88d79ffde52a016f0c2dacffe8056. The wrapped TreasuryCap's total_supply.value was 76870543200000 base units. Historical wrapping transaction: CRwtcn7FYUu7Sr7EzVToa1nbDRzVfmB1djFqJWyVJEjv.",
         "sources": [
+          {
+            "label": "Sui mainnet GraphQL: checkpoint-pinned TokenAuthority and token ObjectBag",
+            "url": "https://graphql.mainnet.sui.io/graphql"
+          },
           {
             "label": "Sui Explorer: TokenAuthority object",
             "url": "https://suiscan.xyz/mainnet/object/0xd4fc1ca0b4a21bc15bacd5d21bf0e0964dfe17e90fc1a1a8294a2e9f4991f407"
@@ -59,8 +65,15 @@
         "address": "0xb1e7dc9a51c2e86e45f6c930f411b8f22dbc2204c964d174e3666816f7ecaac3",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Sui RPC suix_queryTransactionBlocks: MinterRole<RESERVE_LEDGER> and MinterRole<USDSUI> (plus MinterRole<stablecoin::STABLECOIN> and BurnerRole) all held by 0xb1e7dc9a51c2e86e45f6c930f411b8f22dbc2204c964d174e3666816f7ecaac3. This address calls minter.mint and minter.wrap regularly in active Sui transactions, confirmed operational Bridge minter. AdminRole held by 0xb7fec6160... (holds UpgradeCaps for stablecoin and reserve_ledger packages). BlocklistRole held separately by 0x50b9aa5bd...",
+        "capDescription": "At Sui checkpoint 328957731, the typed MinterRole<USDSUI> and MinterRole<RESERVE_LEDGER> entries each recorded max_amount 100000000000000 and amount_used 99223549490000 base units. These are observed role parameters, not an immutable whole-system supply ceiling; cap-reset and modification semantics remain unverified.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 328957731,
+        "evidence": "At Sui checkpoint 328957731, the TokenAuthority roles table contained MinterRole<USDSUI>, MinterRole<RESERVE_LEDGER>, MinterRole<STABLECOIN>, and BurnerRole entries for 0xb1e7dc9a51c2e86e45f6c930f411b8f22dbc2204c964d174e3666816f7ecaac3. AdminRole remained held by 0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423, and BlocklistRole by 0x50b9aa5bd947fb62dd6d4022940c47b89fd19cbe0262a1e3802299abcd62ee68. The USDsui and reserve-ledger minter entries record explicit max_amount and amount_used parameters; their reset and modification semantics remain unverified.",
         "sources": [
+          {
+            "label": "Sui mainnet GraphQL: checkpoint-pinned typed mint roles",
+            "url": "https://graphql.mainnet.sui.io/graphql"
+          },
           {
             "label": "Sui Explorer: Bridge minter address",
             "url": "https://suiscan.xyz/mainnet/account/0xb1e7dc9a51c2e86e45f6c930f411b8f22dbc2204c964d174e3666816f7ecaac3"
@@ -75,13 +88,13 @@
         "chain": "sui",
         "address": "0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 298463699,
-        "evidence": "At Sui checkpoint 298463699, UpgradeCap 0x6b5accd5473c2f194c84a7ca6ac422729d9ef4d8c9f4275823a24f0295b1c8d1 was address-owned by 0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423. Its fields identify Bridge mint package 0x94e8cb8df7796c7ea57f747f330ef61aedd8f48d48f7ac21bc975708a6ca6a1a, policy 0, version 1. That package implements minter, stablecoin_manager, and token_authority for the shared object holding USDsui's wrapped TreasuryCap. Recent transactions sent by the owner use Sui signature scheme byte 0x00 (Ed25519). The separate USDsui coin-package UpgradeCap is held by deployer 0xd76f7d309d52d1020e50588997bb5b82d25e870542316fa082a6c6cdf93e3290, but the coin package only initializes the coin and does not hold the wrapped TreasuryCap or implement the active mint path.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 328957731,
+        "evidence": "At Sui checkpoint 328957731, UpgradeCap 0x6b5accd5473c2f194c84a7ca6ac422729d9ef4d8c9f4275823a24f0295b1c8d1 remained address-owned by 0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423. Its fields identify Bridge mint package 0x94e8cb8df7796c7ea57f747f330ef61aedd8f48d48f7ac21bc975708a6ca6a1a, policy 0, version 1. The package also identifies the active Stablecoin<RESERVE_LEDGER, USDSUI> wrapper and typed minter roles in the shared TokenAuthority.",
         "sources": [
           {
-            "label": "Sui mainnet RPC: UpgradeCap owner and package fields",
-            "url": "https://fullnode.mainnet.sui.io:443"
+            "label": "Sui mainnet GraphQL: checkpoint-pinned UpgradeCap owner and package fields",
+            "url": "https://graphql.mainnet.sui.io/graphql"
           },
           {
             "label": "Sui package upgrade documentation",
@@ -98,9 +111,9 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Sui RPC: TreasuryCap 0x57eafc43... traced to wrapping tx CRwtcn7F... which called Bridge's stablecoin_manager::register_stablecoin; TreasuryCap is locked in Stablecoin<RESERVE_LEDGER, USDSUI> wrapper (obj 0x80954159...) inside TokenAuthority shared object 0xd4fc1ca0b... MinterRole confirmed at 0xb1e7dc9a5... (active operational Bridge minter). At checkpoint 298463699, Bridge mint-package UpgradeCap 0x6b5accd5... for package 0x94e8cb8d... had policy 0, version 1, and was address-owned by 0xb7fec616.... Sui's upgrade documentation confirms a retained UpgradeCap can authorize compatible package upgrades that change function implementations. The separate USDsui coin-package UpgradeCap controls only the coin initialization package, not the active wrapped-TreasuryCap mint path.. Economic-posture fields reviewed 2026-08-15: Bridge's operational EOA can mint without a firm cap, while no USDsui-specific recurring reserve reconciliation or product-level prudential authorization or independent attestation is evidenced. Wave 2 external research reviewed 2026-08-15: Bridge publishes real-time transparency and quarterly attestations for other issuance products, but Bridge and Sui materials plus targeted searches expose no USDsui-specific reserve balances, report, or endpoint reconciling the complete USDsui supply. Codex reconciliation wave 1 research: Bridge's public USDsui transparency feed, updated 2026-08-14, reports total_onchain_amount 74,015,081.75, total_reserve_amount 74,015,081.75, cash and Treasury reserve components, and collateralization_ratio 1.0; Bridge therefore continuously reconciles USDsui supply against its published reserves.",
-      "reviewer": "Codex V9 mint-authority review; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Sui checkpoint 328957731, USDsui's TreasuryCap remained wrapped inside Stablecoin<RESERVE_LEDGER, USDSUI> in the shared TokenAuthority. Bridge's operational minter retained the typed USDsui and reserve-ledger MinterRole entries, each with max_amount 100000000000000 and amount_used 99223549490000 base units. These parameters do not prove an immutable whole-system cap; reset and modification semantics remain unresolved. Bridge mint-package UpgradeCap policy 0, version 1 remained address-owned by 0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423. Bridge's USDsui public transparency response dated 2026-10-01T06:50:42Z reports matching total_onchain_amount and total_reserve_amount of 76870543.2 and collateralization_ratio 1.0. This is issuer-reported supply-to-reserve reconciliation, not independent assurance.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA36SOFID)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Bridge issuance overview",
@@ -115,8 +128,8 @@
           "url": "https://suiscan.xyz/mainnet/object/0xd4fc1ca0b4a21bc15bacd5d21bf0e0964dfe17e90fc1a1a8294a2e9f4991f407"
         },
         {
-          "label": "Sui mainnet RPC: Bridge mint-package UpgradeCap",
-          "url": "https://fullnode.mainnet.sui.io:443"
+          "label": "Sui mainnet GraphQL: checkpoint-pinned Bridge mint-package UpgradeCap",
+          "url": "https://graphql.mainnet.sui.io/graphql"
         },
         {
           "label": "Sui package upgrade documentation",

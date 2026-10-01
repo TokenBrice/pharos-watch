@@ -9,8 +9,8 @@
     "pegCurrency": "EUR",
     "governance": "centralized"
   },
-  "collateral": "Euro-denominated reserves held at CRR credit institutions within the EU, under a multi-bank full reserve model; not used for lending or investment",
-  "pegMechanism": "Direct 1:1 redemption through AllUnity",
+  "collateral": "Euro-denominated reserves held in segregated accounts at EU CRR credit institutions under a multi-bank full-reserve model; the whitepaper permits EUR cash and highly liquid financial instruments",
+  "pegMechanism": "Direct 1:1 EUR redemption through AllUnity, subject to KYC/AML and bank-account checks. For other EMT holders, the policy aims to complete the process within five business days once all required documentation is received and verified; issuer redemption fees are zero, but network fees remain.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

@@ -8,7 +8,7 @@
     "pegCurrency": "CAD",
     "governance": "centralized"
   },
-  "collateral": "Canadian dollars held 1:1 in regulated Canadian financial institutions under the QCAD Digital Trust reserve framework",
+  "collateral": "Canadian-dollar reserves held in regulated financial institutions under the QCAD Digital Trust framework for prospectus-qualified tokens; legacy QCAD issued before November 20, 2025 is excluded from that trust framework and has separate reserve accounts",
   "pegMechanism": "Qualified holders can mint and redeem QCAD at 1 CAD through Stablecorp or authorized partners; issuer APIs publish live supply and fiat reserve totals.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -31,7 +31,7 @@
   "geckoId": "stablecorp-qcad",
   "llamaId": "424",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://stablecorp.ca/transparency",
     "provider": "Davidson & Company LLP (Vancouver; Nexia International member) - the monthly CSAE 3000 reasonable-assurance attestations are signed by Davidson, not by Kingston Ross Pasnak LLP as previously recorded",
     "attestorTier": "regional",
@@ -40,16 +40,24 @@
     "attestorLicense": "Canadian chartered professional accounting firm",
     "latestReport": {
       "periodEnd": "2026-05-31",
-      "publishedAt": "2026-07-15",
+      "reviewReference": {
+        "date": "2026-09-14",
+        "reviewedAt": "2026-10-01",
+        "dateKind": "unspecified"
+      },
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (SEDAR+ filing read: 'in our opinion, the Monthly Attestation as of May 1, 2026 and May 31, 2026, is fairly stated in all material respects', with direct bank confirmations; criteria from the OSC exemptive-relief decision of 2025-11-20)",
+      "reviewer": "Sol curation pass 2026-10-01 (FixInv6): retain the May 31, 2026 Davidson & Company CSAE 3000 reasonable-assurance report as the lockstep report for the existing May-dated reserve envelope; no new aggregate composition or favorable-tier date refresh is supported. The newer July 5 and July 31, 2026 trust-only report, signed September 14, 2026, remains a reference below and is not the periodEnd authority for this composition. Stablecorp expressly excludes pre-November 20, 2025 legacy QCAD and holds its reserves separately, so the newer trust-only cash split is not evidence for the full catalog denominator. Publication dates remain unestablished; reviewReference records the newer report's signature date only.",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Davidson & Company QCAD reasonable-assurance attestation - May 2026 (SEDAR+ doc cdb08e008e109f2cfd9f81ad62011f100ac1bd0d95a48ed4861aaaaaba974b5c)",
-          "url": "https://stablecorp.ca/transparency"
+          "label": "Davidson & Company QCAD reasonable-assurance attestation - May 2026 (retained composition-matching report)",
+          "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=cdb08e008e109f2cfd9f81ad62011f100ac1bd0d95a48ed4861aaaaaba974b5c"
+        },
+        {
+          "label": "QCAD July 2026 trust-only report (newer reference; not aggregate composition evidence)",
+          "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=6666d890fab71d252fa9af1a8666a452030d94252e83ba6cd3c1b3ddcb90c53d"
         }
       ]
     }

@@ -67,7 +67,7 @@
         "sources": [
           {
             "label": "QiDao chain-risk documentation",
-            "url": "https://docs.mai.finance/risks/chain-risk"
+            "url": "https://docs.mai.finance/docs/risks/chain-risk"
           },
           {
             "label": "QiDao erc20Stablecoin source",
@@ -650,11 +650,11 @@
         },
         {
           "label": "QiDao official smart-contract addresses",
-          "url": "https://docs.mai.finance/functions/smart-contract-addresses"
+          "url": "https://docs.mai.finance/docs/functions/smart-contract-addresses"
         },
         {
           "label": "QiDao chain-risk documentation",
-          "url": "https://docs.mai.finance/risks/chain-risk"
+          "url": "https://docs.mai.finance/docs/risks/chain-risk"
         },
         {
           "label": "QiDao erc20Stablecoin source",

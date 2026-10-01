@@ -49,31 +49,27 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "M0 minter bankruptcy-remote collateral SPVs",
-        "role": "custodian"
-      },
-      {
         "name": "M0 Portal and Wormhole NTT contracts",
         "role": "other"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (M0 GraphQL API unreachable this pass; retained prior live capture)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC24)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Noble Dollar collateral disclosure",
-        "url": "https://dollar.noble.xyz/how-noble-dollar-works"
+        "label": "Noble USDN overview",
+        "url": "https://docs.noble.xyz/learn/usdn/overview/"
       },
       {
         "label": "Noble USDN architecture",
         "url": "https://docs.noble.xyz/learn/usdn/architecture/"
       }
     ],
-    "uncertainty": "Noble identifies bankruptcy-remote SPVs and the on-chain M Portal path, but does not publish current minter shares, named custody providers for every SPV, or rehypothecation terms.",
+    "uncertainty": "Direct USDN custody is M locked on Ethereum through M0's Portal and Wormhole NTT contracts. Under D08, parent minter SPV custody and insolvency safeguards remain upstream facts reviewed on m-m0; they do not establish direct Noble-holder protections. Current Noble documentation does not establish product-level legal segregation, insolvency priority or reuse rights. The custodyModel scalar describes this direct on-chain escrow, not the underlying Treasury custodians.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -10,8 +10,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USTB is issued natively on Ethereum and Solana. Plume is conservatively modeled as an Ethereum-issued bridge representation: Superstate documents an issuer-native EVM burn/mint path, and the EVM deployments report Ethereum/Plume as supported destinations in both directions. The Plume deployment also exposes issuer-controlled minting, pause, peer configuration, and upgrade paths, but the evidence does not prove that historical Plume mints created independent local liabilities rather than bridge-funded destination supply. No external validator, DVN, rate-limit committee, or timelock was evidenced. SVM bridging is explicitly unsupported.",
-    "reviewedAt": "2026-08-17",
-    "reviewer": "Codex mint/bridge boundary migration; Codex bridge route review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA23USTB)",
     "confidence": "verified",
     "protocols": [
       {
@@ -64,8 +64,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Ethereum is a documented native USTB issuance network. The token proxy owner and ProxyAdmin owner are the issuer EOA; the separate Plume-to-Ethereum burn/mint capability is reviewed as a bridge route and does not change this native classification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770431,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Superstate smart-contract documentation",
@@ -94,7 +94,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Superstate documents EVM bridge() as burning source-chain USTB and delivering the specified amount on a supported destination. The Ethereum USTB deployment returned supportedChainIds(98866) = true at block 25774665, and the Plume deployment returned supportedChainIds(1) = true at block 87678057, establishing the issuer-native EVM rail in both directions. The Plume proxy also exposes owner-only mint and bulkMint under issuer EOA 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, but the evidence does not establish those local mints as independent liabilities rather than bridge destination issuance; this route is therefore conservatively classified as a representation.",
+        "reviewNote": "Superstate documents EVM bridge() as burning source-chain USTB and delivering the specified amount on a supported destination. Ethereum supportedChainIds(98866) returned true at block 26095796, and Plume supportedChainIds(1) returned true at block 96620648. Both token owners remain the same issuer EOA. The Plume proxy exposes issuer-controlled minting, but these reads do not establish independent local liabilities; this route remains conservatively classified as a representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plume",
         "controllerAddress": "0xad309bb6f13074128b4F23EF9EA2fe8552AfCA83",
@@ -103,8 +103,8 @@
           "contract:plume:0xa5df717b304a50838c72cd310c8df636b1aecfa3",
           "eoa:plume:0xad309bb6f13074128b4f23ef9ea2fe8552afca83"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 87678057,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96620648,
         "sources": [
           {
             "label": "Superstate smart-contract documentation",
@@ -136,7 +136,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Superstate documents Solana as an issuance network and explicitly states that SVM bridging is not supported. At finalized slot 439721950, Token-2022 mintAuthority is EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz with supply 224,119.498751 USTB.",
+        "reviewNote": "Superstate documents Solana as an issuance network and explicitly states that SVM bridging is not supported. At finalized slot 452212633, Token-2022 mintAuthority is EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz with supply 174,210.361163 USTB.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "solana",
         "controllerAddress": "EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz",
@@ -144,8 +144,8 @@
           "token-2022:solana:CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2",
           "system-program:solana:EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 439721950,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212633,
         "sources": [
           {
             "label": "Superstate smart-contract documentation",
@@ -189,15 +189,15 @@
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "lockboxOrEscrow": "Superstate documents bridge() as a source burn followed by delivery of the specified amount on a supported EVM destination; no separate escrow or external lockbox was evidenced.",
-          "trustedPeerOrRemote": "The Ethereum USTB implementation returned supportedChainIds(98866) = true at block 25774665, and the Plume implementation returned supportedChainIds(1) = true at block 87678057; the issuer-controlled chain-support mapping binds the reviewed EVM rail to both deployments.",
+          "trustedPeerOrRemote": "Ethereum supportedChainIds(98866) returned true at block 26095796, and Plume supportedChainIds(1) returned true at block 96620648; the issuer-controlled chain-support mapping binds the reviewed EVM rail to both deployments.",
           "rateLimits": "No external validator, DVN, rate-limit committee, or timelock was evidenced for this issuer-native route.",
           "caps": "The same issuer EOA can mint the destination token and the reviewed path exposes no independent bridge cap or delay.",
           "pausersAdminsUpgraders": "The issuer EOA owns the Plume USTB token and ProxyAdmin 0xa5df717b304a50838c72cd310c8df636b1aecfa3; owner-only mint, bulkMint, accountingPause, setChainIdSupport, and the ProxyAdmin path can authorize representation supply, pause the rail, change supported destinations, and replace the Plume mint/bridge implementation without an observed timelock."
         },
         "capDescription": "Issuer-native Ethereum-Plume burn/mint has no separately evidenced validator, rate-limit, or timelock bound; the issuer EOA's direct Plume mint authority is treated as bridge-representation minting rather than independent native issuance.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 87678057,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96620648,
         "sources": [
           {
             "label": "Superstate smart-contract documentation",
@@ -220,7 +220,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Plume block 87678057, the USTB proxy 0xe4fa682f94610ccd170680cc3b045d77d9e528a8 returned owner 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, implementation 0x2151706cb4763c20381a8860e25a713f6e1e3b93, and ProxyAdmin 0xa5df717b304a50838c72cd310c8df636b1aecfa3; its verified ABI exposes owner-only mint and bulkMint, and the transaction history records an owner mint at block 85248240 on 2026-08-04. The implementation also exposes bridge(uint256,address,string,uint256), accountingPause, and setChainIdSupport. At Plume block 87678057, supportedChainIds(1) returned true; at Ethereum block 25774665, supportedChainIds(98866) returned true. The issuer EOA owns the Plume token and ProxyAdmin and can authorize destination minting, pause the accounting path, change supported destinations, and replace the Plume implementation. No external validator/DVN, bridge rate-limit committee, or timelock was identified. The historical provenance of Plume mints remains unresolved, so the Plume deployment is conservatively scored as an Ethereum-issued bridge representation."
+        "evidence": "At Plume block 96620648, the USTB proxy 0xe4fa682f94610ccd170680cc3b045d77d9e528a8 returned owner 0xad309bb6f13074128b4f23ef9ea2fe8552afca83, implementation 0x2151706cb4763c20381a8860e25a713f6e1e3b93, and ProxyAdmin 0xa5df717b304a50838c72cd310c8df636b1aecfa3. ProxyAdmin owner() returned the same address and eth_getCode for that owner returned 0x. At this Plume block, supportedChainIds(1) returned true; at Ethereum block 26095796, supportedChainIds(98866) returned true. The issuer documents source burn and destination delivery. These pinned reads confirm the current controller and supported rail, but do not independently establish rate limits, key custody, or historical mint provenance; the Plume deployment remains conservatively modeled as an Ethereum-issued bridge representation."
       }
     ]
   }

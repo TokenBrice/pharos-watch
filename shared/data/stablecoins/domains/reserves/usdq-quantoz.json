@@ -48,11 +48,33 @@
         "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       }
     ],
-    "rationale": "Quantoz's Reserve Status Overview dated June 30, 2026 (the latest published snapshot as of 2026-08-08) reports USDQ at 30% allocated cash and 70% government bonds, with a 101.23% reserve ratio. The USDQ whitepaper confirms that at least 30% is held in separate bank accounts and the remainder in secure, low-risk, highly liquid instruments; the dashboard identifies the bond issuers as the Netherlands, Germany, and United States. The snapshot is 39 days old as of the review date, so it sits outside the 31-day V9 admission window.",
+    "rationale": "The authored composition remains the historical June 30, 2026 snapshot reviewed on 2026-08-08. Re-check 2026-10-01: the issuer publishes a 30 August 2026 USDQ snapshot with 33% cash, 66% government bonds and a 101.91% reserve ratio. The published categories total 99%; no undisclosed remainder is inferred or normalized. The dollar reserve policy names US Treasuries. These newer disclosures do not refresh the historical weights or their composition date.",
     "compositionBasis": "Quantoz Reserve Status Overview updated June 30, 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The two disclosed categories cover the full reserve allocation, but Quantoz does not identify individual banking partners, bond security identifiers, country weights, or a maximum maturity. Liquidity horizon therefore remains unknown for the government-bond bucket.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Stichting Quantoz",
+        "role": "other",
+        "jurisdiction": "Netherlands"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValM14USDX)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Quantoz reserve safeguarding",
+        "url": "https://www.quantoz.com/transparency"
+      }
+    ],
+    "uncertainty": "Stichting is the disclosed safeguarding foundation, not a named deposit bank or securities custodian. Individual banking/custodian identities, allocations, anti-rehypothecation and successor-custody mechanics remain undisclosed."
   }
 }

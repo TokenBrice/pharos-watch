@@ -26,9 +26,13 @@
       {
         "label": "Pareto live credit vaults",
         "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+      },
+      {
+        "label": "Current verified IdleCDOEpochVariant implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd596250f838af8862d30e9c78a143356894a18d"
       }
     ],
-    "evidence": "Re-reviewed 2026-09-21 for the sole tracked Ethereum deployment 0xc26a6fa2c37b38e549a4a1807543801db684f99c. Blockscout still identifies the deployed AA_FalconXUSDC contract; the pinned verified IdleCDOTranche source gives its minter an arbitrary burn(address,uint256) path over holder balances, while ordinary transfer and transferFrom contain no independent blacklist hook. The minter remains the IdleCDO proxy 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d, so transfer access is restrictable through holder-selective burn/seizure even though direct ERC-20 transfers are not denylisted. This exact chain/address is the complete authored deployment scope.",
+    "evidence": "Re-reviewed 2026-09-21 for the sole tracked Ethereum deployment 0xc26a6fa2c37b38e549a4a1807543801db684f99c. Blockscout still identifies the deployed AA_FalconXUSDC contract; the pinned verified IdleCDOTranche source gives its minter an arbitrary burn(address,uint256) path over holder balances, while ordinary transfer and transferFrom contain no independent blacklist hook. The minter remains the IdleCDO proxy 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d, so transfer access is restrictable through holder-selective burn/seizure even though direct ERC-20 transfers are not denylisted. This exact chain/address is the complete authored deployment scope. Validation caveat 2026-10-01 (ValA30sUSDai): at Ethereum block 26095937, minter() returned the CDO proxy and its EIP-1967 implementation slot returned 0xdd596250f838af8862d30e9c78a143356894a18d. The verified tranche burn requires msg.sender == minter; a zero-amount burn call from address(1) reverted with reason 6. The current implementation gates requestWithdraw with isWalletAllowed(msg.sender), while keyring() returned 0x6a6a91c7c7c05f9f6b8bc9f6e5ea231e460450e3 and keyringPolicyId() returned 18. The historical holder-selective seizure assertion above is retained as review history, not independently established by the minter-only burn primitive. A reachable CDO path capable of burning arbitrary holders and the current credential policy's holder-access effects still require adjudication; reviewedStatus remains unchanged.",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
     "reviewedAt": "2026-09-21"
   }

@@ -19,13 +19,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-07",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA15PAXG)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG PAXG Redemption Assets Report - July 31, 2026",
-        "url": "https://framerusercontent.com/assets/mZxm7J7vQTwbTmOGENYENSpEU.pdf"
+        "label": "KPMG PAXG Redemption Assets Report - August 31, 2026",
+        "url": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf"
       },
       {
         "label": "Paxos PAX Gold product page",
@@ -40,9 +40,9 @@
         "url": "https://support.paxos.com/articles/7204091747-paxg-allocation-and-physical-gold-bar-details-representing-my-paxg-tokens"
       }
     ],
-    "rationale": "KPMG's unmodified examination as of July 31, 2026 at 5:00 PM Eastern Time, signed August 25, reconciles 442,217 PAXG redeemable tokens (441,939 Ethereum and 278 Solana) to 442,217 fine troy ounces of London Good Delivery gold. Exhibits A-C report no nonredeemable tokens, timing adjustments, or surplus/deficit. Exhibit B identifies allocated gold as the sole redemption asset type and names Brink's Global Services Ltd. and ICBC Standard Bank as LBMA-approved vault providers without provider-level ounce shares. The reviewed official Framer route and product modules are hash-pinned alongside the PDF to detect changes to published report selection.",
-    "compositionBasis": "KPMG examination of PAXG redemption assets and redeemable tokens as of July 31, 2026",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "KPMG's unmodified examination as of August 31, 2026 at 5:00 PM Eastern Time, dated September 24, reconciles 431,313 PAXG redeemable tokens (428,830 Ethereum, 2,478 Solana, and 5 Robinhood) to 431,313 fine troy ounces of London Good Delivery gold. Exhibits A-C report no nonredeemable tokens, timing adjustments, or surplus/deficit. Exhibit B identifies allocated gold as the sole redemption asset type and names Brink's Global Services Ltd. and ICBC Standard Bank as LBMA-approved vault providers without provider-level ounce shares.",
+    "compositionBasis": "KPMG examination of PAXG redemption assets and redeemable tokens as of August 31, 2026",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete reserve asset type is independently examined as allocated London Good Delivery gold. The report names Brink's Global Services Ltd. and ICBC Standard Bank as the LBMA-approved vault providers but does not disclose the ounces held with each provider.",
     "knownUnknownExposurePct": 0,
@@ -82,8 +82,8 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG PAXG Redemption Assets Report - May 29, 2026",
-        "url": "https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf"
+        "label": "KPMG PAXG Redemption Assets Report - August 31, 2026",
+        "url": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf"
       },
       {
         "label": "Paxos PAX Gold product page",
@@ -98,6 +98,6 @@
         "url": "https://support.paxos.com/articles/7204091747-paxg-allocation-and-physical-gold-bar-details-representing-my-paxg-tokens"
       }
     ],
-    "uncertainty": "Paxos custody, allocated storage, and the current Brink's Global Services Ltd. and ICBC Standard Bank vault providers are disclosed. The May 2026 report does not disclose provider-level gold shares, vault-account identifiers, or explicit rehypothecation terms."
+    "uncertainty": "Paxos custody, allocated storage, and the current Brink's Global Services Ltd. and ICBC Standard Bank vault providers are disclosed. The August 2026 report does not disclose provider-level gold shares, vault-account identifiers, or explicit rehypothecation terms. The existing bankruptcy-remoteness classification is retained without a new insolvency-law opinion."
   }
 }

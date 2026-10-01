@@ -62,15 +62,15 @@
     "sources": [
       {
         "label": "Midas mTBILL product disclosure",
-        "url": "https://docs.midas.app/tokens/mtbill"
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill.md"
       },
       {
         "label": "Midas mTBILL bankruptcy remoteness",
-        "url": "https://docs.midas.app/tokens/mtbill/bankruptcy-remoteness"
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill/bankruptcy-remoteness.md"
       },
       {
         "label": "Midas mTBILL independent reporting",
-        "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill/independent-reporting.md"
       },
       {
         "label": "Midas mTBILL transparency dashboard",
@@ -100,8 +100,9 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed mTBILL collateral-account custodian",
-        "role": "custodian"
+        "name": "Maerki Baumann & Co. AG",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
       },
       {
         "name": "Ankura Trust Company LLC",
@@ -112,20 +113,16 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA40apxUSD)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Midas mTBILL bankruptcy remoteness",
-        "url": "https://docs.midas.app/tokens/mtbill/bankruptcy-remoteness"
-      },
-      {
-        "label": "Midas mTBILL independent reporting",
-        "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+        "label": "Midas mTBILL final terms dated July 17, 2026: custodian and security agent",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8"
       }
     ],
-    "uncertainty": "Midas describes bankruptcy-remote collateral accounts, secured tokenholder claims, and Ankura's daily monitoring and enforcement role. It does not name the current account custodian, disclose provider shares, or publish rehypothecation terms.",
+    "uncertainty": "The July 17, 2026 mTBILL final terms name Maerki Baumann & Co. AG as custodian and Ankura Trust Company LLC as security agent, with custody and collateral accounts and agreements applicable. Provider shares, the custody mapping of the issuer-reported USTB/BUIDL wallets, and rehypothecation terms remain unresolved. The inherited segregated status is not newly confirmed by those terms; the custody and collateral agreements themselves are needed to renew that claim. Security arrangements do not confer direct ownership of underlying assets; the 2026 prospectus retains qualified subordination, limited recourse, and enforcement-risk warnings.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -16,7 +16,7 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "thBILL is a NAV-appreciating tokenized Treasury product representing a proportional share of institutional Treasury funds, not a fixed-value payment instrument. The GENIUS Act excludes securities from the payment-stablecoin definition.",
+      "summary": "thBILL is a NAV-appreciating token backed by institutional money-market fund units, with redemption in USDC or USDT. Theo expressly states holders have no claim on underlying fund units or securities. The GENIUS Act excludes securities from the payment-stablecoin definition; the existing excluded-security classification is an editorial perimeter assessment.",
       "references": [
         {
           "label": "GENIUS Act: payment stablecoin definition and securities exclusion",
@@ -38,7 +38,7 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "thBILL is treated as a tokenized fund/security-like product rather than a GENIUS payment stablecoin: the Theo page describes a proportional fund share, NAV appreciation, and Treasury-fund underlyings. This is a GENIUS perimeter classification, not a formal securities-law opinion.",
+    "notes": "Theo's current documentation describes exposure to Wellington ULTRA and Fidelity FILQ, appreciating redemption value, and no holder claim on underlying fund units or securities. The existing excluded-security assessment does not establish that thBILL itself is a legally recognized fund share or constitute a formal securities-law opinion.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",

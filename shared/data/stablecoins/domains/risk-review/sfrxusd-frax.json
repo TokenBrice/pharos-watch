@@ -1550,7 +1550,7 @@
           },
           {
             "label": "Safe API - Frax Comptroller Safe",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8C82D4a505003f27/"
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
           }
         ],
         "evidence": "At Ethereum block 25771126 (2026-08-16), the Ethereum sfrxUSD lockbox 0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126 resolved to implementation 0xf07571bedb8cbd98e6ca43b5ee0fb178477d2219 and common ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c; owner() returned the Frax Comptroller Safe 0xB1748C79709f4Ba2Dd82834B8C82D4a505003f27. This is bridge-route administration and escrow ownership, not an independent native issuer."

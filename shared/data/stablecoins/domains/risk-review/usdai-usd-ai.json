@@ -4,8 +4,8 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Arbitrum USDai verified implementation (Blockscout)",
-        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x0ab74df531c0d8f1c46643e404b3d14723bbc212"
+        "label": "Arbitrum USDai current v1.7 verified implementation",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
       },
       {
         "label": "USDai Arbitrum proxy",
@@ -28,15 +28,15 @@
         "url": "https://docs.usd.ai/"
       }
     ],
-    "evidence": "Re-derived 2026-07-30. Material Arbitrum hub (proxy 0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef): at Arbitrum block 489423393 EIP-1967 implementation is 0x0ab74df531c0d8f1c46643e404b3d14723bbc212. Verified USDai source exposes BLACKLIST_ADMIN_ROLE, setBlacklist(account,bool), isBlacklisted(account) (local list plus Circle USDC 0xaf88… and Tether USDT 0xFd08… lists on Arbitrum), and _update gated by notBlacklisted(msg.sender/from/to); pause modifiers also present. isBlacklisted(address(0)) returned false (function live). Ethereum block 25648410 and Base/Plasma implementations at the same proxy address lack isBlacklisted selectors (bridge mint/burn only on those spokes), so holder-level blacklist reach is Arbitrum-hub primary; spokes remain bridge/mint surfaces. Controlling authority: BLACKLIST_ADMIN_ROLE on the Arbitrum implementation. Failure domain: contract:arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef (blacklist admin) with inherited USDC/USDT list coupling on Arbitrum.",
-    "reviewer": "Grok T49 Safety Score V9 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed at Arbitrum block 510584307 (2026-10-01): the hub proxy now uses verified USDai v1.7 implementation 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9. setBlacklist(address,bool) remains gated by BLACKLIST_ADMIN_ROLE, and transfers check sender/from/to through isBlacklisted. On Arbitrum, that function combines its local blacklist with USDC and USDT lists, but explicitly exempts sUSDai, OUSDaiUtility 0x5d6f3b27d1464a02be5ada30ca0703ef0e5c8e2c, and the sUSDai admin-fee recipient from those external checks. isBlacklisted(address(0)) returned false. Ethereum, Base, and Plasma currently use OToken v1.1 bridge representations, whose reviewed source exposes pause control but no holder-level blacklist function. The Yes verdict remains established by the canonical hub.",
+    "reviewer": "Grok T49 Safety Score V9 access review; Sol curation pass 2026-10-01 (CurA27A7A5)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Canonical USDai issuance is native to the PYUSD-backed Arbitrum hub. Ethereum, Base, and Plasma use LayerZero OAdapter burn/mint representations whose live OTokens still grant BRIDGE_ADMIN_ROLE to the adapter and DEFAULT_ADMIN_ROLE to a chain-local 3-of-3 Safe; those satellite controls are assessed here rather than in Mint Authority.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Codex 2026-08-16 route-control refresh",
+    "summary": "Canonical USDai issuance remains native to the PYUSD-backed Arbitrum hub. Ethereum, Base, and Plasma now use OToken v1.1 implementations whose mint/burn functions require the constructor-fixed LayerZero OAdapter; stored BRIDGE_ADMIN_ROLE grants remain but no longer authorize token minting in the current logic. The adapter is still owned by a chain-local Safe, 3-of-3 on Ethereum and Base and 3-of-4 on Plasma. Proxy upgrades remain governed by chain-local 48-hour DVNTimelocks. Historical role-grant mint exposure is retained in the route notes, and all satellite transfer controls remain Bridge Risk.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Codex 2026-08-16 route-control refresh; Sol curation pass 2026-10-01 (CurA27A7A5)",
     "confidence": "verified",
     "protocols": [
       {
@@ -76,7 +76,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Re-verified at Ethereum block 25766970 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0x30198aa66d057a6216db471fce234b98edc1e5ad. OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum hub, so the control is assessed as bridge risk rather than canonical mint authority.",
+        "reviewNote": "At Ethereum block 26095800 (2026-10-01), the proxy resolved to verified OToken v1.1 implementation 0x24a92e28a8c5d8812dcfaf44bcb20cc0babd1392. Its mint/burn functions require the constructor-fixed OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5. That adapter remains owned by Safe 0x5f0bc72fb5952b2f3f2e11404398ed507b25841f, whose pinned owners and threshold are 3-of-3. Stored DEFAULT_ADMIN_ROLE and BRIDGE_ADMIN_ROLE grants still return true, but the current mint function no longer uses BRIDGE_ADMIN_ROLE. The former role-grant uncapped-mint exposure documented on 2026-08-16 is historical. ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c remains owned by the 172800-second DVNTimelock. This satellite remains a LayerZero bridge representation, with adapter administration and upgrades assessed under Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
         "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
@@ -85,9 +85,13 @@
           "contract:ethereum:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
           "safe:ethereum:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25766970,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
+          {
+            "label": "Current Ethereum OToken v1.1 verified source and immutable adapter constructor",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x24a92e28a8c5d8812dcfaf44bcb20cc0babd1392"
+          },
           {
             "label": "USDai token on Etherscan",
             "url": "https://etherscan.io/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
@@ -110,18 +114,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Re-verified at Arbitrum block 495109986 on 2026-08-16: the collateralized USDai hub is a transparent proxy using source-verified v1.5 implementation 0x0ab74df531c0d8f1c46643e404b3d14723bbc212 and ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c owned by the 48-hour DVNTimelock. This is the canonical native-issuance route; its PYUSD-backed mint authority is reviewed in mintAuthority, while its adapter ingress and egress belong to the bridge routes.",
+        "reviewNote": "At Arbitrum block 510584307 (2026-10-01), the native PYUSD-backed hub resolved to verified USDai v1.7 implementation 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9 and ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c. ProxyAdmin.owner() remained DVNTimelock 0x0eea1ee08611ff4a4e83bfe3916712751995639b and getMinDelay() remained 172800 seconds. Native issuance is reviewed in Mint Authority; immutable adapter ingress and egress remain cross-chain controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495109986,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584307,
         "sources": [
           {
             "label": "Arbitrum USDai proxy",
             "url": "https://arbitrum.blockscout.com/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?tab=contract"
           },
           {
-            "label": "Arbitrum verified USDai v1.5 implementation",
-            "url": "https://arbitrum.blockscout.com/address/0x0ab74df531c0d8f1c46643e404b3d14723bbc212?tab=contract"
+            "label": "Arbitrum verified USDai v1.7 implementation",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
           },
           {
             "label": "USDai documentation",
@@ -142,7 +146,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Re-verified at Base block 50043069 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0x30198aa66d057a6216db471fce234b98edc1e5ad. OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum hub, so the control is assessed as bridge risk rather than canonical mint authority.",
+        "reviewNote": "At Base block 52024135 (2026-10-01), the proxy resolved to verified OToken v1.1 implementation 0xf7dd6107b94af76deffd118bfa12a70c1891bcd8. Its mint/burn functions require the constructor-fixed OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5. That adapter remains owned by Safe 0x5f0bc72fb5952b2f3f2e11404398ed507b25841f, whose pinned owners and threshold are 3-of-3. Stored DEFAULT_ADMIN_ROLE and BRIDGE_ADMIN_ROLE grants still return true, but the current mint function no longer uses BRIDGE_ADMIN_ROLE. The former role-grant uncapped-mint exposure documented on 2026-08-16 is historical. ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c remains owned by the 172800-second DVNTimelock. This satellite remains a LayerZero bridge representation, with adapter administration and upgrades assessed under Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
         "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
@@ -151,9 +155,13 @@
           "contract:base:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
           "safe:base:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 50043069,
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024135,
         "sources": [
+          {
+            "label": "Current Base OToken v1.1 verified source and immutable adapter constructor",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf7dd6107b94af76deffd118bfa12a70c1891bcd8"
+          },
           {
             "label": "USDai token on Basescan",
             "url": "https://basescan.org/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
@@ -177,7 +185,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Re-verified at Plasma block 29934940 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc. OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum hub, so the control is assessed as bridge risk rather than canonical mint authority.",
+        "reviewNote": "At Plasma block 33896631 (2026-10-01), the proxy resolved to verified OToken v1.1 implementation 0x529f703526f1d4a17cd5721b62924e15f9b2a2e9. Its mint/burn functions require the constructor-fixed OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5, also present in the pinned implementation runtime. That adapter remains owned by Safe 0x5f0bc72fb5952b2f3f2e11404398ed507b25841f; getOwners() now returned four owners and getThreshold() returned 3, correcting the prior 3-of-3 claim. Stored DEFAULT_ADMIN_ROLE and BRIDGE_ADMIN_ROLE grants still return true, but the current mint function no longer uses BRIDGE_ADMIN_ROLE. The former role-grant uncapped-mint exposure documented on 2026-08-16 is historical. ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c remains owned by the 172800-second DVNTimelock. This satellite remains a LayerZero bridge representation, with adapter administration and upgrades assessed under Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plasma",
         "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
@@ -186,9 +194,13 @@
           "contract:plasma:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
           "safe:plasma:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 29934940,
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896631,
         "sources": [
+          {
+            "label": "Current Plasma OToken v1.1 verified source and immutable adapter constructor",
+            "url": "https://plasmascan.to/address/0x529f703526f1d4a17cd5721b62924e15f9b2a2e9#code"
+          },
           {
             "label": "USDai token on Plasmascan",
             "url": "https://plasmascan.to/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
@@ -196,6 +208,33 @@
           {
             "label": "USDai documentation",
             "url": "https://docs.usd.ai/"
+          }
+        ]
+      },
+      {
+        "id": "solana:USDai5XCUzNebYzUk6EuRiFCvnyoyEdj7VSyijYcz2A",
+        "sourceChain": "arbitrum",
+        "destinationChain": "solana",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "USDai5XCUzNebYzUk6EuRiFCvnyoyEdj7VSyijYcz2A",
+        "protocol": "USD.AI disclosed Solana OFT deployment (route controls unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Official USD.AI deployment documentation identifies this USDai OFT mint. A finalized getAccountInfo observation at slot 452220256 confirms USDai, six decimals, Token-2022 mint/freeze authorities, permanent delegate, and pause authority. The issuer's public Solana OFT repository describes USDai and sUSDai sources but its README verification targets name sUSDai programs; it does not establish this mint's current controller or upgrade authority. Exact bridge-controller/program mappings and route semantics remain unverified, so classification stays unknown.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452220256,
+        "sources": [
+          {
+            "label": "USD.AI official deployed contracts, Solana USDai OFT",
+            "url": "https://docs.usd.ai/technical-overview/contract-addresses.md"
+          },
+          {
+            "label": "USD.AI Foundation Solana OFT deployment sources",
+            "url": "https://github.com/usdai-foundation/solana-oft-deployment"
           }
         ]
       }

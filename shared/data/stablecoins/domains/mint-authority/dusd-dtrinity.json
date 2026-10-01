@@ -156,13 +156,13 @@
         "deploymentRefs": [
           "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236"
         ],
-        "label": "dTRINITY Emergency Governance 5-of-5 Safe (PAUSER_ROLE)",
+        "label": "dTRINITY Emergency Governance 3-of-5 Safe (PAUSER_ROLE)",
         "role": "governor",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "threshold": 5,
+        "threshold": 3,
         "signerCount": 5,
         "safe": {
           "owners": [
@@ -172,23 +172,25 @@
             "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
             "0x4b58ff1aae6add7465a5584ebcaeb876ec8f21fd"
           ],
-          "threshold": 5,
+          "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 25571702,
-          "observedAt": "2026-07-20",
+          "observedBlock": 26096013,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
         "failureDomainKeys": [
-          "safe:ethereum:0x04401537ca997a43ebccfec8194c7e88c7ee79804"
+          "safe:ethereum:0x04401537ca997a43ebcfec8194c7e88c7ee79804"
         ],
+        "observedBlock": 26096013,
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "Emergency Governance Safe (PAUSER_ROLE hasRole read 2026-07-20)",
             "url": "https://etherscan.io/address/0x04401537CA997a43EBCFEc8194c7e88c7ee79804"
           }
         ],
-        "evidence": "This 5-of-5 Safe (owners read on-chain 2026-07-20) holds PAUSER_ROLE on the Ethereum dUSD token (granted at block 25112809; hasRole re-verified 2026-07-20), emergency pause only, no mint or admin capability."
+        "evidence": "At Ethereum block 26096013 on 2026-10-01, this Safe retained PAUSER_ROLE on dUSD. getThreshold() returned 3, getOwners() returned the five listed owners, getModulesPaginated returned an empty module list with the sentinel next pointer, and the guard storage slot was zero. The prior 5-of-5 threshold is superseded; current dTRINITY security documentation also identifies Emergency Governance as 3/5."
       },
       {
         "chain": "fraxtal",

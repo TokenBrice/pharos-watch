@@ -4,12 +4,88 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "USAT contract source",
-        "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68#code"
+        "label": "USAT verified HadronToken implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e?fields=sources"
       }
     ],
-    "evidence": "USAT proxies to an implementation that imports WithBlockedList.sol (Tether-family blocked-list/freeze surface) and is upgradeable via a TransparentUpgradeableProxy admin.",
-    "reviewer": "Accuratis swarm review",
-    "reviewedAt": "2026-05-13"
+    "evidence": "At Ethereum block 26095794, USAT retained implementation 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e and owner 0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb. Re-fetched verified HadronToken and WithBlockedList source directly exposes owner-only addToBlockedList, removeFromBlockedList, and destroyBlockedFunds.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA21USDGO)",
+    "reviewedAt": "2026-10-01"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Canonical Ethereum issuer mint verified. Anchorage documentation resolves Celo's deployment identity, but address-specific transfer rails, issuance boundaries and controller configuration remain unresolved; no asset-wide bridge safety is inferred.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValA21USDGO)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "USAT August reserve report",
+        "url": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+      },
+      {
+        "label": "Anchorage official stablecoin contract addresses",
+        "url": "https://docs.anchorage.com/knowledge-base/platform/users/stablecoins"
+      },
+      {
+        "label": "LayerZero Anchorage interoperability announcement",
+        "url": "https://layerzero.network/blog/anchorage-selects-layerzero-for-stablecoins"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x07041776f5007aca2a54844f50503a18a72a8b68",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x07041776f5007aca2a54844f50503a18a72a8b68",
+        "protocol": "Anchorage native USAT issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native issue column and HadronToken owner-only mint confirm canonical issuer token.",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095935,
+        "sources": [
+          {
+            "label": "USAT August reserve report",
+            "url": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+          },
+          {
+            "label": "USAT verified implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e?fields=sources"
+          }
+        ]
+      },
+      {
+        "id": "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771",
+        "destinationChain": "celo",
+        "contractAddress": "0xd2ab3c9a02dbbab236bfec45d1d755df4267f771",
+        "protocol": "Issuer-listed deployment; transfer rail unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Anchorage documentation explicitly lists this Celo address and pinned reads confirm USAT identity and six decimals. The reserve report discloses bridge-locked Ethereum inventory; exact Celo native-versus-representation issuance, transfer contracts and controller configuration remain unresolved.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78938475,
+        "sources": [
+          {
+            "label": "USAT August reserve report",
+            "url": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+          },
+          {
+            "label": "Anchorage official stablecoin contract addresses",
+            "url": "https://docs.anchorage.com/knowledge-base/platform/users/stablecoins"
+          }
+        ]
+      }
+    ]
   }
 }

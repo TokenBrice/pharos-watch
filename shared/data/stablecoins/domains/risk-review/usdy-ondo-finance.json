@@ -2,10 +2,19 @@
   "id": "usdy-ondo-finance",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDY resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Ondo deployed-address registry: USDY Ethereum Blocklist",
+        "url": "https://docs.ondo.finance/addresses.md"
+      },
+      {
+        "label": "USDY Ethereum verified implementation and blocklist checks",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xea0f7eebdc2ae40edfe33bf03d332f8a7f617528"
+      }
+    ],
+    "evidence": "At Ethereum block 26095799, USDY blocklist() returned 0xd8c8174691d936e2c80114ec449037b13421b0a8, matching the issuer registry's contract which holds all blocked addresses. The verified current implementation applies blocklist checks to transfers. Solana's same-context finalized account read at slot 452213120 also retained a non-null freezeAuthority. The Yes verdict is now directly sourced rather than inferred solely from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA14USDY)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

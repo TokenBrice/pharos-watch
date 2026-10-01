@@ -4,17 +4,17 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.blox.my"
+        "label": "Solana finalized RPC observation (context slot 452252165)",
+        "url": "https://api.mainnet-beta.solana.com"
       },
       {
         "label": "Website",
         "url": "https://www.blox.my"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At finalized Solana context slot 452252165 on 2026-10-01, MYRC SPL mint myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv retained freezeAuthority Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z. This establishes holder-level SPL account-freeze capability on Solana; the observed authority address is off-curve and its present controlling-program configuration remains unresolved.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

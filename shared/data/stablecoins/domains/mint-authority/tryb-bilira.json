@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "TRYB is issued by BiLira using a FiatTokenProxy pattern on Ethereum. The ETH owner is a Gnosis Safe 1.3.0 (3 signers, 2-of-3, no modules); the masterMinter controlling minting allowances is a separate Gnosis Safe 1.3.0 (6 signers, 3-of-6, no modules). No proxy admin (admin slot=0). Both on-chain controls confirmed.",
+    "summary": "TRYB is issued by BiLira using a FiatTokenProxy pattern on Ethereum. The ETH owner is a Gnosis Safe 1.3.0 (3 signers, 2-of-3, no modules); the masterMinter controlling minting allowances is a separate Gnosis Safe 1.3.0 (6 signers, 3-of-6, no modules). The legacy proxy admin is a separate 2-of-3 multisig at 0xfa161fce6c543647cb5ce86d1ee7fa303eb951c4; zero EIP-1967 slots do not establish immutability for this custom proxy.",
     "controls": [
       {
         "deploymentRefs": [
@@ -14,7 +14,6 @@
           "codex:0x92932acf15928c2007912bb9f90094a5b6fe7160",
           "ethereum:0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
           "plasma:0x90729a45948c3078890bc80f2a4e7870a2ea4c5e",
-          "polygon:0x4fb71290ac171e1d144f7221d882becac7196eb5",
           "solana:A94X2fRy3wydNShU4dRaDyap2UuoeWJGWyATtyp61WZf",
           "worldchain:0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
         ],
@@ -45,6 +44,8 @@
         "threshold": 2,
         "signerCount": 3,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095805,
         "safe": {
           "owners": [
             "0x07913270b3b198b3854df9463d646ce145e02349",
@@ -54,9 +55,10 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": null,
-          "fallbackHandler": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
-          "observedBlock": 25294993,
+          "observedBlock": 26095805,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
         "evidence": "At Ethereum block 25294993: owner() on FiatTokenProxy 0x2c537e5624e4af88a7ae4060c022609376c8d0eb returned 0xb9fda3c5a457573535684f591f3e00d949a8dad6. getOwners() confirmed 3 owners; getThreshold() = 2; slot 0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe 1.3.0 singleton). getModulesPaginated returned empty (next=0x1, arr_len=0). EIP-1967 impl and admin slots both 0x0 (not a proxy in the ERC1967 sense; FiatTokenProxy stores impl in custom slot).",
@@ -69,18 +71,20 @@
       },
       {
         "label": "TRYB ETH masterMinter Safe (3-of-6)",
-        "role": "direct-minter",
+        "role": "minter-admin",
         "authorityType": "safe",
         "address": "0x68193b59a8b188f04da07fa234888b1926384b8e",
         "deploymentRefs": [
           "ethereum:0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
         ],
         "chain": "ethereum",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095805,
         "safe": {
           "owners": [
             "0x30941fe71ea3eb348dcf5643b2af570f6383981e",
@@ -93,16 +97,21 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": null,
-          "fallbackHandler": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
-          "observedBlock": 25294993,
+          "observedBlock": 26095805,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25294993: masterMinter() on FiatTokenProxy 0x2c537e5624e4af88a7ae4060c022609376c8d0eb returned 0x68193b59a8b188f04da07fa234888b1926384b8e. getOwners() confirmed 6 owners; getThreshold() = 3; slot 0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe 1.3.0). getModulesPaginated returned empty.",
+        "evidence": "At Ethereum block 26095805 on 2026-10-01, masterMinter() returned this 3-of-6 Safe, while isMinter(this Safe) returned false. The current verified FiatTokenV2 implementation restricts configureMinter(address,uint256) to onlyMasterMinter and lets it set minters[minter] and minterAllowed[minter]. This Safe administers and can raise mint allowances; it is not currently a direct minter. Current getOwners(), getThreshold(), and getModulesPaginated() confirmed the recorded six owners, threshold three, and no enabled modules.",
         "sources": [
           {
             "label": "TRYB ETH contract on Etherscan",
             "url": "https://etherscan.io/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
+          },
+          {
+            "label": "Current TRYB FiatTokenV2 configureMinter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f88d1a517b670a14ded5d0cf8b3d37e554d977b"
           }
         ]
       },
@@ -137,6 +146,45 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
+      },
+      {
+        "chain": "worldchain",
+        "address": "0xa59bf636e2f9728586d48eb50d92eb691c127f33",
+        "deploymentRefs": [
+          "worldchain:0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
+        ],
+        "label": "TRYB Worldchain legacy proxy upgrade admin Safe (1-of-1)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 1,
+        "signerCount": 1,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": ["0x8cb445f6bd3ab1513e43500ec41e01bd969f79ce"],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedAt": "2026-10-01",
+          "observedBlock": 35751023,
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-01",
+        "observedBlock": 35751023,
+        "evidence": "At Worldchain block 35751023, TRYB's org.zeppelinos.proxy.admin slot returned this Safe, distinct from the Ethereum 2-of-3 admin. The custom implementation slot returned 0xfd023fb9efe3bee7c1fb54931de1b2e544216f1a. getOwners() returned only 0x8cb445f6bd3ab1513e43500ec41e01bd969f79ce, getThreshold() returned 1, VERSION() returned 1.4.1, getModulesPaginated() returned no modules, and the Safe guard slot was zero.",
+        "sources": [
+          {
+            "label": "Worldchain TRYB legacy proxy and admin Safe reads at block 35751023",
+            "url": "https://worldchain-mainnet.g.alchemy.com/public"
+          },
+          {
+            "label": "TRYB legacy proxy storage-slot definitions",
+            "url": "https://eth.blockscout.com/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb?tab=contract"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -145,8 +193,7 @@
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
-        "ethereum:0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
-        "worldchain:0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
+        "ethereum:0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
       ],
       "proxyAddresses": [
         "0x2c537e5624e4af88a7ae4060c022609376c8d0eb"

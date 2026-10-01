@@ -1,7 +1,7 @@
 {
   "id": "wsrusd-reservoir",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Reservoir wsrUSD product documentation",
@@ -34,11 +34,19 @@
       {
         "label": "Solana finalized mint account read",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Reservoir wsrUSD Tempo TIP-20 token",
+        "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000aeED2eC36A54d0e5"
+      },
+      {
+        "label": "Tempo pinned role, pause, and transfer-policy reads",
+        "url": "https://rpc.tempo.xyz"
       }
     ],
-    "evidence": "Re-derived 2026-07-31 across the tracked wrapper surfaces. Reservoir's verified Savingcoin source for Ethereum wsrUSD is a constructor-deployed ERC-4626/ERC20 with MANAGER and DEFAULT_ADMIN roles for cap/rate/update/recovery operations, but no blacklist, freeze, pause, seize, or arbitrary-holder-burn function; the 15 EVM representation deployments use the same 12,275-byte LayerZero OFT code family with ordinary transfer paths. Solana finalized slot 436244454 (2026-07-30T23:20:08Z) for mint 7bxM8cRF... reports freezeAuthority = null. The wrapper therefore has no current local holder-freeze reach. Upstream access is inherited from tracked rUSD: Tempo rUSD TIP-20 currently reads paused() = false and transferPolicyId() = 1 at block 32494649, but the Reservoir admin can activate TIP-403 blacklist/transfer policy, pause, or burnBlocked controls under the TIP-20 standard. Failure domain is the Reservoir rUSD parent/Tempo admin, not wsrUSD's wrapper or OFT contracts.",
-    "reviewer": "T52 access review (fresh exact replay)",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Re-reviewed 2026-10-01. Ethereum Savingcoin remains a constructor-deployed ERC-4626/ERC20 without a local blacklist, freeze, pause, seize, or arbitrary-holder-burn entry point. Solana finalized slot 452226658 reports freezeAuthority = null. However, the subsequently catalogued Tempo wsrUSD TIP-20 representation 0x20c000000000000000000000aeed2ec36a54d0e5 has its own local administrative censorship surface: at pinned Tempo block 42066495, paused() was false, transferPolicyId() was 1 (always-allow), and hasRole(0xb7570e32ded63b25163369d5eb4d8e89e70e5602, DEFAULT_ADMIN_ROLE) was true. The TIP-20 specification directly permits DEFAULT_ADMIN_ROLE to change transferPolicyId, including always-reject or custom policies. Current permissive state does not remove that power. Thus wsrUSD has possible local holder-transfer restriction on Tempo as well as the existing inherited rUSD exposure; the prior inherited-only conclusion no longer describes every authored deployment.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA55wsrUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -1149,11 +1157,11 @@
         "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "At finalized Solana slot 439747243 on 2026-08-16, wsrUSD mint 7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE had mint authority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp, a PDA owned by LayerZero-related program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq. The mint is treated as a LayerZero bridge representation, but the current endpoint peer and validator configuration was not source-verified.",
-          "pausersAdminsUpgraders": "The finalized mint read showed no freeze authority. Program ownership of the mint authority leaves bridge-program administration material; the program's upgrade authority, enforced options, message inspector/pre-crime, and DVN/executor configuration were not independently verified."
+          "pausersAdminsUpgraders": "At finalized slot 452226658 the mint had no freeze authority and its mint-authority PDA was owned by program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq. A finalized ProgramData header read at slot 452226659 identified ProgramData account 8sB66EVaRsNAVdf2ZVDriME51bKqaTEedgdZeyXVTqZw, last deployment slot 357849055, and upgrade authority GrA2cKJH38p2shwj7jDnDrD2pnRsGrUCVXncnTJQyYLZ. The authority account is system-owned with no account data at finalized slot 452226658. Its key-custody safeguards, enforced options, message inspector/pre-crime, and DVN/executor configuration remain unverified."
         },
         "capDescription": "The program-owned mint authority can create the Solana wsrUSD representation through the LayerZero route; route-level supply conservation depends on authenticated remote burn/mint accounting and program configuration, not on independent native issuance.",
         "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "Solana finalized mint account read",
@@ -1168,7 +1176,7 @@
             "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFT.sol"
           }
         ],
-        "evidence": "At finalized Solana slot 439747243 (2026-08-16T00:40:59Z), the wsrUSD SPL mint had 9 decimals, raw supply 10,000, mint authority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp, and no freeze authority. The mint-authority account is owned by LayerZero-related program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq; this is bridge representation machinery and remains separate from the Ethereum native wrapper's Mint Authority."
+        "evidence": "At finalized Solana slot 452226658 on 2026-10-01, the wsrUSD SPL mint had 9 decimals, raw supply 10,000, mint authority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp, and no freeze authority. The mint-authority account is owned by LayerZero-related program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq. The program is deployed through the upgradeable BPF loader, and its ProgramData header at finalized slot 452226659 identifies upgrade authority GrA2cKJH38p2shwj7jDnDrD2pnRsGrUCVXncnTJQyYLZ. This representation-level upgrade path remains Bridge Risk, separate from the Ethereum native wrapper's Mint Authority; no protective threshold or delay is inferred."
       },
       {
         "id": "wsrusd-tempo-oft-adapter",

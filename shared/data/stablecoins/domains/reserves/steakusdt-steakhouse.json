@@ -16,8 +16,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA49sDAI)",
     "confidence": "verified",
     "sources": [
       {
@@ -25,16 +25,16 @@
         "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
       },
       {
-        "label": "Morpho Vaults V1 contract reference",
-        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
+        "label": "Matched Morpho VaultV2 source and compilation identity",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9?fields=abi,sources,compilation"
       },
       {
         "label": "Steakhouse documentation",
         "url": "https://www.steakhouse.financial/docs"
       }
     ],
-    "rationale": "The Steakhouse Prime USDT vault is a Morpho ERC-4626 vault whose underlying asset is USDT. Morpho documents that shares are minted only by depositing the vault's underlying token and that vault capital can be allocated among same-asset Morpho markets. The full reserve is therefore the direct linked USDT wrapper position, without estimating changing borrower-market allocations.",
-    "compositionBasis": "Current Morpho vault asset and documented V1 allocation model",
+    "rationale": "The official Morpho app identifies this exact deployment as version 2.0 with asset USDT; asset() independently returned USDT at Ethereum block 26095798 on 2026-10-01. Matched VaultV2 source allocates through adapters rather than a V1 withdrawal queue. User deposits mint shares against USDT; fee accrual can also mint fee shares. The existing 100% slice describes the USDT-denominated strategy claim, not a measured current distribution across lending markets.",
+    "compositionBasis": "Standing USDT underlying-asset relationship; Morpho V2 adapter allocation model re-verified at Ethereum block 26095798",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete direct reserve relationship is USDT. Market allocations, borrower collateral, and withdrawal liquidity vary on-chain, but do not change the vault's underlying reserve token.",
@@ -43,20 +43,21 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Steakhouse Prime USDT MetaMorpho vault and Morpho Blue market contracts",
+        "name": "Steakhouse Prime USDT Morpho V2 vault and lending adapter contracts",
         "role": "other",
         "jurisdiction": "Ethereum"
       },
       {
-        "name": "Steakhouse Financial",
-        "role": "other"
+        "name": "Carniceria Tropical SA (Steakhouse-branded vault services and curation)",
+        "role": "other",
+        "jurisdiction": "Panama"
       }
     ],
     "segregation": "mixed",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA49sDAI)",
     "confidence": "verified",
     "sources": [
       {
@@ -64,10 +65,14 @@
         "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
       },
       {
-        "label": "Morpho Vaults V1 contract reference",
-        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
+        "label": "Matched Morpho VaultV2 source and compilation identity",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9?fields=abi,sources,compilation"
+      },
+      {
+        "label": "Steakhouse DeFi vault terms: service provider and noncustodial role",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
       }
     ],
-    "uncertainty": "Assets are held by noncustodial vault and market contracts and are intentionally supplied into lending markets. The changing allocation set, legal bankruptcy treatment, and provider shares are not established by the reviewed static disclosures."
+    "uncertainty": "The direct vault is immutable Morpho V2 code, not MetaMorpho V1. At Ethereum block 26095798, its sole adapter and liquidityAdapter were 0x1c87feac33e2ad0a81a250fa63db4b1c2687bb05. The issuer describes a noncustodial lending strategy. This review does not establish provider shares, legal segregation, bankruptcy remoteness, or a current borrower-collateral split. The existing segregation category remains an interpretation of pooled lending, not a separately verified legal term. On 2026-10-01, ruling D10 separates strategy deployment from legal reuse rights: the governing vault terms establish a noncustodial curator but neither permit nor prohibit custodian reuse, so rehypothecation is unknown."
   }
 }

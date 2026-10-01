@@ -169,14 +169,14 @@
             "0x74390470F4001Ca85D93bD546A4Ab1724359654B",
             "0xeF0Ca09fbf9a5f61E657Fb208b46b8685c1d4766",
             "0x8EcAB7B8ed8215cA52500cbf1548B9239173ef82",
-            "0x4088421cBDBa1501d8Fd09fD241717097Afb42Cb",
+            "0x18411aB626c9b3B3Dd5b7356574D8ff396436744",
             "0xcdF067F306E7a511Ef701588AFCdcff292B19282",
             "0xC8Be49a9b1ca1A1cc654491a7cBbD27aBfA06A81"
           ],
           "threshold": 6,
           "enabledModules": [],
-          "observedBlock": 25770536,
-          "observedAt": "2026-08-16",
+          "observedBlock": 26095796,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
         "sources": [
@@ -185,9 +185,9 @@
             "url": "https://etherscan.io/address/0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770536,
-        "evidence": "At Ethereum block 25770536, current Safe reads returned threshold 6, nine owners, and no enabled modules for governance Safe 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF. The Safe passes the Timelock PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE checks. Current guard reads reverted, so guard state remains unresolved rather than being treated as the prior zero value."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "At Ethereum block 26095796, Safe reads returned threshold 6, nine owners, and no enabled modules for governance Safe 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF. The owner list includes 0x18411aB626c9b3B3Dd5b7356574D8ff396436744 in place of the previously recorded 0x4088421cBDBa1501d8Fd09fD241717097Afb42Cb. The Safe passes the Timelock PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE checks at the same block. Guard state was not resolved in this observation and remains unknown."
       }
     ],
     "economicCapSemantics": "raiseable",

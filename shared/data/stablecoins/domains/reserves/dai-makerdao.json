@@ -269,5 +269,50 @@
         "rationale": "Osero is a Sky allocator position with mutable deployed strategies rather than one direct tracked-stablecoin reserve asset."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sky LitePSM USDC pocket (Ethereum 0x37305b1cd40574e4c5ce33f8e8306be057fd7341)",
+        "role": "other"
+      },
+      {
+        "name": "Grove Allocator non-custodial vault infrastructure",
+        "role": "other"
+      },
+      {
+        "name": "Sky Vat and collateral Join adapters",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA05DAI)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky LitePSM deployment and balance segregation documentation",
+        "url": "https://developers.skyeco.com/protocol/liquidity/litepsm/"
+      },
+      {
+        "label": "Sky Chainlog deployed LitePSM and USDC pocket",
+        "url": "https://chainlog.sky.money/api/mainnet/active.json"
+      },
+      {
+        "label": "Ethereum Dwellir RPC, pinned block 26095796",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Grove Allocator custody description",
+        "url": "https://docs.grove.finance/faqs"
+      },
+      {
+        "label": "Sky Vat collateral accounting and adapter authority",
+        "url": "https://developers.skyeco.com/protocol/core/vat/"
+      }
+    ],
+    "uncertainty": "This partial profile identifies on-chain collateral holding infrastructure, not a complete list of legal custodians. At Ethereum block 26095796, LitePSM.gem() identifies canonical USDC and LitePSM.pocket() identifies the named pocket. Grove describes its Allocator as non-custodial vault infrastructure. The cited sources do not establish asset-wide segregation, bankruptcy remoteness, rehypothecation restrictions, or legal custodian allocation shares for the shared DAI/USDS book. Underlying RWA and allocator strategy custody remains unresolved; the institutional-top summary is not independently substantiated by this profile."
   }
 }

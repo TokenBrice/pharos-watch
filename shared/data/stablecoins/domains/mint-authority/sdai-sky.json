@@ -9,11 +9,12 @@
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-20",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095798,
       "sources": [
         {
-          "label": "sDAI Ethereum contract",
-          "url": "https://etherscan.io/address/0x83F20F44975D03b1b09e64809B757c47f942BEeA#readContract"
+          "label": "Sky pinned SavingsDai source",
+          "url": "https://github.com/sky-ecosystem/sdai/blob/2b7acb95289a9eb3a8844206d5712eabfa206efc/src/SavingsDai.sol"
         }
       ]
     },
@@ -30,17 +31,19 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
-            "label": "sDAI token",
-            "url": "https://etherscan.io/address/0x83F20F44975D03b1b09e64809B757c47f942BEeA#readContract"
+            "label": "Sky pinned SavingsDai source",
+            "url": "https://github.com/sky-ecosystem/sdai/blob/2b7acb95289a9eb3a8844206d5712eabfa206efc/src/SavingsDai.sol"
           },
           {
             "label": "Sky Chainlog",
             "url": "https://chainlog.sky.money/api/mainnet/active.json"
           }
         ],
-        "evidence": "At Ethereum block 25294731: asset() returned DAI 0x6B175474E89094C44Da98b954EedeAC495271d0F; name() returned 'Savings Dai'. EIP-1967 proxy admin slot = 0x0 (not upgradeable); owner() reverts (no owner). No privileged mint function, shares minted only on DAI deposit via ERC-4626 deposit/mint. Wrapper is immutable with no upgrade surface."
+        "evidence": "At Ethereum block 26095798 (2026-10-01), asset() returned DAI 0x6b175474e89094c44da98b954eedeac495271d0f, name() returned Savings Dai, and decimals() returned 18. EIP-1967 implementation, corrected admin, and beacon slots were zero; owner() reverted. The pinned SavingsDai source has immutable DaiJoin/Pot references, no upgrade entrypoint or privileged share minter, and mints shares against DAI deposited through DaiJoin into Pot."
       }
     ],
     "economicCapSemantics": "bounded",

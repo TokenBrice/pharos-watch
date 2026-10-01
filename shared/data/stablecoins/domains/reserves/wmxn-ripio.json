@@ -52,19 +52,19 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Codex T64 reserve review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM11bbqUSDC)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Independent public accountant certification for wMXN - March 2026",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+        "label": "Independent public accountant certification for wMXN - June 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wMXN%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
       },
       {
         "label": "Ripio local stablecoins",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
-    "uncertainty": "The March 31, 2026 certification by Pablo Eduardo Soto (Certified Public Accountant, Professional Council of Economic Sciences of CABA) reconciled 518,689 outstanding wMXN to MXN 937,364.13 on a Mexican bank statement but is expressly not an audit or review. It is an agreed-procedures certification on client-supplied documents, and it is the first wMXN attestation published. The bank is not named; account segregation, insolvency protections, and rehypothecation terms are undisclosed, and the certified collateral-to-token surplus (~1.81x) is unexplained in the document."
+    "uncertainty": "The latest report on the official attestation index as checked on 2026-10-01 is the June 30, 2026 certification, signed July 28, 2026 by Pablo Eduardo Soto for SLD y Asociados S.A. It reconciles 968,789 outstanding wMXN across seven chains to MXN 2,086,193.01 deposited in a Mexican bank account. The engagement expressly does not constitute an audit or review and expresses no professional opinion; procedures use client-supplied documents. The bank is not named, and the report does not establish account segregation, insolvency protections, rehypothecation terms, successor custody, or an explanation for the collateral surplus. The June balance date is not re-dated to the retrieval date."
   }
 }

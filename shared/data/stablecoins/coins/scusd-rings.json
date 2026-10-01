@@ -52,7 +52,7 @@
     {
       "type": "info",
       "title": "On-chain reserve tracking pending",
-      "message": "Live reserve tracking for scUSD is pending Trevee/Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address for the latest published addresses."
+      "message": "Trevee publishes the Ethereum stablecoin BoringVault and Sonic scUSD staking-vault addresses at https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address. A complete dated allocation across underlying assets and DeFi strategies is still needed for reserve tracking; idle token balances alone do not establish the full backing composition."
     }
   ],
   "launchDate": "2024-12-09",

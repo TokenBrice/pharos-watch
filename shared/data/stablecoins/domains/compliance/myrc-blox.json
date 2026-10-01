@@ -1,8 +1,5 @@
 {
   "id": "myrc-blox",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

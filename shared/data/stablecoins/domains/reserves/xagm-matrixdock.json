@@ -13,8 +13,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv05)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv2)",
     "confidence": "verified",
     "sources": [
       {
@@ -24,13 +24,17 @@
       {
         "label": "Matrixdock XAGm underlying assets dashboard",
         "url": "https://www.matrixdock.com/transparency/underlying-assets?type=xagm&language=en"
+      },
+      {
+        "label": "Bureau Veritas full physical silver inventory audit (June 30, 2026 parcel list; report July 17, 2026)",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
       }
     ],
-    "rationale": "Matrixdock's issuer dashboards observed on September 21, 2026 report 73,039.260 XAGm outstanding, 72,927.000 troy ounces of physical silver, 73 silver bars, and a current 0.998463014 troy-ounce entitlement per token after the disclosed custody fee. The dashboards identify physical silver as the full direct reserve asset. The current aggregate disclosure refreshes the composition; it does not replace the separate June 30, 2026 Bureau Veritas audit.",
-    "compositionBasis": "Current Matrixdock issuer dashboards reporting the complete XAGm supply, physical-silver reserve total, bar count, and per-token silver entitlement",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Bureau Veritas' July 17, 2026 report covers the complete June 30 Parcel Ownership List: 66 HERAEUS Good Delivery silver bars of 1000 troy ounces and 999.0 fineness, comprising 64 at Brink's Hong Kong and two at Malca-Amit Singapore. It records a 100% physical audit, bar-number checks, and weighing, with no anomalies identified. The re-curated direct reserve bucket is therefore 100% physical silver at the report's June 30 inventory date. The newer issuer dashboard observation of September 21 (73 bars, 72,927 ounces) is retained only as later issuer disclosure and does not re-date this independently inspected composition. The inventory audit does not reconcile token liabilities.",
+    "compositionBasis": "Bureau Veritas complete physical inventory audit of the June 30, 2026 silver Parcel Ownership List",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete direct reserve asset is physical silver. Matrixdock does not publish a current vault-by-vault allocation or named-custodian split.",
+    "knownUnknownExposure": "The complete direct reserve asset in the audited June 30 inventory is physical silver, held as 64 bars at Brink's Hong Kong and two at Malca-Amit Singapore. Later issuer dashboard figures do not establish an independently audited current vault allocation; liability reconciliation and legal custody safeguards remain outside this report's scope.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -43,15 +47,15 @@
     ]
   },
   "custodyProfile": {
-    "providers": [{"name": "Asian bullion vaults (not publicly named)", "role": "custodian"}],
+    "providers": [{"name": "Brink's Hong Kong (June 30, 2026 silver inventory)", "role": "custodian"}, {"name": "Malca-Amit Singapore (June 30, 2026 silver inventory)", "role": "custodian"}],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM03EUSD)",
     "confidence": "probable",
-    "sources": [{"label": "Matrixdock XAGm", "url": "https://www.matrixdock.com/xagm"}],
-    "uncertainty": "Matrixdock identifies reputable Asian vaults and Bureau Veritas physical audits but does not name the custodians or publish segregation, insolvency, rehypothecation, or vault-share terms.",
+    "sources": [{"label": "Matrixdock XAGm", "url": "https://www.matrixdock.com/xagm"}, {"label": "Bureau Veritas July 17, 2026 physical inventory audit (June 30 parcel list)", "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"}],
+    "uncertainty": "Bureau Veritas identifies 64 silver bars at Brink's Hong Kong and two at Malca-Amit Singapore in the June 30, 2026 parcel list, physically inspected in July. These are historical named custodians, not a current vault-share allocation; the current 73-bar issuer dashboard does not establish custody of all additional bars. Segregation, insolvency and rehypothecation terms remain unknown.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -2,14 +2,19 @@
   "id": "pusd-plume",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: pUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified Plume BoringVault: owner-authorized transfer hook",
+        "url": "https://explorer.plume.org/api/v2/smart-contracts/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+      }
+    ],
+    "evidence": "Pinned Plume block 96626677: the BoringVault owner remains the 3-of-6 Safe and hook() is zero. The verified source nevertheless permits the owner to setBeforeTransferHook(address) through requiresAuth; transfers and transferFrom invoke the configured hook's beforeTransfer(from), which can reject a holder's transfer. Yes denotes this configurable holder restriction, not an assertion that a blacklist hook is currently installed. Separate OFAC mint-gateway checks do not alone establish holder freezing.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM16cNGN)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "pUSD is documented as Plume's stablecoin and current materials describe direct mint/redeem and ecosystem use rather than a separate third-party bridge route. Pharos treats the route as native to its supported deployments.",
+    "summary": "The authored Ethereum and Plume pUSD rows are native BoringVault deployments owned by the same Plume/Nucleus Safe. Current issuer docs additionally describe bridge-and-mint with USDC and cross-chain redemption pending up to 12 hours. That operational path and legacy USDC.e held in the Plume vault are separate from a claim that pUSD itself is a third-party bridge representation. No exhaustive material wrapper/deployment census or bridge-role graph is established by the two token owner reads.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",

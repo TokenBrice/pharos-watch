@@ -169,6 +169,8 @@ export const DONOR_KEY_QUALIFYING_STABLECOINS: readonly DonorKeyQualifyingStable
     stablecoinId: "rlusd-ripple",
     contracts: {
       ethereum: "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+      base: "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+      optimism: "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
     },
   },
   {

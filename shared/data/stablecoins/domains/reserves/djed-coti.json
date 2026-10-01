@@ -72,9 +72,13 @@
       {
         "label": "Koios Cardano address_info (reserve balance and UTxO)",
         "url": "https://api.koios.rest/api/v1/address_info"
+      },
+      {
+        "label": "Tweag Technical Review of Djed (29 November 2022; pre-launch code and remediation appendix)",
+        "url": "https://raw.githubusercontent.com/tweag/tweag-audit-reports/main/Djed-2023-01.pdf"
       }
     ],
-    "uncertainty": "Reserves are ADA locked at a dedicated Cardano script address with no custodian; the current Koios address_info read returned 28,300,277.449032 ADA, with the newest returned UTxO at block 13,840,791. COTI has not officially published the contract addresses, the inventory comes from the community-maintained open-djed registry, and the pre-launch audit COTI announced was never published with an auditor name or report. Legal bankruptcy-remoteness and rehypothecation terms do not apply to script custody; the reserve is delegated (staked) but not lent out.",
+    "uncertainty": "Reserves are ADA at a dedicated Cardano script address; the 2026-08-23 Koios observation returned 28,300,277.449032 ADA, with its newest returned UTxO at block 13,840,791. The community-maintained open-djed registry identifies the contract addresses. A public Tweag Technical Review of Djed dated 29 November 2022 examines pre-launch IOG validator code and includes remediation notes; it does not establish an audit of the current deployed script or financial viability. Legal bankruptcy-remoteness, rehypothecation, and operational recovery safeguards remain unestablished by the on-chain balance observation.",
     "knownUnknownExposurePct": 0
   }
 }

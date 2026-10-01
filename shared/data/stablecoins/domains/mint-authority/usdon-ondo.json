@@ -73,6 +73,8 @@
         "chain": "ethereum",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095794,
         "evidence": "At Ethereum block 25295047 (2026-06-11), getRoleMemberCount(MINTER_ROLE) on USDon proxy (0xace8e719899f6e91831b18ae746c9a965c2119f1) returned 2. getRoleMember(MINTER_ROLE, 0) = 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c (GMTokenManager, a 12828-byte contract). GMTokenManager's DEFAULT_ADMIN_ROLE[0] = 0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 (same TimelockController as ProxyAdmin owner).",
         "sources": [
           {
@@ -100,19 +102,22 @@
             "0xe2cbb2fd440133946cd5171f675e1075570c5cae",
             "0x5cd1e413ec933114c52f00545261ce00fd1b037c",
             "0x81961c315e38badc02c014a13dd1d4b3dab81d15",
-            "0xde9825455932279f3c2b833b59a04029693f3e1b",
+            "0xdb8441d6adb9f69af1c339a685e1e26c3c3816db",
             "0xd16e51667cd56b5d03b2acdd8567088fc5cdd579",
             "0x61eac1f1c50c501af35a48d6ab7c42c24b399536"
           ],
           "threshold": 3,
           "enabledModules": [],
           "guard": null,
-          "fallbackHandler": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "GnosisSafe L2",
-          "observedBlock": 25295047,
+          "observedBlock": 26095794,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295047 (2026-06-11), getRoleMember(MINTER_ROLE, 1) = 0x7607c08928bdbab77f88872b49667dcb877524db. getOwners() returned 6 owners; threshold()=3; getModulesPaginated returned 0 modules.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095794,
+        "evidence": "At Ethereum block 25295047 (2026-06-11), getRoleMember(MINTER_ROLE, 1) = 0x7607c08928bdbab77f88872b49667dcb877524db. getOwners() returned 6 owners; threshold()=3; getModulesPaginated returned 0 modules. At block 26095794 on 2026-10-01, the Safe still returned six owners and threshold 3, with owner index 3 now 0xdb8441d6adb9f69af1c339a685e1e26c3c3816db, no enabled modules and a zero guard slot. The fallback-handler slot returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99.",
         "sources": [
           {
             "label": "USDon Ondo Safe on Etherscan",
@@ -132,7 +137,9 @@
         "chain": "ethereum",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295047 (2026-06-11), EIP-1967 proxy admin slot of USDon returned 0x5244a3d8e6534d253c11b9459a4c4c6d3b2361dd (ProxyAdmin contract). ProxyAdmin.owner()=0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 (TimelockController). Timelock minDelay=7200s (2h), PROPOSER_ROLE count=1 (PROPOSER[0]=0x71a4d411b5f7941dee020417fca30413712f1646 is a 4-of-7 Safe), EXECUTOR_ROLE count=2 (EXECUTOR[0]=0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc is 1-of-8 Safe; EXECUTOR[1]=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b is EOA). DEFAULT_ADMIN_ROLE on USDon token = same Timelock.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095794,
+        "evidence": "At Ethereum block 25295047 (2026-06-11), EIP-1967 proxy admin slot of USDon returned 0x5244a3d8e6534d253c11b9459a4c4c6d3b2361dd (ProxyAdmin contract). ProxyAdmin.owner()=0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 (TimelockController). Timelock minDelay=7200s (2h), PROPOSER_ROLE count=1 (PROPOSER[0]=0x71a4d411b5f7941dee020417fca30413712f1646 is a 4-of-7 Safe), EXECUTOR_ROLE count=2 (EXECUTOR[0]=0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc was recorded as a 1-of-8 Safe; EXECUTOR[1]=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b is EOA). DEFAULT_ADMIN_ROLE on USDon token = same Timelock. At block 26095794 on 2026-10-01, proposer/executor role counts and members were unchanged; the proposer Safe returned threshold 4 with seven owners, but executor Safe 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc returned threshold 1 with nine owners. The timelock remains 7200 seconds and the separate EOA executor remains.",
         "sources": [
           {
             "label": "USDon ProxyAdmin on Etherscan",
@@ -195,7 +202,7 @@
             "0xe2cbb2fd440133946cd5171f675e1075570c5cae",
             "0x5cd1e413ec933114c52f00545261ce00fd1b037c",
             "0x81961c315e38badc02c014a13dd1d4b3dab81d15",
-            "0xdb8441d6adb9f69af1c339a685e1e26c3c3816d",
+            "0xdb8441d6adb9f69af1c339a685e1e26c3c3816db",
             "0xd16e51667cd56b5d03b2acdd8567088fc5cdd579",
             "0x61eac1f1c50c501af35a48d6ab7c42c24b399536"
           ],
@@ -203,12 +210,13 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
-          "observedBlock": 116343980,
-          "observedAt": "2026-08-16",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 125057285,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 116343980,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125057285,
         "sources": [
           {
             "label": "BNB USDon MINTER_ROLE Safe",
@@ -219,7 +227,7 @@
             "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "At BNB block 116343980, getRoleMember(MINTER_ROLE, 1) returned Safe 0x4d25d4790b4ec8b40605da55509479047a3d4728. The Safe returned threshold 3, six owners, an empty getModulesPaginated() result, and zero GuardManager storage; its SafeL2 singleton was 0x29fcb43b46531bca003ddc8fcb67ffe91900c762."
+        "evidence": "At BNB block 116343980, getRoleMember(MINTER_ROLE, 1) returned Safe 0x4d25d4790b4ec8b40605da55509479047a3d4728. The Safe returned threshold 3, six owners, an empty getModulesPaginated() result, and zero GuardManager storage; its SafeL2 singleton was 0x29fcb43b46531bca003ddc8fcb67ffe91900c762. Reverified at block 125057285 on 2026-10-01: threshold 3, six owners including the complete 0xdb8441d6adb9f69af1c339a685e1e26c3c3816db address, no enabled modules, zero guard, unchanged singleton and fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99."
       },
       {
         "label": "BNB USDon TimelockController DEFAULT_ADMIN",
@@ -268,7 +276,8 @@
         "bypassSurfaces": [
           "Token-2022 freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK",
           "Token-2022 pausable/config, metadata, scaled-UI, confidential-transfer, and transfer-hook authorities all point to the mint authority PDA",
-          "MinterRoleUSDon/AdminRoleUSDon role accounts and GuardianUSDon governance"
+          "MinterRoleUSDon/AdminRoleUSDon role accounts and GuardianUSDon governance",
+          "Token-2022 permanent delegate 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD can exercise delegated burn authority"
         ],
         "observedAt": "2026-08-16",
         "observedBlock": 439720646,

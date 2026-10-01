@@ -1,12 +1,12 @@
 {
   "id": "ghsm-mento",
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "GHSm is minted CDP-style on Celo by depositing USDm as collateral in Mento V3 (a Liquity v2 fork); BorrowerOperations is an immutable contract with no upgrade path; the token owner is the Mento Timelock (2-day delay) whose sole proposer is the veMENTO DAO Governor.",
+    "summary": "GHSm remains a reserve-backed Mento V2 FX token issued through the USDm/GHSm Broker pool, not a borrower-specific V3 CDP. Its token and Broker are mutable under the Mento Timelock's two-day delay. The token also authorizes the Celo Validators address; its GHSm-specific issuance reach remains unresolved.",
     "upgradeability": {
-      "model": "transparent-proxy",
+      "model": "custom",
       "proxyAddresses": [
         "0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313"
       ],
@@ -19,8 +19,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "Mento Timelock (GHSm token owner)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 72127037,
+      "observedAt": "2026-10-01",
+      "observedBlock": 78936852,
       "sources": [
         {
           "label": "Mento V3 deployments",
@@ -35,21 +35,31 @@
     "controls": [
       {
         "chain": "celo",
-        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
-        "label": "Mento BorrowerOperations (immutable CDP minter)",
+        "address": "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "label": "Mento Broker (GHSm FX-pool minter)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "GHSm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot. It is immutable.",
+        "capDescription": "The USDm/GHSm Broker pool issues against swaps and is subject to governance-configured trading limits and breaker checks; no borrower-specific USDm CDP is involved. The Broker cannot be treated as immutable: its proxy owner and implementation are separately mutable.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78936852,
         "sources": [
           {
-            "label": "Mento V3 deployments",
-            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+            "label": "MGP-18: GHSm stays on its Mento V2 USDm FX pool",
+            "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+          },
+          {
+            "label": "GHSm StableTokenV2 verified mint authorization",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+          },
+          {
+            "label": "Mento Broker verified implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1B78f6acD05e7BcB00f74863bfd8a7C264143e37"
           }
         ],
-        "evidence": "At Celo block 69291577, eth_getCode returned 46358 bytes for 0x8ec9A81871F816F1EF007a82293703057A943B8A; owner() returned empty; EIP-1967 impl and admin slots are zero, confirmed immutable, no upgrade path."
+        "evidence": "At Celo block 78936852, GHSm.broker() returned this Broker; a zero-amount mint eth_call from the Broker succeeded, while the previously authored BorrowerOperations caller reverted with StableTokenV2: not allowed to mint. Broker._getImplementation() returned 0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37 and _getOwner()/owner() returned the Mento Timelock. Verified Broker transferOut() calls StableTokenV2.mint for reserve-recognized stable assets."
       },
       {
         "chain": "celo",
@@ -61,22 +71,60 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78936852,
         "sources": [
           {
             "label": "Mento V3 deployments",
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, GHSm owner() returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() returned 172800. hasRole(PROPOSER_ROLE, 0x47036d78bB3169b4F5560dD77BF93f4412A59852) returned true (MentoGovernor is sole proposer); hasRole(EXECUTOR_ROLE, 0x0) returned true (open executor, standard OZ TimelockController pattern)."
+        "evidence": "At Celo block 78936852, GHSm.owner() and its EIP-1967 admin slot both resolved to this Timelock; getMinDelay() returned 172800. GHSm's implementation remained 0x434563b0604be100f04b7ae485bcafe3c9d8850e. The Broker proxy _getOwner() also returned this Timelock. StableTokenV2 owner-only setBroker/setValidators/setExchange functions can change token minters. Historical July proposer/executor observations are not re-asserted as current membership."
+      },
+      {
+        "chain": "celo",
+        "address": "0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58",
+        "label": "Celo Validators (GHSm-authorized mint address)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78936852,
+        "sources": [
+          {
+            "label": "GHSm StableTokenV2 verified onlyMinter authorization",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+          },
+          {
+            "label": "Celo Validators current implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58"
+          }
+        ],
+        "evidence": "At Celo block 78936852, GHSm.validators() returned this address. StableTokenV2 onlyMinter admits broker, validators or exchange; exchange() was zero. Validators._getImplementation() returned 0x13b0b89f3242f815c1fc6c9cf56e1ab5aea4dc58 and _getOwner() returned 0xd533ca259b330c7a88f74e000a3faea2d63b7972. Its verified mintStableToEpochManager path targets getStableToken(). registry() returned 0x000000000000000000000000000000000000ce10, whose getAddressForString(\"StableToken\") returned USDm at 0x765de816845861e75a25fca122bb6898b8b1282a, not GHSm. This observed path does not establish current direct GHSm issuance; governance could still retarget or replace the configured implementation."
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Celo block 69291577, GHSm owner() resolved to the 172800-second Mento Timelock and BorrowerOperations was confirmed immutable. At block 72127037, the GHSm EIP-1967 implementation slot resolved to StableTokenV2 implementation 0x434563b0...850e and the EIP-1967 admin slot resolved directly to the same Mento Timelock, which can replace mint-critical token logic after its two-day delay. Economic-posture fields reviewed 2026-08-15: cap or minter replacement runs through the enforced two-day Mento Timelock, the live full-composition Mento reserve feed provides continuous reconciliation, and no regulator or independent attestor is evidenced.",
-      "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Re-reviewed 2026-10-01 at Celo block 78936852. MGP-18 and the live token confirm GHSm remains on its V2 Broker FX pool; the previously authored BorrowerOperations is not authorized to mint GHSm. The token implementation/admin and enforced 172800-second Timelock delay were re-pinned. The Broker proxy is also owned by the Timelock, while the Validators address has a separate observed proxy owner. Its GHSm-specific issuance reach is left as a scoped question rather than assumed safe.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+      "reviewedAt": "2026-10-01",
+      "scopedQuestions": [
+        {
+          "controlRef": "celo:0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58",
+          "question": "What governance and authorization path can replace the Validators implementation or retarget its registry-selected stable token from the currently observed USDm to GHSm?",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+          "sources": [
+            {
+              "label": "Celo Validators verified implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58"
+            }
+          ]
+        }
+      ],
       "sources": [
         {
           "label": "Mento V3 stablecoin docs",

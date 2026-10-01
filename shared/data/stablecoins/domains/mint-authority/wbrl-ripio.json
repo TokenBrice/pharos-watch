@@ -202,7 +202,9 @@
           "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
           "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
           "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
-          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "celo:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "hyperevm:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
         ],
         "label": "Ripio WBRL native LimitedMinter contract",
         "role": "direct-minter",
@@ -210,7 +212,7 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At the fixed 2026-08-16 reads, 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7 held MINTER_ROLE on WBRL at Ethereum block 25771239, BSC block 116369053, Polygon block 92147851, and Gnosis block 47763178; it was not a minter on Base block 50068727 or World Chain block 33795582. The verified LimitedMinter source fixes a mint destination and applies a daily cap, making this an issuer-operated native facility rather than the arbitrary-recipient LimitedMinterBridge route."
+        "evidence": "At the fixed 2026-08-16 reads, 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7 held MINTER_ROLE on WBRL at Ethereum block 25771239, BSC block 116369053, Polygon block 92147851, and Gnosis block 47763178; it was not a minter on Base block 50068727 or World Chain block 33795582. The verified LimitedMinter source fixes a mint destination and applies a daily cap, making this an issuer-operated native facility rather than the arbitrary-recipient LimitedMinterBridge route. On 2026-10-01, pinned reads additionally returned hasRole(MINTER_ROLE, this address) = true at Celo block 78938596 and HyperEVM block 47359211, and eth_getCode confirmed a contract at both deployments. Current per-chain destination and daily-cap configuration have not been independently enumerated; no favorable cap bound is inferred from these added deployment references."
       }
     ],
     "economicCapSemantics": "unbounded",

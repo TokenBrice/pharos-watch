@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "DEURO is minted permissionlessly by users opening overcollateralized, oracle-free positions in Frankencoin-style minting modules. The DecentralizedEURO contract (0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea) is immutable (no proxy, no owner). New minting modules require a challengeable application period; nDEPS (Equity) holders at 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6 can veto proposals.",
+    "summary": "dEURO native issuance uses admitted minting modules under the Equity veto/application process. Collateralized MintingHub positions are oracle-free; stablecoin-bridge, gateway and savings modules require separate issuance-scope review before describing all native issuance as collateral gated.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -73,6 +73,8 @@
         ],
         "chain": "ethereum",
         "address": "0xc71104001a3ccda1bef1177d765831bd1bfe8ee6",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096006,
         "deploymentRefs": [
           "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
         ]

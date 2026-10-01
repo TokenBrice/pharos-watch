@@ -2,7 +2,7 @@
   "id": "sfrxusd-frax",
   "name": "Staked Frax USD",
   "symbol": "sfrxUSD",
-  "oneLiner": "sfrxUSD is Frax's staking wrapper of frxUSD; the exchange rate compounds with custodian and protocol yield, with frxUSD-tier T-bill custodial backing.",
+  "oneLiner": "sfrxUSD is Frax's yielding frxUSD wrapper; its Benchmark Yield Strategy allocates staked frxUSD to approved carry-trade, DeFi or Treasury venues.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -27,7 +27,7 @@
       },
       {
         "label": "Frax sfrxUSD addresses",
-        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd/addresses"
+        "url": "https://docs.frax.com/protocol/assets/frxusd/addresses"
       }
     ]
   },

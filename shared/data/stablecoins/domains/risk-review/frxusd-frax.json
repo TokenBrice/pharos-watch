@@ -800,7 +800,7 @@
           },
           {
             "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
           },
           {
             "label": "Fraxtal RPC",
@@ -1070,11 +1070,12 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "Frax's Fraxtal transfer guide identifies this Ethereum contract as the canonical-side lockbox used by the Fraxtal route; it is bridge escrow/mint/burn machinery, not native frxUSD issuance authority.",
-          "trustedPeerOrRemote": "The lockbox's trusted peer, endpoint ID, and messaging configuration were not independently decoded.",
+          "trustedPeerOrRemote": "At Ethereum block 26095811, endpoint() returned LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and token() returned canonical frxUSD. Trusted peers, DVNs, and enforced options remain unresolved.",
           "rateLimits": "The lockbox's rate-limit and supply-accounting configuration were not independently decoded.",
-          "pausersAdminsUpgraders": "The lockbox owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+          "pausersAdminsUpgraders": "At Ethereum block 26095811, owner() returned the frxUSD 4-of-7 Safe; EIP-1967 admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c returned owner() = the frxUSD upgrade timelock. That timelock returned delay() = 86400 and the same Safe as admin. Pause configuration remains unresolved."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095811,
         "sources": [
           {
             "label": "Transfer frxUSD with Fraxtal (lockbox hub)",
@@ -1085,7 +1086,7 @@
             "url": "https://docs.frax.com/frxusd/frxusd-contracts"
           }
         ],
-        "evidence": "Frax's published Fraxtal transfer flow names 0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0 as the Ethereum-side lockbox for the canonical route. This row preserves the adverse bridge dependency while leaving its controller, upgrade, peer, and limit configuration unresolved."
+        "evidence": "At pinned Ethereum block 26095811 on 2026-10-01, owner() returned 0xffffff4f3bac444b2c0ecf2a1840d018be783937, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, and token() returned canonical frxUSD 0xcacd6fd266af91b8aed52accc382b4e165586e29. Correct EIP-1967 slots returned implementation 0x175e4b98075c81511e476c0c5446dda95d9106c8 and admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin owner() returned timelock 0xb898ad2976b4d8f2e21521c9db16b7497825e503; its delay() was 86400 and admin() was the same 4-of-7 Safe. Peers, limits, and pause configuration remain unresolved."
       },
       {
         "id": "fraxtal-frxusd-lockbox",
@@ -1109,12 +1110,12 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "Frax's Fraxtal transfer guide identifies this Fraxtal contract as the canonical-side lockbox; at block 40053263 the native token's minters(lockbox) mapping returned true, so it can use the token's minter_mint() bridge path.",
-          "trustedPeerOrRemote": "The lockbox's trusted peer, endpoint ID, and messaging configuration were not independently decoded.",
+          "trustedPeerOrRemote": "At Fraxtal block 42013517, endpoint() returned LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and token() returned native frxUSD. Trusted peers, DVNs, and enforced options remain unresolved.",
           "rateLimits": "The lockbox's rate-limit and supply-accounting configuration were not independently decoded.",
-          "pausersAdminsUpgraders": "The lockbox owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+          "pausersAdminsUpgraders": "At Fraxtal block 42013517, owner() returned 0x5f25218ed9474b721d6a38c115107428e832fa2e; EIP-1967 admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c returned owner() = 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. Effective upgrade delay and pause configuration remain unresolved."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 40053263,
+        "observedAt": "2026-10-01",
+        "observedBlock": 42013517,
         "sources": [
           {
             "label": "Transfer frxUSD with Fraxtal (lockbox hub)",
@@ -1122,14 +1123,14 @@
           },
           {
             "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
           },
           {
             "label": "Fraxtal RPC",
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "Frax's published transfer flow names 0x96a394058e2b84a89bac9667b19661ed003cf5d4 as the Fraxtal-side lockbox. At Fraxtal block 40053263, minters(0x96a394058e2b84a89bac9667b19661ed003cf5d4) returned true on native frxUSD, confirming a bridge-capable mint path; lockbox governance, upgrade, peer, and limit state remains unresolved."
+        "evidence": "At pinned Fraxtal block 42013517 on 2026-10-01, native-token minters(lockbox) returned true. Lockbox owner() returned 0x5f25218ed9474b721d6a38c115107428e832fa2e, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, and token() returned 0xfc00000000000000000000000000000000000001. Correct EIP-1967 slots returned implementation 0x8861ab8683cfd1fcc84327415888b870ab144f51 and admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. Effective upgrade delay, peers, limits, and pause configuration remain unresolved."
       },
       {
         "id": "fraxtal-l2-standard-bridge",
@@ -1153,10 +1154,10 @@
           "lockboxOrEscrow": "The native frxUSD source defines an immutable BRIDGE() and the fixed-block read returned this Fraxtal L2 StandardBridge address; it can call the token's bridge mint/burn path but is not a native minter_mint() authority.",
           "trustedPeerOrRemote": "The bridge's cross-domain messenger and remote peer configuration were not independently decoded.",
           "rateLimits": "The bridge's rate limits and supply-accounting configuration were not independently decoded.",
-          "pausersAdminsUpgraders": "The bridge's owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+          "pausersAdminsUpgraders": "At Fraxtal block 42013517, EIP-1967 implementation was 0xf2c542d2f6bb8203bf0f1dc52b09f66a7a1a749c and admin was 0x4200000000000000000000000000000000000018; that ProxyAdmin owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. Effective upgrade delay and pause configuration remain unresolved."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 40053263,
+        "observedAt": "2026-10-01",
+        "observedBlock": 42013517,
         "sources": [
           {
             "label": "Fraxtal contract addresses",
@@ -1164,14 +1165,14 @@
           },
           {
             "label": "Permissioned OptiMintable source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
           },
           {
             "label": "Fraxtal RPC",
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "At Fraxtal block 40053263, BRIDGE() on native frxUSD returned 0x4200000000000000000000000000000000000010. The source separates this immutable bridge mint/burn path from owner-controlled minter_mint(); its messenger, limits, admin, and upgrade configuration remain unresolved."
+        "evidence": "At pinned Fraxtal block 42013517 on 2026-10-01, BRIDGE() on native frxUSD returned 0x4200000000000000000000000000000000000010. Correct EIP-1967 slots on that bridge returned implementation 0xf2c542d2f6bb8203bf0f1dc52b09f66a7a1a749c and admin 0x4200000000000000000000000000000000000018. ProxyAdmin owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. The historical reviewed source separates this bridge path from owner-controlled minter_mint(); messenger, limits, and effective upgrade delay remain unresolved."
       }
     ]
   }

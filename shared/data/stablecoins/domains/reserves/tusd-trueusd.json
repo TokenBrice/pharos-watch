@@ -19,12 +19,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA18U)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - August 7, 2026",
+        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report, September 30, 2026",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
       },
       {
@@ -32,13 +32,13 @@
         "url": "https://tusd.io/transparency"
       },
       {
-        "label": "Moore TUSD consolidated reserves report (issued and issuer-held supply; accessed 2026-09-29)",
+        "label": "Moore TUSD consolidated reserves report (issued and issuer-held supply; September 30, 2026 report, accessed October 1)",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
       }
     ],
-    "rationale": "Moore CPA ISAE 3000 (Revised) reasonable-assurance report as of 07 August 2026 04:30:30 PM HKT (PDF read this pass): reserves at cost are $501,850,000 in a single First Digital Trust Limited fund position (~99.98%) plus $78,900.88 cash; US Treasury bills $0. Total $501,928,900.88 against 494,515,082.75 TUSD issued (of which 412,585,497.92 held by Techteryx, public float ~81.9M). The auditor's own notes: procedures cover cost not fair value; the FDT fund invested 'all or substantially all' of the collateral in instruments 'which cannot be readily convertible to cash'; ongoing redemption litigation with FDT 'may suggest potential liquidity and credit risks'; DIFC worldwide freezing order (Oct 2025) up to US$456M. The single curated row carries the live chainlink-por adapter's slice identity (USD reserves, Moore Hong Kong attested, 100%); the report-verified split (99.98% single FDT fund position at cost / 0.02% cash) and the auditor's illiquidity, litigation, and freezing-order notes are recorded here and in the row's risk metadata rather than as separate rows so live classification is preserved.",
-    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of August 7, 2026",
-    "compositionAsOf": "2026-08-07",
+    "rationale": "The signed Moore CPA ISAE 3000 (Revised) reasonable-assurance report as of September 30, 2026 at 04:30:30 PM HKT reports $501,850,000 in First Digital Trust Limited, $78,900.88 US Dollars Cash and $0 US Treasury Bills. Total reserves at cost are $501,928,900.88 against 494,515,082.75 TUSD issued; footnote 2 records 412,585,497.92 issuer-held tokens outside public circulation. The assurance report excludes fund fair market value and internal-control effectiveness. Management Notes, expressly outside the assurance scope, state that all or substantially all Hong Kong collateral was invested in instruments which cannot be readily convertible to cash, describe FDT redemption litigation and an October 2025 DIFC freezing order up to $456 million, and claim separate alternative liquidity for public-token redemption. The single curated row preserves the live chainlink-por adapter identity and conservative opaque-fund classification; the newly dated report does not resolve fund look-through, fair value or cash-bank identities.",
+    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of September 30, 2026",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The live snapshot exposes only aggregate totalTrust. The reviewed Moore report identifies a concentrated First Digital Trust fund position at cost, with undisclosed underlying instruments and fair value, plus cash at unnamed Bahamian institutions. Supply definitions are separate: the report records 494,515,082.75 TUSD issued and 412,585,497.92 issuer-held/non-public TUSD, leaving 81,929,584.83 public float by subtraction. Pharos's market-data circulating USD value has not been reconciled to that public-float definition and must not be treated as issuer public float. This note does not change runtime supply, subtract issuer holdings automatically, or establish a stablecoin dependency.",
     "knownUnknownExposurePct": 100,
@@ -57,32 +57,38 @@
       {
         "name": "First Digital Trust Limited",
         "role": "custodian",
-        "sharePct": 99.98,
         "jurisdiction": "Hong Kong"
       },
       {
         "name": "Undisclosed Bahamian depository institutions",
         "role": "bank",
-        "sharePct": 0.02,
         "jurisdiction": "Bahamas"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "GROK-RESEARCH wave8 phase1",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC16)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 27, 2026",
+        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report, September 30, 2026",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
       },
       {
         "label": "TUSD transparency dashboard (Moore Hong Kong daily attestations)",
         "url": "https://tusd.io/transparency"
+      },
+      {
+        "label": "TrueUSD whitepaper, February 2, 2026: reserve investment and third-party risks",
+        "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf"
+      },
+      {
+        "label": "TrueUSD Terms of Use, January 11, 2024: escrow and investment terms",
+        "url": "https://app.tusd.io/terms-of-use"
       }
     ],
-    "uncertainty": "Moore Note 2 states USD collateral is held at a Hong Kong depository (First Digital Trust Limited) and Bahamian depository institutions for the benefit of TrueUSD token holders; FDT has invested all or substantially all of that collateral in other instruments at cost, with ongoing litigation over redemption. Bahamian institutions are not named. The report does not establish statutory bankruptcy remoteness. Issuer transparency corroborates Moore as the daily attestor but does not restate custodian share percentages."
+    "uncertainty": "The July 28, 2026 review labeled rehypothecation permitted and provider shares 99.98%/0.02%. The October 1 D10 review separates fund investment from legal permission to reuse pledged collateral: the February 2026 whitepaper and January 2024 terms permit investment and yield collection but do not establish custodian rehypothecation permissions. The October 1 Moore report retains the First Digital Trust fund position at cost, redemption litigation and illiquidity; none of those adverse facts is withdrawn. Its management Notes are outside the assurance scope, and the engagement excludes fund fair value. Trust accounts are described, but independently assured statutory bankruptcy remoteness and explicit rehypothecation terms remain unverified. Provider shares are omitted because asset-cost categories do not establish exact custodial allocations."
   }
 }

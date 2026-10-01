@@ -59,7 +59,9 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25526129 (2026-07-13), owner() on A7A5 Ethereum (0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9) returns 0x7d2d47e441915ff9c2d5a6e4a7aadd5e02722e29. That contract has getOwners() returning the same 5 EOA addresses (0x6dab4c10..., 0xae8dd5dd..., 0x8b04bdc0..., 0x99d3df8c..., 0x3353d63a...) and getThreshold()=3. The token's EIP-1967 implementation and beacon slots are zero; its exact-block runtime hash is 0x762de09de4267df1038313af242dd978f2835d193d90a51de836e808eae57dc9. No modules or guard were detected on the owner multisig."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "evidence": "At Ethereum block 26095800 (2026-10-01), owner() on A7A5 Ethereum (0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9) returned 0x7d2d47e441915ff9c2d5a6e4a7aadd5e02722e29. getOwners() returned the same five signers (0x6dab4c10135618a41d4a88d46bb045d58b518e58, 0xae8dd5dd7dce988c100e04d2e7d0806f770f4638, 0x8b04bdc073adc337d64dccf5009de52153ffb5e0, 0x99d3df8c2ad2aeef67148453d1544f9dfa6a72c1, 0x3353d63ae04411fe2f9bb803c7b84b59f091d593) and getThreshold() returned 3. The token's EIP-1967 implementation and admin slots were zero. The earlier 2026-07-13 review found no modules or guard; that extension-surface finding is historical and is not newly established by these owner and threshold reads."
       },
       {
         "chain": "tron",
@@ -103,7 +105,7 @@
           "url": "https://docs.a7a5.io/legal/transparency.md"
         },
         {
-          "label": "A7A5 issuer reserve document",
+          "label": "Historical A7A5 reserve-document endpoint (2026-10-01: application HTML shell, not a retrievable report)",
           "url": "https://www.a7a5.io/audit.pdf"
         },
         {

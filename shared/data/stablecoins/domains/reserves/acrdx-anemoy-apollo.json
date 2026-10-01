@@ -49,7 +49,7 @@
     "compositionBasis": "Chronicle Proof of Asset NAV for ACRDX as captured by the production chronicle-nav single-asset adapter, supported by Chronicle's 2026-09-04 feeder-fund record",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve asset is fully identified as the ACRDX feeder's 100% interest in Apollo Diversified Credit Fund NAV. Chronicle reports the feeder-level gross holdings as 98.2021% Apollo Diversified Credit-I Fund shares, 1.7946% cash, and 0.0033% unidentified cryptocurrency. Cash counterparties, the cryptocurrency token, and the underlying Apollo fund's obligor schedule are not published, so they remain classification limitations rather than unidentified direct reserve exposure.",
+    "knownUnknownExposure": "The direct adapter exposure remains the Apollo fund-share NAV. On 2026-10-01 the Chronicle dashboard displayed Apollo Difersified Credit-I Fund $30,994,515, cash $63,722.77 and cryptocurrency $1,036.9, without an explicit underlying holdings period or cryptocurrency token identity in the holdings table. The September 4 mix remains historical; cash counterparties and underlying obligor detail remain unverified. No current look-through weights are inferred from the dashboard.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -76,8 +76,8 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "Apollo Diversified Credit Fund N-CSR",
-        "url": "https://www.sec.gov/Archives/edgar/data/1676197/000139834426004660/fp0097839-1_ncsr.htm"
+        "label": "Apollo Diversified Credit Fund N-CSRS, reporting period ended June 30, 2026",
+        "url": "https://www.sec.gov/Archives/edgar/data/1676197/000139834426016399/fp0100670-1_ncsrs.htm"
       },
       {
         "label": "Anemoy ACRDX launch disclosure",

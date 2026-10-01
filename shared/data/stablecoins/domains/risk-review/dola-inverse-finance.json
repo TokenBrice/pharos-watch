@@ -26,7 +26,7 @@
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",
-    "summary": "Inverse FiRM values isolated collateral markets through Pessimistic Price Oracles that choose the conservative value across a primary and fallback path before applying market-specific collateral and liquidation parameters.",
+    "summary": "Inverse FiRM's Pessimistic Price Oracles use the lower of the current Chainlink collateral price and a 48-hour trailing low before market-specific collateral and liquidation parameters. A historical low is not evidence of an independent fallback provider.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -64,6 +64,10 @@
       {
         "label": "Inverse jrDOLA first-loss documentation",
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+      },
+      {
+        "label": "Inverse FiRM security: current Chainlink price and 48-hour trailing low",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm/firm-security-and-safety"
       }
     ],
     "branches": [
@@ -71,7 +75,7 @@
         "id": "firm-isolated-markets",
         "label": "FiRM isolated collateral markets",
         "tier": "redundant-with-failover",
-        "summary": "Governance-approved FiRM markets share conservative dual-path price selection, isolated collateral escrows, and third-party liquidation against market-specific risk parameters.",
+        "summary": "Governance-approved FiRM markets share conservative current-versus-trailing-low price selection, isolated collateral escrows, and third-party liquidation against market-specific risk parameters.",
         "collateralAssets": [
           "Governance-approved FiRM collateral markets"
         ],
@@ -81,17 +85,16 @@
         "feeds": [
           {
             "provider": "Inverse Pessimistic Price Oracle",
-            "path": "Primary price source and fallback/TWAP path -> conservative lower collateral price -> FiRM market",
+            "path": "Current Chainlink collateral price and 48-hour trailing low -> lower collateral value -> FiRM market",
             "chain": "ethereum",
             "failureDomainKeys": [
               "inverse-oracle-configuration",
               "chainlink",
-              "inverse-fallback-price-source",
               "ethereum"
             ]
           }
         ],
-        "fallbackBehavior": "FiRM's Pessimistic Price Oracle compares independent price paths and uses the lower collateral value; current documentation describes Chainlink plus a fallback or time-weighted path, with governance able to update oracle configuration.",
+        "fallbackBehavior": "Issuer security documentation describes the lower of the current Chainlink price and a 48-hour trailing low. This establishes conservative temporal price selection, not an independently sourced oracle failover; per-market configurations remain subject to separate verification.",
         "observedAt": "2026-07-14",
         "collateralParameters": [
           {
@@ -126,6 +129,10 @@
           {
             "label": "Inverse jrDOLA first-loss documentation",
             "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+          },
+          {
+            "label": "Inverse FiRM security: current Chainlink price and 48-hour trailing low",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm/firm-security-and-safety"
           }
         ]
       }
@@ -133,18 +140,17 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "DOLA cross-chain deployments are reviewed through Inverse Finance documentation that identifies Chainlink CCIP bridges and chain-specific Fed contracts. CCIP is an external validation and messaging route, so the bridge-route tier is external validated network rather than issuer-native settlement.",
+    "summary": "The tracked DOLA deployments include Ethereum native issuance, Arbitrum, Base and Optimism canonical bridge representations, Polygon FxPortal, and third-party BSC, Avalanche and legacy Multichain Fantom representations. Inverse's former CCIP lanes carried sDOLA and sINV, not these DOLA contracts, and are now shut down.",
     "reviewedAt": "2026-07-28",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
-        "name": "Chainlink CCIP",
-        "url": "https://docs.chain.link/resources/bridge-risks",
+        "name": "Arbitrum canonical bridge",
+        "url": "https://docs.arbitrum.io/arbitrum-essentials/bridging/overview",
         "bridgeTypes": [
-          "external-messaging",
-          "validated-network"
+          "canonical"
         ]
       }
     ],
@@ -154,8 +160,8 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts"
       },
       {
-        "label": "Chainlink bridge-risk docs",
-        "url": "https://docs.chain.link/resources/bridge-risks"
+        "label": "Inverse DOLA cross-chain guide and historical CCIP shutdown",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide"
       }
     ],
     "routes": [
@@ -337,7 +343,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on BSC 2026-07-20 (block 111009503): DOLA 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 (name 'Dola USD Stablecoin', 18 decimals) owner() = 0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7, a Safe multisig with getThreshold/getOwners = 3-of-6. The owner is the mint authority for this deployment; the signer set is not publicly attributed to a named entity in Inverse Finance documentation.",
+        "reviewNote": "Historical block 111009503 identified owner Safe 0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7 as 3-of-6. Re-verification on 2026-10-01 at BSC block 125056745 confirms that Safe's threshold and six owners, but getAllMinters() identifies 0x58892974758a4013377a45fad698d2ff1f08d98e as the token's actual minter with delayMinter() = 0. The owner/admin identity must not be substituted for that minter; signer attribution remains unverified.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -406,7 +412,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Avalanche 2026-07-20 (block 90761741): DOLA 0x221743dc9e954be4f86844649bf19b43d6f8366d (name 'Dola USD Stablecoin', 18 decimals) owner() = 0x1a927b237a57421c414eb511a33c4b82c2718677, a Safe multisig with getThreshold/getOwners = 3-of-4. The owner is the mint authority for this deployment; the signer set is not publicly attributed to a named entity in Inverse Finance documentation.",
+        "reviewNote": "At Avalanche block 96511276 on 2026-10-01, DOLA owner() returned Safe 0x1a927b237a57421c414eb511a33c4b82c2718677, whose threshold and owners remain 3-of-4. getAllMinters() returned 0xd86eee98e7d6726a1701f004f747e5ce3e48e87c and delayMinter() returned 0. The owner/admin identity must not be substituted for the actual token minter; signer attribution remains unverified.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "avalanche",
         "controllerAddress": "0x1a927b237a57421c414eb511a33c4b82c2718677",

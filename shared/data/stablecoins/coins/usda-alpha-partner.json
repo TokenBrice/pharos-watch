@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Undisclosed and unverified. AP Web3 / Alpha Partners markets USDA as 1:1 USD-backed by reserves with 'FDIC protection', but publishes no reserve composition, proof of reserves, or attestation; the FDIC claim is unsubstantiated (FDIC does not insure stablecoins). Backing is opaque.",
+  "collateral": "Undisclosed and unverified. Historical local metadata attributed 1:1 USD backing and 'FDIC protection' marketing to AP Web3 / Alpha Partners; this session's AP U-Card site and complete GitBook recheck did not reproduce a USDA-specific claim or reserve report. The historical FDIC claim remains unsubstantiated (FDIC does not insure stablecoins). Backing is opaque.",
   "pegMechanism": "Undocumented. The issuer publishes no mint/redeem or peg-maintenance mechanism. On-chain USDA is a BSC ERC-20 with a role-gated mint, an address blacklist, and modifiable transfer tax/fees; no peg-stabilization process is described.",
   "detailProvider": "defillama",
   "geckoId": "usda-3",

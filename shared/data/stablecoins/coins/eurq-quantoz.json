@@ -40,6 +40,7 @@
     "attestorJurisdiction": "Netherlands",
     "attestorLicense": "EMI (MiCA)",
     "latestReport": {
+      "publishedAt": "2026-08-30",
       "reviewReference": {
         "date": "2026-06-30",
         "reviewedAt": "2026-08-14",
@@ -52,7 +53,7 @@
       "confidence": "unknown",
       "sources": [
         {
-          "label": "Quantoz transparency (as of 2026-08-14 review; date kind unspecified)",
+          "label": "Quantoz transparency: snapshot published 30 August 2026",
           "url": "https://www.quantoz.com/transparency"
         }
       ]

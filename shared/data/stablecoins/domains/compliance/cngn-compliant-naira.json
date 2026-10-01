@@ -23,7 +23,7 @@
     "issuerPathway": "unknown",
     "issuerEntity": "WrappedCBDC Limited",
     "issuerDomicile": "Nigeria",
-    "licensingRegulator": "Securities and Exchange Commission Nigeria; VASP Regulatory Incubation Program",
+    "licensingRegulator": "Securities and Exchange Commission Nigeria; Accelerated Regulatory Incubation Programme admission announced July 2, 2026. The SEC states admitted entities would receive conditional Approval-in-Principle, not a final licence.",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -64,6 +64,13 @@
         "url": "https://cngn.co/transparency",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "SEC Nigeria: Wrapped CBDC admitted to ARIP",
+        "url": "https://home.sec.gov.ng/for-investors/keep-track-of-circulars/sec-clears-seven-new-fintech-firms-for-admission-into-the-accelerated-regulatory-incubation-programme-arip/",
+        "sourceKind": "regulator-directory",
+        "sourceDate": "2026-07-02",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {

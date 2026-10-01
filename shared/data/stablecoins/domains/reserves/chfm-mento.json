@@ -55,5 +55,30 @@
     "scope": "full-composition",
     "knownUnknownExposure": "CHFm's sole direct collateral category is USDm; USDm's own reserve composition is reviewed separately on cusd-celo.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Mento CHFm CDP contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM05USDX)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento CHFm backing configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts#L88-L101"
+      },
+      {
+        "label": "Mento CDP documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      }
+    ],
+    "uncertainty": "CHFm collateral is USDm locked in the Mento CDP system. The reviewed protocol documentation does not establish legal segregation, bankruptcy remoteness, or rehypothecation protections; USDm's upstream reserve custody is assessed separately."
   }
 }

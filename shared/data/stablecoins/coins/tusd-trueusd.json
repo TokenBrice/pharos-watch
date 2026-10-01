@@ -8,7 +8,7 @@
     "governance": "centralized"
   },
   "collateral": "Daily Moore Hong Kong / Chainlink-attested TUSD reserves, currently modeled by Pharos as concentrated in opaque First Digital Trust fund investments with a small cash-at-depository-institutions balance.",
-  "pegMechanism": "Direct 1:1 redemption through Techteryx; minting controlled by Chainlink Proof of Reserve feed preventing supply from exceeding attested reserves",
+  "pegMechanism": "Issuer-managed 1:1 USD redemption for eligible verified customers. Ethereum minting checks a configured Chainlink reserve feed while Proof of Reserve is enabled; the token owner can disable the check or change the feed, so it is not an immutable collateral constraint.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "7",
   "detailProvider": "defillama",
@@ -16,22 +16,22 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://tusd.io/transparency",
-    "provider": "Moore CPA Limited (Moore Global network member; daily individually signed ISAE 3000 reasonable-assurance reports at widget.verinumus.io, current through 2026-08-07 - latestReport refresh queued for a coherent update with the reserve-composition review; the report itself discloses ~99.98% of reserves as a single at-cost First Digital Trust fund position under redemption litigation)",
+    "provider": "Moore CPA Limited; daily signed ISAE 3000 (Revised) reasonable-assurance reports at widget.verinumus.io, with the September 30, 2026 report reviewed. The engagement covers issued tokens and collateral at cost, not fund fair value or internal controls; management notes describe First Digital Trust redemption litigation and illiquidity.",
     "attestorTier": "regional",
     "cadence": "daily",
     "attestorJurisdiction": "Hong Kong",
     "attestorLicense": "HK CPA",
     "latestReport": {
-      "periodEnd": "2026-08-07",
-      "publishedAt": "2026-08-07",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-09-30",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (daily Moore report read directly; composition review advanced in lockstep)",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA18U); September 30 signed Moore report and reserve review refreshed together",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - August 7, 2026",
+          "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report, September 30, 2026",
           "url": "https://widget.verinumus.io/api/v1/tusd/report"
         }
       ]

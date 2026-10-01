@@ -16,7 +16,7 @@
         "0xbd12e50bfaa25735d074dbfdcf73208b9ccd2e43"
       ],
       "implementationAddresses": [
-        "0xa76645E15c267b876999bf7689E0b2C1EE29BFE6",
+        "0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97",
         "0x2df83a34269bf665a3de9ccd7234867401526ae8"
       ],
       "adminAddresses": [
@@ -26,8 +26,8 @@
       "canChangeMintLogic": true,
       "delaySec": 86400,
       "controlRef": "Cap Ethereum governance Safe through one-day timelock",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530492,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095806,
       "sources": [
         {
           "label": "Ethereum cUSD proxy and verified implementation",
@@ -50,7 +50,7 @@
         "deploymentRefs": [
           "ethereum:0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
         ],
-        "capDescription": "User minting requires a supported reserve asset and is bounded by that asset's deposit cap; the one-day Timelock can change supported assets and raise deposit caps.",
+        "capDescription": "User minting requires a supported reserve asset. At Ethereum block 26095806, the USDC deposit cap was uint256 max and the WTGXX cap was 6000000 tokens; the one-day timelock can change assets, raise caps and replace mint logic.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",

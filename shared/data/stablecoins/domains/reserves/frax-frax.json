@@ -253,10 +253,10 @@
       "name": "reUSD",
       "pct": 0.2,
       "risk": "medium",
-      "coinId": "reusd-re-protocol",
+      "coinId": "reusd-resupply",
       "depType": "collateral",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Re Protocol and hedge counterparties",
+      "issuerOrObligor": "Resupply Protocol",
       "riskFactors": [
         "market",
         "basis",
@@ -505,5 +505,34 @@
         "rationale": "Erebor Bank deposit account holding frxUSD reserve cash; a banking relationship, not a holding of the frxUSD token itself."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Frax Protocol on-chain treasury and AMO contracts",
+        "role": "other"
+      },
+      {
+        "name": "BitGo Trust (Frax Inc's WTGXX trust account)",
+        "role": "custodian"
+      },
+      {
+        "name": "Erebor Bank (FBO frxUSD Stablecoin Reserve Account)",
+        "role": "bank"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA50FRAX)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax balance-sheet API, observation 2026-10-01T06:43:47Z",
+        "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+      }
+    ],
+    "uncertainty": "The issuer's balance sheet identifies on-chain treasury and AMO positions, WTGXX in Frax Inc's BitGo Trust account, and a segregated Erebor Bank account explicitly backing frxUSD. The bank account is indirect frxUSD reserve infrastructure, not evidence of a direct bank claim for legacy FRAX holders. Provider shares, portfolio-wide segregation, bankruptcy remoteness, and rehypothecation restrictions are not established. Tokenized-fund issuers have additional underlying custodians not exhaustively represented here; the institutional-regulated summary does not describe every on-chain position."
   }
 }

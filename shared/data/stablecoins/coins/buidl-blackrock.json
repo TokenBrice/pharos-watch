@@ -36,7 +36,7 @@
     "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl",
     "provider": "Chronicle Proof of Asset",
     "attestorTier": "niche",
-    "cadence": "real-time",
+    "cadence": "daily",
     "attestorJurisdiction": "United States"
   },
   "links": [
@@ -105,7 +105,6 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "yieldConfig": {
     "yieldSource": "BlackRock T-bill fund",

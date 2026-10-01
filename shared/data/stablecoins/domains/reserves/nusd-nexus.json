@@ -77,8 +77,8 @@
     "rationale": "At Ethereum block 25,796,911 (2026-08-20T14:24:59Z), the official Synapse NexusPool getToken/getTokenBalance reads returned 503,142.624149574142632353 DAI, 486,329.990751 USDC, and 1,294,754.683135 USDT; getToken(3) reverted Out of range, confirming the pool has exactly these three assets. Normalizing those same-notional balances produces 22.026820/21.290788/56.682392%.",
     "compositionBasis": "Fixed-block getToken and getTokenBalance reads from the official Ethereum Synapse NexusPool",
     "compositionAsOf": "2026-08-20",
-    "scope": "full-composition",
-    "knownUnknownExposure": "All three nexus-pool assets are identified by the official deployment and reconciled from fixed-block balances.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The three Ethereum pool token identities are known, but their nominal balance normalization is a historical pool-only observation, not a priced whole-token NAV or reconciliation of all NUSD claims. D24 therefore withholds full-composition admission; no current weights or composition date are inferred from the selected balances.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

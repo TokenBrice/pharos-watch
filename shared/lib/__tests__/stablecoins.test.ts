@@ -934,7 +934,7 @@ describe("tracked stablecoin metadata", () => {
         coinId: "pyusd-paypal",
         depType: "collateral",
         assetClass: "stablecoin",
-        issuerOrObligor: "Paxos Trust Company, LLC / PayPal, Inc.",
+        issuerOrObligor: "Paxos Trust Company, N.A. (PYUSD issuer; PayPal brand)",
         riskFactors: ["counterparty", "custody", "smart-contract", "liquidity"],
         liquidityHorizon: "immediate",
       },

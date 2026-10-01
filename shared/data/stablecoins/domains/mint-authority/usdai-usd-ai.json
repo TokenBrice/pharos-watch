@@ -14,7 +14,7 @@
         "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
       ],
       "implementationAddresses": [
-        "0x0ab74df531c0d8f1c46643e404b3d14723bbc212"
+        "0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
       ],
       "adminAddresses": [
         "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c"
@@ -22,16 +22,16 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "USDai Arbitrum ProxyAdmin timelock",
-      "observedAt": "2026-08-16",
-      "observedBlock": 495109986,
+      "observedAt": "2026-10-01",
+      "observedBlock": 510584307,
       "sources": [
         {
           "label": "Arbitrum USDai proxy",
           "url": "https://arbitrum.blockscout.com/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?tab=contract"
         },
         {
-          "label": "Arbitrum verified USDai v1.5 implementation",
-          "url": "https://arbitrum.blockscout.com/address/0x0ab74df531c0d8f1c46643e404b3d14723bbc212?tab=contract"
+          "label": "Arbitrum verified USDai v1.7 implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
         },
         {
           "label": "USD.AI USDai source",
@@ -60,12 +60,12 @@
         "failureDomainKeys": [
           "contract:arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 495109986,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584307,
         "sources": [
           {
-            "label": "Arbitrum verified USDai v1.5 implementation",
-            "url": "https://arbitrum.blockscout.com/address/0x0ab74df531c0d8f1c46643e404b3d14723bbc212?tab=contract"
+            "label": "Arbitrum verified USDai v1.7 implementation",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
           },
           {
             "label": "USD.AI USDai source",
@@ -76,7 +76,7 @@
             "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade"
           }
         ],
-        "evidence": "At Arbitrum block 495109986, the proxy implementation was source-verified USDai v1.5 at 0x0ab74df531c0d8f1c46643e404b3d14723bbc212, baseToken() returned PYUSD 0x46850aD61C2B7d64d08c9C754F45254596696984, and paused() was false. Verified source transfers deposit assets into the hub before minting the scaled PYUSD amount; harvest() mints only accrued base yield and pulls the same PYUSD amount from the immutable BaseYieldEscrow. The current implementation has no role-authorized native mint function: DEFAULT_ADMIN_ROLE administers blacklist and pause roles, while the adapter-only burn/mint path belongs to the separate bridge review."
+        "evidence": "At Arbitrum block 510584307 (2026-10-01), the proxy resolved to verified USDai v1.7 implementation 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9; baseToken() returned PYUSD 0x46850ad61c2b7d64d08c9c754f45254596696984 and paused() returned false. In this implementation, _deposit mints the scaled PYUSD amount and transfers matching PYUSD into the hub in the same reverting transaction; harvest mints accrued yield and pulls matching PYUSD from the constructor-fixed escrow 0x9ddfd49ac4689cf894203794d792dcb38e4b1a9e. Native issuance remains collateral-bound. The bridge mint/burn path is restricted to the constructor-fixed OAdapter and is reviewed separately."
       },
       {
         "chain": "arbitrum",
@@ -94,8 +94,8 @@
         "failureDomainKeys": [
           "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 495109986,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584307,
         "sources": [
           {
             "label": "Arbitrum USDai proxy",
@@ -110,7 +110,7 @@
             "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
           }
         ],
-        "evidence": "At Arbitrum block 495109986, the USDai EIP-1967 admin slot resolved to ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c, ProxyAdmin.owner() returned DVNTimelock 0x0eea1ee08611ff4a4e83bfe3916712751995639b, and getMinDelay() returned 172800 seconds. A completed timelocked upgrade can replace the collateral-bound mint logic, so the economic cap is raiseable rather than immutable."
+        "evidence": "At Arbitrum block 510584307 (2026-10-01), the correct EIP-1967 admin slot resolved to ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c. ProxyAdmin.owner() returned DVNTimelock 0x0eea1ee08611ff4a4e83bfe3916712751995639b and getMinDelay() returned 172800 seconds. The governed path can replace collateral-bound mint logic, so raiseable economic-cap semantics remain unchanged."
       },
       {
         "chain": "arbitrum",
@@ -137,14 +137,14 @@
           "enabledModules": [
             "0x0f01365579158FBe041FAe1c7b7005E622d396c4"
           ],
-          "observedBlock": 495109986,
+          "observedBlock": 510584307,
           "source": "onchain"
         },
         "failureDomainKeys": [
           "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 495109986,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584307,
         "sources": [
           {
             "label": "Arbitrum proposer Safe",
@@ -155,7 +155,7 @@
             "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=logs"
           }
         ],
-        "evidence": "At Arbitrum block 495109986, this Safe remained the DVNTimelock's sole proposer and canceller and also held executor authority. Safe reads returned the same three owners, threshold 3, and one enabled Zodiac Delay module at 0x0f01365579158FBe041FAe1c7b7005E622d396c4. The Safe can schedule a mint-logic upgrade, but execution remains subject to the downstream 172800-second DVNTimelock delay."
+        "evidence": "At Arbitrum block 510584307 (2026-10-01), this Safe held PROPOSER_ROLE, CANCELLER_ROLE, and EXECUTOR_ROLE on the DVNTimelock. Pinned getOwners() and getThreshold() confirmed the same three owners and threshold 3; getModulesPaginated(address(1),32) confirmed the same single enabled module 0x0f01365579158fbe041fae1c7b7005e622d396c4. The complete 34-row Blockscout timelock event history corroborated that this Safe remains the sole proposer and canceller; another Safe also holds executor authority. Scheduling remains subject to the downstream 172800-second delay."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -185,8 +185,8 @@
         }
       ],
       "evidence": "Canonical-chain review at Arbitrum block 495109986 (2026-08-16T10:25:57Z): USDai proxy 0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef resolved to source-verified v1.5 implementation 0x0ab74df531c0d8f1c46643e404b3d14723bbc212 and ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c. Native deposit issuance is bounded by PYUSD received by the hub, and base-yield issuance pulls matching PYUSD from escrow. The hub held 174219797.575409 PYUSD against 173248199.986009703234096152 canonical USDai plus 971597.576938 recorded bridged USDai liabilities, a combined 174219797.562947703234096152. This continuously reconciles the complete hub liability at the observation block. The ProxyAdmin owner remained the 172800-second DVNTimelock; its sole proposer and canceller remained the reviewed 3-of-3 Safe. Current collateral constraints can therefore be replaced only after the governed delay, supporting raiseable economic-cap semantics and a partially bounded admin posture. Satellite OToken role administration and LayerZero message-mint exposure are intentionally excluded from Mint Authority and retained in bridgeRouteRisk, preventing the same bridge control from being assessed in both modules. No named prudential regulator supervises USD.AI.",
-      "reviewer": "Codex USDai canonical mint-authority correction",
-      "reviewedAt": "2026-08-16",
+      "reviewer": "Codex USDai canonical mint-authority correction; Sol curation pass 2026-10-01 (CurA27A7A5)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

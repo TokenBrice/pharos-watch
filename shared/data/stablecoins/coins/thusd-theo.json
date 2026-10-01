@@ -79,7 +79,6 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "theo-thusd-redemption",
@@ -97,5 +96,5 @@
       }
     }
   },
-  "launchDate": "2026-04-27"
+  "launchDate": "2026-04-17"
 }

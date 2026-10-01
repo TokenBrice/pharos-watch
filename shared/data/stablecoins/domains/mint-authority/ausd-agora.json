@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "AUSD native issuance is governed by Agora's EVM MINTER_ROLE family and the Solana Token-2022 mint authority; the EVM LayerZero BRIDGE_MINTER_ROLE/adapter is bridge-only and is reviewed under bridgeRouteRisk. Agora EOAs separately hold EVM role-administration, rate-limit management, and custom transparent-proxy upgrade authority; no multisig was found on these reviewed native paths.",
+    "summary": "AUSD native issuance is governed by Agora's EVM MINTER_ROLE family and the Solana Token-2022 mint authority; the EVM LayerZero BRIDGE_MINTER_ROLE/adapter is bridge-only and is reviewed under bridgeRouteRisk. Agora EOAs separately hold EVM role-administration, rate-limit management, and custom transparent-proxy upgrade authority; no multisig was found on these reviewed native paths. Checkpoint 328966924 Sui GraphQL additionally locates the native AUSD TreasuryCap within shared ManagedTreasury 0x640da8eca8a239a9e26ea9a5c84e4ca526fd6c89a74218aef8672faff3a7baa5. Its typed role table records AdminRole 0x7261eebea7234185a08d14ca9a4c48075c2296196a030acd73e6a41f9401524a with time_locked=false and MinterRole 0x8954386b62c0ae248b1765f3f011a51f3b79431e044c1286e49437d2b29267a0 with the raw configuration values mint_limit=20000000000000 and duration_ms=434000000. That minter address also has PauserRole and FreezerRole. These state records do not establish private-key scheme/custody or deployed-package upgrade authority; do not infer a multisig or immutable cap.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -67,16 +67,16 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The rolling mint-rate-limit getter reported zero currently available AUSD at the fresh observation block; the minter cannot change its own rate limit, while the separate rate-limit manager can restore or raise capacity.",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712131,
+        "capDescription": "At Ethereum block 26095806, getAmountCanBeMinted(address) returned currentAmountInFlight=0 and amountCanBeMinted=15000000000000 atomic units for this minter. getMintRateLimit(address) returned limit=15000000000000 and window=28800 seconds. The separate RATE_LIMIT_MANAGER_ROLE can change these parameters; this is a rolling operational limit, not an immutable economic supply cap.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Etherscan: AUSD proxy",
             "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           }
         ],
-        "evidence": "At Ethereum block 25712131, getMinterRoleMembers() returned only this code-empty EOA and getAmountCanBeMinted() returned zero currently available capacity. Verified implementation source applies MintRateLimit logic to MINTER_ROLE and BRIDGE_MINTER_ROLE calls; the minter cannot raise its own limit."
+        "evidence": "Pinned Ethereum block 26095806 enumerates this sole MINTER_ROLE member and eth_getCode returns 0x for it. Verified implementation ABI names getAmountCanBeMinted(address)'s first return currentAmountInFlight and second return amountCanBeMinted; the two words are 0 and 15000000000000, respectively. The getter must not be decoded as a single zero-capacity return. RATE_LIMIT_MANAGER_ROLE, not the minter, controls rate-limit settings. The August review below is retained as a historical observation and does not describe current capacity."
       },
       {
         "chain": "ethereum",

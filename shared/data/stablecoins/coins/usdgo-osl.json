@@ -2,14 +2,14 @@
   "id": "usdgo-osl",
   "name": "USDGO",
   "symbol": "USDGO",
-  "oneLiner": "USDGO is OSL's yield-bearing Solana dollar issued with Anchorage Digital Bank, passing EFFR-linked reserve yield to holders.",
+  "oneLiner": "USDGO is OSL's enterprise dollar stablecoin issued by Anchorage Digital Bank, backed by cash and money market funds.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
     "yieldBearing": true
   },
-  "collateral": "U.S. Treasuries, cash, and high-quality liquid assets held by Anchorage Digital Bank, with reserve yield linked to the Effective Federal Funds Rate.",
-  "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
+  "collateral": "Cash, BUIDL fund shares, Goldman Sachs STBXX, and JPMorgan JLTXX held in segregated fiduciary trust accounts supporting USDGO.",
+  "pegMechanism": "1:1 USD redemption by onboarded Anchorage Digital Bank clients, net of fees and subject to the bank's redemption terms",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
@@ -19,7 +19,6 @@
     "attestorJurisdiction": "United States",
     "latestReport": {
       "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -57,6 +56,16 @@
     {
       "chain": "solana",
       "address": "72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu",
+      "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
+      "decimals": 6
+    },
+    {
+      "chain": "morph-l2",
+      "address": "0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
       "decimals": 6
     }
   ],

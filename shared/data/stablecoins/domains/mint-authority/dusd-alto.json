@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "DUSD token (0x63d74d22e689c715a04f2c13962b1f77f443d35b) is a direct, non-proxy deployment owned by AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, 1-hour min delay, self-administered). The timelock's proposer/executor is a 3-of-5 Alto Safe (0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0). At Ethereum block 25540452, 11 current contract minters were active in allowedMinter; each is restricted by its on-chain minterConfig ceiling. The token owner can change minter status and ceilings through the timelock, while a minter cannot change its own token-level ceiling.",
+    "summary": "DUSD token (0x63d74d22e689c715a04f2c13962b1f77f443d35b) is a direct, non-proxy deployment owned by AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, 1-hour min delay). At Ethereum block 26096016 on 2026-10-01, the timelock's proposer/executor and DEFAULT_ADMIN_ROLE holder is a 4-of-7 Alto Safe (0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0). The full SetMinterStatus event census resolves 20 addresses, of which 18 are currently active; each is restricted by its on-chain minterConfig ceiling. The token owner can change minter status and ceilings through the timelock, while a minter cannot change its own token-level ceiling. Minter implementation and collateral-gate coverage require separate review for the newly admitted contracts.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -307,28 +307,30 @@
         "directMintAbility": "parameter-only",
         "chain": "ethereum",
         "address": "0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0",
-        "threshold": 3,
-        "signerCount": 5,
+        "threshold": 4,
+        "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
         "safe": {
           "owners": [
+            "0x0e3cb3cdd50e064b719cf3b4709d8ef1fa03e0fa",
+            "0xb655e6d5a0ad0757796510636d1a38d74c9f4c2b",
             "0x91faf08dfca10d2cc69a134e389b6bf28afd5913",
             "0x461c608d638fe23809d89bd9de59678ee24a1b52",
             "0xb56243c4444d718b45688009da8326e6fc532ca0",
             "0x4bdadba493226a63cf8039885a74b17612196e10",
             "0xdd4226988ba92d8600b50727769382646d7249b1"
           ],
-          "threshold": 3,
+          "threshold": 4,
           "enabledModules": [],
-          "version": "1.x",
-          "observedAt": "2026-07-15",
-          "observedBlock": 25540452,
+          "version": "1.4.1",
+          "observedAt": "2026-10-01",
+          "observedBlock": 26096016,
           "source": "onchain"
         },
-        "observedAt": "2026-07-15",
-        "observedBlock": 25540452,
-        "evidence": "At Ethereum block 25540452, getOwners() returned the five listed owners, getThreshold() returned 3, and getModulesPaginated() returned no enabled modules. hasRole(PROPOSER_ROLE, Safe) and hasRole(EXECUTOR_ROLE, Safe) both returned true on the DUSD owner timelock. It can therefore schedule and execute the owner's setMinterStatus and setMinterCeiling calls after the current 1-hour timelock delay.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096016,
+        "evidence": "At Ethereum block 26096016 on 2026-10-01, getOwners() returned the seven listed owners, getThreshold() returned 4, VERSION() returned 1.4.1, and getModulesPaginated(sentinel,100) returned no enabled modules. hasRole(PROPOSER_ROLE), hasRole(EXECUTOR_ROLE), and hasRole(DEFAULT_ADMIN_ROLE) for this Safe all returned true on the token-owner timelock, whose getMinDelay() remained 3600 seconds. This supersedes the prior 3-of-5 owner configuration; signer key independence is not inferred.",
         "sources": [
           {
             "label": "Alto Safe on Etherscan",
@@ -339,13 +341,174 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
+      },
+      {
+        "label": "Alto DUSD active minter 0x6b3458c87cd38aefa6a5d059eb19f609420dd852",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x6b3458c87cd38aefa6a5d059eb19f609420dd852",
+        "capDescription": "At Ethereum block 26096016: minted counter 999000000000000000000000 raw DUSD units; ceiling 1166666666666666666666666 raw DUSD units (18 decimals). This is a token-level limit, not a verified collateral ratio.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096016,
+        "evidence": "Full SetMinterStatus event history has22 events and no next page. Pinned allowedMinter(address)=true; minterConfig(address) returns this minted counter and ceiling. eth_getCode is nonempty. Verified DUSD onlyOwner restricts setMinterCeiling, but underlying admitted-module implementation and collateral gate are not promoted here.",
+        "sources": [
+          {
+            "label": "DUSD verified cap gate",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63d74d22e689c715a04f2c13962b1f77f443d35b"
+          },
+          {
+            "label": "Complete SetMinterStatus census",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x63d74d22e689c715a04f2c13962b1f77f443d35b/logs?topic=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+          }
+        ]
+      },
+      {
+        "label": "Alto DUSD active minter 0x37ab044cce4ee2cc659b887e0868babe097be9b1",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x37ab044cce4ee2cc659b887e0868babe097be9b1",
+        "capDescription": "At Ethereum block 26096016: minted counter 30199182974390580748277 raw DUSD units; ceiling 90740740740740740740740 raw DUSD units (18 decimals). This is a token-level limit, not a verified collateral ratio.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096016,
+        "evidence": "Full SetMinterStatus event history has22 events and no next page. Pinned allowedMinter(address)=true; minterConfig(address) returns this minted counter and ceiling. eth_getCode is nonempty. Verified DUSD onlyOwner restricts setMinterCeiling, but underlying admitted-module implementation and collateral gate are not promoted here.",
+        "sources": [
+          {
+            "label": "DUSD verified cap gate",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63d74d22e689c715a04f2c13962b1f77f443d35b"
+          },
+          {
+            "label": "Complete SetMinterStatus census",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x63d74d22e689c715a04f2c13962b1f77f443d35b/logs?topic=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+          }
+        ]
+      },
+      {
+        "label": "Alto DUSD active minter 0xd5eff65dec6bdf835b4041e862d6d54ea2cab45a",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xd5eff65dec6bdf835b4041e862d6d54ea2cab45a",
+        "capDescription": "At Ethereum block 26096016: minted counter 2000000000000000000 raw DUSD units; ceiling 79859154929577464788732 raw DUSD units (18 decimals). This is a token-level limit, not a verified collateral ratio.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096016,
+        "evidence": "Full SetMinterStatus event history has22 events and no next page. Pinned allowedMinter(address)=true; minterConfig(address) returns this minted counter and ceiling. eth_getCode is nonempty. Verified DUSD onlyOwner restricts setMinterCeiling, but underlying admitted-module implementation and collateral gate are not promoted here.",
+        "sources": [
+          {
+            "label": "DUSD verified cap gate",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63d74d22e689c715a04f2c13962b1f77f443d35b"
+          },
+          {
+            "label": "Complete SetMinterStatus census",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x63d74d22e689c715a04f2c13962b1f77f443d35b/logs?topic=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+          }
+        ]
+      },
+      {
+        "label": "Alto DUSD active minter 0xd2d7f7db33c647d5bf02937a3742c5ad28197c3e",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xd2d7f7db33c647d5bf02937a3742c5ad28197c3e",
+        "capDescription": "At Ethereum block 26096016: minted counter 2000000000000000000 raw DUSD units; ceiling 45208333333333333333333 raw DUSD units (18 decimals). This is a token-level limit, not a verified collateral ratio.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096016,
+        "evidence": "Full SetMinterStatus event history has22 events and no next page. Pinned allowedMinter(address)=true; minterConfig(address) returns this minted counter and ceiling. eth_getCode is nonempty. Verified DUSD onlyOwner restricts setMinterCeiling, but underlying admitted-module implementation and collateral gate are not promoted here.",
+        "sources": [
+          {
+            "label": "DUSD verified cap gate",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63d74d22e689c715a04f2c13962b1f77f443d35b"
+          },
+          {
+            "label": "Complete SetMinterStatus census",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x63d74d22e689c715a04f2c13962b1f77f443d35b/logs?topic=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+          }
+        ]
+      },
+      {
+        "label": "Alto DUSD active minter 0x12c219bacc90e87fe11e34288454728e1d8c8dcf",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x12c219bacc90e87fe11e34288454728e1d8c8dcf",
+        "capDescription": "At Ethereum block 26096016: minted counter 1503000000000000000000 raw DUSD units; ceiling 26923076923076923076923 raw DUSD units (18 decimals). This is a token-level limit, not a verified collateral ratio.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096016,
+        "evidence": "Full SetMinterStatus event history has22 events and no next page. Pinned allowedMinter(address)=true; minterConfig(address) returns this minted counter and ceiling. eth_getCode is nonempty. Verified DUSD onlyOwner restricts setMinterCeiling, but underlying admitted-module implementation and collateral gate are not promoted here.",
+        "sources": [
+          {
+            "label": "DUSD verified cap gate",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63d74d22e689c715a04f2c13962b1f77f443d35b"
+          },
+          {
+            "label": "Complete SetMinterStatus census",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x63d74d22e689c715a04f2c13962b1f77f443d35b/logs?topic=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+          }
+        ]
+      },
+      {
+        "label": "Alto DUSD active minter 0x4ad5ac62542164a74ff88a2bcdd0142126c1e3a3",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x4ad5ac62542164a74ff88a2bcdd0142126c1e3a3",
+        "capDescription": "At Ethereum block 26096016: minted counter 45433721451326038167337 raw DUSD units; ceiling 80769230769230769230769 raw DUSD units (18 decimals). This is a token-level limit, not a verified collateral ratio.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096016,
+        "evidence": "Full SetMinterStatus event history has22 events and no next page. Pinned allowedMinter(address)=true; minterConfig(address) returns this minted counter and ceiling. eth_getCode is nonempty. Verified DUSD onlyOwner restricts setMinterCeiling, but underlying admitted-module implementation and collateral gate are not promoted here.",
+        "sources": [
+          {
+            "label": "DUSD verified cap gate",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63d74d22e689c715a04f2c13962b1f77f443d35b"
+          },
+          {
+            "label": "Complete SetMinterStatus census",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x63d74d22e689c715a04f2c13962b1f77f443d35b/logs?topic=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+          }
+        ]
+      },
+      {
+        "label": "Alto DUSD active minter 0x81b2cce73052f67312ed9994385f62d413ee566e",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x81b2cce73052f67312ed9994385f62d413ee566e",
+        "capDescription": "At Ethereum block 26096016: minted counter 21226914493279160419790 raw DUSD units; ceiling 64814814814814814814814 raw DUSD units (18 decimals). This is a token-level limit, not a verified collateral ratio.",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096016,
+        "evidence": "Full SetMinterStatus event history has22 events and no next page. Pinned allowedMinter(address)=true; minterConfig(address) returns this minted counter and ceiling. eth_getCode is nonempty. Verified DUSD onlyOwner restricts setMinterCeiling, but underlying admitted-module implementation and collateral gate are not promoted here.",
+        "sources": [
+          {
+            "label": "DUSD verified cap gate",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63d74d22e689c715a04f2c13962b1f77f443d35b"
+          },
+          {
+            "label": "Complete SetMinterStatus census",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x63d74d22e689c715a04f2c13962b1f77f443d35b/logs?topic=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25540452, DUSD.owner() = AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86). Verified DUSD source shows mint() is limited to allowedMinter[msg.sender] and minterConfig[msg.sender].ceiling, while onlyOwner can change minter status and ceilings. The direct, non-proxy constructor only initializes the pauser and does not seed a minter or ceiling. Full SetMinterStatus and SetMinterCeiling history from block 0 returned 15 and 29 events respectively; state reads over the 13 unique status-event addresses found 11 active minters and 2 inactive addresses. The controls enumerate the complete active set at this block. The owner timelock remains governed by the 3-of-5 Alto Safe after its 1-hour delay. Economic-posture fields reviewed 2026-08-15: every cap or minter-set change must pass the enforced one-hour timelock, while current issuance is fully on-chain collateral-gated with no off-chain attestor or prudential supervisor.",
+      "evidence": "Historical block 25540452 review found 11 active minters among 13 event addresses and a 3-of-5 Alto Safe. At Ethereum block 26096016 on 2026-10-01, a fresh full SetMinterStatus census returned 22 events with no next page, covering 20 unique addresses; pinned allowedMinter/minterConfig reads found 18 active and two inactive. The Safe is now 4-of-7 and holds proposer, executor and DEFAULT_ADMIN_ROLE on the token-owner timelock, with getMinDelay()=3600. Verified DUSD source restricts mint to active minters within their ceilings, and onlyOwner can change status or ceilings. Newly admitted minters are recorded as token-level capped contracts, without asserting that their underlying collateral/upgrade gates were fully reviewed.",
       "reviewer": "SONG Safety Score V9 control review; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [

@@ -2,7 +2,7 @@
   "id": "xusd-straitsx",
   "name": "StraitsX XUSD",
   "symbol": "XUSD",
-  "oneLiner": "XUSD is StraitsX's MAS-licensed dollar stablecoin, redeemable 1:1 against cash and short-term U.S. government securities held at Tier-1 banks in Singapore.",
+  "oneLiner": "XUSD is StraitsX’s U.S. dollar stablecoin, redeemable 1:1 and backed by reserves held in segregated trust accounts at MAS-permitted financial institutions.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -46,6 +46,17 @@
     {
       "label": "Twitter",
       "url": "https://x.com/straitsx"
+    },
+    {
+      "label": "Binance: historical EEA XUSD trading-pair restriction effective 2025-03-31",
+      "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Historical EEA trading restriction",
+      "message": "Binance announced that XUSD trading pairs would be delisted for EEA users on 2025-03-31. This venue restriction is retained separately from legal status. The 2026-10-01 review withdrew Pharos's categorical MiCA non-compliant label because the cited venue notice and register absence do not meet the token-specific regulator or competent legal determination threshold; MiCA is now not assessed."
     }
   ],
   "jurisdiction": {

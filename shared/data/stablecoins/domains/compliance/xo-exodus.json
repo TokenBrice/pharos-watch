@@ -44,7 +44,7 @@
     "reserveDisclosureUrl": "https://www.moonpay.com/legal/stablecoin_terms",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MoonPay holds an NYDFS Limited Purpose Trust Company (LPTC) charter (MoonPay Trust Company, LLC, authorized Nov 2025), BitLicense, and money transmitter licenses across 49 states. The NYDFS LPTC is the state regulatory pathway most aligned with the GENIUS Act state-qualified issuer track. No PPSI approval has been granted to any issuer as of 2026-06-18; the state-qualified certification framework is still in proposed rulemaking (Treasury NPRM, Apr 2026). issuerPathway reflects the anticipated regulatory track, not an active approval.",
+    "notes": "MoonPay stablecoin terms identify MoonPay USA LLC as issuer. The NYDFS register lists MoonPay USA LLC with virtual-currency and money-transmitter licenses (June 2025) and the distinct MoonPay Trust Company, LLC with a limited-purpose trust charter (November 2025). Those entries do not by themselves establish a token-specific XO GENIUS authorization or state-qualified issuer pathway. Authorization status and negative-evidence review remain qualified by their existing review dates.",
     "references": [
       {
         "label": "Exodus, MoonPay, and M0 XO announcement",

@@ -2,9 +2,14 @@
   "id": "fidd-fidelity",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: FIDD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "FIDD Terms, section 12",
+        "url": "https://www.fidelitydigitalassets.com/fidd-terms"
+      }
+    ],
+    "evidence": "FIDD Terms, section 12, expressly permit Fidelity to block certain addresses and freeze associated FIDD when directed by law or when Fidelity considers action appropriate to protect the network or comply with its obligations. This replaces the prior unsourced centralized-token inference without changing the reviewed status.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB04FIDD)",
+    "reviewedAt": "2026-10-01"
   }
 }

@@ -71,6 +71,6 @@
         "url": "https://usd.startale.com/"
       }
     ],
-    "uncertainty": "M0 documents the general SPV and validator model, but the reviewed Startale sources do not establish the specific SPV, legal segregation, bankruptcy remoteness, or rehypothecation terms for USDSC."
+    "uncertainty": "Startale markets USDSC collateral as U.S. Treasury bills in bankruptcy-remote structures with qualified custodians, but the reviewed product page and terms do not identify the specific custodian, SPV, account, or enforceable custody/segregation instrument; provider shares and safeguards remain unverified."
   }
 }

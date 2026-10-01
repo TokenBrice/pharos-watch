@@ -68,13 +68,15 @@
         "timelockDelaySec": 259200,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Ethereum USD1 contract",
             "url": "https://etherscan.io/address/0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d#readProxyContract"
           }
         ],
-        "evidence": "At Ethereum block 25294739, USD1 token owner() returned this controller contract (confirmed). controller defaultAdmin() returned 0x0D190B74 (the curated Safe). Contract has 12193 bytes bytecode."
+        "evidence": "At Ethereum block 26095806, USD1 owner() returned this controller, defaultAdmin() returned Safe 0x0d190b74308669e8f4fe7dbce3466169b285289d, and defaultAdminDelay() returned 259200 seconds. The prior bytecode-size observation at block 25294739 is historical."
       },
       {
         "chain": "ethereum",
@@ -128,13 +130,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Ethereum USD1 controller",
             "url": "https://etherscan.io/address/0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2"
           }
         ],
-        "evidence": "At block 25294739, hasRole(MINTER_ROLE, 0x0f33afb0) returned true on the controller. Contract is a BitGo WalletSimple (EIP-1167 minimal proxy, WalletFactory 0xa7198f48); 2-of-3 multisig with signers 0xd8fab08c, 0xb7ef75ec, 0x833b62b1 confirmed via isSigner() reads and creation log."
+        "evidence": "At Ethereum block 26095806, hasRole(MINTER_ROLE, 0x0f33afb00334ea05f6f0e64fc919920ecd4bd16c) returned true on the controller. eth_getCode returned an EIP-1167 minimal proxy targeting 0xe5dcdc13b628c2df813db1080367e929c1507ca0. The prior WalletSimple 2-of-3 signer verification at block 25294739 remains historical and was not refreshed."
       },
       {
         "chain": "ethereum",
@@ -148,13 +152,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Ethereum USD1 controller",
             "url": "https://etherscan.io/address/0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2"
           }
         ],
-        "evidence": "At block 25294739, hasRole(MINTER_ROLE, 0x87e001) returned true on the controller. eth_getCode returned empty (EOA confirmed). Issuer-backend minting endpoint."
+        "evidence": "At Ethereum block 26095806, hasRole(MINTER_ROLE, 0x87e0017503560a655309c470666645472c66246e) returned true on the controller and eth_getCode returned 0x, confirming an EOA native minter. Public RPC does not establish its off-chain key custody or backend operator."
       },
       {
         "chain": "ethereum",
@@ -506,8 +512,8 @@
           "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_May_2026.pdf?version=0"
         },
         {
-          "label": "OCC BitGo national trust conversion record",
-          "url": "https://apps.occ.gov/CAAS_CATS/CAAS_Details.aspx?FilingID=342474&FilingSubtypeID=1117&FilingTypeID=23"
+          "label": "OCC current USD1 issuer and proposed successor charter record",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1385.pdf"
         },
         {
           "label": "BitGo USD1 issuer terms",

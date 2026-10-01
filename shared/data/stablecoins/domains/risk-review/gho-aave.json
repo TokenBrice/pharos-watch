@@ -20,13 +20,13 @@
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
       }
     ],
-    "evidence": "Re-verified 2026-08-10. The canonical GhoToken is a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified source exposes ordinary ERC-20 transfer/transferFrom paths without a holder blacklist, balance freeze, seizure, arbitrary-holder burn, or global transfer pause. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; those bridge controls do not establish a current holder-level restriction on canonical GHO. Aave DAO facilitator and bucket roles affect issuance, not existing-holder transfers. GHO nevertheless resolves as upstream under the >50% reserve-exposure rule: the reviewed reserve composition includes 44.3% mainnet GSM aggregate exposure whose underlying stablecoin identities are not published at slice level, plus 7.4% tracked stataUSDT GSM exposure, so more than 50% of current composition is exposed to stablecoin/GSM freeze surfaces.",
-    "reviewer": "OpenAI Codex FreezeWatch consistency review",
-    "reviewedAt": "2026-08-10"
+    "evidence": "At Ethereum block 26095800 (2026-10-01), canonical GHO bytecode matched the verified GhoToken and ordinary ERC-20 implementation; the EIP-1967 implementation and correct admin slots were zero. Its transfer paths contain no holder blacklist, freeze, seizure or global pause, and the external burn function burns only the caller's balance. The current Chainlink directory identifies the nine non-Ethereum deployments as BurnMint pools. The prior inherited-status rationale cited obsolete 44.3% mainnet GSM and 7.4% stataUSDT weights. The September 30 reserve review instead records 41.630945892818% unresolved mainnet GSM residual, 2.718124202359% measured stataUSDT and positive USDC dust, plus unresolved remote allocations. Unknown residual issuance is not proof of specific issuer holdings. The adverse inherited verdict is retained pending reconciliation of the opaque exposures and owner review of the greater-than-50% test; no current threshold-satisfaction claim is made.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA24GHO)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "GHO borrowing in Aave V3 Ethereum Core uses governance-selected reserve price sources through AaveOracle, with the common Pool health-factor liquidation and v3.3 deficit path.",
+    "summary": "The reviewed oracle engine covers GHO borrowing in Aave V3 Ethereum Core through governance-selected AaveOracle reserve sources. Current registered Horizon, Lido, Plasma and remote-GSM facilitator paths are not independently resolved by this single Core branch.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -51,7 +51,7 @@
     },
     "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
-    "confidence": "verified",
+    "confidence": "limited",
     "sources": [
       {
         "label": "Aave GHO docs",
@@ -149,7 +149,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "GHO is natively issued on Ethereum by Aave facilitators; its cross-chain destination deployments are minted via Chainlink CCIP burn/mint pools, with the Ethereum CCIP pool acting as lock/release for supply in transit. The CCIP common-mode failure domain applies to the bridged destination routes (~2% of supply); the natively held Ethereum supply is not CCIP-dependent. The route is external validated-network infrastructure governed by Aave/CCIP controls.",
+    "summary": "GHO is natively issued on Ethereum by Aave facilitators; its cross-chain destination deployments are minted via Chainlink CCIP burn/mint pools, with the Ethereum CCIP pool acting as lock/release for supply in transit. The CCIP common-mode failure domain applies to the bridged destination routes; the natively held Ethereum supply is not CCIP-dependent. The route is external validated-network infrastructure governed by Aave/CCIP controls.",
     "reviewedAt": "2026-07-21",
     "reviewer": "Codex AB-CURATION bridge re-review (native-route common-mode attribution)",
     "confidence": "verified",

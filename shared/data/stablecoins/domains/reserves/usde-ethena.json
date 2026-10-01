@@ -4,7 +4,7 @@
     {
       "sourceKey": "ethena:stable",
       "name": "Liquid Cash strategy basket",
-      "pct": 81.1,
+      "pct": 81.3,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Ethena Liquid Cash strategy counterparties: stablecoin issuers, Aave and Morpho markets, tokenized-fund issuers, and institutional borrowers",
@@ -15,8 +15,7 @@
         "smart-contract",
         "liquidity",
         "concentration"
-      ],
-      "liquidityHorizon": "one-day"
+      ]
     },
     {
       "sourceKey": "ethena:eth",
@@ -32,13 +31,12 @@
         "custody",
         "liquidity",
         "concentration"
-      ],
-      "liquidityHorizon": "one-day"
+      ]
     },
     {
       "sourceKey": "ethena:btc",
       "name": "BTC collateral",
-      "pct": 9.9,
+      "pct": 9.8,
       "risk": "medium",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for delta-hedged BTC positions",
@@ -49,16 +47,15 @@
         "custody",
         "liquidity",
         "concentration"
-      ],
-      "liquidityHorizon": "one-day"
+      ]
     },
     {
       "sourceKey": "ethena:other",
-      "name": "Other crypto collateral",
-      "pct": 1.4,
+      "name": "Other collateral",
+      "pct": 1.3,
       "risk": "high",
-      "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for delta-hedged SOL and BNB positions",
+      "assetClass": "other",
+      "issuerOrObligor": "Ethena counterparties for SOL, XRP, BNB and Gold positions reported in the collateral API; per-position hedge and obligor details are not itemized",
       "riskFactors": [
         "market",
         "basis",
@@ -66,21 +63,20 @@
         "custody",
         "liquidity",
         "concentration"
-      ],
-      "liquidityHorizon": "one-day"
+      ]
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map WS1.D reserve research",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ethena collateral positions API (accessed 2026-09-30)",
+        "label": "Ethena collateral positions API (accessed 2026-10-01)",
         "url": "https://app.ethena.fi/api/positions/current/collateral"
       },
       {
-        "label": "Ethena category breakdown API (accessed 2026-09-30)",
+        "label": "Ethena category breakdown API (accessed 2026-10-01)",
         "url": "https://app.ethena.fi/api/collateral-breakdown"
       },
       {
@@ -92,19 +88,19 @@
         "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
       }
     ],
-    "rationale": "The issuer positions API accessed 2026-09-30 reports $4,909,493,244.78 of backing, reconciled exactly to its positive rows at source timestamp 1790724310 (2026-09-29). The existing adapter emits Liquid Cash 81.1%, ETH / liquid staking collateral 7.6%, BTC 9.9%, and Other crypto 1.4%. The category endpoint separately reports a $1,404,244,668 Liquid Stables bucket naming USDT, USDC, USDtb and PYUSD, without per-token balances. Its $4,900,605,327 category denominator differs from the collateral endpoint; no category fraction is multiplied into the legacy Liquid Cash envelope. RWA likewise names JAAA and STAC without individual balances. No constituent links are authored.",
-    "compositionBasis": "Existing Ethena adapter output from the issuer collateral positions payload accessed 2026-09-30; source timestamp 1790724310; category disclosure retained only as non-additive research evidence",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "The complete issuer collateral payload at source timestamp 1790830837 (2026-10-01T05:00:37Z) discloses totalBackingAssetsInUsd of $4,946,709,944.87. Independently summed rows reconcile exactly in integer USD cents: Liquid Cash $4,016,882,398.87; ETH and liquid-staking assets $376,033,775; BTC $487,054,055; SOL, XRP, BNB and Gold $66,739,716. Existing adapter buckets round to 81.3/7.6/9.8/1.3%, totaling 100% without an invented balance. This is the issuer's whole backing-assets denominator, not a normalized selected subset, category-denominated lending collateral, or the monthly assurance balance sheet. The category API is separate non-additive context, with a different total and no constituent balances; no category fraction is multiplied into Liquid Cash and no tracked-asset allocation is inferred. Historical 2026-09-29 disclosure was $4,909,493,244.78 with weights 81.1/7.6/9.9/1.4; its review was dated 2026-09-30. No current strategy-wide stressed cash-out bound was established.",
+    "compositionBasis": "Complete issuer collateral positions payload; USD amounts summed against its disclosed totalBackingAssetsInUsd at timestamp 1790830837 (2026-10-01T05:00:37Z). Existing adapter source-key buckets, independent division and one-decimal rounding; category disclosure remains non-additive context.",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 81.1% Liquid Cash basket remains allocation-unresolved. Named stablecoins and tokenized funds in the category endpoint lack per-asset balances and a reconciled cross-endpoint checkpoint. Issuer questionnaire pending.",
-    "knownUnknownExposurePct": 81.1,
+    "knownUnknownExposure": "The 81.3% Liquid Cash basket remains allocation-unresolved. Named stablecoins and tokenized funds in the separate category endpoint lack per-asset balances and a reconciled cross-endpoint checkpoint. No favorable constituent classification or dependency allocation follows from the refreshed backing-assets denominator.",
+    "knownUnknownExposurePct": 81.3,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Liquid Cash strategy basket",
-        "pct": 81.1,
+        "pct": 81.3,
         "disposition": "basket-needs-split",
-        "rationale": "Blocked on issuer per-asset balances: USDT, USDC, USDtb and PYUSD are named in one $1,404,244,668 category, while JAAA and STAC share a separate RWA category. The two endpoints have different totals and supply no per-token balances; retain candidates only, without guessed allocations.",
+        "rationale": "The separate category API names USDT, USDC, USDtb and PYUSD in Liquid Stables, and JAAA/STAC in RWA, without constituent balances. Its denominator differs from the complete collateral endpoint. Retain research candidates without quantifying or multiplying category fractions into the Liquid Cash basket.",
         "candidateCoinIds": [
           "usdt-tether",
           "usdc-circle",
@@ -124,16 +120,16 @@
       {
         "reserveIndex": 2,
         "reserveName": "BTC collateral",
-        "pct": 9.9,
+        "pct": 9.8,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Delta-hedged BTC backing is an external crypto and derivatives exposure, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
-        "reserveName": "Other crypto collateral",
-        "pct": 1.4,
+        "reserveName": "Other collateral",
+        "pct": 1.3,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The live adapter's SOL and BNB bucket is an external crypto and derivatives exposure, not a tracked stablecoin dependency."
+        "rationale": "The existing adapter's explicitly enumerated other bucket includes SOL, XRP, BNB and Gold at the reviewed snapshot. No Gold token identity or per-position hedge is inferred, and no tracked stablecoin dependency is allocated."
       }
     ]
   },
@@ -149,6 +145,14 @@
       },
       {
         "name": "Fireblocks",
+        "role": "custodian"
+      },
+      {
+        "name": "Anchorage Digital Bank",
+        "role": "custodian"
+      },
+      {
+        "name": "Kraken Custody",
         "role": "custodian"
       }
     ],
@@ -166,8 +170,12 @@
       {
         "label": "Ethena real-time dashboard custody notes",
         "url": "https://docs.ethena.fi/backing-custody-and-security/real-time-dashboards"
+      },
+      {
+        "label": "Ethena August custodian report (2026-08-26 snapshot, published 2026-09-03)",
+        "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3"
       }
     ],
-    "uncertainty": "Ethena names Copper, Ceffu, and Fireblocks as off-exchange settlement providers and states that protocol assets remain beneficially owned by the protocol, while Copper and Ceffu use commingled omnibus wallets. Provider allocation shares across the stablecoin, DeFi lending, RWA, institutional lending, and crypto-basis categories, and contractual outcomes in each provider or exchange insolvency, are not public."
+    "uncertainty": "Ethena names Copper, Ceffu, and Fireblocks as off-exchange settlement providers and states that protocol assets remain beneficially owned by the protocol, while Copper and Ceffu use commingled omnibus wallets. Provider allocation shares across the stablecoin, DeFi lending, RWA, institutional lending, and crypto-basis categories, and contractual outcomes in each provider or exchange insolvency, are not public. The issuer custodian report published 2026-09-03 also names Anchorage Digital Bank and Kraken Custody at its 2026-08-26 snapshot, plus Coinbase on-chain wallets and an Ethena FalconX SPV using Anchorage and BitGo. These dated observations are not current allocation shares or proof of uniform custody arrangements across the strategy basket; the historical off-exchange provider roster is retained."
   }
 }

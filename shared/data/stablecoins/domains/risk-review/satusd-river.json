@@ -26,7 +26,7 @@
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",
-    "summary": "Thirty-one callable collateral branches across 11 chains use branch-local single-provider or all-components-required aggregate wrappers. Each wrapper fails closed on non-positive or older-than-configured input and has no cache or automatic provider failover; liquidations are immediate, Stability Pool first, then redistribution.",
+    "summary": "The 2026-07-14 review enumerated 31 callable collateral branches across 11 chains and documented branch-local single-provider or all-components-required aggregate wrappers, fail-closed pricing without cache or automatic provider failover, and immediate Stability Pool-first liquidation followed by redistribution. Pinned 2026-10-01 registry reads identified 12 replacement pricing paths, updated below with current source and maximum-age parameters. Unrefreshed collateral parameters and other branch descriptions retain their historical dates; these partial reads do not constitute a new full-profile review.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -37,11 +37,11 @@
       "sources": [
         {
           "label": "River oracle provider and heartbeat matrix",
-          "url": "https://docs.river.inc/outro/oracle"
+          "url": "https://docs.riverai.inc/outro/oracle.md"
         },
         {
           "label": "River deployed-contract registries",
-          "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+          "url": "https://docs.riverai.inc/outro/deployed-contracts/ethereum.md"
         },
         {
           "label": "Pinned Satoshi core source",
@@ -55,19 +55,19 @@
     "sources": [
       {
         "label": "River oracle provider and heartbeat matrix",
-        "url": "https://docs.river.inc/outro/oracle"
+        "url": "https://docs.riverai.inc/outro/oracle.md"
       },
       {
         "label": "River risk management",
-        "url": "https://docs.river.inc/products/editor/risk-management"
+        "url": "https://docs.riverai.inc/products/editor/risk-management.md"
       },
       {
         "label": "River Stability Pool",
-        "url": "https://docs.river.inc/products/editor/stability-pool"
+        "url": "https://docs.riverai.inc/products/editor/stability-pool.md"
       },
       {
         "label": "River Recovery Mode",
-        "url": "https://docs.river.inc/products/editor/recovery-mode"
+        "url": "https://docs.riverai.inc/products/editor/recovery-mode.md"
       },
       {
         "label": "Pinned Satoshi Chainlink wrapper",
@@ -84,6 +84,10 @@
       {
         "label": "Pinned Satoshi trove manager",
         "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/core/TroveManager.sol"
+      },
+      {
+        "label": "Verified current Base PriceFeedChainlink source (runtime-logic comparison reference, 2026-10-01)",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc601034d15e2b739e73d2e1e8ef9a5c452fb9c0d"
       }
     ],
     "branches": [
@@ -138,7 +142,7 @@
         "sources": [
           {
             "label": "River ethereum deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/ethereum.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -197,7 +201,7 @@
         "sources": [
           {
             "label": "River ethereum deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/ethereum.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -256,7 +260,7 @@
         "sources": [
           {
             "label": "River ethereum deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/ethereum.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -315,7 +319,7 @@
         "sources": [
           {
             "label": "River bsc deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bnb-chain"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bnb-chain.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -374,7 +378,7 @@
         "sources": [
           {
             "label": "River bsc deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bnb-chain"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bnb-chain.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -433,7 +437,7 @@
         "sources": [
           {
             "label": "River xlayer deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/x-layer"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/x-layer.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -492,7 +496,7 @@
         "sources": [
           {
             "label": "River xlayer deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/x-layer"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/x-layer.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -551,7 +555,7 @@
         "sources": [
           {
             "label": "River xlayer deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/x-layer"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/x-layer.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -610,7 +614,7 @@
         "sources": [
           {
             "label": "River base deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/base"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/base.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -669,7 +673,7 @@
         "sources": [
           {
             "label": "River base deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/base"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/base.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -728,7 +732,7 @@
         "sources": [
           {
             "label": "River base deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/base"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/base.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -740,7 +744,7 @@
         "id": "base-clbtc",
         "label": "base clBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable clBTC branch uses one Chainsight wrapper path with a contract-enforced 3900-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0xc601034d15e2b739e73d2e1e8ef9a5c452fb9c0d, whose source() returned 0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e and maxTimeThreshold() returned 1500 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "clBTC"
         ],
@@ -749,21 +753,21 @@
         ],
         "feeds": [
           {
-            "provider": "Chainsight",
-            "path": "PriceFeed 0xA9ECf240B4621cf703aDc3985a084770D8Df1F3A -> clBTC/USD at 0x146447574c02deB3B802A1d4c9447CB7648aA56D",
-            "address": "0xA9ECf240B4621cf703aDc3985a084770D8Df1F3A",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0xc601034d15e2b739e73d2e1e8ef9a5c452fb9c0d -> source() 0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e",
+            "address": "0xc601034d15e2b739e73d2e1e8ef9a5c452fb9c0d",
             "chain": "base",
-            "stalenessBoundSec": 3900,
-            "observedAt": "2026-07-14",
-            "observedBlock": 48627278,
+            "stalenessBoundSec": 1500,
+            "observedAt": "2026-10-01",
+            "observedBlock": 52024166,
             "failureDomainKeys": [
-              "chainsight:0x146447574c02deb3b802a1d4c9447cb7648aa56d",
+              "oracle-source:base:0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e",
               "satoshi:base:price-feed-wrapper",
               "base"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3900-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-1500-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 48627278,
         "collateralParameters": [
@@ -771,7 +775,7 @@
             "asset": "clBTC",
             "maximumLtvPct": 66.666667,
             "minimumCollateralRatioPct": 150,
-            "note": "TroveManager 0x01DF7D28c51639F2f2F95dcF2FdFF374269327B0; PriceFeed 0xA9ECf240B4621cf703aDc3985a084770D8Df1F3A; debt 9415926056000000000000000 raw 18-decimal satUSD; cap 10000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0x01DF7D28c51639F2f2F95dcF2FdFF374269327B0; PriceFeed 0xA9ECf240B4621cf703aDc3985a084770D8Df1F3A; debt 9415926056000000000000000 raw 18-decimal satUSD; cap 10000000 satUSD; sunsetting=false and paused=false. The registry now selects 0xc601034d15e2b739e73d2e1e8ef9a5c452fb9c0d at block 52024166 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -779,7 +783,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "chainsight:0x146447574c02deb3b802a1d4c9447cb7648aa56d",
+          "oracle-source:base:0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e",
           "satoshi:base:stability-pool",
           "satoshi:base:redistribution",
           "base"
@@ -787,7 +791,7 @@
         "sources": [
           {
             "label": "River base deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/base"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/base.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -846,7 +850,7 @@
         "sources": [
           {
             "label": "River arbitrum deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/arbitrum.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -905,7 +909,7 @@
         "sources": [
           {
             "label": "River arbitrum deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/arbitrum.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -917,7 +921,7 @@
         "id": "arbitrum-clbtc",
         "label": "arbitrum clBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable clBTC branch uses one Chainsight wrapper path with a contract-enforced 3900-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0x5348ffab4f2ddc88400d7471230a17e18bf26087, whose source() returned 0xd0c7101eacbb49f3decccc166d238410d6d46d57 and maxTimeThreshold() returned 86700 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "clBTC"
         ],
@@ -926,21 +930,21 @@
         ],
         "feeds": [
           {
-            "provider": "Chainsight",
-            "path": "PriceFeed 0x7a38cB1aB2409873C86b73C71cdb33e916696956 -> clBTC/USD at 0x146447574c02deB3B802A1d4c9447CB7648aA56D",
-            "address": "0x7a38cB1aB2409873C86b73C71cdb33e916696956",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0x5348ffab4f2ddc88400d7471230a17e18bf26087 -> source() 0xd0c7101eacbb49f3decccc166d238410d6d46d57",
+            "address": "0x5348ffab4f2ddc88400d7471230a17e18bf26087",
             "chain": "arbitrum",
-            "stalenessBoundSec": 3900,
-            "observedAt": "2026-07-14",
-            "observedBlock": 483812002,
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-10-01",
+            "observedBlock": 510584522,
             "failureDomainKeys": [
-              "chainsight:0x146447574c02deb3b802a1d4c9447cb7648aa56d",
+              "oracle-source:arbitrum:0xd0c7101eacbb49f3decccc166d238410d6d46d57",
               "satoshi:arbitrum:price-feed-wrapper",
               "arbitrum"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3900-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-86700-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 483812002,
         "collateralParameters": [
@@ -948,7 +952,7 @@
             "asset": "clBTC",
             "maximumLtvPct": 66.666667,
             "minimumCollateralRatioPct": 150,
-            "note": "TroveManager 0xa7B54413129441e872F42C1c4fE7D1984332CA87; PriceFeed 0x7a38cB1aB2409873C86b73C71cdb33e916696956; debt 9645828176264000000000000 raw 18-decimal satUSD; cap 10000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0xa7B54413129441e872F42C1c4fE7D1984332CA87; PriceFeed 0x7a38cB1aB2409873C86b73C71cdb33e916696956; debt 9645828176264000000000000 raw 18-decimal satUSD; cap 10000000 satUSD; sunsetting=false and paused=false. The registry now selects 0x5348ffab4f2ddc88400d7471230a17e18bf26087 at block 510584522 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -956,7 +960,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "chainsight:0x146447574c02deb3b802a1d4c9447cb7648aa56d",
+          "oracle-source:arbitrum:0xd0c7101eacbb49f3decccc166d238410d6d46d57",
           "satoshi:arbitrum:stability-pool",
           "satoshi:arbitrum:redistribution",
           "arbitrum"
@@ -964,7 +968,7 @@
         "sources": [
           {
             "label": "River arbitrum deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/arbitrum.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -976,7 +980,7 @@
         "id": "sonic-weth",
         "label": "sonic WETH Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable WETH branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0x7fe7de5d72633b981191eaee2ccaed95c77e79a9, whose source() returned 0x824364077993847f71293b24cca8567c00c2de11 and maxTimeThreshold() returned 86700 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "WETH"
         ],
@@ -985,21 +989,21 @@
         ],
         "feeds": [
           {
-            "provider": "Chainlink",
-            "path": "PriceFeed 0x595aDC759518DD58fd644b8d5a166A00388c77C4 -> WETH/USD at 0x61c7cB499022E74A992c4dC4590DeED13E85543f",
-            "address": "0x595aDC759518DD58fd644b8d5a166A00388c77C4",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0x7fe7de5d72633b981191eaee2ccaed95c77e79a9 -> source() 0x824364077993847f71293b24cca8567c00c2de11",
+            "address": "0x7fe7de5d72633b981191eaee2ccaed95c77e79a9",
             "chain": "sonic",
             "stalenessBoundSec": 86700,
-            "observedAt": "2026-07-14",
-            "observedBlock": 75938977,
+            "observedAt": "2026-10-01",
+            "observedBlock": 80179092,
             "failureDomainKeys": [
-              "chainlink:0x61c7cb499022e74a992c4dc4590deed13e85543f",
+              "oracle-source:sonic:0x824364077993847f71293b24cca8567c00c2de11",
               "satoshi:sonic:price-feed-wrapper",
               "sonic"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-86700-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 75938977,
         "collateralParameters": [
@@ -1007,7 +1011,7 @@
             "asset": "WETH",
             "maximumLtvPct": 90.909091,
             "minimumCollateralRatioPct": 110,
-            "note": "TroveManager 0xb655775C4C7C6e0C2002935133c950FB89974928; PriceFeed 0x595aDC759518DD58fd644b8d5a166A00388c77C4; debt 12085149397581336470 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0xb655775C4C7C6e0C2002935133c950FB89974928; PriceFeed 0x595aDC759518DD58fd644b8d5a166A00388c77C4; debt 12085149397581336470 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false. The registry now selects 0x7fe7de5d72633b981191eaee2ccaed95c77e79a9 at block 80179092 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1015,7 +1019,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "chainlink:0x61c7cb499022e74a992c4dc4590deed13e85543f",
+          "oracle-source:sonic:0x824364077993847f71293b24cca8567c00c2de11",
           "satoshi:sonic:stability-pool",
           "satoshi:sonic:redistribution",
           "sonic"
@@ -1023,7 +1027,7 @@
         "sources": [
           {
             "label": "River sonic deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/sonic"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/sonic.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1035,7 +1039,7 @@
         "id": "sonic-wbtc",
         "label": "sonic WBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable WBTC branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0x1324285bb2ddadfc9bebc2f8fc5049d7985312c0, whose source() returned 0x8bcd59cb7eeeea8e2da3080c891609483dae53ef and maxTimeThreshold() returned 86700 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "WBTC"
         ],
@@ -1044,21 +1048,21 @@
         ],
         "feeds": [
           {
-            "provider": "Chainlink",
-            "path": "PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782 -> WBTC/USD at 0x91dC4c1df27F0619c7a2B2a28c54Ee5a03e26E72",
-            "address": "0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0x1324285bb2ddadfc9bebc2f8fc5049d7985312c0 -> source() 0x8bcd59cb7eeeea8e2da3080c891609483dae53ef",
+            "address": "0x1324285bb2ddadfc9bebc2f8fc5049d7985312c0",
             "chain": "sonic",
             "stalenessBoundSec": 86700,
-            "observedAt": "2026-07-14",
-            "observedBlock": 75938977,
+            "observedAt": "2026-10-01",
+            "observedBlock": 80179092,
             "failureDomainKeys": [
-              "chainlink:0x91dc4c1df27f0619c7a2b2a28c54ee5a03e26e72",
+              "oracle-source:sonic:0x8bcd59cb7eeeea8e2da3080c891609483dae53ef",
               "satoshi:sonic:price-feed-wrapper",
               "sonic"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-86700-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 75938977,
         "collateralParameters": [
@@ -1066,7 +1070,7 @@
             "asset": "WBTC",
             "maximumLtvPct": 90.909091,
             "minimumCollateralRatioPct": 110,
-            "note": "TroveManager 0x5EA26D0A1a9aa6731F9BFB93fCd654cd1C3079Ec; PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782; debt 41175000000000000000 plus 17075000000000000000 defaulted raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0x5EA26D0A1a9aa6731F9BFB93fCd654cd1C3079Ec; PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782; debt 41175000000000000000 plus 17075000000000000000 defaulted raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false. The registry now selects 0x1324285bb2ddadfc9bebc2f8fc5049d7985312c0 at block 80179092 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1074,7 +1078,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "chainlink:0x91dc4c1df27f0619c7a2b2a28c54ee5a03e26e72",
+          "oracle-source:sonic:0x8bcd59cb7eeeea8e2da3080c891609483dae53ef",
           "satoshi:sonic:stability-pool",
           "satoshi:sonic:redistribution",
           "sonic"
@@ -1082,7 +1086,7 @@
         "sources": [
           {
             "label": "River sonic deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/sonic"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/sonic.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1094,7 +1098,7 @@
         "id": "bob-wbtc",
         "label": "bob WBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable WBTC branch uses one Chainlink-compatible wrapper path with a contract-enforced 86400-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb, whose source() returned 0x8a6e27666cea273958d1d39594f185f5411a2fe4 and maxTimeThreshold() returned 86700 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "WBTC"
         ],
@@ -1103,21 +1107,21 @@
         ],
         "feeds": [
           {
-            "provider": "Chainlink-compatible",
-            "path": "PriceFeed 0x4851b1F29E2A2802bb97136aEA4106992FC82f33 -> WBTC/USD at 0x81A64473D102b38eDcf35A7675654768D11d7e24",
-            "address": "0x4851b1F29E2A2802bb97136aEA4106992FC82f33",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb -> source() 0x8a6e27666cea273958d1d39594f185f5411a2fe4",
+            "address": "0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb",
             "chain": "bob",
-            "stalenessBoundSec": 86400,
-            "observedAt": "2026-07-14",
-            "observedBlock": 35590959,
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-10-01",
+            "observedBlock": 38987846,
             "failureDomainKeys": [
-              "chainlink-compatible:0x81a64473d102b38edcf35a7675654768d11d7e24",
+              "oracle-source:bob:0x8a6e27666cea273958d1d39594f185f5411a2fe4",
               "satoshi:bob:price-feed-wrapper",
               "bob"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-86700-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 35590959,
         "collateralParameters": [
@@ -1125,7 +1129,7 @@
             "asset": "WBTC",
             "maximumLtvPct": 90.909091,
             "minimumCollateralRatioPct": 110,
-            "note": "TroveManager 0xB6C69F4EfC6ad9d12C5Fc3715722D5bbEa712a3f; PriceFeed 0x4851b1F29E2A2802bb97136aEA4106992FC82f33; debt 0 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false; zero debt but the branch remained callable with a nonzero cap."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0xB6C69F4EfC6ad9d12C5Fc3715722D5bbEa712a3f; PriceFeed 0x4851b1F29E2A2802bb97136aEA4106992FC82f33; debt 0 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false; zero debt but the branch remained callable with a nonzero cap. The registry now selects 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb at block 38987846 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1133,7 +1137,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "chainlink-compatible:0x81a64473d102b38edcf35a7675654768d11d7e24",
+          "oracle-source:bob:0x8a6e27666cea273958d1d39594f185f5411a2fe4",
           "satoshi:bob:stability-pool",
           "satoshi:bob:redistribution",
           "bob"
@@ -1141,7 +1145,7 @@
         "sources": [
           {
             "label": "River bob deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bob.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1153,7 +1157,7 @@
         "id": "bob-tbtc",
         "label": "bob tBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable tBTC branch uses one Chainlink-compatible wrapper path with a contract-enforced 86400-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0x2fcef71407ffefa2aa0393ecd1750dafcf39ea8d, whose source() returned 0xedf0c69f723910750500a8136b971be135775a07 and maxTimeThreshold() returned 86700 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "tBTC"
         ],
@@ -1162,21 +1166,21 @@
         ],
         "feeds": [
           {
-            "provider": "Chainlink-compatible",
-            "path": "PriceFeed 0x18D2d92cecE0E983C77c1F705F7617b6826c33e8 -> tBTC/USD at 0x4d24E7c1cF0ed63bc8c6cB5a795af31FD8127C6B",
-            "address": "0x18D2d92cecE0E983C77c1F705F7617b6826c33e8",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0x2fcef71407ffefa2aa0393ecd1750dafcf39ea8d -> source() 0xedf0c69f723910750500a8136b971be135775a07",
+            "address": "0x2fcef71407ffefa2aa0393ecd1750dafcf39ea8d",
             "chain": "bob",
-            "stalenessBoundSec": 86400,
-            "observedAt": "2026-07-14",
-            "observedBlock": 35590959,
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-10-01",
+            "observedBlock": 38987846,
             "failureDomainKeys": [
-              "chainlink-compatible:0x4d24e7c1cf0ed63bc8c6cb5a795af31fd8127c6b",
+              "oracle-source:bob:0xedf0c69f723910750500a8136b971be135775a07",
               "satoshi:bob:price-feed-wrapper",
               "bob"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-86700-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 35590959,
         "collateralParameters": [
@@ -1184,7 +1188,7 @@
             "asset": "tBTC",
             "maximumLtvPct": 80,
             "minimumCollateralRatioPct": 125,
-            "note": "TroveManager 0xbf626Fc742bFfD6F17de9Cf2480Da25Dad4D5135; PriceFeed 0x18D2d92cecE0E983C77c1F705F7617b6826c33e8; debt 12000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0xbf626Fc742bFfD6F17de9Cf2480Da25Dad4D5135; PriceFeed 0x18D2d92cecE0E983C77c1F705F7617b6826c33e8; debt 12000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false. The registry now selects 0x2fcef71407ffefa2aa0393ecd1750dafcf39ea8d at block 38987846 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1192,7 +1196,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "chainlink-compatible:0x4d24e7c1cf0ed63bc8c6cb5a795af31fd8127c6b",
+          "oracle-source:bob:0xedf0c69f723910750500a8136b971be135775a07",
           "satoshi:bob:stability-pool",
           "satoshi:bob:redistribution",
           "bob"
@@ -1200,7 +1204,7 @@
         "sources": [
           {
             "label": "River bob deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bob.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1212,7 +1216,7 @@
         "id": "bob-solvbtc",
         "label": "bob solvBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable solvBTC branch uses one 50/50 Chainlink-compatible aggregate wrapper path with a contract-enforced 14500-second maximum age; every configured component is required.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb, whose source() returned 0x8a6e27666cea273958d1d39594f185f5411a2fe4 and maxTimeThreshold() returned 86700 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "solvBTC"
         ],
@@ -1221,21 +1225,21 @@
         ],
         "feeds": [
           {
-            "provider": "50/50 Chainlink-compatible aggregate",
-            "path": "PriceFeed 0x6A18A6b715bF690aC5e16b022AceF139b3355956 -> solvBTC/USD two-component path; both required at 0xD0157e52C06E734aA0F0eB6Db620149021DA819B + 0xE0dBd230E320625fa30B85b1f2a68d0aaDDD367a",
-            "address": "0x6A18A6b715bF690aC5e16b022AceF139b3355956",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb -> source() 0x8a6e27666cea273958d1d39594f185f5411a2fe4",
+            "address": "0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb",
             "chain": "bob",
-            "stalenessBoundSec": 14500,
-            "observedAt": "2026-07-14",
-            "observedBlock": 35590959,
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-10-01",
+            "observedBlock": 38987846,
             "failureDomainKeys": [
-              "50-50-chainlink-compatible-aggregate:0xd0157e52c06e734aa0f0eb6db620149021da819b + 0xe0dbd230e320625fa30b85b1f2a68d0aaddd367a",
+              "oracle-source:bob:0x8a6e27666cea273958d1d39594f185f5411a2fe4",
               "satoshi:bob:price-feed-wrapper",
               "bob"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-14500-second source. There is no cached-price or alternate-provider fallback; every configured component must succeed; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-86700-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 35590959,
         "collateralParameters": [
@@ -1243,7 +1247,7 @@
             "asset": "solvBTC",
             "maximumLtvPct": 68.965517,
             "minimumCollateralRatioPct": 145,
-            "note": "TroveManager 0x39F36DA1f4028473d41e077E178c8551bE4bb231; PriceFeed 0x6A18A6b715bF690aC5e16b022AceF139b3355956; debt 203000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0x39F36DA1f4028473d41e077E178c8551bE4bb231; PriceFeed 0x6A18A6b715bF690aC5e16b022AceF139b3355956; debt 203000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false. The registry now selects 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb at block 38987846 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1251,7 +1255,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "50-50-chainlink-compatible-aggregate:0xd0157e52c06e734aa0f0eb6db620149021da819b + 0xe0dbd230e320625fa30b85b1f2a68d0aaddd367a",
+          "oracle-source:bob:0x8a6e27666cea273958d1d39594f185f5411a2fe4",
           "satoshi:bob:stability-pool",
           "satoshi:bob:redistribution",
           "bob"
@@ -1259,7 +1263,7 @@
         "sources": [
           {
             "label": "River bob deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bob.md"
           },
           {
             "label": "Pinned Satoshi aggregate wrapper",
@@ -1271,7 +1275,7 @@
         "id": "bob-solvbtc-bbn",
         "label": "bob solvBTC.BBN Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable solvBTC.BBN branch uses one 50/50 Chainlink-compatible aggregate wrapper path with a contract-enforced 14500-second maximum age; every configured component is required.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb, whose source() returned 0x8a6e27666cea273958d1d39594f185f5411a2fe4 and maxTimeThreshold() returned 86700 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "solvBTC.BBN"
         ],
@@ -1280,21 +1284,21 @@
         ],
         "feeds": [
           {
-            "provider": "50/50 Chainlink-compatible aggregate",
-            "path": "PriceFeed 0xE3cD7A8AEb9c1305162b216aB93Ef98EfC0e451c -> solvBTC.BBN/USD two-component path; both required at 0xaF98498ae8cA3eD6eFf938BeF3933E6f374Fedee + 0x120e3D31E4D31868553cEFd8E398001C003FE852",
-            "address": "0xE3cD7A8AEb9c1305162b216aB93Ef98EfC0e451c",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb -> source() 0x8a6e27666cea273958d1d39594f185f5411a2fe4",
+            "address": "0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb",
             "chain": "bob",
-            "stalenessBoundSec": 14500,
-            "observedAt": "2026-07-14",
-            "observedBlock": 35590959,
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-10-01",
+            "observedBlock": 38987846,
             "failureDomainKeys": [
-              "50-50-chainlink-compatible-aggregate:0xaf98498ae8ca3ed6eff938bef3933e6f374fedee + 0x120e3d31e4d31868553cefd8e398001c003fe852",
+              "oracle-source:bob:0x8a6e27666cea273958d1d39594f185f5411a2fe4",
               "satoshi:bob:price-feed-wrapper",
               "bob"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-14500-second source. There is no cached-price or alternate-provider fallback; every configured component must succeed; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-86700-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 35590959,
         "collateralParameters": [
@@ -1302,7 +1306,7 @@
             "asset": "solvBTC.BBN",
             "maximumLtvPct": 64.516129,
             "minimumCollateralRatioPct": 155,
-            "note": "TroveManager 0x1F6eF853341037c5C057101F2E38C15c95130807; PriceFeed 0xE3cD7A8AEb9c1305162b216aB93Ef98EfC0e451c; debt 128600243066708655760 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0x1F6eF853341037c5C057101F2E38C15c95130807; PriceFeed 0xE3cD7A8AEb9c1305162b216aB93Ef98EfC0e451c; debt 128600243066708655760 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false. The registry now selects 0xde1cea02e673c9a0dfb8f625b8be289db5bec9fb at block 38987846 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1310,7 +1314,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "50-50-chainlink-compatible-aggregate:0xaf98498ae8ca3ed6eff938bef3933e6f374fedee + 0x120e3d31e4d31868553cefd8e398001c003fe852",
+          "oracle-source:bob:0x8a6e27666cea273958d1d39594f185f5411a2fe4",
           "satoshi:bob:stability-pool",
           "satoshi:bob:redistribution",
           "bob"
@@ -1318,7 +1322,7 @@
         "sources": [
           {
             "label": "River bob deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bob.md"
           },
           {
             "label": "Pinned Satoshi aggregate wrapper",
@@ -1330,7 +1334,7 @@
         "id": "bob-fbtc",
         "label": "bob FBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable FBTC branch uses one Chainlink wrapper path with a contract-enforced 86400-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0x4851b1f29e2a2802bb97136aea4106992fc82f33, whose source() returned 0x81a64473d102b38edcf35a7675654768d11d7e24 and maxTimeThreshold() returned 86400 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "FBTC"
         ],
@@ -1339,21 +1343,21 @@
         ],
         "feeds": [
           {
-            "provider": "Chainlink",
-            "path": "PriceFeed 0x5c64d9aa1E7Bb51C50A940F2E46b2B65C99Fca81 -> FBTC/USD at 0xdcBf8fe85Fb49b385678B4772A0424743Da582cd",
-            "address": "0x5c64d9aa1E7Bb51C50A940F2E46b2B65C99Fca81",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0x4851b1f29e2a2802bb97136aea4106992fc82f33 -> source() 0x81a64473d102b38edcf35a7675654768d11d7e24",
+            "address": "0x4851b1f29e2a2802bb97136aea4106992fc82f33",
             "chain": "bob",
             "stalenessBoundSec": 86400,
-            "observedAt": "2026-07-14",
-            "observedBlock": 35590959,
+            "observedAt": "2026-10-01",
+            "observedBlock": 38987846,
             "failureDomainKeys": [
-              "chainlink:0xdcbf8fe85fb49b385678b4772a0424743da582cd",
+              "oracle-source:bob:0x81a64473d102b38edcf35a7675654768d11d7e24",
               "satoshi:bob:price-feed-wrapper",
               "bob"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "Historical 2026-07-14 wrapper behavior: The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover. At the 2026-10-01 pin the registry selects 0x4851b1f29e2a2802bb97136aea4106992fc82f33; source() and maxTimeThreshold() were observed, but the replacement wrapper's full enforcement/failover implementation was not independently reverified. No new protective control is claimed.",
         "observedAt": "2026-07-14",
         "observedBlock": 35590959,
         "collateralParameters": [
@@ -1361,7 +1365,7 @@
             "asset": "FBTC",
             "maximumLtvPct": 80,
             "minimumCollateralRatioPct": 125,
-            "note": "TroveManager 0x4dEA4c11bDd3Ad05063405C7167Fa9B3f95Aea90; PriceFeed 0x5c64d9aa1E7Bb51C50A940F2E46b2B65C99Fca81; debt 0 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false; zero debt but the branch remained callable with a nonzero cap."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0x4dEA4c11bDd3Ad05063405C7167Fa9B3f95Aea90; PriceFeed 0x5c64d9aa1E7Bb51C50A940F2E46b2B65C99Fca81; debt 0 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false; zero debt but the branch remained callable with a nonzero cap. The registry now selects 0x4851b1f29e2a2802bb97136aea4106992fc82f33 at block 38987846 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1369,7 +1373,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "chainlink:0xdcbf8fe85fb49b385678b4772a0424743da582cd",
+          "oracle-source:bob:0x81a64473d102b38edcf35a7675654768d11d7e24",
           "satoshi:bob:stability-pool",
           "satoshi:bob:redistribution",
           "bob"
@@ -1377,7 +1381,7 @@
         "sources": [
           {
             "label": "River bob deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bob.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1389,7 +1393,7 @@
         "id": "bsquared-wbtc",
         "label": "bsquared WBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable WBTC branch uses one APRO wrapper path with a contract-enforced 86400-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0xaa738260f0c7af2976027d9e0e56e7114991a2bf, whose source() returned 0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346 and maxTimeThreshold() returned 86400 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "WBTC"
         ],
@@ -1398,21 +1402,21 @@
         ],
         "feeds": [
           {
-            "provider": "APRO",
-            "path": "PriceFeed 0xdee136cd19cBfb6571c93E834071E00d721E5cF0 -> WBTC/USD at 0xfcd454d19f9B8806F8908e99d85b8eA17b3c7346",
-            "address": "0xdee136cd19cBfb6571c93E834071E00d721E5cF0",
+            "provider": "APRO (issuer-described)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0xaa738260f0c7af2976027d9e0e56e7114991a2bf -> source() 0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
+            "address": "0xaa738260f0c7af2976027d9e0e56e7114991a2bf",
             "chain": "bsquared",
             "stalenessBoundSec": 86400,
-            "observedAt": "2026-07-14",
-            "observedBlock": 35440059,
+            "observedAt": "2026-10-01",
+            "observedBlock": 38837026,
             "failureDomainKeys": [
-              "apro:0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
+              "oracle-source:bsquared:0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
               "satoshi:bsquared:price-feed-wrapper",
               "bsquared"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "Historical 2026-07-14 wrapper behavior: The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover. At the 2026-10-01 pin the registry selects 0xaa738260f0c7af2976027d9e0e56e7114991a2bf; source() and maxTimeThreshold() were observed, but the replacement wrapper's full enforcement/failover implementation was not independently reverified. No new protective control is claimed.",
         "observedAt": "2026-07-14",
         "observedBlock": 35440059,
         "collateralParameters": [
@@ -1420,7 +1424,7 @@
             "asset": "WBTC",
             "maximumLtvPct": 90.909091,
             "minimumCollateralRatioPct": 110,
-            "note": "TroveManager 0x8FBfe28D6E5424d7f8c8c29A4910ce8a618d2D54; PriceFeed 0xdee136cd19cBfb6571c93E834071E00d721E5cF0; debt 24000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0x8FBfe28D6E5424d7f8c8c29A4910ce8a618d2D54; PriceFeed 0xdee136cd19cBfb6571c93E834071E00d721E5cF0; debt 24000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false. The registry now selects 0xaa738260f0c7af2976027d9e0e56e7114991a2bf at block 38837026 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1428,7 +1432,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "apro:0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
+          "oracle-source:bsquared:0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
           "satoshi:bsquared:stability-pool",
           "satoshi:bsquared:redistribution",
           "bsquared"
@@ -1436,7 +1440,7 @@
         "sources": [
           {
             "label": "River bsquared deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bsquared"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bsquared.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1448,7 +1452,7 @@
         "id": "bsquared-stbtc",
         "label": "bsquared stBTC (registry uBTC) Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable stBTC (registry uBTC) branch uses one 50/50 APRO aggregate wrapper path with a contract-enforced 3780-second maximum age; every configured component is required.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0xaa738260f0c7af2976027d9e0e56e7114991a2bf, whose source() returned 0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346 and maxTimeThreshold() returned 86400 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "stBTC (registry uBTC)"
         ],
@@ -1457,21 +1461,21 @@
         ],
         "feeds": [
           {
-            "provider": "50/50 APRO aggregate",
-            "path": "PriceFeed 0x6C481F0d17Cd6d1299D5f211217e86f25d829B00 -> stBTC/USD two-component path; both required at 0x571b77B3511ba6A097cd219023DBc7a0820DB797 + 0x219491D3D577537C66d1D3d21C0eC3486042065",
-            "address": "0x6C481F0d17Cd6d1299D5f211217e86f25d829B00",
+            "provider": "APRO (issuer-described)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0xaa738260f0c7af2976027d9e0e56e7114991a2bf -> source() 0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
+            "address": "0xaa738260f0c7af2976027d9e0e56e7114991a2bf",
             "chain": "bsquared",
-            "stalenessBoundSec": 3780,
-            "observedAt": "2026-07-14",
-            "observedBlock": 35440059,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-10-01",
+            "observedBlock": 38837026,
             "failureDomainKeys": [
-              "50-50-apro-aggregate:0x571b77b3511ba6a097cd219023dbc7a0820db797 + 0x219491d3d577537c66d1d3d21c0ec3486042065",
+              "oracle-source:bsquared:0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
               "satoshi:bsquared:price-feed-wrapper",
               "bsquared"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3780-second source. There is no cached-price or alternate-provider fallback; every configured component must succeed; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "Historical 2026-07-14 wrapper behavior: The branch wrapper reverts on a non-positive or older-than-3780-second source. There is no cached-price or alternate-provider fallback; every configured component must succeed; an admin-configurable source or threshold is not automatic failover. At the 2026-10-01 pin the registry selects 0xaa738260f0c7af2976027d9e0e56e7114991a2bf; source() and maxTimeThreshold() were observed, but the replacement wrapper's full enforcement/failover implementation was not independently reverified. No new protective control is claimed.",
         "observedAt": "2026-07-14",
         "observedBlock": 35440059,
         "collateralParameters": [
@@ -1479,7 +1483,7 @@
             "asset": "stBTC (registry uBTC)",
             "maximumLtvPct": 58.823529,
             "minimumCollateralRatioPct": 170,
-            "note": "TroveManager 0xa03B86E93c98FE95caC2A6645fF271Bb67040eab; PriceFeed 0x6C481F0d17Cd6d1299D5f211217e86f25d829B00; debt 1030162243973017249291147 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0xa03B86E93c98FE95caC2A6645fF271Bb67040eab; PriceFeed 0x6C481F0d17Cd6d1299D5f211217e86f25d829B00; debt 1030162243973017249291147 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false. The registry now selects 0xaa738260f0c7af2976027d9e0e56e7114991a2bf at block 38837026 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1487,7 +1491,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "50-50-apro-aggregate:0x571b77b3511ba6a097cd219023dbc7a0820db797 + 0x219491d3d577537c66d1d3d21c0ec3486042065",
+          "oracle-source:bsquared:0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
           "satoshi:bsquared:stability-pool",
           "satoshi:bsquared:redistribution",
           "bsquared"
@@ -1495,7 +1499,7 @@
         "sources": [
           {
             "label": "River bsquared deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bsquared"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bsquared.md"
           },
           {
             "label": "Pinned Satoshi aggregate wrapper",
@@ -1554,7 +1558,7 @@
         "sources": [
           {
             "label": "River hemi deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/hemi.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1613,7 +1617,7 @@
         "sources": [
           {
             "label": "River hemi deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/hemi.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1625,7 +1629,7 @@
         "id": "hemi-wbtc",
         "label": "hemi WBTC Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The callable WBTC branch uses one RedStone-compatible wrapper path with a contract-enforced 86700-second maximum age.",
+        "summary": "As of 2026-10-01, the collateral registry selects PriceFeed 0xe10a99cd3f1a064fd358feccb36f968fb38a8bae, whose source() returned 0xe23eca12d7d2ed3829499556f6dce06642afd990 and maxTimeThreshold() returned 86400 seconds. This is a source()-based path, not the historical provider/aggregate configuration; no automatic failover protection is credited.",
         "collateralAssets": [
           "WBTC"
         ],
@@ -1634,21 +1638,21 @@
         ],
         "feeds": [
           {
-            "provider": "RedStone-compatible",
-            "path": "PriceFeed 0x7cfe0DB80E7D197e61B9388F67008946C7AF1281 -> WBTC/USD at 0x930Cb6E69e43443b1632B80f98308dD5521183C9",
-            "address": "0x7cfe0DB80E7D197e61B9388F67008946C7AF1281",
+            "provider": "Chainlink-compatible (upstream operator unverified)",
+            "path": "SatoshiXApp oracleRecords(collateralToken) -> PriceFeed 0xe10a99cd3f1a064fd358feccb36f968fb38a8bae -> source() 0xe23eca12d7d2ed3829499556f6dce06642afd990",
+            "address": "0xe10a99cd3f1a064fd358feccb36f968fb38a8bae",
             "chain": "hemi",
-            "stalenessBoundSec": 86700,
-            "observedAt": "2026-07-14",
-            "observedBlock": 4848099,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-10-01",
+            "observedBlock": 5414247,
             "failureDomainKeys": [
-              "redstone-compatible:0x930cb6e69e43443b1632b80f98308dd5521183c9",
+              "oracle-source:hemi:0xe23eca12d7d2ed3829499556f6dce06642afd990",
               "satoshi:hemi:price-feed-wrapper",
               "hemi"
             ]
           }
         ],
-        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "fallbackBehavior": "The current wrapper's runtime logic matches the verified PriceFeedChainlink implementation after accounting for the immutable source address and compiler metadata. It reverts on a non-positive or older-than-86400-second source; there is no cached-price or alternate-provider fallback, and the owner can change the age threshold.",
         "observedAt": "2026-07-14",
         "observedBlock": 4848099,
         "collateralParameters": [
@@ -1656,7 +1660,7 @@
             "asset": "WBTC",
             "maximumLtvPct": 90.909091,
             "minimumCollateralRatioPct": 110,
-            "note": "TroveManager 0xa7B54413129441e872F42C1c4fE7D1984332CA87; PriceFeed 0x7cfe0DB80E7D197e61B9388F67008946C7AF1281; debt 12050000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+            "note": "Historical 2026-07-14 collateral-parameter observation (not refreshed): TroveManager 0xa7B54413129441e872F42C1c4fE7D1984332CA87; PriceFeed 0x7cfe0DB80E7D197e61B9388F67008946C7AF1281; debt 12050000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false. The registry now selects 0xe10a99cd3f1a064fd358feccb36f968fb38a8bae at block 5414247 on 2026-10-01; the earlier PriceFeed in this note is historical."
           }
         ],
         "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
@@ -1664,7 +1668,7 @@
         "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
         "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
         "failureDomainKeys": [
-          "redstone-compatible:0x930cb6e69e43443b1632b80f98308dd5521183c9",
+          "oracle-source:hemi:0xe23eca12d7d2ed3829499556f6dce06642afd990",
           "satoshi:hemi:stability-pool",
           "satoshi:hemi:redistribution",
           "hemi"
@@ -1672,7 +1676,7 @@
         "sources": [
           {
             "label": "River hemi deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/hemi.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1731,7 +1735,7 @@
         "sources": [
           {
             "label": "River bevm deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bevm"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bevm.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1790,7 +1794,7 @@
         "sources": [
           {
             "label": "River bevm deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bevm"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bevm.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1849,7 +1853,7 @@
         "sources": [
           {
             "label": "River bitlayer deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bitlayer"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bitlayer.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1908,7 +1912,7 @@
         "sources": [
           {
             "label": "River bitlayer deployments",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bitlayer"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bitlayer.md"
           },
           {
             "label": "Pinned Satoshi Chainlink wrapper",
@@ -1920,7 +1924,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "River's chain-local SatoshiXApp/CDP paths create native satUSD liabilities and remain in Mint Authority. Bridge Risk separately scores the issuer-deployed DebtTokenWithLz LayerZero OFT burn/mint routes, including owner-gated upgrades, peer/delegate/configuration authority, endpoint and messaging dependencies, and DVN/executor common-mode risk. This 2026-08-28 CTRL/BRDG review is source-enriched but remains blocked on unresolved current peers, route limits, LayerZero DVN/executor configuration, and the BEVM endpoint/implementation; it is not a cleared validation review. River's bridge documentation confirms the OFT burn/mint model, while the verified owner-gated UUPS implementations on the non-BEVM routes leave bridge-mint limits raiseable; the resulting route tier remains external-lock-mint.",
+    "summary": "River's chain-local SatoshiXApp/CDP paths create native satUSD liabilities and remain in Mint Authority. Bridge Risk separately scores the issuer-deployed DebtTokenWithLz LayerZero OFT burn/mint routes, including owner-gated upgrades, peer/delegate/configuration authority, endpoint and messaging dependencies, and DVN/executor common-mode risk. This CTRL/BRDG review remains blocked on unresolved current peers, route limits, and LayerZero DVN/executor configuration; it is not a cleared validation review. The BEVM deployment's owner, SatoshiXApp, implementation, and endpoint getter were re-read at block 13444309 on 2026-10-01, but the endpoint's protocol version and validation configuration remain unverified. River's bridge documentation confirms the OFT burn/mint model, while the verified owner-gated UUPS implementations on the non-BEVM routes leave bridge-mint limits raiseable; the resulting route tier remains external-lock-mint.",
     "reviewedAt": "2026-08-28",
     "reviewer": "Codex Safety Score V9 BRDG curation; Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Codex mint-bridge-boundary migration 2026-08-16",
     "confidence": "manual-review",
@@ -1979,7 +1983,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ]
       },
@@ -2015,7 +2019,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "LayerZero on L2BEAT",
@@ -2055,7 +2059,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ]
       },
@@ -2091,7 +2095,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "LayerZero on L2BEAT",
@@ -2131,7 +2135,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "LayerZero on L2BEAT",
@@ -2171,7 +2175,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "LayerZero on L2BEAT",
@@ -2211,7 +2215,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "LayerZero on L2BEAT",
@@ -2241,7 +2245,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           }
         ]
       },
@@ -2277,7 +2281,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "LayerZero on L2BEAT",
@@ -2297,7 +2301,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xd4b0eecf327c0f1b43d487fecfd2ea56e746a72b (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment was reviewed as an issuer-deployed DebtTokenWithLz OFT (endpoint() = the LayerZero V2 endpoint); current BEVM RPC state, including the endpoint address and peer/delegate/DVN-executor configuration, was unavailable in the 2026-08-16 re-read. Supply movement and native CDP issuance remain separately assessed. A deprecated satUSD V1 token 0xF2692468666E459D87052f68aE474E36C1a34fbB also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
+        "reviewNote": "Native satUSD mint chain: at chain ID 11501 block 13444309 on 2026-10-01, satoshiXApp() returned 0xd4b0eecf327c0f1b43d487fecfd2ea56e746a72b and owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47. The EIP-1967 implementation slot returned 0xa9ecf240b4621cf703adc3985a084770d8df1f3a and endpoint() returned 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa. The prior 2026-08-16 RPC read was unavailable; these getter observations do not establish the endpoint's LayerZero version, peers, delegate, or DVN/executor configuration. Supply movement and native CDP issuance remain separately assessed. A deprecated satUSD V1 token 0xF2692468666E459D87052f68aE474E36C1a34fbB also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bevm",
         "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
@@ -2307,7 +2311,8 @@
           "contract:bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
           "config:layerzero-v2-dvn-executor"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 13444309,
         "sources": [
           {
             "label": "bevm explorer satUSD token",
@@ -2315,11 +2320,15 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "Chain ID 11501 pinned BEVM deployment read (block 13444309, 2026-10-01)",
+            "url": "https://rpc-mainnet-1.geb.network/"
           }
         ]
       },
@@ -2355,7 +2364,7 @@
           },
           {
             "label": "River docs (satUSD omnichain OFT)",
-            "url": "https://docs.river.inc"
+            "url": "https://docs.riverai.inc/products/editor/bridge.md"
           },
           {
             "label": "LayerZero on L2BEAT",
@@ -2869,9 +2878,9 @@
         "authorityType": "validator-quorum",
         "routeChecks": {
           "attestorQuorum": "LayerZero V2 endpoint/DVN/executor validation is an external route failure domain. The exact per-OApp DVN and executor configuration, validator membership, quorum, and emergency override roster were not read; no threshold or custody claim is made.",
-          "trustedPeerOrRemote": "The reviewed route rows identify the satUSD DebtTokenWithLz delivery contracts and known LayerZero V2 endpoint addresses on Ethereum, Arbitrum, Base, BSC, Sonic, BOB, Bitlayer, Hemi, and X Layer. Current satUSD peer mappings were not re-read; the BEVM route's endpoint, implementation, and peer state remain unresolved because its RPC endpoint did not return state.",
+          "trustedPeerOrRemote": "The reviewed route rows identify satUSD delivery contracts and known LayerZero endpoint addresses. Current satUSD peer mappings were not re-read. BEVM owner(), satoshiXApp(), endpoint(), and the EIP-1967 implementation slot were pinned at block 13444309 on 2026-10-01; the observed endpoint 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa has not been independently classified by LayerZero version or validation configuration.",
           "rateLimits": "LayerZero messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated for the selected routes, and no numeric limit or cap claim is made.",
-          "unsupportedReason": "Delivery-contract addresses, River's OFT documentation, and the recorded owner EOA identify the route machinery but do not identify the current peer, DVN/executor roster, validator authority, or BEVM endpoint/implementation. A protocol label or delivery contract cannot stand in for a validator identity."
+          "unsupportedReason": "Delivery-contract addresses, River's OFT documentation, and observed owner/endpoint/implementation state identify the route machinery but do not identify the current peers, DVN/executor roster, validator authority, or the BEVM endpoint's protocol version. A protocol label or delivery contract cannot stand in for a validator identity."
         },
         "observedAt": "2026-08-28",
         "sources": [
@@ -2885,7 +2894,7 @@
           },
           {
             "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
         ],
         "evidence": "The reviewed route rows and River bridge documentation establish the issuer-deployed DebtTokenWithLz delivery contracts and OFT burn/mint semantics for the ten selected LayerZero routes, while the owner controls separately preserve only source-proven route administration. The 2026-08-28 review found no primary source in the record that resolves current satUSD peers, aggregate or per-lane rate limits, per-OApp DVN/executor configuration, validator authority, or the BEVM endpoint/implementation. Delivery contracts, protocol labels, and the recorded owner EOA therefore do not resolve the independent validation domain; this control remains unknown and keeps the CTRL/BRDG review source-enriched but blocked rather than cleared. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external LayerZero V2 DVN/executor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum, known but weak, graded no higher than a named issuer backend and never above a named multisig, rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."

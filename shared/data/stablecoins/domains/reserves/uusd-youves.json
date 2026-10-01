@@ -103,7 +103,7 @@
       }
     ],
     "rationale": "Current Tezos vault contexts at the 2026-08-20 head contain 630,593.314303 XTZ, 10,486,199 SIRS, 1.61999584 tzBTC in the active tzBTC engine plus 0.00069433 tzBTC in the legacy engine, and 13,408,639.257002 USDt. The current SIRS LP oracle reports 1,271,655,876 tzBTC atomic units against 26,125,307 SIRS, or 0.0000004867525101 tzBTC per SIRS; TzKT's head quote reports XTZ at $0.2168773476 and current BTC/USD and USDt/USD quotes normalize the balances to $13,400,138.18 USDt, $365,219.66 SIRS, $136,761.41 XTZ, and $115,965.24 tzBTC. The resulting full-composition weights are 95.59179212/2.60534637/0.97560694/0.82725457.",
-    "compositionBasis": "Current active Youves vault-context balances across all uUSD engines, the on-chain SIRS LP reserve ratio, and same-day market quotes used only to normalize collateral values",
+    "compositionBasis": "Historical 2026-08-20 market-normalized composition. At Tezos level 15181100 on 2026-10-01, token administrator bigmap 7705 identifies nine authorized uUSD engines; the eight-engine live adapter omits KT1TcCSR24TmDvwTfHkyWbwMB111gtNYxEcA and KT1H2514Wb6G38fmgU3vpAwkWEpFC9sq7HPH and includes a different legacy tzBTC engine. A full refresh requires reconciling that census and validating fresh market quotes plus SIRS LP unit normalization. The compositionAsOf remains 2026-08-20.",
     "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
     "knownUnknownExposure": "All active uUSD engine vault contexts and collateral balances are identified; SIRS is represented as the protocol's LP token with its current on-chain tzBTC-per-SIRS reserve ratio. Savings-pool uUSD is a holder claim rather than reserve collateral and is excluded.",

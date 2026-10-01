@@ -2,7 +2,7 @@
   "id": "cusd-celo",
   "name": "Mento Dollar",
   "symbol": "USDm",
-  "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo and Monad (formerly cUSD), backed by the live Mento reserve and CDP/liquidity infrastructure.",
+  "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo and Monad (formerly cUSD), backed by the live Mento reserve and reserve-liquidity infrastructure.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"

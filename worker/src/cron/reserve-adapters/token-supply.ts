@@ -4,6 +4,7 @@ import type { AdapterContext } from "./types";
 import { throwIfAborted } from "../../lib/abort";
 import { redactProviderUrls } from "../../lib/safe-error-message";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { APTOS_PUBLIC_REST_URL } from "@shared/lib/chain-rpc-registry";
 import { getRpcAuthHeaders, registryRpcUrls } from "../../lib/chain-registry";
 import { fetchErc20TotalSupply } from "./onchain";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
@@ -29,8 +30,7 @@ const SOLANA_RPC_URLS = [
 
 const MOVE_CONCURRENT_SUPPLY_TYPE = "0x1::fungible_asset::ConcurrentSupply";
 const MOVE_METADATA_TYPE = "0x1::fungible_asset::Metadata";
-/** Public Aptos REST base; a registry `aptos` endpoint takes precedence. */
-export const APTOS_PUBLIC_REST_URL = "https://api.mainnet.aptoslabs.com/v1";
+export { APTOS_PUBLIC_REST_URL };
 
 interface MoveLedgerResponse {
   ledger_version?: string;

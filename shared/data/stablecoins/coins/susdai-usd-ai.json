@@ -2,7 +2,7 @@
   "id": "susdai-usd-ai",
   "name": "Staked USDai",
   "symbol": "sUSDai",
-  "oneLiner": "sUSDai is USD.AI's staked wrapper of USDai; share price accrues yield from a PYUSD liquid sleeve and GPU-backed AI-compute loans, with a 30-day queued exit.",
+  "oneLiner": "sUSDai is USD.AI's staked USDai wrapper, earning yield from PYUSD and GPU-backed AI-compute loans, with cash-constrained exits in 30-day epochs.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -14,7 +14,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdai-usd-ai",
   "collateral": "Yield-bearing USD.AI position backed by a mixed reserve stack that currently pairs a large PYUSD liquid sleeve with GPU-backed infrastructure loans financing AI compute; current issuer materials describe value-warranty coverage on new GPU loans",
-  "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
+  "pegMechanism": "Stake USDai to receive sUSDai at the current share price. Unstaking enters a FIFO redemption queue processed in global 30-day epochs from available USDai; unfulfilled requests carry into later epochs, and holders cannot force immediate protocol liquidity.",
   "mechanismArchetype": "rwa-credit-fund",
   "archetypeOverride": true,
   "detailProvider": "coingecko",

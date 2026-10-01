@@ -14,8 +14,8 @@
         "0.0.6070082"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-13",
-      "observedBlock": 97626563,
+      "observedAt": "2026-10-01",
+      "observedBlock": 100587413,
       "sources": [
         {
           "label": "Hedera Mirror Node HCHF token state",
@@ -35,7 +35,7 @@
         }
       ]
     },
-    "summary": "HCHF is minted only when immutable HLiquity BorrowerOperations creates user debt against HBAR Troves. The HTS supply key decodes to fixed HCHFToken contract 0.0.6070122 rather than an external keypair, and that wrapper accepts mint calls only from fixed BorrowerOperations 0.0.6070094. The token has no admin, freeze, KYC, wipe, pause, fee, or metadata key, and every mint-critical contract has renounced ownership with no contract-update history.",
+    "summary": "HCHF is minted only when immutable HLiquity BorrowerOperations creates user debt against HBAR Troves. The HTS supply key decodes to fixed HCHFToken contract 0.0.6070122 rather than an external keypair, and that wrapper accepts mint calls only from fixed BorrowerOperations 0.0.6070094. The token has no admin, freeze, KYC, wipe, pause, fee, or metadata key. BorrowerOperations, TroveManager, StabilityPool, and PriceFeed have renounced ownership; HCHFToken has no Ownable interface.",
     "controls": [
       {
         "label": "HLiquity HCHFToken and fixed BorrowerOperations mint path",
@@ -47,9 +47,9 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "No hard global supply cap. BorrowerOperations permits user debt only under the immutable 110% minimum collateral ratio, 150% critical collateral ratio, 1,780-HCHF minimum net debt, 20-HCHF gas compensation, and 0.5% borrowing-fee floor; HTS also applies its signed-int64 per-call bound.",
-        "observedAt": "2026-07-13",
-        "observedBlock": 97626563,
-        "evidence": "At Hedera block 97626563, token 0.0.6070123 had no admin, freeze, KYC, wipe, pause, fee, or metadata key. Its sole supply-key protobuf decoded to ContractID 0.0.6070122, also the token treasury. Exact HCHFToken source permits only fixed BorrowerOperations 0.0.6070094 to call mint. HCHFToken, BorrowerOperations, TroveManager, StabilityPool, and PriceFeed each had owner() = 0, self-referential ContractID admin keys, no modified timestamp, and no CONTRACTUPDATEINSTANCE history. Transaction 0.0.842806-1783066707-152111688 at block 97172682 traces a user adjustTrove through BorrowerOperations and HCHFToken into HTS mintToken, confirming the live path.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 100587413,
+        "evidence": "At Hedera block 100587413 (2026-10-01 07:20:31 UTC), HCHFToken getter calls returned BorrowerOperations 0.0.6070094, TroveManager 0.0.6070118, StabilityPool 0.0.6070108, and token 0.0.6070123. BorrowerOperations, TroveManager, StabilityPool, and PriceFeed returned owner() = 0. HCHFToken owner() reverted: its source has no Ownable interface, so the earlier assertion that all five returned zero was incorrect. Mirror Node metadata retrieved on 2026-10-01 reports no token admin, freeze, KYC, wipe, pause, fee, or metadata key; supply key 0a0518eabef202 identifies ContractID 0.0.6070122, also the treasury. All five contract admin keys are self-referential ContractID keys. Source restricts mint to immutable BorrowerOperations; pinned getters confirm the unchanged collateral parameters.",
         "sources": [
           {
             "label": "Hedera Mirror Node HCHF token state",
@@ -70,9 +70,9 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At the fixed cutoff, historical Mirror Node state and contract calls resolved the full HCHF mint path. The token's sole supply key is fixed wrapper contract 0.0.6070122, not an external signer; exact source restricts wrapper mint to fixed BorrowerOperations 0.0.6070094. All five checked mint, collateral, liquidation, and oracle contracts had renounced owners and no external update history. A real mint trace at block 97172682 follows user Trove adjustment through BorrowerOperations into the HTS mint precompile. Economic-posture fields reviewed 2026-08-15: immutable collateral-gated BorrowerOperations is the sole mint path, so reconciliation is not applicable and no off-chain supervisor applies.",
-      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Current fixed-path getters and four Ownable owner() reads were verified at Hedera block 100587413 on 2026-10-01. HCHFToken is not Ownable and its owner() call reverts; it must not be described as having renounced ownership. Mirror Node token and contract metadata independently retain the fixed supply key, absent holder-restriction keys, and self-referential contract admin keys. BorrowerOperations parameters remain 110% MCR, 150% CCR, 1,780-HCHF minimum net debt, 20-HCHF gas compensation, and 0.5% borrowing-fee floor. Transaction-history searches returned empty pages with continuation links, so this review does not assert a complete absence of contract-update history. Immutable user-collateralized issuance remains the reviewed economic boundary; reconciliation is not applicable and no off-chain supervisor applies.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.HchfReview)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Hedera Mirror Node HCHF token state",

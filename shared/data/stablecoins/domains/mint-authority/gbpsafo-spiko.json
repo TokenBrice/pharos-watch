@@ -63,7 +63,7 @@
         "failureDomainKeys": [
           "safe:ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea"
         ],
-        "evidence": "Verified on-chain 2026-07-20: this Safe is the sole member of group 0 (ADMIN) in the Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum (getGroups bitmask = group 0; GroupAdded event history); it administers all permission groups including the mint group.",
+        "evidence": "At Ethereum block 26095801 on 2026-10-01, getGroups on PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 included ADMIN group 0 for this Safe; getRequirements(token, mint) returned group mask 0x5. The Safe threshold remains 3 but its owner set is now six addresses, compared with the recorded seven-owner observation on 2026-07-20. No enabled modules and a zero guard were observed.",
         "sources": [
           {
             "label": "Spiko smart contracts",
@@ -76,20 +76,24 @@
           "ethereum:0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0"
         ],
         "threshold": 3,
-        "signerCount": 7,
+        "signerCount": 6,
+        "observedBlock": 26095801,
+        "observedAt": "2026-10-01",
         "safe": {
+          "version": "1.4.1",
           "threshold": 3,
           "owners": [
             "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
-            "0xe9106c617d7180bf6badcfa5edc664b726c5dcbb",
-            "0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d",
+            "0xd01046472371168721e45dc357296683f026d6b8",
             "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
             "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
-            "0xe67d2cbeae3090be017c66e7a6943961619a5d35",
-            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"
           ],
-          "observedBlock": 25571110,
-          "observedAt": "2026-07-20",
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26095801,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         }
       }
@@ -112,7 +116,7 @@
           "url": "https://www.spiko.io/spiko-pound"
         }
       ],
-      "sourceFreeRationale": "Spiko uses a custom RBAC permission-group system not compatible with standard AccessControl interfaces. On-chain reads (owner(), getRoleMemberCount(), getOwners()) all revert or return nothing useful on the token proxies. The Ethereum proxy (0xc273986a...) delegates to a combined Token+TimelockController-like implementation (0x60fcb851..., named 'Token' on Blockscout) which exposes Timelock selectors but not standard enumerable role getters. The Polygon external proxy admin (0x251747f0...) is an unverified contract that does not respond to standard Safe or multisig ABI."
+      "sourceFreeRationale": "Spiko uses a custom permission-group system. Pinned reads on 2026-10-01 resolve authority() to each EVM deployment's PermissionManager and the Ethereum mint requirement to group mask 0x5. EIP-1967 implementation slots identify Ethereum implementation 0x60fcb8511db2a7b823cd0f3c6b08da456e18bff1 and Polygon implementation 0x251747f0346db8cb0a9d7938068b406c27f07bdb; the latter is an implementation address, not an external proxy admin. Correct EIP-1967 admin-slot reads are zero on these UUPS deployments and do not establish absence of upgrade authority. Non-EVM upgrade paths remain separately unverified."
     }
   }
 }

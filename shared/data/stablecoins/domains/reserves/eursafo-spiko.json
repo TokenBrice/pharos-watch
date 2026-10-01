@@ -58,8 +58,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA17EURSAFO)",
     "confidence": "verified",
     "sources": [
       {
@@ -75,6 +75,6 @@
         "url": "https://www.spiko.io/spiko-euro"
       }
     ],
-    "uncertainty": "The KID identifies CACEIS Bank as depositary and states that the fund is separate from its management company and legally segregated from custodian assets. The reviewed sources do not publish delegated-provider allocations or rehypothecation terms."
+    "uncertainty": "The KID identifies CACEIS Bank as depositary and states that the fund is separate from its management company and legally segregated from custodian assets. The September 2026 prospectus permits reinvestment of received cash collateral, prohibits selling, reinvesting or pledging received securities collateral, and permits securities lending up to 100% of net assets with expected use of 0%. Those are disclosed policy permissions, not a current allocation or proof of actual reuse. Delegated-provider allocations and current encumbrance remain undisclosed."
   }
 }

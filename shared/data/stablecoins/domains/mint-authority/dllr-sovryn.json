@@ -42,6 +42,8 @@
         "address": "0x5f777270259e32f79589fe82269db6209f7b7582",
         "capDescription": "Mints DLLR 1:1 only against deposited accepted bAssets (ZUSD, DOC); supply is bounded by deposited underlying stablecoins, not a fresh CDP.",
         "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 9286816,
         "evidence": "At Rootstock block 8935202, owner() on MassetManager proxy 0x5f777270 returned Timelock 0x967c84b731679e36a344002b8e3ce50620a7f69f. EIP-1967 proxy admin slot returned ProxyAdmin 0x466e023ddd08b53385b4763b883ab63820c123df, whose owner() also returned the same Timelock. The Timelock's delay (storage slot 2) = 0x2a300 = 172800 seconds (48 hours). The Timelock's admin() = GovernorAlpha 0x6496df39d000478a7a7352c01e0e713835051ccd, whose timelock() = Timelock 0x967c84. This confirms a full DAO governance chain: SOV-token GovernorAlpha → 48-hour Timelock → MassetManager.",
         "sources": [
           {
@@ -58,6 +60,8 @@
         "canRaiseCap": true,
         "chain": "rootstock",
         "address": "0x6496df39d000478a7a7352c01e0e713835051ccd",
+        "observedAt": "2026-10-01",
+        "observedBlock": 9286816,
         "evidence": "GovernorAlpha 0x6496df controls the 48-hour Timelock 0x967c84 that owns the MassetManager and its ProxyAdmin. GovernorAlpha.timelock() returns 0x967c84. SOV stakers vote to authorize changes via GovernorAlpha proposals queued through the Timelock.",
         "sources": [
           {

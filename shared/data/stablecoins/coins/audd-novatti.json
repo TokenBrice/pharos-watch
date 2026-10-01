@@ -2,14 +2,14 @@
   "id": "audd-novatti",
   "name": "AUDD",
   "symbol": "AUDD",
-  "oneLiner": "AUDD is AUDC Pty Ltd's centralized Australian dollar stablecoin, redeemable 1:1 and backed by AUD cash and Treasury bills at regulated Australian banks.",
+  "oneLiner": "AUDD is AUDC Pty Ltd's centralized Australian dollar stablecoin, redeemable 1:1 and backed by Australian-dollar reserves held on bare trust for holders.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "AUD",
     "governance": "centralized"
   },
-  "collateral": "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd",
-  "pegMechanism": "Direct 1:1 redemption for AUD through AUDC Pty Ltd (AFSL No. 700123, Novatti subsidiary), with monthly independent reserve attestations by William Buck",
+  "collateral": "Australian-dollar cash in Australian or foreign banks and AUD-denominated cash equivalents permitted by the PDS; the August 2026 report records 100% cash at Westpac and Banking Circle",
+  "pegMechanism": "1:1 AUD redemption via distributors, with direct AUDC fallback when distributor redemption is unavailable, subject to KYC and a $10 minimum; monthly William Buck agreed-upon procedures reconcile reserves and multichain supply",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -27,7 +27,7 @@
   "detailProvider": "defillama",
   "geckoId": "novatti-australian-digital-dollar",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://www.audd.digital/transparency/",
     "provider": "William Buck",
     "attestorTier": "regional",

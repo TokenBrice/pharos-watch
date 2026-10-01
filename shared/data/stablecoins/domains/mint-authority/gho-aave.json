@@ -11,8 +11,8 @@
         "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530270,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095800,
       "sources": [
         {
           "label": "GHO verified token source and constructor",
@@ -38,6 +38,8 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The Aave ACL Admin executor holds GHO's default-admin, facilitator-manager, and bucket-manager roles and can authorize facilitators or raise their bucket capacities.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "Aave GHO facilitators",
@@ -52,7 +54,7 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25530270, hasRole() returned true for 0x5300A1a1 under DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned the six facilitator contracts represented below."
+        "evidence": "At Ethereum block 26095800, hasRole() returned true for this executor under DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight facilitator contracts."
       },
       {
         "chain": "ethereum",
@@ -67,13 +69,15 @@
         "capDescription": "250M GHO bucket observed",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
-        "evidence": "GHO getFacilitator(0x5513224daaEABCa31af5280727878d52097afA05) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 250,000,000 GHO capacity and 135,000,000 GHO level."
       },
       {
         "chain": "ethereum",
@@ -88,13 +92,15 @@
         "capDescription": "2M GHO bucket observed",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
-        "evidence": "GHO getFacilitator(0xb639D208Bcf0589D54FaC24E655C79EC529762B8) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 2,000,000 GHO capacity and zero GHO level."
       },
       {
         "chain": "ethereum",
@@ -109,13 +115,15 @@
         "capDescription": "50M GHO bucket observed",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
-        "evidence": "GHO getFacilitator(0x2bd010Ab5393AB51b601B99C4B33ba148d9466e9) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level."
       },
       {
         "chain": "ethereum",
@@ -130,13 +138,15 @@
         "capDescription": "310M GHO bucket observed",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
-        "evidence": "At Ethereum block 25530270, getFacilitatorBucket(0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2) returned 310M GHO capacity and 310M GHO level."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 310,000,000 GHO capacity and 310,000,000 GHO level."
       },
       {
         "chain": "ethereum",
@@ -151,13 +161,15 @@
         "capDescription": "175M GHO bucket observed",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
-        "evidence": "GHO getFacilitator(0x2cE01c87Fec1b71A9041c52CaED46Fc5f4807285) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 175,000,000 GHO capacity and 45,000,000 GHO level."
       },
       {
         "chain": "ethereum",
@@ -172,13 +184,88 @@
         "capDescription": "80M GHO bucket observed",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "GHO token contract",
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
-        "evidence": "GHO getFacilitator(0xe10C78A3AC7f016eD2DE1A89c5479b1039EAB9eA) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+        "evidence": "At Ethereum block 26095800, getFacilitatorBucket() returned 80,000,000 GHO capacity and 59,000,000 GHO level."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x436dccc028322afc355f608cf582b7d7f19fdfed",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
+        "label": "GhoDirectFacilitator GSM Arbitrum",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "50M GHO bucket observed",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "sources": [
+          {
+            "label": "Verified canonical GHO token source and facilitator getters",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+          }
+        ],
+        "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Arbitrum, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
+        "label": "GhoDirectFacilitator GSM Monad",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "50M GHO bucket observed",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "sources": [
+          {
+            "label": "Verified canonical GHO token source and facilitator getters",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+          }
+        ],
+        "evidence": "At Ethereum block 26095800, getFacilitatorsList() included this Ethereum address, getFacilitator() returned the label GhoDirectFacilitator GSM Monad, and getFacilitatorBucket() returned 50,000,000 GHO capacity and 50,000,000 GHO level. This control records native Ethereum bucket issuance, not the remote bridge capabilities."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x46aa1063e5265b43663e81329333b47c517a5409",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
+        "label": "GHO Bucket Steward",
+        "role": "bucket-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Holds GHO BUCKET_MANAGER_ROLE. The verified steward permits only Risk Council increases for controlled facilitators, with each increase no greater than the current capacity and a one-day debounce between updates. The DAO executor controls the approved facilitator list. The debounce is not an execution timelock.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "sources": [
+          {
+            "label": "Verified GhoBucketSteward implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46aa1063e5265b43663e81329333b47c517a5409"
+          },
+          {
+            "label": "Aave GHO address book",
+            "url": "https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoEthereum.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26095800, canonical GHO hasRole(BUCKET_MANAGER_ROLE, steward) returned true and hasRole(FACILITATOR_MANAGER_ROLE, steward) returned false. The steward's bytecode matched its verified source, GHO_TOKEN() returned canonical GHO, owner() returned 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a, and RISK_COUNCIL() returned 0x8513e6f37dbc52de87b166980fa3f50639694b60. getControlledFacilitators() returned Core, Horizon, mainnet GSM and Lido facilitators; MINIMUM_DELAY() returned 86400."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -193,11 +280,15 @@
         {
           "label": "GHO token contract",
           "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+        },
+        {
+          "label": "Verified GhoToken source matched to Ethereum block 26095800",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
         }
       ],
-      "evidence": "At Ethereum block 25530270, the verified non-proxy GHO token had zero EIP-1967 implementation and admin slots. Aave's ACL Admin executor held all three GHO administrative roles, and getFacilitatorsList() returned six cap-limited facilitator contracts. Contract-governed minting requires no off-chain reserve reconciliation; no mint-authority incident is recorded in the reviewed protocol sources. Economic-posture fields reviewed 2026-08-15: six facilitators mint only within DAO-managed buckets and Aave governance can add facilitators or raise buckets, while GHO is a protocol liability without an off-chain reserve claim or prudential supervisor.",
-      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 26095800 (2026-10-01), canonical GHO bytecode matched the verified GhoToken deployment and its EIP-1967 implementation and correct admin slots were zero. The ACL Admin executor retained DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight registered facilitators and totalSupply() returned 699,000,000 GHO; the Arbitrum and Monad GSM facilitators each had 50,000,000 GHO capacity and level. The token's verified mint function enforces each facilitator's bucket capacity, while DAO-authorized administration can add facilitators or raise capacities. The separately verified GHO Bucket Steward also holds BUCKET_MANAGER_ROLE and can increase approved native facilitator capacities under its own Risk Council and debounce checks. Contract-governed issuance has no off-chain reserve reconciliation requirement; no prudential supervision of this native mint boundary is evidenced in the reviewed protocol disclosures.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA24GHO)",
+      "reviewedAt": "2026-10-01"
     }
   }
 }

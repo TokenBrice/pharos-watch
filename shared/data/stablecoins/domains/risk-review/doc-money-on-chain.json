@@ -161,8 +161,8 @@
         "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
       },
       {
-        "label": "DefiLlama DOC adapter: Ethereum eDOC contract mapping",
-        "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/doc/index.ts"
+        "label": "Blockscout: verified RSK Bridge implementation (originalTokens / mappedTokens), mapping rechecked by pinned RPC",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f29f9bda2052884d39f0f032b68aaa14fc363d8"
       },
       {
         "label": "Blockscout: verified Ethereum eDOC SideToken",
@@ -192,7 +192,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Rootstock RPC read on 2026-07-20 returned name Dollar on Chain, symbol DOC, 18 decimals, and owner 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038. Money On Chain documents native DOC minting against rBTC collateral on Rootstock.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 9286868,
         "sources": [
           {
             "label": "Money On Chain DOC minting",
@@ -221,7 +222,8 @@
           "protocol:layerzero-oft",
           "contract:arbitrum:0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510589999,
         "sources": [
           {
             "label": "Money On Chain DOC on Arbitrum",
@@ -255,12 +257,12 @@
           "multisig:ethereum:0x040007b1804ad78a97f541bebed377dcb60e4138",
           "federation:ethereum:0x5e29c223d99648c88610519f96e85e627b3abe17"
         ],
-        "observedAt": "2026-07-21",
-        "observedBlock": 25580192,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095937,
         "sources": [
           {
-            "label": "DefiLlama DOC adapter (eDOC mapping)",
-            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/doc/index.ts"
+            "label": "Blockscout: verified RSK Bridge implementation (originalTokens / mappedTokens), mapping rechecked by pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f29f9bda2052884d39f0f032b68aaa14fc363d8"
           },
           {
             "label": "Blockscout eDOC SideToken and verified minter code",

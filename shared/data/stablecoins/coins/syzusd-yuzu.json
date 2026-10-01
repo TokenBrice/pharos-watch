@@ -40,8 +40,7 @@
   "geckoId": "staked-yuzu-usd",
   "jurisdiction": {
     "country": "Georgia",
-    "regulator": "National Bank of Georgia (NBG)",
-    "license": "Virtual Asset Service Provider (VASP)"
+    "license": "Issuer-disclosed Virtual Asset Service Provider (VASP) under the Kutaisi Free Industrial Zone (FEZ) framework; authorization not independently verified"
   },
   "proofOfReserves": {
     "type": "real-time",
@@ -103,10 +102,15 @@
       "chain": "berachain",
       "address": "0x11a292b4a8985bfe4ea19aad24793b4e1d91ba60",
       "decimals": 18
+    },
+    {
+      "chain": "aptos",
+      "address": "0x5763307032c1971376260ca48cc627eb7cfde4d021aabc6bce9ffb9c7aa30619",
+      "decimals": 6
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",

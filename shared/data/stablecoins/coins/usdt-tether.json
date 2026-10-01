@@ -8,13 +8,13 @@
     "governance": "centralized"
   },
   "collateral": "Q2 2026 attestation: $187.75B total assets vs $183.64B liabilities; about $140.6B in U.S. Treasury bills and reverse repurchase agreements, $18.8B precious metals, $5.8B Bitcoin, $13.5B secured loans, and a $4.11B excess reserve buffer.",
-  "pegMechanism": "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
+  "pegMechanism": "Direct redemption through Tether for verified customers at $1 less applicable fees, subject to Tether's terms. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "1",
   "detailProvider": "defillama",
   "geckoId": "tether",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://tether.to/en/transparency",
     "provider": "BDO Italia",
     "attestorTier": "regional",
@@ -361,7 +361,7 @@
             "liquidity",
             "custody"
           ],
-          "liquidityHorizon": "one-day"
+          "liquidityHorizon": "unknown"
         },
         {
           "sourceKey": "tether:usdt:overnight-reverse-repo",
@@ -375,7 +375,7 @@
             "liquidity",
             "custody"
           ],
-          "liquidityHorizon": "one-day",
+          "liquidityHorizon": "unknown",
           "maturityDaysMax": 1
         },
         {
@@ -419,7 +419,7 @@
             "counterparty",
             "custody"
           ],
-          "liquidityHorizon": "immediate"
+          "liquidityHorizon": "unknown"
         },
         {
           "sourceKey": "tether:usdt:corporate-bonds",
@@ -448,7 +448,7 @@
             "custody",
             "liquidity"
           ],
-          "liquidityHorizon": "seven-days"
+          "liquidityHorizon": "unknown"
         },
         {
           "sourceKey": "tether:usdt:bitcoin",
@@ -462,7 +462,7 @@
             "custody",
             "liquidity"
           ],
-          "liquidityHorizon": "seven-days"
+          "liquidityHorizon": "unknown"
         },
         {
           "sourceKey": "tether:usdt:public-equities",
@@ -507,7 +507,7 @@
             "counterparty",
             "concentration"
           ],
-          "liquidityHorizon": "over-seven-days"
+          "liquidityHorizon": "unknown"
         }
       ]
     }

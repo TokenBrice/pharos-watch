@@ -55,5 +55,36 @@
         "rationale": "The broad private-credit and digital-asset mandate is identified, but facility-level and digital-asset allocations are not available to split the strategy into reviewed exposures."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Infinite Tokens S.A., acting in respect of its Compartment D",
+        "role": "other"
+      },
+      {
+        "name": "Midas Software GmbH",
+        "role": "other",
+        "jurisdiction": "Germany"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA10PYUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "September 14 SAVE attestation, Fasanara fund-manager correspondence",
+        "url": "https://gateway.pinata.cloud/ipfs/QmTMkn3M66fzD7mFxFiZ3qVpmzt4FQUqrfcedPL3RPP5Gs"
+      },
+      {
+        "label": "Midas Software GmbH base prospectus, issuer identity",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf"
+      }
+    ],
+    "uncertainty": "The September 14 fund-manager correspondence names Infinite Tokens S.A., Compartment D as noteholder and Midas Software GmbH as beneficiary of Class A, Series 2 tied to FASANARA SICAV-RAIF, Sub-Fund 29/F-ONE, Class A-A USD. These are identified legal participants, not verified asset custodians. The disclosed claim does not name the underlying asset custodians, establish tokenholder custody rights or provider shares, or prove segregation, bankruptcy remoteness or rehypothecation restrictions. The dated base prospectus establishes the German issuer identity but expired July 17, 2025 and is not used as current product-specific custody protection.",
+    "knownUnknownExposurePct": 100
   }
 }

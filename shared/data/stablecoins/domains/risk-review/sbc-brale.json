@@ -9,11 +9,15 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Brale documents stablecoin issuance APIs that can mint and redeem branded stablecoins across supported networks, including SBC. The route is reviewed as issuer-native burn/mint rather than an unaffiliated bridge route.",
+    "summary": "Brale supports issuer-native SBC issuance and redemption across networks and separately documents a LayerZero OFT integration for native mint/burn transfers through Stargate. The tracked token deployments are native liabilities, but the LayerZero transfer rail's adapter, peer, verifier, and administration controls require a separate route-scoped review.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Brale SBC LayerZero OFT integration",
+        "url": "https://brale.xyz/blog/sbc-integrates-layerzero-for-cross-chain-transfers"
+      },
       {
         "label": "Brale transfer types",
         "url": "https://docs.brale.xyz/coverage/transfer-types"
@@ -36,9 +40,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native SBC issuance on ethereum: the UUPS proxy resolves to Brale's SBC implementation 0x935eda0060ba40ea409bb05fa2300abb4e215ac1 with the reviewed 6-signer legacy multisig UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
+        "reviewNote": "Native SBC issuance on Ethereum: at block 26095892 on 2026-10-01, the implementation remains 0x935eda0060ba40ea409bb05fa2300abb4e215ac1 and UPGRADER_ROLE is held by Safe 0x4d16d9e3358b68638e25f631ac861fa40a8fb87e. getOwners() returns six owners and getThreshold() returns three. The earlier legacy-multisig description is superseded; the token is a native liability, with separately documented LayerZero transfer machinery not fully inventoried here.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "SBC on ethereum explorer (probed 2026-07-20)",

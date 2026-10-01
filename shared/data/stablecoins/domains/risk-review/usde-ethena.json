@@ -34,15 +34,23 @@
       {
         "label": "TONAPI USDe jetton metadata",
         "url": "https://tonapi.io/v2/jettons/EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"
+      },
+      {
+        "label": "Aptos USDe OFT state and published Move source at ledger version 7436641924",
+        "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3/resources?ledger_version=7436641924"
+      },
+      {
+        "label": "Aptos deployed USDe OFT freeze-entry ABI at ledger version 7436641924",
+        "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3/module/oft_fa?ledger_version=7436641924"
       }
     ],
-    "evidence": "POSTURE CHANGE on 2026-07-22: direct holder control is Yes because the material TON USDe jetton can be locked by its administrator. Ethereum USDe exposes owner-set minter authority and ordinary ERC-20 transfers but no holder freeze or blacklist, and a finalized Solana read at slot 434568679 returned freezeAuthority=null. On TON, verified jetton-minter.fc code for EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f gives the administrator an upgrade path and an admin-only call_to operation that can send set_status to any derived jetton wallet; the verified source explicitly describes this path as able to lock, unlock, or redeem funds. The 2026-07-22 state was pinned to master code hash a9bfedc76d60b332e8019e405505aadf4d7f870b8d3bae7abcfeb868681e6b2a and last transaction LT 91438387000020 / hash bf7da7303ee7eb1ac66741c08f6ba5146fc6fdde56206118f6801b30673f2727, with administrator EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7. This TON holder-control path makes the asset-level direct posture true even though the reviewed Ethereum and Solana deployments lack an equivalent active freeze authority.",
+    "evidence": "POSTURE CHANGE on 2026-07-22: direct holder control is Yes because the material TON USDe jetton can be locked by its administrator. Ethereum USDe exposes owner-set minter authority and ordinary ERC-20 transfers but no holder freeze or blacklist, and a finalized Solana read at slot 434568679 returned freezeAuthority=null. On TON, verified jetton-minter.fc code for EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f gives the administrator an upgrade path and an admin-only call_to operation that can send set_status to any derived jetton wallet; the verified source explicitly describes this path as able to lock, unlock, or redeem funds. The 2026-07-22 state was pinned to master code hash a9bfedc76d60b332e8019e405505aadf4d7f870b8d3bae7abcfeb868681e6b2a and last transaction LT 91438387000020 / hash bf7da7303ee7eb1ac66741c08f6ba5146fc6fdde56206118f6801b30673f2727, with administrator EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7. This TON holder-control path makes the asset-level direct posture true even though the reviewed Ethereum and Solana deployments lack an equivalent active freeze authority. Current 2026-10-01 Aptos state at ledger version 7436641924 additionally shows the USDe OFT object 0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3 holding the transfer reference for USDe metadata 0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9 with freeze_fungible_store_enabled=true and blocklist_enabled=true. Its deployed ABI exposes set_primary_fungible_store_frozen and set_fungible_store_frozen; published Move source restricts these to the OApp admin, currently 0x84c7ac376914733149586b28acf837f3ef20eee7fe8e28a19e1a135ffca676b9. No Aptos materiality share or administrative signer composition is inferred; existing direct holder-control status remains true.",
     "reviewer": "GPT SOL-CORP-A wave6",
     "reviewedAt": "2026-07-22"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "Ethena's offchain hedging system prices mint and redeem requests from exchange market data and validates internal pricing with Pyth and RedStone, but USDe has no permissionless CDP liquidation oracle.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Ethena's offchain service sets mint and redemption RFQ amounts using exchange data, Pyth and RedStone validation, and retains last-look acceptance. USDe terms section 13 gives Ethena BVI discretion to calculate the exchanged asset's value. A user-signed order cannot be changed, but neither automatic balance-derived conversion nor autonomous feed failover determines the issuer's offered quote.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -65,8 +73,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)",
     "confidence": "verified",
     "sources": [
       {
@@ -80,12 +88,24 @@
       {
         "label": "Ethena mint and redeem key functions",
         "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+      },
+      {
+        "label": "Ethena order validity and last-look checks",
+        "url": "https://docs.ethena.fi/technical-design/minting-usde/order-validity-checks"
+      },
+      {
+        "label": "Ethena USDe terms, section 13 valuation discretion",
+        "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions"
+      },
+      {
+        "label": "Ethena pricing sources and internal validation",
+        "url": "https://docs.ethena.fi/technical-design/use-of-oracles"
       }
     ]
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethereum is the sole reviewed native USDe issuance route. The canonical Ethereum OFT adapter and all reviewed satellite deployments are representation machinery assessed under Bridge Risk, not native Mint Authority. Because the LayerZero/OFT routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint. The Tempo route is now verified as an OFT-style proxy linked to a live Tempo USDe TIP-20 token, while its route controller and administrative semantics remain unresolved.",
+    "summary": "Ethereum is the sole reviewed native USDe issuance route. The canonical Ethereum OFT adapter and all reviewed satellite deployments are representation machinery assessed under Bridge Risk, not native Mint Authority. Because the LayerZero/OFT routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint. Current issuer documentation and pinned Tempo reads identify the USDe TIP-20 token and its separately listed OFT; the route controller and administrative semantics remain unresolved.",
     "reviewedAt": "2026-09-04",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); Codex Tempo USDe linkage refresh",
     "confidence": "verified",
@@ -157,7 +177,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on arbitrum at block 485672661: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on arbitrum at block 485672661: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at arbitrum block 510584242: owner()=0x89bad41d3307072cfd3118b5fd08101e23b2e129. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -200,7 +220,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Base at block 48859867: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner() = Ethena Safe 0xbc89d10eb486b6591583f218acb9545087dbf293 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on Base at block 48859867: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner() = Ethena Safe 0xbc89d10eb486b6591583f218acb9545087dbf293 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at base block 52024128: owner()=0xd896f26f76ed089a1711284a00af497b19d65171. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -243,7 +263,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on optimism at block 154455233: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc66bbbf821f2cfb3a85683acf0326eac92c160bd (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on optimism at block 154455233: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc66bbbf821f2cfb3a85683acf0326eac92c160bd (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at optimism block 157619415: owner()=0xbb4db1dd2851a4c06afbc2c115de874d103090b4. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -286,7 +306,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on bsc at block 110999461: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on bsc at block 110999461: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at bsc block 125055865: owner()=0x89bad41d3307072cfd3118b5fd08101e23b2e129. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -329,7 +349,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on avalanche at block 90749623: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x4e1204b35ee8adc35d20dbe6a52d4b40b6a858da (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on avalanche at block 90749623: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x4e1204b35ee8adc35d20dbe6a52d4b40b6a858da (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at avalanche block 96511204: owner()=0x33038a97ed7e407914e23b67234728a965645cd4. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -414,7 +434,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on mantle at block 98189462: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x799a2cd46cbc7fb53949072257e6331054a060bb (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on mantle at block 98189462: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x799a2cd46cbc7fb53949072257e6331054a060bb (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at mantle block 101353650: owner()=0xcd4769571095e66c96d9c86b16610217b4184a0b. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -457,7 +477,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on linea at block 31446302: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xe1b9b4c7d664126bf4b6724deb59eb5f8aab9192 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on linea at block 31446302: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xe1b9b4c7d664126bf4b6724deb59eb5f8aab9192 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at linea block 32198404: owner()=0x022f6538ab8468d75314d91f906c867e6b048c74. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -612,8 +632,8 @@
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           },
           {
-            "label": "USDe OFT on mode explorer (verified 2026-07-20)",
-            "url": "https://modescan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+            "label": "USDe OFT on Mode Blockscout (verified 2026-10-01)",
+            "url": "https://explorer.mode.network/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
           }
         ],
         "observedBlock": 42170830
@@ -758,7 +778,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on hyperevm at block 40924298: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, Ethena Safe 0x8f866f78b73431fbff76f77108a65b5699554972 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on hyperevm at block 40924298: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, Ethena Safe 0x8f866f78b73431fbff76f77108a65b5699554972 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at hyperevm block 47357451: owner()=0x0b10127af7a839a89c0083986a8cd68d82d33379. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -839,7 +859,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "LayerZero OFT registry (queried 2026-07-20) lists the Aptos USDe OFT adapter object 0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3 managing the fungible-asset USDe 0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9 (innerTokenAddress). Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter.",
+        "reviewNote": "LayerZero OFT registry (queried 2026-07-20) lists the Aptos USDe OFT adapter object 0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3 managing the fungible-asset USDe 0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9 (innerTokenAddress). Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter. At Aptos ledger version 7436641924 on 2026-10-01, the fungible-asset ObjectCore owner is this OFT object; its own ObjectCore owner and OAppStore admin/delegate are 0x84c7ac376914733149586b28acf837f3ef20eee7fe8e28a19e1a135ffca676b9. OftImpl references this exact USDe metadata for mint, burn and transfer, with freeze_fungible_store_enabled=true; Config.blocklist_enabled=true. The deployed oft_fa ABI exposes signer-gated set_primary_fungible_store_frozen and set_fungible_store_frozen entry functions; the on-chain published Move source checks the OApp admin. Administrator signer composition, peer-table contents and upgrade protection remain unreviewed; the external-lock-mint route tier is unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -915,7 +935,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on plasma at block 27568891: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x2c57434603f21f580c91a3bdc0cc5f3f20278632 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on plasma at block 27568891: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x2c57434603f21f580c91a3bdc0cc5f3f20278632 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at plasma block 33896637: owner()=0xabd3645ba0bb60c238bede64378826e1206f5072. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -941,8 +961,8 @@
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           },
           {
-            "label": "USDe OFT on plasma explorer (verified 2026-07-20)",
-            "url": "https://plasma-explorer.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+            "label": "USDe OFT on Plasmascan (verified 2026-10-01)",
+            "url": "https://plasmascan.to/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
           }
         ],
         "observedBlock": 27568891
@@ -1130,7 +1150,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on xlayer at block 65740209: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xce2f77841a8b974ce8e79157bccbecf17599f0e8 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on xlayer at block 65740209: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xce2f77841a8b974ce8e79157bccbecf17599f0e8 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at xlayer block 72068594: owner()=0xa179d46706d78a8bb24bd36bfb6472d4a0e15569. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -1216,7 +1236,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on megaeth at block 21712234: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x6e61463ec8ef3c585bb534473528f5fa68c9a709 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on megaeth at block 21712234: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x6e61463ec8ef3c585bb534473528f5fa68c9a709 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at megaeth block 28040625: owner()=0x1e86d2dda0063a44ed2d4e5e88205c2c84fbec3a. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -1259,7 +1279,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Hyperliquid spotMeta API (queried 2026-07-20): HyperCore USDe (tokenId 0x2e6d84f2d7ca82e6581e03523e4389f7, spot index 235) is EVM-linked to the HyperEVM USDe OFT 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34. Verified on HyperEVM at block 40924298: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, owner() = Ethena Safe 0x8f866f78b73431fbff76f77108a65b5699554972 (5-of-10). DefiLlama attributes Hyperliquid L1 USDe supply to LayerZero bridging from Ethereum; the HyperEVM OFT custody-backs the HyperCore asset via the HyperEVM-HyperCore link.",
+        "reviewNote": "Historical observation: Hyperliquid spotMeta API (queried 2026-07-20): HyperCore USDe (tokenId 0x2e6d84f2d7ca82e6581e03523e4389f7, spot index 235) is EVM-linked to the HyperEVM USDe OFT 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34. Verified on HyperEVM at block 40924298: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, owner() = Ethena Safe 0x8f866f78b73431fbff76f77108a65b5699554972 (5-of-10). DefiLlama attributes Hyperliquid L1 USDe supply to LayerZero bridging from Ethereum; the HyperEVM OFT custody-backs the HyperCore asset via the HyperEVM-HyperCore link. On 2026-10-01 the official spotMeta API still links tokenId 0x2e6d84f2d7ca82e6581e03523e4389f7, index 235, weiDecimals 8 to the HyperEVM OFT. At HyperEVM block 47357451 the OFT owner() instead returns 0x0b10127af7a839a89c0083986a8cd68d82d33379. The historical Safe identity is not the current owner; no bridge-control upgrade is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -1298,7 +1318,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on ink at block 51011790: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0xca29f3a6f966cb2fc0de625f8f325c0c46dbe958, owner() = Ethena Safe 0xaca3d1ece65c008a7df54f748d776566d5253e78 (getThreshold/getOwners = 5-of-10). DefiLlama attributes ink USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on ink at block 51011790: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0xca29f3a6f966cb2fc0de625f8f325c0c46dbe958, owner() = Ethena Safe 0xaca3d1ece65c008a7df54f748d776566d5253e78 (getThreshold/getOwners = 5-of-10). DefiLlama attributes ink USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at ink block 57339226: owner()=0x8114a138a81e62ba5ae4afd543c40ec84b79ebb7. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ink",
         "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
@@ -1341,7 +1361,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on monad at block 88890968: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = Ethena Safe 0x648209c3e51cf5b43faa5466ac13ab0514710aa0 (getThreshold/getOwners = 5-of-10). DefiLlama attributes monad USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on monad at block 88890968: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = Ethena Safe 0x648209c3e51cf5b43faa5466ac13ab0514710aa0 (getThreshold/getOwners = 5-of-10). DefiLlama attributes monad USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at monad block 109541605: owner()=0xf0527f03479bb6d467102ad90c77ef424ac1f2c7. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "monad",
         "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
@@ -1365,8 +1385,8 @@
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           },
           {
-            "label": "USDe OFT on monad explorer (verified 2026-07-20)",
-            "url": "https://explorer.monad.xyz/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+            "label": "USDe OFT on MonadScan (verified 2026-10-01)",
+            "url": "https://monadscan.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
           }
         ],
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
@@ -1384,7 +1404,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on robinhood 2026-07-20: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = Ethena Safe 0x6a31d637eb0a52019e69b5cb9ec0c9ada5aeffe0 (getThreshold/getOwners = 5-of-10). DefiLlama attributes robinhood USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "reviewNote": "Historical observation: Verified on robinhood 2026-07-20: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = Ethena Safe 0x6a31d637eb0a52019e69b5cb9ec0c9ada5aeffe0 (getThreshold/getOwners = 5-of-10). DefiLlama attributes robinhood USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. Current pinned observation on 2026-10-01 at robinhood block 77175168: owner()=0x5b29acbb51a1290ebda7f6a7a209aa08caa35901. The owner is no longer the historically recorded Safe. Privileged role/bypass details and score-tier effects are not inferred from this owner read; the external-lock-mint bridge boundary is retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "robinhood",
         "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
@@ -1415,11 +1435,11 @@
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
       },
       {
-        "id": "tempo:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "id": "tempo:0x20c0000000000000000000002f52d5cc21a3207b",
         "sourceChain": "ethereum",
         "destinationChain": "tempo",
         "canonicalChain": "ethereum",
-        "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "contractAddress": "0x20c0000000000000000000002f52d5cc21a3207b",
         "protocol": "LayerZero OFT",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
@@ -1427,14 +1447,14 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Refreshed from Tempo mainnet RPC at block 37948550 on 2026-09-04: the EIP-1967 proxy at 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 resolves to implementation 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a with a zero EIP-1967 admin slot. endpoint() returns Tempo's published LayerZero V2 endpoint 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c, token() returns the Tempo TIP-20 0x20c0000000000000000000002f52d5cc21a3207b, and approvalRequired() returns true. The linked TIP-20 currently returns name()='USDe', symbol()='USDe', decimals()=6, paused()=false, transferPolicyId()=1, and totalSupply()=22.256021. This resolves the route's token identity and OFT-style bridge boundary, but the reviewed Ethena and LayerZero materials do not publish this Tempo deployment's controller, delegate/peer configuration, TIP-20 issuer or policy administrator, or route-liability boundary. The route therefore remains reviewed for identity but unresolved for controller semantics; no native issuance authority is inferred.",
+        "reviewNote": "Historical observation (2026-09-04): Refreshed from Tempo mainnet RPC at block 37948550 on 2026-09-04: the EIP-1967 proxy at 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 resolves to implementation 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a with a zero EIP-1967 admin slot. endpoint() returns Tempo's published LayerZero V2 endpoint 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c, token() returns the Tempo TIP-20 0x20c0000000000000000000002f52d5cc21a3207b, and approvalRequired() returns true. The linked TIP-20 currently returns name()='USDe', symbol()='USDe', decimals()=6, paused()=false, transferPolicyId()=1, and totalSupply()=22.256021. This resolves the route's token identity and OFT-style bridge boundary, but the reviewed Ethena and LayerZero materials do not publish this Tempo deployment's controller, delegate/peer configuration, TIP-20 issuer or policy administrator, or route-liability boundary. The route therefore remains reviewed for identity but unresolved for controller semantics; no native issuance authority is inferred. Current issuer key-addresses documentation lists the USDe TIP-20 0x20c0000000000000000000002f52d5cc21a3207b and OFT 0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f. At Tempo block 42066527 on 2026-10-01 the TIP-20 returns symbol USDe and decimals 6; the listed OFT token() points to that TIP-20 and endpoint() returns 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c. owner() reverted for the current OFT, so controller/delegate/peer and policy administration remain unresolved; no native issuance authority or favorable control tier is inferred. Additional pinned reads of the issuer-listed current OFT at the same block resolve its EIP-1967 implementation to 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a and its nonzero admin slot to 0x4371714e061d4b1e800cf93795d0ca3f62a70e36; that admin address owner() returns 0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b, whose getThreshold()/getOwners() return 5 and 10 owners. These establish current administrative identities, not a timelock or complete delegate/peer, policy-role, or liability-boundary review; the unresolved protective-control posture is retained.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
-        "observedBlock": 37948550,
+        "observedAt": "2026-10-01",
+        "observedBlock": 42066527,
         "sources": [
           {
             "label": "Ethena key addresses",
-            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+            "url": "https://docs.ethena.fi/technical-design/key-addresses"
           },
           {
             "label": "LayerZero OFT metadata API (USDe)",

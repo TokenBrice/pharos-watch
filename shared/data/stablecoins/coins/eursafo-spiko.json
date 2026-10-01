@@ -2,7 +2,7 @@
   "id": "eursafo-spiko",
   "name": "Spiko Amundi Overnight Swap Fund (EUR)",
   "symbol": "EURSAFO",
-  "oneLiner": "EURSAFO is Spiko's EUR share of the Spiko/Amundi Smart Cash fund, a UCITS overnight-swap money-market vehicle authorized by the AMF.",
+  "oneLiner": "EURSAFO is Spiko's EUR share of the Spiko/Amundi Smart Cash fund, an AMF-authorized UCITS using fully collateralized overnight total-return swaps.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -13,13 +13,24 @@
   },
   "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
   "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
-  "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol owner-ruling review 2026-10-01 (RuleC05)",
+    "rationale": "The EURSAFO share gives proportional ownership of a UCITS securities portfolio. The 1 September 2026 prospectus invests in bonds, equities and money market instruments and transfers portfolio performance through total-return swaps, with a possible unswapped money-market UCITS sleeve. This exact-product holder claim and mixed physical-securities/swap mechanism do not establish direct short-duration Treasury-bill backing. The former tbill assignment is withdrawn under D18; no replacement family or grade is asserted without an exact-product methodology review.",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus published 1 September 2026, SAFO strategy and shareholder rights",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-eur",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit, statutory auditor (SAFO, the Spiko Amundi Overnight Swap Fund, was authorised by the AMF on 2026-02-23 and its first financial year has not closed, so no PwC certification exists yet; the spiko.io fund pages are unlaunched placeholders with dummy data and the 'four audits annually' claim is template marketing text)",
+    "provider": "PricewaterhouseCoopers Audit is the statutory auditor named in the Spiko SICAV prospectus. The linked AMF authorization certificate is not an audit or reserve-to-liability report; no current SAFO-specific financial audit report was verified in the public sources reviewed on 2026-10-01.",
     "attestorTier": "big4",
     "cadence": "annual",
     "attestorJurisdiction": "France"

@@ -68,8 +68,16 @@
       {
         "label": "Forte AUD Terms of Use January 2026",
         "url": "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf"
+      },
+      {
+        "label": "Forte AUDF August 2026 assets-only reserve cash audit",
+        "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026"
+      },
+      {
+        "label": "Cointree AUDF PDS — distributor disclosure of token-holder reserve/insolvency rights",
+        "url": "https://www.cointree.com/company/pds/audf-pds/"
       }
     ],
-    "uncertainty": "Management and Horizon Nexus describe one segregated, unencumbered AUDF reserve bank account in Australia but do not name the bank, disclose provider allocations, establish statutory bankruptcy remoteness or trust status for token holders, or state anti-rehypothecation / successor-custody terms. Binding terms deny holders a security interest or trust/fiduciary claim on reserves."
+    "uncertainty": "The May 2026 reserve report described one segregated, unencumbered AUDF reserve account in Australia without naming the bank. The August 31 report audits AUD 5,142,851.53 cash assets but does not establish holder trust/title, successor-custody continuity, or token-liability reconciliation. Current Cointree distributor PDS expressly says holders have no trust/proprietary reserve interest and are unsecured creditors on Forte insolvency. The cited January 2026 issuer terms return HTTP 404; current binding issuer terms, bank identity, provider allocations, anti-rehypothecation, and continuity arrangements remain unverified. This disclosure-scope update does not refresh the favorable historical segregation observation."
   }
 }

@@ -2,10 +2,19 @@
   "id": "zarp-zarp",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: ZARP resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Solana RPC finalized mint and authority observation, slot 452212935",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "ZARP issuer deployment inventory",
+        "url": "https://www.zarpstablecoin.com/transparency/"
+      }
+    ],
+    "evidence": "At finalized Solana slot 452212935 on 2026-10-01, the tracked Token-2022 mint dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk had freezeAuthority 797qLH2ZBvMrroZwxsLiWxgvDeLfUeJaHL1xWjfC7J4j, a System Program-owned wallet. This is a direct token-account freeze authority and independently supports the existing Yes verdict; no assumption about centralized governance is needed.",
+    "reviewer": "Pharos curation pass 2026-10-01 (CurB09JUPUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

@@ -2,13 +2,13 @@
   "id": "alusd-alchemix",
   "name": "Alchemix USD",
   "symbol": "alUSD",
-  "oneLiner": "alUSD is Alchemix's self-repaying CDP stablecoin: users borrow against DAI/USDC/USDT collateral and the yield from those deposits gradually repays the debt.",
+  "oneLiner": "alUSD is Alchemix's self-repaying CDP stablecoin; V3 uses USDC-denominated MYT collateral, and the Transmuter settles vested alUSD into MYT.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "DAI, USDC, and USDT deposited into yield strategies (Yearn, Aave) via Alchemix CDPs; yield automatically repays debt",
-  "pegMechanism": "Self-repaying loans: yield from deposited collateral automatically repays debt; the v3 Fixed-Duration Transmuter redeems alUSD 1:1 into collateral at DAO-scheduled maturity dates (per-chain deposit caps apply; 3% early-exit fee since 2026-07-15)",
+  "collateral": "USDC-denominated Mix-Yield Token (MYT) vault shares allocated across DAO-selected yield strategies; the V2-to-V3 migration completed in April 2026",
+  "pegMechanism": "Self-repaying loans and fixed-term transmutation: vested alUSD settles at face value into an equivalent value of MYT collateral, subject to bad-debt haircuts, per-chain deposit caps, and strategy liquidity. Current documented early-exit fees apply only to unvested alAssets: 1% on Ethereum and Optimism, 2.5% on Arbitrum.",
   "mechanismArchetype": "cdp",
   "llamaId": "20",
   "detailProvider": "defillama",
@@ -20,7 +20,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://v2-docs.alchemix.fi/"
+      "url": "https://docs.alchemix.fi/"
     },
     {
       "label": "GitHub",

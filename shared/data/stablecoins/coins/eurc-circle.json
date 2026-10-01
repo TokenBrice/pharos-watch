@@ -11,7 +11,7 @@
     "governance": "centralized"
   },
   "collateral": "Euro-denominated fiat reserves held separately from Circle operating funds at regulated financial institutions in the EEA",
-  "pegMechanism": "Direct 1:1 redemption through Circle Internet Financial Europe SAS (licensed EMI under MiCA); Circle Mint enables institutional mint/redeem at zero fees with near-instant settlement",
+  "pegMechanism": "Direct 1:1 euro redemption through Circle Internet Financial Europe SAS (ACPR-authorized electronic money institution); issuance through Circle Mint requires an eligible institutional account, and redemption remains subject to AML checks and the applicable redemption policy",
   "llamaId": "50",
   "detailProvider": "defillama",
   "geckoId": "euro-coin",
@@ -24,17 +24,16 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-27",
+      "periodEnd": "2026-08-31",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle; refreshed to the July 2026 report; PDF retrieved, same Deloitte engagement as USDC, examination opinion and management assertion dated August 27, 2026 verified by research pass)",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA34EURC), August examination and management assertion dated September 29, 2026",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte EURC examination report - July 2026",
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20July%2026%20(1).pdf"
+          "label": "Deloitte EURC examination report - August 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
         }
       ]
     }
@@ -112,6 +111,11 @@
     {
       "chain": "cardano",
       "address": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff93545555243",
+      "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0x3ee196e78d4d4248b849b8e1c7f44c5457fafd2c",
       "decimals": 6
     },
     {

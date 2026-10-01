@@ -1,8 +1,8 @@
 {
   "id": "honey-berachain",
-  "name": "Honey",
-  "symbol": "HONEY",
-  "oneLiner": "Honey is Berachain's native fully-collateralized dollar token, minted 1:1 against approved stable assets where some routes carry mint/redeem fees.",
+  "name": "Bera USD",
+  "symbol": "BUSD",
+  "oneLiner": "Bera USD, formerly HONEY, is Berachain's collateralized dollar token, minted and redeemed against approved stable assets at governance-configured rates.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
@@ -15,7 +15,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://honey.berachain.com/"
+      "url": "https://busd.berachain.com/"
     },
     {
       "label": "Twitter",
@@ -23,7 +23,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+      "url": "https://docs.berachain.com/general/tokens/busd"
     },
     {
       "label": "Discord",

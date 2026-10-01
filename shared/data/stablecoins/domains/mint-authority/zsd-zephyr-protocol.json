@@ -4,7 +4,7 @@
     "mintPath": "immutable-user-collateralized",
     "authorityPosture": "none-resolved",
     "confidence": "verified",
-    "summary": "ZSD is minted and redeemed through Zephyr's native reserve-ratio protocol rules against ZEPH collateral. Source code review confirms no admin/emergency mint path: all transaction_type enum values (MINT_STABLE, MINT_RESERVE, MINT_YIELD) are user-facing; blockchain.cpp contains no admin override. The Zephyr foundation controls the oracle RSA signing key (cryptonote_config.h), a price-feed centralization vector, but not a privileged mint bypass.",
+    "summary": "ZSD is minted and redeemed through Zephyr's native reserve-ratio protocol rules against ZEPH collateral. The v2.3.0 transaction enum and native conversion routing expose user-facing stablecoin mint/redeem operations, with no privileged ZSD mint entry identified. HF11 included a one-time ZPH base-coin payout for MEXC's unauditable balance; this was not a ZSD mint. Oracle pricing records are validated against one hard-coded RSA public key, a price-feed centralization vector distinct from direct mint authority.",
     "controls": [
       {
         "label": "Zephyr native reserve mint/redeem rules",

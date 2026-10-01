@@ -38,5 +38,34 @@
     "scope": "full-composition",
     "knownUnknownExposure": "sUSDe has no independent reserve portfolio; upstream USDe hedge collateral, custody, and counterparty allocation are tracked on the parent asset.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ethena StakedUSDeV2 vault (Ethereum 0x9d39a5de30e57443bff2a8307a4256c8797a3497)",
+        "role": "other"
+      },
+      {
+        "name": "Ethena USDeSilo (Ethereum 0x7fc7c91d556b400afa565013e3f32055a0713425)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC26), D08 direct-wrapper custody review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethena staking USDe documentation",
+        "url": "https://docs.ethena.fi/technical-design/staking-usde"
+      },
+      {
+        "label": "Ethena staking contract verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9d39a5de30e57443bff2a8307a4256c8797a3497"
+      }
+    ],
+    "uncertainty": "The onchain custodyModel describes direct wrapper custody of USDe in the staking vault and withdrawal silo, as documented by Ethena and confirmed by asset() at Ethereum block 26097118 on 2026-10-01. Upstream USDe collateral providers, hedge counterparties and their allocations remain in the usde-ethena parent dependency. This wrapper review does not establish their safeguards, legal segregation or bankruptcy treatment, and does not remove inherited parent risk. No provider share is estimated."
   }
 }

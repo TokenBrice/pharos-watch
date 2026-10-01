@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "LISUSD uses a Maker-style wards() auth pattern with role values (1 = minter, 2 = manager). Confirmed minter wards: the 24h admin timelock and the HayJoin CDP exit adapter (the operational minter). A 3/6 manager Safe (wards = 2) can only set the supply cap. The timelock is the hardcoded DEFAULT_ADMIN gating rely/deny and owns the ProxyAdmin for both the token and HayJoin.",
+    "summary": "lisUSD uses Maker-style wards() authorization with roles 1 = minter, 2 = manager, and 3 = admin. The 24-hour timelock is the hardcoded DEFAULT_ADMIN and owns the ProxyAdmin for the token and HayJoin; onlyAdmin also admits wards with role 3, whose complete membership is not established by the historical probe list. The manager Safe remains 3-of-6, and its role 2 can set the supply cap and update the domain separator, but cannot mint.",
     "mintIncidents": [
       {
         "date": "2022-12-02",
@@ -21,7 +21,7 @@
           },
           {
             "label": "Helio post-mortem: aBNBc exploit impact",
-            "url": "https://medium.com/@Helio-HAY/helio-protocols-impact-in-the-abnbc-exploit-6954e0199096"
+            "url": "https://medium.com/@ListaDAO/helio-protocols-impact-in-the-abnbc-exploit-6954e0199096"
           }
         ]
       }
@@ -37,6 +37,8 @@
         "canRaiseCap": false,
         "capDescription": "LISUSD uses wards() Maker-style auth; mint() reverts with 'LisUSD/not-authorized-minter' unless caller is a ward with role 1. HayJoin mints only when users exit the CDP system, bounded by the supply cap (settable by the wards=2 manager Safe).",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055872,
         "sources": [
           {
             "label": "HayJoin implementation source (Sourcify)",
@@ -56,6 +58,8 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055872,
         "safe": {
           "owners": [
             "0x3fc791a56f99da498dfddac14e4081737d9f4d07",
@@ -83,6 +87,9 @@
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 86400,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055872,
         "evidence": "At BSC block 103622030: eth_getCode = CONTRACT (len=14880). getMinDelay() = 86400 (24h). wards(this_address) on LISUSD = 1 (confirmed ward). Sourcify source labels DEFAULT_ADMIN as TimeLock and onlyAdmin gates rely()/deny() calls. Proxy admin (0x1fa3e471...) owner() = this timelock address."
       },
       {
@@ -93,6 +100,8 @@
         "authorityType": "contract",
         "directMintAbility": "upgrade-only",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055872,
         "evidence": "At BSC block 103622030: EIP-1967 admin slot on LISUSD proxy = 0x1fa3e4718168077975ff4039304cc2e19ae58c4c. eth_getCode = CONTRACT (len=3764). owner() = 0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253 (timelock). Can upgrade LISUSD implementation."
       }
     ],
@@ -103,10 +112,10 @@
       "sources": [
         {
           "label": "Sourcify LisUSD source",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0xF5bd9b192092517D60E90c9AF17b69b134c4d7f8/sources/contracts/LisUSD.sol"
+          "url": "https://sourcify.dev/server/v2/contract/56/0xf5bd9b192092517d60e90c9af17b69b134c4d7f8?fields=sources"
         }
       ],
-      "evidence": "At BSC block 103638487 (2026-06-11): LISUSD (0x0782b6d8...) is an EIP-1967 proxy; impl = 0xf5bd9b19… (Sourcify-verified LisUSD); proxy admin = 0x1fa3e471… (owned by 24h timelock). The wards ward set was resolved by direct wards() probes: the LisUSD source defines NO Rely/Deny events (the prior 'event scan' blocker is impossible by construction) and wards can only be changed by the hardcoded DEFAULT_ADMIN (the 24h timelock) via rely/deny. Confirmed wards: timelock 0x07D274… = 1 (minter), HayJoin 0x4c798f81… = 1 (minter, the CDP exit adapter; impl Sourcify-verified, proxy admin = same timelock-owned ProxyAdmin), manager Safe 0x8d3881… = 2 (3/6, setSupplyCap only, guard present). All other Lista ecosystem contracts probed (Interaction, PSMs, VaultManager, VenusAdapter, EarnPool, vault joins, AuctionProxy) returned wards = 0. A 500K-block recent mint scan showed mints flowing only through the CDP Interaction → HayJoin path. Mint reverts 'LisUSD/not-authorized-minter' for non-wards; timelock getMinDelay() = 86400s (24h). Economic-posture fields reviewed 2026-08-15: the undelayed manager Safe can raise the global supply cap, issuance is collateral-gated on-chain, and no prudential supervisor or attestor is identified.",
+      "evidence": "At BSC block 103638487 (2026-06-11): LISUSD (0x0782b6d8...) is an EIP-1967 proxy; impl = 0xf5bd9b19… (Sourcify-verified LisUSD); proxy admin = 0x1fa3e471… (owned by 24h timelock). The LisUSD source defines no Rely/Deny events. Correction from the same verified implementation source fetched 2026-10-01: rely/deny admit both the hardcoded DEFAULT_ADMIN and wards with role ADMIN (3); the historical address probes do not establish a complete ward census or exclude additional admins. Historically confirmed wards: timelock 0x07D274… = 1 (minter), HayJoin 0x4c798f81… = 1 (minter, the CDP exit adapter), manager Safe 0x8d3881… = 2 (3/6, guard present). The other ecosystem contracts in the historical probe list returned wards = 0, and a historical 500K-block mint scan found CDP Interaction to HayJoin mints. At BSC block 125055872 on 2026-10-01, token implementation and admin, HayJoin implementation and admin, ProxyAdmin owner, manager Safe owners/threshold, and timelock getMinDelay() = 86400 were unchanged. The historical event scan, guard and complete role membership were not re-certified. Economic-posture review from 2026-08-15 is retained: the manager Safe can raise the supply cap and no prudential supervisor or attestor is identified.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     },
@@ -117,12 +126,12 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "LISUSD EIP-1967 proxy admin (owned by timelock)",
-      "observedAt": "2026-06-11",
-      "observedBlock": 103622030,
+      "observedAt": "2026-10-01",
+      "observedBlock": 125055872,
       "sources": [
         {
           "label": "Sourcify LisUSD source",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0xF5bd9b192092517D60E90c9AF17b69b134c4d7f8/sources/contracts/LisUSD.sol"
+          "url": "https://sourcify.dev/server/v2/contract/56/0xf5bd9b192092517d60e90c9af17b69b134c4d7f8?fields=sources"
         }
       ]
     }

@@ -2,10 +2,19 @@
   "id": "jpyc-jpyc",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: JPYC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified JPYC FiatTokenV1 implementation and Blocklistable source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e"
+      },
+      {
+        "label": "JPYC Ethereum pinned observation block 26095889",
+        "url": "https://etherscan.io/block/26095889"
+      }
+    ],
+    "evidence": "At Ethereum block 26095889, Polygon block 94755692, Avalanche block 96512160, and Kaia block 228637041 on 2026-10-01, blocklister() on the tracked JPYC token returns 0x0f018651bd4c556ed9515379dd314d9fdee21bb9. Verified FiatTokenV1 source exposes blocklist(address) under onlyBlocklister and applies notBlocklisted checks to transfers. The current owner Safe can replace the blocklister. This confirms selective holder restrictions directly rather than inferring them from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB33JPYC)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

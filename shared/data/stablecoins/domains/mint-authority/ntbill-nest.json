@@ -17,6 +17,8 @@
           "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
         ],
         "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
         "sources": [
           {
             "label": "Nest smart contracts (Teller address)",
@@ -57,6 +59,8 @@
           "observedAt": "2026-07-30",
           "source": "safe-api"
         },
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
         "sources": [
           {
             "label": "Nest Teller owner() at Ethereum block 25295096",

@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve curation review 2026-08-29",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA48USTBL)",
     "confidence": "probable",
     "sources": [
       {
@@ -21,11 +21,11 @@
         "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf"
       },
       {
-        "label": "Transfero BRZ product disclosure (published 2026-08-28; current page re-opened 2026-08-29)",
+        "label": "Transfero BRZ current product disclosure (re-opened 2026-10-01; no substantive publication date verified)",
         "url": "https://transfero.com/brz-stablecoin"
       }
     ],
-    "rationale": "Re-reviewed 2026-08-29. Transfero's current BRZ page, published 2026-08-28, still states 1:1 BRL backing and links the same Reserve report PDF; the page shows R$15.2MM collateral and R$12.3MM circulating but gives no report date beyond the linked artifact. The reachable report is dated March 31, 2024 at 18:00 BRT, reports R$15,243,944.24 collateral against R$12,398,003.00 circulating, and says the reserve is held at an institution authorized by the Central Bank of Brazil without naming it. No newer composition or independent reconciliation was found. The one 100% BRL bank-deposit slice remains a historical disclosure and is outside the 31-day plus seven-day static-composition window; no current reserve claim is asserted.",
+    "rationale": "Re-reviewed 2026-10-01. The current product page has September 29 Framer rendering-release and optimization timestamps, which do not establish a substantive disclosure publication date. It still links the report dated March 31, 2024 at 18:00 BRT, reporting R$15,243,944.24 collateral against R$12,398,003.00 circulating and custody at an unnamed financial institution authorized by the Central Bank of Brazil. Neither the product page, linked report nor issuer whitepaper supplies a newer dated asset split, independent reconciliation, named custodian or account-level segregation terms. The preserved 100% BRL reserve row is historical, not a fresh composition; its bank-deposit categorization remains subject to interpretation because the report names custody at a financial institution rather than enumerating instrument types. compositionAsOf remains 2024-03-31; no score-bearing unknown exposure or custody protections are improved.",
     "compositionBasis": "Transfero BRZ transparency report dated March 31, 2024 (re-hosted URL from live product page)",
     "compositionAsOf": "2024-03-31",
     "scope": "full-composition",

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "XSGD has issuer-native issuance on all eight authored deployments. Ethereum has two allowance-capped minter multisigs, a 3-of-5 MasterMinter Safe that can change those allowances, a separate 3-of-5 token-owner Safe, and a 2-of-5 legacy multisig controlling proxy upgrades; Polygon, Arbitrum, Avalanche, and Base have their own native FiatToken minters and issuer controls; Hedera has a 2-of-5 supply key; XRPL has its issuer account; and Solana has a direct 3-of-10 SPL multisig. Overall issuance is economically unbounded but periodically reconciled. Bridge representations and cross-chain machinery are not included in this Mint Authority profile.",
+    "summary": "XSGD has issuer-native issuance on all eight authored deployments. Ethereum has two allowance-capped minter multisigs, a 3-of-5 MasterMinter Safe that can change those allowances, a separate 3-of-5 token-owner Safe, and a 2-of-5 legacy multisig controlling proxy upgrades; Polygon, Arbitrum, Avalanche, and Base have their own native FiatToken minters and issuer controls; Hedera has a 2-of-5 supply key; XRPL has its issuer account; and Solana has a direct 3-of-11 SPL multisig at finalized slot 452222569. Overall issuance is economically unbounded but periodically reconciled. Bridge representations and cross-chain machinery are not included in this Mint Authority profile.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -758,7 +758,7 @@
       },
       {
         "chain": "solana",
-        "address": "5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj",
+        "address": "CrtdStZqGrcqrpDZ5XnmaEKvzyBNLgq6uvNKCokFgo6v",
         "deploymentRefs": [
           "solana:71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy"
         ],
@@ -767,10 +767,10 @@
         "authorityType": "multisig",
         "directMintAbility": "direct",
         "threshold": 3,
-        "signerCount": 10,
+        "signerCount": 11,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439728047,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452222569,
         "sources": [
           {
             "label": "Solana mainnet RPC",
@@ -781,7 +781,7 @@
             "url": "https://github.com/solana-program/token/blob/c58d674b4280f4d1a6246b43685fc7fa428a51c3/interface/src/state.rs#L182-L209"
           }
         ],
-        "evidence": "At finalized Solana slot 439728047, the XSGD mint 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy had this address as both mint and freeze authority. The initialized SPL Token multisig decoded as 3-of-10."
+        "evidence": "At finalized Solana slot 452222569, one getMultipleAccounts response returned XSGD mint 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy with decimals 6 and CrtdStZqGrcqrpDZ5XnmaEKvzyBNLgq6uvNKCokFgo6v as both mint and freeze authority, alongside that initialized SPL Token multisig with numRequiredSigners=3 and numValidSigners=11. This replaces the historical slot 439728047 authority 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj (3-of-10)."
       },
       {
         "chain": "hedera",

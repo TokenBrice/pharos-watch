@@ -95,6 +95,51 @@ describe("fetchRedstonePrices", () => {
     expect(outcome.value.get("crvusd-curve")?.price).toBeCloseTo(0.9996, 4);
   });
 
+  it("resolves Bera USD's current symbol through the unchanged HONEY feed to its canonical id", async () => {
+    mockFetch([{
+      match: (request) => new URL(request.url).searchParams.get("symbols") === "HONEY",
+      body: {
+        HONEY: {
+          value: 1.0002,
+          source: { "kodiak-berachain-usdc.e-100": 1.0002 },
+          timestamp: Date.now(),
+        },
+      },
+    }], { requireMatch: true });
+
+    const outcome = await fetchRedstonePrices(["BUSD"]);
+
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("honey-berachain")).toMatchObject({
+      stablecoinId: "honey-berachain",
+      metaSymbol: "BUSD",
+      apiSymbol: "HONEY",
+      price: 1.0002,
+    });
+    expect([...outcome.value.keys()]).toEqual(["honey-berachain"]);
+  });
+
+  it("does not admit a Binance USD BUSD feed as the renamed Berachain token", async () => {
+    vi.useFakeTimers();
+    mockFetch([{
+      match: (request) => new URL(request.url).searchParams.get("symbols") === "HONEY",
+      body: {
+        BUSD: {
+          value: 0.95,
+          source: { binance: 0.95 },
+          timestamp: Date.now(),
+        },
+      },
+    }], { requireMatch: true });
+
+    const pending = fetchRedstonePrices(["BUSD"]);
+    await vi.advanceTimersByTimeAsync(100);
+    const outcome = await pending;
+
+    expect(outcome.kind).toBe("upstream-error");
+    expect([...outcome.value.entries()]).toEqual([]);
+  });
+
   it("retries missing batch symbols individually", async () => {
     vi.useFakeTimers();
     const fetchMock = mockFetch([{

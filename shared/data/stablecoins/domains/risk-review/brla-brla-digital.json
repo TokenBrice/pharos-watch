@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "BRLA is an issuer-native multichain token: on all four tracked chains mint() is gated solely by Avenia's OPERATOR_ROLE (0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929), held only by the BRLA Digital deployer EOA, Avenia operator EOAs, and Avenia-owned mint-executor/backend contracts, re-verified on-chain 2026-07-20 with functional mint() calls and full RoleGranted event histories. No public or third-party bridge holds mint rights on any deployment; cross-chain supply moves through issuer-run mint/redeem.",
+    "summary": "The historical 2026-07-20 review classified BRLA as an issuer-native multichain token with mint() gated by Avenia's OPERATOR_ROLE (0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929), and reported only issuer-affiliated role holders and no third-party bridge minters. The 2026-10-01 pinned RPC checks reconfirmed all 26 previously authored operator memberships and their functional mint permissions. Completeness of the current holder set, exclusive issuer affiliation, and ownership of backend proxies were not re-established; the failed wide-range role-event queries do not prove that no additional or third-party holders exist.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",

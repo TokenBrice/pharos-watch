@@ -1,22 +1,5 @@
 {
   "id": "usdu-unitas",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA Interim MiCA Register: ART/EMT issuer files reviewed; no Unitas or USDu match found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Unitas minting documentation: USDu is a crypto-native digital dollar backed by a delta-neutral strategy",
-        "url": "https://docs.unitas.so/solution-design/minting-usdu"
-      },
-      {
-        "label": "Unitas Terms of Service: USDu is issued through Unipay smart contracts and direct redemption is subject to protocol rules",
-        "url": "https://docs.unitas.so/resources"
-      }
-    ]
-  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

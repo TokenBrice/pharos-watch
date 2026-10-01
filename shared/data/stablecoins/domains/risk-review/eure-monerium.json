@@ -48,7 +48,7 @@
           },
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "EURe on ethereum explorer (verified 2026-07-20)",
@@ -80,7 +80,7 @@
           },
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "EURe on gnosis explorer (verified 2026-07-20)",
@@ -112,7 +112,7 @@
           },
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "EURe on base explorer (verified 2026-07-20)",
@@ -144,7 +144,7 @@
           },
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "EURe on linea explorer (verified 2026-07-20)",
@@ -176,7 +176,7 @@
           },
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "EURe on scroll explorer (verified 2026-07-20)",
@@ -208,7 +208,7 @@
           },
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "EURe on arbitrum explorer (verified 2026-07-20)",
@@ -240,7 +240,7 @@
           },
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "EURe on polygon explorer (verified 2026-07-20)",
@@ -267,7 +267,7 @@
         "sources": [
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "Monerium tokens (supported chains)",

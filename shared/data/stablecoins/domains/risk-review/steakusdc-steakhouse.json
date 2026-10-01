@@ -1,16 +1,20 @@
 {
   "id": "steakusdc-steakhouse",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Website",
         "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+      },
+      {
+        "label": "Verified exact-deployment VaultV2 source and gate abdication semantics",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The previous inferred Yes did not identify an exercised freeze control. At Ethereum block 26095798, receiveSharesGate, sendSharesGate, and receiveAssetsGate were zero, and the setters for all three were permanently abdicated. The verified immutable VaultV2 source enforces abdication and has no administrator-only seizure, forced holder burn, or upgrade path. Allocation governance and USDC's underlying freeze exposure remain separate risks; this verdict covers the vault share's direct blacklistability.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA13BUIDL)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

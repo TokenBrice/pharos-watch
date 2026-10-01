@@ -12,7 +12,26 @@
   },
   "collateral": "Shared Mento Reserve: current issuer configuration classifies this currency as reserve-backed, not USDm locked in a borrower-specific CDP.",
   "pegMechanism": "AUDm is issued and retired through Mento V2's oracle-priced USDm/AUDm Broker/BiPoolManager pool. USDm-to-AUDm swaps burn incoming USDm and mint the FX token; reverse swaps burn the FX token and mint USDm, subject to the configured oracle, spread, trading limits, and breaker checks.",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC18)",
+    "rationale": "AUDm is explicitly backed by Mento's diversified crypto reserve, rather than a borrower-specific collateral position or a custodial fiat cash claim. The current reserve API itemizes CELO, stablecoins and stETH. D18 requires the exact holder claim and backing mechanism to fit the scored family; the reviewed sources do not establish an enforceable fiat cash claim, and a shared crypto reserve alone does not support the old CDP overlay. Leave the family unresolved pending a reviewed shared-reserve mechanism mapping and exact holder-right evidence; no quality grade or mint-control protection is inferred.",
+    "sources": [
+      {
+        "label": "Mento issuer configuration: AUDm reserve backing",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Mento shared reserve itemized API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento counsel workshop: crypto reserve and issuer-scope position, November 18, 2024",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      }
+    ]
+  },
   "geckoId": "celo-australian-dollar",
   "proofOfReserves": {
     "type": "real-time",

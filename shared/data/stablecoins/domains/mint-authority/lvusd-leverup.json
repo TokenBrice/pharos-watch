@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open lvUSD positions against USDC collateral; mint is gated by 'only issuer' resolving to a 3/5 GnosisSafe (0xf9bd99...) with no modules. Token is not upgradeable.",
+    "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open lvUSD positions against USDC collateral; the token's issuer() and owner() resolve to the UUPS engine 0x135951057cfccca7e8ef87ee41318d670f723f68, whose owner is the 3-of-5 Safe 0xf9bd99a8e5be72adf687b304ed0e0234e0ebccba with no enabled modules observed. The token itself is not upgradeable, but the engine controlling issuance is upgradeable by that Safe.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [

@@ -60,8 +60,8 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x5422374b27757da72d5265cc745ea906e0446634",
-        "label": "USDCV Ethereum token proxy (SmartCoin V4)",
+        "address": "0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69",
+        "label": "USDCV Ethereum registrar minter EOA (SmartCoin V4)",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
@@ -70,13 +70,15 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095943,
         "sources": [
           {
             "label": "Ethereum USDCV token",
             "url": "https://etherscan.io/address/0x5422374b27757da72d5265cc745ea906e0446634"
           }
         ],
-        "evidence": "At Ethereum block 25294784: EIP-1967 impl = 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (same SmartCoin V4 as EURCV); proxy admin slot = zero. Immutable operators from implementation bytecode (PUSH32 scan): registrar (minter) = 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69 (EOA), operations = 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6 (EOA), technical (upgrade admin) = 0x54124a6834af252a0f9ac7f478001aa500428955 (EOA). All confirmed as EOAs via eth_getCode."
+        "evidence": "At Ethereum block 26095943 on 2026-10-01, registrar() on proxy 0x5422374b27757da72d5265cc745ea906e0446634 returned 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69 and eth_getCode(registrar) returned 0x. The proxy itself is not the EOA controller; its unchanged implementation is 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b, whose verified mint() is gated by onlyAllowedMinter. technical() and operations() also retained the previously recorded operator addresses."
       },
       {
         "chain": "ethereum",

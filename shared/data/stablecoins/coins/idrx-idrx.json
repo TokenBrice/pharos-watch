@@ -98,8 +98,8 @@
   },
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20July%202026.pdf",
-    "provider": "KAP Jojo Sunarjo & Rekan (registered public accountant; July 2026 agreed-upon-procedures report, not an audit opinion)",
+    "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+    "provider": "KAP Jojo Sunarjo & Rekan (registered public accountant; August 2026 agreed-upon-procedures report, not an audit opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Indonesia",

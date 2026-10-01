@@ -11,14 +11,14 @@
     "rwa": true
   },
   "collateral": "Physical gold bullion backing with issuer-managed gold leasing through Monetary Metals; Streamex presents one GLDY as one troy ounce of gold exposure with yield paid in additional gold",
-  "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible primary-market investors can redeem through the issuer process, while secondary markets price the gold-ounce claim plus accrued yield mechanics",
+  "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible investors can redeem through the issuer for U.S. dollars, stablecoins or physical gold. Streamex reserves the right to gate extraordinary large-scale redemptions while gold leases roll off, with a stated maximum wait of 12 months; secondary-market liquidity is not an unconditional redemption guarantee",
   "mechanismArchetype": "rwa-credit-fund",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "streamex-gldy",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://ir.streamex.com/press-releases/detail/428/streamex-corp-announces-first-independent-reserve",
+    "url": "https://www.globenewswire.com/news-release/2026/07/01/3320524/22558/en/streamex-corp-announces-first-independent-reserve-attestation-by-eisneramper-for-gldy.html",
     "provider": "EisnerAmper LLP AICPA examination (one report to date; the Chainlink gldy-reserves feed has porSource Streamex / porType Off-chain with a 86400s heartbeat, so it transports issuer-reported ounces rather than independently attesting them)",
     "attestorTier": "regional",
     "cadence": "ad-hoc",
@@ -34,7 +34,7 @@
       "sources": [
         {
           "label": "Streamex press release - first independent reserve attestation (2026-07-01)",
-          "url": "https://ir.streamex.com/press-releases/detail/428/streamex-corp-announces-first-independent-reserve"
+          "url": "https://www.globenewswire.com/news-release/2026/07/01/3320524/22558/en/streamex-corp-announces-first-independent-reserve-attestation-by-eisneramper-for-gldy.html"
         },
         {
           "label": "Chainlink GLDY reserves feed (issuer-sourced)",

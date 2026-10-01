@@ -33,9 +33,9 @@ export const ZEPHYR_ZYS_ASSET_ID = "zys-zephyr-protocol";
 const ZEPHYR_SCANNER_SUPPLY_IDS = new Set([ZEPHYR_ZSD_ASSET_ID, ZEPHYR_ZYS_ASSET_ID]);
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 // Shared by Starknet contract addresses (felts: hex, up to 252 bits, usually
-// written zero-padded to 64 nibbles) and Movement fungible-asset metadata
-// addresses (32-byte account ids, leading zeros customarily trimmed). Both are
-// a 0x prefix followed by at most 64 nibbles, so one bound serves both.
+// written zero-padded to 64 nibbles) and Aptos-framework fungible-asset metadata
+// addresses (32-byte account ids, leading zeros customarily trimmed). All use
+// a 0x prefix followed by at most 64 nibbles.
 const HEX32_ADDRESS_RE = /^0x[0-9a-fA-F]{1,64}$/;
 // ICP canister ids are 10-byte principals in base32-with-CRC text form, i.e.
 // four groups of five characters plus a three-character tail. Longer
@@ -50,11 +50,12 @@ const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
  */
 export const EEARN_SUI_COIN_TYPE = "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN";
 
-export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "starknet" | "icp" | "sui";
+export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui";
 
 const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeFamily>> = {
   solana: "solana",
   movement: "movement",
+  aptos: "aptos",
   starknet: "starknet",
   icp: "icp",
 };
@@ -423,7 +424,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("mantle"),
     supplyProbeChain("ink"),
   ],
-  // syrupUSDC is an Ethereum ERC-4626 vault carried to seven Chainlink CCIP
+  // syrupUSDC is an Ethereum ERC-4626 vault carried to eight Chainlink CCIP
   // representations. Chainlink's directory identifies Ethereum as the
   // LockRelease leg and every remote token as BurnMint, so Ethereum totalSupply
   // is the conserved global total and the remote supplies are reallocated out
@@ -431,6 +432,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // 98,551,586; the three routes absent from CoinGecko were live but immaterial
   // (Ink 0.000110, Robinhood 0.009000, Tempo 886.105125). Pin reviewed public
   // RPCs for chains outside buildChainRpcs(); any unreadable leg fails closed.
+  // Arc joins the same reviewed BurnMint representation partition (2026-10-01).
   "syrupusdc-maple": [
     { chain: "ethereum" },
     { chain: "base" },
@@ -440,6 +442,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("monad"),
     supplyProbeChain("robinhood", { allowZeroSupply: true }),
     supplyProbeChain("tempo", { allowZeroSupply: true }),
+    { chain: "arc" },
   ],
   // srUSD has the same Reservoir shape as wsrUSD but a different adapter:
   // 0x316cd39632Cac4F4CdfC21757c4500FE12f64514 (SrusdOftAdapter). Verified
@@ -582,12 +585,17 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // 11,720,796.241001 (asset=0xb97e…8a6e, totalAssets 12,024,527.957899)
   // = 274,452,817.626907. Ethereum balanceOf(self)=0.
   "susdc-spark": [{ chain: "ethereum" }, { chain: "avalanche" }],
-  // spUSDT is a per-chain Spark ERC-4626 (USDT on Ethereum, USDT0 on Arbitrum).
+  // spUSDT is a per-chain Spark ERC-4626 (USDT on Ethereum, USDT0 on Arbitrum
+  // and X Layer). USDT0 is collateral, not a bridged spUSDT representation.
   // Verified 2026-08-19: Ethereum 364,164,245.855785 (totalAssets
   // 374,349,718.457184) + Arbitrum 1,273.135898 (totalAssets 1,276.509506)
   // = 364,165,518.991683. Ethereum balanceOf(self)=0. Arbitrum is dust; allow
   // a zero read.
-  "susdt-spark": [{ chain: "ethereum" }, { chain: "arbitrum", allowZeroSupply: true }],
+  "susdt-spark": [
+    { chain: "ethereum" },
+    { chain: "arbitrum", allowZeroSupply: true },
+    supplyProbeChain("xlayer"),
+  ],
   // gtUSDCp is a local Gauntlet/Morpho ERC-4626 on each chain. Verified
   // 2026-08-19: Ethereum 70,509,526.219773 (NAV 1.032007 USDC) + Base
   // 387,163,856.589938 (NAV 1.107844) + Arbitrum 485,663.027798 (NAV
@@ -690,6 +698,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // provider-parity lane) and Plasma entered it for the reviewed Curve factory
   // capture, so both legs still pin reviewed public endpoints here and stay
   // independent of that registry.
+  // The reviewed Aptos CCIP BurnMint representation joins this same canonical
+  // partition (2026-10-01); its pinned-ledger reader is distinct from Movement.
   "syzusd-yuzu": [
     supplyProbeChain("plasma"),
     { chain: "ethereum" },
@@ -702,6 +712,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     // alone rather than declaring a fallback that can never serve totalSupply.
     supplyProbeChain("pharos", { fallbackRpcUrl: undefined }),
     supplyProbeChain("berachain"),
+    supplyProbeChain("aptos"),
   ],
   // IDRT is minted natively on Ethereum, BSC and Polygon: each is a
   // non-upgradeable Ownable ERC-20 whose owner() is the same PT Rupiah Token
@@ -837,6 +848,8 @@ export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): Oncha
       return contract.address.length > 0 ? "solana" : null;
     case "movement":
       return HEX32_ADDRESS_RE.test(contract.address) ? "movement" : null;
+    case "aptos":
+      return HEX32_ADDRESS_RE.test(contract.address) ? "aptos" : null;
     case "starknet":
       return HEX32_ADDRESS_RE.test(contract.address) ? "starknet" : null;
     case "icp":

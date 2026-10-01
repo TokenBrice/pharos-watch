@@ -1284,8 +1284,8 @@
         },
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Arbitrum block 495410695, Optimism block 155676713, and Base block 50081434, the MONEY token peer table included LayerZero EIDs 30101 (Ethereum), 30110 (Arbitrum), 30111 (Optimism), and 30184 (Base). The Safe is the active owner path for peer configuration.",
-          "pausersAdminsUpgraders": "At the reviewed deployments, the Safe controls setPeer, setBridgeEnabled, setDefaultOptions, and setDelegate on the local MONEY token. The guardian and bridgeRelay reads were zero, so no separate fast pause or peer authority was evidenced."
+          "trustedPeerOrRemote": "At Arbitrum block 510584285, Optimism block 157619418, and Base block 52024132 on 2026-10-01, peers(uint32) returned the same-address MONEY token for each configured remote EID among 30101 (Ethereum), 30110 (Arbitrum), 30111 (Optimism), and 30184 (Base). Each chain's own EID returned zero: BridgeToken deliberately excludes the local token from the remote peer mapping and includes it only in getGlobalPeers(). The Safe remains the owner path for peer configuration.",
+          "pausersAdminsUpgraders": "BridgeToken source assigns setPeer, setBridgeEnabled, setDefaultOptions, and setDelegate to the owner path. At Arbitrum block 510584285, Optimism block 157619418, and Base block 52024132, CORE_OWNER() returned 0xc0deb055a11fd0801040de91a1fac500dc577f00, whose owner() was the reviewed Safe and whose guardian() and bridgeRelay() were zero. These two getters belong to DFMProtocolCore, not the token; failed calls to them on the token are not evidence of zero authority."
         },
         "observedAt": "2026-08-17",
         "sources": [
@@ -1335,7 +1335,7 @@
           },
           {
             "label": "LayerZero V2 architecture",
-            "url": "https://docs.layerzero.network/v2/developers/evm/protocol-gas-settings"
+            "url": "https://docs.layerzero.network/v2/developers/evm/protocol-contracts-overview"
           }
         ],
         "evidence": "The MONEY BridgeToken burns on source debit and mints on destination credit only after the LayerZero V2 receive path accepts a verified message from a configured peer. The token controls above retain the bridge-mint and bridge-burn capabilities; this separate control retains the external validator/DVN/Executor failure domain."

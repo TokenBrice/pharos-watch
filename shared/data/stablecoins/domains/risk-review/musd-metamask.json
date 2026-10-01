@@ -2,14 +2,23 @@
   "id": "musd-metamask",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: MUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Consensys Diligence MetaMask USD audit, administrative controls and trust model",
+        "url": "https://diligence.security/audits/2025/08/metamask-usd-token/"
+      },
+      {
+        "label": "MUSD account freeze and forced-transfer implementation",
+        "url": "https://raw.githubusercontent.com/m0-platform/mUSD/main/src/MUSD.sol"
+      }
+    ],
+    "evidence": "The independent mUSD audit identifies privileged roles that can freeze and seize assets, including a Freeze Manager and Forced Transfer Manager. MUSD source implements role-gated forced transfers from frozen accounts. The canonical Ethereum proxy still resolves to implementation 0x37a309611e1d278cddc341e479957ec8bc6256ce at block 26095802; this review replaces the inferred centralized-governance rationale with sourced token-level capability evidence.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB20MUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "MetaMask USD has one canonical native issuance route on Ethereum, where M0 M is created by the immutable MinterGateway and MUSD wraps hub-native M through the Ethereum SwapFacility. Linea and Monad MUSD are bridge representations: M0 Portal v2 burns and mints spoke M, then the local SwapFacility wraps it. Their token and SwapFacility proxy-admin paths, Portal roles and UUPS upgrades, Hyperlane adapter peers, mailbox default ISMs, 2-of-2 validator sets, pauses, and the absence of a token-specific Portal rate limit are assessed here as Bridge Risk and are excluded from Mint Authority posture.",
+    "summary": "MetaMask USD has one canonical native issuance route on Ethereum, where M0 M is created by the immutable MinterGateway and MUSD wraps hub-native M through the Ethereum SwapFacility. Linea and Monad MUSD are bridge representations: M0 Portal v2 burns and mints spoke M, then the local SwapFacility wraps it. Their token and SwapFacility proxy-admin paths, Portal roles and UUPS upgrades, Hyperlane adapter peers, mailbox default ISM validation trees, pauses, and the absence of a token-specific Portal rate limit are assessed here as Bridge Risk and are excluded from Mint Authority posture. October 1 pinned reads supersede the historical two-validator default ISMs with aggregation and routing trees; their Ethereum-origin multisig branches use six of nine validators.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint/bridge boundary migration; Pharos V9 Phase 3 curation lane cur-4",
     "confidence": "verified",
@@ -77,10 +86,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified at Linea block 31736976: mUSD reads mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, while spoke M portal() returns M0 Portal v2 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd. Its default adapter for hub chain ID 1 is HyperlaneBridgeAdapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, whose mailbox is 0x02d16bc51af6bfd153d67ca61754cf912e82c4d9; its mailbox default static ISM 0x29c3d1759e2995550aa84d102ca928ec9e505db8 has a 2-of-2 validator set. Local M is therefore a burn-mint representation of Ethereum M and local MUSD inherits this Portal/Hyperlane route risk.",
+        "reviewNote": "At Linea block 32198405 on 2026-10-01, mUSD mToken(), spoke M portal(), the hub-domain default adapter and adapter mailbox retain their recorded addresses. The adapter uses the mailbox default ISM, now 0xd9c340f695f4970db784a66e05e48df3c49fc4e2. Its Ethereum-origin routing tree includes six-of-nine validator multisigs, superseding the historical two-validator ISM. Local M remains the M0 Portal burn-mint representation and mUSD wraps that spoke M; complete validation-tree semantics and key custody remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 31736976,
+        "observedAt": "2026-10-01",
+        "observedBlock": 32198405,
         "controllerChain": "linea",
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "failureDomainKeys": [
@@ -89,11 +98,18 @@
           "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
           "contract:linea:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
           "contract:linea:0x02d16bc51af6bfd153d67ca61754cf912e82c4d9",
-          "contract:linea:0x29c3d1759e2995550aa84d102ca928ec9e505db8",
+          "contract:linea:0xd9c340f695f4970db784a66e05e48df3c49fc4e2",
           "safe:linea:0x48670b46380fe1645f0e3e821a25162db2589d19",
           "eoa:linea:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
-          "validator:linea:0x69dca95b7abf731e5909a77aeca405b746b92914",
-          "validator:linea:0xb1a545387eb101cd07f2b51858f4b43d14f5bd"
+          "validator:linea:0x29d783efb698f9a2d3045ef4314af1f5674f52c5",
+          "validator:linea:0x36a669703ad0e11a0382b098574903d2084be22c",
+          "validator:linea:0x4f977a59fdc2d9e39f6d780a84d5b4add1495a36",
+          "validator:linea:0x5450447aee7b544c462c9352bef7cad049b0c2dc",
+          "validator:linea:0x94438a7de38d4548ae54df5c6010c4ebc5239eae",
+          "validator:linea:0xa5962efa3ec138bf7ca8f7fde86b7ee32e24bf03",
+          "validator:linea:0xb3ac35d3988bca8c2ffd195b1c6bee18536b317b",
+          "validator:linea:0xb683b742b378632a5f73a2a5a45801b3489bba44",
+          "validator:linea:0xef2e5bb2bc45dd092ff7f9d4d4485f022185aeae"
         ],
         "sources": [
           {
@@ -127,10 +143,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified at Monad block 96594242: mUSD reads mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, while spoke M portal() returns M0 Portal v2 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd. Its default adapter for hub chain ID 1 is HyperlaneBridgeAdapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, whose mailbox is 0x3a464f746d23ab22155710f44db16dca53e0775e; its mailbox default static ISM 0x0e1f8b3b48f9c429f9349848fc711cdb455be269 has a 2-of-2 validator set. Local M is therefore a burn-mint representation of Ethereum M and local MUSD inherits this Portal/Hyperlane route risk.",
+        "reviewNote": "At Monad block 109541590 on 2026-10-01, mUSD mToken(), spoke M portal(), the hub-domain default adapter and adapter mailbox retain their recorded addresses. The adapter uses the mailbox default ISM, now 0x2a3ec2f98ca5840061567fe38428bac697281fe1. Its Ethereum-origin routing tree includes six-of-nine validator multisigs, superseding the historical two-validator ISM. Local M remains the M0 Portal burn-mint representation and mUSD wraps that spoke M; complete validation-tree semantics and key custody remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 96594242,
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541590,
         "controllerChain": "monad",
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "failureDomainKeys": [
@@ -139,11 +155,18 @@
           "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
           "contract:monad:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
           "contract:monad:0x3a464f746d23ab22155710f44db16dca53e0775e",
-          "contract:monad:0x0e1f8b3b48f9c429f9349848fc711cdb455be269",
+          "contract:monad:0x2a3ec2f98ca5840061567fe38428bac697281fe1",
           "safe:monad:0x48670b46380fe1645f0e3e821a25162db2589d19",
           "eoa:monad:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
-          "validator:monad:0x24f89395e932961c27167f42db928ec92047b695",
-          "validator:monad:0xbb67da637d4b030c647176a53dd27d8d868e01cb"
+          "validator:monad:0x29d783efb698f9a2d3045ef4314af1f5674f52c5",
+          "validator:monad:0x36a669703ad0e11a0382b098574903d2084be22c",
+          "validator:monad:0x4f977a59fdc2d9e39f6d780a84d5b4add1495a36",
+          "validator:monad:0x5450447aee7b544c462c9352bef7cad049b0c2dc",
+          "validator:monad:0x94438a7de38d4548ae54df5c6010c4ebc5239eae",
+          "validator:monad:0xa5962efa3ec138bf7ca8f7fde86b7ee32e24bf03",
+          "validator:monad:0xb3ac35d3988bca8c2ffd195b1c6bee18536b317b",
+          "validator:monad:0xb683b742b378632a5f73a2a5a45801b3489bba44",
+          "validator:monad:0xef2e5bb2bc45dd092ff7f9d4d4485f022185aeae"
         ],
         "sources": [
           {
@@ -299,7 +322,7 @@
         "sources": [
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+            "url": "https://docs.m0.org/raw/protocol/extensions.md"
           },
           {
             "label": "Linea PublicNode JSON-RPC",
@@ -325,30 +348,30 @@
         "failureDomainKeys": [
           "contract:monad:0xb6807116b3b1b321a390594e31ecd6e0076f6278",
           "contract:monad:0x0f38d8a5583f9316084e9c40737244870c565924",
-          "safe:monad:0x48670b46380fe1645f0e3e821a25162db2589d19"
+          "timelock:monad:0xcacc556744a9c8de12a627d570156aaa156edf4b"
         ],
         "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "The Monad SwapFacility wraps approved M0 extensions 1:1 against spoke M; it does not create base M supply.",
           "onchainAmountBounds": "Representation extension minting is bounded by available spoke-M-backed wrapper flow and the M0 Portal burn/mint accounting path.",
           "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable local MUSD cap.",
-          "pausersAdminsUpgraders": "The Monad SwapFacility is a TransparentUpgradeableProxy with ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924; its owner is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 directly, with no timelock."
+          "pausersAdminsUpgraders": "At Monad block 109541590, SwapFacility remains a TransparentUpgradeableProxy with ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. Its owner is now TimelockController 0xcacc556744a9c8de12a627d570156aaa156edf4b with getMinDelay() = 259200 seconds. The former direct Safe owner is historical; current proposer and executor membership was not established."
         },
         "capDescription": "SwapFacility routes approved M0 extensions 1:1 against spoke M; it can mint representation balances through wrap flows but does not create base M supply.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 87714833,
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541590,
         "sources": [
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+            "url": "https://docs.m0.org/raw/protocol/extensions.md"
           },
           {
             "label": "Monad public JSON-RPC",
             "url": "https://rpc.monad.xyz"
           }
         ],
-        "evidence": "At Monad block 87714833, the SwapFacility representation route used implementation 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e and ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. ProxyAdmin owner() returned the direct 3-of-5 Safe 0x48670b46380fe1645f0e3e821a25162db2589d19, so this route has no timelock on SwapFacility upgrades; it remains bridge-representation issuance against spoke M."
+        "evidence": "Historical block 87714833 recorded ProxyAdmin owner Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 directly, with no timelock. At Monad block 109541590 on 2026-10-01, the EIP-1967 admin remains ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, whose owner() now returns TimelockController 0xcacc556744a9c8de12a627d570156aaa156edf4b with getMinDelay() = 259200 seconds. The former Safe does not hold the tested proposer or executor roles on this timelock; its complete current role membership remains unknown. The wrapper remains a bridge-representation path against spoke M."
       },
       {
         "id": "musd-linea-portal-adapter-admin",
@@ -388,7 +411,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "The Portal default adapter for internal chain 1 is 0xfcc1d596ad6cab0b5394eaa447d8626813180f32. The adapter reports the Portal as its immutable parent and its generic peer for internal chain 1 as itself.",
-          "pausersAdminsUpgraders": "Portal DEFAULT_ADMIN_ROLE and adapter DEFAULT_ADMIN_ROLE are held by this Safe. The Linea Portal is UUPS with implementation 0x67a6ea7be440b4aa90552fa40505fa21cc1a2237; the HyperlaneBridgeAdapter is UUPS with implementation 0x248af94d8f8f7f37b9b2355c8ca46b19e7c7c6c2."
+          "pausersAdminsUpgraders": "At Linea block 32198405, the shared Safe still holds Portal and adapter DEFAULT_ADMIN_ROLE. The Portal implementation is now 0xb1f6696e804777152c89dc6ab1aa6711055a3a59; the adapter implementation remains 0x248af94d8f8f7f37b9b2355c8ca46b19e7c7c6c2. Historical Portal implementation 0x67a6ea7be440b4aa90552fa40505fa21cc1a2237 is superseded."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 31736976,
@@ -442,7 +465,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "The Portal default adapter for internal chain 1 is 0xfcc1d596ad6cab0b5394eaa447d8626813180f32. The adapter reports the Portal as its immutable parent and its generic peer for internal chain 1 as itself.",
-          "pausersAdminsUpgraders": "Portal DEFAULT_ADMIN_ROLE and adapter DEFAULT_ADMIN_ROLE are held by this Safe. The Monad Portal is UUPS with implementation 0x58a3a9c561591bab0dd11110eca755ea455f1841; the HyperlaneBridgeAdapter is UUPS with implementation 0x23d8162e084aa33d8ef6fcc0ab33f4028a53ee79."
+          "pausersAdminsUpgraders": "At Monad block 109541590, the shared Safe still holds Portal and adapter DEFAULT_ADMIN_ROLE. The Portal implementation is now 0x6c0815281be10c9b929f6de50983fa0c61148da6; the adapter implementation remains 0x23d8162e084aa33d8ef6fcc0ab33f4028a53ee79. Historical Portal implementation 0x58a3a9c561591bab0dd11110eca755ea455f1841 is superseded."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 96594242,
@@ -550,22 +573,34 @@
           "validator"
         ],
         "controllerChain": "linea",
-        "controllerAddress": "0x29c3d1759e2995550aa84d102ca928ec9e505db8",
+        "controllerAddress": "0xd9c340f695f4970db784a66e05e48df3c49fc4e2",
         "failureDomainKeys": [
           "contract:linea:0x02d16bc51af6bfd153d67ca61754cf912e82c4d9",
-          "contract:linea:0x29c3d1759e2995550aa84d102ca928ec9e505db8",
-          "validator:linea:0x69dca95b7abf731e5909a77aeca405b746b92914",
-          "validator:linea:0xb1a545387eb101cd07f2b51858f4b43d14f5bd"
+          "contract:linea:0xd9c340f695f4970db784a66e05e48df3c49fc4e2",
+          "contract:linea:0x0cedb173a71139d0ff5ec08eadaf3eb5d6932aaf",
+          "contract:linea:0x729a93c47ef1115960cf0af49b5e696437eaea03",
+          "contract:linea:0x08929d30e9396f234892a499f4de4d6101cef123",
+          "contract:linea:0x280ff4f9a3be8042f1b2fd080c29c74bffa0f92f",
+          "contract:linea:0xd4ee1b93afcf916da21b7977c3bde6bf21ccd285",
+          "validator:linea:0x29d783efb698f9a2d3045ef4314af1f5674f52c5",
+          "validator:linea:0x36a669703ad0e11a0382b098574903d2084be22c",
+          "validator:linea:0x4f977a59fdc2d9e39f6d780a84d5b4add1495a36",
+          "validator:linea:0x5450447aee7b544c462c9352bef7cad049b0c2dc",
+          "validator:linea:0x94438a7de38d4548ae54df5c6010c4ebc5239eae",
+          "validator:linea:0xa5962efa3ec138bf7ca8f7fde86b7ee32e24bf03",
+          "validator:linea:0xb3ac35d3988bca8c2ffd195b1c6bee18536b317b",
+          "validator:linea:0xb683b742b378632a5f73a2a5a45801b3489bba44",
+          "validator:linea:0xef2e5bb2bc45dd092ff7f9d4d4485f022185aeae"
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "The Linea adapter mailbox is 0x02d16bc51af6bfd153d67ca61754cf912e82c4d9 and its default ISM is this static message-ID multisig.",
-          "attestorQuorum": "The Linea default ISM 0x29c3d1759e2995550aa84d102ca928ec9e505db8 requires both validators 0x69dca95b7abf731e5909a77aeca405b746b92914 and 0xb1a545387eb101cd07f2b51858f4b43d14f5bd; threshold is 2-of-2.",
+          "trustedPeerOrRemote": "At Linea block 32198405, adapter interchainSecurityModule() is zero, selecting mailbox 0x02d16bc51af6bfd153d67ca61754cf912e82c4d9 default ISM 0xd9c340f695f4970db784a66e05e48df3c49fc4e2. This aggregation requires both a module-type-6 branch and routing ISM 0x729a93c47ef1115960cf0af49b5e696437eaea03.",
+          "attestorQuorum": "For Ethereum origin domain 1, routing selects aggregation 0x08929d30e9396f234892a499f4de4d6101cef123, requiring one of two multisig branches. Both decoded branches require six of nine validators. The outer module-type-6 branch reports paused() = false; its complete validation semantics and validator key custody remain unverified.",
           "rateLimits": "The external validator quorum is the reviewed route approval control; no token-specific Portal rate limit was evidenced."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 31736976,
+        "observedAt": "2026-10-01",
+        "observedBlock": 32198405,
         "sources": [
           {
             "label": "Hyperlane static multisig ISM source",
@@ -576,7 +611,7 @@
             "url": "https://linea-rpc.publicnode.com"
           }
         ],
-        "evidence": "The Linea Hyperlane mailbox 0x02d16bc51af6bfd153d67ca61754cf912e82c4d9 uses default static ISM 0x29c3d1759e2995550aa84d102ca928ec9e505db8 with a decoded 2-of-2 validator set. Validator key custody and operational quorum beyond the on-chain configuration remain unverified."
+        "evidence": "Historical default ISM 0x29c3d1759e2995550aa84d102ca928ec9e505db8 had two validators. At Linea block 32198405 on 2026-10-01, mailbox defaultIsm() instead returns 0xd9c340f695f4970db784a66e05e48df3c49fc4e2, and adapter interchainSecurityModule() is zero. modulesAndThreshold() decodes a two-of-two outer aggregation with module-type-6 0x0cedb173a71139d0ff5ec08eadaf3eb5d6932aaf and routing module 0x729a93c47ef1115960cf0af49b5e696437eaea03. The Ethereum-origin route selects one-of-two aggregation 0x08929d30e9396f234892a499f4de4d6101cef123 over merkle-root and message-ID multisigs 0x280ff4f9a3be8042f1b2fd080c29c74bffa0f92f and 0xd4ee1b93afcf916da21b7977c3bde6bf21ccd285. Each validatorsAndThreshold() read returns nine validators and threshold six. Old validator keys remain historical evidence, not the current validation tree."
       },
       {
         "id": "musd-monad-hyperlane-default-ism",
@@ -588,22 +623,34 @@
           "validator"
         ],
         "controllerChain": "monad",
-        "controllerAddress": "0x0e1f8b3b48f9c429f9349848fc711cdb455be269",
+        "controllerAddress": "0x2a3ec2f98ca5840061567fe38428bac697281fe1",
         "failureDomainKeys": [
           "contract:monad:0x3a464f746d23ab22155710f44db16dca53e0775e",
-          "contract:monad:0x0e1f8b3b48f9c429f9349848fc711cdb455be269",
-          "validator:monad:0x24f89395e932961c27167f42db928ec92047b695",
-          "validator:monad:0xbb67da637d4b030c647176a53dd27d8d868e01cb"
+          "contract:monad:0x2a3ec2f98ca5840061567fe38428bac697281fe1",
+          "contract:monad:0x2e3049c52fa232ebff6ab0c1e2a4e48fcb629a1b",
+          "contract:monad:0x512a1ee58a5f0335ade0198646935b95cf142457",
+          "contract:monad:0xf1c25e03c9783793d4bc50f8f8710de8136edb87",
+          "contract:monad:0x355714589856158336f18b1eea6364c9f51ec3ea",
+          "contract:monad:0xd8dedc491db97e489cb8ebdc59ea9fcc1ab61410",
+          "validator:monad:0x29d783efb698f9a2d3045ef4314af1f5674f52c5",
+          "validator:monad:0x36a669703ad0e11a0382b098574903d2084be22c",
+          "validator:monad:0x4f977a59fdc2d9e39f6d780a84d5b4add1495a36",
+          "validator:monad:0x5450447aee7b544c462c9352bef7cad049b0c2dc",
+          "validator:monad:0x94438a7de38d4548ae54df5c6010c4ebc5239eae",
+          "validator:monad:0xa5962efa3ec138bf7ca8f7fde86b7ee32e24bf03",
+          "validator:monad:0xb3ac35d3988bca8c2ffd195b1c6bee18536b317b",
+          "validator:monad:0xb683b742b378632a5f73a2a5a45801b3489bba44",
+          "validator:monad:0xef2e5bb2bc45dd092ff7f9d4d4485f022185aeae"
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "The Monad adapter mailbox is 0x3a464f746d23ab22155710f44db16dca53e0775e and its default ISM is this static message-ID multisig.",
-          "attestorQuorum": "The Monad default ISM 0x0e1f8b3b48f9c429f9349848fc711cdb455be269 requires both validators 0x24f89395e932961c27167f42db928ec92047b695 and 0xbb67da637d4b030c647176a53dd27d8d868e01cb; threshold is 2-of-2.",
+          "trustedPeerOrRemote": "At Monad block 109541590, adapter interchainSecurityModule() is zero, selecting mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e default ISM 0x2a3ec2f98ca5840061567fe38428bac697281fe1. This aggregation requires both a module-type-6 branch and routing ISM 0x512a1ee58a5f0335ade0198646935b95cf142457.",
+          "attestorQuorum": "For Ethereum origin domain 1, routing selects aggregation 0xf1c25e03c9783793d4bc50f8f8710de8136edb87, requiring one of two multisig branches. Both decoded branches require six of nine validators. The outer module-type-6 branch reports paused() = false; its complete validation semantics and validator key custody remain unverified.",
           "rateLimits": "The external validator quorum is the reviewed route approval control; no token-specific Portal rate limit was evidenced."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 96594242,
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541590,
         "sources": [
           {
             "label": "Hyperlane static multisig ISM source",
@@ -614,7 +661,7 @@
             "url": "https://rpc.monad.xyz"
           }
         ],
-        "evidence": "The Monad Hyperlane mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e uses default static ISM 0x0e1f8b3b48f9c429f9349848fc711cdb455be269 with a decoded 2-of-2 validator set. Validator key custody and operational quorum beyond the on-chain configuration remain unverified."
+        "evidence": "Historical default ISM 0x0e1f8b3b48f9c429f9349848fc711cdb455be269 had two validators. At Monad block 109541590 on 2026-10-01, mailbox defaultIsm() instead returns 0x2a3ec2f98ca5840061567fe38428bac697281fe1, and adapter interchainSecurityModule() is zero. modulesAndThreshold() decodes a two-of-two outer aggregation with module-type-6 0x2e3049c52fa232ebff6ab0c1e2a4e48fcb629a1b and routing module 0x512a1ee58a5f0335ade0198646935b95cf142457. The Ethereum-origin route selects one-of-two aggregation 0xf1c25e03c9783793d4bc50f8f8710de8136edb87 over merkle-root and message-ID multisigs 0x355714589856158336f18b1eea6364c9f51ec3ea and 0xd8dedc491db97e489cb8ebdc59ea9fcc1ab61410. Each validatorsAndThreshold() read returns nine validators and threshold six. Old validator keys remain historical evidence, not the current validation tree."
       }
     ]
   }

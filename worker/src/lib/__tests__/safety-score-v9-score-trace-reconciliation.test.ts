@@ -123,29 +123,15 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     const pipeline = buildUsdcCandidate(CURRENT_CLOCK_SEC);
     const card = pipeline.candidate.cards[0]!;
 
-    expect({
-      score: card.score,
-      grade: card.grade,
-      totalFactCount: card.scoreTrace.evidenceResponsibility.totalFactCount,
-      reasonCodes: card.reasonCodes,
-    }).toEqual({
-      // The 2026-09-29 curation reconciled the curated composition to the
-      // Deloitte July 2026 examination (compositionAsOf == report periodEnd),
-      // so the audited fallback composition is admitted at the current clock
-      // and this no-live-producer scenario scores instead of returning NR for
-      // missing reserve composition.
-      score: 54,
-      grade: "C-",
-      // SAFETY-SCORE-V9-25 L-08 keeps the missing bridge-supply attribution
-      // explicit instead of treating the route as measured zero.
-      totalFactCount: 6,
-      reasonCodes: [
-        "missing-peg-input",
-        "missing-same-notional-route",
-        "runtime-bridge-materiality-unavailable",
-        "unresolved-control-identity",
-      ],
-    });
+    // The curation pass withdrew the extrapolated bank split's composition
+    // date (usdc-circle#F7; independently confirmed in verify-R). Without a
+    // live reserve producer, that fallback must not buy sufficient evidence
+    // for a rating, even though the mechanism review itself remains current.
+    expect(card.score).toBeNull();
+    expect(card.grade).toBe("NR");
+    expect(card.nrReasons).toContainEqual(
+      expect.objectContaining({ code: "insufficient-evidence", field: "evidenceLevel" }),
+    );
 
     expect(card.scoreTrace.boundedUncertaintyAttribution.items).not.toContainEqual(
       expect.objectContaining({ code: "bounded-mechanism-review" }),

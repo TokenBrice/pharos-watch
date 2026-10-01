@@ -18,22 +18,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM15PHT)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Aura Partners AUDX Independent Limited Assurance Report - July 2026",
-        "url": "https://www.audxtoken.com/_files/ugd/539754_d2b6ce0bfdd947bda8375fe3283a0491.pdf"
+        "label": "Aura Partners AUDX Independent Limited Assurance Report - August 2026",
+        "url": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf"
       },
       {
         "label": "AUDX reserve transparency archive",
         "url": "https://www.audxtoken.com/transparency"
       }
     ],
-    "rationale": "The July 31, 2026 AUDX Reserve Verification Report records AUD 3,231,371.79 in designated TAU accounts against AUD 3,208,057.00 of AUDX in circulation. Aura Partners' independent limited-assurance report, dated August 20, 2026 and performed under ASAE 3000 and ASAE 3100, obtained independent confirmation of reserve balances directly from the relevant financial institution or institutions, inspected blockchain ledger data, and reconciled reserves to issued supply; its conclusion found no matter indicating that the supply was under-backed. Management states that all AUDX reserves are held in segregated, unencumbered accounts. The report does not name the financial institutions or disclose account-level allocation, so the single designated-bank-account category remains 100%.",
-    "compositionBasis": "Aura Partners independent limited assurance under ASAE 3000/3100 of the AUDX Reserve Verification Report as of July 31, 2026",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "The August 31, 2026 AUDX Reserve Verification Report records AUD 3,521,466.68 in designated TAU accounts against AUD 3,498,067.00 of AUDX in circulation across seven named chains. Aura Partners' independent limited-assurance report, dated September 22, 2026 and performed under ASAE 3000 and ASAE 3100, obtained independent confirmation of reserve balances directly from the relevant financial institutions, inspected blockchain ledger data, and reconciled reserves to issued supply. Its conclusion found no matter indicating that supply was under-backed; it expressly disclaims an audit opinion. Management states that all reserves are held in segregated, unencumbered accounts. The report identifies the full reserve as designated bank-account balances but does not name financial institutions or disclose account-level allocation. The report's signing date is not treated as its publication date.",
+    "compositionBasis": "Aura Partners independent limited assurance under ASAE 3000/3100 of the AUDX Reserve Verification Report as of August 31, 2026",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report establishes that the full reserve is held in designated bank accounts, but does not name the financial institutions or disclose provider shares and deposit terms.",
     "knownUnknownExposurePct": 0,
@@ -57,7 +57,7 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "contractual-only",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "prohibited",
     "reviewedAt": "2026-07-21",
     "reviewer": "OpenAI Codex V9 NR-recovery review",

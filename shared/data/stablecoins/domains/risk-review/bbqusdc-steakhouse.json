@@ -39,6 +39,34 @@
         "label": "Morpho Smokehouse USDC vault",
         "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+        "protocol": "MetaMorpho",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The Ethereum deployment is the direct MetaMorpho ERC-4626 share issuer over USDC, not a bridge representation. This review covers the sole catalogued deployment and does not establish absence of uncatalogued integrations.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
+        "sources": [
+          {
+            "label": "Morpho Smokehouse USDC vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+          },
+          {
+            "label": "Deployed MetaMorpho source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbeefff209270748ddd194831b3fa287a5386f5bc?fields=sources,compilation"
+          }
+        ]
+      }
     ]
   }
 }

@@ -8,8 +8,8 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Cash, cash equivalents, and short-term U.S. Treasury bills held in segregated accounts; Basel III-inspired 6% liquidity buffer maintained on non-cash reserves",
-  "pegMechanism": "Direct 1:1 redemption through WSPN; fiat minted/burned on deposit/withdrawal with reserves verified by independent third-party audits",
+  "collateral": "Cash, cash equivalents, and short-term U.S. Treasury bills under WSPN's reserve policy; the whitepaper describes a 6% buffer on non-cash reserves as a long-term goal, not a verified current balance",
+  "pegMechanism": "Direct 1:1 redemption through WSPN for verified customers; minting and burning follow fiat deposits and withdrawals. WSPN commits to independent reserve attestations, but no dated reserve-liability report was located in the reviewed public disclosures",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "234",
   "detailProvider": "defillama",

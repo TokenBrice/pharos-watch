@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "SAFO tokens are UUPS-upgradeable ERC-20s governed by a per-chain Permission Manager (PM) contract. On Ethereum, the PM's ADMIN group (group 0) is held by a legacy 6-signer multisig (threshold 3) at 0x4eaa52b6. The mint requirement on the Ethereum token is group 0 or group 2; only the multisig currently holds group 0 (group 2 was previously assigned to an EOA that has since been removed). The PM itself is upgradeable but has no separate proxy admin, so upgrades require group 0 approval by this multisig.",
+    "summary": "SAFO's Ethereum token and Permission Manager are UUPS-upgradeable, with the PM ADMIN group controlled by a 3-of-6 Gnosis Safe at 0x4eaa52b6280593a8820c45ce38f974290ae52cea. Pinned block 26095796 confirms that token mint permission accepts ADMIN or group 2. The removed historical EOA 0x60a98f4b7d6e3f0b71d9ad3dd74b6a416f00c84a is not the complete mint-group census: six contract addresses currently hold group 2, including the verified native Minter proxy 0x5ed5a75eeed1934ea060186e35187eaa73331366. Two group-10 EOAs can initiate native minting through this proxy within a shared 5000000-share daily limit; six group-9 EOAs and a 1-of-4 Safe can approve pending mints without that daily-limit check. ADMIN can raise the limit or upgrade the token, PM and Minter, so these operational controls do not bound ultimate mint capacity. Five additional group-2 contracts have verified mint permission but unresolved implementation/topology attribution and are recorded as curation proposals rather than assumed safe or bridge-only.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -12,19 +12,21 @@
       ],
       "proxyAddresses": [
         "0xcbade7d9bdee88411cb6cbcbb29952b742036992",
-        "0x344278aff344d6fb960705dc18a4912221608472"
+        "0x344278aff344d6fb960705dc18a4912221608472",
+        "0x5ed5a75eeed1934ea060186e35187eaa73331366"
       ],
       "implementationAddresses": [
         "0xbf5fb9284c9cf2798d5f18a9702af620cd4351be",
-        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e",
+        "0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
       ],
       "adminAddresses": [
         "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
       ],
       "canChangeMintLogic": true,
       "controlRef": "Spiko Permission Manager ADMIN group — Ethereum (6-signer legacy multisig, threshold 3)",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25576670,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095796,
       "sources": [
         {
           "label": "SAFO Ethereum token",
@@ -54,6 +56,8 @@
         "evidence": "Spiko's token is a UUPS-upgradeable ERC-20 whose privileged functions (including mint/burn) are governed by a central Permission Manager; Spiko, as transfer agent for the SICAV, mints fund shares on KYC-gated subscription at the published NAV.",
         "chain": "ethereum",
         "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "deploymentRefs": [
           "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
         ],
@@ -88,12 +92,229 @@
         ],
         "chain": "ethereum",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "deploymentRefs": [
           "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
         ],
         "failureDomainKeys": [
           "multisig:ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea"
         ]
+      },
+      {
+        "label": "Spiko native Minter proxy — Ethereum group 2",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "capDescription": "Pinned dailyLimit(SAFO) is 500000000000 raw shares (5000000 shares at decimals 5), and maxDelay is 86400 seconds. initiateMint requires ADMIN or group 10; exceeding the daily limit creates a pending request. approveMint requires ADMIN or group 9 and executes a pending mint without the daily-limit check. setDailyLimit requires ADMIN. These mutable, bypassable operational limits do not bound ultimate ADMIN mint or upgrade power.",
+        "modulesOrGuardsStatus": "present",
+        "chain": "ethereum",
+        "address": "0x5ed5a75eeed1934ea060186e35187eaa73331366",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "contract:ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+          "contract:ethereum:0x344278aff344d6fb960705dc18a4912221608472"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "sources": [
+          {
+            "label": "Verified Spiko Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          }
+        ],
+        "evidence": "At Ethereum block 26095796, PM getGroups(proxy) includes group 2 and canCall(proxy, SAFO token, mint selector 0x40c10f19) returned true. The Minter proxy authority is PM 0x344278aff344d6fb960705dc18a4912221608472, its implementation slot is 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, and the corrected EIP-1967 admin slot is zero. PM getRequirements(proxy, upgradeToAndCall) returned ADMIN mask 1; the fetched verified implementation calls token.mint in initiateMint and approveMint."
+      },
+      {
+        "label": "Spiko native Minter initiator — group 10 0x7a493c05479f6132cb895c72c49439139b595eb4",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "initiateMint authorizes minting within the shared 500000000000 raw-share daily limit (5000000 SAFO shares at decimals 5); excess requests become pending for at most 86400 seconds. This caller is not an ADMIN or group-9 approver, but separate ADMIN/group-9 callers can approve pending requests.",
+        "chain": "ethereum",
+        "address": "0x7a493c05479f6132cb895c72c49439139b595eb4",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0x7a493c05479f6132cb895c72c49439139b595eb4"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 10; canCall(address, native Minter, initiateMint) returned true. The corresponding Minter requirement is ADMIN or group 10. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
+      },
+      {
+        "label": "Spiko native Minter initiator — group 10 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "initiateMint authorizes minting within the shared 500000000000 raw-share daily limit (5000000 SAFO shares at decimals 5); excess requests become pending for at most 86400 seconds. This caller is not an ADMIN or group-9 approver, but separate ADMIN/group-9 callers can approve pending requests.",
+        "chain": "ethereum",
+        "address": "0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0xe582cddcb3d2374adbb34c9afe76683d019c8a2b"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 10; canCall(address, native Minter, initiateMint) returned true. The corresponding Minter requirement is ADMIN or group 10. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
+      },
+      {
+        "label": "Spiko native Minter pending-mint approver — group 9 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 9; canCall(address, native Minter, approveMint) returned true. The corresponding Minter requirement is ADMIN or group 9. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
+      },
+      {
+        "label": "Spiko native Minter pending-mint approver — group 9 0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0x4d1d9c5b5d9ca448194313d799de374f362bd460"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 9; canCall(address, native Minter, approveMint) returned true. The corresponding Minter requirement is ADMIN or group 9. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
+      },
+      {
+        "label": "Spiko native Minter pending-mint approver — group 9 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 9; canCall(address, native Minter, approveMint) returned true. The corresponding Minter requirement is ADMIN or group 9. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
+      },
+      {
+        "label": "Spiko native Minter pending-mint approver — group 9 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7",
+        "role": "backend-signer",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "safe:ethereum:0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 9; canCall(address, native Minter, approveMint) returned true. The corresponding Minter requirement is ADMIN or group 9. setDailyLimit requires ADMIN; this address has no ADMIN group. Verified SafeProxy source and pinned Safe getters show threshold 1 with 4 owners, no enabled modules and a zero guard slot. No signer-independence or off-chain custody claim is made.",
+        "threshold": 1,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 1,
+          "owners": [
+            "0x0f8c7805a572159755ac1d0a4c1ffa8cee3dea3b",
+            "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460"
+          ],
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 26095796,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        }
+      },
+      {
+        "label": "Spiko native Minter pending-mint approver — group 9 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0xda47bd72438f11bef7cc54f18cd02426dd86a5a2"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 9; canCall(address, native Minter, approveMint) returned true. The corresponding Minter requirement is ADMIN or group 9. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
+      },
+      {
+        "label": "Spiko native Minter pending-mint approver — group 9 0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0xe67d2cbeae3090be017c66e7a6943961619a5d35"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 9; canCall(address, native Minter, approveMint) returned true. The corresponding Minter requirement is ADMIN or group 9. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
+      },
+      {
+        "label": "Spiko native Minter pending-mint approver — group 9 0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0xf949ca7be175a5fcbd3febb9a0235de608ca7898"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "Pinned PM getGroups includes group 9; canCall(address, native Minter, approveMint) returned true. The corresponding Minter requirement is ADMIN or group 9. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
       }
     ],
     "economicCapSemantics": "unbounded",

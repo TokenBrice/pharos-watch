@@ -1,7 +1,7 @@
 {
   "id": "usdu-unitas",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Unitas Terms of Service",
@@ -18,11 +18,15 @@
       {
         "label": "Unitas Solana mint",
         "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+      },
+      {
+        "label": "Verified immutable USDu BSC source and holder-transfer ABI",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xea953ea6634d55dac6697c436b1e81a679db5882?fields=sources,abi"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. Section 5 of Unipay Pte. Ltd.'s binding Unitas Terms of Service explicitly reserves the issuer's right, without prior notice, to freeze, burn, or otherwise restrict USDu or sUSDu under a user's control when it believes the user violated the terms or applicable law. That exact-token issuer power is sufficient for a direct true freeze-reach finding under the access-review contract even though the currently verified BSC ERC-20 and Solana Token-2022 transfer paths themselves remain permissionless and expose no native freeze authority. The prior inherited verdict was invalid because USDU has no upstream stablecoin parent; the legal authority belongs to its own issuer.",
-    "reviewer": "OpenAI Codex C04 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-reviewed 2026-10-01. The Terms of Service dated 27 August 2026 explicitly state that Unipay does not have or claim the ability to freeze, burn, seize, or otherwise alter USDu or sUSDu held in a user's wallet; interface suspension is separate. This supersedes the adverse issuer-legal-power claim recorded by the 2026-08-08 review. Verified BSC USDu.sol has standard ERC-20 holder transfers, self/allowance-based burning, and owner-only minter replacement, with no holder blacklist, seizure, or pause surface. At finalized Solana slot 452213018, both RPC reads returned no freezeAuthority and only metadataPointer/tokenMetadata extensions. The still-active Solana mint authority and BSC issuance-admin powers remain Mint Authority risks rather than holder-freeze powers.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "oracleless",
@@ -87,11 +91,11 @@
         "bridgeTypes": [
           "native-mint"
         ],
-        "note": "Gnosis Safe 3-of-5 sole minter (registry mintAuthority review)"
+        "note": "Token owner Safe can replace the separate UnitasMintingV2 minter; native issuance controls are recorded in Mint Authority."
       },
       {
         "source": "explorer",
-        "name": "USDU Solana Token-2022 mint — self-referential mintAuthority, effectively frozen",
+        "name": "USDU Solana Token-2022 mint: non-null self-referential mintAuthority, signer custody unresolved",
         "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
         "bridgeTypes": [
           "native-mint"
@@ -140,9 +144,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "BSC USDU is a plain BEP20 minted by owner() = Gnosis Safe 3-of-5 0x8e3811b4dc5022ab9c8afbb54be4aa23780c62b3 (verified on BSC at 2026-07-20); no bridge carries the claim.",
+        "reviewNote": "At BSC block 125056986, owner() returned Safe 0x8e3811b4dc5022ab9c8afbb54be4aa23780c62b3 and minter() returned UnitasMintingV2 0xbb984ce670100aa855f6152f88b26ee57f4ea82a. The verified token source is native ERC-20 issuance, not an OFT bridge. The Safe can replace the minter; it is not the current direct minter.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056986,
         "sources": [
           {
             "label": "Unitas Foundation",

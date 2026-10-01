@@ -254,14 +254,14 @@
           "bridge-mint"
         ],
         "controllerChain": "base",
-        "controllerAddress": "0x8bec53b3bd5590f93fba62fcdbce14aab411d8624",
+        "controllerAddress": "0x8bec53b3bd5590f93fba62fcdbce14aab411d862",
         "failureDomainKeys": [
-          "eoa:base:0x8bec53b3bd5590f93fba62fcdbce14aab411d8624",
+          "eoa:base:0x8bec53b3bd5590f93fba62fcdbce14aab411d862",
           "contract:base:0x7e0d3f1a390209d87d9e1425d03066eb567a9844"
         ],
         "authorityType": "eoa",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50068610,
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024106,
         "sources": [
           {
             "label": "Base gateway RoleGranted history",
@@ -272,7 +272,7 @@
             "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
           }
         ],
-        "evidence": "Current Base hasRole(MINTER_ROLE, 0x8bec53b3bd5590f93fba62fcdbce14aab411d8624) returned true at block 50068610. This role is a bridge-route minter on BRLVCanonicalGateway, not an independent native BRLV issuance authority."
+        "evidence": "At Base block 52024106, hasRole(MINTER_ROLE, 0x8bec53b3bd5590f93fba62fcdbce14aab411d862) on BRLVCanonicalGateway returned true. RoleGranted history identifies the same 40-hex-digit address, correcting the previously authored 41-digit controller. eth_getCode returned the EIP-7702 delegation designation 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b. This delegated EOA controls bridge-route minting, not independent native BRLV issuance."
       },
       {
         "id": "brlv-base-canonical-gateway-burner-role",

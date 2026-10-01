@@ -27,19 +27,21 @@
             "0xb12e2C44CB2c8c18bB80c5A9714c04c30091AA51",
             "0x3b8645aEEd35f6016114a94A961EdfC8C5058af4",
             "0x2442438D7C4850866D41b226A835D43E2C1D1B86",
-            "0xD42EC163464da30A6116499254816c9B8Da9f87B",
+            "0xd770a384b34169f4683deed78e2961cba1e22cd3",
             "0xdEDAC74E6A7b5112b3D78518C858db3091a05390"
           ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "version": "1.4.1+L2",
-          "observedBlock": 50068513,
-          "observedAt": "2026-08-16",
-          "source": "safe-api"
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 52024964,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
-        "evidence": "At Base block 50068513 on 2026-08-16, current Safe reads confirmed the YO admin Safe has six owners, threshold 4, empty module pagination, zero guard, and Safe version 1.4.1+L2. This Safe holds PROPOSER_ROLE on the 2-day TimelockController (0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48), which owns the ProxyAdmin (0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073) controlling the Base yoUSD vault upgrade. The Safe is not a current or authorizable share minter."
+        "evidence": "At Base block 52024964 on 2026-10-01, the Safe has six owners including replacement signer 0xd770a384b34169f4683deed78e2961cba1e22cd3, threshold four, empty module pagination, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and VERSION 1.4.1. ProxyAdmin owner and 172800-second timelock remain unchanged.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024964
       },
       {
         "label": "yoUSD Base authority contract",
@@ -53,9 +55,9 @@
         ],
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": "unknown",
-        "evidence": "At Base block 50068513 on 2026-08-16, yoUSD.authority() returned this Solmate RolesAuthority, whose owner() is the 4-of-6 YO admin Safe. Against the current ABI-visible vault implementation 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7, getRolesWithCapability returned roles 11, 12, and 17 for manage, role 15 for fulfillRedeem, and roles 13 and 14 for pause/unpause, while mint and deposit both returned a zero role bitmap with isCapabilityPublic=false. This authority governs strategy execution, redemption fulfilment, and pausing; it does not authorize share creation.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50068513,
+        "evidence": "At base block 52024964 on 2026-10-01, vault authority() returned this Safe-owned RolesAuthority. getRolesWithCapability and isCapabilityPublic returned zero for mint(uint256,address) and deposit(uint256,address). Current implementation 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc exposes public deposit/mint and privileged strategy, pause and redemption-fulfilment functions.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024964,
         "sources": [
           {
             "label": "yoUSD RolesAuthority (Base)",
@@ -63,7 +65,7 @@
           },
           {
             "label": "yoUSD current vault implementation (Base)",
-            "url": "https://base.blockscout.com/address/0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7"
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
           }
         ]
       },
@@ -78,9 +80,9 @@
           "base:0x0000000f2eb9f69274678c76222b35eec7588a65"
         ],
         "canRaiseCap": false,
-        "evidence": "At Base block 50068513 on 2026-08-16, the local proxy's current EIP-1967 implementation was 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7. The current ABI exposes deposit(uint256,address) and mint(uint256,address), and the RolesAuthority returns a zero, non-public capability result for both selectors; share creation is therefore user deposit-driven at NAV with no privileged share-mint path resolved.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50068513,
+        "evidence": "At base block 52024964 on 2026-10-01, the proxy implementation is 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. Verified YoVault source implements public deposit/mint through ERC4626 with pause checks; the RolesAuthority returned zero mint/deposit role bitmaps and false public capability flags. Shares remain deposit-driven, with privileged oracle pricing and a mutable implementation.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024964,
         "sources": [
           {
             "label": "yoUSD vault (Base)",
@@ -101,15 +103,15 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50068513,
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024964,
         "sources": [
           {
             "label": "yoUSD vault contract (Base)",
             "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
           }
         ],
-        "evidence": "At Base block 50068513 on 2026-08-16, the vault's EIP-1967 implementation was 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7 and its admin was ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073. ProxyAdmin.owner() was this TimelockController and getMinDelay() returned 172800 seconds. An implementation change through that owned ProxyAdmin can alter local share-mint logic after the enforced two-day delay."
+        "evidence": "At base block 52024964 on 2026-10-01, implementation=0xc84a6e01bff58996540f1abc22355a9dfe0d78dc; admin=0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073; ProxyAdmin.owner()=0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48; getMinDelay()=172800 seconds. The upgrade path remains able to replace local share-mint logic."
       },
       {
         "label": "yoUSD Ethereum admin Safe",
@@ -131,19 +133,21 @@
             "0xb12e2C44CB2c8c18bB80c5A9714c04c30091AA51",
             "0x3b8645aEEd35f6016114a94A961EdfC8C5058af4",
             "0x2442438D7C4850866D41b226A835D43E2C1D1B86",
-            "0xD42EC163464da30A6116499254816c9B8Da9f87B",
+            "0xd770a384b34169f4683deed78e2961cba1e22cd3",
             "0xdEDAC74E6A7b5112b3D78518C858db3091a05390"
           ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "version": "1.4.1+L2",
-          "observedBlock": 25771204,
-          "observedAt": "2026-08-16",
-          "source": "safe-api"
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 26095939,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
-        "evidence": "At Ethereum block 25771204 on 2026-08-16, current Safe reads confirmed the YO admin Safe has six owners, threshold 4, empty module pagination, zero guard, and Safe version 1.4.1+L2. This Safe holds PROPOSER_ROLE on the 2-day TimelockController (0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48), which owns the ProxyAdmin (0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073) controlling the Ethereum yoUSD vault upgrade. The Safe is not a current or authorizable share minter."
+        "evidence": "At Ethereum block 26095939 on 2026-10-01, the Safe has six owners including replacement signer 0xd770a384b34169f4683deed78e2961cba1e22cd3, threshold four, empty module pagination, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and VERSION 1.4.1. ProxyAdmin owner and 172800-second timelock remain unchanged.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095939
       },
       {
         "label": "yoUSD Ethereum authority contract",
@@ -157,9 +161,9 @@
         ],
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25771204 on 2026-08-16, yoUSD.authority() returned this Solmate RolesAuthority, whose owner() is the 4-of-6 YO admin Safe. Against the current ABI-visible vault implementation 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7, getRolesWithCapability returned roles 11, 12, and 17 for manage, role 15 for fulfillRedeem, and role 14 for pause/unpause, while mint and deposit both returned a zero role bitmap with isCapabilityPublic=false. This authority governs strategy execution, redemption fulfilment, and pausing; it does not authorize share creation.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771204,
+        "evidence": "At ethereum block 26095939 on 2026-10-01, vault authority() returned this Safe-owned RolesAuthority. getRolesWithCapability and isCapabilityPublic returned zero for mint(uint256,address) and deposit(uint256,address). Current implementation 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc exposes public deposit/mint and privileged strategy, pause and redemption-fulfilment functions.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095939,
         "sources": [
           {
             "label": "yoUSD RolesAuthority (Ethereum)",
@@ -167,7 +171,7 @@
           },
           {
             "label": "yoUSD current vault implementation (Ethereum)",
-            "url": "https://etherscan.io/address/0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7"
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
           }
         ]
       },
@@ -182,9 +186,9 @@
           "ethereum:0x0000000f2eb9f69274678c76222b35eec7588a65"
         ],
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 25771204 on 2026-08-16, the local proxy's current EIP-1967 implementation was 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7. The current ABI exposes deposit(uint256,address) and mint(uint256,address), and the RolesAuthority returns a zero, non-public capability result for both selectors; share creation is therefore user deposit-driven at NAV with no privileged share-mint path resolved.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771204,
+        "evidence": "At ethereum block 26095939 on 2026-10-01, the proxy implementation is 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. Verified YoVault source implements public deposit/mint through ERC4626 with pause checks; the RolesAuthority returned zero mint/deposit role bitmaps and false public capability flags. Shares remain deposit-driven, with privileged oracle pricing and a mutable implementation.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095939,
         "sources": [
           {
             "label": "yoUSD vault (Ethereum)",
@@ -205,15 +209,15 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771204,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095939,
         "sources": [
           {
             "label": "yoUSD vault contract (Ethereum)",
             "url": "https://etherscan.io/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
           }
         ],
-        "evidence": "At Ethereum block 25771204 on 2026-08-16, the vault's EIP-1967 implementation was 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7 and its admin was ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073. ProxyAdmin.owner() was this TimelockController and getMinDelay() returned 172800 seconds. An implementation change through that owned ProxyAdmin can alter local share-mint logic after the enforced two-day delay."
+        "evidence": "At ethereum block 26095939 on 2026-10-01, implementation=0xc84a6e01bff58996540f1abc22355a9dfe0d78dc; admin=0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073; ProxyAdmin.owner()=0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48; getMinDelay()=172800 seconds. The upgrade path remains able to replace local share-mint logic."
       },
       {
         "label": "yoUSD Arbitrum admin Safe",
@@ -235,19 +239,21 @@
             "0xb12e2C44CB2c8c18bB80c5A9714c04c30091AA51",
             "0x3b8645aEEd35f6016114a94A961EdfC8C5058af4",
             "0x2442438D7C4850866D41b226A835D43E2C1D1B86",
-            "0xD42EC163464da30A6116499254816c9B8Da9f87B",
+            "0xd770a384b34169f4683deed78e2961cba1e22cd3",
             "0xdEDAC74E6A7b5112b3D78518C858db3091a05390"
           ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "version": "1.4.1+L2",
-          "observedBlock": 495309899,
-          "observedAt": "2026-08-16",
-          "source": "safe-api"
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 510590098,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
-        "evidence": "At Arbitrum block 495309899 on 2026-08-16, current Safe reads confirmed the YO admin Safe has six owners, threshold 4, empty module pagination, zero guard, and Safe version 1.4.1+L2. This Safe holds PROPOSER_ROLE on the 2-day TimelockController (0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48), which owns the ProxyAdmin (0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073) controlling the Arbitrum yoUSD vault upgrade. The Safe is not a current or authorizable share minter."
+        "evidence": "At Arbitrum block 510590098 on 2026-10-01, the Safe has six owners including replacement signer 0xd770a384b34169f4683deed78e2961cba1e22cd3, threshold four, empty module pagination, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and VERSION 1.4.1. ProxyAdmin owner and 172800-second timelock remain unchanged.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510590098
       },
       {
         "label": "yoUSD Arbitrum authority contract",
@@ -261,9 +267,9 @@
         ],
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": "unknown",
-        "evidence": "At Arbitrum block 495309899 on 2026-08-16, yoUSD.authority() returned this Solmate RolesAuthority, whose owner() is the 4-of-6 YO admin Safe. Against the current ABI-visible vault implementation 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7, getRolesWithCapability returned role 12 for manage and role 15 for fulfillRedeem, role 14 for pause/unpause, while mint and deposit both returned a zero role bitmap with isCapabilityPublic=false. This authority governs strategy execution, redemption fulfilment, and pausing; it does not authorize share creation.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495309899,
+        "evidence": "At arbitrum block 510590098 on 2026-10-01, vault authority() returned this Safe-owned RolesAuthority. getRolesWithCapability and isCapabilityPublic returned zero for mint(uint256,address) and deposit(uint256,address). Current implementation 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc exposes public deposit/mint and privileged strategy, pause and redemption-fulfilment functions.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510590098,
         "sources": [
           {
             "label": "yoUSD RolesAuthority (Arbitrum)",
@@ -271,7 +277,7 @@
           },
           {
             "label": "yoUSD current vault implementation (Arbitrum)",
-            "url": "https://arbiscan.io/address/0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7"
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
           }
         ]
       },
@@ -286,9 +292,9 @@
           "arbitrum:0x0000000f2eb9f69274678c76222b35eec7588a65"
         ],
         "canRaiseCap": false,
-        "evidence": "At Arbitrum block 495309899 on 2026-08-16, the local proxy's current EIP-1967 implementation was 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7. The current ABI exposes deposit(uint256,address) and mint(uint256,address), and the RolesAuthority returns a zero, non-public capability result for both selectors; share creation is therefore user deposit-driven at NAV with no privileged share-mint path resolved.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495309899,
+        "evidence": "At arbitrum block 510590098 on 2026-10-01, the proxy implementation is 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. Verified YoVault source implements public deposit/mint through ERC4626 with pause checks; the RolesAuthority returned zero mint/deposit role bitmaps and false public capability flags. Shares remain deposit-driven, with privileged oracle pricing and a mutable implementation.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510590098,
         "sources": [
           {
             "label": "yoUSD vault (Arbitrum)",
@@ -309,15 +315,15 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495309899,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510590098,
         "sources": [
           {
             "label": "yoUSD vault contract (Arbitrum)",
             "url": "https://arbiscan.io/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
           }
         ],
-        "evidence": "At Arbitrum block 495309899 on 2026-08-16, the vault's EIP-1967 implementation was 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7 and its admin was ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073. ProxyAdmin.owner() was this TimelockController and getMinDelay() returned 172800 seconds. An implementation change through that owned ProxyAdmin can alter local share-mint logic after the enforced two-day delay."
+        "evidence": "At arbitrum block 510590098 on 2026-10-01, implementation=0xc84a6e01bff58996540f1abc22355a9dfe0d78dc; admin=0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073; ProxyAdmin.owner()=0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48; getMinDelay()=172800 seconds. The upgrade path remains able to replace local share-mint logic."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -334,7 +340,7 @@
         "0x0000000f2eb9f69274678c76222B35eEc7588a65"
       ],
       "implementationAddresses": [
-        "0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7"
+        "0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
       ],
       "adminAddresses": [
         "0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073",
@@ -343,8 +349,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "yoUSD Base ProxyAdmin owner TimelockController",
-      "observedAt": "2026-08-16",
-      "observedBlock": 50068513,
+      "observedAt": "2026-10-01",
+      "observedBlock": 52024964,
       "sources": [
         {
           "label": "yoUSD Base vault contract",
@@ -361,9 +367,9 @@
       ]
     },
     "review": {
-      "evidence": "Reviewed on 2026-08-16 across Base block 50068513, Ethereum block 25771204, and Arbitrum block 495309899. YO's official contract inventory and gateway documentation describe three independent local ERC-4626 yoUSD deployments, each receiving and redeeming against its chain-local USDC; shares received on one chain cannot be redeemed on another. Each local proxy currently resolves to implementation 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7, with ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 owned by TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with a 172800-second delay. The same YO Safe is 4-of-6 with no modules and zero guard on all three chains and holds the timelock proposer path. Current RolesAuthority reads show no role and no public capability for mint or deposit on any chain; the authority instead governs manage, fulfillRedeem, and pause/unpause. yoUSD share creation is therefore deposit-driven with no current privileged share-mint path, while the delayed upgrade path can replace local mint logic. USDC parent issuance is inherited on each chain; no Circle bridge control is imported into yoUSD Mint Authority. The mint-scoped posture is none-resolved-mint and economicCapSemantics remains raiseable.",
-      "reviewer": "Codex mint-bridge boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Pinned 2026-10-01 census: Base 52024964, Ethereum 26095939, Arbitrum 510590098. All three proxies now use implementation 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. Local USDC assets, Safe ownership, RolesAuthority and ProxyAdmin/timelock paths match the earlier review; six Safe owners and threshold four remain, but signer 0xd42ec163464da30a6116499254816c9b8da9f87b was replaced by 0xd770a384b34169f4683deed78e2961cba1e22cd3. Mint/deposit capability bitmaps remain zero and verified source retains public asset-funded ERC4626 share creation. Current implementation uses YoOracle for share conversions and privileged operators can settle queued withdrawals at a lower current oracle price. All three Safes have empty module pagination, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and VERSION 1.4.1.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "sources": [
         {
@@ -392,7 +398,11 @@
         },
         {
           "label": "yoUSD current vault implementation ABI",
-          "url": "https://base.blockscout.com/address/0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7"
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+        },
+        {
+          "label": "Current verified YoVault implementation",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
         }
       ]
     }

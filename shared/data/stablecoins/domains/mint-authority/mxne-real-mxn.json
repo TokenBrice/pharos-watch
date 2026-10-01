@@ -47,7 +47,9 @@
           "base:0x269cae7dc59803e5c596c95756faeebb6030e0af"
         ],
         "canRaiseCap": true,
-        "evidence": "At Base block 47200644, hasRole(MINTER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) on the BraleToken proxy (0x269cae7dc59803e5c596c95756faeebb6030e0af) returned true. eth_getCode confirms EOA. Same address also holds DEFAULT_ADMIN_ROLE. MINTER_ROLE = keccak256('MINTER_ROLE') = 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6. Contract source confirmed as BraleToken (OpenZeppelin AccessControl + UUPS) via Blockscout."
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024140,
+        "evidence": "At Base block 52024140, hasRole(MINTER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) and hasRole(DEFAULT_ADMIN_ROLE, same address) on 0x269cae7dc59803e5c596c95756faeebb6030e0af both returned true. eth_getCode on the controller returned 0x. The ERC1967 implementation remained 0x2a6c613bd6288b1f7e1c02393f1cf92444eadee5."
       },
       {
         "label": "Brale mint authority keypair — Solana",
@@ -60,7 +62,9 @@
           "solana:6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa"
         ],
         "canRaiseCap": true,
-        "evidence": "getAccountInfo on SPL mint 6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa returned mintAuthority=3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH and freezeAuthority=same. That account is owned by System Program and non-executable (regular Solana keypair/EOA)."
+        "observedAt": "2026-10-01",
+        "observedBlock": 452230655,
+        "evidence": "At finalized Solana slot 452230655, one getMultipleAccounts response confirmed that SPL mint 6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa has 9 decimals and mintAuthority and freezeAuthority both 3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH. The same atomic response confirmed that authority account is System Program owned, non-executable, and has zero data length."
       },
       {
         "label": "Brale issuer account — Stellar",
@@ -73,7 +77,8 @@
           "stellar:MXNe-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
         ],
         "canRaiseCap": true,
-        "evidence": "Stellar Horizon: issuer GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR has 1 signer (self, weight=1), all thresholds=0, auth_revocable and auth_clawback_enabled set, standard single-key issuer account."
+        "observedAt": "2026-10-01",
+        "evidence": "Stellar Horizon account snapshot fetched 2026-10-01: issuer GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR has one signer (self, weight 1), all thresholds zero, auth_revocable true and auth_clawback_enabled true. The response records last_modified_ledger 64710391; that is the last account modification, not a pinned current query ledger."
       }
     ],
     "economicCapSemantics": "unbounded",

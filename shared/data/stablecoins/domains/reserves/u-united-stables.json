@@ -80,9 +80,13 @@
       {
         "label": "United Stables terms and conditions",
         "url": "https://u.tech/terms/"
+      },
+      {
+        "label": "Ceffu custody and MirrorX announcement, February 25, 2026",
+        "url": "https://www.ceffu.com/support/announcements/article/Ceffu-Selected-by-United-Stables-to-Provide-Custody-and-Off-Exchange-Settlement"
       }
     ],
-    "uncertainty": "The website describes segregated custody accounts, while the governing terms state that United Stables need not segregate reserves and that holders have no preferential, secured, or proprietary insolvency claim. Provider identities, allocations, account terms, and rehypothecation restrictions are not disclosed.",
+    "uncertainty": "The website describes segregated custody accounts, while the governing terms state that United Stables need not segregate reserves and that holders have no preferential, secured, or proprietary insolvency claim. Ceffu's February 25, 2026 announcement confirms digital-asset custody and MirrorX settlement, but does not disclose its share, the contracting Ceffu entity, or holder protections. Other provider identities, allocations, account terms, and rehypothecation restrictions are not disclosed.",
     "knownUnknownExposurePct": 100
   }
 }

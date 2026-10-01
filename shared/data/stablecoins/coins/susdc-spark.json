@@ -66,6 +66,10 @@
     {
       "label": "Deployments",
       "url": "https://github.com/sparkdotfi/spark-address-registry"
+    },
+    {
+      "label": "Spark Savings V2 launch and public availability",
+      "url": "https://paragraph.com/@spark-11/savings-v2-launches"
     }
   ],
   "contracts": [
@@ -113,6 +117,6 @@
       }
     }
   },
-  "launchDate": "2025-11-12",
+  "launchDate": "2025-10-21",
   "geckoId": "spark-savings-usdc"
 }

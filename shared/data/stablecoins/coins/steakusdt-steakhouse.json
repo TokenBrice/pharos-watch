@@ -2,7 +2,7 @@
   "id": "steakusdt-steakhouse",
   "name": "Steakhouse USDT V2",
   "symbol": "steakUSDT",
-  "oneLiner": "steakUSDT is Steakhouse's curated Morpho ERC-4626 lending vault over USDT; share price accrues borrower interest with FIFO withdrawal queue on Morpho liquidity.",
+  "oneLiner": "steakUSDT is Steakhouse's Morpho V2 USDT lending vault; shares accrue yield, can absorb losses, and redeem against idle and adapter liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -13,7 +13,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdt-tether",
   "collateral": "USDT deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
-  "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDT as borrower interest accrues; withdrawals redeem vault shares for available USDT liquidity or wait for Morpho market liquidity to return",
+  "pegMechanism": "Morpho V2 ERC-4626 shares represent a USDT strategy position. Interest and fees change assets per share, and losses can reduce the share price. Withdrawals use idle USDT first and the configured liquidity adapter for any shortfall; execution depends on available liquidity.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

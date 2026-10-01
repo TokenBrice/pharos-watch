@@ -571,19 +571,19 @@
         ],
         "capabilities": ["escrow", "admin"],
         "controllerChain": "avalanche",
-        "controllerAddress": "0xf4c7e640eda248ef95972845a62bdc74237805db",
+        "controllerAddress": "0xd4d23209aae8630bf386b7393763a5b7865e57cb",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "contract:avalanche:0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d",
-          "eoa:evm:0xf4c7e640eda248ef95972845a62bdc74237805db"
+          "eoa:evm:0xd4d23209aae8630bf386b7393763a5b7865e57cb"
         ],
         "authorityType": "eoa",
         "routeChecks": {
           "lockboxOrEscrow": "The canonical-side CCIP LockReleaseTokenPool is 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D and holds the bridge escrow path for native savUSD.",
-          "pausersAdminsUpgraders": "At Avalanche block 92981175, the pool owner() returned 0xf4c7e640eda248ef95972845a62bdc74237805db. Other pool admin, upgrade, router, and rate-limit surfaces remain outside this fixed owner read."
+          "pausersAdminsUpgraders": "At Avalanche block 96511220, pool owner() returned EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb. This supersedes the recorded block-92981175 owner 0xf4c7e640eda248ef95972845a62bdc74237805db. Other pool admin, upgrade, router, and rate-limit surfaces are not settled by this owner read."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 92981175,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511220,
         "sources": [
           {
             "label": "Avant contract addresses",
@@ -598,7 +598,7 @@
             "url": "https://docs.chain.link/ccip"
           }
         ],
-        "evidence": "At Avalanche block 92981175, the official Avant registry's canonical-side CCIP pool 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D returned getToken() = native savUSD and typeAndVersion() = LockReleaseTokenPool 1.5.1; owner() returned the EOA 0xf4c7e640eda248ef95972845a62bdc74237805db. This is bridge escrow and administration for cross-chain movement, not an independent native savUSD issuance path."
+        "evidence": "At Avalanche block 96511220 on 2026-10-01, the canonical savUSD CCIP pool 0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d returned getToken() = 0x06d47f3fb376649c3a9dafe069b3d6e35572219e, typeAndVersion() = LockReleaseTokenPool 1.5.1 and owner() = 0xd4d23209aae8630bf386b7393763a5b7865e57cb. eth_getCode at the owner returned 0x (EOA). The prior block-92981175 observation of owner 0xf4c7e640eda248ef95972845a62bdc74237805db is historical; bridge escrow remains separate from canonical native share issuance."
       },
       {
         "id": "avalanche-layerzero-oft-adapter",

@@ -2,10 +2,19 @@
   "id": "usdq-quantoz",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDQ resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified USDQ HadronToken implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbae166f5e8b4b6735341446b1405fa779a92d7c7"
+      },
+      {
+        "label": "USDQ Algorand asset role configuration",
+        "url": "https://mainnet-idx.algonode.cloud/v2/assets/2768603795"
+      }
+    ],
+    "evidence": "Pinned Ethereum block 26096002 identifies HadronToken implementation 0xbae166f5e8b4b6735341446b1405fa779a92d7c7. Its verified code restricts transfers from blocked senders and lets the owner destroy blocked balances. At validated XRPL ledger 107354828, allowTrustLineClawback is enabled; at Algorand indexer round 65564578, ASA 2768603795 has nonempty issuer freeze and clawback roles. This replaces the former centralized-governance inference with direct implementation and chain evidence.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",

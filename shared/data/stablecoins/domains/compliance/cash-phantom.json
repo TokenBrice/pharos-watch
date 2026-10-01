@@ -5,7 +5,7 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "ESMA interim MiCA register: EMT issuers",
+        "label": "ESMA EMT register reviewed 2026-10-01: Bridge Building S.A. is listed for EURR; no CASH whitepaper entry located",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
@@ -13,7 +13,7 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-48-requirements-offer-public-or"
       },
       {
-        "label": "CASH: Bridge identifies EEA flows through its EU subsidiary, transitioning to CASP and EMI licenses",
+        "label": "CASH product disclosures: BBI is issuer; EEA affiliate references do not establish CASH EMT authorization",
         "url": "https://www.usecash.xyz/"
       }
     ]
@@ -32,10 +32,10 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "reserveDisclosureUrl": "https://reserves.bridge.xyz/cash",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge Building Inc. (BBI), the legal issuer of CASH via Bridge Open Issuance, is a Stripe subsidiary and licensed state money transmitter (NMLS #2450917). On Feb 12, 2026, the OCC conditionally approved Bridge Ventures LLC (BVL, BBI's parent) to organize Bridge National Trust Bank (OCC Corporate Decision #1365), a new federally chartered national trust bank that would issue stablecoins and custody digital assets under direct OCC oversight. This conditional trust-bank charter covers a new bank entity under BVL, not BBI directly; BBI remains a state money transmitter. Because the chartered entity is not yet formed and BBI is the actual CASH issuer, issuerPathway remains unknown rather than federal-qualified-nonbank. Bridge markets its platform as GENIUS-ready but no token-specific PPSI approval or official GENIUS application has been filed or publicly disclosed for CASH. authorizationStatus stays issuer-announced-intent. No enforcement actions found.",
+    "notes": "CASH's current product disclosures identify Bridge Building Inc. (BBI) as issuer and give NMLS #2450917. OCC Corporate Decision #1365, dated February 12, 2026, grants only preliminary conditional approval to organize Bridge National Trust Bank under Bridge Ventures LLC; the decision expressly withholds final authorization to commence business until preopening requirements are met. That conditional approval does not establish a CASH-specific PPSI approval or an issuer migration from BBI to the proposed bank, so issuerPathway remains unknown. The current CASH site states that Bridge will transition CASH to the GENIUS regime when obligations begin, supporting issuer-announced-intent without claiming an official token-specific approval. The 2026-10-01 ESMA EMT register lists Bridge Building S.A. for EURR, not CASH; this affiliate entry does not authorize the authored BBI-issued USD token. The issuer-published CASH dashboard is the current reserve disclosure, not an independent monthly attestation. The historical negative-evidence review below retains its original date and scope.",
     "references": [
       {
         "label": "OCC Corporate Decision #1365: Bridge Ventures LLC conditional national trust bank charter",

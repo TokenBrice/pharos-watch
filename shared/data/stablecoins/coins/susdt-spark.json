@@ -31,7 +31,7 @@
       { "id": "usdt-tether", "weight": 1, "type": "wrapper", "reason": "The V2 USDT vault remains a USDT-denominated ERC-4626 claim; the structural native-asset parent is retained alongside USDS backing." }
     ]
   },
-  "collateral": "USDT deposited into Spark Savings Vault V2 (ERC-4626 asset=USDT); idle USDT is taken by the Spark Liquidity Layer into SparkLend, Morpho, and other supported yield strategies, with Spark docs framing V2 USD vaults as economically backed by USDS / Sky balance-sheet liquidity for redemptions.",
+  "collateral": "USDT on Ethereum or USDT0 on Arbitrum and X Layer deposited into Spark Savings Vault V2; a permissioned Spark Liquidity Layer taker deploys idle assets into supported yield strategies, while Spark documents full USDS economic backing for these V2 vaults.",
   "pegMechanism": "Users deposit USDT into Spark Savings Vault V2 and receive spUSDT; a permissioned Spark Liquidity Layer taker deploys idle USDT into yield strategies while share value accrues via the vault savings rate (vsr), not the Sky Savings Rate or legacy sUSDC path.",
   "detailProvider": "coingecko",
   "geckoId": "spark-savings-usdt",
@@ -62,6 +62,11 @@
     {
       "chain": "arbitrum",
       "address": "0x45d91340b3b7b96985a72b5c678f7d9e8d664b62",
+      "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0xc358c90d32375721cb3924320fdc2f8b694347ca",
       "decimals": 6
     }
   ],

@@ -3,13 +3,13 @@
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: spUSDT resolves to Upstream because the wrapper holds USDT as its only reserve, inheriting Tether's blacklist surface.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "spUSDT retains upstream Tether freeze exposure: asset() on the Ethereum vault returned native USDT and asset() on Arbitrum returned USDT0 at pinned blocks 26095794 and 510584053 on 2026-10-01. Spark also documents full USDS economic backing and downstream strategy deployment, so USDT is the deposit asset rather than the only reserve exposure.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA35spUSDT)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "spUSDT has two canonical local Spark ERC-4626 issuance routes, on Ethereum and Arbitrum, and no bridge control mints spUSDT representations. The Arbitrum vault's Spark Receiver-to-Executor path is cross-chain governance transport for that local native vault, not a spUSDT bridge. Its collateral is USDT0, whose Ethereum lock-and-mint adapter and Arbitrum OFT/token are a separate LayerZero bridge representation of Tether's Ethereum USDT; the USDT0 owner Safe is therefore a collateral-bridge failure domain rather than a spUSDT issuer or minter. LayerZero DVN configuration and rate limits were not independently enumerated, so the collateral dependency remains external-lock-mint and no narrower tier is claimed.",
+    "summary": "spUSDT has canonical local Spark ERC-4626 issuance on Ethereum, Arbitrum and X Layer; no bridge control mints spUSDT representations. Spark Receiver-to-Executor paths administer local vaults through cross-chain governance rather than bridging spUSDT. Arbitrum and X Layer deposit assets are USDT0, a separate LayerZero lock-and-mint representation of Ethereum USDT. The USDT0 owner Safe is a collateral-bridge failure domain, not a spUSDT minter. LayerZero DVN configuration and rate limits were not independently enumerated; the collateral dependency remains external-lock-mint.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Pharos mint/bridge boundary migration; verified susdt-spark research finding",
     "confidence": "verified",
@@ -22,7 +22,7 @@
         "bridgeTypes": [
           "cross-chain-governance"
         ],
-        "note": "Both authored spUSDT deployments are native local share issuance. The Arbitrum Spark Receiver 0x212871A1C235892F86cAB30E937e18c94AEd8474 targets Spark Executor 0x65d946e533748a998b1f0e430803e39a6388f7a1 and resolves its L1 authority to SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4; this governance transport administers the local vault and does not mint a spUSDT representation."
+        "note": "All three authored spUSDT deployments use native local share issuance. The Arbitrum Spark Receiver-to-Executor path and the X Layer Receiver 0x4bd50b9c00ae19e8b59723f27645c7a5cce7a4a0 targeting Executor 0xcf5af6f53cec74b791cb4182ac778ca9cd323510 resolve their L1 authority to SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. This governance transport administers local vaults and does not mint bridged spUSDT representations."
       },
       {
         "source": "docs",
@@ -34,7 +34,7 @@
           "lockAndMint",
           "external-lock-mint"
         ],
-        "note": "USDT0 is the Arbitrum spUSDT vault's collateral dependency, not a spUSDT representation. The reviewed route is Ethereum OFT Adapter 0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee to Arbitrum token 0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9 and OFT 0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92, with common owner Safe 0x4DFF9b5B0143E642A3F63A5BcF2d1C328E600BF8."
+        "note": "USDT0 is collateral for the Arbitrum and X Layer spUSDT vaults, not a spUSDT representation. The previously reviewed Ethereum-to-Arbitrum OFT route is retained. At X Layer block 72069446, asset() on the local spUSDT vault returned USDT0 0x779ded0c9e1022225f8e0630b35a9b54be713736, whose owner() returned the same USDT0 Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8."
       }
     ],
     "sources": [
@@ -175,6 +175,45 @@
           {
             "label": "Arbitrum RPC fixed-block reads",
             "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0xc358c90d32375721cb3924320fdc2f8b694347ca",
+        "destinationChain": "xlayer",
+        "canonicalChain": "xlayer",
+        "contractAddress": "0xc358c90d32375721cb3924320fdc2f8b694347ca",
+        "protocol": "Spark native savings vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Spark documents X Layer as a local ERC-4626 spUSDT vault over USDT0. At block 72069446, the contract returned name Spark Savings USDT, symbol spUSDT, decimals 6, implementation 0xdce929a335c75a1676ef5957a4d7a3b928c48820, zero EIP-1967 admin slot and asset USDT0 0x779ded0c9e1022225f8e0630b35a9b54be713736. DEFAULT_ADMIN_ROLE had one member, Spark Executor 0xcf5af6f53cec74b791cb4182ac778ca9cd323510, with delay()=0; Receiver 0x4bd50b9c00ae19e8b59723f27645c7a5cce7a4a0 targeted that Executor and returned L1 SubProxy authority. Governance transport and the USDT0 collateral bridge are distinct from local spUSDT issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xcf5af6f53cec74b791cb4182ac778ca9cd323510",
+        "failureDomainKeys": [
+          "protocol:spark-cross-chain-governance",
+          "contract:xlayer:0xcf5af6f53cec74b791cb4182ac778ca9cd323510",
+          "contract:xlayer:0x4bd50b9c00ae19e8b59723f27645c7a5cce7a4a0",
+          "contract:ethereum:0x3300f198988e4c9c63f75df86de36421f06af8c4"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 72069446,
+        "sources": [
+          {
+            "label": "Spark Savings product documentation",
+            "url": "https://docs.spark.finance/products/spark-savings"
+          },
+          {
+            "label": "Official Spark X Layer address registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/XLayer.sol"
+          },
+          {
+            "label": "X Layer RPC fixed-block reads",
+            "url": "https://rpc.xlayer.tech"
           }
         ]
       }

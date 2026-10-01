@@ -10,10 +10,18 @@
       {
         "label": "Midas mF-ONE",
         "url": "https://midas.app/mfone"
+      },
+      {
+        "label": "Verified mF-ONE implementation and inherited transfer blacklist checks",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2"
+      },
+      {
+        "label": "Ethereum Dwellir RPC",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
-    "evidence": "Explicit Yes: Midas mF-ONE is a permissioned tokenized certificate with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "At Ethereum block 26095810, mF-ONE proxy 0x238a700ed6165261cf8b2e544ba797bc11e466ba used implementation 0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2 and shared MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b. The verified inherited transfer path calls _onlyNotBlacklisted(from) and _onlyNotBlacklisted(to); the access-control contract lets role administrators grant or revoke BLACKLISTED_ROLE. This confirms the existing Yes verdict with deployment-bound code and state.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA10PYUSD)",
+    "reviewedAt": "2026-10-01"
   }
 }

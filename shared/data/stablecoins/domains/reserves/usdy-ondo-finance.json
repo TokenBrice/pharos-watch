@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "BNY Mellon US Treasury 912797UL9",
-      "pct": 0.3794848350283619,
+      "pct": 0.37951985042774017,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:stonex:912797ul9",
       "assetClass": "treasury-bill",
@@ -14,11 +14,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 29
+      "maturityDaysMax": 27
     },
     {
       "name": "BNY Mellon US Treasury 912797TV9",
-      "pct": 1.5019160335770776,
+      "pct": 1.50195597541166,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:stonex:912797tv9",
       "assetClass": "treasury-bill",
@@ -29,11 +29,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 148
+      "maturityDaysMax": 146
     },
     {
       "name": "BNY Mellon US Treasury 912797UD7",
-      "pct": 2.0719261030306892,
+      "pct": 2.0720893450520483,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:stonex:912797ud7",
       "assetClass": "treasury-bill",
@@ -44,26 +44,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 176
-    },
-    {
-      "name": "Marex US Treasury 912797UH8",
-      "pct": 5.9750442785860205,
-      "risk": "very-low",
-      "sourceKey": "usdy-holdings-report:marex:912797uh8",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "United States Treasury",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day",
-      "maturityDaysMax": 1
+      "maturityDaysMax": 174
     },
     {
       "name": "Marex US Treasury 912797SA6",
-      "pct": 11.884798395858796,
+      "pct": 11.886360293540537,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797sa6",
       "assetClass": "treasury-bill",
@@ -74,11 +59,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 8
+      "maturityDaysMax": 6
     },
     {
       "name": "Marex US Treasury 912797UK1",
-      "pct": 11.75415350068771,
+      "pct": 11.755234657894947,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797uk1",
       "assetClass": "treasury-bill",
@@ -89,11 +74,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 22
+      "maturityDaysMax": 20
     },
     {
       "name": "Marex US Treasury 912797SK4",
-      "pct": 2.3435301655068326,
+      "pct": 2.3437706293927376,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797sk4",
       "assetClass": "treasury-bill",
@@ -104,11 +89,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 36
+      "maturityDaysMax": 34
     },
     {
       "name": "Marex US Treasury 912797UZ8",
-      "pct": 5.067383249053422,
+      "pct": 5.067689907329171,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797uz8",
       "assetClass": "treasury-bill",
@@ -119,11 +104,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 57
+      "maturityDaysMax": 55
     },
     {
       "name": "Marex US Treasury 912797TV9",
-      "pct": 5.739243132254624,
+      "pct": 5.7393428058971745,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797tv9",
       "assetClass": "treasury-bill",
@@ -134,11 +119,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 148
+      "maturityDaysMax": 146
     },
     {
       "name": "Marex US Treasury 912797UD7",
-      "pct": 7.865586407273518,
+      "pct": 7.86620611770741,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797ud7",
       "assetClass": "treasury-bill",
@@ -149,11 +134,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 176
+      "maturityDaysMax": 174
     },
     {
       "name": "Marex US Treasury 912797UE5",
-      "pct": 9.115817937759013,
+      "pct": 9.115254204270219,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797ue5",
       "assetClass": "treasury-bill",
@@ -164,11 +149,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 204
+      "maturityDaysMax": 202
     },
     {
       "name": "Marex US Treasury 912797UX3",
-      "pct": 6.983351801782287,
+      "pct": 6.98222733076268,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797ux3",
       "assetClass": "treasury-bill",
@@ -179,11 +164,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 232
+      "maturityDaysMax": 230
     },
     {
       "name": "Marex US Treasury 912797VF1",
-      "pct": 11.01572129140577,
+      "pct": 11.01237572027034,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797vf1",
       "assetClass": "treasury-bill",
@@ -194,11 +179,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 260
+      "maturityDaysMax": 258
     },
     {
       "name": "Marex US Treasury 912797VQ7",
-      "pct": 6.800884473788735,
+      "pct": 6.802525284316525,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797vq7",
       "assetClass": "treasury-bill",
@@ -209,11 +194,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 288
+      "maturityDaysMax": 286
     },
     {
       "name": "Marex US Treasury 912797WA1",
-      "pct": 5.505424980582184,
+      "pct": 11.49794772906096,
       "risk": "very-low",
       "sourceKey": "usdy-holdings-report:marex:912797wa1",
       "assetClass": "treasury-bill",
@@ -224,11 +209,11 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 344
+      "maturityDaysMax": 342
     },
     {
       "name": "First Citizens Select MMA",
-      "pct": 0.028017970297474853,
+      "pct": 0.02800959936620019,
       "risk": "low",
       "sourceKey": "usdy-holdings-report:first-citizens:mma",
       "assetClass": "bank-deposit",
@@ -238,12 +223,11 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day",
-      "maturityDaysMax": 1
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "StoneX brokerage cash",
-      "pct": 0.00045517362884167325,
+      "pct": 0.0004550376365793995,
       "risk": "low",
       "sourceKey": "usdy-holdings-report:stonex:cash",
       "assetClass": "cash",
@@ -253,23 +237,22 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day",
-      "maturityDaysMax": 1
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USDY outside LLC report scope (including BVI issuance)",
-      "pct": 5.967260269898646,
+      "pct": 5.9490355116630695,
       "risk": "high",
       "sourceKey": "usdy-holdings-report:excluded-issuance"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos Dependency Map WS1.D BVI primary-evidence review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv2)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ondo USDY LLC daily Ankura ATCAttest archive, September 2026 (newest report 2026-09-23, uploaded 2026-09-28, SHA-256 44dae1ef24c612195d51d2d896c96e243bbee91f50697678e49fd4c5585e3c3b)",
+        "label": "Ondo USDY LLC daily Ankura ATCAttest archive, September 2026 (report 2026-09-25; SHA-256 0b08d651a92b9a4f55a9dcef53b983804f0d76ef177863f223051e881f759742)",
         "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
       },
       {
@@ -277,138 +260,131 @@
         "url": "https://bin.bnbstatic.com/images/web3-data/public/token/ondo/pdf/daily-2026-09-22.pdf"
       }
     ],
-    "rationale": "The newest daily report in the issuer's September 2026 Ankura archive is Ondo USDY LLC_ATCAttest_260923.pdf (end of day 9/23/2026; downloaded and hashed 2026-09-29). Ankura Trust Company, LLC, as Verification Agent under the Tokenized Credit and Security Agreement dated July 29, 2023, reviewed and confirmed the Market Values, CUSIPs, and Maturity Dates of the Permitted Assets through read-only access to the deposit, brokerage, operating, and exchange accounts. The report reconciles 15 US Treasury bill positions across StoneX/BNY Mellon and Marex ($2,081,813,286.65), a First Citizens Select MMA ($620,484.42), and StoneX brokerage cash ($10,080.25) to Permitted Assets of $2,082,443,851.32 against Token Principal Outstanding of $2,066,500,758.43 (coverage 1.007715). Stated per-instrument maturities run from 1 day (912797UH8, maturing 9/24/2026) to 344 days (912797WA1, maturing 9/2/2027); slice maturityDaysMax values are those stated figures, not converted averages. The report's footnote 1 states it reflects only USDY issued by Ondo USDY LLC and does not account for USDY issued by Ondo Global Markets (BVI) Limited. The excluded share is measured exactly as the suspended live adapter measures it: canonical circulating USD (chain-supply generation ed34a648, capture 2026-09-29, $2,197,639,635.26) minus report-time LLC principal ($2,066,500,758.43) = 5.9673%, and is carried inside the composition as the explicit bounded-unknown high-risk slice at index 17 and flagged through knownUnknownExposurePct, so the review does not claim a fully verified composition while the BVI share lacks per-token attribution. Ondo's own OGM (BVI) daily verification-agent report of 2026-09-22 corroborates the excluded scope: 173,440,642.63 USDY tokens outstanding with market value $198,949,893.44, backed only by OGM's shared collateral pool (fiat, trading, custodian, and stablecoin accounts shared with tokenized securities and USDon), which is not attributable per-token; the BVI share therefore remains unclassified rather than being restated as Treasury exposure. Slice weights are market value / permitted assets scaled to the 94.0327% LLC-covered share.",
+    "rationale": "The September 25, 2026 Ondo USDY LLC daily report, re-fetched October 1, explicitly lists 14 Treasury bill positions with market value $2,082,839,369.62, First Citizens Select MMA of $620,484.42, and StoneX cash of $10,080.25, totaling $2,083,469,934.29. The September 24 matured Marex 912797UH8 position is absent; all retained positions and weights were re-curated from this report. Treasury maturityDaysMax records calendar days to each stated contractual maturity date, rather than the report's weighted-average maturity column. Ankura confirms the values, CUSIPs and maturity dates through account access, but footnote 1 excludes all USDY issued by Ondo Global Markets (BVI) Limited. Retaining the existing canonical-supply comparison (September 29 capture, chain-supply generation ed34a648, $2,197,639,635.26) and replacing the LLC principal with the report's $2,066,901,272.94 gives 5.9490% outside report scope, including measurement timing. LLC slice weights are their market value divided by permitted assets, scaled to the covered share. This residual is not a same-close BVI issuance measurement or a token-specific allocation of OGM collateral; it remains a high-risk unknown slice. The September 22 OGM report is retained only as historical evidence of shared backing and excluded issuer scope.",
     "compositionBasis": "Ankura-verified Ondo USDY LLC permitted-asset holdings at stated market values; excluded BVI scope measured from canonical circulating supply minus report-time LLC principal",
-    "compositionAsOf": "2026-09-23",
+    "compositionAsOf": "2026-09-25",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 5.9673% issued outside the LLC report scope (Ondo Global Markets (BVI) Limited issuance, plus measurement timing) is carried as the bounded-unknown high-risk slice at index 17. Its backing is OGM's aggregate collateral pool (fiat, trading, custodian, and stablecoin accounts shared with tokenized securities and USDon), which the OGM daily verification-agent report attests only in aggregate; no per-token instrument census exists, so the share stays a known unknown rather than being restated as Treasury exposure.",
-    "knownUnknownExposurePct": 5.967260269898646,
+    "knownUnknownExposure": "The 5.9490% residual between September 25 LLC principal and the retained September 29 canonical circulating-USD observation is carried as the high-risk unknown slice at index 16. It includes excluded OGM (BVI) issuance and measurement timing. No same-close, USDY-specific BVI reserve allocation is published; historical OGM pooled collateral is not assigned to this token.",
+    "knownUnknownExposurePct": 5.9490355116630695,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "BNY Mellon US Treasury 912797UL9",
-        "pct": 0.3794848350283619,
+        "pct": 0.37951985042774017,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "BNY Mellon US Treasury 912797TV9",
-        "pct": 1.5019160335770776,
+        "pct": 1.50195597541166,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "BNY Mellon US Treasury 912797UD7",
-        "pct": 2.0719261030306892,
+        "pct": 2.0720893450520483,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
-        "reserveName": "Marex US Treasury 912797UH8",
-        "pct": 5.9750442785860205,
+        "reserveName": "Marex US Treasury 912797SA6",
+        "pct": 11.886360293540537,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 4,
-        "reserveName": "Marex US Treasury 912797SA6",
-        "pct": 11.884798395858796,
+        "reserveName": "Marex US Treasury 912797UK1",
+        "pct": 11.755234657894947,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
-        "reserveName": "Marex US Treasury 912797UK1",
-        "pct": 11.75415350068771,
+        "reserveName": "Marex US Treasury 912797SK4",
+        "pct": 2.3437706293927376,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
-        "reserveName": "Marex US Treasury 912797SK4",
-        "pct": 2.3435301655068326,
+        "reserveName": "Marex US Treasury 912797UZ8",
+        "pct": 5.067689907329171,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 7,
-        "reserveName": "Marex US Treasury 912797UZ8",
-        "pct": 5.067383249053422,
+        "reserveName": "Marex US Treasury 912797TV9",
+        "pct": 5.7393428058971745,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 8,
-        "reserveName": "Marex US Treasury 912797TV9",
-        "pct": 5.739243132254624,
+        "reserveName": "Marex US Treasury 912797UD7",
+        "pct": 7.86620611770741,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 9,
-        "reserveName": "Marex US Treasury 912797UD7",
-        "pct": 7.865586407273518,
+        "reserveName": "Marex US Treasury 912797UE5",
+        "pct": 9.115254204270219,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 10,
-        "reserveName": "Marex US Treasury 912797UE5",
-        "pct": 9.115817937759013,
+        "reserveName": "Marex US Treasury 912797UX3",
+        "pct": 6.98222733076268,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 11,
-        "reserveName": "Marex US Treasury 912797UX3",
-        "pct": 6.983351801782287,
+        "reserveName": "Marex US Treasury 912797VF1",
+        "pct": 11.01237572027034,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 12,
-        "reserveName": "Marex US Treasury 912797VF1",
-        "pct": 11.01572129140577,
+        "reserveName": "Marex US Treasury 912797VQ7",
+        "pct": 6.802525284316525,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 13,
-        "reserveName": "Marex US Treasury 912797VQ7",
-        "pct": 6.800884473788735,
+        "reserveName": "Marex US Treasury 912797WA1",
+        "pct": 11.49794772906096,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 14,
-        "reserveName": "Marex US Treasury 912797WA1",
-        "pct": 5.505424980582184,
+        "reserveName": "First Citizens Select MMA",
+        "pct": 0.02800959936620019,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 15,
-        "reserveName": "First Citizens Select MMA",
-        "pct": 0.028017970297474853,
+        "reserveName": "StoneX brokerage cash",
+        "pct": 0.0004550376365793995,
         "disposition": "untracked-exogenous-asset",
         "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 16,
-        "reserveName": "StoneX brokerage cash",
-        "pct": 0.00045517362884167325,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 17,
         "reserveName": "USDY outside LLC report scope (including BVI issuance)",
-        "pct": 5.967260269898646,
+        "pct": 5.9490355116630695,
         "disposition": "insufficient-evidence",
-        "rationale": "NC-136: BVI report accessed 2026-09-30 confirms $198,949,893.44 USDY liabilities inside a shared $1,532,537,048.33 pool backing stocks and USDon as well. It itemizes USDC, BSC-USDT, SOL-USDC and pathUSD holdings, but does not assign them to USDY. The 5.9673% excluded-scope share is the historical LLC/canonical-supply reconciliation, not a measured BVI token allocation. Next evidence: issuer allocation/seniority rules and USDY-specific holdings at the same close as LLC principal and canonical supply. No pooled USDC/USDT amount is copied into a USDY edge or counted once per issuer liability."
+        "rationale": "Excluded BVI issuer scope and measurement timing are unresolved; the retained September 22 OGM report describes pooled collateral without a USDY-specific allocation. No pooled stablecoin holdings are attributed to USDY."
       }
     ]
   },
@@ -423,6 +399,14 @@
         "name": "StoneX",
         "role": "custodian",
         "jurisdiction": "United States"
+      },
+      {
+        "name": "BNY Mellon",
+        "role": "custodian"
+      },
+      {
+        "name": "Marex",
+        "role": "custodian"
       },
       {
         "name": "First Citizens / Silicon Valley Bank",
@@ -443,8 +427,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Kimi FIAT-CTRL shard-18 control-evidence review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA14USDY)",
     "confidence": "verified",
     "sources": [
       {
@@ -458,8 +442,12 @@
       {
         "label": "Ondo trust and security",
         "url": "https://docs.ondo.finance/trust-and-security"
+      },
+      {
+        "label": "Ondo USDY LLC ATCAttest 2026-09-25 named accounts (LLC scope only)",
+        "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
       }
     ],
-    "uncertainty": "Ondo documents issuer Ondo Global Markets (BVI) Limited as a bankruptcy-remote SPV with full segregation of assets, books, and accounts from Ondo Finance Inc. and the Ondo Foundation group, and Ankura Trust Company holds a first-priority perfected security interest in the backing assets as verification and collateral agent with contractual wind-down authority. The custodial broker-dealers and bank counterparties, provider shares, custodian-level account segregation, and rehypothecation terms are not identified in the reviewed public materials."
+    "uncertainty": "Ondo's USDY comparison describes both the previous LLC issuer and Ondo Global Markets (BVI) Limited and Ankura's collateral-agent wind-down role. OGM documents issuer-level segregation and bankruptcy-remoteness design. The 2026-09-25 LLC report names First Citizens accounts, StoneX brokerage cash and BNY Mellon Treasury positions, and Marex Treasury positions. These named accounts do not establish provider shares across all USDY issuance, custodian-level account segregation, or rehypothecation terms. OGM's separate collateral pool supports multiple token liabilities; its USDY-specific custody allocation remains unresolved. Unidentified-provider rows retain the earlier review's bounded additional-counterparty scope."
   }
 }

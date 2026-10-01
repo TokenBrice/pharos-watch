@@ -61,9 +61,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle) — fallback-composition reconciliation to the Deloitte July 2026 examination (report PDF read directly this pass)",
-    "confidence": "verified",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA02USDC)",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "Deloitte USDC examination report - July 2026",
@@ -78,9 +78,8 @@
         "url": "https://www.blackrock.com/cash/en-us/products/329365/circle-reserve-fund"
       }
     ],
-    "rationale": "Rows keep the live Circle transparency adapter's four slice identities (adapter-owned source keys) so V9 keeps classifying live rows, with weights reconciled to the Deloitte examination as of July 31, 2026 (read directly this pass: $71,904,101,332 fair value of USDC reserve assets vs $71,826,453,410 USDC in circulation). Mapping: <3-Month U.S. Treasuries $7,678,498,751 (Circle Reserve Fund U.S. Treasury securities $7,179,080,057, longest maturity 2026-10-15, plus other reserve Treasury securities $499,418,694) = 10.6788%; Overnight Reverse Treasury Repo $52,723,000,000 (report footnote 3: overnight lending to global financial institutions overcollateralized by U.S. Treasuries) = 73.3241%; the two deposit slices carry the examined net cash of $11,502,602,581 (fund cash $1,003,971,911 + cash at regulated financial institutions $10,607,410,596 + settlement/timing net -$108,779,926) = 15.9971%. The examination does not split cash between systemically important and other institutions; the split applies the Aug 06, 2026 weekly-disclosure deposit mix (47.4% SIFI / 52.6% other, from the previously curated $8.99B/$9.97B figures) to the July 31 examined net cash — both slices share the identical bank-deposit classification, so the split does not alter the risk picture. compositionAsOf equals the examination period end, so the curated rows are now the independently examined fallback composition; the 2026-08-08 pass deliberately omitted the date because its weights tracked the rolling weekly disclosure rather than the examined balance sheet.",
-    "compositionBasis": "Deloitte examination of the USDC Reserve Report as of July 31, 2026 (Circle Reserve Fund assets and other USDC reserve assets schedules), mapped onto the Circle transparency adapter's four slice identities",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "The retained fallback rows were authored on September 29 from the July 31 Deloitte examination, but the two deposit percentages were extrapolated using an August 6 weekly-disclosure bank mix. The July examination reports aggregate cash and settlement adjustments, not the SIFI/non-SIFI split. The four rows therefore are not an independently examined composition at a single date; their compositionAsOf has been removed rather than renewed. Both bank slices retain their existing asset classification. The August 31 examination and September 24 itemized weekly disclosure were fetched on October 1; a replacement composition requiring percentage arithmetic is proposed for second-round validation, not applied.",
+    "compositionBasis": "Historical July 31 examined aggregate balances with an extrapolated August 6 bank-deposit split; retained pending validation of a dated replacement",
     "scope": "full-composition",
     "knownUnknownExposure": "All examined reserve assets are classified (U.S. Treasuries, overnight Treasury repos, cash at regulated financial institutions). The SIFI vs non-SIFI split of the examined cash is not disclosed by the examination and is carried from the Aug 06, 2026 weekly-disclosure deposit mix; individual bank and repo counterparties are not named.",
     "knownUnknownExposurePct": 0
@@ -90,7 +89,6 @@
       {
         "name": "The Bank of New York Mellon",
         "role": "custodian",
-        "sharePct": 88,
         "jurisdiction": "United States"
       },
       {

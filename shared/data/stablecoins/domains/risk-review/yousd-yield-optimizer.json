@@ -47,10 +47,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Base block 50068513 on 2026-08-16, the local vault reads symbol yoUSD, 6 decimals, owner() = 0x67b6f699f1c8040414032a3c2c88a54db144fcd2, and asset() = Base USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Its current EIP-1967 implementation is 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7. YO documents that gateway deposits and redemptions occur independently on each chain and local shares cannot be redeemed on another chain; no yoUSD bridge representation is identified.",
+        "reviewNote": "Pinned 2026-10-01 at base block 52024964: yoUSD symbol, six decimals, local USDC asset, Safe owner, authority and ProxyAdmin remain as reviewed; implementation is now 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. YO Gateway documentation continues to restrict share redemption to the chain of deposit. Native local issuance; cross-chain strategy exposure is separate from a share bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50068513,
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024964,
         "sources": [
           {
             "label": "yoUSD on Basescan",
@@ -82,10 +82,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Ethereum block 25771204 on 2026-08-16, the local vault reads symbol yoUSD, 6 decimals, owner() = 0x67b6f699f1c8040414032a3c2c88a54db144fcd2, and asset() = Ethereum USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Its current EIP-1967 implementation is 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7 and ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 is owned by TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with a 172800-second delay; authority() returns 0x9524e25079b1b04d904865704783a5aa0202d44d, owned by the same admin Safe. YO documents that gateway deposits and redemptions occur independently on each chain and local shares cannot be redeemed on another chain; no yoUSD bridge representation is identified.",
+        "reviewNote": "Pinned 2026-10-01 at ethereum block 26095939: yoUSD symbol, six decimals, local USDC asset, Safe owner, authority and ProxyAdmin remain as reviewed; implementation is now 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. YO Gateway documentation continues to restrict share redemption to the chain of deposit. Native local issuance; cross-chain strategy exposure is separate from a share bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771204,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095939,
         "sources": [
           {
             "label": "yoUSD on Etherscan",
@@ -117,10 +117,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Arbitrum block 495309899 on 2026-08-16, the local vault reads name yoVaultUSD, symbol yoUSD, 6 decimals, owner() = 0x67b6f699f1c8040414032a3c2c88a54db144fcd2, and asset() = Arbitrum USDC 0xaf88d065e77c8cc2239327c5edb3a432268e5831. Its current EIP-1967 implementation is 0xcff43a89d3ee3ad8dab0117cf679f45a34c87aa7 and the same ProxyAdmin/TimelockController path as Ethereum remains in place, including the 172800-second delay; authority() returns the same Safe-owned RolesAuthority. YO documents that gateway deposits and redemptions occur independently on each chain and local shares cannot be redeemed on another chain; no yoUSD bridge representation is identified.",
+        "reviewNote": "Pinned 2026-10-01 at arbitrum block 510590098: yoUSD symbol, six decimals, local USDC asset, Safe owner, authority and ProxyAdmin remain as reviewed; implementation is now 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. YO Gateway documentation continues to restrict share redemption to the chain of deposit. Native local issuance; cross-chain strategy exposure is separate from a share bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495309899,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510590098,
         "sources": [
           {
             "label": "yoUSD on Arbiscan",

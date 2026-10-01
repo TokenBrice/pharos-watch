@@ -74,10 +74,12 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095889,
         "sources": [
           {
-            "label": "Sourcify JPYC implementation source",
-            "url": "https://repo.sourcify.dev/contracts/full_match/1/0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e/metadata.json"
+            "label": "Blockscout verified JPYC implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e"
           },
           {
             "label": "Ethereum JPYC token",
@@ -98,6 +100,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095889,
         "sources": [
           {
             "label": "Ethereum JPYC token",
@@ -195,8 +199,8 @@
           "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
         },
         {
-          "label": "Sourcify JPYC implementation source",
-          "url": "https://repo.sourcify.dev/contracts/full_match/1/0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e/metadata.json"
+          "label": "Blockscout verified JPYC implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e"
         },
         {
           "label": "Safe Transaction Service (token owner)",

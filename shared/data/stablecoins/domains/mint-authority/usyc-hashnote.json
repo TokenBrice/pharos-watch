@@ -57,7 +57,8 @@
         "failureDomainKeys": [
           "eoa:evm:0xdbe01f447040f78ccbc8dfd101bec1a2c21f800d"
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Ethereum USYC token",
@@ -68,7 +69,7 @@
             "url": "https://eth.blockscout.com/address/0x902d906b8d988092213be799b18bd2cbd64f808c"
           }
         ],
-        "evidence": "At Ethereum block 25526129, this zero-code EOA was the current FundAdmin on the Ethereum RolesAuthority. It can immediately set any Ethereum minter allowance to uint256.max. It was itself an Ethereum max-allowance minter; max allowance is not decremented and USYC has no global supply cap. Its separate BSC route administration capability is scored under bridgeRouteRisk."
+        "evidence": "At Ethereum block 26095806, minterAllowance returned uint256.max and eth_getCode returned 0x for this account. RolesAuthority doesUserHaveRole(account,255) and canCall(account,USYC,setMinterAllowance) both returned true. This reconfirms the native FundAdmin and unbounded minter capabilities recorded at block 25526129. Its BSC route capability is separately reviewed under bridgeRouteRisk."
       },
       {
         "chain": "ethereum",
@@ -185,14 +186,15 @@
         "failureDomainKeys": [
           "eoa:evm:0x85fbfb6a6ef755797cf65a4c7d7a90423f96d011"
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Ethereum USYC token",
             "url": "https://eth.blockscout.com/address/0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
           }
         ],
-        "evidence": "At Ethereum block 25526129, this zero-code EOA had uint256.max minter allowance on the Ethereum token. The allowance is not decremented by minting and the Ethereum token has no global supply cap. Its separate BSC representation allowance is scored under bridgeRouteRisk."
+        "evidence": "At Ethereum block 26095806, minterAllowance returned uint256.max and eth_getCode returned 0x for this account. The current verified implementation does not decrement uint256.max allowances. This agrees with the historical block 25526129 observation; the BSC representation allowance is assessed separately under bridgeRouteRisk."
       },
       {
         "chain": "ethereum",
@@ -259,8 +261,8 @@
         "failureDomainKeys": [
           "program:solana:emfvubr8rre2f7snqddypzqw7kgbusvtxg7nx93ywadm"
         ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213698,
         "sources": [
           {
             "label": "Official USYC smart contracts",
@@ -275,7 +277,7 @@
             "url": "https://solscan.io/account/EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
           }
         ],
-        "evidence": "At Solana slot 432714278, Token-2022 mint and freeze authority were this PDA, controlled by the officially documented EMfvu...YwAdm Teller and Permissions program. The deployed binary exposes ForceMint, SetMinterAllowance, IncreaseMinterAllowance, DecreaseMinterAllowance, and SetTellerMinterAllowance. Permission accounts govern operational callers; their off-chain custody and threshold identities remain undisclosed."
+        "evidence": "At finalized Solana slot 452213698, USYC Token-2022 mint and freeze authority remained this non-executable account, owned by the documented EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm Teller and Permissions program. The historical slot 432714278 review identified ForceMint and minter-allowance instructions in the deployed binary. Operational permission-account identities and off-chain custody thresholds remain undisclosed."
       },
       {
         "chain": "solana",
@@ -292,8 +294,8 @@
         "failureDomainKeys": [
           "eoa:solana:p3s7wbl3bvibuhw5hytm8aicqqcivhjcs1ewq9xvb7b"
         ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213698,
         "sources": [
           {
             "label": "Solana USYC Teller and Permissions program",
@@ -304,7 +306,7 @@
             "url": "https://solscan.io/account/DwbKhT65kW49dw6e3cjz1qwhkm2akDehGsraLBau7s7M"
           }
         ],
-        "evidence": "At Solana slot 432714278, ProgramData DwbK...s7M retained this system-owned single-account upgrade authority. It could replace the mint and permissions program immediately, with no on-chain delay."
+        "evidence": "At finalized Solana slot 452213698, ProgramData DwbKhT65kW49dw6e3cjz1qwhkm2akDehGsraLBau7s7M retained this upgrade authority (last deployment slot 422537133). The authority is System Program-owned and non-executable. This confirms the authority identity recorded at slot 432714278; off-chain key custody is not established by the RPC observation."
       },
       {
         "deploymentRefs": [
@@ -377,9 +379,9 @@
           "url": "https://solscan.io/account/EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
         }
       ],
-      "evidence": "At exact cutoff Ethereum block 25526129, six accounts had uint256.max native minter allowance: Teller 0xeE35..., TokenMinterV2 0xfd78..., TokenManagerProxy 0x6A41..., PriceReporterProxy 0x9fde..., FundAdmin 0xDbE0..., and EOA 0x85fB.... The shared FundAdmin could immediately set new Ethereum max allowances, and the Ethereum RolesAuthority owner could change FundAdmin permissions. At Solana slot 432714278, the mint/freeze PDA was controlled by the documented Teller and Permissions program, whose ProgramData was previously associated with a no-delay upgrade EOA; the current ProgramData account could not be re-confirmed at the reviewed finalized slot. BSC USYC is an Ethereum-sourced Cross Chain Teller representation; its TokenMinterV2, shared EOA allowance, Entitlements owner, FundAdmin route capability, and token upgrade owner are scored under bridgeRouteRisk rather than native Mint Authority. No source supports the prior MPC/HSM custody assertion, so it is not repeated.",
-      "reviewer": "Codex Safety Score V9 registry pass / mint-bridge boundary migration",
-      "reviewedAt": "2026-08-16"
+      "evidence": "The 2026-10-01 Ethereum block 26095806 read reconfirmed uint256.max allowances for all six historical native minters, the FundAdmin's role and setMinterAllowance permission, token owner 0x13ff...dd6, RolesAuthority owner 0x8fb0...2fc0, and implementation 0xbf0f...eb92. At finalized Solana slot 452213698, the mint/freeze authority remained the documented Permissions-program account and ProgramData DwbK...s7M was successfully read with upgrade authority P3S7...vb7B, resolving the earlier account-fetch uncertainty. The authority accounts remain non-executable/System Program-owned on Solana and zero-code on Ethereum; off-chain signer custody remains unverified. Historical issuance and upgrade exposure is retained. BSC representation controls remain separate and have not been inferred from Ethereum state.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA11USYC)",
+      "reviewedAt": "2026-10-01"
     }
   }
 }

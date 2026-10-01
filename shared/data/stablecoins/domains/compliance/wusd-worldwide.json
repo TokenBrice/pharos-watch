@@ -13,7 +13,7 @@
     "reserveDisclosureUrl": "https://developer.wspn.io/5768563m0",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "WSPN is a BVI-domiciled entity with a stated FinCEN MSB registration and pending BVI VASP application. WUSD terms restrict U.S. persons. The GENIUS Act foreign-exception comparability framework remains in proposed-rulemaking (Treasury FR 2026-06489; comment deadline June 2, 2026): no foreign registration can yet be granted. No PPSI approval or US authorization of any kind found.",
+    "notes": "WUSD terms identify WSPN Fintech Limited and restrict U.S. persons, with discretionary exceptions for eligible contract participants. WSPN's transparency page attributes MSB registration 31000251587240 to WSPN U.S. and Dutch EMI license 77446844 to group entity Aplauz NL B.V.; these issuer disclosures do not establish WUSD-specific U.S. GENIUS authorization or a registered foreign-issuer exception. Treasury's August 17, 2026 section 3 proposal addresses issuance and sale of foreign-issued payment stablecoins; the older state-regime comparability proposal does not by itself establish that foreign registration is legally impossible. No token-specific authorization source was located in the issuer disclosures and official materials searched on 2026-10-01.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -26,8 +26,8 @@
         "sourceKind": "federal-register"
       },
       {
-        "label": "WSPN WUSD",
-        "url": "https://www.wspn.io/wusd",
+        "label": "WSPN transparency and group licensing disclosures",
+        "url": "https://wspn.io/transparency/",
         "sourceKind": "issuer-disclosure"
       },
       {
@@ -39,6 +39,13 @@
         "label": "WSPN terms of service",
         "url": "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Treasury section 3 GENIUS proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {

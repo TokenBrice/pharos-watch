@@ -17,8 +17,8 @@
     "reviewedAt": "2026-05-14"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "mAPOLLO is a NAV-accreting Midas Liquid Yield Token tracking an Apollo Crypto strategy, not a borrower CDP with user collateral liquidation.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Midas Software GmbH is mAPOLLO's calculation agent and can postpone NAV determination or apply fallback valuation methodologies during market disruption under the signed Final Terms. NAV is published through Ethereum oracle 0x84303e5568c7b167fa4febc6253cddfe12b7ee4b. This price-setting authority is distinct from automatic balance-derived vault accounting.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -33,8 +33,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC20)",
     "confidence": "verified",
     "sources": [
       {
@@ -48,6 +48,10 @@
       {
         "label": "Midas mToken pricing",
         "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+      },
+      {
+        "label": "Signed mAPOLLO Final Terms dated 17 July 2026: calculation agent, NAV oracle and fallback valuation authority",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media"
       }
     ]
   }

@@ -46,19 +46,23 @@
         "jurisdiction": "Lithuania"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi Code R08 reserve research",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB20MUSD)",
     "confidence": "probable",
     "sources": [
       {
         "label": "STASIS EURS transparency page",
         "url": "https://stasis.net/transparency"
+      },
+      {
+        "label": "STASIS Terms of Business, section 8 redemption from a segregated bank account",
+        "url": "https://stasis.net/terms"
       }
     ],
-    "uncertainty": "The live page names NexPay UAB as the route to the Lithuanian Central Bank account and states reserves are held in central-bank accounts, but it does not publish the account agreement, statutory segregation, insolvency remoteness, or rehypothecation terms.",
+    "uncertainty": "The live page names NexPay UAB as the route to the Lithuanian Central Bank account. STSS's Terms of Business state that redeemed euros are paid from its segregated bank account. The account agreement, statutory insolvency treatment, bankruptcy remoteness and rehypothecation restrictions are not public; the issuer's segregation statement is not an independent legal opinion.",
     "knownUnknownExposurePct": 0
   }
 }

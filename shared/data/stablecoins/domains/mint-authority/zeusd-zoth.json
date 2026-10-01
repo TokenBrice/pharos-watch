@@ -50,6 +50,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095809,
         "sources": [
           {
             "label": "ZeUSD router implementation",
@@ -70,6 +72,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095809,
         "sources": [
           {
             "label": "ZeUSD AccessController implementation (verified source)",
@@ -94,6 +98,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095809,
         "sources": [
           {
             "label": "ZeUSD token role logs",
@@ -123,8 +129,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "ZeUSD token owner/admin EOA",
-      "observedAt": "2026-07-27",
-      "observedBlock": 25625512,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095809,
       "sources": [
         {
           "label": "ZeUSD implementation (verified source; _authorizeUpgrade is onlyRole(DEFAULT_ADMIN_ROLE))",
@@ -148,7 +154,7 @@
       "sources": [
         {
           "label": "Zoth ZeUSD docs",
-          "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+          "url": "https://web.archive.org/web/20260606203655/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
         },
         {
           "label": "ZeUSD implementation",

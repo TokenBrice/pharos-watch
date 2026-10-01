@@ -61,11 +61,11 @@
         "role": "other"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC16)",
     "confidence": "verified",
     "sources": [
       {
@@ -77,7 +77,7 @@
         "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
       }
     ],
-    "uncertainty": "Liquity identifies immutable, non-custodial system contracts and the dedicated ActivePool and DefaultPool addresses, but pool shares vary with liquidations and the public documentation does not express legal bankruptcy-remoteness or rehypothecation terms.",
+    "uncertainty": "Liquity identifies immutable, non-custodial system contracts and the dedicated ActivePool and DefaultPool addresses. These establish technical pool separation, not enforceable legal segregation or holder insolvency protection. The July 14, 2026 review labeled segregation segregated on that technical basis; the October 1 D09 review withdraws the legal interpretation to unknown while preserving the contract separation. Pool shares vary with liquidations, and bankruptcy-remoteness and rehypothecation terms remain unverified.",
     "knownUnknownExposurePct": 100
   }
 }

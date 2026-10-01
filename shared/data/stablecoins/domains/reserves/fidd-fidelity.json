@@ -4,7 +4,7 @@
     {
       "sourceKey": "fidd-independent-assurance:fidd:us-treasury-bills",
       "name": "U.S. Treasury bills",
-      "pct": 64.08,
+      "pct": 60.07,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -14,12 +14,12 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 83
+      "maturityDaysMax": 31
     },
     {
       "sourceKey": "fidd-independent-assurance:fidd:cash-deposits",
       "name": "Cash in bank deposit accounts",
-      "pct": 35.92,
+      "pct": 39.93,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "The Bank of New York Mellon",
@@ -32,22 +32,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC10)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "PwC FIDD Reserve Attestation Report - May 2026",
-        "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+        "label": "PwC FIDD Reserve Attestation Report - August 2026",
+        "url": "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026"
       },
       {
         "label": "Fidelity Digital Assets FIDD transparency",
         "url": "https://www.fidelitydigitalassets.com/stablecoin"
       }
     ],
-    "rationale": "PwC's May examination reports $38.17962770 million of U.S. Treasury bills and $21.40396255 million of cash deposits at May 29, 2026. Excluding the separately disclosed negative $5.07224849 million net-other-assets-and-liabilities adjustment, gross reserve assets normalize to 64.08% Treasury bills and 35.92% cash.",
-    "compositionBasis": "PwC examination of the FIDD Reserve Report as of May 29, 2026",
-    "compositionAsOf": "2026-05-29",
+    "rationale": "At August 31, 2026, 5:00 PM Eastern Time, the report discloses USD 31,173,738.08 in U.S. Treasury bills and USD 20,717,851.25 in cash deposits. The complete gross holdings denominator is USD 51,891,589.33. Independently reproduced division and two-decimal rounding yield 60.07% bills and 39.93% cash. The separately disclosed negative USD 97,070.46 net-other-assets/liabilities adjustment reconciles gross holdings to the reported USD 51,794,518.87 net asset value; it is not assigned to a reserve asset category. This preserves the existing gross-holdings basis. The latest disclosed bill maturity, October 1, is 31 calendar days after August 31.",
+    "compositionBasis": "Complete gross holdings in PwC's FIDD examination at August 31, 2026, 5:00 PM Eastern Time; USD 51,891,589.33 denominator, with negative net-other-assets/liabilities separately reconciled to reported NAV",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "No material gross reserve asset-class exposure is unclassified; the report separately discloses a negative net-other-assets-and-liabilities adjustment and identifies BNY Mellon as the sole reserve account provider at period end.",
     "knownUnknownExposurePct": 0
@@ -64,15 +64,15 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB04FIDD)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "PwC FIDD Reserve Attestation Report - May 2026",
-        "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+        "label": "PwC FIDD Reserve Attestation Report - August 2026",
+        "url": "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026"
       }
     ],
-    "uncertainty": "The report states that all reserve investments and cash deposits were held in segregated accounts at BNY Mellon on both May report dates. It does not establish statutory bankruptcy remoteness or disclose rehypothecation terms."
+    "uncertainty": "The August report states that all reserve investments and cash deposits were held in segregated accounts at BNY Mellon on both August report dates. It does not establish statutory bankruptcy remoteness or disclose rehypothecation terms."
   }
 }

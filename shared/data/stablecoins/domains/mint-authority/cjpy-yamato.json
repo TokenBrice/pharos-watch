@@ -17,8 +17,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Yamato governance Safe (upgrade + parameter authority)",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579969,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095940,
       "sources": [
         {
           "label": "CurrencyOS contract on Etherscan",
@@ -44,7 +44,9 @@
         "address": "0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257",
         "capDescription": "Mint bounded by the 130% minimum collateralization ratio on ETH pledges, with redemption-based peg defense.",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295201, the Yamato proxy (0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257) has EIP-1967 impl slot pointing to YamatoV4 (0x0bfa59f9fbe9565c240cd64311c86e90e59a4838, 29684 bytes); proxy admin slot = 0x0 (UUPS pattern). Users mint CJPY by overcollateralizing ETH at 130% MCR.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
+        "evidence": "At Ethereum block 26095940 on 2026-10-01, the Yamato proxy implementation slot still resolves to YamatoV4 0x0bfa59f9fbe9565c240cd64311c86e90e59a4838; its admin slot is zero. MCR() returns 130 and governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec.",
         "sources": [
           {
             "label": "Yamato contract on Etherscan",
@@ -63,6 +65,8 @@
         "signerCount": 4,
         "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
         "safe": {
           "owners": [
             "0xbe08d5fb542ac0c808bdea3bbcf85caeb2b5522c",
@@ -73,12 +77,13 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.x",
-          "observedBlock": 25295201,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095940,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295201, governance() on the Yamato proxy returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec (GnosisSafeProxy); getOwners() = 4 addresses; getThreshold() = 2; getModulesPaginated returns empty array (next=sentinel, length=0). YamatoV4 source confirms onlyGovernance modifier gates upgrades and parameter changes.",
+        "evidence": "At Ethereum block 26095940 on 2026-10-01, governance() on the Yamato proxy returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec. The Safe retains the four recorded owners and threshold 2; getModulesPaginated returns an empty array and the guard storage slot is zero. The pinned Yamato/UUPSBase source gates upgrades and parameter changes through onlyGovernance.",
         "sources": [
           {
             "label": "Yamato governance Safe on Etherscan",
@@ -99,6 +104,8 @@
         "address": "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
         "capDescription": "The pinned Currency.sol source declares a private `governance` slot that alone can call setCurrencyOS(); it exposes no public getter.",
         "sources": [
           {
@@ -110,7 +117,7 @@
             "url": "https://etherscan.io/address/0x1cfa5641c01406ab8ac350ded7d735ec41298372"
           }
         ],
-        "evidence": "Currency.sol declares `address currencyOS` then `address governance` as its own storage variables, placed after ERC20Permit's inherited layout (_balances, _allowances, _totalSupply, _name, _symbol, _nonces occupy slots 0-5). Direct eth_getStorageAt reads on the CJPY token at Ethereum block 25579969 confirm this: slot 2 held totalSupply, slots 3/4 held the packed name/symbol strings, slot 6 (currencyOS) held 0x000000000000000000000000e69c6bf0a6ea2f12abe054988a3e2091a8a3784f, and slot 7 (governance) read all-zero. Since Currency.sol's only governance-mutating function is revokeGovernance() (no replacement setter exists), a zero value means governance has been permanently renounced: setCurrencyOS() can no longer be called by anyone, so the token's currencyOS pointer (0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f) is now fixed."
+        "evidence": "Currency.sol declares address currencyOS followed by address governance after the inherited ERC20Permit storage. At Ethereum block 26095940 on 2026-10-01, slot 6 returns CurrencyOS 0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f and slot 7 remains zero. The pinned source only sets governance in the constructor or clears it in revokeGovernance(), leaving the token's CurrencyOS pointer fixed."
       },
       {
         "label": "CurrencyOS UUPS governance (Yamato Safe)",
@@ -123,6 +130,8 @@
         "signerCount": 4,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
         "safe": {
           "owners": [
             "0xbe08d5fb542ac0c808bdea3bbcf85caeb2b5522c",
@@ -133,9 +142,10 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.x",
-          "observedBlock": 25295201,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095940,
           "source": "onchain"
         },
         "capDescription": "CurrencyOS.addYamato/setDeps (registering new Yamato mint sources) and its UUPS _authorizeUpgrade are both gated onlyGovernance.",
@@ -149,7 +159,7 @@
             "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/Dependencies/UUPSBase.sol"
           }
         ],
-        "evidence": "At Ethereum block 25579969, CurrencyOS 0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f is a UUPS proxy (EIP-1967 admin slot = 0x0, implementation = 0x811cE73639A05f436a56ea71480cd921a4039542) whose public governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec, the same 2-of-4 Safe already resolved as the Yamato pledge contract's governance. The pinned UUPSBase source confirms _authorizeUpgrade and the onlyGovernance modifier gate both upgrades and CurrencyOS's addYamato/setDeps functions, with a 2-phase setGovernance/acceptGovernance transfer and a revokeGovernance option available to that Safe."
+        "evidence": "At Ethereum block 26095940 on 2026-10-01, CurrencyOS 0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f retains implementation 0x811ce73639a05f436a56ea71480cd921a4039542 and a zero EIP-1967 admin slot. governance() returns the same 2-of-4 Yamato Safe 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec. Its owners, threshold, empty module list and zero guard were re-read at that block; the pinned UUPSBase source gates replacement and mint-source administration through onlyGovernance."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -1,22 +1,5 @@
 {
   "id": "usdai-usd-ai",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register landing page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "USD.AI MiCA page: CHIP governance-token whitepaper, not USDai",
-        "url": "https://usd.ai/mica"
-      },
-      {
-        "label": "USD.AI USDai product page: fully-backed synthetic dollar",
-        "url": "https://usd.ai/usdai"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",
@@ -30,8 +13,21 @@
     "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USD.AI publishes reserve data through its Proof of Reserves documentation and M0/Usual/Gauntlet vault disclosures, but no U.S. federal GENIUS issuer approval exists. Treat as prospective-pathway-only until a permitted payment stablecoin issuer is identified.",
+    "notes": "The issuer Terms modified 2026-09-25 state that base USDai is backed 1:1 by PYUSD, while sUSDai separately holds loan-related exposure. Earlier M0/Usual/Gauntlet references do not describe the current base-USDai reserve. The Network Firm's July 15, 2026 Proof of Loans engagement covers GPU-loan attributes, not base-USDai reserve-to-liability assurance. The existing GENIUS authorization finding remains a dated negative-evidence review, not proof of an authorization or a legal conclusion.",
     "references": [
+      {
+        "label": "USD.AI Terms modified 2026-09-25: PYUSD base backing and separate sUSDai loan exposure",
+        "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-25",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "USD.AI Proof of Loans: July 15, 2026 GPU-loan AUP scope",
+        "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",

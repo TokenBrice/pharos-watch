@@ -1,22 +1,5 @@
 {
   "id": "brla-brla-digital",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA interim register and scope",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Avenia BRLA product and reserve disclosures",
-        "url": "https://avenia.io/brla"
-      },
-      {
-        "label": "Avenia terms: BRLA backed 1:1 by Brazilian real",
-        "url": "https://app.avenia.io/Avenia-TC.pdf"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -47,7 +30,7 @@
     "reserveDisclosureUrl": "https://avenia.io/brla",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Avenia describes BRLA as a 1:1 BRL-backed stablecoin with monthly collateral reporting and attestations. The public materials reviewed identify a Brazil-focused issuer/correspondent context, but no U.S. GENIUS PPSI approval, state-qualified pathway, official application, or foreign-issuer exception registration was found as of 2026-08-14. GENIUS remains in proposed-rules phase.",
+    "notes": "Avenia describes BRLA as a 1:1 BRL-backed stablecoin with monthly collateral reporting and attestations. The public materials reviewed identify a Brazil-focused issuer/correspondent context, but no U.S. GENIUS PPSI approval, state-qualified pathway, official application, or foreign-issuer exception registration was found as of 2026-08-14. GENIUS remains in proposed-rules phase. On 2026-10-01, the issuer reserve report and OCC digital-asset charter application index were re-fetched. No BRLA/Avenia application was listed in that index; this narrow check does not establish a comprehensive PPSI/state/foreign-exception or enforcement negative review.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",

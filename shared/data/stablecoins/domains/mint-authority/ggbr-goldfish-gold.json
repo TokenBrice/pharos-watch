@@ -7,9 +7,19 @@
     "summary": "GGBR is minted exclusively through the GoldfishTokenFactory contract (MINT_OPERATOR_ROLE + DEFAULT_ADMIN held by a single issuer EOA). The GoldfishToken contract itself is administered by a 2-of-3 Safe that controls setMinterContract() and UUPS upgrades. Redemptions burn through the same factory.",
     "upgradeability": {
       "model": "uups",
+      "proxyAddresses": [
+        "0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a"
+      ],
+      "implementationAddresses": [
+        "0x35fef16fea897dd6ca2e28041dbfb8d56e2978d6"
+      ],
+      "adminAddresses": [
+        "0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "GoldfishToken admin Safe — upgrade and minterContract rotation",
-      "observedAt": "2026-06-11",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095795,
       "sources": [
         {
           "label": "GoldfishToken implementation source",
@@ -27,8 +37,15 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295025, GoldfishToken storage slot 2 == 0x765c0af86952604f1576ca3b5beb75420d75ff62 (GoldfishTokenFactory ERC1967Proxy, impl GoldfishTokenFactory). The factory MINT_OPERATOR_ROLE and DEFAULT_ADMIN_ROLE are held by EOA 0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4 (eth_getCode = 0x). GoldfishToken.mint() requires msg.sender == minterContract; factory.issueTokens() requires MINT_OPERATOR_ROLE.",
+        "canRaiseCap": "unknown",
+        "capDescription": "At Ethereum block 26,097,123, maxSupply is 1,000,000,000 GGBR. Both ordinary issuance and staking-reward issuance enter the token mint() guard. The factory EOA has factory mint and upgrade roles but neither the token SUPPLY_MANAGER_ROLE nor token DEFAULT_ADMIN_ROLE. Its broad indirect cap capability remains unknown; no protective cap credit is inferred. The token Safe holds SUPPLY_MANAGER_ROLE and can increase the ceiling without posting more backing. The asset-wide economic cap remains unbounded.",
+        "bypassSurfaces": [
+          "Factory DEFAULT_ADMIN_ROLE can upgrade its UUPS minting implementation.",
+          "Factory mintStakingRewards accepts the configured StakeMyGold contract in addition to the issuer MINT_OPERATOR_ROLE path."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095795,
+        "evidence": "At Ethereum block 26,095,795 on 2026-10-01, minterContract() returns factory 0x765c0af86952604f1576ca3b5beb75420d75ff62, whose EIP-1967 implementation is 0x05a106559954a372baad1af06fe644f8c4796ed1. hasRole(MINT_OPERATOR_ROLE, 0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4) and hasRole(DEFAULT_ADMIN_ROLE, the same EOA) return true. Verified factory code allows its DEFAULT_ADMIN to authorize UUPS upgrades and exposes an additional mintStakingRewards path through stakingContract 0xd0a21f885e53f53b0947f8699677c09dae32523b. The EOA does not hold the token's SUPPLY_MANAGER_ROLE; cap changes require that role, which the recorded token Safe holds. These calls do not enumerate all role holders.",
         "sources": [
           {
             "label": "GoldfishToken on Etherscan",
@@ -52,6 +69,7 @@
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
+        "capDescription": "The token Safe holds SUPPLY_MANAGER_ROLE and may increase maxSupply through setMaxSupply; the current 1,000,000,000-GGBR technical ceiling is therefore mutable. Its token DEFAULT_ADMIN_ROLE also controls UUPS upgrades and minterContract rotation.",
         "threshold": 2,
         "signerCount": 3,
         "modulesOrGuardsStatus": "none-detected",
@@ -66,10 +84,11 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "1.4.1",
-          "observedBlock": 25295025,
+          "observedBlock": 26095795,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295025, GoldfishToken DEFAULT_ADMIN_ROLE is held by 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4 (Blockscout: SafeProxy). getOwners() = 3 owners; getThreshold() = 2; getModulesPaginated() = sentinel only (no modules); guard slot = 0x0; fallbackHandler slot = 0xfd0732dc... (CompatibilityFallbackHandler); Safe VERSION() = 1.4.1. DEFAULT_ADMIN controls setMinterContract() and _authorizeUpgrade() on the token. Follow-up 2026-07-20: the 2-of-3 Safe address is 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4, getThreshold()=2 and getOwners() returns exactly the three recorded owner EOAs on Ethereum.",
+        "evidence": "At Ethereum block 26,095,795 on 2026-10-01, token hasRole(DEFAULT_ADMIN_ROLE, Safe 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4) and hasRole(SUPPLY_MANAGER_ROLE, the same Safe) return true. RPC confirms the three recorded owners, threshold 2, version 1.4.1, no enabled modules, zero guard, and the recorded fallback handler. The token's implementation remains 0x35fef16fea897dd6ca2e28041dbfb8d56e2978d6; its verified code restricts setMinterContract and UUPS _authorizeUpgrade to DEFAULT_ADMIN and setMaxSupply to SUPPLY_MANAGER_ROLE.",
         "sources": [
           {
             "label": "GoldfishToken admin Safe (Etherscan)",
@@ -78,16 +97,18 @@
         ],
         "chain": "ethereum",
         "address": "0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095795,
         "failureDomainKeys": [
           "safe:ethereum:0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
         ]
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295025: GoldfishToken (ERC1967Proxy, UUPS) minterContract slot 2 == GoldfishTokenFactory proxy 0x765c0af86952604f1576ca3b5beb75420d75ff62. Factory MINT_OPERATOR_ROLE and DEFAULT_ADMIN = EOA 0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4. Token DEFAULT_ADMIN = 2-of-3 Safe v1.4.1 (no modules). Mint path: EOA calls factory.issueTokens() which calls token.mint(). Safe holds token upgrade and minterContract rotation authority. Economic-posture fields reviewed 2026-08-15: issuer-controlled roles can mint or replace the minter without an independent delay, while the sole-chain designated collateral wallet is continuously comparable with total GGBR supply.",
+      "evidence": "Historical review at Ethereum block 25295025 identified the factory operator EOA, token admin Safe and factory mint path. The August 15, 2026 review called reconciliation continuous because a designated collateral wallet could be compared with total GGBR supply. Under owner ruling D22, wallet totals alone do not document reserve-to-liability procedures for the exact token. The collateral and support pages rechecked October 1, 2026 advertise live totals and issuer-stated in-situ gold but do not publish a dated token-specific reconciliation engagement; current reconciliation is unknown, not absent. At block 26097123, both active implementations are unchanged, the factory EOA holds factory mint/admin roles but not token supply-manager/admin roles, and the token Safe holds SUPPLY_MANAGER_ROLE. Ordinary issuance and staking rewards enter the token cap guard; the Safe can raise that ceiling without a reserve-posting condition. D14 therefore retains the adverse asset-wide unbounded cap semantics while the EOA's broad indirect cap capability remains unknown.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [

@@ -14,13 +14,13 @@
         "0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
       ],
       "adminAddresses": [
-        "0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+        "0xa952453e39f77108ee37c1b92de593f1c59a6ef4"
       ],
       "canChangeMintLogic": true,
       "delaySec": 86400,
       "controlRef": "trUSD UUPS and minter-replacement timelock",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25712112,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095800,
       "sources": [
         {
           "label": "Blockscout trUSD UUPS proxy",
@@ -31,13 +31,16 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
         },
         {
-          "label": "Blockscout verified ToriTimelock",
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+          "label": "Current ToriTimelock verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa952453e39f77108ee37c1b92de593f1c59a6ef4"
         },
         {
           "label": "Ethereum observation block 25712112",
           "url": "https://eth.blockscout.com/block/25712112"
         }
+      ],
+      "deploymentRefs": [
+        "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
       ]
     },
     "controls": [
@@ -51,8 +54,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Minting is bounded to 5,000,000 trUSD per block globally and per active collateral asset at observation; orders also require a live operator, whitelisted participant, valid signature and custody route, active supported asset, collateral-ratio check, and actual collateral transfer.",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "Blockscout verified ToriMinting",
@@ -63,7 +66,10 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
           }
         ],
-        "evidence": "At Ethereum block 25712112, trUSD minter() returned this verified contract, which was unpaused. Verified source permits mint only through MINTER_ROLE operators and enforces a signed order, participant whitelist, custody route, active collateral, per-asset and global block caps, and transfer of USDC or USDT before calling token mint. The global and each active-asset mint cap were 5000000000000000000000000, or 5,000,000 trUSD per block."
+        "evidence": "At Ethereum block 25712112, trUSD minter() returned this verified contract, which was unpaused. Verified source permits mint only through MINTER_ROLE operators and enforces a signed order, participant whitelist, custody route, active collateral, per-asset and global block caps, and transfer of USDC or USDT before calling token mint. The global and each active-asset mint cap were 5000000000000000000000000, or 5,000,000 trUSD per block. Re-checked at Ethereum block 26095800 on 2026-10-01: token minter() still returns this contract; paused() is false; globalMaxMintPerBlock() is 5000000000000000000000000 (5,000,000 trUSD), and globalMaxRedeemPerBlock() is 500000000000000000000000 (500,000 trUSD). The current custodian array contains 0x63392eab47926f6ee3e6aca285b367a952001cc7. The August per-asset-cap statement remains historical, not a fresh per-asset observation.",
+        "deploymentRefs": [
+          "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        ]
       },
       {
         "chain": "ethereum",
@@ -83,7 +89,10 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
           }
         ],
-        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates.",
+        "deploymentRefs": [
+          "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        ]
       },
       {
         "chain": "ethereum",
@@ -103,7 +112,10 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
           }
         ],
-        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates.",
+        "deploymentRefs": [
+          "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        ]
       },
       {
         "chain": "ethereum",
@@ -123,7 +135,10 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
           }
         ],
-        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates.",
+        "deploymentRefs": [
+          "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        ]
       },
       {
         "chain": "ethereum",
@@ -166,11 +181,14 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
           }
         ],
-        "evidence": "At Ethereum block 25712112, this Safe held ToriMinting DEFAULT_ADMIN_ROLE and the trUSD token's default-admin role. Safe state was 3-of-5, version 1.4.1, with no modules and zero guard. It can grant or revoke ToriMinting operators and change global, per-asset, custody, and participant controls, including raising the 5,000,000-per-block mint caps."
+        "evidence": "At Ethereum block 25712112, this Safe held ToriMinting DEFAULT_ADMIN_ROLE and the trUSD token's default-admin role. Safe state was 3-of-5, version 1.4.1, with no modules and zero guard. It can grant or revoke ToriMinting operators and change global, per-asset, custody, and participant controls, including raising the 5,000,000-per-block mint caps.",
+        "deploymentRefs": [
+          "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        ]
       },
       {
         "chain": "ethereum",
-        "address": "0x7af35ab3e5373da511c5f1331f44335a36da1a55",
+        "address": "0xa952453e39f77108ee37c1b92de593f1c59a6ef4",
         "label": "trUSD UUPS and minter-replacement timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
@@ -178,19 +196,26 @@
         "timelockDelaySec": 86400,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
-            "label": "Blockscout verified trUSD implementation",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+            "label": "Current ToriTimelock verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa952453e39f77108ee37c1b92de593f1c59a6ef4"
           },
           {
-            "label": "Blockscout verified ToriTimelock",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+            "label": "Tori role matrix and replacement timelock",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "Tori mainnet deployments and 15 September replacement",
+            "url": "https://docs.tori.finance/resources/contracts.md"
           }
         ],
-        "evidence": "At Ethereum block 25712112, this verified ToriTimelock held token TIMELOCK_ADMIN_ROLE and getMinDelay() returned 86400 seconds. Verified TrUSD source gates both setMinter and UUPS _authorizeUpgrade through TIMELOCK_ADMIN_ROLE, so the timelock can replace the current ToriMinting contract or the entire mint implementation after the delay. The Tori administration Safe held the timelock's proposer and executor roles."
+        "evidence": "Original review at block 25712112: At Ethereum block 25712112, this verified ToriTimelock held token TIMELOCK_ADMIN_ROLE and getMinDelay() returned 86400 seconds. Verified TrUSD source gates both setMinter and UUPS _authorizeUpgrade through TIMELOCK_ADMIN_ROLE, so the timelock can replace the current ToriMinting contract or the entire mint implementation after the delay. The Tori administration Safe held the timelock's proposer and executor roles. On 2026-10-01 at Ethereum block 26095800, the old timelock no longer held token TIMELOCK_ADMIN_ROLE; 0xa952453e39f77108ee37c1b92de593f1c59a6ef4 held it and returned getMinDelay() = 86400. The 3-of-5 administration Safe held the new timelock PROPOSER_ROLE but not EXECUTOR_ROLE. Executor 0x039e71e865a34bcaaebfc641291bec6517ea0ce7 held EXECUTOR_ROLE. Official docs date the replacement to 2026-09-15. The current minimum delay is verified; the off-chain MPC policy quorum is a separate issuer/Accountable disclosure, not an on-chain quorum.",
+        "deploymentRefs": [
+          "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",

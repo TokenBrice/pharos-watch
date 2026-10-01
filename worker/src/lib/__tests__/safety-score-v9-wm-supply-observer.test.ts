@@ -1,5 +1,10 @@
+import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it, vi } from "vitest";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types/core";
+import currentWm from "@shared/data/stablecoins/coins/wm-m0.json";
+import currentWmRisk from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import { makeWmDeploymentObservations } from "../../test-helpers/v9-fixed-input";
 import { uint256, addressWord, chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../evm-rpc";
@@ -167,6 +172,32 @@ async function observe(overrides: ReturnType<typeof dependencies> = dependencies
 }
 
 describe("wM reviewed deployment observer", () => {
+  it("rejects the current expanded catalog instead of attributing only the old reviewed routes", async () => {
+    const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
+    const reviewed = metaById.get("wm-m0")!;
+    const deps = dependencies();
+    metaById.set("wm-m0", {
+      ...reviewed,
+      contracts: currentWm.contracts,
+      bridgeRouteRisk: currentWmRisk.bridgeRouteRisk,
+    } as unknown as StablecoinMeta);
+    try {
+      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        chainRpcs: chainRpcs(["ethereum", "arbitrum", "base"]),
+      }, deps);
+      expect(attempt).toEqual({
+        status: "rejected",
+        rejectionCode: "deployment-identity-unavailable",
+        failedRouteId: "bsc:0x437cc33344a0b27a429f795ff6b469c72698b291",
+      });
+    } finally {
+      metaById.set("wm-m0", reviewed);
+    }
+  });
+
   it("captures all EVM and Solana routes atomically at reviewed identities", async () => {
     const deps = dependencies();
     const attribution = await observe(deps);

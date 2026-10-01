@@ -1,8 +1,5 @@
 {
   "id": "msusd-metronome",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

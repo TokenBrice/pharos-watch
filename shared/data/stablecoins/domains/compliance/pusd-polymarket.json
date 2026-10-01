@@ -1,9 +1,9 @@
 {
   "id": "pusd-polymarket",
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "pUSD is described as Polymarket-only USDC-backed collateral for prediction-market trading, rather than a general-purpose payment stablecoin offered for ordinary payments.",
+      "summary": "pUSD is transferable Polygon collateral used for settlement on Polymarket and unwraps into USDC.e. Restricted platform use and crypto-asset redemption do not establish a GENIUS exclusion; token-specific holder obligations and legal classification remain unresolved.",
       "references": [
         {
           "label": "Polymarket pUSD documentation",
@@ -16,14 +16,21 @@
           "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
           "sourceKind": "federal-register",
           "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, section 2 definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-01"
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-applicable",
+    "daspOfferSaleStatus": "unknown",
     "references": [
       {
         "label": "Polymarket pUSD documentation",
@@ -42,10 +49,23 @@
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
         "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2 definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Polymarket pUSD product and USDC.e unwrap documentation, reviewed 2026-10-01",
+        "url": "https://docs.polymarket.com/concepts/pusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
       }
     ],
-    "notes": "No GENIUS authorization was assessed because the reviewed product description makes pUSD platform collateral, not a payment stablecoin. Re-check if pUSD is later externally listed or marketed for general payments, and confirm the token issuer's legal entity.",
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "notes": "Historical 2026-08-14 review: applicability non-payment-token; authorization, issuer pathway, foreign exception and DASP posture not-applicable. Prior note: No GENIUS authorization was assessed because the reviewed product description makes pUSD platform collateral, not a payment stablecoin. Re-check if pUSD is later externally listed or marketed for general payments, and confirm the token issuer's legal entity. D17 review on 2026-10-01 withdraws that categorical exclusion pending qualified token-specific legal analysis of holder repayment obligations and any US securities or deposit exclusion. Authorization and pathway are separately unknown; no approval or negative authorization census is asserted. Platform-only use and lack of external listing are product facts, not statutory exclusions. The enforcement field remains the historical 2026-08-14 posture and was not refreshed in this applicability review. Re-review on publication of governing holder terms or qualified regulator/legal analysis, otherwise by 2027-01-01.",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC26)",
+    "reviewedAt": "2026-10-01"
   }
 }

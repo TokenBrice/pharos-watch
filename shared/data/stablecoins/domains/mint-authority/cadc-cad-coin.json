@@ -322,20 +322,18 @@
       },
       {
         "chain": "solana",
-        "address": "5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw",
+        "address": "5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg",
         "label": "CADC Solana SPL mint authority",
         "role": "direct-minter",
-        "authorityType": "multisig",
-        "threshold": 1,
-        "signerCount": 2,
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "deploymentRefs": [
           "solana:9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7"
         ],
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439727154,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452218719,
         "sources": [
           {
             "label": "Solana mainnet RPC",
@@ -346,7 +344,7 @@
             "url": "https://faq.paytrie.com/en/help/what-is-the-cadc-address"
           }
         ],
-        "evidence": "At finalized Solana slot 439727154, getAccountInfo(jsonParsed) for CADC mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 returned mintAuthority 5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw and freezeAuthority CwAYsAH3HpJSFvmxUCxd3sExavu9TeEvz49zruhei6w4. The live SPL mint authority is the native CADC direct-issuance controller; no contract-level cap or timelock is described in the reviewed source."
+        "evidence": "At finalized Solana slot 452218719, getAccountInfo(jsonParsed) for CADC mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 returned mintAuthority and freezeAuthority 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg, replacing the previously observed authority. At the same slot, the authority account was System Program-owned, non-executable and zero-data, not an SPL multisig. This is a single-key direct-issuance and freeze controller."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -15,6 +15,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056298,
         "capDescription": "MAX_SUPPLY is a Solidity constant (uint256 public constant MAX_SUPPLY = 0x033b2e3c9fd0803ce8000000 ≈ 1B tokens); cannot be changed without redeployment.",
         "sources": [
           {
@@ -33,6 +35,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056298,
         "sources": [
           {
             "label": "SPUSD contract (BscScan)",

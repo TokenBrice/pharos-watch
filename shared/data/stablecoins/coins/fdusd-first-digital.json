@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
+  "collateral": "U.S. Treasury bills, cash in custody accounts, and fixed deposits held in reserve accounts for FD121 (BVI) Limited, as reported on August 31, 2026. A related-party Hong Kong trust company manages the accounts; underlying financial institutions are not named.",
   "pegMechanism": "Direct 1:1 redemption through FD121 (BVI) Limited; reserves custodied by First Digital Trust Limited",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -34,7 +34,7 @@
   "detailProvider": "defillama",
   "geckoId": "first-digital-usd",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://www.firstdigitallabs.com/transparency",
     "provider": "AOGB CPA Limited",
     "attestorTier": "niche",
@@ -125,5 +125,5 @@
       "reportHosts": ["cdn.prod.website-files.com"]
     }
   },
-  "launchDate": "2023-04-28"
+  "launchDate": "2023-06"
 }

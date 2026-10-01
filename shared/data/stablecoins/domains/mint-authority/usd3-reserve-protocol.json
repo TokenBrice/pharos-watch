@@ -60,6 +60,8 @@
         ],
         "canRaiseCap": false,
         "capDescription": "Permissionless mint requires depositing the full governed collateral basket in proportion; mint/redeem are throttled by protocol issuance/redemption rate limits.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095810,
         "evidence": "At Ethereum block 25531015, USD3 RToken.main() returned 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 (Main proxy), Main.rToken() returned 0x0d86883FAf4FfD7aEb116390af37746F45b6F378, Main.basketHandler() returned 0x19835E5817A6fDC944100E86da2FCe86327457B8, and frozen()=false / issuancePaused()=false. The Main proxy implementation slot returned verified MainP1 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44.",
         "sources": [
           {
@@ -83,6 +85,8 @@
           "ethereum:0x0d86883faf4ffd7aeb116390af37746f45b6f378"
         ],
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095810,
         "evidence": "At Ethereum block 25531015, Main.OWNER_ROLE() returned bytes32('OWNER') and Main.hasRole(OWNER_ROLE, 0x848b923b5d99d5963608ff55acdfee51c443cca6) returned true. TimelockController.getMinDelay() returned 259200 seconds (3 days). Governor Anastasius 0xd895a5d391fc09f12e8c8d57cfde5c59bfbe2fa7 remains the USD3 stRSR governor through Governor.token() = 0x55230B05d4c1F4a0B4f804dc52919F06355DfBF8; the existing guardian Safe 0xd5fe2780eb882d1da78f2136b81c2a4395488c98 remains the cancellation authority.",
         "sources": [
           {
@@ -114,7 +118,7 @@
       "sources": [
         {
           "label": "Reserve Yield DTF overview",
-          "url": "https://docs.reserve.org/yield_dtfs/overview/"
+          "url": "https://docs.reserve.org/core-components/yield-dtfs/yield-dtf-overview"
         },
         {
           "label": "Introducing USD3 (Reserve forum)",

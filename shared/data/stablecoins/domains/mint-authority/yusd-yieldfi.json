@@ -46,8 +46,8 @@
       "observedBlock": 25648573,
       "sources": [
         {
-          "label": "YieldFi current contract directory",
-          "url": "https://docs.yield.fi/resources/contract-addresses"
+          "label": "YieldFi legacy V2 contract directory",
+          "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
         },
         {
           "label": "Arbitrum verified YTokenL2 implementation",
@@ -90,6 +90,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The Ethereum YToken and nine YTokenL2 deployments mint local vault shares through ERC-4626 deposit/mint against each chain's configured asset; this share issuance does not mint the upstream base asset.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095938,
         "sources": [
           {
             "label": "YieldFi yUSD terms",
@@ -136,6 +138,8 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The common Manager's manageAssetAndShares and manager-only mintYToken/burnYToken paths can adjust arbitrary yUSD shares with no protocol supply ceiling on each local deployment. Native share issuance through the YIELD role remains Mint Authority; BRIDGE and LOCKBOX route accounting is separately authored under Bridge Risk.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095938,
         "sources": [
           {
             "label": "YieldFi yUSD terms",
@@ -321,8 +325,8 @@
     "review": {
       "sources": [
         {
-          "label": "YieldFi current contract directory",
-          "url": "https://docs.yield.fi/resources/contract-addresses"
+          "label": "YieldFi legacy V2 contract directory",
+          "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
         },
         {
           "label": "YieldFi yTokens architecture",

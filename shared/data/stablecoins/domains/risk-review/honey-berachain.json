@@ -8,12 +8,12 @@
         "url": "https://routescan.io/address/0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce"
       },
       {
-        "label": "Berachain HONEY verified implementation",
-        "url": "https://routescan.io/address/0x96b1a552a97da5503343d0f9ff2766c616e62905"
+        "label": "Current BUSD verified implementation",
+        "url": "https://sourcify.dev/server/v2/contract/80094/0x33260b0b0a81dbb6d23509dcdc5f321cb585f22a?fields=abi,sources"
       }
     ],
-    "evidence": "The verified current HONEY implementation exposes setBlacklisted(wallet, status) and setPaused(bool) to DEFAULT_ADMIN_ROLE. Its transfer hook rejects transfers involving blacklisted wallets and rejects all transfers while paused, so an authorized administrator can directly freeze individual holders or halt token transfers globally.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Berachain block 26911429, the token implementation slot resolved to 0x33260b0b0a81dbb6d23509dcdc5f321cb585f22a and the 3/5 admin Safe retained DEFAULT_ADMIN_ROLE. That exact verified implementation still exposes setBlacklisted(wallet, status) and setPaused(bool) to DEFAULT_ADMIN_ROLE; its transfer hook rejects blacklisted senders or receivers and all transfers while paused. The August 19, 2026 BUSD rename did not remove these holder-freeze powers.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB02ACRDX)",
+    "reviewedAt": "2026-10-01"
   }
 }

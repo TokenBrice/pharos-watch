@@ -110,7 +110,23 @@
       "evidence": "At Ethereum block 25573280, asset() on the recorded sGHO token returned GHO 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f. The wrapper is an EIP-1967 transparent proxy with implementation 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and ProxyAdmin 0xc15700631020eba02317964550365b95a9a28adb. Its ProxyAdmin owner is the Aave Governance V3 Level-1 Executor 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. Shares are local deposit accounting; durable GHO issuance remains inherited from the reviewed parent. No named prudential supervisor applies to the wrapper.",
       "reviewer": "GPT SOL-BIND wave6",
       "reviewedAt": "2026-07-22",
-      "disposition": "scoreable"
+      "disposition": "scoreable",
+      "noLocalIssuance": {
+        "kind": "inherited-parent-issuance",
+        "reviewedAt": "2026-10-01",
+        "reviewer": "Sol curation pass 2026-10-01 (CurA47sGHO)",
+        "rationale": "sGHO is the ERC-4626 receipt for GHO deposits, confirmed by asset() at Ethereum block 26095797 and the verified implementation. Wrapper shares do not issue native GHO liabilities; native issuance authority is inherited from gho-aave. The local governance upgrade path remains recorded separately.",
+        "sources": [
+          {
+            "label": "Aave sGHO documentation",
+            "url": "https://aave.com/docs/ecosystem/gho/sgho"
+          },
+          {
+            "label": "Verified sGHO implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xff229a0bbb614a284de8ae0e41e5974878fd7c04?fields=sources,compilation"
+          }
+        ]
+      }
     }
   }
 }

@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "BUCK is minted through Bucket Protocol CDP/PSM functions on Sui. The BUCK TreasuryCap is locked inside the shared BucketProtocol object. Admin caps are held by EOA 0x169451… and the package UpgradeCap (policy=0, v27) by EOA 0x938884…, both confirmed Bucket Protocol team operational wallets.",
+    "summary": "BUCK is Bucket Protocol’s legacy Sui stablecoin. At checkpoint 328957880 all 40 reviewed V1 CDP mint ceilings are zero. The shared BucketProtocol still holds its TreasuryCap; AdminCaps remain with 0x169451… and the unrestricted policy-0, version-27 UpgradeCap with 0x938884…. Admin and upgrade powers remain in place.",
     "controls": [
       {
         "chain": "sui",
@@ -16,19 +16,19 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "BUCK TreasuryCap is wrapped inside the shared BucketProtocol object; the object itself cannot raise a mint bound. A separately held AdminCap can call update_max_mint_amount, and the package UpgradeCap can change the mint-critical code.",
-        "observedAt": "2026-07-15",
-        "observedBlock": 298999088,
+        "observedAt": "2026-10-01",
+        "observedBlock": 328957880,
         "sources": [
           {
             "label": "Bucket CDP docs",
             "url": "https://docs.bucketprotocol.io/mechanism/how-cdp-work"
           },
           {
-            "label": "Sui fullnode RPC",
-            "url": "https://fullnode.mainnet.sui.io:443"
+            "label": "Sui mainnet GraphQL checkpoint-pinned object and package reads",
+            "url": "https://graphql.mainnet.sui.io/graphql"
           }
         ],
-        "evidence": "At Sui checkpoint 298999088, the shared BucketProtocol object was version 944302979 and held TreasuryCap 0x058715d59eda37c2a1880a3c0972878f4448f48f2ffe8ee43cff7ace6afabcd4 with total_supply 25967024785770812. The normalized buck module keeps the TreasuryCap in that object; its update_max_mint_amount entry requires a separate &AdminCap, so this shared mint path cannot itself raise the bound."
+        "evidence": "At Sui checkpoint 298999088, the shared BucketProtocol object was version 944302979 and held TreasuryCap 0x058715d59eda37c2a1880a3c0972878f4448f48f2ffe8ee43cff7ace6afabcd4 with total_supply 25967024785770812. The normalized buck module keeps the TreasuryCap in that object; its update_max_mint_amount entry requires a separate &AdminCap, so this shared mint path cannot itself raise the bound. Re-verified at finalized Sui checkpoint 328957880 (2026-10-01T06:54:27.540Z): shared object version 1025546749 retains TreasuryCap 0x058715d59eda37c2a1880a3c0972878f4448f48f2ffe8ee43cff7ace6afabcd4. All 40 reviewed CDP Bucket max_mint_amount fields are zero; this does not remove the separate AdminCap or UpgradeCap powers."
       },
       {
         "chain": "sui",
@@ -38,15 +38,15 @@
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "observedAt": "2026-07-15",
-        "observedBlock": 298999088,
+        "observedAt": "2026-10-01",
+        "observedBlock": 328957880,
         "sources": [
           {
-            "label": "Sui fullnode RPC",
-            "url": "https://fullnode.mainnet.sui.io:443"
+            "label": "Sui mainnet GraphQL checkpoint-pinned object and package reads",
+            "url": "https://graphql.mainnet.sui.io/graphql"
           }
         ],
-        "evidence": "At Sui checkpoint 298999088, 0x169451... had no object code and owned Bucket AdminCap 0xfa5775562f1df8b70ac72e07138d74c93f0398bf54803283f6beb75781d44979 and BktAdminCap 0x99a8a71bbf8b533b2aae8dd6b7e0d0b0c7995b2b58db343671b36e294a6f0af1. The normalized buck module requires &AdminCap for update_max_mint_amount, establishing this EOA as the cap-raising authority."
+        "evidence": "At Sui checkpoint 298999088, 0x169451... had no object code and owned Bucket AdminCap 0xfa5775562f1df8b70ac72e07138d74c93f0398bf54803283f6beb75781d44979 and BktAdminCap 0x99a8a71bbf8b533b2aae8dd6b7e0d0b0c7995b2b58db343671b36e294a6f0af1. The normalized buck module requires &AdminCap for update_max_mint_amount, establishing this EOA as the cap-raising authority. Re-verified at finalized Sui checkpoint 328957880: AdminCap 0xfa5775562f1df8b70ac72e07138d74c93f0398bf54803283f6beb75781d44979 and BktAdminCap 0x99a8a71bbf8b533b2aae8dd6b7e0d0b0c7995b2b58db343671b36e294a6f0af1 are both address-owned by this controller; the current buck.update_max_mint_amount signature requires &AdminCap."
       },
       {
         "chain": "sui",
@@ -56,15 +56,15 @@
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "observedAt": "2026-07-15",
-        "observedBlock": 298999088,
+        "observedAt": "2026-10-01",
+        "observedBlock": 328957880,
         "sources": [
           {
-            "label": "Sui fullnode RPC",
-            "url": "https://fullnode.mainnet.sui.io:443"
+            "label": "Sui mainnet GraphQL checkpoint-pinned object and package reads",
+            "url": "https://graphql.mainnet.sui.io/graphql"
           }
         ],
-        "evidence": "At Sui checkpoint 298999088, 0x938884... had no object code and owned BUCK UpgradeCap 0x332cc625c24f8d95a2a8455248aa33fa669bdeeb2e83d7ade6e31a8814d0ec85 for current package 0x346684e428a8b24c43cb2af269176fdbc41760ea2aed3e2a9d5c09a3347198bb. Its policy is 0 and version is 27, which permits unrestricted package upgrades and therefore mint-logic changes."
+        "evidence": "At Sui checkpoint 298999088, 0x938884... had no object code and owned BUCK UpgradeCap 0x332cc625c24f8d95a2a8455248aa33fa669bdeeb2e83d7ade6e31a8814d0ec85 for current package 0x346684e428a8b24c43cb2af269176fdbc41760ea2aed3e2a9d5c09a3347198bb. Its policy is 0 and version is 27, which permits unrestricted package upgrades and therefore mint-logic changes. Re-verified at finalized Sui checkpoint 328957880: UpgradeCap 0x332cc625c24f8d95a2a8455248aa33fa669bdeeb2e83d7ade6e31a8814d0ec85 remains address-owned by this controller with policy 0, version 27 and package 0x346684e428a8b24c43cb2af269176fdbc41760ea2aed3e2a9d5c09a3347198bb."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -93,12 +93,12 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Bucket package upgrade-cap owner (EOA)",
-      "observedAt": "2026-07-15",
-      "observedBlock": 298999088,
+      "observedAt": "2026-10-01",
+      "observedBlock": 328957880,
       "sources": [
         {
-          "label": "Sui fullnode RPC",
-          "url": "https://fullnode.mainnet.sui.io:443"
+          "label": "Sui mainnet GraphQL checkpoint-pinned UpgradeCap read",
+          "url": "https://graphql.mainnet.sui.io/graphql"
         },
         {
           "label": "Bucket Protocol docs",

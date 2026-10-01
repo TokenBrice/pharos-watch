@@ -9,8 +9,8 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "1:1 reserves of Kinesis-native KAU held by KMS Labs S.A. (Panama); native KAU is in turn backed 1:1 by LBMA-approved allocated physical gold in ABX vaults.",
-  "pegMechanism": "ERC-20 KAU is redeemable for Kinesis-native KAU through KMS Labs after compliance onboarding, then for physical gold through Kinesis Cayman subject to platform terms; no Kinesis fee-yield accrues on ERC-20 balances.",
+  "collateral": "1:1 reserves of Kinesis-native KAU held by KMS Labs S.A. (Panama); native KAU is in turn backed 1:1 by allocated physical gold in ABX vaults.",
+  "pegMechanism": "KMS Labs may offer discretionary 1:1 redemption of ERC-20 KAU for Kinesis-native KAU after compliance onboarding, without guaranteed availability or processing time; physical gold redemption then follows Kinesis Cayman terms. ERC-20 holders have no legal, equitable, or beneficial title to the reserves.",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 0.03215074656862798,
   "detailProvider": "commodity",
@@ -22,12 +22,15 @@
     "attestorTier": "self",
     "cadence": "undisclosed",
     "latestReport": {
-      "periodEnd": "2026-09-04",
-      "publishedAt": "2026-09-04",
+      "reviewReference": {
+        "date": "2026-09-04",
+        "reviewedAt": "2026-10-01",
+        "dateKind": "unspecified"
+      },
       "assuranceMethod": "self-verification",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Whole-corpus D/F/NR verification pass (KMS Labs ERC-20 KAU backing disclosure read 2026-09-04: each ERC-20 KAU is backed 1:1 by Kinesis-native KAU held in segregated KMS Labs wallets; issuer self-report with no third-party token reconciliation)",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU): KMS Labs standing backing disclosure; the prior 2026-09-04 date was a research observation, not a stated report period or publication date. Independent verification of ERC-20 reserve holdings remains undisclosed.",
       "confidence": "verified",
       "sources": [
         {
@@ -44,7 +47,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://kinesis.money/gold/"
+      "url": "https://kmslabs.money/"
     },
     {
       "label": "Twitter",
@@ -52,7 +55,11 @@
     },
     {
       "label": "Docs",
-      "url": "https://kinesis.money/resources/kinesis-whitepaper-en.pdf"
+      "url": "https://kmslabs.money/wp-content/uploads/2026/03/07.ERC20_KAU_KAG_Whitepaper_Final_v3-Final-V3-1.pdf"
+    },
+    {
+      "label": "Underlying Kinesis gold",
+      "url": "https://kinesis.money/gold/"
     }
   ],
   "jurisdiction": {
@@ -65,7 +72,6 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
@@ -98,17 +104,17 @@
   "launchDate": "2025-09-11",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-08-09",
-    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
-    "rationale": "KAU is a direct allocated-commodity claim: Kinesis discloses that holders legally own fully allocated 9999 gold held off the Kinesis balance sheet through the ABX vaulting network, verified every six months against an independent physical precious-metals audit by Inspectorate International (a Bureau Veritas company), with redemption from a 100 g minimum. Migrated to commodity-claim under methodology v9.14.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU)",
+    "rationale": "The authored Ethereum KAU is a KMS Labs commodity-linked representation backed by native Kinesis KAU. Native KAU's allocated bullion ownership, off-balance-sheet custody, and biannual physical inspections do not extend to the ERC-20 holder: KMS Labs terms expressly deny reserve title and a trust or fiduciary relationship. ERC-20 redemption is discretionary and two-step before physical delivery. The existing commodity-claim archetype is retained without claiming direct bullion title.",
     "sources": [
       {
-        "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody, 100 g redemption minimum)",
-        "url": "https://kinesis.money/trust-security/"
+        "label": "KMS Labs ERC-20 claim and native-bullion custody scope",
+        "url": "https://kmslabs.money/"
       },
       {
-        "label": "Kinesis audits archive (biannual Inspectorate International physical audits)",
-        "url": "https://kinesis.money/audits/"
+        "label": "KMS Labs terms sections 5, 8 and 12",
+        "url": "https://kmslabs.money/kms-labs-tcs/"
       }
     ]
   }

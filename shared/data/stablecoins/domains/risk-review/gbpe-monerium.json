@@ -2,8 +2,17 @@
   "id": "gbpe-monerium",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: GBPe resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "sources": [
+      {
+        "label": "Monerium issuer smart-contract repository: blacklist and token controls",
+        "url": "https://github.com/monerium/smart-contracts"
+      },
+      {
+        "label": "Monerium Token.sol: owner-selected transfer validator",
+        "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+      }
+    ],
+    "evidence": "Monerium's issuer repository explicitly documents administrator blacklisting that prevents addresses from transferring or receiving tokens, shared between its tokens within a deployment environment. Its current Token.sol invokes an owner-selected validator before transfer and transferFrom. This supports the retained Yes review from a primary issuer disclosure rather than inference from centralized governance. On 2026-10-01, owner and implementation-slot reads across all six tracked GBPe deployments matched the recorded issuer-controlled owner paths. The public repository describes the control design; it is not an independently reproduced bytecode-to-source match for every historical v1/v2 deployment, nor a census of currently frozen holders. Failure domain is Monerium's token/validator administration, distinct from offchain safeguarding-provider failures.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },

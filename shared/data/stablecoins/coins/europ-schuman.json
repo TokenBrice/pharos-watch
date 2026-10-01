@@ -16,7 +16,7 @@
   "detailProvider": "defillama",
   "geckoId": "schuman-europ",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://schuman.io/reserve-attestations/",
     "provider": "KPMG",
     "attestorTier": "big4",

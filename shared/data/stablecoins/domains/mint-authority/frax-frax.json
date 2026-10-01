@@ -4,31 +4,37 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "FRAX native mint authority is an AMO/governance hybrid on Ethereum only; immutable Ethereum token and AMO Minter contracts are controlled by the Frax Comptroller 3-of-5 Safe directly and through its two-day timelock. Other authored deployments are bridge representations and are assessed under Bridge Risk.",
+    "summary": "FRAX native issuance is Ethereum-only and includes six currently authorized pools/AMOs. The token and main AMO Minter are direct contracts, but the authorized Convex AMO is a transparent proxy controlled by the Frax Comptroller 3-of-5 Safe. Satellite deployments remain bridge representations.",
     "upgradeability": {
-      "model": "immutable",
+      "model": "transparent-proxy",
       "deploymentRefs": [
         "ethereum:0x853d955acef822db058eb8505911ed77f175b99e"
       ],
-      "implementationAddresses": [
-        "0x853d955acef822db058eb8505911ed77f175b99e",
-        "0xcf37b62109b537fa0cb9a90af4ca72f6fb85e241"
+      "proxyAddresses": [
+        "0x49ee75278820f409ecd67063d8d717b38d66bd71"
       ],
-      "canChangeMintLogic": false,
-      "observedAt": "2026-08-16",
-      "observedBlock": 25770070,
+      "implementationAddresses": [
+        "0x485395dad57afac9e926e634a25dba5c3708e25d"
+      ],
+      "adminAddresses": [
+        "0xe53d45abe10ce20427d20c5a1b6360fa5ba0ce0a"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "FRAX Convex AMO ProxyAdmin",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095801,
       "sources": [
         {
-          "label": "FRAX token verified source",
-          "url": "https://eth.blockscout.com/address/0x853d955acef822db058eb8505911ed77f175b99e?tab=contract"
+          "label": "Authorized Convex AMO transparent proxy verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x49ee75278820f409ecd67063d8d717b38d66bd71"
         },
         {
-          "label": "FRAX AMO Minter verified source",
-          "url": "https://eth.blockscout.com/address/0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241?tab=contract"
+          "label": "Convex AMO current mint-capable implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x485395dad57afac9e926e634a25dba5c3708e25d"
         },
         {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Convex AMO ProxyAdmin verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe53d45abe10ce20427d20c5a1b6360fa5ba0ce0a"
         }
       ]
     },
@@ -45,9 +51,9 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The AMO Minter can create FRAX only for approved AMOs within its aggregate 700,000,000 FRAX mint cap; owner or timelock governance can change that cap.",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712139,
+        "capDescription": "At block 26095801, mintFraxForAMO enforces the 700,000,000 FRAX aggregate cap and restricts destinations to approved AMOs. The separate oldPoolRedeem path mints to the minter itself under collateral-borrow checks rather than frax_mint_cap, but a pinned simulation reverted because legacy-pool redemption is paused. Owner or timelock governance can change the cap; the 700 million figure is not a whole-contract bound independent of these other controls.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Frax AMO docs",
@@ -58,7 +64,7 @@
             "url": "https://etherscan.io/address/0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25712139, owner() still returned the Frax Comptroller Safe, timelock_address() returned 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca, and frax_mint_cap() remained 700,000,000 FRAX. The contract is the cap-limited mint route; only its owner or timelock can raise the cap."
+        "evidence": "At Ethereum block 26095801, owner() returned Frax Comptroller Safe 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, timelock_address() returned 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca, and frax_mint_cap() returned 700,000,000 FRAX. The cap is unchanged from the 2026-08-08 review and remains raiseable by owner or timelock. This is one of six authorized native pools/AMOs, not the entire native issuance surface."
       },
       {
         "chain": "ethereum",
@@ -88,12 +94,12 @@
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
-          "observedBlock": 25712139,
-          "observedAt": "2026-08-08",
-          "source": "safe-api"
+          "observedBlock": 26095801,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712139,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Safe transaction service",
@@ -104,7 +110,144 @@
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
           }
         ],
-        "evidence": "At Ethereum block 25712139, the AMO Minter owner still resolved to this Safe and the configured timelock remained 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. Safe API returned the listed 3-of-5 owners, no enabled modules, zero guard and module guard, and Safe v1.3.0. The Safe can authorize AMOs and raise the 700 million FRAX cap directly through its owner path, bypassing the timelock."
+        "evidence": "At Ethereum block 26095801, pinned getOwners()/getThreshold() reads confirmed the listed 3-of-5 owners; getModulesPaginated returned no enabled modules. Guard and module-guard storage slots were zero, and the fallback handler matched the prior observation. The AMO Minter owner and the Convex AMO ProxyAdmin owner both resolved to this Safe. The Safe retains an immediate owner path to authorize AMOs, raise the main 700 million FRAX cap, and upgrade an authorized native-mint proxy; the separate FRAX timelock delay() returned 172800 seconds.",
+        "bypassSurfaces": [
+          "Immediate owner path to AMO authorization and cap changes",
+          "Immediate ProxyAdmin owner path to replace Convex AMO native-mint logic"
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1864ca3d47aab98ee78d11fc9dcc5e7badda1c0d",
+        "label": "FRAX Pool_USDC",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "deploymentRefs": [
+          "ethereum:0x853d955acef822db058eb8505911ed77f175b99e"
+        ],
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
+        "sources": [
+          {
+            "label": "Pool_USDC verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1864ca3d47aab98ee78d11fc9dcc5e7badda1c0d"
+          }
+        ],
+        "evidence": "FRAX frax_pools(address) returned true at block 26095801. Pool_USDC mintPaused() returned true. The token-level pool authorization remains present despite the currently paused mint path; complete pause-admin and economic-bound analysis is unresolved."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x49ee75278820f409ecd67063d8d717b38d66bd71",
+        "label": "FRAX Convex AMO proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "deploymentRefs": [
+          "ethereum:0x853d955acef822db058eb8505911ed77f175b99e"
+        ],
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
+        "sources": [
+          {
+            "label": "Convex AMO current implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x485395dad57afac9e926e634a25dba5c3708e25d"
+          }
+        ],
+        "evidence": "FRAX frax_pools(address) returned true at block 26095801. Current implementation 0x485395dad57afac9e926e634a25dba5c3708e25d contains owner/governance-gated FRAX.pool_mint calls. owner() returned the Frax Comptroller Safe and timelock_address() returned 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. Complete economic-bound analysis is unresolved; the mint-critical proxy upgrade path is recorded separately."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x96665d63c1b53f8335e3c9287ee255f306c93c45",
+        "label": "FRAX RariFuseLendingAMO",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "deploymentRefs": [
+          "ethereum:0x853d955acef822db058eb8505911ed77f175b99e"
+        ],
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "At block 26095801 mint_cap() was 100,000,000 FRAX. mintFRAXForInvestments enforces the cap and collateral-ratio checks; owner or timelock can change the cap using setMintCap.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
+        "sources": [
+          {
+            "label": "RariFuseLendingAMO verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x96665d63c1b53f8335e3c9287ee255f306c93c45"
+          }
+        ],
+        "evidence": "FRAX frax_pools(address) returned true at block 26095801. owner() returned the Frax Comptroller Safe and timelock_address() returned 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. The AMO is an additional authorized native-mint contract outside the main AMO Minter aggregate cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3814307b86b54b1d8e7b2ac34662de9125f8f4e6",
+        "label": "FRAX UniV3LiquidityAMO",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "deploymentRefs": [
+          "ethereum:0x853d955acef822db058eb8505911ed77f175b99e"
+        ],
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "At block 26095801 mint_cap() was 12,500,000 FRAX. mintFRAXForInvestments enforces this cap and collateral-ratio checks. The separate mintRedeemPart1 path uses collateral-borrow checks rather than mint_cap, but a pinned simulation reverted because legacy-pool redemption is paused. Complete administrative and alternative-path bounds remain unresolved.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
+        "sources": [
+          {
+            "label": "UniV3LiquidityAMO verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3814307b86b54b1d8e7b2ac34662de9125f8f4e6"
+          }
+        ],
+        "evidence": "FRAX frax_pools(address) returned true at block 26095801. owner() returned the Frax Comptroller Safe and timelock_address() returned 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. The AMO is an additional authorized native-mint contract outside the main AMO Minter aggregate cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2fe065e6ffef9ac95ab39e5042744d695f560729",
+        "label": "FRAX FraxPoolV3",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "deploymentRefs": [
+          "ethereum:0x853d955acef822db058eb8505911ed77f175b99e"
+        ],
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
+        "sources": [
+          {
+            "label": "FraxPoolV3 verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2fe065e6ffef9ac95ab39e5042744d695f560729"
+          }
+        ],
+        "evidence": "FRAX frax_pools(address) returned true at block 26095801. owner() returned the Frax Comptroller Safe and timelock_address() returned 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. Source mintFrax uses collateral-specific pause, collateral and pool-ceiling checks; complete current per-collateral bounds remain unresolved."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe53d45abe10ce20427d20c5a1b6360fa5ba0ce0a",
+        "label": "FRAX Convex AMO ProxyAdmin",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "deploymentRefs": [
+          "ethereum:0x853d955acef822db058eb8505911ed77f175b99e"
+        ],
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
+        "sources": [
+          {
+            "label": "ProxyAdmin verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe53d45abe10ce20427d20c5a1b6360fa5ba0ce0a"
+          }
+        ],
+        "evidence": "The correct EIP-1967 admin slot on authorized native pool proxy 0x49ee75278820f409ecd67063d8d717b38d66bd71 returned this ProxyAdmin at block 26095801. ProxyAdmin owner() returned the Frax Comptroller Safe; its verified onlyOwner upgrade path can replace the pool's mint-critical implementation."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -121,9 +264,9 @@
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
         }
       ],
-      "evidence": "At Ethereum block 25712139, FRAX and AMO Minter remained direct non-proxy contracts on Ethereum, the only native issuance route retained in Mint Authority. Authored non-Ethereum deployments are bridge representations and are assessed under Bridge Risk. The AMO Minter retained a 700 million FRAX aggregate cap, owner Safe 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, and timelock 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. The 3-of-5 owner Safe can authorize AMOs and raise the cap through the immediate owner path; Safe API reported no modules and zero guard/module guard. Current issuance is contract-governed and raiseable, with reconciliation not applicable to this on-chain AMO control model and no prudential supervisor. No public mint-authority incident was identified. Economic-posture fields reviewed 2026-08-15: the immediate Safe owner path makes the cap economically unbounded, and repo evidence does not prove whole-supply reserve reconciliation across all deployments. Reconciliation determination 2026-08-15: the first-party Frax balance sheet (api.frax.finance/v2/frax/balance-sheet/latest) reconciles whole-supply liabilities (liability:remaining_frax_supply, borrowed-FRAX debt, FXB adjustments) against assets at pinned observation blocks on all 14 deployment chains including Polygon zkEVM and Fraxtal, refreshed continuously (asOfTimestamp 2026-08-15T19:23:47Z at review). AMO mints and satellite supply enter the liability side by construction, so no mint path escapes: reconciliation=continuous. Supervision stays none (self-published, no independent attestor).",
-      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Re-reviewed at Ethereum block 26095801. Enumeration of frax_pools_array indices 0-24, terminated by an out-of-bounds revert at index 25, found six nonzero native pool/AMO addresses; frax_pools(address) independently confirmed the five previously omitted entries. The main AMO Minter has a 700 million FRAX cap on mintFraxForAMO and a Frax Comptroller 3-of-5 Safe owner. Rari and UniV3 mintFRAXForInvestments have separate 100 million and 12.5 million FRAX caps. The main minter's oldPoolRedeem and UniV3's mintRedeemPart1 instead use collateral-borrow checks; both pinned simulations reverted because legacy-pool redemption is paused. These observations do not establish a whole-contract FRAX cap independent of the other control paths. Pool_USDC is mint-paused but retains token-level authorization. The authorized Convex AMO is a transparent proxy with implementation 0x485395dad57afac9e926e634a25dba5c3708e25d and ProxyAdmin 0xe53d45abe10ce20427d20c5a1b6360fa5ba0ce0a owned by the same Safe; the earlier profile's immutable whole-issuance conclusion omitted this path. Canonical FRAX and the main AMO Minter themselves have zero implementation and correct admin slots and direct verified sources. Historical 2026-08-15 economic posture remains: raiseable owner-path caps are economically unbounded; the issuer balance sheet self-reports whole-supply liabilities continuously; supervision is none. The independently fetched 2026-10-01T07:43:47Z balance sheet reports totalAssets, totalLiabilities, remaining FRAX supply, borrowed debt and FXB adjustments, but self-published accounting is not independent assurance. No incident finding is inferred from these additional authorized contracts.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA50FRAX)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

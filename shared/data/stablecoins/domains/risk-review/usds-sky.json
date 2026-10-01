@@ -16,9 +16,9 @@
         "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "The official Sky USDS repository describes the EVM token as a standard ERC-20 with permit and UUPS upgradeability, without a holder blacklist function. The listed Solana USDS mint was queried through the Solana JSON-RPC API on 2026-07-14 and returned an active freezeAuthority (AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt), so the multichain asset has direct holder-freeze capability on its Solana deployment even though the EVM token source does not expose that function.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The official Sky USDS repository describes the EVM token as a standard ERC-20 with permit and UUPS upgradeability, without a holder blacklist function. The listed Solana USDS mint was queried through the Solana JSON-RPC API on 2026-07-14 and returned an active freezeAuthority (AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt). A finalized getMultipleAccounts read at Solana slot 452212654 on 2026-10-01 confirmed the same freeze authority and mintAuthority BEvTHkTyXooyaJzP8egDUC7WQK8cyRrq5WvERZNWhuah, so the multichain asset retains direct holder-freeze capability on Solana.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA03USDS)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",
@@ -83,7 +83,6 @@
             "provider": "Sky whitelisted oracle set",
             "path": "Per-ilk signed observations -> Median -> OSM -> Spot -> Vat",
             "chain": "ethereum",
-            "heartbeatSec": 3600,
             "failureDomainKeys": [
               "sky-oracle-signers",
               "sky-governance",

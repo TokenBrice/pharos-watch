@@ -137,6 +137,20 @@ async function readContractSupplyRaw(input: {
     });
   }
 
+  if (input.family === "aptos") {
+    if (!input.rpcUrl) throw new Error("Aptos supply probe REST endpoint is unavailable");
+    const observation = await fetchMoveFungibleAssetSupply(
+      supplyContract.address,
+      input.signal,
+      input.rpcUrl,
+    );
+    if (!observation) throw new Error("Aptos supply probe returned no pinned-ledger observation");
+    if (observation.decimals !== supplyContract.decimals) {
+      throw new Error("Aptos fungible-asset decimals do not match tracked metadata");
+    }
+    return observation.rawSupply;
+  }
+
   if (input.family === "movement") {
     if (input.meta.id !== MOVEMENT_USDCX_ID || !input.rpcUrl) {
       throw new Error("Movement supply probe is not configured for this asset");

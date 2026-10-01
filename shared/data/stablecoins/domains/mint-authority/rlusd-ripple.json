@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "RLUSD Ethereum minting is gated by Ripple's custom 2-of-31 MultiSign minter. The proxy creation calldata and current role reads identify separate 7-of-12 Ripple MultiSign contracts for DEFAULT_ADMIN_ROLE and UPGRADER_ROLE. The XRPL issuer account has its master key active and no signer list.",
+    "confidence": "manual-review",
+    "summary": "RLUSD Ethereum minting is gated by the historically reviewed custom 2-of-32 MultiSign minter. At Ethereum block 26097127, role-admin and upgrader contracts each have quorum weight 7 over 11 signer addresses, requiring at least 3 signatures rather than 7 people. At XRPL ledger 107358397, quorum weight 25 over 26 signer addresses requires at least 2 signatures; the issuer master key is disabled and no regular key is present. These are minimum cryptographic signer counts, not evidence of independent people or organizations. Weighted rosters remain in the review evidence and independence remains unresolved.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -21,9 +21,9 @@
         "0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "RLUSD Ethereum upgrader MultiSign (7-of-12)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530195,
+      "controlRef": "RLUSD Ethereum upgrader MultiSign (weighted quorum 7, 11 signers)",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095802,
       "sources": [
         {
           "label": "Ethereum: RLUSD proxy creation transaction",
@@ -41,19 +41,21 @@
     },
     "controls": [
       {
-        "label": "RLUSD Ethereum minter - Ripple MultiSign contract (2-of-31)",
+        "label": "RLUSD Ethereum minter - Ripple MultiSign contract (2-of-32)",
         "role": "direct-minter",
         "authorityType": "multisig",
+        "chain": "ethereum",
         "address": "0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
         "deploymentRefs": [
-          "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
-          "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+          "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
         ],
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "threshold": 2,
-        "signerCount": 31,
+        "signerCount": 32,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "Ethereum: RLUSD token contract",
@@ -64,26 +66,31 @@
             "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
           }
         ],
-        "evidence": "RLUSD ETH (0x8292) is a StablecoinProxy (UUPS), implementation StablecoinUpgradeableV2 at 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. hasRole(MINTER_ROLE, 0x97e9) = true (MINTER_ROLE bytes32 obtained via MINTER_ROLE() getter 0xd5391393). Contract 0x97e9 verified on Blockscout as Ripple's MultiSign (EIP-712 multisig): signers() returns 31 addresses, quorum() = 2, each signerWeight = 1, nonce = 350. No GnosisSafe module structure, custom Ripple EIP-712 multisig."
+        "evidence": "At Ethereum block 26095802, hasRole(MINTER_ROLE, 0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591) returned true. MultiSign signers() returned 32 addresses; quorum() returned 2; all 32 signerWeight() reads returned 1; nonce() returned 610. The EIP-1967 implementation remained 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. This custom EIP-712 MultiSign controls Ethereum issuance, not the XRPL issuer."
       },
       {
         "deploymentRefs": [
-          "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
           "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
         ],
-        "label": "RLUSD XRPL issuer account (Ripple master key)",
+        "chain": "xrpl",
+        "address": "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+        "label": "RLUSD XRPL issuer account (Ripple weighted signer list)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "threshold": 2,
+        "signerCount": 26,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 107358397,
         "sources": [
           {
             "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
             "url": "https://xrpscan.com/account/rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
           }
         ],
-        "evidence": "XRPL account_info for rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De: Flags = 0x819a0000 (RequireDestTag, DisallowXRP, DefaultRipple, DepositAuth SET; NoFreeze NOT set; GlobalFreeze NOT set). RegularKey = none. No signer_list present. Master key active; XRPL issuance fully controlled by Ripple. Total XRPL RLUSD obligations = 761,696,376 RLUSD."
+        "evidence": "Pinned XRPL account_info at validated ledger 107354222, hash B8DE3B19D5292634507586AC6D1FE22BF589213B84EBD629733F27062D164411: Flags 0x819a0000 includes DisableMaster; no RegularKey is present. SignerListID 0 has SignerQuorum 25 and 26 entries: eight signers have weight 24 and eighteen have weight 1. NoFreeze and GlobalFreeze are unset. The former master-key-active/no-signer-list description was incorrect. Mapping this weighted quorum into the person-count multisig schema remains a separate review question. D15 current observation at validated XRPL ledger 107358397 confirms the weighted roster and authority unchanged. One maximum-weight signer supplies 24, below quorum 25; two can meet quorum as 24+1 or 24+24. Master key remains disabled and no RegularKey is present. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
       },
       {
         "chain": "ethereum",
@@ -91,16 +98,16 @@
         "deploymentRefs": [
           "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
         ],
-        "label": "RLUSD Ethereum role-admin MultiSign (7-of-12)",
+        "label": "RLUSD Ethereum role-admin MultiSign (weighted quorum 7, 11 signers)",
         "role": "governor",
         "authorityType": "multisig",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "threshold": 7,
-        "signerCount": 12,
+        "threshold": 3,
+        "signerCount": 11,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530195,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26097127,
         "sources": [
           {
             "label": "Ethereum: RLUSD proxy creation transaction",
@@ -115,7 +122,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "RLUSD proxy initialization calldata assigns DEFAULT_ADMIN_ROLE to 0x66fc. At block 25530195, hasRole(DEFAULT_ADMIN_ROLE, 0x66fc) returned true; the verified Ripple MultiSign reports quorum 7 and 12 signers. This role can grant and revoke mint-critical roles."
+        "evidence": "At Ethereum block 26095802, hasRole(DEFAULT_ADMIN_ROLE, 0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e) returned true. MultiSign quorum() returned 7 and signers() returned 11 addresses. signerWeight() returned four weights of 3 and seven weights of 2. Weighted quorum 7 must not be presented as a seven-person threshold. The role can grant and revoke mint-critical roles; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
       },
       {
         "chain": "ethereum",
@@ -123,16 +130,16 @@
         "deploymentRefs": [
           "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
         ],
-        "label": "RLUSD Ethereum upgrader MultiSign (7-of-12)",
+        "label": "RLUSD Ethereum upgrader MultiSign (weighted quorum 7, 11 signers)",
         "role": "proxy-admin",
         "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
-        "threshold": 7,
-        "signerCount": 12,
+        "threshold": 3,
+        "signerCount": 11,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530195,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26097127,
         "sources": [
           {
             "label": "Ethereum: RLUSD proxy creation transaction",
@@ -147,7 +154,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "RLUSD proxy initialization calldata assigns UPGRADER_ROLE to 0x863c. At block 25530195, hasRole(UPGRADER_ROLE, 0x863c) returned true; the verified Ripple MultiSign reports quorum 7 and the same 12-signer set as the role-admin MultiSign."
+        "evidence": "At Ethereum block 26095802, hasRole(UPGRADER_ROLE, 0x863c8754c298d3efec3863f2a46f1c71a355ce6c) returned true. MultiSign quorum() returned 7 and signers() returned the same 11 addresses as the role-admin contract. signerWeight() returned four weights of 3 and seven weights of 2. The current UUPS implementation is unchanged. Weighted quorum 7 is not a seven-person threshold; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -176,9 +183,29 @@
           "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
         }
       ],
-      "evidence": "ETH: MINTER_ROLE holder is 0x97e9 (Ripple MultiSign, quorum 2 of 31). The proxy creation calldata names 0x66fc as DEFAULT_ADMIN_ROLE and 0x863c as UPGRADER_ROLE; current hasRole reads at block 25530195 confirm both assignments, and both verified MultiSign contracts report quorum 7 of 12. XRPL: issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De has its master key active and no signer list.",
-      "reviewer": "Codex V9 control curation / SOL-IV calibration",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Ethereum block 26095802 confirms the unchanged implementation and role assignments, a 2-of-32 equal-weight minter, and separate role-admin/upgrader MultiSign contracts with weighted quorum 7 over 11 signers weighted 2 or 3. XRPL validated ledger 107354222 confirms a disabled master key, no regular key, and weighted signer quorum 25 over 26 entries. Controls are scoped only to their actual native deployment. Weighted-to-person-count mapping is proposed separately rather than overstating a protective threshold. D15 supersedes the held weighted-to-headcount mapping with the independently reproduced minimum signature counts, without granting organizational independence. Current EVM block 26097127 role-admin/upgrader identical address:weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Quorum weight 7 requires minimum three signatures. Current validated XRPL ledger 107358397 (hash 86447D40875CA527FBB3F68150EE3CB5CBA13729DC2D4C06CE4B0E9AD0A049D0) account:weight roster: r4atrYAjm91GTB4qsDARjQQJPTi5svSEm:24; rkRFoAFGRGBsarkzhiA8kGzvyVHnZR1Co:24; rhogmBAzXLHhYvqn6iwZZdukbMwj1m6k36:1; rnw4p9U352SWuMquc9MxgoRD319THHQaWY:1; rnGL7M29kbXv4h2Lbnx87uxrTbD762gXug:24; raVEUzHFjwAy4HHH4ig6JmHB65SHL5nRe2:1; rfwUW9ff6zxcUdeDgY25aYWVHgYqhwCpTP:1; rfExtNyAg5gsmKakzZPQaowS8kPWmX4f1Z:1; r3DucgFuQDSRyJ66hUpFx6W9s6wQnCdiUf:24; r3WdRnCjsnNpHct8Tims5cimLMKVD34fcb:1; r9mGCUy43pxfstc24yd4Mq8hS6eHQS9631:24; rwJ7arqSfCLPqFyv63hk1xDfYyfNQ8S5FA:1; rwFESSqngExPayH5HN9DQ6QKjgsfUujkHv:1; rBpzqzJrNxthrBfLcGfJrkkCNq1tz6XKup:1; rUyCpgTR9HLrTQ4ss2aVspF3rV5vSfSytt:1; rNRkUBZGPKZxF23BcVUhw99UB9445QZFau:1; rGHNvJHHHQAqTxCGJi829E6teKRZrVMx7N:1; rH3GmSoCFgTMk4pMgLmjdA14ti5iY37D22:24; rJpKdQU6D6ZHuNXgQaEwcBDbdTaTpHEwAc:1; rJ2YSzpuNnT9QgBzesPt5KwYbyCNRwd9Zd:24; rKWvpdUUGgoRiFf7b7rQKyngjpXSqsh6RG:1; rMMqCGdLevMMX1rr31AV2zcCn878SzG2k3:1; r48mivRxDNerUcjqs3sdLixL2fEzgrGgxB:1; rPi8fRYg8HyXGBiMsagsQLZoBo91TdAqQE:24; rQNbmpvaaFjPULxWZTNz5hLaPDmJvhtCJS:1; rQLhRtSztTCptVjEyAb4ZSckQDkbhBHJ8v:1. Quorum weight 25 requires minimum two signatures. No independence follows from distinct addresses; confidence remains manual-review.",
+      "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)",
+      "reviewedAt": "2026-10-01",
+      "scopedQuestions": [
+        {
+          "controlRef": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+          "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
+        },
+        {
+          "controlRef": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+          "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
+        },
+        {
+          "controlRef": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+          "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
+        }
+      ]
     }
   }
 }

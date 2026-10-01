@@ -28,9 +28,9 @@
         "url": "https://solscan.io/token/USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The sole stUSDS proxy still used implementation 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22; asset() still returned USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f and wards(Sky Pause Proxy 0xbe8e3e3618f7474f8cb1d074a26affef007e98fb) still returned 1. The pinned implementation has ordinary transfers and no live blacklist/freeze/pause path, while wards gate future upgrades. The inherited finding is valid because variantOf and mintAuthority.inheritedFrom both resolve to reviewed parent usds-sky, whose Solana deployment retains freeze authority.",
-    "reviewer": "OpenAI Codex C02 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-verified 2026-10-01 at Ethereum block 26095796. stUSDS retained implementation 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22; asset() returned USDS and wards(Sky Pause Proxy) returned 1. The pinned implementation has ordinary transfers without a direct live blacklist, freeze or pause path, while wards gate future upgrades. At finalized Solana slot 452213453, parent USDS mint USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA retained freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt. This confirms inherited upstream exposure, not a direct Ethereum stUSDS freeze function or cross-chain freeze propagation.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA43KAG)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

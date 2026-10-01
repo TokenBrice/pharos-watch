@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum and BSC both have the same EOA owner and same proxy-admin contract whose owner is also a confirmed EOA.",
+    "summary": "EURI is issuer-minted/redeemed by Banking Circle. Ethereum and BSC share the same token-owner address and ProxyAdmin. The Ethereum token owner now has EIP-7702 delegated code; the BSC token owner and both ProxyAdmin owners remain codeless EOAs at the pinned observations.",
     "controls": [
       {
         "deploymentRefs": [
@@ -27,7 +27,7 @@
             "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
           }
         ],
-        "evidence": "Banking Circle materials identify EURI as an issuer-managed MiCA EMT. On-chain addressable surfaces (owner EOA + proxy-admin EOA) confirmed; issuer-backend control corroborated by MiCA credit-institution licensing."
+        "evidence": "Banking Circle materials identify EURI as an issuer-managed MiCA EMT. The token owner and ProxyAdmin owner are separately observed on-chain; the Ethereum token owner has EIP-7702 delegation, while the BSC token owner and both ProxyAdmin owners are codeless EOAs."
       },
       {
         "chain": "ethereum",
@@ -41,13 +41,15 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Ethereum EURI token",
             "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
           }
         ],
-        "evidence": "owner() returned 0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D on both Ethereum (block 25294735) and BSC (block 103620570); eth_getCode = 0x on both chains (EOA confirmed)."
+        "evidence": "Historical owner() reads at Ethereum block 25294735 and BSC block 103620570 returned 0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D with no bytecode. On 2026-10-01, owner() still returned that address at Ethereum block 26095806 and BSC block 125056043. At Ethereum block 26095806 its code was 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b, an EIP-7702 delegation to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b; at BSC block 125056613 its code remained 0x. No signer threshold or delegation safeguard is inferred."
       },
       {
         "chain": "ethereum",
@@ -60,13 +62,15 @@
         "authorityType": "contract",
         "directMintAbility": "upgrade-only",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Ethereum EURI token",
             "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
           }
         ],
-        "evidence": "EIP-1967 proxy admin slot returned 0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC on both Ethereum (block 25294735) and BSC (block 103620570). proxy-admin.owner() returned EOA 0x315ef9e4fECf88B7cFc860d7E995Ff72aD7c7A21 on both chains; eth_getCode = 0x (EOA confirmed)."
+        "evidence": "Historical EIP-1967 admin reads at Ethereum block 25294735 and BSC block 103620570 identified 0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC. Correct-slot reads on 2026-10-01 at Ethereum block 26095806 and BSC block 125056043 still returned that ProxyAdmin. Its owner() returned 0x315ef9e4fECf88B7cFc860d7E995Ff72aD7c7A21 at Ethereum block 26095806 and BSC block 125056613; eth_getCode on that owner was 0x on both chains."
       }
     ],
     "economicCapSemantics": "unbounded",

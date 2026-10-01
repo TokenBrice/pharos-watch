@@ -2,13 +2,13 @@
   "id": "usdc-circle",
   "name": "USD Coin",
   "symbol": "USDC",
-  "oneLiner": "USDC is Circle's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and cash held in an SEC-regulated reserve fund.",
+  "oneLiner": "USDC is Circle's dollar stablecoin, redeemable 1:1 under issuer terms, backed by U.S. Treasuries, repos, and cash in a fund and segregated bank accounts.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
-  "pegMechanism": "Direct 1:1 redemption through Circle",
+  "collateral": "U.S. Treasuries, overnight Treasury repos, and cash held in the BlackRock-managed Circle Reserve Fund, whose assets are custodied at BNY Mellon, and in segregated accounts at regulated financial institutions",
+  "pegMechanism": "1:1 redemption through an eligible Circle Mint account outside the EEA; EEA holders have rights under Circle Europe's MiCA terms",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "2",
   "detailProvider": "defillama",
@@ -22,17 +22,17 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-27",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-29",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle; refreshed to the July 2026 report; PDF retrieved, Deloitte examination opinion and Circle management assertion dated August 27, 2026 verified by research pass)",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA02USDC): August examination and management assertion dated September 29, 2026 retrieved",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USDC examination report - July 2026",
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20July%2026%20(1).pdf"
+          "label": "Deloitte USDC examination report: August 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
         }
       ]
     }
@@ -53,7 +53,7 @@
   ],
   "jurisdiction": {
     "country": "United States",
-    "regulator": "NYDFS / 50-state MTL",
+    "regulator": "U.S. state money-transmission regulators / NYDFS",
     "license": "Virtual Currency License (BitLicense)"
   },
   "contracts": [
@@ -490,6 +490,11 @@
     {
       "chain": "arc",
       "address": "0x3600000000000000000000000000000000000000",
+      "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0x2d661c89d812261039af9764eceaaee884f5f67f",
       "decimals": 6
     }
   ],

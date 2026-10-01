@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi T17 backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB27ZeUSD)",
     "confidence": "probable",
     "sources": [
       {
@@ -38,7 +38,7 @@
     "rationale": "Telcoin's Terms of Use effective 2026-06-30, section XXIX, state that eMXN is an eXYZ token issued by Telcoin LLC, backed by an equivalent or greater value of Mexican-peso currency or currency equivalents held in segregated accounts at regulated financial institutions, apart from Telcoin's corporate operating account; the separate bank.telco.in terms confirm eUSD under Telcoin Digital Asset Bank is a distinct product, so the eMXN obligor is Telcoin LLC. The reviewed primary sources do not publish an eMXN-specific reserve report, asset-class split, named reserve institution, or reserve-liquidity disclosure, so the 100% aggregate envelope is retained without fabricated subcategories.",
     "compositionBasis": "Telcoin Terms of Use section XXIX eXYZ reserve disclosure for the eMXN reserve envelope",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full 100% reserve envelope lacks eMXN-specific category weights, named institutions, and an external assurance report. Telcoin states that monthly attestations will be published, but none was located in the reviewed sources as of 2026-08-08.",
+    "knownUnknownExposure": "The full 100% reserve envelope lacks eMXN-specific category weights, named institutions, and an external assurance report in the Terms of Use, Digital Cash page, and bank terms re-fetched on 2026-10-01. The Digital Cash page still states that monthly external attestations will be published; none is linked there. No composition date or category weights are inferred.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -65,8 +65,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi T17 backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB27ZeUSD)",
     "confidence": "probable",
     "sources": [
       {

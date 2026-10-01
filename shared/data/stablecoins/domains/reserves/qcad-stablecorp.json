@@ -34,13 +34,21 @@
       {
         "label": "Stablecorp QCAD transparency and monthly attestations",
         "url": "https://stablecorp.ca/transparency"
+      },
+      {
+        "label": "QCAD July 2026 independent reasonable-assurance report (SEDAR+)",
+        "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=6666d890fab71d252fa9af1a8666a452030d94252e83ba6cd3c1b3ddcb90c53d"
+      },
+      {
+        "label": "Stablecorp legacy QCAD scope disclosure",
+        "url": "https://stablecorp.ca/"
       }
     ],
     "rationale": "2026-07-31 re-open: Stablecorp balances API reports totalSupply=totalFiatReserves=1,652,020.55 CAD as of 2026-07-30T23:10Z (full fiat-reserve parity). The transparency page links monthly independent QCAD attestations, and the OSC QCAD Digital Trust order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. Neither the live feed nor the reviewed public attestation index publishes current instrument weights. Envelope remains 100% eligible CAD reserve assets with knownUnknownExposurePct=100 pending class split. Lockstep pin 2026-08-08: compositionAsOf anchored to the May 31, 2026 Davidson & Company reasonable-assurance attestation (direct bank confirmations; 100% Canadian-dollar fiat reserves within the OSC order's eligible-asset envelope); the balances-API parity read of 2026-07-30 (totalSupply = totalFiatReserves = 1,652,020.55 CAD) is retained as corroboration.",
     "compositionBasis": "Davidson & Company CSAE 3000 attestation as of May 31, 2026 (100% CAD fiat parity), corroborated by the live balances API",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full eligible reserve envelope is disclosed, but the current mix among cash, short-term Canadian government debt, money-market funds, and any approved assets is not published.",
+    "knownUnknownExposure": "Research update 2026-10-01: the July 31 trust report discloses 100% Canadian currency, but Stablecorp expressly excludes pre-November 20, 2025 legacy QCAD from the trust framework and keeps its reserves separate. The catalog's full deployment-to-product and reserve-denominator reconciliation is unresolved. No all-deployment 100% cash allocation or unknown-exposure reduction is applied; current provider shares and later allocation changes also remain unknown.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -48,7 +56,7 @@
         "reserveName": "Eligible CAD reserve asset basket",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The current allocation among the permitted reserve asset classes and custodial providers is not publicly disclosed."
+        "rationale": "The July 31, 2026 trust report supplies its own asset-class split, but that trust-only split is not yet reconciled to every catalog deployment and legacy reserve pool. The full catalog reserve denominator and custodial-provider allocation remain unresolved."
       }
     ]
   },
@@ -60,12 +68,12 @@
         "jurisdiction": "Canada"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
-    "rehypothecation": "prohibited",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
     "reviewedAt": "2026-07-31",
     "reviewer": "Codex T43 safety-v9 unknown-reduction w2",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Stablecorp QCAD balances API",
@@ -80,7 +88,7 @@
         "url": "https://www.newsfilecorp.com/release/291667/QCAD-Digital-Trust-Announces-Filing-of-Prospectus-Amendment-Accessible-through-SEDAR"
       }
     ],
-    "uncertainty": "The regulatory order requires a Canadian custodian, trust-designated segregation, exclusion from issuer-creditor claims, and no encumbrance. QCAD Digital Trust's issuer release identifies VersaBank as the current replacement custodian. Stablecorp's 2026-07-30 balances API still reports aggregate parity but no instrument or provider allocation; the announced phased transition to TD remains unverified as complete, and no current failure/replacement or anti-rehypothecation terms were found.",
+    "uncertainty": "The OSC order establishes trust-designated segregation, issuer-creditor exclusion, and no lending or encumbrance for QCAD Digital Trust reserves. The issuer release names VersaBank for that trust. Stablecorp expressly excludes QCAD issued before November 20, 2025 from the trust framework and holds legacy reserves separately. Deployment-to-product and custody-safeguard reconciliation across the catalog denominator remains unresolved; trust-specific safeguards are therefore not assigned as aggregate protections. Provider shares and completion of the announced TD transition remain unknown.",
     "knownUnknownExposurePct": 100
   }
 }

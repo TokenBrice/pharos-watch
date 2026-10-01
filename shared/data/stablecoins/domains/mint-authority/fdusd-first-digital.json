@@ -11,6 +11,7 @@
         "arbitrum:0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
         "bsc:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
         "ethereum:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "sui:0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
         "ton:EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
       ],
       "proxyAddresses": [
@@ -363,8 +364,8 @@
         "capDescription": "The Jetton master is mintable without a numeric cap; its multisig admin can also replace code and data immediately.",
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 79471628,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96199646,
         "failureDomainKeys": [
           "issuer:fd121-bvi-limited",
           "multisig:ton:0:e02c00f5dd26696983b2ca87f4a4fe95b87a3ced2c8002bb67e98621dbd6ebed"
@@ -387,14 +388,13 @@
             "url": "https://github.com/ton-blockchain/stablecoin-contract/blob/main/contracts/jetton-minter.fc"
           }
         ],
-        "evidence": "At masterchain seqno 79471628 (root hash n0gw418+m5lTfMy5nnolQIH1NhLOY3gCJ0tL6MCMJSw=), the mintable Jetton master admin was this multisig_v2 wallet, with threshold 4, six signers, no proposers, and no pending next admin. The signer raw addresses were 0:d062c0a1d4e488529bf12870446328da739bc6da88b4d11593d8ddb363843827, 0:3e5f91e9cc1ad5326ceb24879d4e36af55f34cce80192bc5a032b68ec2a3577f, 0:93ae8e1bf81fea3e7baf8deec24b3cf30fb263dfc0d42d45df015c26f34f7df4, 0:cb7f0a416fd0c4901fad19ca72c2255a70301d3581c7b3ad97c65c0eb0cda644, 0:cdd5448de2863575ad8cb1875bddd954e42c6f499dd69252cbedc475b45fcef7, and 0:b15db0a38382b07c07c4edf55fa860397a303f620f9c2cfea1782d5585fa975d. Deployed code hash 18d5b6e7... matched the reviewed source, whose admin-only upgrade operation replaces code and data without delay."
+        "evidence": "At masterchain seqno 79471628 (root hash n0gw418+m5lTfMy5nnolQIH1NhLOY3gCJ0tL6MCMJSw=), the mintable Jetton master admin was this multisig_v2 wallet, with threshold 4, six signers, no proposers, and no pending next admin. The signer raw addresses were 0:d062c0a1d4e488529bf12870446328da739bc6da88b4d11593d8ddb363843827, 0:3e5f91e9cc1ad5326ceb24879d4e36af55f34cce80192bc5a032b68ec2a3577f, 0:93ae8e1bf81fea3e7baf8deec24b3cf30fb263dfc0d42d45df015c26f34f7df4, 0:cb7f0a416fd0c4901fad19ca72c2255a70301d3581c7b3ad97c65c0eb0cda644, 0:cdd5448de2863575ad8cb1875bddd954e42c6f499dd69252cbedc475b45fcef7, and 0:b15db0a38382b07c07c4edf55fa860397a303f620f9c2cfea1782d5585fa975d. Deployed code hash 18d5b6e7... matched the reviewed source, whose admin-only upgrade operation replaces code and data without delay. Re-verified on 2026-10-01 at TON masterchain seqno 96199646 (root hash I9fTRMnJlSiigOf+nZNNpu9Cbgfie0ASfrIgA8bt7mo=): block-bound get_jetton_data confirms mintable=true and the same multisig admin; get_multisig_data confirms threshold 4, the same six signer addresses, and no proposers; get_next_admin_address returns addr_none. The pinned getAddressInformation code BOC has representation hash 18d5b6e780ff0bb451254c2c760d09d6e485638cd1407abb97078752c3c1c9ee, unchanged from the reviewed upgrade-capable minter source."
       },
       {
         "deploymentRefs": [
           "arbitrum:0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
           "bsc:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
           "ethereum:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
-          "solana:9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u",
           "sui:0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
           "ton:EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
         ],

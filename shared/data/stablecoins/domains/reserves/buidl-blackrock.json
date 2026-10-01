@@ -34,7 +34,7 @@
         "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
       }
     ],
-    "rationale": "The BUIDL live-reserve producer is the single-asset chronicle-nav adapter: it reads the Chronicle Proof-of-Asset VAO consumer 0x2d6db2116aD7a6e203E72C8DCCfFf23f5315b0Dd via readWithAge() (value + age; probed 2026-09-09 at 1.00e18 NAV with age 2026-09-09T05:02:59Z, the dashboard's latest Oracle Updated event) and publishes exactly one exposure naming the fund share, so the reviewed row carries that producer identity at 100%. Chronicle's daily independently verified holdings table identifies all 18 look-through positions at its 2026-08-27T06:16:23Z source timestamp: five tri-party repo positions totaling $2.1355 billion and thirteen U.S. Treasury bills totaling $644.290777 million, against the reported $2,779,790,777 aggregate portfolio market value. The latest stated Treasury-bill maturity is 2026-11-12, 77 days after the composition date.",
+    "rationale": "The BUIDL live-reserve producer is the single-asset chronicle-nav adapter: it reads the Chronicle Proof-of-Asset VAO consumer 0x2d6db2116aD7a6e203E72C8DCCfFf23f5315b0Dd via readWithAge() and publishes one fund-share exposure at 100%. At Ethereum block 26095798, readWithAge() reconfirmed NAV 1.00e18 and an oracle update timestamp matching 2026-10-01T00:22:23Z. The historical 2026-08-27T06:16:23Z holdings snapshot is retained: five tri-party repo positions totaling $2.1355 billion and thirteen U.S. Treasury bills totaling $644.290777 million, against $2,779,790,777 aggregate portfolio market value, with the latest Treasury maturity 2026-11-12. The current dashboard explicitly states that Chronicle performs technical verification checks and does not attest to, audit, or guarantee underlying records or assets; the earlier 'independently verified holdings' wording overstated that assurance. This correction does not re-date the historical composition.",
     "compositionBasis": "Chronicle Proof of Asset NAV captured by the production chronicle-nav single-asset adapter (one 100% fund-share exposure), with the reviewed look-through position summary above",
     "compositionAsOf": "2026-08-27",
     "scope": "full-composition",
@@ -47,8 +47,7 @@
       {
         "name": "The Bank of New York Mellon",
         "role": "custodian",
-        "jurisdiction": "United States",
-        "sharePct": 100
+        "jurisdiction": "United States"
       }
     ],
     "segregation": "segregated",
@@ -75,6 +74,6 @@
         "url": "https://app.rwa.xyz/assets/BUIDL"
       }
     ],
-    "uncertainty": "The issuer-authored Arbitrum STEP application (2024-05-04) states BNY Mellon is the Fund's administrator and custodian and that the Fund's assets are held in one or more accounts in the name of the Fund, with subcustodians and depositories permitted; no other fund-level custodian is named in reviewed sources, so the documented custody is a single-provider concentration. rwa.xyz (2026-07-16) lists the account segregation as bankruptcy remote. Sub-custodian splits and rehypothecation restrictions are not stated in reviewed public sources."
+    "uncertainty": "The issuer-authored Arbitrum STEP application (2024-05-04), re-opened 2026-10-01, names BNY Mellon as fund administrator and custodian for cash and other non-crypto assets delivered to it, requires fund-titled accounts, and permits subcustodians and depositories. It does not disclose current custody allocations or identify every material repo collateral, depositary, or subcustody exposure. Under the whole-book coverage rule, the asset-wide institutional-top summary and precise 100% provider share are withdrawn; BNY's documented role and fund segregation remain. The previously reviewed bankruptcyRemoteness classification is retained unchanged because D03 does not adjudicate insolvency protection. Subcustodian splits and rehypothecation restrictions remain undisclosed."
   }
 }

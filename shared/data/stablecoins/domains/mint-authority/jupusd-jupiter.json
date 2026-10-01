@@ -19,8 +19,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "JupUSD program upgrade authority (Squads 4-of-9 vault)",
-      "observedAt": "2026-07-13",
-      "observedBlock": 432737041,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452212935,
       "sources": [
         {
           "label": "Solana RPC",
@@ -68,9 +68,9 @@
             "url": "https://explorer.solana.com/tx/vy3Bq8PWovTceVVS9JAAZ3YsRmS8sUwt2ozwBHizhEswwzY9mmJciU4mJdGUUfiUoY2TQowX9eynrsiY4mVeEkf"
           }
         ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 432737041,
-        "evidence": "At finalized Solana slot 432737041, the mint and freeze authorities were both CkzLnD9r4d4ZZofsgNVo2VNunxDmte5YJ4vfAgMfBZNA. A successful mint at slot 432727339 shows JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr invoking SPL Token mintTo with that PDA as authority."
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212935,
+        "evidence": "At finalized Solana slot 452212935 on 2026-10-01, one getMultipleAccounts response confirmed that the JupUSD mint's mintAuthority and freezeAuthority were both CkzLnD9r4d4ZZofsgNVo2VNunxDmte5YJ4vfAgMfBZNA, with 6 decimals. Historical observation: a successful mint at slot 432727339 showed JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr invoking SPL Token mintTo with that PDA as authority."
       },
       {
         "chain": "solana",
@@ -84,8 +84,8 @@
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432737041,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212935,
         "sources": [
           {
             "label": "Solana RPC",
@@ -104,7 +104,7 @@
             "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
           }
         ],
-        "evidence": "At finalized Solana slot 432737041, JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr pointed to ProgramData GF7fyG3MC28FzpNVH1rm9AAoDBR9kHTSvGcCoV9a8wkz, whose live upgrade authority was this Squads vault. The vault is index 0 for autonomous multisig H4siPbdsgRDoNHyWb1UsTzNhDRAVNoV5MNKjxtL4chzX, configured 4-of-9 with time_lock 0. Upgrade transaction 2M36bgx... executed through Squads and invoked the BPF Upgradeable Loader."
+        "evidence": "At finalized Solana slot 452212935 on 2026-10-01, one getMultipleAccounts response confirmed that JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr points to ProgramData GF7fyG3MC28FzpNVH1rm9AAoDBR9kHTSvGcCoV9a8wkz with upgrade authority 31wgH9Czzd3qgquTGxVxtxJuzBd8Fm4xEo8rPX7CNfhM. The Squads account H4siPbdsgRDoNHyWb1UsTzNhDRAVNoV5MNKjxtL4chzX remained autonomous, with threshold 4, 9 members, and time_lock 0. Historical observation: upgrade transaction 2M36bgx... executed through Squads and invoked the BPF Upgradeable Loader."
       },
       {
         "label": "Ethena Labs issuance backend / reserve operator",

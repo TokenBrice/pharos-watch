@@ -8,8 +8,8 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "sUSD1+ is an NAV-accruing receipt over Lorenzo's USD1+ on-chain traded fund and managed strategy portfolio, not a borrower debt market with collateral liquidation oracles.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Lorenzo sUSD1+ minting and redemption depend on manager-set Unit NAV. At BSC block 125061021, the proxy used implementation 0x972c27ee69b19d7648cef365700c22713a9a31fd and cedefiManager() returned 0x507ec48ef26919a205a9f3b8aaf69532e20c0987. The verified implementation restricts setUnitNav() and resetUnitNav() to that manager and uses the stored NAV for share issuance and redemption. Independent valuation and off-chain portfolio reconciliation remain unverified.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -28,17 +28,25 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex ORCL curation batch 20",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValA62sUSD1)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Lorenzo Protocol product overview",
-        "url": "https://lorenzo-protocol.org/"
+        "label": "Lorenzo USD1+ OTF launch: NAV-accruing fund shares",
+        "url": "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/"
       },
       {
         "label": "Lorenzo USD1+ OTF guide",
         "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/"
+      },
+      {
+        "label": "Sourcify exact-match sUSD1+ implementation: manager-only NAV setters",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x972c27ee69b19d7648cef365700c22713a9a31fd?fields=abi,sources"
+      },
+      {
+        "label": "BSC pinned NAV implementation and manager reads at block 125061021 (2026-10-01)",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com"
       }
     ]
   },
@@ -69,12 +77,12 @@
       },
       {
         "source": "manual",
-        "name": "Lorenzo app bundle sUSD1+ route mapping",
+        "name": "Lorenzo historical app bundle sUSD1+ route mapping",
         "url": "https://app.lorenzo-protocol.xyz/_next/static/chunks/pages/_app-b4d9e8782993d9b8.js",
         "bridgeTypes": [
           "unknown"
         ],
-        "note": "The current deployed bundle maps sUSD1+ to the Interport Ethereum-to-BNB route; no remote token, escrow, liquidity, or mint authority is identified."
+        "note": "The bundle captured in the prior route review mapped sUSD1+ to the Interport Ethereum-to-BNB route. The URL returned HTTP 404 on 2026-10-01; no current remote token, escrow, liquidity, or mint authority was verified."
       }
     ],
     "sources": [
@@ -83,7 +91,7 @@
         "url": "https://app.lorenzo-protocol.xyz/bridge"
       },
       {
-        "label": "Lorenzo current app bundle",
+        "label": "Lorenzo historical app bundle observed during 2026-08-16 route review",
         "url": "https://app.lorenzo-protocol.xyz/_next/static/chunks/pages/_app-b4d9e8782993d9b8.js"
       },
       {

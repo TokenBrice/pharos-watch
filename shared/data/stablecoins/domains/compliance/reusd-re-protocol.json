@@ -18,9 +18,9 @@
     ]
   },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "reUSD is a senior, NAV-based yield token issued exclusively to eligible non-U.S. persons. Its backing combines onchain stablecoin liquidity with offchain reinsurance collateral in Regulation 114 trust accounts; redemptions become queued when instant capacity is unavailable. These investment and yield features place it outside GENIUS payment-stablecoin scope.",
+      "summary": "reUSD is a senior NAV-based reinsurance capital token. Its purchase agreement characterizes it as derivative tranched debt under BVI law, restricts noteholder rights to registered eligible holders and does not require the issuer to maintain redemption liquidity. Current product documentation describes repayment in the deposit asset at the accrued price. These facts do not establish the GENIUS fixed-monetary-value obligation or a U.S. securities/deposit exclusion; applicability remains uncertain pending qualified token-specific legal analysis.",
       "references": [
         {
           "label": "Re Protocol disclosure page",
@@ -32,22 +32,35 @@
           "label": "Re Protocol About reUSD",
           "url": "https://docs.re.xyz/products/about-reusd.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-07-14"
+          "accessedAt": "2026-10-01"
+        },
+        {
+          "label": "reUSD Token Purchase Agreement: holder rights and derivative debt",
+          "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-01"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment-stablecoin definition and exclusions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-01"
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "issuerEntity": "Resilience Foundation",
-    "issuerDomicile": "Cayman Islands",
-    "foreignExceptionStatus": "not-applicable",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Resilience (BVI) Ltd",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-applicable",
+    "daspOfferSaleStatus": "unknown",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://app.re.xyz/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "reUSD is a yield-bearing, NAV-based insurance capital token restricted to non-U.S. persons under Regulation S. The issuer is Resilience Foundation (full legal name: Resilience Foundation Company), an Exempted Limited Guarantee Foundation Company incorporated in the Cayman Islands (IC-414560), not a BVI entity. A related entity Resilience (BVI) Ltd exists in BVI but is not the token issuer. Prior entry listed issuerDomicile as British Virgin Islands: corrected to Cayman Islands. No GENIUS payment-stablecoin applicability; not-applicable status is appropriate.",
+    "notes": "Reviewed under D17 on 2026-10-01: the former non-payment-token exemption based on yield, NAV and non-U.S. access restrictions is withdrawn; the proposed excluded-security replacement is also unsupported by a qualified U.S. legal determination. Resilience (BVI) Ltd remains the token issuer under the purchase agreement; the Cayman foundation/operator and SPC roles are separate. Applicability, authorization, pathway, foreign-exception and DASP posture remain unresolved, not findings of authorization or wrongdoing. The no-public-action-found observation is retained as historical evidence from the 2026-07-14 review, not a newly exhaustive regulator search.",
     "references": [
       {
         "label": "Re Protocol disclosure page",
@@ -66,9 +79,21 @@
         "url": "https://docs.re.xyz/glossary-and-reference/disclosures",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "reUSD Token Purchase Agreement: legal issuer and derivative debt claim",
+        "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Re Protocol: token issuance and custody legal structure",
+        "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "owner-triage",
-    "reviewedAt": "2026-07-14"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC23), scoped D17 applicability withdrawal; enforcement observation remains historical",
+    "reviewedAt": "2026-10-01"
   }
 }

@@ -52,6 +52,7 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "capDescription": "Direct-mint source validates principal permissions and collateral settlement and checks a pathway's configured limit policy when present. Such per-transaction and rolling-window limits are configurable, not an immutable total-supply ceiling; the complete live pathway and migration bounds remain unresolved.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-09-15",

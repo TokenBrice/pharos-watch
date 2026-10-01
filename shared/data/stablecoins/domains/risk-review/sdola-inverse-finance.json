@@ -81,7 +81,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "sDOLA is native on Ethereum (ERC-4626 wrapper, locked by the CCIP LockReleaseTokenPool on transfer). Base, Optimism, Arbitrum, and Berachain deployments are burn-mint representations minted solely by the Chainlink CCIP BurnMintTokenPool on each chain (mint simulation verified on-chain).",
+    "summary": "sDOLA minting, unwrapping, and yield accrual operate on Ethereum. Inverse reports that governance mill 396 shut down all sDOLA Chainlink CCIP lanes on 2026-08-11. At pinned blocks read 2026-10-01, the Ethereum, Base, Optimism, Arbitrum, and Berachain pools each returned an empty supported-chain list. Peripheral token contracts remain historical burn-mint representations; they are not live CCIP destinations.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
@@ -124,7 +124,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "sDOLA is native on Ethereum (immutable ERC-4626 wrapper over DOLA). The Chainlink CCIP LockReleaseTokenPool 0x05eEe76f456C51Be0459EC1c0a78bf177B2c877C (registered in the CCIP TokenAdminRegistry, read on-chain) locks sDOLA for cross-chain transfer.",
+        "reviewNote": "sDOLA is native on Ethereum. The historical CCIP LockReleaseTokenPool 0x05eEe76f456C51Be0459EC1c0a78bf177B2c877C returned no supported chains at Ethereum block 26095807. Inverse reports that mill 396 closed the sDOLA CCIP lanes on 2026-08-11; the prior lock-release route is no longer available.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -134,7 +134,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ]
       },
@@ -153,7 +153,7 @@
         "controllerChain": "base",
         "controllerAddress": "0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab",
         "reviewDisposition": "reviewed",
-        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0xd84e1B7e1a7A8D49167884855c3985ef4bCa45aB and reverts from other senders on base at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. At Base block 52024171, that pool returned no supported chains. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. This deployment is not a live bridge destination.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -163,7 +163,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ],
         "failureDomainKeys": [
@@ -186,7 +186,7 @@
         "controllerChain": "optimism",
         "controllerAddress": "0x8404024d8f74ad2d20e82c184816b64d4184a018",
         "reviewDisposition": "reviewed",
-        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0x8404024d8F74Ad2D20E82c184816B64D4184A018 and reverts from other senders on optimism at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. At Optimism block 157619456, that pool returned no supported chains. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. This deployment is not a live bridge destination.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -196,7 +196,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ],
         "failureDomainKeys": [
@@ -219,7 +219,7 @@
         "controllerChain": "arbitrum",
         "controllerAddress": "0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e",
         "reviewDisposition": "reviewed",
-        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0xbbc28DB61DF26B76D5F7D5Eed17eD4D6C278460e and reverts from other senders on arbitrum at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. At Arbitrum block 510584562, that pool returned no supported chains. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. This deployment is not a live bridge destination.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -229,7 +229,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ],
         "failureDomainKeys": [
@@ -252,7 +252,7 @@
         "controllerChain": "berachain",
         "controllerAddress": "0x8bbd036d018657e454f679e7c4726f7a8ece2773",
         "reviewDisposition": "reviewed",
-        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0x8Bbd036d018657E454F679E7C4726F7a8ECE2773 and reverts from other senders on berachain at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. At Berachain block 26911486, that pool returned no supported chains. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. This deployment is not a live bridge destination.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -262,7 +262,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ],
         "failureDomainKeys": [

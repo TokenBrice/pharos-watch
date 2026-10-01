@@ -47,16 +47,23 @@
     }
   ],
   "launchDate": "2025-07-04",
-  "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
-    "disposition": "resolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "USDU is protocol-issued against managed stablecoin and stablecoin-liquidity positions rather than overcollateralized borrower vaults.",
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC06)",
+    "rationale": "USDU holders own the protocol ERC-20; adapters own Curve LP tokens and lending-vault shares. The issuer expressly states there is no off-chain backing or unsecured IOU and values backing in USDU equivalents. This mixed on-chain liquidity/lending mechanism does not establish a fiat-cash holder claim. No existing family is assigned pending exact-product claim and current-backing review under D18.",
     "sources": [
       {
         "label": "USDU docs",
         "url": "https://usdu.gitbook.io/docs/"
+      },
+      {
+        "label": "USDU issuer backing and holder-position disclosure",
+        "url": "https://usdu.finance/transparency/"
+      },
+      {
+        "label": "USDU stablecoin issuance source",
+        "url": "https://raw.githubusercontent.com/usdu-finance/usdu-core/main/contracts/stablecoin/Stablecoin.sol"
       }
     ]
   }

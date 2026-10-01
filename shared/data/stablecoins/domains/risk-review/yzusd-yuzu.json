@@ -12,8 +12,8 @@
         "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
       },
       {
-        "label": "YZUSD Plasma implementation",
-        "url": "https://plasmascan.to/address/0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe#code"
+        "label": "Current YuzuUSDV3 implementation bound by pinned EIP-1967 read",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
       },
       {
         "label": "Pinned official YuzuUSD source",
@@ -30,48 +30,48 @@
       {
         "label": "Yuzu reserve composition dashboard",
         "url": "https://cache.accountable.capital/dashboard/yuzu"
+      },
+      {
+        "label": "Current YuzuUSDV3 facet source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x978b32904b361f22d7338692feb6b9cd8ad1887e"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The current Plasma implementation's pause is confined to mint and redeem paths, and its restriction-manager role only administers minter/redeemer roles; no current holder-transfer blacklist, freeze, seizure, or arbitrary holder-burn hook was found. Yuzu's Hypernative/Sentinel documentation describes surgical blocking of malicious wallets from protocol interactions, but does not establish that this control can intercept an ordinary yzUSD ERC-20 transfer. Current reserves also contain issuer-freezable USDT0, syrupUSDT, syrupUSDC, syrupUSDG, USTB, mGLOBAL, USDe, sUSDe, and AUSD; those controls can impair backing or exits but cannot directly freeze a yzUSD holder balance. The prior inherited verdict was invalid because yzUSD has no single resolvable parent identity. Possible is retained honestly because the documented operational-blocking boundary and issuer legal terms could not be proven to exclude holder-token reach.",
-    "reviewer": "OpenAI Codex C04 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-reviewed 2026-10-01 at Plasma block 33899322: EIP-1967 binds the canonical proxy to YuzuUSDV3 at 0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5. Verified V3 source routes mint/redemption configuration and NAV setters to a facet and tracks same-block received shares for redemption eligibility. Its inherited V2 burn function burns the caller's own tokens subject to BURNER_ROLE. The issuer discloses Hypernative blocking protocol interactions and Sentinel executing withdrawals from the Fordefi wallet; those disclosures do not establish interception of ordinary holder transfers. The August 8 source review remains historical, not a current V3 exclusion. Upstream backing controls remain distinct from native holder access. Possible is retained pending issuer legal terms and a complete mapping of operational controls to the holder-token execution path.",
+    "reviewer": "Sol curation pass 2026-10-01 (ValA58ONyc)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "Yuzu documents yzUSD as a pooled, overcollateralized product minted and redeemed against USDT0, with yzPP as a first-loss tranche; it does not describe borrower-owned collateral positions with oracle-triggered liquidations.",
+    "tier": "privileged-internal-pricing",
+    "summary": "At Plasma block 33896709, yzUSD uses the YuzuUSDV3 implementation. Mint and redemption conversions apply a stored NAV capped at par. Its configured facet gates setNav and setNavUpdateInProgress with NAV_MANAGER_ROLE; NAV changes normally have a one-day cooldown and 10% step cap, with markdown-step exemptions. The live NAV was 1e18 and navLastUpdate was zero. This is a privileged top-level internal valuation path, not an oracleless product; no external feed or borrower-specific liquidation branch is identified in this path. The from-deployment grant census found no active NAV_MANAGER_ROLE recipients at this block. On-chain getRoleAdmin assigns NAV_MANAGER_ROLE to ADMIN_ROLE, held by the 12-hour manager timelock 0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c, which can grant the pricing role.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "Yuzu's yzPP documentation defines a system-wide collateralization ratio as backing assets divided by yzUSD TVL, requires the ratio to remain above 110% for redemption, and uses the pool-level ratio for first-loss absorption. That reserve/value authority is price-sensitive at the top level, while yzUSD has no borrower-specific debt or liquidation branches; the disposition is top-level-only.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA58ONyc)",
+      "rationale": "The verified V3 code applies a stored NAV to pooled mint and redemption conversions. It delegates the role-gated NAV setter to a configured facet; this is a top-level token valuation authority rather than borrower-specific collateral-price liquidation branches. The current review does not rely on the prior unsupported 110% redemption-ratio assertion.",
       "sources": [
         {
-          "label": "Yuzu yzUSD documentation (last updated 2026-08-07)",
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+          "label": "Routescan verified YuzuUSDV3 implementation bound by pinned EIP-1967 read",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
         },
         {
-          "label": "Yuzu yzPP first-loss and collateral-ratio documentation (Yuzu docs revision 2026-08-07)",
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
-        },
-        {
-          "label": "Yuzu stablecoin app",
-          "url": "https://app.yuzu.money/"
+          "label": "Routescan verified YuzuUSDV3 facet: NAV_MANAGER_ROLE setter",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x978b32904b361f22d7338692feb6b9cd8ad1887e"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA58ONyc)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Yuzu Protection Pool",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
+        "label": "Routescan verified YuzuUSDV3 implementation bound by pinned EIP-1967 read",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
       },
       {
-        "label": "Yuzu staked yzUSD wrapper",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/staked-yzusd-syzusd"
+        "label": "Routescan verified YuzuUSDV3 facet: NAV_MANAGER_ROLE setter",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x978b32904b361f22d7338692feb6b9cd8ad1887e"
       }
     ]
   },
@@ -104,8 +104,8 @@
         "url": "https://metadata.layerzero-api.com/v1/metadata"
       },
       {
-        "label": "DefiLlama yzUSD adapter - Monad representation bridged from Plasma",
-        "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/yuzu-usd/index.ts"
+        "label": "Archived DefiLlama yzUSD adapter: Monad representation bridged from Plasma",
+        "url": "https://github.com/DefiLlama/peggedassets-server/blob/cfb73336f802f6c30de5f91c6510a005ba040e5b/src/adapters/peggedAssets/yuzu-usd/index.ts"
       },
       {
         "label": "Plasma yzUSD token contract",

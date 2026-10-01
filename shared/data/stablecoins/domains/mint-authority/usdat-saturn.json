@@ -4,66 +4,100 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDat is an M0-backed extension with native issuance only on Ethereum; extension wrapping routes through M0 infrastructure while base M issuance remains on the Ethereum MinterGateway. BNB and Monad USDat deployments are CCIP representations reviewed under Bridge Risk, not additional native issuance chains.",
+    "summary": "USDat is a permissioned PYUSDx-backed MultiMint extension with native issuance on Ethereum. The current PYUSDx SwapFacility handles wrapping and is upgradeable by a 3-of-5 Safe. Separate five-day timelocks control alternative-asset caps and USDat proxy upgrades. The legacy MinterGateway and M SwapFacility no longer describe its current backing path. BNB and Monad are CCIP representations reviewed under Bridge Risk.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "address": "0x0bc305e7e13113caed3f5486849e9518a1cc4173",
         "deploymentRefs": ["ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"],
-        "controllerAssetId": "m-m0",
-        "label": "M0 MinterGateway backing rail",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "capDescription": "Base M issuance backing USDat depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "sources": [
-          {
-            "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
-          },
-          {
-            "label": "M0 protocol docs",
-            "url": "https://docs.m0.org/protocol/minting-burning"
-          },
-          {
-            "label": "M0 minter gateway docs",
-            "url": "https://docs.m0.org/protocol/minting-burning"
-          },
-          {
-            "label": "MinterGateway on Blockscout",
-            "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
-          }
-        ],
-        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. M0 validator attestations, approved-minter status, collateral/debt checks, and mint-delay review bound ordinary M issuance; per-Minter capacity remains raiseable by M0 TTG and Registrar governance. No external admin or module surface exists on this immutable gateway."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
-        "deploymentRefs": ["ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"],
-        "label": "M0 SwapFacility extension router",
+        "label": "PYUSDx SwapFacility extension router",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The current USDat implementation wraps PYUSDx through this SwapFacility, subject to USDat's enabled compliance whitelist. Ordinary wrapping is 1:1 against PYUSDx; alternative-asset wrapping is governed by per-asset caps. This is not base-M issuance through MinterGateway.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "sources": [
           {
-            "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "label": "Saturn pinned PYUSDx migration runbook",
+            "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md"
           },
           {
-            "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+            "label": "Saturn pinned USDat MultiMint implementation",
+            "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/src/USDat.sol"
           },
           {
-            "label": "SwapFacility on Blockscout",
-            "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+            "label": "Current PYUSDx SwapFacility",
+            "url": "https://eth.blockscout.com/address/0x0bc305e7e13113caed3f5486849e9518a1cc4173"
           }
         ],
-        "evidence": "At Ethereum block 25295161: EIP-1967 impl slot=0x45bf08d042a8958f01f8e8319b791e4584550da8 (TransparentUpgradeableProxy). ProxyAdmin (EIP-1967 admin slot)=0x0f38d8a5583f9316084e9c40737244870c565924. SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply; extension minting is bounded by available M-backed wrapper flow and base M supply. ProxyAdmin owner=TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (minDelay=259200s, 3 days); timelock proposer=Gnosis Safe 3/5 (0xb7a9b5f301ef3bad36c2b4964e82931dd7fb989c). SwapFacility capacity follows M supply and its governance/admin path, with no modules detected."
+        "evidence": "At Ethereum block 26095799, USDat swapFacility() returned 0x0bc305e7e13113caed3f5486849e9518a1cc4173 and pyusdx() returned 0xebdb0942ce16386ab90718c7bd10c91cdb66b14d. The facility's EIP-1967 implementation was 0xc37370ba22f8c565f64fdb4d85314c14d6bb3b3f and admin was 0xc421ccea39cc9858ba613052e84f04cc2b0df53b; that ProxyAdmin owner() returned Safe 0x48670b46380fe1645f0e3e821a25162db2589d19, independently verified as 3-of-5 with no enabled modules or guard. The legacy M SwapFacility's three-day timelock is not part of this new facility's admin ownership path. USDat's verified Extension._wrap transfers PYUSDx from the facility before minting; the facility admin does not by itself remove that local backing transfer. At Ethereum block 26095799, USDat held 85,981,412.404485 PYUSDx, equal to its native totalSupply. The verified Extension._wrap transfers PYUSDx from the configured SwapFacility before minting; totalAssets() tracks alternative assets and is not the PYUSDx reserve balance. Ordinary wrapping uses a 1:1 PYUSDx transfer-before-mint check in USDat, not MinterGateway base-M collateral attestations. Legacy M balance and cap are zero. The snapshot equality does not establish upstream PYUSDx/PYUSD custody or independent reserve assurance. Wrapping and unwrapping are compliance-whitelisted; isWhitelistEnabled() is true. The facility ProxyAdmin is directly owned by a 3-of-5 Safe; separate five-day timelocks govern USDat proxy upgrades and alternative-asset caps."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "deploymentRefs": ["ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"],
+        "label": "PYUSDx SwapFacility upgrade Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f0",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 26095799,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 26095799, the PYUSDx SwapFacility ProxyAdmin owner() returned this Safe. getOwners() returned five owners, getThreshold() = 3, VERSION() = 1.4.1, getModulesPaginated(address(1),100) returned no modules, the guard slot was zero and the fallback-handler slot contained 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The admin ownership chain contains this Safe directly, not the historical M SwapFacility three-day timelock. It can change facility logic, not USDat's separately timelocked logic or its PYUSDx transfer-before-mint check. At Ethereum block 26095799, this Safe required three signatures from five owners, had no enabled modules or guard and used Safe 1.4.1. Its recorded fallback handler is not a mint-cap or timelock guarantee. This Safe directly owns the PYUSDx SwapFacility ProxyAdmin. No timelock is present in that facility admin ownership chain; the separate USDat five-day upgrade and asset-cap timelocks do not delay facility upgrades. USDat's local PYUSDx transfer-before-mint check remains in its separately controlled implementation.",
+        "sources": [
+          {
+            "label": "PYUSDx SwapFacility ProxyAdmin",
+            "url": "https://eth.blockscout.com/address/0xc421ccea39cc9858ba613052e84f04cc2b0df53b"
+          },
+          {
+            "label": "USDat verified Extension source",
+            "url": "https://eth.blockscout.com/address/0x496a4a33b6181f4536203488d9a05ac1429e702c?tab=contract"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7d343d17896d2cd87a49b4fb8872298a883f78f7",
+        "deploymentRefs": ["ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"],
+        "label": "USDat alternative-asset cap timelock",
+        "role": "cap-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "capDescription": "ASSET_CAP_MANAGER_ROLE can set MultiMint alternative-asset caps. At the observation block the legacy M cap and tracked M balance were zero, isAllowedAsset(M) was false, and totalAssets() was zero. The cap administrator can enable or resize alternative-asset admission after its delay.",
+        "canRaiseCap": true,
+        "timelockDelaySec": 432000,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
+        "sources": [
+          {
+            "label": "Saturn pinned PYUSDx migration and cap-removal runbook",
+            "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md"
+          }
+        ],
+        "evidence": "At Ethereum block 26095799, USDat hasRole(ASSET_CAP_MANAGER_ROLE,0x7d343d17896d2cd87a49b4fb8872298a883f78f7) = true; getMinDelay() = 432000. The runbook's proposer/canceller 0xa18f34a03788cfc566ce5ccb21b2715f072da3ad retained both roles; EXECUTOR_ROLE remained granted to address(0). The legacy M cap, tracked balance and actual proxy-held M balance were all zero. This parameter controller is distinct from the USDat upgrade timelock. At Ethereum block 26095799, legacy M assetCap and tracked balance were zero and isAllowedAsset(M) was false. The cap-manager role can change alternative-asset admission and limits; no fixed perpetual zero-M cap is inferred. This controller holds ASSET_CAP_MANAGER_ROLE and enforces getMinDelay() = 432000. The runbook's proposer and canceller remain authorized; executor access is open to address(0), which permits execution of ready operations but does not bypass scheduling."
       },
       {
         "chain": "ethereum",
@@ -76,42 +110,42 @@
         "canRaiseCap": true,
         "timelockDelaySec": 432000,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25570046,
-        "evidence": "At Ethereum block 25570046 (2026-07-20): EIP-1967 slots on the USDat proxy 0x23238f20b894f29041f48d88ee91131c395aaa71 read implementation 0x17cac25c6d6bbcb592837fea083a5c8eb4d1e52e and admin 0xcf1072da5f0d127aef99136489bad08bfa3d1a7d; the ProxyAdmin's owner() is TimelockController 0xfd5782e3bff366601da3973ae30c583de4f08a67 with getMinDelay() = 432,000 seconds (5 days).",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
+        "evidence": "At Ethereum block 26095799, USDat's EIP-1967 implementation was 0x496a4a33b6181f4536203488d9a05ac1429e702c and admin was 0xcf1072da5f0d127aef99136489bad08bfa3d1a7d. ProxyAdmin owner() remained 0xfd5782e3bff366601da3973ae30c583de4f08a67 and getMinDelay() = 432000. This timelock also held USDat DEFAULT_ADMIN_ROLE. Proposer/canceller 0x610182581c93687ca03f4a8e7f124f8cec616820 retained both roles and execution remained open to address(0). At Ethereum block 26095799, USDat's transparent-proxy admin is 0xcf1072da5f0d127aef99136489bad08bfa3d1a7d, owned by this five-day timelock. The controller also holds USDat DEFAULT_ADMIN_ROLE. Its proposer and canceller remain authorized and execution is open to address(0); open execution does not itself skip the 432000-second delay. The current implementation transfers PYUSDx before ordinary minting and restricts alternative assets through raiseable caps. Replacing USDat logic after the upgrade delay can change those checks; the current reserve match is not an immutable economic ceiling.",
         "sources": [
           {
-            "label": "Etherscan TimelockController 0xfd5782e3",
-            "url": "https://etherscan.io/address/0xfd5782e3bff366601da3973ae30c583de4f08a67"
+            "label": "Saturn pinned PYUSDx migration runbook",
+            "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md"
+          },
+          {
+            "label": "USDat upgrade TimelockController",
+            "url": "https://eth.blockscout.com/address/0xfd5782e3bff366601da3973ae30c583de4f08a67"
           }
         ]
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
-          "label": "M0 protocol docs",
-          "url": "https://docs.m0.org/protocol/minting-burning"
+          "label": "Saturn pinned PYUSDx migration runbook",
+          "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md"
         },
         {
-          "label": "M0 minter gateway docs",
-          "url": "https://docs.m0.org/protocol/minting-burning"
+          "label": "Saturn pinned USDat MultiMint implementation",
+          "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/src/USDat.sol"
         },
         {
-          "label": "MinterGateway on Blockscout",
-          "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
-        },
-        {
-          "label": "SwapFacility on Blockscout",
-          "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+          "label": "Saturn USDat reserve analytics",
+          "url": "https://app.saturn.credit/insights/saturn-protocol"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy (IsProxy=false, both EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); timelock proposer is Gnosis Safe 3/5. The USDat proxy logic path remains governed by its separate five-day TimelockController. Native USDat issuance is therefore limited to the M0-backed Ethereum extension path; BNB and Monad representations, pools, peer configuration, and token-admin controls are scored under Bridge Risk. Economic-posture fields reviewed 2026-08-15: M0 TTG governance controls base-M capacity while SwapFacility and USDat logic changes pass through enforced three- and five-day timelocks; real-time M0 validator/reserve reconciliation exists without named prudential supervision.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Current native issuance was re-verified at Ethereum block 26095799: USDat is the PYUSDx-backed MultiMint implementation 0x496a4a33b6181f4536203488d9a05ac1429e702c, using PYUSDx SwapFacility 0x0bc305e7e13113caed3f5486849e9518a1cc4173. PYUSDx held by the proxy equals USDat totalSupply at 85,981,412.404485 units, while actual and tracked M balances and the M asset cap are zero. The enabled compliance whitelist gates wrapping and unwrapping. Separate five-day USDat proxy-upgrade and alternative-asset-cap timelocks remain active. The PYUSDx SwapFacility's ProxyAdmin is directly owned by a verified 3-of-5 Safe with no enabled modules or guard; it does not inherit the old M SwapFacility's three-day timelock. USDat's current verified Extension code transfers PYUSDx from the facility before minting. Historical MinterGateway and M SwapFacility control claims were removed from the current USDat path after the evidenced migration; their historical M0 facts are not evidence of current USDat supervision.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA17EURSAFO)",
+      "reviewedAt": "2026-10-01"
     },
     "upgradeability": {
       "model": "transparent-proxy",
@@ -120,7 +154,7 @@
         "0x23238f20b894f29041f48d88ee91131c395aaa71"
       ],
       "implementationAddresses": [
-        "0x17cac25c6d6bbcb592837fea083a5c8eb4d1e52e"
+        "0x496a4a33b6181f4536203488d9a05ac1429e702c"
       ],
       "adminAddresses": [
         "0xcf1072da5f0d127aef99136489bad08bfa3d1a7d",
@@ -129,8 +163,8 @@
       "canChangeMintLogic": true,
       "delaySec": 432000,
       "controlRef": "USDat proxy admin timelock",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25570046,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095799,
       "sources": [
         {
           "label": "Etherscan USDat proxy (EIP-1967 slots)",

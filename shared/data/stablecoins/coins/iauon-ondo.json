@@ -14,9 +14,9 @@
   "detailProvider": "coingecko",
   "geckoId": "ishares-gold-trust-ondo-tokenized-stock",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency",
-    "provider": "Ankura Trust Company",
+    "provider": "Ankura Trust Company. The September 23, 2026 daily attestation (8pm ET) reports aggregate Ondo Stocks, USDY and USDon collateral and obligations; it does not disclose IAUon-specific IAU shares, cash weights or liabilities. The report remains reference evidence, not a dated attestation of the adapter-owned IAUon composition.",
     "attestorTier": "niche",
     "cadence": "daily-nav"
   },

@@ -22,8 +22,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Money On Chain Governor",
-      "observedAt": "2026-07-14",
-      "observedBlock": 9051085,
+      "observedAt": "2026-10-01",
+      "observedBlock": 9286868,
       "sources": [
         {
           "label": "Money On Chain published mainnet contract list (Governor, Upgrade Delegator, Admin, MoCExchange, DoCToken)",
@@ -53,6 +53,8 @@
         "capDescription": "Mint is bounded by the protocol's rBTC overcollateralization: DOC is issued only against locked rBTC and is permissionlessly redeemable for rBTC. MoCExchange cannot raise that bound itself; only a Governor-authorized Changer can alter the parameters.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 9286868,
         "sources": [
           {
             "label": "Rootstock explorer: DoCToken 0xe700691d",
@@ -89,6 +91,8 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 9286868,
         "sources": [
           {
             "label": "Money On Chain published mainnet contract list (Governor, Upgrade Delegator, Admin, MoCExchange, DoCToken)",
@@ -117,6 +121,8 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 9286868,
         "sources": [
           {
             "label": "Rootstock explorer: Money On Chain Governor 0x3b8853df",

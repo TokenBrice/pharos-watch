@@ -56,50 +56,46 @@
         "url": "https://rpc.tempo.xyz"
       }
     ],
-    "evidence": "On 2026-07-30 the full nine-chain deployment inventory was re-derived. At Ethereum block 25648350 the reUSD proxy still resolves to ShareToken implementation 0xb5276c436F65913Cd5332DE745d04feDEb4a21D4, whose Sourcify-verified ABI exposes only role-gated mint/burn with no holder blacklist, freeze, pause, or transfer hook; the Arbitrum, Base, and BNB Chain implementations are Sourcify-verified with the identical ShareToken function set, the Katana implementation 0xc84110aa47171452bacc2b6ca08ff2d862cbf968 is Sourcify-verified with the same set, and the Avalanche, Ink, Plasma, and Katana proxies all revert on blacklist(address) and paused() selector probes. The decisive surface is the Tempo TIP-20 reUSD 0x20c000000000000000000000e09a4cfec804f102: the TIP20Factory TokenCreated event at Tempo block 12906370 granted DEFAULT_ADMIN_ROLE to governance Safe 0x8eec10616802Ef639CA55c98ac856553fAdEfBaD, RoleMembershipUpdated logs show that Safe additionally holds PAUSE_ROLE and UNPAUSE_ROLE with no revocations through Tempo block 32484367, and getThreshold() = 3 confirms the Safe is live on Tempo. Under the TIP-20 specification, DEFAULT_ADMIN_ROLE can immediately set the built-in always-reject policy or any TIP-403 blocklist policy via changeTransferPolicyId, and PAUSE_ROLE can halt all transfers; the current paused() = false and transferPolicyId() = 1 (always-allow) are settings, not bounds on reach. A live 3-of-5 Safe can therefore freeze or policy-block reUSD holders on Tempo today, so the asset-level direct holder-intervention posture is reviewed true (individual reach), superseding the 2026-07-15 possible.",
-    "reviewer": "Kimi T38 unknown-reduction wave 2",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Historical July 2026 review located direct holder intervention on Tempo: TokenCreated at block 12906370 assigned the governance Safe, and role logs through block 32484367 included pause and unpause authority. Those earlier EVM ShareToken ABI/no-hook observations remain historical, not a current all-chain immunity claim. At pinned Tempo block 42066454, eth_call simulations of changeTransferPolicyId(0) and pause() from Safe 0x8eec10616802ef639ca55c98ac856553fadefbad succeed; the same policy change from an unrelated account reverts Unauthorized. The Safe currently has threshold 3 and five owners. The TIP-20 specification defines policy 0 as always-reject and these methods as privileged, so direct holder intervention remains proven even though paused() is false and transferPolicyId() is 1. Unsupported hasRole selector probes are not treated as evidence of role absence. Solana finalized slot 452213366 additionally records freezeAuthority 8trS7JTXGHrHmzE5UUnV1iJ11ipK3tkFZESHdeK2JETn; the entity controlling that key is not established. The issuer now lists a different Tempo token, while the Ethereum CCIP mapping still targets this legacy token; no legacy capability or deployment is silently retired.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA41reUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "reUSD is a senior NAV-based tranche token rather than a collateralized debt position, so it has no borrower health factor or oracle-triggered collateral liquidation branch.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Protocol-operated NAV oracles publish reUSD's daily mint and redeem price. Chainlink CRE writes the NAV and CRE/CCIP wrappers deliver that same protocol NAV; the wrappers are explicitly not independent Chainlink price oracles. The absence of borrower liquidation branches does not make this top-level price authority oracleless.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "Re Protocol recalculates reUSD's NAV and token price daily at UTC 00:00 from the reviewed yield references and publishes the accepted price through an onchain JSON/Chainlink feed. This is a price-sensitive top-level redemption and valuation authority, but reUSD has no borrower-specific debt or liquidation branches, so the disposition is top-level-only.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA41reUSD)",
+      "rationale": "The issuer explicitly identifies protocol-operated NAV feeds as the daily mint and redeem price authority. reUSD has no borrower-specific liquidation branches; its price-sensitive top-level authority remains applicable.",
       "sources": [
         {
-          "label": "How Re works",
-          "url": "https://docs.re.xyz/protocol/how-the-re-protocol-work"
-        },
-        {
-          "label": "Re Protocol FAQ: daily NAV and price update",
-          "url": "https://docs.re.xyz/"
+          "label": "Re Protocol: oracle authority and delivery paths",
+          "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/oracles.md"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA41reUSD)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Re Protocol About reUSD",
-        "url": "https://docs.re.xyz/products/about-reusd.md"
+        "label": "Re Protocol: oracle authority and delivery paths",
+        "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/oracles.md"
       },
       {
-        "label": "Re Protocol reUSD and reUSDe comparison",
-        "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+        "label": "Re Protocol: deployed NAV oracles and controllers",
+        "url": "https://docs.re.xyz/products/smart-contracts.md"
       }
     ]
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "reUSD has one native Ethereum issuance route and eight Chainlink CCIP burn/mint representation routes. The canonical-side CCIP BurnWithFromMintTokenPool is bridge machinery: it holds the Ethereum token MINTER_ROLE but can mint only through validated CCIP releaseOrMint flow and configured remote-chain lanes/rate limits. Its governance Safe owner, CCIP router/RMN validation path, peer mappings, rate limits, and emergency curse gate are represented below; the native InsuranceCapitalLayer remains the only collateral-backed native minter.",
-    "reviewedAt": "2026-08-19",
-    "reviewer": "Codex FIX-05 reUSD bridge-boundary migration; Claude solana CCIP route review (issue #881)",
+    "summary": "reUSD supports both local collateral-backed ICL deposits and Chainlink CCIP transfers. Issuer documentation and pinned minter-role reads identify native deposit paths on Ethereum, Avalanche, Arbitrum and Base, alongside their CCIP transfer pools. Reviewed CCIP controls retain Safe ownership, router/RMN validation, peer mappings and configurable rate limits. Solana's 1-of-2 mint multisig additionally permits its second member to authorize minting independently of the CCIP PDA. The legacy Tempo receive path is unresolved after pool-sender mint simulations revert Unauthorized; the current issuer-listed Tempo and MegaETH tokens also disagree with Ethereum's configured peers.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA41reUSD)",
     "confidence": "verified",
     "protocols": [
       {
@@ -111,7 +107,7 @@
           "burnAndMint",
           "external-validated-network"
         ],
-        "note": "The Ethereum canonical-side pool and eight destination pools use Chainlink CCIP validated burn/mint routes. Native Ethereum collateral-backed issuance remains separately classified as native-issuance."
+        "note": "Reviewed CCIP pools implement conserved cross-chain transfer machinery alongside local native deposit issuance on Ethereum, Avalanche, Arbitrum and Base. Berachain and Monad pool identities and token mint roles are pinned. The legacy Tempo pool remains configured but its current executable mint path is unresolved; configured peer identity alone is not proof of mint authorization."
       }
     ],
     "sources": [
@@ -126,6 +122,10 @@
       {
         "label": "reUSD on Solana (Solscan)",
         "url": "https://solscan.io/account/2uxaYT1fVrp6Fg2BrxQcyKSW91hefM6dG9krpbeDiirT"
+      },
+      {
+        "label": "Re Protocol: current local deposit and CCIP deployment inventory",
+        "url": "https://docs.re.xyz/products/smart-contracts.md"
       }
     ],
     "routes": [
@@ -150,9 +150,9 @@
           "safe:ethereum:0x8eec10616802ef639ca55c98ac856553fadefbad",
           "rmn:ethereum:0x411de17f12d1a34ecc7f45f49844626267c75e81"
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
         "canonicalChain": "ethereum",
-        "observedBlock": 25770134,
+        "observedBlock": 26095799,
         "sources": [
           {
             "label": "Re Protocol docs",
@@ -180,17 +180,16 @@
         "id": "avalanche:0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
         "destinationChain": "avalanche",
         "contractAddress": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
-        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Re Protocol native reUSD with Chainlink CCIP transfers",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on avalanche 2026-07-20 (block 90755315): TokenAdminRegistry.getPool(reUSD) = 0xd75e543c68a80a05f281aacad649c18661719ddd, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'; eth_call mint() simulation succeeds from the pool and reverts from other senders, so the CCIP pool is the mint/burn authority for this representation.",
+        "reviewNote": "At Avalanche block 96511192, issuer-listed deposit ICL 0xb22a8533e6cd81598f82514a42f0b3161745fbe1 holds MINTER_ROLE on this token, so this deployment is not exclusively a CCIP representation. Current issuer documentation explicitly supports local ICL deposits. Pool 0xd75e543c68a80a05f281aacad649c18661719ddd still governs the CCIP transfer path. The native ICL is upgradeable; its two-day timelock holds admin/upgrader roles and the 3-of-5 Safe additionally holds ICL DEFAULT_ADMIN_ROLE, retaining an immediate authorization bypass.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
+        "observedAt": "2026-10-01",
         "canonicalChain": "ethereum",
         "controllerChain": "avalanche",
         "controllerAddress": "0xd75e543c68a80a05f281aacad649c18661719ddd",
@@ -198,8 +197,12 @@
           "protocol:chainlink-ccip",
           "contract:avalanche:0xd75e543c68a80a05f281aacad649c18661719ddd"
         ],
-        "observedBlock": 90755315,
+        "observedBlock": 96511192,
         "sources": [
+          {
+            "label": "Re Protocol: local Avalanche deposit ICL and controllers",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          },
           {
             "label": "Chainlink CCIP token directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet"
@@ -214,17 +217,16 @@
         "id": "arbitrum:0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
         "destinationChain": "arbitrum",
         "contractAddress": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
-        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Re Protocol native reUSD with Chainlink CCIP transfers",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on arbitrum 2026-07-20 (block 485696031): TokenAdminRegistry.getPool(reUSD) = 0xd156a8e80a6593ddafa099f76754fdce0f808a55, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'; eth_call mint() simulation succeeds from the pool and reverts from other senders, so the CCIP pool is the mint/burn authority for this representation.",
+        "reviewNote": "At Arbitrum block 510584234, issuer-listed deposit ICL 0x802edbb1ec20548a4388abc337e4011718eb0291 holds MINTER_ROLE on this token, so this deployment is not exclusively a CCIP representation. Current issuer documentation explicitly supports local ICL deposits. Pool 0xd156a8e80a6593ddafa099f76754fdce0f808a55 still governs the CCIP transfer path. The native ICL is upgradeable; its two-day timelock holds admin/upgrader roles and the 3-of-5 Safe additionally holds ICL DEFAULT_ADMIN_ROLE, retaining an immediate authorization bypass.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
+        "observedAt": "2026-10-01",
         "canonicalChain": "ethereum",
         "controllerChain": "arbitrum",
         "controllerAddress": "0xd156a8e80a6593ddafa099f76754fdce0f808a55",
@@ -232,8 +234,12 @@
           "protocol:chainlink-ccip",
           "contract:arbitrum:0xd156a8e80a6593ddafa099f76754fdce0f808a55"
         ],
-        "observedBlock": 485696031,
+        "observedBlock": 510584234,
         "sources": [
+          {
+            "label": "Re Protocol: local Arbitrum deposit ICL and controllers",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          },
           {
             "label": "Chainlink CCIP token directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet"
@@ -248,17 +254,16 @@
         "id": "base:0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
         "destinationChain": "base",
         "contractAddress": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
-        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Re Protocol native reUSD with Chainlink CCIP transfers",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on base 2026-07-20 (block 48862869): TokenAdminRegistry.getPool(reUSD) = 0x76eb70425066b4f260e23492575a5835daf9ef46, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'; eth_call mint() simulation succeeds from the pool and reverts from other senders, so the CCIP pool is the mint/burn authority for this representation.",
+        "reviewNote": "At Base block 52024126, issuer-listed deposit ICL 0xd75ea2fd3d00399df7b7241ab7a189085ab2ede9 holds MINTER_ROLE on this token, so this deployment is not exclusively a CCIP representation. Current issuer documentation explicitly supports local ICL deposits. Pool 0x76eb70425066b4f260e23492575a5835daf9ef46 still governs the CCIP transfer path. The native ICL and token expose admin/upgrader roles held by the two-day timelock; checked Safe admin/upgrader roles are false. No exhaustive role-holder inventory is asserted.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
+        "observedAt": "2026-10-01",
         "canonicalChain": "ethereum",
         "controllerChain": "base",
         "controllerAddress": "0x76eb70425066b4f260e23492575a5835daf9ef46",
@@ -266,8 +271,12 @@
           "protocol:chainlink-ccip",
           "contract:base:0x76eb70425066b4f260e23492575a5835daf9ef46"
         ],
-        "observedBlock": 48862869,
+        "observedBlock": 52024126,
         "sources": [
+          {
+            "label": "Re Protocol: local Base deposit ICL and controllers",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          },
           {
             "label": "Chainlink CCIP token directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet"
@@ -420,13 +429,13 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x20c000000000000000000000e09a4cfec804f102",
         "protocol": "Chainlink CCIP (reUSD BurnMintTokenPool)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Tempo 2026-07-20: TIP-20 token 0x20c000000000000000000000e09a4cfec804f102 (symbol reUSD) is registered in the Tempo CCIP TokenAdminRegistry 0x60A97bd9ACf755954Ff0fE85837224f2920a57F3 with getPool() = 0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e, whose typeAndVersion() = 'BurnMintTokenPool 2.0.0'; the Katana reUSD CCIP pool's getRemoteToken(Tempo selector 7281642695469137430) returns this token address. The CCIP pool is the mint/burn authority for this representation.",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Historical July 2026 review identified this CCIP pool and token mapping. At Ethereum block 26095799 the Tempo selector still maps to this token, and at Tempo block 42066454 the pool getToken() returns it and typeAndVersion() is BurnMintTokenPool 2.0.0. However, a mint(Safe,1) eth_call simulation from the pool reverts Unauthorized on both this legacy token and the issuer's newly listed Tempo token 0x20c000000000000000000000383a23bacb546ab9. Both tokens have nonzero supply. The current executable issuance/bridge path is therefore unresolved; a configured peer is not proof of working mint authorization. No deployment is retired and no alternative route is invented.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "tempo",
         "controllerAddress": "0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e",
@@ -434,8 +443,13 @@
           "protocol:chainlink-ccip",
           "contract:tempo:0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 42066454,
         "sources": [
+          {
+            "label": "Re Protocol: current Tempo deployment disclosure",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          },
           {
             "label": "Chainlink CCIP token directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet"
@@ -488,6 +502,66 @@
             "url": "https://docs.re.xyz/products/smart-contracts"
           }
         ]
+      },
+      {
+        "id": "berachain:0xd156a8e80a6593ddafa099f76754fdce0f808a55",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd156a8e80a6593ddafa099f76754fdce0f808a55",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Berachain block 26911440 the issuer-listed token returns symbol reUSD and decimals 18. Pool 0x6022c05282477f1aba5547602a3b5e72a673cdb9 returns this token from getToken(), BurnWithFromMintTokenPool 2.0.0 from typeAndVersion(), and governance Safe ownership. The pool has MINTER_ROLE on this token; the Ethereum pool's selector 1294465214383781161 maps to the same token and pool.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x6022c05282477f1aba5547602a3b5e72a673cdb9",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0x6022c05282477f1aba5547602a3b5e72a673cdb9"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26911440,
+        "sources": [
+          {
+            "label": "Re Protocol: token and CCIP pool deployment inventory",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          }
+        ]
+      },
+      {
+        "id": "monad:0xd25f563e12ff616262f8c947fec108db934f8059",
+        "sourceChain": "ethereum",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd25f563e12ff616262f8c947fec108db934f8059",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Monad block 109541472 the issuer-listed token returns symbol reUSD and decimals 18. Pool 0x2ba4e08af6889c4803747a292f69a0ee9bf3dd0c returns this token from getToken(), BurnWithFromMintTokenPool 2.0.0 from typeAndVersion(), and governance Safe ownership. The pool has MINTER_ROLE on this token; the Ethereum pool's selector 8481857512324358265 maps to the same token and pool.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "monad",
+        "controllerAddress": "0x2ba4e08af6889c4803747a292f69a0ee9bf3dd0c",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0x2ba4e08af6889c4803747a292f69a0ee9bf3dd0c"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541472,
+        "sources": [
+          {
+            "label": "Re Protocol: token and CCIP pool deployment inventory",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          }
+        ]
       }
     ],
     "controls": [
@@ -528,20 +602,20 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedAt": "2026-08-16",
-          "observedBlock": 25770134,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095799,
           "source": "safe-api"
         },
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "lockboxOrEscrow": "BurnWithFromMintTokenPool burns reUSD held by the pool on outbound transfers and mints only from releaseOrMint after CCIP validation; this is conserved bridge supply machinery, not a reserve lockbox or independent native collateral path.",
-          "trustedPeerOrRemote": "At Ethereum block 25770134, the verified pool exposed 12 supported CCIP chain selectors and a non-empty getRemotePools() mapping for each selector. The mappings include the authored Avalanche, Arbitrum, Base, BSC, Ink, Plasma, Katana, and Tempo representation lanes; getRemoteToken() mappings and getRemotePools() are owner-controlled through the verified addRemotePool/removeRemotePool/applyChainUpdates surfaces.",
-          "attestorQuorum": "The verified BurnWithFromMintTokenPool routes releaseOrMint through the Chainlink CCIP router 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d and RMN proxy 0x411de17f12d1a34ecc7f45f49844626267c75e81. The RMN implementation's isCursed() read was false at block 25770134, so no global emergency curse was active at observation time.",
-          "rateLimits": "At block 25770134, getCurrentRateLimiterState() returned the same enabled outbound bucket for all 12 supported selectors: capacity 1000000000000000000000000 and rate 277777777777777777777; every inbound bucket was disabled. The pool also exposes owner-controlled setRateLimitConfig() and dynamic rate-limit administration. The pool's getDynamicConfig() returned rateLimitAdmin = 0 and feeAdmin = 0, leaving no separately identified non-owner admin in the observed configuration.",
+          "trustedPeerOrRemote": "At Ethereum block 26095799, getSupportedChains() returns 12 selectors and getRemotePools() is non-empty for each. getRemoteToken() confirms the authored Avalanche, Arbitrum, Base, BSC, Ink, Plasma, Katana, Tempo, Solana, Berachain and Monad identities. The MegaETH selector 9027416829622342829 instead maps to 0x0a790e1f85594e27d8eb26907fe280f0e0f166de, which differs from the current issuer-listed MegaETH token and remains unresolved. Peer mappings are owner-controlled.",
+          "attestorQuorum": "At Ethereum block 26095799, getDynamicConfig() returns Chainlink CCIP router 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d and getRmnProxy() returns 0x411de17f12d1a34ecc7f45f49844626267c75e81. RMNProxy getARM() returns 0x0b047953451a207743fb62541b21199b95190602; isCursed() is false.",
+          "rateLimits": "At Ethereum block 26095799, getCurrentRateLimiterState(selector,false) returns enabled outbound and inbound buckets for all 12 supported selectors. Outbound capacity is 1000000000000000000000000 and rate 277777777777777777777; inbound capacity is 1100000000000000000000000 and rate 305555555555555555555. This replaces the historical block 25770134 observation of disabled inbound buckets. The verified owner-controlled setRateLimitConfig() can change these bounds; getDynamicConfig() has zero separate rate-limit and fee admins.",
           "pausersAdminsUpgraders": "The Ethereum pool has deployed verified BurnWithFromMintTokenPool code, is not an EIP-1967 proxy, and exposes no pool-local pause or upgrade function. The 3-of-5 governance Safe 0x8eec10616802ef639ca55c98ac856553fadefbad owns the pool and controls its remote-pool, rate-limit, finality, hook, and dynamic configuration surfaces. Emergency halting is represented by the separate RMN curse control below; the RMNProxy owner read was 0x44835bbba9d40deda9b64858095ecfb2693c9449 and its ARM implementation was 0x0b047953451a207743fb62541b21199b95190602."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770134,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "sources": [
           {
             "label": "Verified reUSD BurnWithFromMintTokenPool",
@@ -560,7 +634,7 @@
             "url": "https://docs.chain.link/ccip/concepts"
           }
         ],
-        "evidence": "At Ethereum block 25770134, the pool owner() read returned governance Safe 0x8eec10616802ef639ca55c98ac856553fadefbad, typeAndVersion() returned BurnWithFromMintTokenPool 2.0.0, getToken() returned native reUSD 0x5086bf358635b81d8c47c66d1c8b9e567db70c72, and getDynamicConfig() returned Chainlink Router 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d with zero separate rate-limit and fee admins. The verified non-proxy ABI exposes releaseOrMint/lockOrBurn plus owner-administered remote-pool, rate-limit, finality, hook, and dynamic-config methods. Fixed-block reads returned 12 supported CCIP selectors, a non-empty remote-pool mapping for every selector, and the authored destination pool identities; all 12 selectors had an enabled outbound bucket with capacity 1000000000000000000000000 and rate 277777777777777777777, while all inbound buckets were disabled. The pool's RMN proxy was 0x411de17f12d1a34ecc7f45f49844626267c75e81, whose ARM implementation was 0x0b047953451a207743fb62541b21199b95190602 and whose isCursed() read was false."
+        "evidence": "Pinned Ethereum block 26095799 confirms pool ownership by the 3-of-5 Safe, token identity, BurnWithFromMintTokenPool 2.0.0, the configured Chainlink router and RMN proxy, and 12 supported selectors with non-empty remote pools. Verified source exposes validated releaseOrMint/lockOrBurn and owner-controlled configuration. All 12 standard-finality outbound buckets remain enabled at capacity 1000000000000000000000000 and rate 277777777777777777777; all 12 inbound buckets are now enabled at capacity 1100000000000000000000000 and rate 305555555555555555555, superseding their disabled state at historical block 25770134. The remote MegaETH token disagrees with the issuer's current token list and is not promoted. RMNProxy owner and ARM implementation are unchanged, and isCursed() is false."
       },
       {
         "id": "reusd-ethereum-ccip-rmn-emergency",
@@ -581,10 +655,10 @@
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "pausersAdminsUpgraders": "The pool has no local pause function; Chainlink's RMN emergency curse gate is reached through RMNProxy fallback. At block 25770134 the RMN implementation returned isCursed() = false. The ARMProxy owner was 0x44835bbba9d40deda9b64858095ecfb2693c9449 and getARM() returned 0x0b047953451a207743fb62541b21199b95190602; this emergency/admin identity is kept separate from the reUSD governance Safe's pool configuration authority."
+          "pausersAdminsUpgraders": "At Ethereum block 26095799, the verified pool still has no local pause function and reaches Chainlink's RMN emergency curse gate through RMNProxy. isCursed() is false. RMNProxy owner is 0x44835bbba9d40deda9b64858095ecfb2693c9449 and getARM() returns 0x0b047953451a207743fb62541b21199b95190602; this authority remains separate from the reUSD governance Safe."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770134,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "sources": [
           {
             "label": "Chainlink RMNProxy source",
@@ -599,7 +673,7 @@
             "url": "https://eth.blockscout.com/api/eth-rpc"
           }
         ],
-        "evidence": "The CCIP pool's getRmnProxy() returned 0x411de17f12d1a34ecc7f45f49844626267c75e81 at block 25770134. RMNProxy getARM() returned 0x0b047953451a207743fb62541b21199b95190602, and the ARM implementation's isCursed() returned false. The pool-local ABI has no pause method, so this validated emergency curse gate is the scoreable pause/emergency surface for the canonical-side CCIP route."
+        "evidence": "At pinned Ethereum block 26095799 the CCIP pool's getRmnProxy() returns 0x411de17f12d1a34ecc7f45f49844626267c75e81. RMNProxy getARM() returns 0x0b047953451a207743fb62541b21199b95190602 and isCursed() returns false. Re-fetched verified pool and RMN source preserve the same emergency curse path and controller identity."
       }
     ]
   }

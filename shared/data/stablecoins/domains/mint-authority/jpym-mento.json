@@ -19,6 +19,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "JPYm debt mints are constrained by USDm collateral and the JPYm V3 oracle/liquidation rules; BorrowerOperationsv300JPYm is a deployed non-proxy CDP branch contract.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78938514,
         "sources": [
           {
             "label": "Mento deployments registry",
@@ -44,6 +46,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "ActivePoolv300JPYm mints only collateral/accounting-bound aggregate interest and management-fee amounts for the native JPYm CDP branch; it is a deployed non-proxy protocol pool rather than an arbitrary governance minter.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78938514,
         "sources": [
           {
             "label": "Mento deployments registry",

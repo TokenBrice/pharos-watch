@@ -9,7 +9,7 @@
     "issuerPathway": "federal-qualified-nonbank",
     "issuerEntity": "Agora Bermuda Limited",
     "issuerDomicile": "Bermuda",
-    "licensingRegulator": "BMA (current); OCC national trust bank application for Agora National Trust Bank (filed 2026-04-20, under review)",
+    "licensingRegulator": "BMA (current issuer); OCC granted Agora National Trust Bank preliminary conditional charter approval on 2026-09-18, with final approval and permission to commence business still subject to preopening requirements",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -17,7 +17,7 @@
     "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: Agora filed its OCC national trust bank charter application on April 20, 2026 (received by OCC; public portion available as PDF on OCC licensing page), pursuing the federal-qualified-nonbank pathway under GENIUS Act. CEO Nick van Eck confirmed in April 2026 that the OCC trust charter is Agora's intended GENIUS Act onshore PPSI pathway. No PPSI approval has been granted: GENIUS Act rulemaking is still in proposed-rules phase as of 2026-06-18. No registered foreign-issuer exception found. Application status: under review (not approved). Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
+    "notes": "OCC Corporate Decision 1393 dated September 18, 2026 grants preliminary conditional approval to Agora National Trust Bank, a proposed affiliate of current AUSD issuer Agora Bermuda Limited. The decision explicitly withholds final approval and authorization to commence business until preopening requirements are met. It describes a future cutover of AUSD reserve assets and liabilities from Agora Bermuda to the Bank after establishment. This is not evidence of completed issuer migration or GENIUS PPSI approval, so issuerEntity and authorizationStatus remain unchanged. The negativeEvidenceReview below records the historical June 18 search and is not a current charter-status assertion.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -39,10 +39,11 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "ChainCatcher: Agora CEO on OCC charter and GENIUS Act federal pathway intent",
-        "url": "https://www.chaincatcher.com/en/article/2262780",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "label": "OCC Corporate Decision 1393: Agora preliminary conditional charter approval and proposed AUSD cutover",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1393.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-18",
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Agora transparency",
@@ -71,7 +72,7 @@
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-06-18"
     },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewer": "Sol curation pass 2026-10-01 (CurA31YLDS)",
+    "reviewedAt": "2026-10-01"
   }
 }

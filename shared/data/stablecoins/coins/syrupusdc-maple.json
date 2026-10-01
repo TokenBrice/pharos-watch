@@ -40,11 +40,29 @@
   "geckoId": "syrupusdc",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://maple.finance/transparency",
-    "provider": "The Network Firm (PoR programme launched 2026-05-07; maple.finance/transparency serves live AUM/treasury figures, but the announced TNF collateralization report itself remains 'coming soon' and is not yet published there)",
+    "url": "https://dashboard.ledgerlens.io/c/maple",
+    "provider": "The Network Firm (combined syrupUSDC and syrupUSDT collateral verification dashboard; last verified 2026-09-29 at 01:00 UTC, not a syrupUSDC-specific reserve-to-liability reconciliation)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "reviewReference": {
+        "date": "2026-09-29",
+        "reviewedAt": "2026-10-01",
+        "dateKind": "unspecified"
+      },
+      "assuranceMethod": "unknown",
+      "scope": "assets-only",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA22syrupUSDC)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "The Network Firm combined syrupUSDC and syrupUSDT collateral verification",
+          "url": "https://dashboard.ledgerlens.io/c/maple"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -99,6 +117,11 @@
     {
       "chain": "tempo",
       "address": "0x20c0000000000000000000008191667423f70e67",
+      "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0x0dc6b79f3c3854e4d74514fd4d29be6c96beee39",
       "decimals": 6
     }
   ],

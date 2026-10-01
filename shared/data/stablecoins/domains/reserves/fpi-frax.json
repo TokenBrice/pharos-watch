@@ -91,7 +91,7 @@
     "compositionBasis": "Frax FPI collateral API snapshot captured on 2026-08-08; ferry/liability entries excluded from the reserve mix",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "All positive reserve positions returned by the first-party endpoint are identified and classified; pool composition, unwind depth, and governance-token market risks remain structured within the classified exposures.",
+    "knownUnknownExposure": "The issuer API fetched on 2026-10-01 lists a Fraxtal sfrxUSD entry with valueUsd null and no tokenQuantity or tokenPrice. This entry does not establish a nonzero balance or a reserve share. The authored composition remains the historical 2026-08-08 snapshot, not a current complete portfolio observation.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

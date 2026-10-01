@@ -31,6 +31,7 @@ function makeMeta(contracts: StablecoinMeta["contracts"], id = "test-stablecoin"
   } as StablecoinMeta;
 }
 
+
 describe("supportsOnchainSupplyProbe", () => {
   it("accepts strict EVM addresses and Solana addresses", () => {
     expect(supportsOnchainSupplyProbe({
@@ -55,6 +56,15 @@ describe("supportsOnchainSupplyProbe", () => {
       address: "0x0000000000000000000000000000000000000001",
       decimals: 18,
     })).toBe(false);
+  });
+
+  it.each(["movement", "aptos"])("validates %s metadata addresses without conflating reader families", (chain) => {
+    for (const address of ["0x1", `0x${"a".repeat(64)}`]) {
+      expect(onchainSupplyProbeFamily({ chain, address, decimals: 6 })).toBe(chain);
+    }
+    for (const address of ["0x", "0xnot-hex", `0x${"1".repeat(65)}`]) {
+      expect(onchainSupplyProbeFamily({ chain, address, decimals: 6 })).toBeNull();
+    }
   });
 
   // Platform extension: non-EVM legs must be able to join a fail-closed
@@ -273,12 +283,12 @@ describe("curated on-chain supply paths", () => {
       canonical: "ethereum", zero: ["codex"], endpoints: { fraxtal: "https://rpc.frax.com" } },
     { id: "syrupusdt-maple", chains: ["ethereum", "plasma", "bsc", "mantle", "ink"],
       canonical: "ethereum", endpoints: { ink: "https://rpc-gel.inkonchain.com" } },
-    { id: "syrupusdc-maple", chains: ["ethereum", "base", "arbitrum", "solana", "ink", "monad", "robinhood", "tempo"],
+    { id: "syrupusdc-maple", chains: ["ethereum", "base", "arbitrum", "solana", "ink", "monad", "robinhood", "tempo", "arc"],
       canonical: "ethereum", mint: "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj", endpoints: { monad: "https://rpc.monad.xyz" } },
     { id: "witry-brix", chains: ["ethereum", "megaeth"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum"], zero: ["ethereum"],
       endpoints: { base: undefined, ethereum: undefined } },
-    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain"], canonical: "plasma",
+    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos"], canonical: "plasma",
       zero: ["hyperevm"],
       endpoints: { plasma: "https://rpc.plasma.to", monad: "https://rpc.monad.xyz" } },
     { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon", "harmony"],
@@ -486,7 +496,7 @@ describe("hasRuntimeOnchainSupplyPath", () => {
 });
 
 
-it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])("covers every reviewed deployment for %s and rejects a missing leg", (id) => {
+it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "syrupusdc-maple", "susdt-spark"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
   const meta = TRACKED_META_BY_ID.get(id)!;
   const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
   expect(selected.map(({ contract }) => `${contract.chain}:${contract.address}`).sort()).toEqual(
@@ -496,6 +506,7 @@ it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])("covers every revi
     expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta, contracts: meta.contracts!.filter((entry) => entry !== contract) })).toBeNull();
   }
 });
+
 
 it("fails a canonical roster closed on an unselected registered deployment unless a residual policy records the remainder", () => {
   const unselected = { chain: "polygon", address: "0x0000000000000000000000000000000000000001", decimals: 6 };

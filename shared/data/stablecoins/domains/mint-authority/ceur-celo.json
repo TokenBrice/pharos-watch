@@ -21,8 +21,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Mento EURm token owner Safe",
-      "observedAt": "2026-07-20",
-      "observedBlock": 72682852,
+      "observedAt": "2026-10-01",
+      "observedBlock": 78936968,
       "sources": [
         {
           "label": "Celo EURm proxy",
@@ -51,6 +51,8 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78936968,
         "capDescription": "Mento Broker minting is rate-limited by Mento exchange limits and circuit breakers on the EURm FPMM pool.",
         "sources": [
           {
@@ -74,17 +76,28 @@
         "signerCount": 6,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78936968,
         "failureDomainKeys": [
           "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
         ],
         "safe": {
           "version": "1.4.1+L2",
           "threshold": 4,
+          "owners": [
+            "0xb1074d0f9e54763e073c7fdb25b622b4326327cb",
+            "0x95be2b73d313768d3b2dfeeca3213ed0a6434060",
+            "0x66b94446f5ff3f0d8673c1f502a298b50ba2f0ce",
+            "0x6dec25d7be9bf6c6fc302977629f2e801e98611c",
+            "0x7a678c8f9e8a7ac08c8c6f34d38126f3219958f2",
+            "0x628ffa32ab958c5b9ce74d8b81d73f335c3776b0"
+          ],
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "source": "safe-api",
-          "observedBlock": 69293381
+          "source": "onchain",
+          "observedAt": "2026-10-01",
+          "observedBlock": 78936968
         },
         "sources": [
           {

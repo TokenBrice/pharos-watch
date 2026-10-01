@@ -30,10 +30,10 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "canRaiseCap": "unknown",
-        "evidence": "2026-07-20 full SetModule/SubmitModule event enumeration from block 0 on the USDU token 0xdde3ec717f220fc6a29d6a4be73f91da5b718e55: 9 module addresses were ever submitted, 4 have since expired. checkValidModule() = true today for exactly these five adapters: 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. 0xfb46481a… has a never-expiring module grant (expiredAt = 2^256-1); the other four expire 2027-10 (modules() reads). All approvals were submitted by the curator DAO proxy 0x9fe66037c44236c87d9ac8345f489b4413fdff06.",
+        "evidence": "At Ethereum block 26095942 on 2026-10-01, checkValidModule(address) returned true for 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45 and false for the four other previously recorded adapters: 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, and 0x397fb4a34757ac180c0841b26131f25040e2e50b. This is a re-check of the five historical candidates, not an exhaustive current module enumeration. The 2026-07-20 historical review found nine submitted modules and five then-valid modules; its 2027 expiry descriptions do not establish present validity.",
         "address": "0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573280,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095942,
         "failureDomainKeys": [
           "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
           "ethereum:0x8f36bbee57acb4857cb97898020b529969fdf221",

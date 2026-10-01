@@ -9,11 +9,11 @@
     "rwa": true
   },
   "collateral": "Variable reserve mix of cash, U.S. Treasury bills, and fiat-referenced stablecoins approved by United Stables.",
-  "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
+  "pegMechanism": "Issuer-managed minting against eligible assets and redemption for issuer-selected cash or stablecoins, restricted to approved Mint Users. Ethereum/BSC token owners can mint without a reserve-oracle check; Chainlink publishes aggregate reserve data.",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://u.tech/por",
-    "provider": "Chainlink Proof of Reserve feed on BNB Chain (u-por, linked from the issuer PoR page since July 2026; Ceffu provides custody per Ceffu's announcement, but no downloadable custodian attestation was retrievable and the feed's heartbeat/source metadata could not be verified)",
+    "provider": "Chainlink U Reserves feed on BNB Chain (0xFa8e834DD2200923C706e6438d9030dB029B0c18; reference data directory identifies Stablemint Labs, third-party off-chain reserves, 18 decimals and an 86,400-second heartbeat). Ceffu separately provides digital-asset custody and MirrorX settlement; custody is not reserve-to-liability assurance.",
     "attestorTier": "niche",
     "cadence": "real-time"
   },

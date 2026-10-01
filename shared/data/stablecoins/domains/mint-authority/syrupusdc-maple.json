@@ -20,7 +20,9 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "capDescription": "syrupUSDC shares are minted/burned by the Maple ERC-4626 vault against USDC deposits and FIFO-queued withdrawals; this share accounting cannot create or destroy base USDC supply.",
-        "evidence": "At Ethereum block 25295167: asset() returned USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48. EIP-1967 impl slot = 0x0 and admin slot = 0x0 (not upgradeable). No proxy admin or module surface detected. Wrapper share accounting only."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
+        "evidence": "At Ethereum block 26095801, asset() returned USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; the token's EIP-1967 implementation and correctly addressed admin slots were zero. The verified MaplePool token is not a proxy, but manager() returned upgradeable PoolManager 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f, whose implementation() was 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. Token immutability does not establish immutability of the manager-dependent accounting or deposit controls."
       },
       {
         "chain": "ethereum",
@@ -34,6 +36,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Ethereum USDC contract",
@@ -54,6 +58,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Ethereum USDC contract",
@@ -61,6 +67,37 @@
           }
         ],
         "evidence": "Underlying USDC token owner/admin can authorize USDC mint administration; syrupUSDC wrapper shares inherit this base USDC authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f",
+        "deploymentRefs": [
+          "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+        ],
+        "label": "Maple syrupUSDC upgradeable PoolManager",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "MaplePool delegates native share-mint eligibility, liquidity limits and totalAssets accounting to this upgradeable PoolManager. The scheduled pool delegate or security admin can request a factory-approved implementation upgrade. This affects syrupUSDC share issuance and does not grant authority to mint base USDC.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095936,
+        "sources": [
+          {
+            "label": "Verified current MaplePoolManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+          },
+          {
+            "label": "Verified MaplePool share issuance and manager calls",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+          },
+          {
+            "label": "Verified Maple PoolManager factory upgrade admission",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339"
+          }
+        ],
+        "evidence": "At Ethereum block 26095936, MaplePool manager() returned 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f and manager implementation() returned 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. poolDelegate was 0xc1e18ffd8825ffb286d177ddebeba345ec70b49f; securityAdmin was 0x6b1a78c1943b03086f7ee53360f9b0672bd60818; factory was 0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339. Verified MaplePool deposit/mint functions use manager canCall and totalAssets. Verified manager upgrade requires a valid scheduled pool-delegate call or the security admin; its factory checks an enabled upgrade path. Governor controls factory implementation registration and path admission. No exact current schedule delay or exhaustive enabled-version census is asserted."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -88,13 +125,36 @@
       "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority."
     },
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-20",
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+      ],
+      "proxyAddresses": [
+        "0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f"
+      ],
+      "implementationAddresses": [
+        "0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      ],
+      "adminAddresses": [
+        "0xc1e18ffd8825ffb286d177ddebeba345ec70b49f",
+        "0x6b1a78c1943b03086f7ee53360f9b0672bd60818"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Maple syrupUSDC upgradeable PoolManager",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095936,
       "sources": [
         {
-          "label": "syrupUSDC on Etherscan",
-          "url": "https://etherscan.io/address/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b#code"
+          "label": "Verified MaplePool manager-dependent native share issuance",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+        },
+        {
+          "label": "Verified current MaplePoolManager upgrade implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+        },
+        {
+          "label": "Verified Maple PoolManager factory upgrade admission",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339"
         }
       ]
     }

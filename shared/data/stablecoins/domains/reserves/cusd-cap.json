@@ -83,5 +83,38 @@
         ]
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Cap Ethereum cUSD vault (0xcccc62962d17b8914c62d74ffb843d73b2a3cccc)",
+        "role": "other"
+      },
+      {
+        "name": "Cap fractional reserve vaults and borrower positions",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA07USD1)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Cap vault storage, issuance, redemption and borrower accounting",
+        "url": "https://docs.cap.app/concepts/vault"
+      },
+      {
+        "label": "Cap fractional reserve deployment and strategy mechanics",
+        "url": "https://docs.cap.app/concepts/vault/fractional-reserves.md"
+      },
+      {
+        "label": "Cap official vault and fractional reserve addresses",
+        "url": "https://docs.cap.app/developers/addresses"
+      }
+    ],
+    "uncertainty": "The protocol documents on-chain vault storage, lending to borrowers and investment into fractional reserve strategies. Pinned Ethereum block 26095806 identifies USDC and WTGXX and their separate fractional reserve vaults. No provider shares, legal segregation, bankruptcy-remoteness or rehypothecation safeguards are inferred; underlying stablecoins and fund tokens retain their own off-chain custody exposure."
   }
 }

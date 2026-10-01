@@ -9,13 +9,13 @@
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": ["0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc"],
-      "implementationAddresses": ["0xb606fb370eaaad03d71b49ae5e42aa4aec7458d9"],
+      "implementationAddresses": ["0xd1f1c3f485063712873285bf4ef25ab068f13893"],
       "adminAddresses": ["0x41c838664a9c64905537ff410333b9f5964cc596"],
       "canChangeMintLogic": true,
       "delaySec": 604800,
       "controlRef": "USD3 proxy upgrade timelock",
-      "observedAt": "2026-07-13",
-      "observedBlock": 25524745,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095802,
       "sources": [
         {
           "label": "3Jane contract addresses",
@@ -38,15 +38,15 @@
         "capDescription": "ERC-4626 shares are minted only against USDC deposits; the reviewed implementation exposes no privileged unbacked mint path.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25524745,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "3Jane USD3 source",
             "url": "https://github.com/3jane-protocol/moneymarket-contracts/blob/main/src/usd3/USD3.sol"
           }
         ],
-        "evidence": "The deployed USD3 strategy follows ERC-4626 deposit and mint accounting against USDC. Token supply changes through deposits, withdrawals, redemptions, and proxy-upgradeable strategy logic rather than a separate privileged token minter."
+        "evidence": "At Ethereum block 26095802, asset() returned canonical USDC and the EIP-1967 implementation was source-verified USD3 0xd1f1c3f485063712873285bf4ef25ab068f13893. Deposits mint ERC-4626 shares against USDC; management can exempt self-deposit receivers from the ordinary supply cap, but this does not create an unbacked mint path."
       },
       {
         "chain": "ethereum",
@@ -56,11 +56,11 @@
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "timelockDelaySec": 86400,
-        "capDescription": "ProtocolConfig held a 75,000,000 USDC supply cap and 100% max-on-credit setting at the observed block; the timelock can change these limits.",
+        "capDescription": "ProtocolConfig held a 100,000,000 USDC supply cap and 100% max-on-credit setting at block 26095802; management can exempt self-deposit receivers from ordinary supply-cap headroom.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25524745,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "3Jane protocol configuration",
@@ -71,7 +71,7 @@
             "url": "https://docs.3jane.xyz/developers/addresses"
           }
         ],
-        "evidence": "Onchain ProtocolConfig reads at block 25524745 returned a 75,000,000 USDC supply cap, maxOnCredit of 10,000 bps, and a minimum timelock delay of 86,400 seconds. The 3Jane Safe is a proposer and executor."
+        "evidence": "At Ethereum block 26095802, ProtocolConfig getUsd3SupplyCap() returned 100000000000000, getMaxOnCredit() returned 10000, and owner() returned this timelock. Its getMinDelay() returned 86400. Safe 0x33333333bd7045f1a601a1e289d7ab21036fb5ef held proposer, executor, and canceller roles; USD3 management() returned this timelock."
       },
       {
         "chain": "ethereum",
@@ -83,19 +83,19 @@
         "timelockDelaySec": 604800,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25524745,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "Ethereum USD3 proxy",
             "url": "https://eth.blockscout.com/address/0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc"
           }
         ],
-        "evidence": "The EIP-1967 proxy admin is 0x41c838664a9c64905537ff410333b9f5964cc596. Its owner is this OpenZeppelin timelock, whose getMinDelay() returned 604,800 seconds at the observed block."
+        "evidence": "At Ethereum block 26095802, the correct EIP-1967 admin slot resolved to 0x41c838664a9c64905537ff410333b9f5964cc596. Its owner() returned this timelock, whose getMinDelay() returned 604800; the current 3Jane Safe held proposer, executor, and canceller roles."
       },
       {
         "chain": "ethereum",
-        "address": "0x33333333c480194b5b651987b7d00cb9427365b7",
+        "address": "0x33333333bd7045f1a601a1e289d7ab21036fb5ef",
         "label": "3Jane governance Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -105,7 +105,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
-          "version": "1.3.0+L2",
+          "version": "1.3.0",
           "owners": [
             "0x208662548D73755b4C96a9f7809a035910E55631",
             "0x5A519B341962307a98BB196EcFc21b8fa89395D1",
@@ -118,20 +118,20 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "observedBlock": 25524745,
-          "observedAt": "2026-07-13",
-          "source": "safe-api"
+          "observedBlock": 26095802,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 25524745,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "failureDomainKeys": ["3jane-governance-safe"],
         "sources": [
           {
-            "label": "Safe Transaction Service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x33333333c480194b5b651987b7d00cb9427365b7/"
+            "label": "3Jane contract addresses",
+            "url": "https://docs.3jane.xyz/developers/addresses"
           }
         ],
-        "evidence": "The Safe Transaction Service reported five owners, a threshold of three, no enabled modules, and no guard. The Safe holds proposer, executor, and canceller roles on the reviewed timelocks and is the strategy management and keeper."
+        "evidence": "Pinned Ethereum reads at block 26095802 confirmed five owners, threshold three, VERSION() 1.3.0, no enabled modules, zero guard and module-guard storage, and fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. This issuer-listed Safe holds proposer, executor, and canceller roles on both timelocks. USD3 management is the one-day timelock; keeper() is 0xc22158100b823e1ef612fba265941efe9e7d7975. The previously recorded Safe address returned empty data for getOwners() and getThreshold()."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -152,13 +152,13 @@
           "url": "https://eth.blockscout.com/address/0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc"
         },
         {
-          "label": "Safe Transaction Service",
-          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x33333333c480194b5b651987b7d00cb9427365b7/"
+          "label": "USD3 verified current implementation",
+          "url": "https://eth.blockscout.com/address/0xd1f1c3f485063712873285bf4ef25ab068f13893#code"
         }
       ],
-      "evidence": "At Ethereum block 25524745, USD3 was a TransparentUpgradeableProxy using implementation 0xb606fb370eaaad03d71b49ae5e42aa4aec7458d9. A 3-of-5 Safe controls protocol operations through one-day and seven-day timelocks. Deposits were permissionless, the configured supply cap was 75 million USDC, and the reviewed implementation exposed no independent unbacked mint function. Economic-posture fields reviewed 2026-08-15: the local cap-raise path is enforced by the one-day configuration timelock, mint-logic replacement by the seven-day upgrade timelock, and live on-chain vault accounting covers all USD3 shares without independent attestation or prudential supervision.",
-      "reviewer": "OpenAI Codex mint-authority review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 26095802, USD3 used source-verified implementation 0xd1f1c3f485063712873285bf4ef25ab068f13893 and proxy admin 0x41c838664a9c64905537ff410333b9f5964cc596 owned by the seven-day timelock. The issuer-listed 3-of-5 Safe 0x33333333bd7045f1a601a1e289d7ab21036fb5ef holds proposer, executor, and canceller roles on the one-day configuration and seven-day upgrade timelocks. ProtocolConfig's supply cap is 100 million USDC and maxOnCredit is 100%; management can exempt self-deposit receivers from supply-cap headroom. USD3 management is the configuration timelock and its keeper is 0xc22158100b823e1ef612fba265941efe9e7d7975. The current implementation retains deposit-backed share issuance and live accounting; prudential supervision remains unestablished.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA39GUSD)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

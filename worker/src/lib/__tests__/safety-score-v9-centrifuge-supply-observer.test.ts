@@ -1,4 +1,8 @@
+import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it, vi } from "vitest";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types/core";
+import currentJtrsyRisk from "@shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json";
 import type { ChainRpcConfig } from "../chain-registry";
 import { makeChainRpcs } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import type {
@@ -185,6 +189,31 @@ async function observe(
 }
 
 describe("Centrifuge reviewed deployment observer", () => {
+  it("rejects the current unresolved Solana route even when every deployment observation succeeds", async () => {
+    const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
+    const reviewed = metaById.get(ASSET_ID)!;
+    metaById.set(ASSET_ID, {
+      ...reviewed,
+      bridgeRouteRisk: currentJtrsyRisk.bridgeRouteRisk,
+    } as unknown as StablecoinMeta);
+    try {
+      const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
+        assetId: ASSET_ID,
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        chainRpcs: chainRpcs(),
+      }, dependencies());
+      expect(attempt).toEqual({
+        status: "rejected",
+        rejectionCode: "packet-reconciliation-failed",
+        failedRouteId: null,
+      });
+    } finally {
+      metaById.set(ASSET_ID, reviewed);
+    }
+  });
+
   it("captures the complete EVM and Solana burn/mint inventory atomically", async () => {
     const deps = dependencies();
     const attribution = await observe(deps);

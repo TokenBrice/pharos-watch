@@ -14,7 +14,7 @@
   "variantKind": "savings-passthrough",
   "pegReferenceId": "usde-ethena",
   "collateral": "USDe deposited into Ethena's ERC-4626 staking contract; the wrapper remains fully backed by USDe while additional USDe rewards accrue inside the vault",
-  "pegMechanism": "Stake USDe to receive sUSDe; the exchange rate versus USDe rises as rewards are transferred into the staking contract, while unstaking burns sUSDe immediately and releases USDe after Ethena's documented 7-day cooldown",
+  "pegMechanism": "Stake USDe to receive sUSDe; the exchange rate versus USDe rises as rewards vest inside the staking contract. Requesting unstaking burns the shares and moves USDe to the silo; withdrawal follows the configurable cooldown, observed at 86,400 seconds (1 day) at Ethereum block 26095796 on 2026-10-01.",
   "detailProvider": "coingecko",
   "geckoId": "ethena-staked-usde",
   "links": [
@@ -168,7 +168,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "cex",
+  "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Ethena staking (sUSDe)",

@@ -19,6 +19,8 @@
         "capDescription": "Mint is 1:1 against the current collateral basket only; supply is bounded by deposited collateral, with arbitrage holding the peg.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095945,
         "sources": [
           {
             "label": "eUSD RToken on Etherscan",
@@ -45,7 +47,7 @@
           "owners": [
             "0xE229477f3D8987818cbEd33D530E92eF916c6275",
             "0x6bEfF0cA296c3ac84817F502E18353266151Cb1e",
-            "0x69eE04082614cF5fcf7DcE1C2feD25cdED0FE1c9",
+            "0xf4e8fdac8ac832939143e30985583b4f87e3c828",
             "0xF03f87acb470499B5D8C8D579F8C62378cbCE95f",
             "0x2BefaE6159809622dB36A88049Ed3FE557e64812"
           ],
@@ -54,9 +56,11 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "masterCopy": "0xfb1bffC9d739B8D520DaF37dF666da4C687191EA",
-          "observedBlock": 25294956,
-          "source": "safe-api"
+          "observedBlock": 26095945,
+          "source": "onchain"
         },
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095945,
         "sources": [
           {
             "label": "eUSD governance Safe on Etherscan",

@@ -22,11 +22,10 @@
     "cadence": "ad-hoc",
     "latestReport": {
       "periodEnd": "2024-03-31",
-      "publishedAt": "2026-06-03",
       "assuranceMethod": "self-verification",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Pharos reserve curation review 2026-08-29 (report date 2024-03-31; re-hosted upload last-modified 2026-06-03)",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA48USTBL): report period 2024-03-31; publication date is not stated in the report, and re-hosting Last-Modified metadata is not a publication date",
       "confidence": "probable",
       "sources": [
         {

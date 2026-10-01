@@ -35,8 +35,8 @@
         "url": "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
       },
       {
-        "label": "Janus Henderson tokenized-fund announcement",
-        "url": "https://www.janushenderson.com/corporate/press-releases/janus-henderson-to-partner-with-anemoy-and-centrifuge-on-its-first-tokenized-fund/"
+        "label": "Anemoy JAAA factsheet, June 2026 (fund identity and service providers)",
+        "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le"
       }
     ],
     "rationale": "The independent Chainlink producer measures the current JAAA fund-share NAV, not a durable 95/5 holdings split. The exact direct reserve is therefore one Janus Henderson Anemoy AAA CLO Fund share exposure with credit, custody, liquidity, legal, and concentration risks retained.",
@@ -54,5 +54,31 @@
         "rationale": "The NAV feed proves the fund-share value but does not publish current security-level holdings or cash weights."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "J. P. Morgan",
+        "role": "custodian"
+      },
+      {
+        "name": "Trident Trust (Cayman)",
+        "role": "other",
+        "jurisdiction": "Cayman Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA26JAAA)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anemoy JAAA factsheet, June 2026: custodian and administrator",
+        "url": "https://ipfs.centrifuge.io/ipfs/bafybeid4o4lmkh3hg6cxuzomjkkbyepl2sylmy3o2ojxcmoidhvkofo3le"
+      }
+    ],
+    "uncertainty": "The June 2026 issuer factsheet names J. P. Morgan as custodian and Trident Trust (Cayman) as administrator. It does not identify provider allocations, custody-account segregation terms, bankruptcy-remoteness safeguards, or rehypothecation restrictions. No later primary service-provider disclosure was found in this review."
   }
 }

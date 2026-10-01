@@ -34,7 +34,7 @@
       },
       {
         "label": "Backed proof-of-reserves methodology",
-        "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+        "url": "https://backed.fi/news-updates/chainlink-proof-of-reserve-is-now-active"
       },
       {
         "label": "Backed issuer-maintained inventory exclusion policy (pinned commit)",
@@ -75,6 +75,10 @@
         "jurisdiction": "Switzerland"
       },
       {
+        "name": "GTN Europe Financial Services Limited",
+        "role": "custodian"
+      },
+      {
         "name": "Security Agent Services AG",
         "role": "other",
         "jurisdiction": "Switzerland"
@@ -92,6 +96,6 @@
         "url": "https://assets.backed.fi/products/bc3m"
       }
     ],
-    "uncertainty": "Backed names three possible brokers and custodians plus the security agent but does not publish which provider holds the current bC3M reserve or any provider shares. The reviewed product page does not establish current product-specific segregation, insolvency, or rehypothecation terms, so those safeguards remain unknown."
+    "uncertainty": "The bC3M product page fetched on 2026-10-01 names three possible brokers, four possible custodians (including GTN Europe Financial Services Limited), and the security agent, but does not publish which provider holds the current bC3M reserve or any provider shares. The reviewed product page does not establish current product-specific segregation, insolvency, or rehypothecation terms, so those safeguards remain unknown."
   }
 }

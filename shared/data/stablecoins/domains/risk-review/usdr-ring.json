@@ -4,17 +4,17 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.ring.exchange/"
+        "label": "USDR AssetToken verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
       },
       {
-        "label": "Website",
-        "url": "https://ring.exchange/"
+        "label": "Ring Core and Permissions verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The verified deployed AssetToken overrides burnFrom(account, amount) with onlyBurner and directly calls _burn without an allowance check. Core governors can grant BURNER_ROLE, and CoreRef.setCore(address) is onlyGovernor. At Ethereum block 26095797, token core() returned 0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4 and its GOVERN_ROLE still had Core plus two EOA members. The adverse reviewedStatus=true is retained for privileged holder-balance destruction and replaceable access authority; this is not a claim that an address-blacklist mapping exists.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB02ACRDX)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "oracleless",

@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)",
-  "pegMechanism": "Direct 1:1 redemption for physical PAMP® gold through Gold Token SA; minimum 1 gram, no custody or transfer fees",
+  "pegMechanism": "Each DGLD represents co-ownership of one fine troy ounce of allocated gold. Physical delivery is available through Gold Token SA or approved providers, with retail quantities advertised from 1 gram and KYC/AML checks when requested. Direct delivery requiring a token burn carries a 0.20% burning fee plus quoted third-party delivery costs; approved-provider delivery transfers the tokens without burning and uses that provider's fees. No separate issuer storage or administration fee.",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
@@ -66,7 +66,7 @@
     "semantics": "single-asset",
     "breakerScope": "dgld-gold-mapper",
     "display": {
-      "url": "https://production-gold-mapper-backend.onrender.com/v1",
+      "url": "https://explorer.dgld.ch/",
       "label": "DGLD Bar Registry"
     },
     "inputs": {
@@ -85,10 +85,10 @@
     "disposition": "resolved",
     "reviewedAt": "2026-08-09",
     "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
-    "rationale": "DGLD is a direct allocated-commodity claim: the June 2026 General Terms & Conditions make each token proof of Swiss-law co-ownership of allocated LBMA gold with title remaining with tokenholders, require segregated vault custody in Gold Token SA's name on behalf of tokenholders with MKS PAMP SA named as Custodian, and document physical Delivery with KYC. Migrated to commodity-claim under methodology v9.14.",
+    "rationale": "DGLD is a direct allocated-commodity claim: the General Terms & Conditions make each token proof of Swiss-law co-ownership of allocated LBMA gold with title remaining with tokenholders, require segregated vault custody in Gold Token SA's name on behalf of tokenholders with MKS PAMP SA named as Custodian, and document physical Delivery with KYC. Migrated to commodity-claim under methodology v9.14. The linked terms now identify their last update as July 2026, re-fetched on 2026-10-01.",
     "sources": [
       {
-        "label": "DGLD General Terms & Conditions, last updated June 2026 (direct legal co-ownership of allocated LBMA gold, physical Delivery)",
+        "label": "DGLD General Terms & Conditions, last updated July 2026 (direct legal co-ownership of allocated LBMA gold, physical Delivery)",
         "url": "https://dgld.ch/legal/general-terms-conditions-dgld-2"
       }
     ]

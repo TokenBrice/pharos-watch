@@ -35,7 +35,7 @@
     "compositionBasis": "Nereus protocol documentation; per-market collateral weights are undisclosed",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current per-market collateral balances and weights across Nereus lending markets are not published; the aggregate basket cannot be split into reviewed constituents.",
+    "knownUnknownExposure": "At Avalanche block 96513135, all 17 authored Cauldrons exposed readable totalCollateralShare, collateral and BentoBox addresses with nonzero totalBorrow. These raw shares and debt observations do not establish a reconciled, USD-valued whole-system collateral composition covering both native deployments, share-to-asset conversions and Polygon markets. No DAI or other tracked dependency weight is inferred from one market or a protocol TVL figure.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

@@ -19,10 +19,6 @@
         "observedBlock": 34127652,
         "sources": [
           {
-            "label": "cNGN FAQ: native Bantu issuance",
-            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-          },
-          {
             "label": "Bantu Foundation cNGN case study",
             "url": "https://bantufoundation.org/case-studies/cngn"
           },
@@ -47,10 +43,6 @@
       "reviewedAt": "2026-09-01",
       "sources": [
         {
-          "label": "cNGN FAQ: native Bantu issuance",
-          "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-        },
-        {
           "label": "Bantu Foundation cNGN case study",
           "url": "https://bantufoundation.org/case-studies/cngn"
         },
@@ -74,10 +66,6 @@
         "reviewer": "Codex mint-bridge-boundary canonicality verification",
       "rationale": "Every deployment currently authored in the catalog is a destination representation: the five EVM routes are supported by the Bantu lock-and-mint architecture, and Solana is conservatively classified as a representation because independent native issuance is unproven. Native issuance is verified on Bantu, but bantu is not a registered catalog chain identifier and therefore cannot be authored as a route or contract row within this scoped migration. This explicit exception prevents the untracked Bantu issuer control from implicitly targeting a destination route.",
         "sources": [
-          {
-            "label": "cNGN FAQ: native Bantu issuance",
-            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-          },
           {
             "label": "Bantu Foundation cNGN case study",
             "url": "https://bantufoundation.org/case-studies/cngn"

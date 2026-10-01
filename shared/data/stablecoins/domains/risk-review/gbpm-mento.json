@@ -36,13 +36,13 @@
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
-    "evidence": "Re-derived 2026-07-30 23:16:46 UTC. On Celo block 73552648, GBPm proxy 0xccf663b1ff11028f0b19058d0f7b674004a40746 resolves via EIP-1967 to verified StableTokenV3 0x815795c30d0758a297b08cd4e0643620c974c318 and owner() is the Mento 4-of-6 Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. The verified implementation has owner-gated setBurner/setOperator; its live TroveManager 0xb38aEf2bF4e34B997330D626EBCd7629De3885C9 and StabilityPool 0x06346c0fAB682dBde9f245D2D84677592E8aaa15 both return isBurner=true, and StabilityPool isOperator=true. Therefore those contracts can call burn(address,uint256) or sendToPool(sender,...) against an arbitrary GBPm holder without allowance: direct individual-holder intervention is Yes. The Monad proxy 0x39bb4e0a204412bb98e821d25e7d955e69d40fd1 at block 91758657 resolves to StableTokenSpoke 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e, whose source exposes only self-burn burn(uint256); its current isBurner reads for the Celo CDP contracts are false. The Celo path controls the asset-level verdict. USDm/cusd-celo reserve exposure remains an inherited upstream failure domain (asset:cusd-celo), separate from the direct burner/operator reach.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Pinned Celo block 78940190: GBPm still resolves to StableTokenV3 0x815795c30d0758a297b08cd4e0643620c974c318 and owner() is the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Verified source exposes onlyOwner setBurner/setOperator and burn(address,uint256) or sendToPool(sender,...) without holder allowance. TroveManager and StabilityPool remain burners, and StabilityPool remains an operator. Their own entry-point restrictions are separate; the owner can authorize a new burner/operator, establishing configurable direct holder intervention without claiming that every existing protocol entry point accepts an arbitrary victim. At Monad block 109552565, StableTokenSpoke remains 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e with NTT Manager minter/burner authorization; its source exposes only self-burn burn(uint256). The Celo owner-configurable path determines Yes. USDm collateral remains a separate inherited asset:cusd-celo failure domain.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM16cNGN)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them. The GBPm Celo CDP branch (Liquity v2 fork) has been reviewed on-chain: USDm-collateralized troves liquidate below a 110% MCR with a 135% system CCR and a 110% shutdown SCR.",
+    "tier": "single-source-or-laggy",
+    "summary": "At Celo block 78952776 (2026-10-01), GBPm FXPriceFeed reads OracleAdapter and SortedOracles GBP/USD feed 0xf590b62f9cfcc6409075b1ecac8176fe25744b88. The feed has one authorized reporter, ChainlinkRelayerV1 0x215d3ba962597defb38da439ed4db8e8a63e409a, with one configured Chainlink aggregator 0xe76fe54dfed2ce8b4d1ac63c982dff7cfc92bf82. Emergency shutdown uses cached lastValidPrice; no independently functioning live alternative is evidenced. Existing liquidation-parameter observations retain their original dates.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -76,14 +76,26 @@
       {
         "label": "Mento BreakerBox docs",
         "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+      },
+      {
+        "label": "GBPm relayer verified source and aggregator configuration",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x215d3ba962597defb38da439ed4db8e8a63e409a"
+      },
+      {
+        "label": "Mento CDP emergency shutdown documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Pinned Celo oracle topology at block 78952776",
+        "url": "https://api-celo-mainnet-archive.n.dwellir.com"
       }
     ],
     "branches": [
       {
         "id": "gbpm-usdm-cdp",
         "label": "GBPm/USDm CDP (Liquity v2 fork, Celo)",
-        "tier": "redundant-with-failover",
-        "summary": "GBPm's Celo CDP branch prices GBP/USD via Mento's FXPriceFeed -> OracleAdapter -> SortedOracles path and liquidates USDm-collateralized troves below a 110% MCR, with a 135% system CCR and a 110% SCR shutdown threshold enforced by a dedicated SystemParams contract.",
+        "tier": "single-source-or-laggy",
+        "summary": "GBPm's Celo USDm-collateralized branch uses FXPriceFeed -> OracleAdapter -> SortedOracles GBP/USD. At block 78952776 the configured feed has a single Chainlink relayer and a single Chainlink aggregator, with no independent live fallback. Cached lastValidPrice serves emergency shutdown only. Previously reviewed MCR, CCR and SCR observations remain dated to their original block.",
         "collateralAssets": [
           "USDm"
         ],
@@ -104,7 +116,7 @@
             ]
           }
         ],
-        "fallbackBehavior": "GBPm's FXPriceFeed (0xBBB144A67f4403112b4C895Cc85d5EE4F90013DE) reads oracleAdapter.getFXRateIfValid(rateFeedID) during normal operation; per Mento's CDP documentation it falls back to a cached lastValidPrice during emergency shutdown or CDP-market-closed windows (BreakerBox-gated weekends/holidays), with no alternate third-party oracle provider.",
+        "fallbackBehavior": "GBPm's FXPriceFeed (0xBBB144A67f4403112b4C895Cc85d5EE4F90013DE) reads oracleAdapter.getFXRateIfValid(rateFeedID) during normal operation. Mento documents that FX market closure blocks normal price-dependent CDP actions, including normal redemptions and liquidations; cached lastValidPrice is used after emergency shutdown, not as an ordinary weekend or holiday fallback. No alternate third-party oracle provider is identified.",
         "observedAt": "2026-07-21",
         "observedBlock": 72722909,
         "collateralParameters": [
@@ -329,7 +341,7 @@
           "lockboxOrEscrow": "At Celo block 75026011, the NTT Manager 0x7895D03FfDeb14a57eF79c21C3eA14dADf2a7c3f is the LOCKING hub-side manager. It locks canonical GBPm for outbound NTT transfers and releases the conserved canonical balance on the return path; this is bridge accounting, not independent native mint authority.",
           "trustedPeerOrRemote": "The Celo NTT Manager peer points to the Monad NTT Manager at the same address, and the Celo Wormhole Transceiver peer points to the Monad Transceiver at 0xcB55fE41C5437Ad6449C2978B061958C1EC1AB5f. The Celo Transceiver uses Wormhole Core 0xa321448d90d4e5b0a732867c18ea198e75cac48e.",
           "rateLimits": "The official GBPm NTT configuration sets nominal 500,000e18 limits in each direction with an 86,400-second duration. The Celo NTT Manager threshold is 1 with one enabled Wormhole Transceiver.",
-          "pausersAdminsUpgraders": "The 4-of-6 Safe controls NTT Manager peer, rate-limit, transceiver, threshold, pause, and upgrade operations, and controls the Transceiver peer and implementation. At Celo block 75026011, NTT Manager and Transceiver implementation slots resolve to 0x67850dd0546e785ba81eb7fa4cf4d2f5b393cb0 and 0xdd38eac014c3dbd34ff06f966e9d24b907e992dd, respectively."
+          "pausersAdminsUpgraders": "The 4-of-6 Safe controls NTT Manager peer, rate-limit, transceiver, threshold, pause, and upgrade operations, and controls the Transceiver peer and implementation. At Celo block 75026011, NTT Manager and Transceiver implementation slots resolve to 0x67850dd0546e785ba81eb7fa4cf4d2f5b393cb0d and 0xdd38eac014c3dbd34ff06f966e9d24b907e992dd, respectively. A current pinned recheck at block 78940190 returned the same implementations and Safe owner/pauser."
         },
         "capDescription": "The Celo NTT Manager and Transceiver Safe governs the canonical-side lock/release rail, peers, nominal rate limits, pause, threshold, and upgrade paths. It controls bridge exposure but does not turn the Celo route into a second native issuance deployment.",
         "canRaiseCap": true,
@@ -403,7 +415,7 @@
           "onchainAmountBounds": "At Monad block 96633798, StableTokenSpoke reports the NTT Manager as the live minter and burner. This burn/mint route is expected representation accounting: conservation depends on the Celo locking hub, reciprocal peers, and the configured limits, not on an independent Monad native-liability path.",
           "trustedPeerOrRemote": "The Monad NTT Manager peer points to the Celo NTT Manager at the same address, and the Monad Wormhole Transceiver peer points to the Celo Transceiver at 0xcB55fE41C5437Ad6449C2978B061958C1EC1AB5f. The Monad Transceiver uses Wormhole Core 0x194b123c5e96b9b2e49763619985790dc241cac0.",
           "rateLimits": "The official GBPm NTT configuration sets nominal 500,000e18 limits in each direction with an 86,400-second duration. The Monad NTT Manager threshold is 1 with one enabled Wormhole Transceiver.",
-          "pausersAdminsUpgraders": "The 4-of-6 Safe controls NTT Manager peer, rate-limit, transceiver, threshold, pause, and upgrade operations, and controls the Transceiver peer and implementation. At Monad block 96633798, NTT Manager and Transceiver implementation slots resolve to 0x67850dd0546e785ba81eb7fa4cf4d2f5b393cb0 and 0xdd38eac014c3dbd34ff06f966e9d24b907e992dd, respectively."
+          "pausersAdminsUpgraders": "The 4-of-6 Safe controls NTT Manager peer, rate-limit, transceiver, threshold, pause, and upgrade operations, and controls the Transceiver peer and implementation. Current pinned Monad block 109552565 returned NTT Manager implementation 0x67850dd0546e785ba81eb7fa4cf4d2f5b393cb0d and Transceiver implementation 0xdd38eac014c3dbd34ff06f966e9d24b907e992dd, with the same Safe as owner/pauser. The prior block 96633798 implementation slot could not be re-read on this RPC; the current addresses are not backdated."
         },
         "capDescription": "The Monad NTT Manager and Transceiver Safe governs the bridge representation's burn/mint rail, peers, nominal rate limits, pause, threshold, and upgrade paths. The NTT Manager's token roles are bridge capabilities, not Celo native Mint Authority.",
         "canRaiseCap": true,

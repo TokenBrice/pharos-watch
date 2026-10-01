@@ -61,7 +61,7 @@
         "address": "0x7C135549504245B5eAe64fc0E99Fa5ebabb8e35D",
         "label": "FIDD Ethereum token (AccessControl)",
         "role": "direct-minter",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",

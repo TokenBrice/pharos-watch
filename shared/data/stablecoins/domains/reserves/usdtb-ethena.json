@@ -4,7 +4,7 @@
     {
       "sourceKey": "usdtb-transparency:buidl",
       "name": "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
-      "pct": 98.9927,
+      "pct": 99.017,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -20,8 +20,8 @@
     },
     {
       "sourceKey": "usdtb-transparency:assets-in-motion",
-      "name": "Bank Demand Deposits (FDIC-Insured)",
-      "pct": 1.0073,
+      "name": "Bank demand deposits at FDIC-insured institutions (includes uninsured balances)",
+      "pct": 0.983,
       "risk": "low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Major U.S. commercial banks (FDIC-insured)",
@@ -33,13 +33,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle) — fallback-composition reconciliation to the July 2026 USDtb reserve report (Deloitte & Touche LLP examination via Anchorage; report PDF read directly this pass)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv6); fallback composition re-curated from the August 2026 USDtb examination, Schedule II",
     "confidence": "verified",
     "sources": [
       {
-        "label": "USDtb Reserve Report - July 2026 (Deloitte via Anchorage)",
-        "url": "https://learn.anchorage.com/07.31.26_USDtb-Stablecoin-Attestation-Report-signed.pdf"
+        "label": "USDtb Reserve Report - August 2026 (Deloitte via Anchorage)",
+        "url": "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
       },
       {
         "label": "USDtb current backing and supply",
@@ -50,9 +50,9 @@
         "url": "https://usdtb.money/transparency"
       }
     ],
-    "rationale": "Rows keep the live usdtb-transparency adapter's two slice identities (adapter-owned source keys), with weights reconciled to Schedule II of the examination as of July 31, 2026: total reserve assets $401,718,132 vs $400,956,706 redeemable USDtb, composed of BUIDL at fair value $397,671,702 (98.9927%; self-custodied by Anchorage in segregated wallets — Solana $172,726,853, BSC $110,765,307, Avalanche $114,179,542) and cash $4,046,430 (1.0073%; demand deposit accounts at FDIC-insured depository institutions, held directly, United States, of which $3,796,430 exceeded the FDIC insurance limit). The examination classifies the entire non-BUIDL balance as FDIC-insured bank demand deposits, so the prior 'Assets in motion (settlement float)' unknown-counterparty slice is reclassified to the examined bank-deposit category with an immediate liquidity horizon; the live endpoint continues to label this balance 'assets in motion' (the source key is unchanged so V9 keeps classifying live rows), and the prior non-link disposition and 1.2% known-unknown are resolved by this disclosure. compositionAsOf equals the examination period end, so the curated rows are the independently examined fallback composition; the 2026-08-08 pass deliberately omitted the date because its weights tracked the rolling live endpoint rather than the examined balance-sheet date.",
-    "compositionBasis": "Deloitte & Touche LLP examination of the USDtb Reserve Report as of July 31, 2026 (Schedule II composition of reserve assets by asset type), mapped onto the usdtb-transparency adapter's two slice identities",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "The independently examined August 31, 2026 fallback composition is BUIDL at fair value $525,205,527 (99.017%) and cash $5,214,126 (0.983%) out of $530,419,653 reserve assets, supporting $529,269,213 redeemable USDtb. Schedule II identifies all cash as directly held U.S. demand deposits at FDIC-insured depository institutions, with $4,964,126 above the FDIC limit. BUIDL is self-custodied in segregated wallets on Solana ($223,271,995), BSC ($111,095,606), Avalanche ($45,754,629), and Aptos ($145,083,297). Percentages are calculated from the reported reserve-asset total and rounded to four decimal places. The existing adapter-owned source keys remain unchanged; these rows are the dated examined fallback, not an assertion that the rolling live endpoint has the same weights. The composition date matches proofOfReserves.latestReport.periodEnd.",
+    "compositionBasis": "Deloitte & Touche LLP examination of the USDtb Reserve Report as of August 31, 2026, Schedule II asset-type balances divided by total reserve assets, mapped onto the usdtb-transparency adapter's two existing slice identities",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "All examined reserve assets are classified (BUIDL fund shares at fair value; FDIC-insured bank demand deposits). Individual deposit bank names are not disclosed, and BUIDL's own underlying fund holdings are governed by BlackRock's separate fund disclosures rather than this examination.",
     "knownUnknownExposurePct": 0
@@ -72,7 +72,7 @@
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
-    "rehypothecation": "prohibited",
+    "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
@@ -84,8 +84,16 @@
       {
         "label": "USDtb reserve attestations",
         "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
+      },
+      {
+        "label": "USDtb Reserve Report: August 2026",
+        "url": "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+      },
+      {
+        "label": "Anchorage covered stablecoin terms",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
       }
     ],
-    "uncertainty": "Anchorage reports that BUIDL is self-custodied in segregated wallets and cash is held in segregated fiduciary trust accounts at major commercial banks. The banks are not identified, current provider allocations can change, and the legal treatment has not been independently adjudicated."
+    "uncertainty": "Anchorage reports that BUIDL is self-custodied in segregated wallets and cash is held in segregated fiduciary trust accounts at unnamed major commercial banks. D10 review on 2026-10-01: the May and August examinations describe unencumbered reserves only at their report dates, while the covered stablecoin terms impose prudent trust investment and management obligations without an express standing permission or prohibition on rehypothecation. The prior 2026-07-14 prohibited classification is withdrawn as unsupported policy evidence and retained in the curation history. Investment through BUIDL remains distinct from legal reuse rights; current allocations and insolvency treatment have not been independently adjudicated."
   }
 }

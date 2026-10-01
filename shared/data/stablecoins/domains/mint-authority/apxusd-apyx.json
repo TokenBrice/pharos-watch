@@ -88,7 +88,7 @@
         "label": "Apyx ROLE_MINTER Safe — Ethereum",
         "role": "direct-minter",
         "authorityType": "safe",
-        "directMintAbility": "direct",
+        "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
         "deploymentRefs": [
@@ -117,12 +117,12 @@
           "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770531,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "failureDomainKeys": [
           "operator:apyx-4-of-7-safe"
         ],
-        "evidence": "At Ethereum block 25770531, getOwners() returned the seven listed addresses, getThreshold() returned 4, VERSION() returned 1.4.1, getModulesPaginated() returned no modules, and slot 0 resolved to the Safe 1.4.1 master copy. AccessManager hasRole(2) returned true with zero caller delay; the Safe can request and execute MinterV0 orders after its 4-of-7 threshold, with the downstream token mint delayed four hours. It can raise the Ethereum token supply cap through role 23 after a one-day delay and holds operational roles 21-25, including the three-day UUPS upgrade role, while role 0 has no current external holder.",
+        "evidence": "Historical August 16 Safe metadata is retained in the nested safe object. At Ethereum block 26095802 on October 1, getOwners() confirmed the same seven owners, getThreshold() returned 4, getModulesPaginated() returned no modules, and the Safe guard slot was zero. AccessManager hasRole(2,Safe) returned true with zero caller delay, while hasRole(4,Safe) returned false: the Safe authorizes MinterV0 requests and executions rather than minting the native token directly. MinterV0 retained role 4 with a 14,400-second delay. Safe-held cap role 23 retained an 86,400-second delay and upgrade role 24 retained 259,200 seconds.",
         "sources": [
           {
             "label": "Apyx ROLE_MINTER Safe on Etherscan",

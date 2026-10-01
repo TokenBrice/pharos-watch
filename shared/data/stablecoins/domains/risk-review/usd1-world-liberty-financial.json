@@ -2,10 +2,15 @@
   "id": "usd1-world-liberty-financial",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USD1 resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "BitGo USD1 terms, sections 3.I, 3.J and 3.L.iv",
+        "url": "https://www.bitgo.com/usd1-terms/"
+      }
+    ],
+    "evidence": "BitGo's January 8, 2026 USD1 terms reserve the right to freeze and upgrade USD1 regardless of where it is held, block addresses, and freeze, seize or destroy tokens. This directly supports the existing Yes verdict rather than inferring it from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA07USD1)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -511,11 +516,12 @@
         "authorityType": "contract",
         "canRaiseCap": "unknown",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Ethereum block 25770446, the legacy BurnMintWithExternalMinterTokenPool reported supported CCIP chain selectors 0x9d70576d8e253bcf and 0xf8946d7c5b972a83. The corresponding remote-pool bytes and route destinations were not decoded.",
-          "unsupportedReason": "The pool remains an authorized BRIDGE_MINTER_OR_BURNER_ROLE member, but its current owner and rate-limit admin were not fixed-block verified in this review."
+          "trustedPeerOrRemote": "At Ethereum block 26095806, the legacy pool reported supported CCIP chain selectors 0x9d70576d8e253bcf and 0xf8946d7c5b972a83 and getRouter() returned 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d. Remote-pool bytes and route destinations remain undecoded.",
+          "rateLimits": "At Ethereum block 26095806, getRateLimitAdmin() returned the zero address. This read does not establish that rate limits are absent or immutable.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095806, owner() returned the 3-of-6 Safe 0x0d190b74308669e8f4fe7dbce3466169b285289d. Threshold, owners and empty module pagination were re-read at the same block; no fresh guard or key-custody assertion is made."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770446,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
         "sources": [
           {
             "label": "Verified Ethereum prior CCIP pool source",
@@ -526,7 +532,7 @@
             "url": "https://eth.blockscout.com/address/0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2#code"
           }
         ],
-        "evidence": "At Ethereum block 25770446, getBridgeMintersOrBurners() on the USD1 controller included the still-authorized legacy pool 0xf9e47d3720d5142930444ae6773c7f6d05696228. The verified BurnMintWithExternalMinterTokenPool reported selectors 0x9d70576d8e253bcf and 0xf8946d7c5b972a83. This pool is retained as a separate bridge control even though the current Chainlink directory lists a replacement pool."
+        "evidence": "At Ethereum block 26095806, getBridgeMintersOrBurners() on the USD1 controller still included legacy pool 0xf9e47d3720d5142930444ae6773c7f6d05696228. The pool returned the USD1 token and TokenGovernor, owner Safe 0x0d190b74308669e8f4fe7dbce3466169b285289d, zero rate-limit admin, and the same two supported chain selectors. The legacy authorization remains adverse exposure even though the Chainlink directory lists a replacement pool."
       },
       {
         "id": "usd1-bnb-ccip-current-pool",

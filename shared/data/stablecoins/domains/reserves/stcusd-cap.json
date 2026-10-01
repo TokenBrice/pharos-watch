@@ -50,5 +50,34 @@
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct stcUSD reserve slice is identified; operator allocations inside the position remain upstream portfolio detail.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Cap Ethereum stcUSD ERC-4626 vault (0x88887be419578051ff9f4eb6c858a951921d8888)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA34EURC)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Cap deployed-address registry",
+        "url": "https://docs.cap.app/developers/addresses"
+      },
+      {
+        "label": "Verified Ethereum StakedCap implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31"
+      },
+      {
+        "label": "Cap lending mechanics",
+        "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+      }
+    ],
+    "uncertainty": "At Ethereum block 26095797, asset() resolves to cUSD 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc. The verified ERC-4626 implementation receives cUSD deposits and sends cUSD on withdrawals. This documents contract custody of the wrapper's direct asset, not legal segregation, bankruptcy protection, or upstream operator custody. Those safeguards remain unknown. Cap's current address registry also lists stcUSD on MegaETH, Tempo, and Katana; their route and control scopes remain unverified here, and no cross-chain provider shares are estimated."
   }
 }

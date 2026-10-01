@@ -2,13 +2,13 @@
   "id": "nusd-neutrl",
   "name": "Neutrl USD",
   "symbol": "NUSD",
-  "oneLiner": "Neutrl's synthetic dollar: minting and redemptions paused 2026-08-13 for reserve-liquidity review; early-redemption process pending review 2026-08-29.",
+  "oneLiner": "Neutrl's synthetic dollar: ordinary minting and redemptions paused in August 2026; a separate USDC redemption program opened September 17, subject to terms.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Accountable currently shows reserves concentrated in liquid stablecoins, with smaller OTC aggregate and other hedged reserve assets; Neutrl describes NUSD as a fully collateralized synthetic dollar backed by delta-neutral strategies and other crypto assets",
-  "pegMechanism": "As of 2026-08-13, state that NUSD minting, redemptions, and other protocol functions were paused for a reserve-liquidity review. As of 2026-08-29, the proposed early-redemption path was still pending a new contract, audit, and legal/financial review. Retain the permissionless-mint/KYC-redemption description only as the pre-pause design.",
+  "collateral": "Neutrl describes NUSD as backed by crypto assets, liquid synthetic dollars, and corresponding short futures positions. Its September 17 redemption program uses previously disclosed liquid reserves; a current reconciled full reserve composition has not been verified.",
+  "pegMechanism": "Ordinary minting, redemptions, and other protocol functions were paused in August 2026 for a reserve-liquidity review. On September 17, Neutrl opened a separate fixed-rate redemption program paying USDC and burning redeemed NUSD or sNUSD, expected to remain open until November 14, 2026 subject to applicable terms. Wallet ownership must be verified by an onchain signature before redemption details are displayed. The permissionless-mint/KYC-redemption design in the docs predates the pause and is not evidence of restored par redemption.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "346",
   "detailProvider": "defillama",

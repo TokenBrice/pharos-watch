@@ -8,8 +8,8 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
-  "pegMechanism": "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve: liquid portion available for instant withdrawals, illiquid portion deployed to time-locked institutional lending strategies; redemptions queue when liquid reserves are insufficient",
+  "collateral": "Issuer-reported protocol reserves across Fasanara fund and private-credit positions, New Silver lending, FalconX institutional lending, Spark sUSDC, f(x) fxSAVE, Morpho positions, and Aave USDG/USDC positions; composition varies over time",
+  "pegMechanism": "Mint and redeem against USDC through infiniFi protocol controllers; liquid reserves support instant withdrawals, while redemptions queue when liquid reserves are insufficient",
   "llamaId": "298",
   "detailProvider": "defillama",
   "geckoId": "infinifi-usd",

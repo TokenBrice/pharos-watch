@@ -17,8 +17,8 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 439738655,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452230743,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -39,8 +39,8 @@
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 439738658,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452230743,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -61,8 +61,8 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 116363031,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055810,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -93,10 +93,11 @@
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 4,
-        "observedAt": "2026-08-16",
-        "observedBlock": 116363031,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055810,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "version": "1.4.1",
           "owners": [
             "0x222542fac5d6f5c2562312f907d202be807ee415",
             "0x955703b14f475bc0c53db9522283ba1bf1c8a8e1",
@@ -106,8 +107,8 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 116363031,
-          "observedAt": "2026-08-16",
+          "observedBlock": 125055810,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
         "sources": [
@@ -167,8 +168,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "StandX BSC DEFAULT_ADMIN Safe (3-of-4)",
-      "observedAt": "2026-08-16",
-      "observedBlock": 116364053,
+      "observedAt": "2026-10-01",
+      "observedBlock": 125056374,
       "sources": [
         {
           "label": "DUSD BSC token on BscScan",

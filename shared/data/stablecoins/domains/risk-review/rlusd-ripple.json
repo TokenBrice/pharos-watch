@@ -2,10 +2,15 @@
   "id": "rlusd-ripple",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: RLUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Ripple RLUSD user terms, section 11.5",
+        "url": "https://ripple.com/legal/stablecoin/"
+      }
+    ],
+    "evidence": "Section 11.5 expressly permits Ripple to blacklist addresses from sending or receiving RLUSD, freeze balances, and burn RLUSD in a wallet under applicable law or internal compliance policies. Ethereum's verified StablecoinUpgradeableV2 exposes pauseAccounts and clawback; the pinned XRPL issuer flags retain freeze capability. This replaces an inference from centralized governance with direct issuer terms.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA12RLUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -81,6 +86,110 @@
           {
             "label": "Ripple RLUSD mint and redemption lifecycle",
             "url": "https://docs.ripple.com/products/stablecoin/overview/rlusd"
+          }
+        ]
+      },
+      {
+        "id": "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+        "destinationChain": "base",
+        "contractAddress": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+        "protocol": "Ripple RLUSD deployment; issuance and bridge boundary unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Ripple identifies this mainnet deployment; pinned RPC verifies RLUSD identity and 18 decimals. Issuer mint/redeem docs do not resolve this deployment's current native-mint, cross-chain transfer and controller boundaries; no protective classification is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024943,
+        "sources": [
+          {
+            "label": "Ripple RLUSD token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple RLUSD chains and networks",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+        "destinationChain": "optimism",
+        "contractAddress": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+        "protocol": "Ripple RLUSD deployment; issuance and bridge boundary unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Ripple identifies this mainnet deployment; pinned RPC verifies RLUSD identity and 18 decimals. Issuer mint/redeem docs do not resolve this deployment's current native-mint, cross-chain transfer and controller boundaries; no protective classification is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 157620228,
+        "sources": [
+          {
+            "label": "Ripple RLUSD token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple RLUSD chains and networks",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+        "destinationChain": "ink",
+        "contractAddress": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+        "protocol": "Ripple RLUSD deployment; issuance and bridge boundary unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Ripple identifies this mainnet deployment; pinned RPC verifies RLUSD identity and 18 decimals. Issuer mint/redeem docs do not resolve this deployment's current native-mint, cross-chain transfer and controller boundaries; no protective classification is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 57340822,
+        "sources": [
+          {
+            "label": "Ripple RLUSD token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple RLUSD chains and networks",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks"
+          }
+        ]
+      },
+      {
+        "id": "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+        "destinationChain": "unichain",
+        "contractAddress": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+        "protocol": "Ripple RLUSD deployment; issuance and bridge boundary unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Ripple identifies this mainnet deployment; pinned RPC verifies RLUSD identity and 18 decimals. Issuer mint/redeem docs do not resolve this deployment's current native-mint, cross-chain transfer and controller boundaries; no protective classification is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 60090874,
+        "sources": [
+          {
+            "label": "Ripple RLUSD token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple RLUSD chains and networks",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks"
           }
         ]
       }

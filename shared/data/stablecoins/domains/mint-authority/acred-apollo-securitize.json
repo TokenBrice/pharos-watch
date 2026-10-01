@@ -6,7 +6,7 @@
     "confidence": "probable",
     "summary": "ACRED's working canonical Mint Authority scope is Ethereum only: its token/trust-service master EOA is an uncapped direct issuer and immediate upgrade authority. Avalanche, Ink, Polygon, Solana, and Aptos local issuer and upgrade surfaces are reviewed as bridge-representation controls under bridgeRouteRisk pending proof of independent reconciled fund liabilities; they are not additional canonical Mint Authority.",
     "upgradeability": {
-      "model": "custom",
+      "model": "uups",
       "deploymentRefs": [
         "ethereum:0x17418038ecf73ba4026c4f428547bf099706f27b"
       ],
@@ -24,7 +24,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "ACRED Ethereum master and upgrade owner",
-      "observedAt": "2026-07-13",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095798,
       "sources": [
         {
           "label": "Ethereum ACRED token",
@@ -51,7 +52,8 @@
         "failureDomainKeys": [
           "eoa:evm:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
             "label": "Ethereum ACRED token",
@@ -62,7 +64,7 @@
             "url": "https://eth.blockscout.com/address/0xc397436742eaf7c325ddbfc4dc63d95822b27101?tab=contract"
           }
         ],
-        "evidence": "At the fixed exact cutoff, this zero-code EOA was owner or MASTER for the Ethereum ACRED token and trust-service deployments. It could call issueTokens, grant or revoke ISSUER, set the one-time token cap, and immediately replace both Ethereum token or trust-service implementations. cap() returned zero on the Ethereum deployment, which the verified implementation treats as uncapped."
+        "evidence": "At Ethereum block 26095798 on 2026-10-01, owner() on the token returned this zero-code EOA and getRole(address) on trust service 0xc397436742eaf7c325ddbfc4dc63d95822b27101 returned 1 (MASTER). The token and trust-service EIP-1967 implementation slots remain 0xfc8a9000c161e3c6e073e967107ce926a44a06e2 and 0xd5417b82ae5b9ab7db1532b517fb284f38d7141e; the correct EIP-1967 admin slots are zero. Their verified implementations authorize UUPS upgrades with onlyMaster and expose issuance/role administration. cap() returned zero, which TokenLibrary treats as uncapped. This refresh retains the prior immediate-upgrade and uncapped-issuance findings."
       }
     ],
     "economicCapSemantics": "unbounded",

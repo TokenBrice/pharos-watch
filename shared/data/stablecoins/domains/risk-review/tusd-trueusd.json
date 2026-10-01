@@ -2,10 +2,15 @@
   "id": "tusd-trueusd",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: TUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified Ethereum TUSD implementation, owner-controlled blacklist and transfer restrictions",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbc97a631c2fee80417d5d69f32b198c8c39c27e"
+      }
+    ],
+    "evidence": "At Ethereum block 26095796, implementation() returned 0xdbc97a631c2fee80417d5d69f32b198c8c39c27e. Its verified source exposes owner-only setBlacklisted(address,bool), prohibits blacklisted senders and recipients from transferring, and permits destruction of blacklisted funds. The Yes verdict is directly evidenced rather than inferred solely from centralization; redemption-address exceptions do not remove the general blacklist power.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA18U)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -248,7 +253,7 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "TrueUSD on FtmScan",
+            "label": "TrueUSD on FtmScan (historical source; not retrievable during October 1, 2026 review)",
             "url": "https://ftmscan.com/address/0x9879abdea01a879644185341f7af7d8343556b7a"
           },
           {
@@ -285,7 +290,7 @@
             "url": "https://nearblocks.io/token/0000000000085d4780b73119b644ae5ecd22b376.factory.bridge.near"
           },
           {
-            "label": "Rainbow Bridge documentation",
+            "label": "Rainbow Bridge documentation (historical source; not retrievable during October 1, 2026 review)",
             "url": "https://docs.rainbowbridge.app/"
           }
         ]

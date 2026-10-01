@@ -562,69 +562,6 @@
       }
     },
     {
-      "assetId": "audm-mento",
-      "archetype": "cdp",
-      "reviewedAt": "2026-07-20",
-      "sources": [
-        {
-          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
-          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
-        },
-        {
-          "label": "Mento V3 reserve conversion documentation",
-          "url": "https://docs.mento.org/mento-v3"
-        }
-      ],
-      "notes": "Pinned Celo block 72202914; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/audm-mento/2026-07-15-block-72202914.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital. Completion pass 2026-07-20 (backstop, branchIsolation, shutdownAndBadDebt added; all prior components, metrics, and sources preserved and both source URLs re-fetched and re-read this session): the Celoscan page confirms the pinned contract is the verified Mento BiPoolManagerProxy, and the Mento V3 documentation establishes that Mento conversion pools quote an oracle rate through a Chainlink-only oracle path, that trading limits cap flow per token over time, and that circuit breakers trip and halt trading when stablecoins move too far off peg or other safety thresholds are breached, with USDm/EURm backed by the shared Mento Reserve. Backstop is limited: the measured 10000000 USDm virtual counter-bucket is bounded conversion inventory, and the shared reserve backing USDm is not an AUDm-dedicated committed backstop. Branch isolation is limited: per-pair buckets bound AUDm/USDm flow, but the Broker, USDm counter-asset, shared reserve, and oracle paths are failure domains shared with other Mento stables. Shutdown and bad-debt handling is limited: BreakerBox circuit breakers and trading limits can halt unsafe conversion, but no unconditional residual-deficit recapitalization or holder settlement path is documented for AUDm. No prior quality tier was changed; the added components follow the same limited pattern as sibling Mento conversion-token overlays. NOT established: any AUDm-dedicated insurance fund or stability pool, any documented reserve commitment earmarked for AUDm residual deficits, and any formal shutdown or wind-down settlement procedure for AUDm holders.",
-      "metrics": {
-        "collateralizationRatio": null,
-        "liquidationCapacityRatio": null
-      },
-      "metricApplicability": {
-        "collateralizationRatio": {
-          "state": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationCapacityRatio": {
-          "state": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        }
-      },
-      "analogousMetrics": {
-        "conversionCapacityCounterUnits": 10000000
-      },
-      "components": {
-        "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "backstop": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "branchIsolation": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "shutdownAndBadDebt": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "structuralRedemption": {
-          "applicability": "measured",
-          "quality": "adequate"
-        }
-      }
-    },
-    {
       "assetId": "cadm-mento",
       "archetype": "fiat-cash",
       "reviewedAt": "2026-08-08",
@@ -662,132 +599,85 @@
     },
     {
       "assetId": "copm-mento",
-      "archetype": "cdp",
-      "reviewedAt": "2026-07-20",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
-          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+          "label": "Mento COPm-specific reserve-backed issuer configuration",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
-          "label": "Mento V3 reserve conversion documentation (FPMM oracle-priced pools, Reserve-backed vs CDP-backed models, circuit breakers)",
-          "url": "https://docs.mento.org/mento-v3"
+          "label": "MGP-18 legacy COPm FX pool disclosure",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         },
         {
-          "label": "Mento BiPoolManager source (broker conversion architecture)",
-          "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
+          "label": "Mento reserve issuer API, fetched 2026-10-01",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Mento Reserve documentation",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+        },
+        {
+          "label": "Mento issuer audit index: security engagements",
+          "url": "https://www.mento.org/audits"
         }
       ],
-      "notes": "Carried forward from the 2026-07-15 review: at pinned Celo block 72202985 the producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread (journaled: shared/data/safety-score-v9/mechanism-measurements/copm-mento/2026-07-15-block-72202985.json); conversion capacity stays an analogous exit metric, not collateralization or liquidation capital. New on 2026-07-20: the three remaining bounded components were adjudicated under the same reserve/conversion framing. The 2026-07-14 oracle review found no live COPm CDP troves in the Mento reserve API (active troves only for GBPm, JPYm, CHFm) and a single USDm/COPm Broker exchange, and the current Mento V3 overview documents the two backing models (Reserve-backed vs CDP-backed) with FPMM oracle-priced conversion and circuit breakers that halt trading. With no debt-offset liquidation engine at the COPm layer there is no liquidation-backstop function and no per-collateral branch structure to isolate, so backstop and branchIsolation are structurally not applicable; the shared Mento Reserve counter-bucket inventory is redemption liquidity already covered under structuralRedemption. shutdownAndBadDebt is limited: BreakerBox circuit breakers and trading limits are documented halts, not a wind-down or settlement procedure, and the reviewed sources define no bad-debt or recapitalization facility for the COPm pair; impairment of upstream USDm or the shared reserve would transmit to COPm holders at par. Not established: any documented COPm wind-down/settlement path, reserve-level legal custody or segregation terms, and whether or when Mento migrates COPm to V3 CDP troves (which would make the CDP metrics applicable and require re-review).",
-      "metrics": {
-        "collateralizationRatio": null,
-        "liquidationCapacityRatio": null
-      },
-      "metricApplicability": {
-        "collateralizationRatio": {
-          "state": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationCapacityRatio": {
-          "state": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        }
-      },
-      "analogousMetrics": {
-        "conversionCapacityCounterUnits": 10000000
-      },
+      "notes": "COPm-specific issuer registry and Celo block 78939187 bind this asset to the legacy USDm/COPm reserve-backed Broker pool. The previous CDP overlay is identity-incompatible with the current fiat-cash base archetype. Independently reviewed issuer reserve API, Reserve dashboard/docs, MGP-18 and issuer audit index on 2026-10-01: they identify reserve assets, wallets, swap mechanics and security audits but do not supply a COPm-specific enforceable legal segregation claim, independently reconciled reserve-to-liability assurance report, or documented continuity guarantee. No quality grade or numeric CDP metric is carried forward. Negative-search scope is these reviewed public primary locations, not a claim that no document exists anywhere.",
+      "metrics": {},
       "components": {
-        "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
+        "claimAndSegregation": {
+          "applicability": "unavailable",
+          "rationale": "COPm-specific registry states reserve backing but the reviewed issuer docs do not document an enforceable holder claim and legal asset segregation for COPm.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
         },
-        "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Issuer API identifies reserve Safes, liquidity reserves and operational positions but supplies no COPm-specific continuity or legal custody safeguards.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "backstop": {
-          "applicability": "not-applicable",
-          "rationale": "With no debt-offset liquidation engine at the COPm conversion layer there is no liquidation backstop function; the shared Mento Reserve counter-bucket inventory is redemption liquidity covered under structuralRedemption.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "branchIsolation": {
-          "applicability": "not-applicable",
-          "rationale": "COPm exists as a single USDm conversion pair inside the shared Mento Broker/Reserve system; there are no per-collateral debt branches at the COPm layer to isolate.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "shutdownAndBadDebt": {
-          "quality": "limited"
-        },
-        "structuralRedemption": {
-          "applicability": "measured",
-          "quality": "adequate"
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "Reviewed dashboard/API are issuer self-reported real-time observations, not a dated independent COPm reserve-to-liability reconciliation engagement. No structured latest independent report exists in this asset metadata.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
     },
     {
       "assetId": "ghsm-mento",
-      "archetype": "cdp",
-      "reviewedAt": "2026-07-15",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
-          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+          "label": "Mento current reserve assets and custody legs",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {
-          "label": "Mento V3 reserve conversion documentation",
-          "url": "https://docs.mento.org/mento-v3"
+          "label": "Official backing config: GHSm reserve-backed on Celo",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "MGP-18: GHSm V2 FX pools retained rather than immediate CDP migration",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         }
       ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/ghsm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at the journaled 100 bps fee. Conversion capacity is an analogous exit metric rather than dedicated liquidation capital. The bounded virtual USDm counter-bucket provides limited conversion support; pair buckets limit flow but Broker, USDm, reserve, and oracle failure domains remain shared; BreakerBox and trading limits can halt unsafe conversion without supplying an unconditional residual-deficit recapitalization path. Backstop, branch isolation, and shutdown/bad-debt handling are therefore limited.",
-      "metrics": {
-        "collateralizationRatio": null,
-        "liquidationCapacityRatio": null
-      },
-      "metricApplicability": {
-        "collateralizationRatio": {
-          "state": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationCapacityRatio": {
-          "state": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        }
-      },
-      "analogousMetrics": {
-        "conversionCapacityCounterUnits": 10000000
-      },
+      "notes": "Scoped review 2026-10-01 of the current official reserve API, backing configuration and V2 deprecation governance disclosure. GHSm remains a reserve-backed V2 FX-pool asset; the old CDP overlay is not the matching mechanism. The fetched issuer-controlled allocation disclosures do not supply independent liability reconciliation, enforceable holder claim/segregation, or contractual custody continuity. Current reserve custody identities were updated in the owned sidecar. Unavailable components are intentional unresolved evidence, not not-applicable findings or favorable quality estimates. No report date or independent assurance level is invented.",
+      "metrics": {},
       "components": {
-        "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed reserve API is issuer-controlled. It does not provide an independently assured reconciliation of the asset-wide reserve portfolio and GHSm liabilities.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
+        "claimAndSegregation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed current reserve and governance disclosures do not establish an enforceable GHSm holder claim, trust/segregation arrangement or insolvency priority over reserve assets.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         },
-        "backstop": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "branchIsolation": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "shutdownAndBadDebt": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "structuralRedemption": {
-          "applicability": "measured",
-          "quality": "adequate"
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "The current reserve API identifies multiple Safes, liquidity reserves, operational accounts and DeFi position legs but does not establish contractual continuity or access guarantees across custody failures.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
     },
@@ -2631,41 +2521,41 @@
     {
       "assetId": "moveusd-cfx",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "CFX MoveUSD backing and redemption disclosure",
+          "label": "CFX current tokenized bank-deposit disclosure, retrieved October 1 2026",
           "url": "https://cfx.to/"
         },
         {
-          "label": "CFX legal, custody, and regulatory disclosure",
-          "url": "https://cfx.to/about-us"
+          "label": "CFX Trust Center custody and registration assertion, retrieved October 1 2026",
+          "url": "https://trust.cfx.to"
         },
         {
-          "label": "CFX product-capabilities documentation",
+          "label": "CFX platform capabilities, last updated October 21 2025",
           "url": "https://docs.cfx.to/docs/key-features"
         },
         {
-          "label": "NMLS Consumer Access entity page searched for CFX Labs (request blocked by site)",
-          "url": "https://www.nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/2383683"
+          "label": "CFX docs index searched October 1 2026",
+          "url": "https://docs.cfx.to/llms.txt"
         }
       ],
-      "notes": "CFX self-reports that MoveUSD is redeemable 1:1, that collateralizing dollars are held in a beneficiary account at an FDIC-member bank, and that custodial accounts are separate from CFX's assets. The same pages identify CFX as a non-bank MSB/money transmitter (NMLS 2383683; FinCEN MSB 31000284640857), not a prudential stablecoin issuer. The reviewed surfaces do not publish a governing holder agreement, beneficiary identity, insolvency priority, named bank, provider allocation, continuity plan, dated asset balance, circulating liability, or independent attestation. Registration and generic claims cannot supply those missing controls under the canonical standard. Searched URLs: https://cfx.to/, https://cfx.to/about-us, https://docs.cfx.to/docs/key-features, and https://www.nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/2383683 (HTTP access blocked). All three outcomes are therefore unavailable, not weak.",
+      "notes": "October 1 2026 review of the current CFX homepage, Trust Center, platform documentation, complete docs index and old MoveUSD disclosure redirects. The former about-us source returns 404; the old MoveUSD disclosure paths redirect to platform capabilities. CFX asserts 1:1 deposits across 3,000+ FDIC-insured banks and segregated customer custodial accounts, but these fetched surfaces contain no governing MOVEUSD holder claim/insolvency agreement, named bank/custody-continuity procedure or dated assets-to-all-liabilities independent reconciliation. The September 29 reserve review already records the new Trust Center; no qualifying closure document was found. All three components retain unavailable status, not a protective quality grade. No proofOfReserves.latestReport exists for the compiler fallback.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "applicability": "unavailable",
-          "rationale": "The CFX pages claim beneficiary/custodial-account separation, but no governing MoveUSD holder contract identifies the beneficiary, establishes a direct reserve claim, or fixes insolvency priority.",
-          "sourceUrl": "https://cfx.to/"
+          "rationale": "The issuer asserts segregated custodial accounts, but the reviewed public surfaces do not supply the governing holder agreement, named beneficiary, direct reserve claim or insolvency priority needed to grade this component.",
+          "sourceUrl": "https://trust.cfx.to"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "Searched CFX's homepage, about page, and product documentation. The FDIC-member bank is not named, no provider share or anti-rehypothecation control is published, and no failure, replacement, or successor-custody procedure is disclosed.",
-          "sourceUrl": "https://cfx.to/about-us"
+          "rationale": "The current homepage describes deposits across 3,000+ banks and a bank-failure survival claim, but no named banks, provider allocations, enforceable custody restrictions or successor-custody procedures are published on the reviewed surfaces.",
+          "sourceUrl": "https://cfx.to/"
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "Searched CFX's MoveUSD and product disclosures. They contain no dated assets-to-liabilities report, reserve statement, independent attestation, or reproducible itemized reserve dataset; a 1:1 issuer claim and MSB registration are insufficient.",
+          "rationale": "The homepage, Trust Center, docs index and product documentation contain no dated independent assets-to-whole-supply reconciliation, reserve statement or reproducible reserve inventory. Generic onchain deposit assertions and MSB registration do not provide that evidence.",
           "sourceUrl": "https://cfx.to/"
         }
       }
@@ -3950,13 +3840,21 @@
         {
           "label": "Kinesis trust and security disclosure (holders legally own fully allocated bullion that never appears on the Kinesis balance sheet; ABX strategic-partner vaulting network with Brinks and Loomis Zurich logistics across 13 named vault cities; every six months the digital record is verified against an independent physical precious metals audit; redemption from 100 g gold)",
           "url": "https://kinesis.money/trust-security/"
+        },
+        {
+          "label": "KMS ERC20 operative terms archived May 20, 2026: exact KAU contract, reserve-title denial and discretionary redemption",
+          "url": "https://web.archive.org/web/20260520201852/https://kmslabs.money/kms-labs-tcs/"
+        },
+        {
+          "label": "KMS ERC20 current operative terms checked October 1, 2026",
+          "url": "https://kmslabs.money/kms-labs-tcs/"
         }
       ],
-      "notes": "Merged entry: preserves claimAndSegregation and custodyContinuity at limited and adds assuranceAndReconciliation. CLAIM AND SEGREGATION = limited (preserved). Kinesis self-reports that KAU holders legally own fully allocated 9999 gold held off the Kinesis balance sheet, with redemption subject to platform terms (0.45% + $100 + delivery, 100 g minimum); the operative trust/custody agreements were not public, so this remains issuer disclosure at limited. CUSTODY CONTINUITY = limited (preserved). ABX is identified as the custody/vaulting-network partner with fully insured vaults across 13 cities (Dubai, Hong Kong, Istanbul, Vaduz, London, New York, Singapore, Sydney, Toronto, Zurich, Panama City, Batam, Brisbane) and Brinks/Loomis as logistics partners; vault-level allocations per custodian, replacement and failure process, and a reserve-wide non-rehypothecation covenant were not public, so limited stands. ASSURANCE AND RECONCILIATION = adequate (new). Kinesis documents a biannual independent audit program run by Inspectorate International Limited (a Bureau Veritas company): auditors physically tally all vaulted gold and silver, assess weight, fineness and storage quality, and check vaulted totals against the record of all KAU and KAG in circulation on the Kinesis blockchain; results are published, and the public archive shows a consistent twice-yearly cadence from March 2020 through October 2025 (latest entry directly verified this session: October 2025). A prior Pharos mint-tier review (2026-07-15) recorded the April 2026 audit (audit date 2026-04-20, published 2026-06-03 at kinesis.money/audit-april-2026/), but that report page returned HTTP 403 in this session and no archived copy was retrievable, so the April 2026 report could not be re-verified here. This recurring independent physical reconciliation of vaulted metal to circulation, with published reports, supports adequate rather than limited; it does not reach strong because the engagements are physical-inspection audits rather than financial attestation/examination reports with an assurance opinion, the ERC-20 wrapper's own KMS Labs native-KAU holdings are reconciled through the separate Chainlink PoR feed rather than in the Bureau Veritas reports, and no regulator supervises the program. What was NOT established: the April 2026 report's contents, and any independent reconciliation specific to the ERC-20 KAU contract supply. No existing quality was changed.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
+      "notes": "Historical 2026-07-20 review, retained as provenance rather than current direct ERC20 title/redemption evidence:\nMerged entry: preserves claimAndSegregation and custodyContinuity at limited and adds assuranceAndReconciliation. CLAIM AND SEGREGATION = limited (preserved). Kinesis self-reports that KAU holders legally own fully allocated 9999 gold held off the Kinesis balance sheet, with redemption subject to platform terms (0.45% + $100 + delivery, 100 g minimum); the operative trust/custody agreements were not public, so this remains issuer disclosure at limited. CUSTODY CONTINUITY = limited (preserved). ABX is identified as the custody/vaulting-network partner with fully insured vaults across 13 cities (Dubai, Hong Kong, Istanbul, Vaduz, London, New York, Singapore, Sydney, Toronto, Zurich, Panama City, Batam, Brisbane) and Brinks/Loomis as logistics partners; vault-level allocations per custodian, replacement and failure process, and a reserve-wide non-rehypothecation covenant were not public, so limited stands. ASSURANCE AND RECONCILIATION = adequate (new). Kinesis documents a biannual independent audit program run by Inspectorate International Limited (a Bureau Veritas company): auditors physically tally all vaulted gold and silver, assess weight, fineness and storage quality, and check vaulted totals against the record of all KAU and KAG in circulation on the Kinesis blockchain; results are published, and the public archive shows a consistent twice-yearly cadence from March 2020 through October 2025 (latest entry directly verified this session: October 2025). A prior Pharos mint-tier review (2026-07-15) recorded the April 2026 audit (audit date 2026-04-20, published 2026-06-03 at kinesis.money/audit-april-2026/), but that report page returned HTTP 403 in this session and no archived copy was retrievable, so the April 2026 report could not be re-verified here. This recurring independent physical reconciliation of vaulted metal to circulation, with published reports, supports adequate rather than limited; it does not reach strong because the engagements are physical-inspection audits rather than financial attestation/examination reports with an assurance opinion, the ERC-20 wrapper's own KMS Labs native-KAU holdings are reconciled through the separate Chainlink PoR feed rather than in the Bureau Veritas reports, and no regulator supervises the program. What was NOT established: the April 2026 report's contents, and any independent reconciliation specific to the ERC-20 KAU contract supply. No existing quality was changed.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.\n\nScoped D25 review on 2026-10-01: operative KMS ERC20 terms recovered in the May 20, 2026 archive explicitly identify KAU contract 0x14DAB79fD7B7B3f748d434812Fd6a9Aac460EA52 and deny token holders legal, equitable or beneficial reserve title; titleAndAllocation is weak. Redemption into native Kinesis KAU is discretionary, with no guaranteed direct redemption mechanism or processing timeframe, and physical gold redemption requires the subsequent native-KAU path; physicalRedemption is weak. Only these two components are updated. CustodyContinuity, assuranceAndReconciliation, metrics, adverse compliance history and the existing envelope reviewedAt are unchanged; newly pinned legal evidence is not a global freshness renewal.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
-          "quality": "limited"
+          "quality": "weak"
         },
         "custodyContinuity": {
           "quality": "limited"
@@ -3965,7 +3863,7 @@
           "quality": "adequate"
         },
         "physicalRedemption": {
-          "quality": "limited"
+          "quality": "weak"
         }
       }
     },
@@ -4162,30 +4060,38 @@
     {
       "assetId": "thbill-theo",
       "archetype": "tbill",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Theo thBILL product documentation",
-          "url": "https://docs.theo.xyz/thbill"
+          "label": "Theo current thBILL money-market product",
+          "url": "https://docs.theo.xyz/products/thbill.md"
         },
         {
-          "label": "Theo tULTRA and ULTRA service-provider disclosure",
-          "url": "https://docs.theo.xyz/thbill/tultra"
+          "label": "Theo current yield, allocation and redemption mechanics",
+          "url": "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md"
         },
         {
-          "label": "Theo tToken NAV and optimistic-settlement design",
-          "url": "https://docs.theo.xyz/technical-reference/ttokens-and-itokens/ttokens"
+          "label": "Theo holder rights and KYC/KYB terms",
+          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md"
         },
         {
-          "label": "Theo iToken basket and oracle design",
-          "url": "https://docs.theo.xyz/technical-reference/ttokens-and-itokens/itokens"
+          "label": "Theo ULTRA fact sheet",
+          "url": "https://docs.theo.xyz/products/thbill/wellington-ultra.md"
+        },
+        {
+          "label": "Theo FILQ fact sheet",
+          "url": "https://docs.theo.xyz/products/thbill/fidelity-filq.md"
         },
         {
           "label": "Theo legal terms",
-          "url": "https://docs.theo.xyz/legal/terms"
+          "url": "https://docs.theo.xyz/legal/terms.md"
+        },
+        {
+          "label": "Pinned Ethereum thBILL observation",
+          "url": "https://eth.blockscout.com/block/26095798"
         }
       ],
-      "notes": "Theo currently describes thBILL as an iToken basket of institutional Treasury products and tULTRA as a one-to-one wrapper of ULTRA shares or USDC reserved to mint ULTRA shares. It names FundBridge, Wellington, Standard Chartered/Libeara and the MAS-regulated Singapore unit-trust structure. The thBILL page also expressly says participants have no claim over underlying assets and only receive equivalent USDC value on redemption. That is affirmative adverse claim evidence, so fundClaimAndSeniority is weak rather than unavailable. The tToken/iToken pages describe totalAssets/totalSupply and oracle-based basket pricing, optimistic pendingAssets, and four-business-day collateral settlement, but they also say smart contracts/method references are pending and publish no dated independent NAV reconciliation, current maturity/WAM table, measured liquidity schedule, or loss waterfall. Those three components therefore remain unavailable.",
+      "notes": "Rechecked 2026-10-01 with Ethereum observation block 26095798. Current issuer docs explicitly deny holder claims on underlying fund units or securities, so the existing adverse fundClaimAndSeniority weak grade is retained, not improved. Current docs identify ULTRA/FILQ and a Theo-managed variable allocation, T+1 stablecoin redemption and independently reported FILQ NAV, but no current complete thBILL maturity schedule, liquidity ladder, thBILL-level independently administered NAV/basket-to-supply reconciliation, or enforceable holder recovery waterfall. The transparency dashboard is thUSD-scoped; its Libeara thBILL-holdings label is not a fetched thBILL assets-and-liabilities assurance report. No proofOfReserves.latestReport exists to support lossRecoveryDesign fallback. Old iToken/tToken source URLs are unavailable and replaced only for the claims directly supported by current documents.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -4193,18 +4099,18 @@
         },
         "navValuation": {
           "applicability": "unavailable",
-          "rationale": "Searched the thBILL, tULTRA, tToken and iToken disclosures. They describe contract exchange-rate and oracle concepts but do not publish a dated independently administered NAV, current input set, or basket-to-supply reconciliation.",
-          "sourceUrl": "https://docs.theo.xyz/technical-reference/ttokens-and-itokens/itokens"
+          "rationale": "Current yield and FILQ NAV pages describe redemption value and independently reported FILQ NAV but disclose no dated independently administered complete thBILL basket inputs and basket-to-supply reconciliation.",
+          "sourceUrl": "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md"
         },
         "durationAndLiquidity": {
           "applicability": "unavailable",
-          "rationale": "The reviewed thBILL/tULTRA pages state ultra-short Treasury exposure and four-business-day underlying settlement but publish no current itemized maturity schedule, WAM, hard maturity limits, liquidity ladder, or stress result.",
-          "sourceUrl": "https://docs.theo.xyz/thbill"
+          "rationale": "Product and fund fact sheets describe short-duration mandates and T+1 redemption but disclose no current itemized basket maturity schedule, WAM, hard maturity limit, liquidity ladder or stress result.",
+          "sourceUrl": "https://docs.theo.xyz/products/thbill.md"
         },
         "lossRecoveryDesign": {
           "applicability": "unavailable",
-          "rationale": "Searched the thBILL, tULTRA and legal disclosures. They publish no holder loss waterfall, insurance or reserve fund, recapitalization commitment, or independently reconciled assets-and-liabilities report for thBILL.",
-          "sourceUrl": "https://docs.theo.xyz/legal/terms"
+          "rationale": "Holder-rights and legal pages disclose no enforceable thBILL holder loss waterfall, reserve fund, insurance or recapitalization commitment, and no dated independent thBILL assets-to-liabilities report was fetched.",
+          "sourceUrl": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md"
         }
       }
     },
@@ -17211,26 +17117,30 @@
     {
       "assetId": "usdf-astherus",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-08-13",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Aster USDF fund-custody and risk-management disclosure",
-          "url": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+          "label": "Aster USDF mechanism",
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works"
         },
         {
-          "label": "Aster USDF capital-flow disclosure",
-          "url": "https://docs.asterdex.com/product/usdf-stablecoin/how-usdf-works"
+          "label": "Aster USDF custody and risk",
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
         },
         {
-          "label": "Aster USDF product overview",
-          "url": "https://docs.asterdex.com/product/usdf-stablecoin"
+          "label": "Aster USDF FAQs",
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
         },
         {
-          "label": "Ceffu MirrorX off-exchange settlement service named by Aster",
+          "label": "Aster full documentation index",
+          "url": "https://docs.asterdex.com/llms.txt"
+        },
+        {
+          "label": "Ceffu MirrorX",
           "url": "https://www.ceffu.com/solutions/mirrorx"
         }
       ],
-      "notes": "Aster describes 1:1 USDT minting, Ceffu custody, MirrorX delegation to a Binance sub-account, spot purchases paired with perpetual shorts, T+1 off-exchange settlement, frequent PnL settlement, and regular risk monitoring. Those are qualitative design claims rather than an itemized custody or hedge reconciliation, so they do not satisfy the canonical limited-grade evidence class. The issuer does affirmatively disclose that sustained negative funding reduces asUSDF APY and offers only an expectation of reversion toward a positive mean; that is direct evidence of a soft funding-stress design and supports weak. It also acknowledges liquidation if collateral falls short, but publishes no margin balance, requirement, headroom, or threshold, so margin remains unavailable rather than weak-from-missing. Searches of the linked USDF overview, capital-flow, custody/risk pages and Ceffu surface found no unwind-capacity stress result or funded loss-absorption arrangement.",
+      "notes": "ValA38OUSG independently fetched the public mechanism, custody/risk, peg, FAQ, complete documentation index and Ceffu MirrorX pages on 2026-10-01. They describe paired spot/perpetual positions, Ceffu/MirrorX delegation and Binance execution, but disclose no itemized hedge notionals/net delta, dated margin balances/requirements, USDF custody inventory or funded first-loss capital within that search scope. The issuer expressly acknowledges negative funding reducing asUSDF APY, so fundingBasisStress=weak is preserved. Qualitative risk monitoring and normal redemption processing do not meet the canonical limited-grade requirement for itemized figures plus an external anchor; marginAndLiquidation and unwindCapacity therefore receive unavailable dispositions rather than unsupported limited grades. This complete shared-file replacement is a validated high-confidence proposal for coordinator merge, not an applied shared-file edit.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -17239,44 +17149,48 @@
       "metricApplicability": {
         "hedgeCoverageRatio": {
           "state": "unavailable",
-          "rationale": "Searched the Aster USDF overview, capital-flow, and custody/risk pages. They describe corresponding spot and perpetual-short positions but publish no reconciled notionals or net delta.",
-          "sourceUrl": "https://docs.asterdex.com/product/usdf-stablecoin/how-usdf-works"
+          "rationale": "No reconciled spot/perpetual notionals or net delta in reviewed mechanism and custody pages.",
+          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works"
         },
         "marginBufferPct": {
           "state": "unavailable",
-          "rationale": "Searched Aster's custody and risk-management disclosure. It mentions monitoring and frequent PnL settlement but gives no exchange margin balance, initial or maintenance requirement, liquidation threshold, or excess-margin percentage.",
-          "sourceUrl": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+          "rationale": "No dated margin balance, requirements, headroom or threshold in reviewed custody/risk disclosure.",
+          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
         },
         "lossAbsorptionShare": {
           "state": "unavailable",
-          "rationale": "Searched the Aster USDF product, capital-flow, and custody/risk disclosures. No insurance fund, reserve fund, junior tranche, or other quantified first-loss capital is published.",
-          "sourceUrl": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+          "rationale": "No quantified funded first-loss capital in reviewed USDF disclosures.",
+          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
         }
       },
       "components": {
-        "venueAndCustody": {
-          "applicability": "unavailable",
-          "rationale": "Aster names Ceffu, MirrorX and Binance and describes the custody route, but the reviewed disclosure publishes no itemized account balances, provider shares, or independently anchored custody reconciliation needed to assign a quality grade.",
-          "sourceUrl": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
-        },
-        "hedgeReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "The capital-flow disclosure says spot assets are paired with corresponding perpetual shorts but publishes no venue-by-venue notionals, hedge coverage, or net-delta reconciliation.",
-          "sourceUrl": "https://docs.asterdex.com/product/usdf-stablecoin/how-usdf-works"
-        },
         "fundingBasisStress": {
           "quality": "weak"
         },
-        "marginAndLiquidation": {
-          "quality": "limited"
+        "hedgeReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "Paired positions are described but no measured notionals, hedge coverage or net delta is published.",
+          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works"
         },
-        "unwindCapacity": {
-          "quality": "limited"
+        "venueAndCustody": {
+          "applicability": "unavailable",
+          "rationale": "Ceffu/MirrorX/Binance are named, but no itemized custody account balances, provider shares or independent USDF reconciliation is published.",
+          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
         },
         "lossAbsorption": {
           "applicability": "unavailable",
-          "rationale": "Searched the USDF product and custody/risk disclosures. No funded insurance, reserve, junior tranche, or enforceable sponsor first-loss commitment is disclosed.",
-          "sourceUrl": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+          "rationale": "No funded insurance/reserve/junior tranche or enforceable sponsor first-loss commitment was found in the reviewed sources.",
+          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
+        },
+        "marginAndLiquidation": {
+          "applicability": "unavailable",
+          "rationale": "Risk monitoring and settlement are qualitative; no dated margin buffers or requirement reconciliation was found.",
+          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
+        },
+        "unwindCapacity": {
+          "applicability": "unavailable",
+          "rationale": "FAQ gives normal redemption processing periods, but no measured strategy stress-unwind capacity was published.",
+          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
         }
       }
     },
@@ -17470,7 +17384,7 @@
           "url": "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FR6VP6Ks07fXMOC9Bg4qK%2FMidas_Final_Terms_mAPOLLO_2025.pdf?alt=media"
         },
         {
-          "label": "Signed Midas mAPOLLO Final Terms dated 14 July 2026 (market-neutral basis strategy, 8.0x leverage cap, and daily/emergency rebalancing rules)",
+          "label": "Signed Midas mAPOLLO Final Terms dated 17 July 2026 (market-neutral basis strategy, 8.0x leverage cap, and daily/emergency rebalancing rules)",
           "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media"
         },
         {
@@ -17478,7 +17392,7 @@
           "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption"
         }
       ],
-      "notes": "mAPOLLO review updated 2026-08-11. venueAndCustody is weak because the binding terms rely on public wallet-address NAV tracking while listing Custodian, Collateral, and Security Agent as n/a, with no product-specific account-control evidence. lossAbsorption is weak because holders have a qualified-subordinated debt claim and no collateral/security-agent layer; this is positive adverse legal evidence, not a missing-evidence inference. unwindCapacity is limited because redemption is available at any time but valued through hypothetical best-efforts asset liquidation, and the Midas operational route can fall back from instant liquidity to a 1-7 business-day queue. The signed 14 July 2026 Final Terms now define a market-neutral strategy using basis trading, derivatives, and centralized and decentralized venues; require delta neutrality, cap gross leverage at 8.0x, require daily limit rebalancing, and require immediate exits under counterparty distress, systemic exchange outages, extreme market stress, or severe liquidity impairment. The Midas risk-monitoring disclosure independently describes fund-level credit/depeg/systemic-default stress scenarios and automated Initial/Maintenance Margin, leverage, and market-neutrality surveillance through 1Token PMS. This supports limited fundingBasisStress and marginAndLiquidation design quality, but not adequate quality: no mAPOLLO-specific stress output, funding tolerance, margin balance, maintenance utilization, liquidation threshold, or distance-to-liquidation is published. hedgeCoverageRatio, marginBufferPct, and lossAbsorptionShare therefore remain null and explicitly unavailable; component quality is not converted into invented numeric metrics.",
+      "notes": "mAPOLLO review updated 2026-08-11. venueAndCustody is weak because the binding terms rely on public wallet-address NAV tracking while listing Custodian, Collateral, and Security Agent as n/a, with no product-specific account-control evidence. lossAbsorption is weak because holders have a qualified-subordinated debt claim and no collateral/security-agent layer; this is positive adverse legal evidence, not a missing-evidence inference. unwindCapacity is limited because redemption is available at any time but valued through hypothetical best-efforts asset liquidation, and the Midas operational route can fall back from instant liquidity to a 1-7 business-day queue. The signed 17 July 2026 Final Terms now define a market-neutral strategy using basis trading, derivatives, and centralized and decentralized venues; require delta neutrality, cap gross leverage at 8.0x, require daily limit rebalancing, and require immediate exits under counterparty distress, systemic exchange outages, extreme market stress, or severe liquidity impairment. The Midas risk-monitoring disclosure independently describes fund-level credit/depeg/systemic-default stress scenarios and automated Initial/Maintenance Margin, leverage, and market-neutrality surveillance through 1Token PMS. This supports limited fundingBasisStress and marginAndLiquidation design quality, but not adequate quality: no mAPOLLO-specific stress output, funding tolerance, margin balance, maintenance utilization, liquidation threshold, or distance-to-liquidation is published. hedgeCoverageRatio, marginBufferPct, and lossAbsorptionShare therefore remain null and explicitly unavailable; component quality is not converted into invented numeric metrics.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -17951,7 +17865,7 @@
     {
       "assetId": "usda-alpha-partner",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Alpha Partner public site",
@@ -17966,7 +17880,7 @@
           "url": "https://ap-organization-1.gitbook.io/alpha-partners/llms.txt"
         }
       ],
-      "notes": "The current public site is an AP U-Card/USDT payment product. The GitBook discusses USDT deposits, internal reward ledgers, public address tracing, and says only that a portion of assets may be held with unspecified compliant banking partners. The complete GitBook index contains no USDA product or reserve documentation. Searched https://alphapartner.vip/, https://ap-organization-1.gitbook.io/alpha-partners/rules-and-trust.md and https://ap-organization-1.gitbook.io/alpha-partners/llms.txt. No USDA reserve assets, holder claim, redemption contract, custody provider, reserve balance, or independent reconciliation was found, so all fiat-cash controls are unavailable. Archetype warning: fiat-cash rests on stale/local metadata rather than current issuer evidence; absent a governing USDA source, the mechanism should be reopened as unresolved.",
+      "notes": "October1 scoped recheck: all14 GitBook Markdown pages from the complete llms.txt index, AP U-Card front-end shell and all20 delivered script assets were fetched. No USDA-specific product, reserve composition, binding holder claim, segregation instrument, named reserve custodian, or assets/liabilities attestation was found. The sole substring USDA in a shipped vendor asset occurs within PREVIOUSDAY, not a token disclosure. Rules and Trust discusses real card sales/USDT deposits and unspecified banking partners only. All three fiat-cash components remain unavailable. Fiat-cash archetype remains inherited local metadata, not current issuer substantiation. This bounded search does not prove absence across the internet or close any gap.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -18079,26 +17993,28 @@
     {
       "assetId": "emxn-telcoin",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Telcoin Digital Cash product page listing eMXN and promised monthly external attestations",
-          "url": "https://www.telco.in/en/digital-cash"
-        },
-        {
-          "label": "Telcoin Terms of Use, section XXIX for eXYZ stablecoins including eMXN",
+          "label": "Telcoin eXYZ Terms, re-fetched 2026-10-01",
           "url": "https://www.telco.in/en/terms-of-use"
         },
         {
-          "label": "Nebraska Governor announcement of Telcoin Digital Asset Bank's state charter, 2025-11-12",
-          "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter"
+          "label": "Telcoin Digital Cash, re-fetched 2026-10-01",
+          "url": "https://www.telco.in/en/digital-cash"
+        },
+        {
+          "label": "Separate Telcoin Digital Asset Bank eUSD terms",
+          "url": "https://bank.telco.in/terms-of-use"
         }
       ],
-      "notes": "Telcoin's effective 2026-06-30 terms identify eMXN as an eXYZ token issued by Telcoin LLC, backed at least 1:1 by MXN or equivalents in segregated regulated-financial-institution accounts, with redemption for eligible accounts. The binding terms plus the externally documented Telcoin Digital Asset Bank charter support limited claim and segregation, but do not establish that the chartered bank itself holds every eMXN reserve. Custody remains unavailable because the actual institutions and continuity terms are undisclosed. The promised monthly external-attestation program still has no eMXN artifact, so assurance remains unavailable.",
+      "notes": "The 2026-06-30 eXYZ terms identify Telcoin LLC as eMXN issuer and claim fiat/currency-equivalent reserves in segregated regulated-financial-institution accounts. Re-fetched 2026-10-01: no itemized eMXN asset/liability reconciliation, named reserve institution, custody-continuity terms or independent report is linked in the reviewed sources. Bank terms separately name Telcoin Digital Asset Bank and eUSD; that affiliate charter is not an external anchor for the eMXN claim. All three components are proposed unavailable rather than inferring quality from affiliate status.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "quality": "limited"
+          "applicability": "unavailable",
+          "rationale": "The issuer states a segregated eXYZ reserve claim but provides no independently anchored, itemized eMXN reconciliation or token-specific legal/custody document meeting the reviewed quality bar. The affiliate bank charter does not establish the eMXN legal issuer or reserve structure.",
+          "sourceUrl": "https://www.telco.in/en/terms-of-use"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
@@ -18922,6 +18838,56 @@
         },
         "assuranceAndReconciliation": {
           "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdv-solomon-v2",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-10-01",
+      "sources": [
+        {
+          "label": "Solomon replacement USDv reserves and peg stability",
+          "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves/"
+        },
+        {
+          "label": "Solomon approved-counterparty redemption and holder access limits",
+          "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/"
+        },
+        {
+          "label": "Solomon current risk and transparency disclosures",
+          "url": "https://docs.solomonlabs.org/usdv/transparency-and-risk"
+        },
+        {
+          "label": "Solomon program-security audit scopes (not financial reserve assurance)",
+          "url": "https://docs.solomonlabs.org/usdv/audits-and-security"
+        },
+        {
+          "label": "Independent finalized atomic replacement mint and selected reserve accounts, slot 452223792",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solomon main-website terms; expressly exclude separate redemption arrangements",
+          "url": "https://solomonlabs.org/terms-of-use"
+        }
+      ],
+      "notes": "Independently reviewed current replacement-USDv reserve, redemption, risk, program-security and main-website legal disclosures on 2026-10-01. Atomic finalized Solana slot 452223792 shows selected USDC/USDG accounts and USDv supply, with 1.542288 nominal units unreconciled. These locations do not establish complete financial reserve/liability assurance, enforceable holder reserve title/segregation, or insolvency-continuity terms. Main-website terms expressly exclude separate redemption arrangements; no inference of product rights is made from those terms. Program-security audits are not reserve examinations. Unavailable components retain bounded unknown and grant no qualitative quality score.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "applicability": "unavailable",
+          "rationale": "Issuer docs restrict direct mint/redeem to approved counterparties; holding USDv is not direct redemption entitlement. Reviewed documents do not establish enforceable holder reserve title, legal segregation or insolvency priority.",
+          "sourceUrl": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "On-chain PDAs and live role controllers are observable, but reviewed issuer risk disclosures do not provide product-specific legal custody, bankruptcy-remoteness or continuity terms for the complete reserve.",
+          "sourceUrl": "https://docs.solomonlabs.org/usdv/transparency-and-risk"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The selected USDC/USDG account inventory and token supply can be read atomically, with a small unreconciled nominal-unit gap. Published audit scopes concern programs and controls, not an independent complete reserve/liability examination.",
+          "sourceUrl": "https://docs.solomonlabs.org/usdv/audits-and-security"
         }
       }
     }

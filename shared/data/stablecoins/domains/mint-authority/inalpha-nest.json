@@ -77,16 +77,17 @@
             "0x98be74d3d5604904d0686eef9b4267f681f9520a",
             "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
             "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
-            "0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a",
+            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
             "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           ],
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "1.3.0",
-          "observedBlock": 25296225,
-          "source": "safe-api"
+          "observedBlock": 26095937,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
         "sources": [
           {
@@ -94,7 +95,7 @@
             "url": "https://app.safe.global/eth:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
           }
         ],
-        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (GnosisSafeL2 v1.3.0), threshold 3-of-6, 6 owners, no modules, no guard, nonce 151. This Safe is owner() of the BoringVault and controls the RolesAuthority. 2026-07-20 (Kimi P2 dc-2): owner() of the inALPHA BoringVault returns this Safe on both Ethereum and Plume; recorded as the explicit authority address so the control identity resolves.",
+        "evidence": "Historical Ethereum Safe API block 25296225 review recorded a 3-of-6 Safe with no modules or guard; the July review also recorded this Safe as vault owner on Ethereum and Plume. At Ethereum block 26095937 on 2026-10-01, the vault still returned owner 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, getThreshold() remained 3 and getOwners() returned six owners, with 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9 replacing the previously recorded 0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a. Modules, guard and current Plume state were not re-read.",
         "chain": "multichain",
         "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
         "failureDomainKeys": [
@@ -137,11 +138,11 @@
         },
         {
           "label": "Nest Alpha live positions and supply-by-chain feed",
-          "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/positions"
+          "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions"
         },
         {
           "label": "Nest Alpha live NAV and aggregate supply feed",
-          "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/price"
+          "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price"
         },
         {
           "label": "Nest nALPHA cross-chain integration documentation",

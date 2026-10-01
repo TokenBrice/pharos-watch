@@ -2,13 +2,13 @@
   "id": "usdcv-societe-generale-forge",
   "name": "USD CoinVertible",
   "symbol": "USDCV",
-  "oneLiner": "USDCV is Societe Generale-FORGE's MiCA-regulated U.S. dollar stablecoin, redeemable 1:1 against cash and HQLA segregated at BNY Mellon.",
+  "oneLiner": "USDCV is Societe Generale-FORGE's MiCA-regulated dollar stablecoin, backed by cash at BNY and Societe Generale; EEA holders have a direct 1:1 redemption right.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "U.S. dollar cash deposits and high-quality liquid assets held 1:1 in segregated accounts at Bank of New York Mellon (BNY), managed by independent fiduciaries and bankruptcy-remote from SG-FORGE; daily public disclosure of reserve composition",
-  "pegMechanism": "Direct 1:1 redemption through SG-FORGE",
+  "collateral": "U.S. dollar cash deposits held 1:1 in segregated accounts at The Bank of New York Mellon SA/NV and Societe Generale; holder claims are protected from other issuer creditors under French law, and reserve composition is disclosed daily by SG-FORGE.",
+  "pegMechanism": "Direct 1:1 redemption through SG-FORGE for EEA-resident holders after KYC/AML and sanctions checks; non-EEA holders have no direct issuer redemption right, and U.S. residents are excluded.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "307",
   "detailProvider": "defillama",
@@ -33,7 +33,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+      "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf"
     }
   ],
   "jurisdiction": {
@@ -74,5 +74,5 @@
       "coinType": "usd"
     }
   },
-  "launchDate": "2025-06-10"
+  "launchDate": "2025-06-25"
 }

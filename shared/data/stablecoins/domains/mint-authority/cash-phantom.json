@@ -24,8 +24,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "CASH Bridge program single-key upgrade authority",
-      "observedAt": "2026-08-28",
-      "observedBlock": 442198055,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452212680,
       "sources": [
         {
           "label": "Current Solana finalized RPC ProgramData reads",
@@ -137,8 +137,8 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-28",
-        "observedBlock": 442198055,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212680,
         "failureDomainKeys": [
           "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
         ],
@@ -152,7 +152,7 @@
             "url": "https://explorer.solana.com/tx/23biLsrUSuYhnDDvRhQUu7u7bnHNVB5nhE5nVDEJHLFvzztHKb5h4DXBmA5gWosN9v1FcmLqTMaJQCkihwWnpSHa"
           }
         ],
-        "evidence": "At finalized Solana slot 442198055, Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu named 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q as its current upgrade authority. The prior 6HZHZvHV... value was a decoding error: that 32-byte slice began at the bincode Option tag at offset 12 instead of the authority key at offset 13. The corrected authority is an on-curve public key with no live account data at the cutoff, so Solana exposes a direct externally signable authority rather than an on-chain multisig or timelock. Successful transaction 23biLsr... at slot 401157588 records the transfer from BozdeW... to 76m8d.... This authority can replace native Bridge mint logic immediately and invalidate every current allowance check."
+        "evidence": "At finalized Solana slot 452212680, native CASH remained owned by Token-2022 and retained Bridge mint authority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7. Bridge program BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm pointed to ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu, whose loader state named 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q as upgrade authority using the Option tag at byte 12 and key bytes 13-44. The authority is an on-curve public key, not a program-derived address. The standard Solana loader exposes this externally signable program-upgrade authority without an on-chain execution timelock; native allowance checks remain changeable through program replacement. Finalized getTransaction(23biLsr...) returned successful slot 401157588 with loader log New authority Some(76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q), confirming the historical transfer from transaction signer BozdeWNZHmpVWcKSYZo9W8rYbvtK8U8jMnYMQggsGkQH."
       },
       {
         "chain": "solana",

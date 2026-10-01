@@ -314,8 +314,8 @@
             "url": "https://klaytnscope.com/token/0x08745bee17026ed2e0e39a98f81189b9e14ab1b3"
           },
           {
-            "label": "DefiLlama celo-dollar adapter",
-            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-dollar/index.ts"
+            "label": "DefiLlama celo-dollar adapter (archived pre-consolidation revision)",
+            "url": "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/cfb73336f802f6c30de5f91c6510a005ba040e5b/src/adapters/peggedAssets/celo-dollar/index.ts"
           }
         ]
       }

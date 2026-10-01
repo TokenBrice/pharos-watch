@@ -16,8 +16,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi backing re-review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM01ZCHF)",
     "confidence": "verified",
     "sources": [
       {
@@ -27,12 +27,20 @@
       {
         "label": "Token Teknoloji EUROT product page",
         "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+      },
+      {
+        "label": "Akbank Token Teknoloji balance letter dated 2024-08-09",
+        "url": "https://www.token.com.tr/wp-content/uploads/2024/08/rezerv_akbank_20240809.pdf"
+      },
+      {
+        "label": "Ziraat Katılım Token Teknoloji balance letter dated 2024-08-08",
+        "url": "https://www.token.com.tr/wp-content/uploads/2024/08/Ziraat-Katilim-08082024.pdf"
       }
     ],
-    "rationale": "Re-verified 2026-07-30: Token's proof-of-reserves page (English and Turkish) states that EUROT euro reserves are kept in euro at Ziraat Participation Bank and Akbank, and links bank-signed balance letters (Akbank 2024-05-08, Ziraat Participation 2024-07-24) corroborating euro balances at both banks; the product page confirms the 1:1 euro backing mechanism. The issuer does not publish current balances, the bank-level split, or account terms.",
+    "rationale": "Reviewed 2026-10-01: the issuer's proof-of-reserves page names Ziraat Participation Bank and Akbank for EUROT euro reserves. Retrieved and visually read bank letters dated 2024-08-09 (Akbank) and 2024-08-08 (Ziraat Katılım) confirm Token Teknoloji euro balances alongside other currencies and assets. They are company balance certificates, not EUROT-specific reserve-to-liability reconciliations. The historical composition date is retained; no current bank allocation or safeguarding terms were established.",
     "compositionBasis": "Token proof-of-reserves disclosure (re-verified 2026-07-30)",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve banks are named, but the published bank balance letters are dated 2024-05-08 and 2024-07-24, and the split between the banks, current balances, and applicable account liquidity and safeguarding terms are undisclosed.",
+    "knownUnknownExposure": "The reserve banks are named, but the retrieved bank letters are dated 2024-08-09 and 2024-08-08 and cover Token Teknoloji multi-product balances. Current EUROT-specific reserve amounts, liabilities, bank-level allocation, liquidity terms, and safeguarding terms remain unverified.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

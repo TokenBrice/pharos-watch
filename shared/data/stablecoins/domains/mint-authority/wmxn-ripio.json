@@ -62,7 +62,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25770925, Base block 50066834, Worldchain block 33793694, BSC block 116360770, Polygon block 92145385, and Gnosis block 47762454 (all 2026-08-16 UTC), issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b held MINTER_ROLE on each reviewed native WMXN deployment. The verified LatamStable source gives the same EOA the immediate UPGRADER_ROLE path, and the EOA has no contract code where checked. Celo is excluded from this native control because its current role graph is representation-like."
+        "observedAt": "2026-10-01",
+        "evidence": "At Ethereum block 25770925, Base block 50066834, Worldchain block 33793694, BSC block 116360770, Polygon block 92145385, and Gnosis block 47762454 (all 2026-08-16 UTC), issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b held MINTER_ROLE on each reviewed native WMXN deployment. The verified LatamStable source gives the same EOA the immediate UPGRADER_ROLE path, and the EOA has no contract code where checked. Celo is excluded from this native control because its current role graph is representation-like. Rechecked on 2026-10-01: MINTER_ROLE, UPGRADER_ROLE and PAUSER_ROLE remain granted at Ethereum block 26096091, Base block 52025882, Worldchain block 35752737, Polygon block 94757316 and Gnosis block 48529969; all three are absent on Celo at block 78940356. BSC role rechecks returned unavailable historical state, so its prior observation is retained rather than refreshed."
       },
       {
         "chain": "ethereum",
@@ -119,7 +120,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At the reviewed role reads, fixed-destination LimitedMinter 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 held WMXN MINTER_ROLE on Ethereum, BSC, Polygon, and Gnosis, but not on Base or Worldchain. Its verified AccessControl path is administered by the Ripio issuer EOA and Safe; it remains a separate fixed-destination issuer facility and is not the cross-chain LimitedMinterBridge adapter."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096091,
+        "evidence": "At the reviewed role reads, fixed-destination LimitedMinter 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 held WMXN MINTER_ROLE on Ethereum, BSC, Polygon, and Gnosis, but not on Base or Worldchain. Its verified AccessControl path is administered by the Ripio issuer EOA and Safe; it remains a separate fixed-destination issuer facility and is not the cross-chain LimitedMinterBridge adapter. At Ethereum block 26096091 on 2026-10-01, WMXN hasRole(MINTER_ROLE, LimitedMinter) returned true and tokenConfigs(WMXN) returned destination 0xb6c9e6451a4b4f65249f60de4fd12da1088a2807, dailyMaxMint 650000000000000000000000, exists true. This current observation is Ethereum-specific; historical grants on other chains are not re-dated."
       }
     ],
     "economicCapSemantics": "unbounded",

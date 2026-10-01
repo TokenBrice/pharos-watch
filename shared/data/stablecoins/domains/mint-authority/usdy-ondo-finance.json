@@ -432,9 +432,9 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "InstantManager issuance is bounded by the OndoRateLimiter's 100,000,000 USDY global subscription limit per 24 hours and 50,000,000 USDY default per-user subscription limit per 24 hours; the reviewed admin subscriber Safe additionally had about 9,081,309 USD of remaining configured allowance.",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711917,
+        "capDescription": "At Ethereum block 26095799, OndoRateLimiter configured a 100,000,000 USD-value global subscription limit per 86,400 seconds and a 50,000,000 USD-value default per-user subscription limit per 86,400 seconds. AdminSubscriptionChecker reported 25,000,000 USD-value remaining allowance for the admin subscriber Safe. These replaceable route limits do not bound direct Safe issuance.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "failureDomainKeys": [
           "contract:ethereum:0xa42613c243b67bf6194ac327795b926b4b491f15",
           "issuer:ondo"
@@ -469,7 +469,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25711917, token MINTER_ROLE enumeration included this verified USDY InstantManager, whose public and admin subscription paths call the external limiter/checker before minting. At blocks 25711917-25711923, the active constraints were about $9.081 million of admin allowance, $100 million per 24 hours globally, and $50 million per 24 hours by default per user. The contract cannot raise those limits itself."
+        "evidence": "At Ethereum block 26095799, token MINTER_ROLE enumeration still included this verified USDY InstantManager. Pinned globalSubscriptionLimits(USDY), defaultUserSubscriptionLimitConfigs(USDY), and adminSubscriptionAllowance(0x505ff4462ba5e62ed529fa836d768ecd7b85439c) returned configured USD-value limits of 100 million and 50 million with 86,400-second windows, and 25 million of admin allowance respectively. Verified limiter and checker interfaces denominate limits in USD value rather than USDY token units. The public and admin subscription paths call the external limiter/checker before minting; the contract cannot raise those limits itself. The earlier August observation had about $9.081 million of admin allowance."
       },
       {
         "chain": "ethereum",
@@ -535,7 +535,7 @@
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 7,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.3.0",
           "owners": [
@@ -549,12 +549,13 @@
           ],
           "threshold": 3,
           "enabledModules": [],
-          "observedBlock": 87675398,
-          "observedAt": "2026-08-16",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 96620498,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 87675398,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96620498,
         "failureDomainKeys": [
           "safe:plume:0x8df2b047e5d7c854fa2e96d558496b04362c03da",
           "issuer:ondo"
@@ -573,7 +574,7 @@
             "url": "https://plume.org/blog/ondo"
           }
         ],
-        "evidence": "At Plume block 87675398, USDY DEFAULT_ADMIN_ROLE and MINTER_ROLE each had one member, this Safe's getThreshold() returned 3, getOwners() returned the seven owners recorded above, and getModulesPaginated() returned an empty module list. getGuard() reverted, so guard state remains unresolved and modulesOrGuardsStatus is recorded as unknown. The Safe is also the owner of Plume ProxyAdmin 0xbd452c59fa3c4c03de464500e94e8f3e6cf12167, so it can mint directly, change token roles, and replace mint-critical proxy logic. No bridge minter was found on Plume."
+        "evidence": "At Plume block 96620498, USDY DEFAULT_ADMIN_ROLE and MINTER_ROLE each had one member, this 3-of-7 Safe; its recorded owners were unchanged and getModulesPaginated() returned an empty module list. A pinned eth_getStorageAt read of Safe 1.3.0 GUARD_STORAGE_SLOT 0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8 returned zero, resolving the earlier reverted public getGuard() call. ProxyAdmin 0xbd452c59fa3c4c03de464500e94e8f3e6cf12167 owner() returned this Safe. It can mint directly, change token roles, and replace mint-critical proxy logic; no bridge minter was found on Plume."
       },
       {
         "chain": "plume",
@@ -588,7 +589,7 @@
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 7,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.3.0",
           "owners": [
@@ -602,12 +603,13 @@
           ],
           "threshold": 3,
           "enabledModules": [],
-          "observedBlock": 87675398,
-          "observedAt": "2026-08-16",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 96620498,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 87675398,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96620498,
         "failureDomainKeys": [
           "safe:plume:0x8df2b047e5d7c854fa2e96d558496b04362c03da",
           "issuer:ondo"
@@ -622,7 +624,7 @@
             "url": "https://rpc.plume.org"
           }
         ],
-        "evidence": "At Plume block 87675398, ProxyAdmin 0xbd452c59fa3c4c03de464500e94e8f3e6cf12167 owner() returned this Safe; getThreshold() returned 3, getOwners() returned the seven owners recorded above, and getModulesPaginated() returned an empty module list. getGuard() reverted, so guard state remains unresolved and modulesOrGuardsStatus is recorded as unknown. The transparent USDY proxy implementation was 0xbbfe105992808f4f92d2becd9e586358014ce613; no upgrade delay was established."
+        "evidence": "At Plume block 96620498, ProxyAdmin 0xbd452c59fa3c4c03de464500e94e8f3e6cf12167 owner() returned this 3-of-7 Safe; its recorded owners were unchanged and getModulesPaginated() returned an empty module list. Safe 1.3.0 GUARD_STORAGE_SLOT 0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8 returned zero, resolving the earlier reverted public getGuard() call. Correct EIP-1967 implementation and admin storage reads confirmed implementation 0xbbfe105992808f4f92d2becd9e586358014ce613 and the recorded ProxyAdmin. No upgrade delay was established."
       },
       {
         "chain": "sui",
@@ -639,8 +641,8 @@
         "signerCount": 7,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Live 0x2::coin::TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267a controls native Sui USDY issuance and is owned by a native 4-of-7 Sui multisig; the separate package upgrade authority remains unresolved.",
-        "observedAt": "2026-08-27",
-        "observedBlock": 314522516,
+        "observedAt": "2026-10-01",
+        "observedBlock": 328964517,
         "failureDomainKeys": [
           "sui:treasury-cap:0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267a",
           "issuer:ondo"
@@ -656,7 +658,7 @@
           },
           {
             "label": "Latest TreasuryCap mutation signed by the owner multisig",
-            "url": "https://suiscan.xyz/mainnet/tx/S71ik7k1Nenkqjm85qWfymMfPVVdLRxoP58dQuUTBmk"
+            "url": "https://suiscan.xyz/mainnet/tx/DSMfwL3k9g2qC6iQv2yWPEfoNW9FuBrLCDMA5sHiUomb"
           },
           {
             "label": "USDY Sui coin metadata",
@@ -667,7 +669,7 @@
             "url": "https://docs.ondo.finance/"
           }
         ],
-        "evidence": "A current Sui GraphQL type query on 2026-08-27 returned the live USDY TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267a at object version 961561917, owned by this address. Its latest mutation was successful transaction S71ik7k1Nenkqjm85qWfymMfPVVdLRxoP58dQuUTBmk at checkpoint 314522516 on 2026-08-24; the transaction carries a native MultisigSignature whose committee has threshold 4 and seven equal-weight members. The cap holder can execute the uncapped native mint path. The package upgrade authority was not established by these reads."
+        "evidence": "At pinned Sui checkpoint 328964517 on 2026-10-01, GraphQL returned USDY TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267a at object version 1015751157, owned by this address. Its latest mutation was successful transaction DSMfwL3k9g2qC6iQv2yWPEfoNW9FuBrLCDMA5sHiUomb at checkpoint 328043290. That transaction's sender is the cap owner, and its native MultisigSignature committee has threshold 4 and seven members each with weight 1. The cap holder can execute the uncapped native mint path. The separate package upgrade authority remains unresolved."
       },
       {
         "chain": "aptos",

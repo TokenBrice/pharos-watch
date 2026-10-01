@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
+  "collateral": "BTC, ETH, BNB, and liquid staking tokens through Omni-CDP; Prime Vault custodian-held BTC and Smart Vault deposits including USDT/USDC support internally minted satUSD",
   "pegMechanism": "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
   "mechanismArchetype": "cdp",
   "llamaId": "218",
@@ -95,7 +95,7 @@
     "semantics": "protocol-reserve",
     "breakerScope": "satusd-river",
     "display": {
-      "url": "https://river.inc/",
+      "url": "https://riverai.inc/",
       "label": "River Protocol Info"
     },
     "inputs": {

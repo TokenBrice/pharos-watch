@@ -70,23 +70,13 @@
         "name": "Initia iusd-vault and AUSD0 OFT contracts",
         "role": "other",
         "jurisdiction": "Onchain protocol"
-      },
-      {
-        "name": "Agora AUSD reserve structure",
-        "role": "other",
-        "jurisdiction": "United States"
-      },
-      {
-        "name": "Agora Reserve Fund LP and regulated reserve counterparties",
-        "role": "custodian",
-        "jurisdiction": "United States"
       }
     ],
-    "segregation": "mixed",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC15)",
     "confidence": "verified",
     "sources": [
       {
@@ -94,14 +84,10 @@
         "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
       },
       {
-        "label": "Agora AUSD reserve report - May 31, 2026",
-        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
-      },
-      {
-        "label": "Agora reserve transparency index",
-        "url": "https://docs.agora.finance/developer/transparency"
+        "label": "Initia official iUSD FAQ",
+        "url": "https://contents.initia.xyz/app/iusd-faq.json"
       }
     ],
-    "uncertainty": "The iUSD wrapper is held through Initia and LayerZero contracts, while reserve custody and assurance are inherited from AUSD. Initia does not publish a dedicated legal custody or proof-of-reserves report for the wrapper, so segregation, bankruptcy remoteness, and rehypothecation are not asserted here."
+    "uncertainty": "Direct iUSD custody is the Initia iusd-vault and AUSD0 OFT contract path. Agora reserve custody and assurance are upstream AUSD facts, not direct wrapper providers or legal safeguards. The current vault resources demonstrate a separate technical account, but the reopened FAQ and resources do not establish enforceable iUSD holder segregation or insolvency protection. Segregation, bankruptcy remoteness, and rehypothecation remain unknown."
   }
 }

@@ -92,13 +92,17 @@
       {
         "label": "Unitas off-exchange settlement documentation",
         "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
+      },
+      {
+        "label": "HT Digital collateral sighting letter, 18 September 2026 (future assurance engagement, not completed ISAE 3000 assurance)",
+        "url": "https://unipayfi.github.io/POR/20260918_090007_HTD_PoR_for_Unitas.pdf"
       }
     ],
     "rationale": "Re-opened 2026-08-08: Unitas Accountable dashboard reserves_split snapshot (total reserves $55,511,787.70, supply $53,052,105.13, collateralization 104.64%) exposes four venue/instrument buckets. Curated slice names mirror the adapter reserves_split identities verbatim. Weights refreshed to the 2026-08-08 capture: Solana 47.57%, Bitcoin 35.17%, Binance 15.02%, BNB Smart Chain 2.24%. The Bitcoin bucket is new since the prior review and represents BTC/WBTC on-chain collateral per Unitas docs; the three venue buckets continue to aggregate undisclosed instrument-level composition.",
     "compositionBasis": "Accountable dashboard API reserves_split venue/instrument allocation captured 2026-08-08; per-venue instrument composition undisclosed",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The venue split identifies where reserves are attested but not what each venue holds: Binance, Solana and BNB Smart Chain aggregate collateral assets, long/short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances per venue. Bitcoin/WBTC is identified as an asset class but its custody arrangement and hedge status are not itemized.",
+    "knownUnknownExposure": "The venue split identifies where reserves are attested but not what each venue holds: Binance, Solana and BNB Smart Chain aggregate collateral assets, long/short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances per venue. Bitcoin/WBTC is identified as an asset class but its custody arrangement and hedge status are not itemized. The HT Digital letter dated 18 September 2026 identifies collateral against the Solana USDu mint at 09:00:07 UTC, including a negative Other assets line; it is not a current per-venue instrument split. It reports management's segregation statement, says no procedures were performed over security placed on assets, and describes ISAE 3000 assurance as a future engagement. It does not settle the unknown legal-custody safeguards or justify re-dating the preserved August venue composition.",
     "knownUnknownExposurePct": 64.83,
     "nonLinkDispositions": [
       {

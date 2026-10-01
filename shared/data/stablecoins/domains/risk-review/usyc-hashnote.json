@@ -2,10 +2,23 @@
   "id": "usyc-hashnote",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USYC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "USYC product structuring: allowlist, entitlements, and system halt",
+        "url": "https://usyc.docs.hashnote.com/overview/product-structuring.md"
+      },
+      {
+        "label": "USYC verified Ethereum implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf0f2f3aad6b99893d80c550fbacec915545eb92"
+      },
+      {
+        "label": "Solana mainnet finalized account observation",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "Issuer documentation explicitly describes allowlist entitlements and a system halt that can freeze all USYC transactions. The verified Ethereum implementation checks transfer permissions through RolesAuthority. At finalized Solana slot 452213698, Token-2022 USYC retained live freezeAuthority DZ7j2YLDq7847t2HtCWaDQUTpLJ4BinPGsY8w9Aai63y, a non-executable account owned by the documented Teller and Permissions program. The prior inferred Yes verdict is now supported by primary documentation and pinned state.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA11USYC)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -331,7 +344,21 @@
             "url": "https://bscscan.com/address/0xf38979e05650be7926ea07bb59c48fb9b1db3d08#code"
           }
         ],
-        "evidence": "At BSC block 116356868, this zero-code EOA was the current FundAdmin on the BSC Entitlements/RolesAuthority. It could immediately set any BSC representation-minter allowance to uint256.max; this bridge-route capability is separate from its Ethereum native Mint Authority control."
+        "evidence": "Historical BSC block 116356868 review recorded this zero-code EOA as FundAdmin able to set representation-minter allowances. On 2026-10-01 at BSC block 125056474, Entitlements canCall(this account,USYC,setMinterAllowance) returned false, while doesUserHaveRole(this account,255) reverted. A separate block 125056037 read found its representation minter allowance was zero. The current FundAdmin capability is therefore not reconfirmed; no inference from the reverted role read is used to remove the historical adverse control. The native Ethereum FundAdmin capability was independently reconfirmed and remains separately scored."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "usyc-bsc-fundadmin",
+        "question": "Does the BSC Entitlements contract still authorize this historical FundAdmin to set representation-minter allowances through another role or capability path? At block 125056474 canCall returned false and the historical doesUserHaveRole ABI reverted; the old adverse control is retained pending a deployment-specific ABI and capability review.",
+        "reviewedAt": "2026-10-01",
+        "reviewer": "Sol curation pass 2026-10-01 (CurA11USYC)",
+        "sources": [
+          {
+            "label": "BSC Entitlements deployment",
+            "url": "https://bscscan.com/address/0x6b7d54003f73be979cf92bf369432ac534853692#code"
+          }
+        ]
       }
     ]
   }

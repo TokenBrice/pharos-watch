@@ -11,6 +11,9 @@
     "supervision": "none",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x88887be419578051ff9f4eb6c858a951921d8888"
+      ],
       "proxyAddresses": [
         "0x88887be419578051ff9f4eb6c858a951921d8888"
       ],
@@ -44,6 +47,9 @@
       {
         "chain": "ethereum",
         "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
+        "deploymentRefs": [
+          "ethereum:0x88887be419578051ff9f4eb6c858a951921d8888"
+        ],
         "label": "stcUSD ERC-4626 UUPS wrapper",
         "role": "wrapper",
         "authorityType": "contract",
@@ -71,6 +77,9 @@
       {
         "chain": "ethereum",
         "address": "0xb8FC49402dF3ee4f8587268FB89fda4d621a8793",
+        "deploymentRefs": [
+          "ethereum:0x88887be419578051ff9f4eb6c858a951921d8888"
+        ],
         "label": "Cap Ethereum governance Safe through one-day timelock",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -123,6 +132,9 @@
       {
         "chain": "ethereum",
         "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "deploymentRefs": [
+          "ethereum:0x88887be419578051ff9f4eb6c858a951921d8888"
+        ],
         "label": "Inherited Cap cUSD collateralized mint path",
         "role": "direct-minter",
         "authorityType": "contract",

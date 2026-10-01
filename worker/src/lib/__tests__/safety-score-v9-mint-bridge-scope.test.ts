@@ -297,9 +297,12 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(controlsFor(compiled, contaminatedMeta.id)).toEqual([]);
   });
 
-  it.each(["usdai-usd-ai", "susdai-usd-ai"])(
-    "%s compiles Arbitrum mint controls separately from satellite bridge controls",
-    (assetId) => {
+  it.each([
+    { assetId: "usdai-usd-ai", unresolvedChains: ["solana"] },
+    { assetId: "susdai-usd-ai", unresolvedChains: [] },
+  ])(
+    "$assetId compiles Arbitrum mint controls separately from satellite bridge controls",
+    ({ assetId, unresolvedChains }) => {
       const metadata = ACTIVE_META_BY_ID.get(assetId);
       if (!metadata?.mintAuthority || !metadata.bridgeRouteRisk?.routes) {
         throw new Error(`expected boundary metadata for ${assetId}`);
@@ -321,8 +324,10 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
           .filter((route) => route.issuanceModel === "native-issuance")
           .map((route) => route.id),
       );
-      const satelliteAuthorityKeys = satelliteRoutes.map(
-        (route) => `${route.controllerChain}:${route.controllerAddress!.toLowerCase()}`,
+      const satelliteAuthorityKeys = satelliteRoutes.map((route) =>
+        route.controllerAddress
+          ? `${route.controllerChain}:${route.controllerAddress.toLowerCase()}`
+          : `bridge-route:${route.id}`,
       );
 
       expect(mintControls).toHaveLength(metadata.mintAuthority.controls?.length ?? 0);
@@ -338,7 +343,31 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       expect(bridgeControls.map((control) => control.deploymentKey).sort()).toEqual(
         satelliteRoutes.map((route) => route.id).sort(),
       );
-      expect(bridgeControls.every((control) => control.capabilities.includes("bridge-mint"))).toBe(true);
+      const reviewedBridgeControls = bridgeControls.filter((control) =>
+        satelliteRoutes.some((route) => route.id === control.deploymentKey && route.reviewDisposition === "reviewed"),
+      );
+      expect(reviewedBridgeControls.map((control) => control.deploymentKey).sort()).toEqual(
+        satelliteRoutes.filter((route) => route.reviewDisposition === "reviewed").map((route) => route.id).sort(),
+      );
+      expect(reviewedBridgeControls.every((control) => control.capabilities.includes("bridge-mint"))).toBe(true);
+      const unresolvedRoutes = satelliteRoutes.filter((route) => route.reviewDisposition !== "reviewed");
+      expect(unresolvedRoutes.map((route) => route.destinationChain)).toEqual(unresolvedChains);
+      for (const unresolvedRoute of unresolvedRoutes) {
+        const unresolvedControl = bridgeControls.find((control) => control.deploymentKey === unresolvedRoute.id);
+        expect(unresolvedControl).toMatchObject({
+          capabilities: [],
+          authority: { authorityKey: `bridge-route:${unresolvedRoute.id}`, model: "unknown" },
+          capSemantics: { kind: "unknown" },
+          claimImpairment: "unknown",
+          incidentState: "unknown",
+        });
+        expect(unresolvedControl!.status.observationState).not.toBe("known");
+        expect(
+          asset.gaps
+            .filter((gap) => unresolvedControl!.status.gapIds.includes(gap.gapId))
+            .map((gap) => gap.reasonCode),
+        ).toContain("unresolved-control-identity");
+      }
       expect(bridgeControls.map((control) => control.authority?.authorityKey).sort()).toEqual(
         satelliteAuthorityKeys.sort(),
       );

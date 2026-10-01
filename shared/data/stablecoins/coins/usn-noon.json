@@ -2,13 +2,13 @@
   "id": "usn-noon",
   "name": "Noon USN",
   "symbol": "USN",
-  "oneLiner": "USN is Noon's base dollar, minted 1:1 from USDC/USDT or short-term T-bills while yield accrues through separate sUSN.",
+  "oneLiner": "USN is Noon's base dollar, minted 1:1 from USDC or USDT while yield accrues through separate sUSN.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "USN is minted 1:1 against USDT, USDC, or short-term U.S. Treasury bills, but the deposited assets are redeployed: on Accountable's 2026-09-22 snapshot the reserve composition is 62.0% Fasanara FTAC private credit, 13.4% funding-rate arbitrage, 9.9% tokenized Treasury bills held through Dinari USD+, 5.4% undeployed USDC/USDT, 4.5% Janus Henderson JAAA CLOs, and 4.8% Morpho and Euler lending.",
+  "collateral": "USN is minted 1:1 against USDT or USDC, but the deposited assets are redeployed: on Accountable's 2026-09-22 snapshot the reserve composition is 62.0% Fasanara FTAC private credit, 13.4% funding-rate arbitrage, 9.9% tokenized Treasury bills held through Dinari USD+, 5.4% undeployed USDC/USDT, 4.5% Janus Henderson JAAA CLOs, and 4.8% Morpho and Euler lending.",
   "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
   "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "230",

@@ -72,18 +72,20 @@
         "deploymentRefs": [
           "solana:myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
         ],
-        "label": "MYRC Solana mint and freeze authority (issuer keypair)",
+        "label": "MYRC Solana mint and freeze authority (off-curve address; controller controls unresolved)",
         "role": "direct-minter",
-        "authorityType": "eoa",
+        "authorityType": "unknown",
         "directMintAbility": "direct",
-        "modulesOrGuardsStatus": "not-applicable",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452252165,
         "sources": [
           {
             "label": "Solana MYRC mint",
             "url": "https://solscan.io/token/myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
           }
         ],
-        "evidence": "At Solana slot 425797741, getAccountInfo on mint myrcAs6b... returned mintAuthority and freezeAuthority Df8T8pvE..., a System-Program-owned non-executable account (issuer keypair, EOA-equivalent)."
+        "evidence": "At finalized Solana context slot 452252165 on 2026-10-01, mint myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv returned decimals 6 and mintAuthority and freezeAuthority Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z on both public Solana RPC and Alchemy. At context slot 452252244, the authority account was System Program-owned, non-executable and zero-data. Independent Ed25519 point decoding shows this address is off-curve, so it cannot be an issuer keypair. Historical transaction kBPurtV85kBnFp8S4QF6NUtFe8fJtTCxUtD76eW4ef4W1B7eMb43V5oKZtycqLGGHKks2ytSEvp7YiABQWzTvcX at slot 444138447 invokes program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf with this authority as a non-transaction signer. Present controlling-program configuration, threshold, membership and bypass paths are not independently established; do not treat System Program ownership as keypair evidence."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -53,7 +53,7 @@
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Sky Core vault collateral pools and underlying crypto protocols",
       "riskFactors": ["market", "liquidity", "smart-contract", "custody", "counterparty", "concentration"],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "sky-makercore:module:staked",

@@ -32,13 +32,17 @@
       {
         "label": "Tempo pathUSD documentation",
         "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
+      },
+      {
+        "label": "Bridge public pathUSD transparency API",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
       }
     ],
-    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. Bridge states that its custom stablecoins use configurable portfolios of short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash. Neither source publishes pathUSD's current allocation, so the reserve remains one aggregate basket without invented weights. Write-time re-open 2026-07-28: Bridge issuance reserves + FAQ docs still describe configurable reserve management for issued stablecoins; Tempo pathUSD docs corroborate product. No public dated instrument weights for pathUSD \u2192 ku=100.",
-    "compositionBasis": "Bridge custom-stablecoin reserve policy; pathUSD allocation undisclosed",
+    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. The Bridge FAQ describes eligible cash, short Treasuries, overnight Treasury repo and money-market-fund exposure. On 2026-10-01 the public pathUSD API reported dated cash and treasury amounts, superseding the earlier statement that no allocation was published. The existing aggregate composition and its date are retained pending review of the treasury category's instrument scope and the API's reserve-total discrepancy.",
+    "compositionBasis": "Bridge custom-stablecoin reserve policy; dated public cash/treasury amounts now available, with instrument-level mapping unresolved",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The eligible Bridge reserve portfolio is known, but pathUSD's current asset-class allocation is not publicly disclosed.",
+    "knownUnknownExposure": "Bridge publishes dated cash and treasury category amounts for pathUSD. The treasury category's instrument-level split, pathUSD-specific provider shares and the difference between reported total reserves and summed category amounts remain unresolved.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -46,7 +50,7 @@
         "reserveName": "Short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Bridge supports configurable reserve allocations but does not publish pathUSD's current weights."
+        "rationale": "Dated cash and treasury amounts are public, but the treasury instrument split and the category-sum versus reserve-total discrepancy require review before a structured composition is admitted."
       }
     ]
   },

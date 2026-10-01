@@ -7,14 +7,14 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Cash (USD deposits), short-dated U.S. Treasury bills, and overnight reverse repurchase agreements; managed by VanEck in a bankruptcy-remote Delaware Statutory Trust custodied by State Street",
-  "pegMechanism": "Fiat-backed 1:1; users deposit USD and mint AUSD at par; direct redemption for USD through Agora; reserves held in bankruptcy-remote Delaware Statutory Trust administered by State Street",
+  "collateral": "Cash, short-term U.S. Treasury securities, overnight Treasury repos and a disclosed stablecoin basket; reserve assets include Agora Bermuda Limited's interest in the Delaware limited partnership Agora Reserve Fund LP and directly held cash and stablecoins, held through its Bermuda segregated account",
+  "pegMechanism": "USD-denominated fiat-backed token; direct mint and redemption require a verified Agora customer. Reserve assets are held through Agora Bermuda Limited's segregated account under Bermuda's Segregated Accounts Companies Act; redemption timing, delays and possible in-kind settlement are governed by the issuer's terms",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "205",
   "detailProvider": "defillama",
   "geckoId": "agora-dollar",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://docs.agora.finance/developer/transparency",
     "provider": "Grant Thornton LLP",
     "attestorTier": "regional",

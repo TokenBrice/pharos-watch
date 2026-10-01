@@ -2,7 +2,7 @@
   "id": "syusd-aegis",
   "name": "Aegis Staked YUSD",
   "symbol": "sYUSD",
-  "oneLiner": "sYUSD is Aegis's staking wrapper of YUSD; share price accrues delta-neutral BTC funding-rate yield with a 7-day cooldown before YUSD can be withdrawn.",
+  "oneLiner": "sYUSD is Aegis's YUSD staking wrapper; rewards accrue through its share price. Ethereum supports a 7-day cooldown or instant YUSD redemption with a fee.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized",
@@ -13,7 +13,7 @@
   "variantKind": "savings-passthrough",
   "pegReferenceId": "yusd-aegis",
   "collateral": "YUSD deposited into Aegis's ERC-4626 staking contract; the wrapper remains backed by YUSD while funding-rate income accrues through the rising exchange rate",
-  "pegMechanism": "Deposit YUSD to receive sYUSD; the exchange rate versus YUSD increases as rewards accrue, while unstaking enters Aegis's documented 7-day cooldown before YUSD can be withdrawn",
+  "pegMechanism": "Deposit YUSD to receive sYUSD; rewards accrue through the exchange rate. On Ethereum, holders can use the 7-day cooldown or redeem immediately for YUSD with the configured instant-unstaking fee, observed at 50 basis points on 2026-10-01.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "staked-yusd",

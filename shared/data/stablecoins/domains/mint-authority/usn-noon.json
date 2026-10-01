@@ -28,7 +28,7 @@
       "sources": [
         {
           "label": "Noon contracts and addresses",
-          "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
+          "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
         },
         {
           "label": "USN proxy on Etherscan",
@@ -159,14 +159,14 @@
         "sources": [
           {
             "label": "Noon on-chain collateral addresses",
-            "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
           },
           {
             "label": "Noon collateral Safe API",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089/"
           }
         ],
-        "evidence": "At block 25530462, MinterHandlerV2.custodialWallet() returned this address. Noon identifies it as an on-chain collateral wallet; direct Safe reads and the Safe API identify a 4-of-5 Safe with no enabled modules and a zero guard. It receives collateral from mint users but has no USN mint role. Re-checked 2026-09-22 at block 26036288: the Safe remains 4-of-5, and exactly three of its owner keys (0xe45Bb0D3..., 0x09CE2d1C..., 0x8B3641db...) are shared with the 3-of-6 admin Safe, an overlap equal to the admin threshold, so the same three keys form a complete admin quorum while needing one additional signer to act here."
+        "evidence": "At block 25530462, MinterHandlerV2.custodialWallet() returned this address. Noon identifies it as an on-chain collateral wallet; direct Safe reads and the Safe API identify a 4-of-5 Safe with no enabled modules and a zero guard. Historical mint deposits were routed here. Re-checked 2026-09-22 at block 26036288: the Safe remained 4-of-5, and exactly three of its owner keys (0xe45Bb0D3..., 0x09CE2d1C..., 0x8B3641db...) were shared with the 3-of-6 admin Safe, an overlap equal to the admin threshold. At Ethereum block 26095810 on 2026-10-01, both Safe quorums and the three-owner overlap were unchanged, but MinterHandlerV2.custodialWallet() returned 0x4fd04553468610e5a88a2cffa38e057c954312da instead; this Safe is no longer the handler's current collateral destination."
       },
       {
         "chain": "ethereum",
@@ -189,7 +189,7 @@
         "sources": [
           {
             "label": "Noon contracts and addresses",
-            "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
           },
           {
             "label": "Noon upgrade timelock source",
@@ -230,11 +230,11 @@
         },
         {
           "label": "Noon contracts and addresses",
-          "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
+          "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
         },
         {
           "label": "Noon USN interoperability",
-          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
         },
         {
           "label": "Noon collateral Safe API",

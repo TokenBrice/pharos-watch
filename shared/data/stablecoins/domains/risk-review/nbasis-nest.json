@@ -13,7 +13,7 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless",
+    "tier": "privileged-internal-pricing",
     "summary": "nBASIS is a Nest NAV vault receipt token whose value is determined by the vault's strategy accounting and redemption value, not by borrower-specific collateral liquidation oracles.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
@@ -29,8 +29,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex ORCL curation batch 18",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "ValM06UTY second-round validation",
     "confidence": "verified",
     "sources": [
       {
@@ -40,6 +40,18 @@
       {
         "label": "Nest nBASIS integration guide",
         "url": "https://docs.nest.credit/developers/integration-guides/nbasis/"
+      },
+      {
+        "label": "Nest operations and valuation: operations-managed NAV updates",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+      },
+      {
+        "label": "Nest nBASIS current Accountant and hub/spoke registry",
+        "url": "https://api.nest.credit/v1/vaults/nest-basis-vault"
+      },
+      {
+        "label": "Nest nBASIS current NAV price updates",
+        "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
       }
     ]
   },

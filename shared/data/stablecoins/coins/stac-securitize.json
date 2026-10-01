@@ -36,7 +36,21 @@
     "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac",
     "provider": "Chronicle Proof of Asset",
     "attestorTier": "niche",
-    "cadence": "daily"
+    "cadence": "daily",
+    "latestReport": {
+      "periodEnd": "2026-09-29",
+      "assuranceMethod": "unknown",
+      "scope": "assets-only",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA32rwaUSDi)",
+      "confidence": "manual-review",
+      "sources": [
+        {
+          "label": "Chronicle STAC proof payload (document date 2026-09-29; retrieved 2026-10-01)",
+          "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
+        }
+      ]
+    }
   },
   "links": [
     {

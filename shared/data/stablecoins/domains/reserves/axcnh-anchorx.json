@@ -17,8 +17,8 @@
     "confidence": "unknown",
     "sources": [
       {
-        "label": "Kreston AxCNH Agreed-Upon Procedures Report - May 2026",
-        "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
+        "label": "Kreston AxCNH Agreed-Upon Procedures Report: June 2026, recovered October 1",
+        "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA?e=9k7D0I"
       },
       {
         "label": "AnchorX public reserves data (GitHub anchorx-reserves data.json, latest commit 2026-07-29)",
@@ -29,11 +29,11 @@
         "url": "https://www.anchorx.org/"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-31: the issuer's GitHub reserve feed (latest commit 2026-07-29) reports circulationAmount 39.13 and reservesAmount 39.13 and links March/June attestation files, but publishes no reserve asset classes, institution names, terms, or allocation. The linked SharePoint attestation URLs redirect to Microsoft sign-in in the current retrieval environment, so the report contents cannot be re-derived now. AnchorX's public site likewise exposes no structured composition. The prior 100% bank-deposit slice is therefore not retained; the complete reserve remains an explicit unknown residual pending a retrievable assurance report. Lockstep pin 2026-08-08: compositionAsOf anchored to the June 2026 Kreston AUP period that latestReport records; the composition remains an unknown envelope (no asset classes published) and the GitHub feed parity read of 2026-07-29 (circulation 39.13 = reserves 39.13) is retained as corroboration.",
-    "compositionBasis": "AnchorX June 2026 Kreston AUP period (composition classes undisclosed) with the issuer reserve feed parity check",
+    "rationale": "The June 30, 2026 Kreston AUP report, published July 15, was recovered through the SharePoint viewer on October 1. It reports AnchorX Global Limited reserves of 39,221,874 CNH as cash held at regulated financial institutions against 39,128,445 AxCNH, while AnchorX.KZ Limited had 56.47 CNH and zero circulating tokens. This dated report does not identify banks or establish current reserve allocation. The unknown reserve envelope and June composition date remain unchanged pending current, identity-matched evidence; the earlier report-access blocker is resolved.",
+    "compositionBasis": "Historical June 2026 Kreston AUP reserve period; current reserve composition remains unresolved",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current issuer feed does not disclose the reserve composition; linked attestations were not retrievable at write time.",
+    "knownUnknownExposure": "The recovered June report identifies historical CNH cash at unnamed regulated financial institutions; no current institution-level allocation is established.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -41,7 +41,7 @@
         "reserveName": "CNH reserve (composition undisclosed)",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The issuer feed confirms matched headline totals but does not identify reserve assets; the linked attestations require sign-in in the current retrieval environment."
+        "rationale": "The June AUP report is now retrievable and identifies historical CNH cash. Its age and issuer-version scope do not establish the current reserve allocation, so the unknown residual is retained."
       }
     ]
   },
@@ -64,10 +64,10 @@
         "url": "https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data.json"
       },
       {
-        "label": "Kreston AxCNH linked attestation (retrieval attempted 2026-07-31)",
-        "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
+        "label": "Kreston AxCNH June AUP report recovered October 1, 2026",
+        "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA?e=9k7D0I"
       }
     ],
-    "uncertainty": "No provider share, segregation, bankruptcy-remoteness, or rehypothecation fact is asserted because the current public feed omits them and the linked attestation was not retrievable without SharePoint sign-in."
+    "uncertainty": "The June AUP report was recovered on October 1. It identifies unnamed regulated financial institutions and company-name accounts, but institution shares and enforceable holder segregation, bankruptcy remoteness, and rehypothecation protections remain unresolved. Company confirmations about permitted reserve use are not independent legal protection evidence."
   }
 }

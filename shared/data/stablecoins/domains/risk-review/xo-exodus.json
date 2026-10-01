@@ -4,13 +4,17 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
-        "url": "https://www.exodus.com/"
+        "label": "MoonPay stablecoin terms, Section 7",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      },
+      {
+        "label": "Solana finalized mint-account observation, slot 452213064",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At finalized Solana slot 452213064 on 2026-10-01, the XO Cash Token-2022 mint xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y exposed freezeAuthority, permanentDelegate, and pausableConfig authority AgNSjv3CWETjQgcLK5MkTzRSt3KirbrBqGagjv5AKbCR; paused was false. The transferHook authority was the same address, with no active hook program. MoonPay's stablecoin terms reserve aggregate token-freeze and upgrade powers and compliance-directed seizure rights. These are direct token controls rather than an inference from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB15USN)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
@@ -164,6 +168,8 @@
         },
         "capDescription": "The XO extension wraps Portal-delivered Solana M and mints the XO representation; its paired unwrap path burns the representation against the underlying M route.",
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213064,
         "sources": [
           {
             "label": "XO Solana token",

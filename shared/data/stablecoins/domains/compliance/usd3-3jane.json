@@ -1,22 +1,5 @@
 {
   "id": "usd3-3jane",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "MiCA Article 2: financial instruments and funds are outside MiCA scope",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      },
-      {
-        "label": "3Jane Terms of Use: USD3 is a yieldcoin backed by credit lines and the platform is operated by Tulkum Assets Corp.",
-        "url": "https://www.3jane.xyz/pdf/terms-of-service.pdf"
-      },
-      {
-        "label": "3Jane official site: USD3 is a credit-backed yieldcoin with auto-compounded yield",
-        "url": "https://www.3jane.xyz/"
-      }
-    ]
-  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

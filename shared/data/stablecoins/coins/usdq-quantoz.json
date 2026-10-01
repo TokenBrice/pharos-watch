@@ -2,13 +2,13 @@
   "id": "usdq-quantoz",
   "name": "Quantoz USDQ",
   "symbol": "USDQ",
-  "oneLiner": "USDQ is Quantoz Payments' MiCA-authorized dollar e-money token, backed by cash, deposits, and EU and U.S. government bonds.",
+  "oneLiner": "USDQ is Quantoz Payments' MiCA-authorized dollar e-money token, backed by dollar cash deposits and U.S. Treasuries.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserve ratio disclosed on Quantoz's transparency page",
-  "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves are disclosed against circulating supply on the Quantoz transparency page",
+  "collateral": "U.S. dollar cash deposits and U.S. Treasuries safeguarded through Stichting Quantoz, separate from Quantoz Payments' operating funds. Quantoz describes the foundation as bankruptcy-remote and uses multiple undisclosed Tier 1 European banking partners; the USDQ reserve snapshot is self-reported.",
+  "pegMechanism": "Quantoz's current redemption webpage offers direct face-value redemption to a verified bank account in the holder's own name after identity, token-ownership and source-of-funds checks, without requiring a pre-existing token account, for holders with a verified address and bank account in the EEA, UK or Switzerland. It allows up to one week for on-chain compliance checks after confirmed receipt, followed by the Terms of Service payout schedule. The linked USDQ whitepaper v1.4 dated 30 April 2026 instead describes direct redemption for registered EEA-resident USDQ Account Holders and directs other holders to partners; this eligibility discrepancy remains unresolved. Secondary-market sales are on venue terms.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

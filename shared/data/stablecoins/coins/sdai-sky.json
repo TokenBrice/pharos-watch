@@ -49,7 +49,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-top",
+  "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Dai Savings Rate (sDAI)",

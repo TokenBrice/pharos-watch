@@ -39,6 +39,8 @@
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Immutable DSR-style savings wrapper over deposited USDD; no admin, no proxy, no upgrade path. Shares minted/burned only by deposit/withdraw.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "SavingsUsdd source (Blockscout ETH)",
@@ -49,7 +51,7 @@
             "url": "https://usdd.io/"
           }
         ],
-        "evidence": "At Ethereum block 25771107, the SavingsUsdd wrapper returned name() = Savings Usdd, symbol() = sUSDD, and asset() = 0x4f8e5de400de08b164e7421b3ee387f461becd1a. Its EIP-1967 implementation slot was zero and owner() reverted. The verified immutable ERC-4626 source has no owner, role admin, pause, or upgrade path; shares mint only against deposited USDD and burn on withdrawal."
+        "evidence": "At Ethereum block 26095796 on 2026-10-01, name() = Savings Usdd, symbol() = sUSDD, asset() = 0x4f8e5de400de08b164e7421b3ee387f461becd1a, and usddJoin() = 0x983dfef6d71862d809e239845da5a959492f63b8. The EIP-1967 implementation slot was zero and owner() reverted, reconfirming the prior block 25771107 observation. Verified SavingsUsdd source has no owner, role admin, pause or upgrade path; shares mint against deposits and burn on withdrawal."
       },
       {
         "chain": "bsc",
@@ -63,6 +65,8 @@
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Immutable DSR-style savings wrapper over deposited BNB Chain USDD; no admin, no proxy, no upgrade path. Shares minted/burned only by deposit/withdraw.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055874,
         "sources": [
           {
             "label": "SavingsUsdd source (BSCScan)",
@@ -73,11 +77,11 @@
             "url": "https://docs.usdd.io/susdd-mechanism"
           }
         ],
-        "evidence": "At BSC block 116365577, the SavingsUsdd wrapper returned name() = Savings Usdd, symbol() = sUSDD, and asset() = 0x45e51bc23d592eb2dba86da3985299f7895d66ba. Its EIP-1967 implementation slot was zero and owner() reverted. The verified immutable ERC-4626 source has no owner, role admin, pause, or upgrade path; shares mint only against deposited BNB Chain USDD and burn on withdrawal."
+        "evidence": "At BSC block 125055874 on 2026-10-01, name() = Savings Usdd, symbol() = sUSDD, asset() = 0x45e51bc23d592eb2dba86da3985299f7895d66ba, and usddJoin() = 0x6b00039d76795fd59baf17e0c9c6d87011e7edac. The EIP-1967 implementation slot was zero and owner() reverted, reconfirming the prior block 116365577 observation. Verified SavingsUsdd source has no owner, role admin, pause or upgrade path; shares mint against local USDD deposits and burn on withdrawal."
       },
       {
         "chain": "ethereum",
-        "address": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+        "address": "0x983dfef6d71862d809e239845da5a959492f63b8",
         "deploymentRefs": [
           "ethereum:0xc5d6a7b61d18afa11435a889557b068bb9f29930"
         ],
@@ -89,6 +93,8 @@
         "capDescription": "UsddJoin.exit first executes vat.move(msg.sender,address(this),ONE*wad) and only then calls usdd.mint. The Join therefore requires pre-existing Vat credit and cannot authorize itself or raise a Vat debt ceiling.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Official USDD deployment addresses",
@@ -103,7 +109,7 @@
             "url": "https://etherscan.io/block/25711756"
           }
         ],
-        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At Ethereum block 25711756, token.wards(Join) returned 1, Join.usdd() returned the tracked token, and Join.live() returned 1. Verified exit() consumes existing Vat credit before minting, and the Join cannot raise system limits or authorize itself."
+        "evidence": "At Ethereum block 26095796 on 2026-10-01, wrapper.usddJoin() resolves this Join (the prior addressed control incorrectly used the USDD token address). token.wards(Join) = 1, Join.usdd() = 0x4f8e5de400de08b164e7421b3ee387f461becd1a, and Join.live() = 1. Verified exit() consumes existing Vat credit before minting; this remains inherited native USDD mint authority, not a bridge."
       },
       {
         "chain": "ethereum",
@@ -120,6 +126,8 @@
         "capDescription": "The DSAuth-controlled executor can call rely to authorize new token or Vat wards, file to raise system ceilings, and customExec for arbitrary system calls. Its Pause delay is zero.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Sourcify verified Ethereum GovActionsProxy source",
@@ -130,7 +138,7 @@
             "url": "https://etherscan.io/block/25711756"
           }
         ],
-        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At Ethereum block 25711756, authority() returned zero, owner() returned 0x25198d0d111eeac0fb1bd1de826294d9fce84378, and the linked Pause delay was zero. Verified source exposes authenticated rely, file, and customExec paths, so this executor can authorize mint rails rather than only changing parameters."
+        "evidence": "At Ethereum block 26095796 on 2026-10-01, authority() = zero, owner() = 0x25198d0d111eeac0fb1bd1de826294d9fce84378, and Pause 0xca277750ecd2b0707a7ccef2a78ec2f33b5fc7f7 delay() = zero, reconfirming block 25711756. Verified source exposes authenticated rely, file and customExec paths; inherited parent authority remains immediately governed."
       },
       {
         "chain": "ethereum",
@@ -146,6 +154,8 @@
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Sourcify verified Ethereum GovActionsProxy source",
@@ -160,7 +170,7 @@
             "url": "https://etherscan.io/block/25711756"
           }
         ],
-        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At Ethereum block 25711756, GovActionsProxy.owner() returned this address, authority() returned zero, and eth_getCode returned empty. DSAuth therefore gives this EOA immediate governance paths that can authorize mint rails or remove system limits."
+        "evidence": "At Ethereum block 26095796 on 2026-10-01, GovActionsProxy.owner() = this address, authority() = zero and eth_getCode = 0x, reconfirming block 25711756. Verified DSAuth gives this EOA immediate governance paths that can authorize mint rails or remove system limits."
       },
       {
         "chain": "bsc",
@@ -176,6 +186,8 @@
         "capDescription": "UsddJoin.exit first executes vat.move(msg.sender,address(this),ONE*wad) and only then calls usdd.mint. The Join therefore requires pre-existing Vat credit and cannot authorize itself or raise a Vat debt ceiling.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055874,
         "sources": [
           {
             "label": "Official USDD deployment addresses",
@@ -190,7 +202,7 @@
             "url": "https://bscscan.com/block/114778869"
           }
         ],
-        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At BSC block 114778869, token.wards(Join) returned 1, Join.usdd() returned the tracked token, and Join.live() returned 1. Verified exit() consumes existing Vat credit before minting, and the Join cannot raise system limits or authorize itself."
+        "evidence": "At BSC block 125055874 on 2026-10-01, token.wards(Join) = 1, Join.usdd() = 0x45e51bc23d592eb2dba86da3985299f7895d66ba and Join.live() = 1, reconfirming block 114778869. Verified exit() consumes existing Vat credit before minting; the Join cannot raise system limits or authorize itself."
       },
       {
         "chain": "bsc",
@@ -207,6 +219,8 @@
         "capDescription": "The DSAuth-controlled executor can call rely to authorize new token or Vat wards, file to raise system ceilings, and customExec for arbitrary system calls. Its Pause delay is zero.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055874,
         "sources": [
           {
             "label": "Sourcify verified BSC GovActionsProxy source",
@@ -217,7 +231,7 @@
             "url": "https://bscscan.com/block/114778869"
           }
         ],
-        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At BSC block 114778869, authority() returned zero, owner() returned 0x25198d0d111eeac0fb1bd1de826294d9fce84378, and the linked Pause delay was zero. Verified source exposes authenticated rely, file, and customExec paths, so this executor can authorize mint rails rather than only changing parameters."
+        "evidence": "At BSC block 125055874 on 2026-10-01, authority() = zero, owner() = 0x25198d0d111eeac0fb1bd1de826294d9fce84378 and Pause 0xc081f712e217672374a9c3db708c6f6c183c172e delay() = zero, reconfirming block 114778869. Verified source exposes authenticated rely, file and customExec paths; inherited parent authority remains immediately governed."
       },
       {
         "chain": "bsc",
@@ -233,6 +247,8 @@
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055874,
         "sources": [
           {
             "label": "Sourcify verified BSC GovActionsProxy source",
@@ -247,7 +263,7 @@
             "url": "https://bscscan.com/block/114778869"
           }
         ],
-        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At BSC block 114778869, GovActionsProxy.owner() returned this address, authority() returned zero, and eth_getCode returned empty. DSAuth therefore gives this EOA immediate governance paths that can authorize mint rails or remove system limits."
+        "evidence": "At BSC block 125055874 on 2026-10-01, GovActionsProxy.owner() = this address, authority() = zero and eth_getCode = 0x, reconfirming block 114778869. Verified DSAuth gives this EOA immediate governance paths that can authorize mint rails or remove system limits."
       }
     ],
     "economicCapSemantics": "bounded",

@@ -2,10 +2,19 @@
   "id": "eurot-token-teknoloji",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EUROT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex Worker B metadata pass",
-    "reviewedAt": "2026-05-14"
+    "sources": [
+      {
+        "label": "EUROT Ethereum verified StableCoin source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+      },
+      {
+        "label": "EUROT Polygon verified StableCoin source",
+        "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+      }
+    ],
+    "evidence": "Verified StableCoin source exposes freeze(address) and unfreeze(address) to the compliance manager or owner, and transfer checks reject frozen accounts. At Ethereum block 26095946, Avalanche block 96512784, and Polygon block 94756151, owner() and supplyManager() matched the recorded issuer EOAs; paused() returned false. The existence of the owner-controlled per-account freeze surface supports Yes regardless of the current global pause state.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM01ZCHF)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",

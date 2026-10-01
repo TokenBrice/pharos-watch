@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "A shared zero-code EOA has uncapped direct-mint permission on four independently native rwaUSDi deployments on Ethereum, Base, Monad, and Arbitrum through chain-local RolesAuthority contracts. Current same-address Safe owners remain the native mint-governance and UUPS upgrade controls: 3-of-8 on Ethereum, 3-of-7 on Base, 4-of-8 on Monad, and 4-of-8 on Arbitrum, all with no timelock. The token's CCIP-admin/IBurnMintERC20-compatible surface is bridge-adjacent but no active TokenPool, remote-token, or lane binding is verified; those unresolved bridge facts stay in Bridge Risk and do not alter the native Mint Authority scope.",
+    "summary": "A shared zero-code EOA has direct-mint permission on all seven authored native rwaUSDi deployments on Ethereum, Base, Monad, Arbitrum, X Layer, Robinhood Chain, and Pharos through chain-local RolesAuthority contracts. Pinned 2026-10-01 simulations of a mint far above reported reserves succeeded on every deployment. The four existing Safe mint-governance and UUPS upgrade reviews cover 3-of-8 on Ethereum, 3-of-7 on Base, 4-of-8 on Monad, and 4-of-8 on Arbitrum, all with no timelock; the added minter scope does not imply that X Layer, Robinhood, or Pharos upgrade controls have been fully reviewed. The token's CCIP-admin/IBurnMintERC20-compatible surface is bridge-adjacent but no active TokenPool, remote-token, or lane binding is verified; those unresolved bridge facts stay in Bridge Risk and do not alter the native Mint Authority scope.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -61,9 +61,12 @@
           "ethereum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
           "base:0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
           "arbitrum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
-          "monad:0x650b616b46ff94000eb115926ab8393b90788d76"
+          "monad:0x650b616b46ff94000eb115926ab8393b90788d76",
+          "xlayer:0x3b274e3fe48e34f032920f766f750bdeafd80068",
+          "robinhood:0x9000123cb195804f35cee9553e2596978227910f",
+          "pharos:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
         ],
-        "label": "rwaUSDi shared four-chain uncapped minter EOA",
+        "label": "rwaUSDi shared seven-chain uncapped minter EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
@@ -74,10 +77,22 @@
           "eoa:evm:0xd60acbbc9b249f4bb4b70a88e5c5f5ac73b6b081"
         ],
         "bypassSurfaces": [
-          "One EOA key can immediately create uncapped rwaUSDi on all four material deployments."
+          "One EOA key can immediately create rwaUSDi without a restrictive mint cap on all seven authored native deployments."
         ],
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
         "sources": [
+          {
+            "label": "X Layer pinned native-mint simulation (block 72068536, 2026-10-01)",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "Robinhood pinned native-mint simulation (block 77174495, 2026-10-01)",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Pharos pinned native-mint simulation (block 19075554, 2026-10-01)",
+            "url": "https://rpc.pharos.xyz"
+          },
           {
             "label": "Ethereum role-5 assignment",
             "url": "https://eth.blockscout.com/tx/0xfa783564350f40a7a10fd2058e3b81754e19cb1afc0d64ce659b27d5678f2680"
@@ -95,7 +110,7 @@
             "url": "https://monadscan.com/tx/0xd36ae301753cb5da9dec0288dbb853c5660556b82d16424ebf2ff977aaf8b907"
           }
         ],
-        "evidence": "Complete UserRoleUpdated event scans through the prior fixed cutoffs found this as the sole role-5 holder on each RolesAuthority: Ethereum assignment block 25043270, Base 45684457, Arbitrum 462083810, and Monad 68747935. At the current observations on Ethereum block 25771300, Base block 50069092, Arbitrum block 495314430, and Monad block 96636315, getUserRoles returned bit 5 and canCall/token isAuthorized returned true for mint(address,uint256) on every native deployment. The address has zero code, random callers revert UNAUTHORIZED, and the token mint surface exposes no global supply ceiling or per-minter allowance."
+        "evidence": "Historical role-5 assignment scans covered Ethereum block 25043270, Base 45684457, Arbitrum 462083810, and Monad 68747935; those scans established the sole role-5 holder only through their original cutoffs. Current 2026-10-01 pinned reads at Ethereum 26095797, Base 52024112, Arbitrum 510584145, Monad 109541389, X Layer 72068536, Robinhood 77174495, and Pharos 19075554 confirm zero code at this EOA and true RolesAuthority.canCall and token.isAuthorized for mint(address,uint256) on every deployment. On all seven tokens, an eth_call simulation from this EOA of mint(address,uint256) with amount 1000000000000000000000000000000 raw units returned successfully. The simulations did not submit transactions or alter chain state. These observations extend the direct-minter scope to X Layer, Robinhood and Pharos; no current exclusivity, off-chain signing safeguard, or finite economic mint ceiling is inferred."
       },
       {
         "chain": "arbitrum",
@@ -388,7 +403,7 @@
         },
         {
           "label": "Multipli regulatory disclosures",
-          "url": "https://docs.multipli.fi/legal/terms-of-use"
+          "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md"
         },
         {
           "label": "Ethereum rwaUSDi token",

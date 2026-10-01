@@ -4,17 +4,17 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.midas.app/"
+        "label": "Ethereum mRe7YIELD current implementation verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe084623e02beaca3e8d1e7f356003a9e04417893"
       },
       {
-        "label": "Website",
-        "url": "https://midas.app/mre7yield"
+        "label": "Midas current token and access-control registry",
+        "url": "https://docs.midas.app/resources/smart-contracts-registry"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Ethereum block 26095801, the mRe7YIELD proxy implementation is 0xe084623e02beaca3e8d1e7f356003a9e04417893. Its verified mRE7/mTBILL source checks BLACKLISTED_ROLE for transfer sender and recipient and enforces ERC20Pausable on transfers; pause() is restricted to the token-specific pauser role. This directly supports retained Yes for the Ethereum native deployment without asserting that every bridge representation uses the same local freeze mechanism.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB16GUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "oracleless",
@@ -201,7 +201,7 @@
         "controllerChain": "starknet",
         "controllerAddress": "0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Starknet block 13408053 on 2026-08-17, the StarkGate L2 bridge 0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256 returned get_l1_bridge() = 0xf5b6ee2caeb6769659f6c091d209dfdca3f69eb, get_l1_token(mRe7YIELD) = Ethereum 0x87c9053c819bb28e0d73d33059e1b3da80afb0cf, and get_l2_token(Ethereum mRe7YIELD) = this Starknet address. The Ethereum transaction 0x56b9ff858cffd1376827ca5954e0f6d932071d924a256330fffa368bea8b1532 escrowed 0.01 mRe7YIELD in the L1 bridge on 2025-09-10; its accepted L1_HANDLER delivery 0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8 at Starknet block 2105929 called the L2 bridge and emitted a zero-address mint Transfer from this token. The token class exposes permissioned_mint/permissioned_burn but no L1 handler because the separate StarkGate bridge invokes it. An earlier Starknet publication described the deployment as native; the fixed bridge mapping and transfer receipt are decisive, while Midas's public directory still omits the Starknet address and supply policy.",
+        "reviewNote": "At Starknet block 13408053 on 2026-08-17, the StarkGate L2 bridge 0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256 returned get_l1_bridge() = 0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb, get_l1_token(mRe7YIELD) = Ethereum 0x87c9053c819bb28e0d73d33059e1b3da80afb0cf, and get_l2_token(Ethereum mRe7YIELD) = this Starknet address. The Ethereum transaction 0x56b9ff858cffd1376827ca5954e0f6d932071d924a256330fffa368bea8b1532 escrowed 0.01 mRe7YIELD in the L1 bridge on 2025-09-10; its accepted L1_HANDLER delivery 0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8 at Starknet block 2105929 called the L2 bridge and emitted a zero-address mint Transfer from this token. The token class exposes permissioned_mint/permissioned_burn but no L1 handler because the separate StarkGate bridge invokes it. An earlier Starknet publication described the deployment as native; the fixed bridge mapping and transfer receipt are decisive, while Midas's public directory still omits the Starknet address and supply policy.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-17",
         "observedBlock": 13408053,
@@ -258,7 +258,7 @@
         "failureDomainKeys": [
           "protocol:starkgate",
           "contract:starknet:0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256",
-          "bridge:ethereum:0xf5b6ee2caeb6769659f6c091d209dfdca3f69eb",
+          "bridge:ethereum:0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb",
           "contract:starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
         ],
         "authorityType": "contract",
@@ -288,7 +288,7 @@
           },
           {
             "label": "Ethereum StarkGate MultiBridge",
-            "url": "https://etherscan.io/address/0xf5b6ee2caeb6769659f6c091d209dfdca3f69eb"
+            "url": "https://etherscan.io/address/0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb"
           },
           {
             "label": "mRe7YIELD StarkGate deposit transaction",

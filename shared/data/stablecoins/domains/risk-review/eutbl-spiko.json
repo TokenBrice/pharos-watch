@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Spiko announced Chainlink CCIP as the interoperability standard for moving its regulated money-market fund tokens across multiple blockchains. The route is scored as an external validated network with compliance-aware controls rather than an issuer-only burn/mint path. 2026-07-20 cohort dc-1 pass: all seven listed deployments are verified issuer-native Spiko tokens; the Stellar contract is in Spiko's official registry and the Starknet token has the shared Spiko owner.",
+    "summary": "Spiko announced adoption of Chainlink CCIP for EUTBL and USTBL on 1 July 2025. The reviewed deployment routes identify issuer-native tokens; this announcement does not resolve per-route deployed CCIP routers, validation configuration, or rate limits. Route-level issuer control observations remain distinct from any future CCIP bridge classification.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",

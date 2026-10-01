@@ -17,6 +17,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "MAX_SUPPLY is a Solidity constant (≈1B tokens); issueFromWrapper() is gated by MINTER_ROLE and enforces MAX_SUPPLY ceiling.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056043,
         "sources": [
           {
             "label": "StoneYield contract design docs",
@@ -38,6 +40,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056043,
         "sources": [
           {
             "label": "stUSD contract (BscScan)",

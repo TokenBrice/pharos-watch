@@ -103,13 +103,15 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Ethereum sdUSD shares are minted only against deposited local dUSD and do not create base dUSD supply.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
         "sources": [
           {
             "label": "sdUSD Ethereum contract",
             "url": "https://etherscan.io/address/0x7cb20517776636ed76b68edb3d99dcce356abf02"
           }
         ],
-        "evidence": "At Ethereum block 25570988, asset() on the dSTAKE vault returned local dUSD 0x07fff99e1664d9b116fbc158c0e99785f81ca236. The current vault share path is deposit-backed accounting."
+        "evidence": "At Ethereum block 26095807, asset() on the dSTAKE vault returned local dUSD 0x07fff99e1664d9b116fbc158c0e99785f81ca236. The vault retains deposit-backed share accounting; the upgrade and router accounting powers are documented separately."
       },
       {
         "label": "Inherited dUSD AMO/governed-reserve mint authority",

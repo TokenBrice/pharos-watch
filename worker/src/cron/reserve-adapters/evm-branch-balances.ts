@@ -611,7 +611,7 @@ export async function fetchEvmBranchBalancesReserves(
       params.fallbackRpcUrl,
     ),
     debtSelector
-      ? onchain.uint256(params.debtContract ?? params.branches[0].holder, debtSelector)
+      ? onchain.raw(params.debtContract ?? params.branches[0].holder, debtSelector).then(decodeUint256Word)
       : Promise.resolve(null),
     redemptionCapacityParams?.kind === "honey-factory-vaults"
       ? observeHoneyFactoryRedemptionCapacity(
@@ -624,6 +624,12 @@ export async function fetchEvmBranchBalancesReserves(
         )
       : Promise.resolve<RedemptionCapacityObservation>({ warnings: [] }),
   ]);
+
+  // A configured liability read is mandatory, not optional telemetry: do not
+  // publish collateral alone when the reserve/supply reconciliation is missing.
+  if (debtSelector && debtRaw == null) {
+    throw new Error(`${ADAPTER_KEY}: configured liability read unavailable or malformed; cannot reconcile reserves`);
+  }
 
   // Honey custody composition: a custody-mode vault's idle balance is not the
   // backing. The factory-owned net vault shares (shares minus collected fees)
@@ -675,6 +681,7 @@ export async function fetchEvmBranchBalancesReserves(
       if (price == null) return sum;
       return sum + decimalNumberFromBigInt(entry.balanceRaw, entry.balanceDecimals ?? entry.branch.token.decimals) * price;
     }, 0);
+    // Observed zero debt is valid, but cannot produce a finite coverage ratio.
     const collateralizationRatio = totalDebtUsd > 0 ? totalCollateralUsd / totalDebtUsd : null;
     const warnings: LiveReserveWarning[] = [];
     if (collateralizationRatio != null && collateralizationRatio < 1.0) {

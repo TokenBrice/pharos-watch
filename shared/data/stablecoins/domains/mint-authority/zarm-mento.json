@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "ZARm uses StableTokenV2 with minting restricted to broker/validator paths; the token owner is the Mento Timelock (2-day delay, MentoGovernor as sole proposer, open executor). BorrowerOperations is immutable.",
+    "summary": "ZARm uses reserve-backed StableTokenV2, not a BorrowerOperations CDP. Minting is restricted to the configured broker, validator and exchange addresses; the current exchange address is zero. The token owner is the Mento Timelock (2-day delay; historical review identified MentoGovernor as sole proposer and an open executor).",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -44,7 +44,16 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable"
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78939406,
+        "sources": [
+          {
+            "label": "ZARm active StableTokenV2 verified source",
+            "url": "https://sourcify.dev/server/v2/contract/42220/0x434563b0604be100f04b7ae485bcafe3c9d8850e?fields=abi,metadata,sources"
+          }
+        ],
+        "evidence": "At Celo block 78939406, ZARm broker() returned this address. The active StableTokenV2 onlyMinter modifier permits broker, validators and exchange; exchange() returned zero. Broker owner() returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147. Reserve-backed Broker authorization is not an immutable BorrowerOperations CDP."
       },
       {
         "chain": "celo",
@@ -56,20 +65,22 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78939406,
         "sources": [
           {
             "label": "Mento V3 deployments",
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, ZARm owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147; confirmed Timelock (getMinDelay() = 172800); hasRole(PROPOSER_ROLE, MentoGovernor 0x47036...) = true; hasRole(EXECUTOR_ROLE, 0x0) = true (open executor)."
+        "evidence": "At Celo block 78939406, ZARm owner() and its EIP-1967 admin slot returned this Timelock, and getMinDelay() returned 172800 seconds. Historical block 69291577 role reads identified MentoGovernor as proposer and an open executor; that complete membership was not re-enumerated in this read."
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Celo block 69291577, ZARm owner() resolved to the 172800-second Mento Timelock and BorrowerOperations was confirmed immutable. At block 72127033, the ZARm EIP-1967 implementation slot resolved to StableTokenV2 implementation 0x434563b0...850e and the EIP-1967 admin slot resolved directly to the same Mento Timelock, which can replace mint-critical token logic after its two-day delay. Economic-posture fields reviewed 2026-08-15: cap or minter replacement runs through the enforced two-day Mento Timelock, the live full-composition Mento reserve feed provides continuous reconciliation, and no regulator or independent attestor is evidenced.",
+      "evidence": "At Celo block 69291577, ZARm owner() resolved to the 172800-second Mento Timelock. At block 72127033, the ZARm EIP-1967 implementation slot resolved to StableTokenV2 implementation 0x434563b0...850e and the EIP-1967 admin slot resolved directly to the same Mento Timelock, which can replace mint-critical token logic after its two-day delay. The implementation, admin, owner and delay were re-confirmed at block 78939406 on 2026-10-01. ZARm is reserve-backed; the former BorrowerOperations immutability assertion was not applicable to this deployment. Economic-posture fields reviewed 2026-08-15: cap or minter replacement runs through the enforced two-day Mento Timelock, the live full-composition Mento reserve feed provides continuous reconciliation, and no regulator or independent attestor is evidenced.",
       "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [

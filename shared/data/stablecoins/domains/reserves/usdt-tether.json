@@ -13,7 +13,7 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "tether:usdt:overnight-reverse-repo",
@@ -27,7 +27,7 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day",
+      "liquidityHorizon": "unknown",
       "maturityDaysMax": 1
     },
     {
@@ -71,7 +71,7 @@
         "counterparty",
         "custody"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "tether:usdt:corporate-bonds",
@@ -100,7 +100,7 @@
         "custody",
         "liquidity"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "tether:usdt:bitcoin",
@@ -114,7 +114,7 @@
         "custody",
         "liquidity"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "tether:usdt:public-equities",
@@ -159,7 +159,7 @@
         "counterparty",
         "concentration"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -276,13 +276,13 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Kimi FIAT-CTRL shard-16 custody review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA01USDT)",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-03-31 (signed Milan, 2026-04-30)",
-        "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
+        "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-06-30 (signed Milan, 2026-07-31)",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
       },
       {
         "label": "Tether International Relevant Information Document filed with CNAD (2026-02-20), Safeguarding Arrangements section",
@@ -293,7 +293,7 @@
         "url": "https://tether.to/en/legal/"
       }
     ],
-    "uncertainty": "The Q1 2026 BDO report identifies reserve asset categories only in aggregate and names no custodians (BDO obtained confirmations directly from unnamed banks and depositaries). The CNAD-filed Relevant Information Document (2026-02-20) states reserves are held with various unidentified third parties including banks and licensed financial institutions, and documents no trust, SPV, segregation vehicle, bankruptcy-remoteness, or reuse restrictions; the Terms grant holders only a personal contractual redemption right. Custodian names, provider shares, legal segregation, and reuse restrictions remain undisclosed in every available primary source.",
+    "uncertainty": "The Q2 2026 BDO report identifies reserve asset categories in aggregate and names no custodians; its procedures obtained confirmations directly from banks and depositaries. The CNAD-filed Relevant Information Document (2026-02-20), Safeguarding Arrangements section, states reserves are held with various third parties including banks and licensed financial institutions, without identifying those providers or describing reserve segregation, bankruptcy-remoteness, or reuse restrictions. The Token Terms grant verified customers a personal contractual redemption right. These inspected sources do not establish provider shares or the three custody safeguards; their unknown status is retained. This review does not claim that no other public source names a custodian.",
     "knownUnknownExposurePct": 100
   }
 }

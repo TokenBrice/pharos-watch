@@ -1,30 +1,9 @@
 {
   "id": "usdf-astherus",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA Article 2: MiCA is distinct from existing financial-services regimes",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      },
-      {
-        "label": "Aster: USDF is a decentralized, yield-bearing stablecoin using delta-neutral strategies",
-        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works"
-      },
-      {
-        "label": "Aster: USDF redemption and yield mechanisms",
-        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/maintaining-the-peg"
-      },
-      {
-        "label": "ESMA interim MiCA register: EMT issuers",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      }
-    ]
-  },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDF is a decentralized, yield-bearing synthetic dollar whose collateral is deployed through Ceffu and Binance delta-neutral strategies; its core purpose is passive return generation rather than payment or settlement.",
+      "summary": "USDF is redeemable for USDT, while strategy profits are distributed to the separately staked asUSDF wrapper. Under owner ruling D17, these features do not establish a payment-stablecoin exclusion. Applicability remains uncertain pending qualified token-specific analysis of the repayment obligation and any securities or deposit exclusion.",
       "references": [
         {
           "label": "GENIUS Act text: payment stablecoin definition and yield restriction",
@@ -40,12 +19,12 @@
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-applicable",
-    "notes": "USDF is explicitly described by Aster as decentralized and yield-bearing, with weekly profit distribution through the asUSDF contract and collateral deployed into delta-neutral trading strategies. Those features make it a non-payment-token for this tracker; no GENIUS authorization status is asserted.",
+    "daspOfferSaleStatus": "unknown",
+    "notes": "Reviewed 2026-10-01 under D17: Aster's FAQ specifies USDT redemption, a 0.1% fee and a separate yield-bearing asUSDF token. Crypto payout and yield marketing do not establish a GENIUS exclusion or authorization. The prior 2026-08-14 non-payment-token assessment and its sources are preserved in the curation history; no token-specific legal determination is asserted.",
     "references": [
       {
         "label": "OCC proposed GENIUS Act rule",
@@ -64,9 +43,21 @@
         "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Enacted GENIUS Act: payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Aster USDF FAQ: USDT redemption and separate asUSDF wrapper",
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC24)",
+    "reviewedAt": "2026-10-01"
   }
 }

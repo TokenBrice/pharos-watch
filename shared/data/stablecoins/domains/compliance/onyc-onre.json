@@ -18,9 +18,9 @@
     ]
   },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "ONyc is a NAV-based tokenized reinsurance investment asset and is explicitly not a stablecoin or fixed-$1 payment token.",
+      "summary": "ONyc represents a fractional segregated-account claim with variable NAV and eligible-holder redemption quoted in USDG. Variable value, crypto redemption and access restrictions do not independently establish a GENIUS non-payment or securities exclusion; token-specific governing obligations require qualified legal review.",
       "references": [
         {
           "label": "GENIUS Act Public Law 119-27",
@@ -34,17 +34,24 @@
           "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, section 2 definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-01"
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
     "issuerEntity": "On Re SAC Ltd.",
     "issuerDomicile": "Bermuda",
     "licensingRegulator": "Bermuda Monetary Authority",
-    "foreignExceptionStatus": "not-applicable",
-    "daspOfferSaleStatus": "not-applicable",
-    "notes": "ONyc is a regulated Bermuda reinsurance-pool investment asset with NAV-based returns, not a payment stablecoin. No GENIUS payment-stablecoin authorization is asserted.",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "unknown",
+    "notes": "Historical 2026-08-14 review: applicability non-payment-token; authorization, issuer pathway, foreign exception and DASP posture not-applicable. Prior note: ONyc is a regulated Bermuda reinsurance-pool investment asset with NAV-based returns, not a payment stablecoin. No GENIUS payment-stablecoin authorization is asserted. D17 review on 2026-10-01 withdraws that categorical exclusion pending qualified token-specific legal analysis of holder repayment obligations and any US securities or deposit exclusion. Authorization and pathway are separately unknown; no approval or negative authorization census is asserted. Bermuda licensing identity and the separate MiCA row are unchanged; an EU category cannot establish a US exclusion. Re-review on publication of governing holder terms or qualified regulator/legal analysis, otherwise by 2027-01-01.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
@@ -58,9 +65,28 @@
         "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2 definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "OnRe redemption and onchain liquidity: USDG quotes and eligibility",
+        "url": "https://docs.onre.finance/technical-resources/redemptions-and-onchain-liquidity.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "OnRe ONyc fractional segregated-account claim, reviewed 2026-10-01",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC26)",
+    "reviewedAt": "2026-10-01"
   }
 }

@@ -1979,6 +1979,22 @@ const afiProofParamsSchema = z
   .strict();
 
 export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
+  "leverup-lvusd": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_VALIDATION,
+    provenance: {
+      status: "active",
+      rationale: "Bound to lvusd-leverup: reviewed LVUSD-only Monad vault census and pinned supply reconciliation exclude LVMON and MON staking, fail closed on registry or identity drift, and retain measured undercollateralization without allowlisting the deficit or inferring redemption capacity.",
+    },
+  },
   "hylo-solana": {
     primaryInputKinds: ["onchain-solana"],
     paramsSchema: hyloSolanaParamsSchema,
@@ -2074,6 +2090,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: MONTHLY_VERIFIED_VALIDATION,
+  },
+  "blox-attestation-index": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: MONTHLY_VERIFIED_VALIDATION,
+    provenance: {
+      status: "active",
+      rationale: "Bound to myrc-blox: the issuer JSON index validates the unique reviewed August 2026 period, report URL and MYR breakdown total before publishing static-validated 66.68% bank cash and 33.32% Halogen fund slices. Freshness uses the examined August 31 balances under the 33-day monthly cap, not upload time; newer reports require composition review. The MYR 0.03 assertion/breakdown discrepancy is retained, with no inferred USD total or coverage ratio.",
+    },
   },
   "audd-independent-assurance": declareAdapter(
     auddAssuranceParamsSchema,

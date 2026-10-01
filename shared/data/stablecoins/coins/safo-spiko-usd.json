@@ -84,6 +84,11 @@
       "chain": "etherlink",
       "address": "0x5677a4dc7484762ffccee13cba20b5c979def446",
       "decimals": 5
+    },
+    {
+      "chain": "solana",
+      "address": "BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo",
+      "decimals": 5
     }
   ],
   "collateralQuality": "rwa",

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "sUSDS held by the Ethereum xDAI Foreign Bridge",
-      "pct": 99.03,
+      "pct": 98.49,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -14,7 +14,7 @@
     },
     {
       "name": "Liquid USDS held by the Ethereum xDAI Foreign Bridge",
-      "pct": 0.97,
+      "pct": 1.51,
       "risk": "low",
       "coinId": "usds-sky",
       "depType": "collateral",
@@ -25,8 +25,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-18",
-    "reviewer": "OpenAI Codex Safety Score V9 backing review; W06 mint-boundary re-home",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv5)",
     "confidence": "verified",
     "sources": [
       {
@@ -42,33 +42,33 @@
         "url": "https://developers.skyeco.com/protocol/tokens/susds/"
       },
       {
-        "label": "Ethereum xDAI Foreign Bridge asset and principal reads at block 25584913",
+        "label": "Ethereum xDAI Foreign Bridge collateral-token reads at block 26095806",
         "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
       },
       {
-        "label": "Ethereum sUSDS balance and max-withdraw reads at block 25584913",
+        "label": "Ethereum sUSDS balance and max-withdraw reads at block 26095806",
         "url": "https://etherscan.io/address/0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD#readProxyContract"
       },
       {
-        "label": "Gnosis xDAI Home Bridge burnt-coin read at block 47325357",
+        "label": "Gnosis xDAI Home Bridge burnt-coin read at block 48529298",
         "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6?tab=read_proxy"
       },
       {
-        "label": "Gnosis BlockReward bridge-mint read at block 47325357",
+        "label": "Gnosis BlockReward bridge-mint read at block 48529298",
         "url": "https://gnosis.blockscout.com/address/0x481c034c6d9441db23Ea48De68BCAe812C5d39bA?tab=read_contract"
       },
       {
-        "label": "Ethereum block 25584913",
-        "url": "https://etherscan.io/block/25584913"
+        "label": "Ethereum block 26095806 (2026-10-01T06:54:35Z)",
+        "url": "https://etherscan.io/block/26095806"
       },
       {
-        "label": "Gnosis block 47325357",
-        "url": "https://gnosis.blockscout.com/block/47325357"
+        "label": "Gnosis block 48529298 (2026-10-01T06:54:40Z)",
+        "url": "https://gnosis.blockscout.com/block/48529298"
       }
     ],
-    "rationale": "Gnosis documents that the completed migration replaced DAI and sDAI with USDS and sUSDS as xDAI bridge collateral. Timestamp-aligned reads at Ethereum block 25584913 (2026-07-22T01:13:47Z) and Gnosis block 47325357 (2026-07-22T01:13:50Z) reconcile the two sides. The Foreign Bridge held 705,559.039085990130672328 liquid USDS and 64,994,123.730852270706889290 sUSDS shares redeemable for 71,738,483.035424911185310499 USDS; only 0.052688189469517749 legacy DAI and zero sDAI remained. On Gnosis, BlockRewardAuRa mintedTotallyByBridge(Home Bridge) was 1,327,754,383.519273030164275956 xDAI and Home Bridge totalBurntCoins was 1,255,997,803.184027289689191742, leaving 71,756,580.335245740475084214 bridge-minted xDAI outstanding. Direct USDS plus the bridge's recorded 71,729,444.626685023633523932 USDS sUSDS principal and DAI dust total 72,435,003.718459203233714009, exceeding that liability by 678,423.383213462758629795 (100.95% principal coverage); max-withdrawable fair value is 72,444,042.127199090785500576. The fair-value composition normalizes to 99.03% sUSDS and 0.97% liquid USDS; legacy DAI is immaterial dust, not a reserve slice. W06 mint-boundary re-home (2026-08-18): keep both collateral rows in this sidecar as xDAI's Foreign Bridge backing composition (99.03% sUSDS + 0.97% liquid USDS at Ethereum 0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016). Do not convert them to a 100% usds-sky wrapper slice and do not add a parallel wrapper slice. Redemption pays USDS (or DAI), but the escrow's sUSDS share and minCashThreshold liquidity are real xDAI backing risk and must remain visible here; the live xdai-bridge adapter already emits this collateral mix. USDS/sUSDS mint risk stays on those assets as basket-exposure, not as inherited xDAI mint authority.",
-    "compositionBasis": "Timestamp-aligned Ethereum bridge escrow balances and sUSDS max-withdraw/principal reads reconciled to Gnosis bridge mint-minus-burn accounting",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Re-fetched fixed-block reads at Ethereum block 26095806 (2026-10-01T06:54:35Z) identify USDS and sUSDS as the Foreign Bridge's collateral tokens. The bridge holds 823,108.741077534044999388 liquid USDS and 48,331,262.650941988724367273 sUSDS shares, with maxWithdraw returning 53,711,261.055768077689618397 USDS. Normalizing liquid USDS and max-withdrawable sUSDS value gives 1.51% USDS and 98.49% sUSDS, rounded to two decimals; 0.052688189469517749 legacy DAI and zero sDAI remain immaterial dust. Gnosis block 48529298 (2026-10-01T06:54:40Z) records 1,337,958,897.531459019251049888 bridge-minted xDAI and 1,283,840,434.163870179025493045 burned, leaving 54,118,463.367588840225556843 outstanding. These on-chain observations do not constitute an independent attestation. Keep both escrow collateral rows visible; underlying USDS/sUSDS mint risk belongs to those assets rather than xDAI native mint authority.",
+    "compositionBasis": "Timestamp-aligned fixed-block Ethereum Foreign Bridge USDS balance and sUSDS maxWithdraw fair value; Gnosis bridge mint-minus-burn accounting separately observed.",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No material reserve constituent remains unidentified; 0.052688189469517749 legacy DAI remains as quantified dust after the completed migration.",
     "knownUnknownExposurePct": 0

@@ -35,12 +35,12 @@
         "url": "https://docs.morpho.org/curate/"
       },
       {
-        "label": "Gauntlet USDC Prime V2 vault",
-        "url": "https://app.gauntlet.xyz/vaults/opt%3A0xc30ce6a5758786e0f640cc5f881dd96e9a1c5c59"
+        "label": "Exact Ethereum Gauntlet USDC Prime Vault V2",
+        "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
       }
     ],
-    "rationale": "Morpho and Gauntlet identify USDC as the sole supply asset for the Gauntlet USDC Prime V2 vault family across its reviewed deployments. The reserve envelope is therefore one 100% USDC dependency; market allocation and available liquidity remain dynamic.",
-    "compositionBasis": "Morpho and Gauntlet USDC Prime V2 vault disclosures",
+    "rationale": "Pinned asset() reads on 2026-10-01 identify native USDC for the Ethereum Vault V2, Base MetaMorpho and Arbitrum MetaMorphoV1_1 deployments. The single tracked USDC dependency describes the strategy's denomination, not a measured allocation among lending markets or a claim that all holdings are idle USDC. Market allocation and available liquidity remain dynamic.",
+    "compositionBasis": "USDC-denominated strategy dependency; no current constituent-market allocation percentages are asserted",
     "scope": "full-composition",
     "knownUnknownExposure": "The sole tracked dependency is identified, but current deployment-level market allocations and available liquidity are dynamic.",
     "knownUnknownExposurePct": 0
@@ -48,8 +48,8 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Gauntlet USDC Prime V2 MetaMorpho vaults on Ethereum, Base, and Arbitrum",
-        "role": "custodian"
+        "name": "Gauntlet USDC Prime Vault V2 on Ethereum and MetaMorpho vaults on Base and Arbitrum",
+        "role": "other"
       },
       {
         "name": "Morpho lending markets",
@@ -70,6 +70,10 @@
       {
         "label": "Morpho curation docs",
         "url": "https://docs.morpho.org/curate/"
+      },
+      {
+        "label": "Gauntlet branded-vault disclaimer (Dec 2025)",
+        "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
       }
     ],
     "uncertainty": "The vaults and Morpho markets are on-chain, but the reviewed materials do not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for deposited USDC."

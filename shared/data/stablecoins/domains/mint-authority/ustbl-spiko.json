@@ -22,7 +22,9 @@
       ],
       "implementationAddresses": [
         "0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74",
-        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e",
+        "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "0x344278aff344d6fb960705dc18a4912221608472"
       ],
       "adminAddresses": [
         "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
@@ -35,8 +37,8 @@
       "observedBlock": 25575138,
       "sources": [
         {
-          "label": "Sourcify Spiko Token source",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          "label": "Blockscout verified Spiko Token implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
         },
         {
           "label": "Blockscout PermissionManager source",
@@ -67,17 +69,17 @@
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "Sourcify Spiko Token source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            "label": "Blockscout verified Spiko Token implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
           },
           {
             "label": "Spiko USTBL docs",
             "url": "https://docs.spiko.io/"
           }
         ],
-        "evidence": "At Ethereum block 25294990, implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000 (renounced), authority() = 0x344278aff344d6fb960705dc18a4912221608472 (PermissionManager). Mint and burn are restricted() calls requiring PermissionManager authorization.",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25575137
+        "evidence": "At Ethereum block 26095794 on 2026-10-01, EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = zero and authority() = 0x344278aff344d6fb960705dc18a4912221608472. Zero owner alone does not prove an ownership-renunciation transaction. PermissionManager getRequirements(token,mint) = 0x05 and getRequirements(token,upgradeToAndCall) = 0x01: permission-based administrative control remains, rather than an uncontrolled or immutable token.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095794
       },
       {
         "chain": "ethereum",
@@ -123,11 +125,13 @@
             "url": "https://polygon-bor-rpc.publicnode.com"
           },
           {
-            "label": "Sourcify Spiko Token source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            "label": "Blockscout verified Spiko Token implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
           }
         ],
-        "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
+        "evidence": "Observed 2026-10-01 at Polygon block 94754936: symbol() = USTBL; decimals() = 5; implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74; owner() = zero; authority() = 0x344278aff344d6fb960705dc18a4912221608472.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94754936
       },
       {
         "chain": "base",
@@ -147,11 +151,13 @@
             "url": "https://mainnet.base.org"
           },
           {
-            "label": "Sourcify Spiko Token source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            "label": "Blockscout verified Spiko Token implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
           }
         ],
-        "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
+        "evidence": "Observed 2026-10-01 at Base block 52024098: symbol() = USTBL; decimals() = 5; implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74; owner() = zero; authority() = 0x344278aff344d6fb960705dc18a4912221608472.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024098
       },
       {
         "chain": "etherlink",
@@ -171,11 +177,13 @@
             "url": "https://node.mainnet.etherlink.com"
           },
           {
-            "label": "Sourcify Spiko Token source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            "label": "Blockscout verified Spiko Token implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
           }
         ],
-        "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
+        "evidence": "Observed 2026-10-01 at Etherlink block 54657506: symbol() = USTBL; decimals() = 5; implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74; owner() = zero; authority() = 0x344278aff344d6fb960705dc18a4912221608472.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 54657506
       },
       {
         "chain": "arbitrum",
@@ -195,9 +203,9 @@
             "url": "https://arbiscan.io/address/0x021289588cd81dc1ac87ea91e91607eef68303f5"
           }
         ],
-        "evidence": "Verified on Arbitrum at block 485687744: authority() of the USTBL token returns the Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a, an EIP-1967 proxy whose implementation is the same PermissionManager code as the Ethereum deployment 0x344278aff344d6fb960705dc18a4912221608472. Minting is gated by the PermissionManager, as on the other EVM chains.",
-        "observedAt": "2026-07-20",
-        "observedBlock": 485896330
+        "evidence": "At Arbitrum block 510584035 on 2026-10-01, authority() = Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a; the token EIP-1967 implementation is 0xa0769f7a8fc65e47de93797b4e21c073c117fc80, and the PermissionManager implementation is 0x344278aff344d6fb960705dc18a4912221608472. PermissionManager getRequirements(token,mint) = 0x05 and getRequirements(token,upgradeToAndCall) = 0x01; ADMIN group administration mask is 0x01. This current address observation supersedes the July same-implementation description; no claim of bytecode equivalence is made.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584035
       },
       {
         "chain": "arbitrum",
@@ -290,21 +298,21 @@
           "version": "1.4.1",
           "owners": [
             "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
-            "0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d",
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
             "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
-            "0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+            "0xd01046472371168721e45dc357296683f026d6b8",
             "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011",
             "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"
           ],
           "threshold": 3,
           "enabledModules": [],
           "guard": null,
-          "observedBlock": 485896631,
-          "observedAt": "2026-07-20",
+          "observedBlock": 510584035,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "observedAt": "2026-07-20",
-        "observedBlock": 485896631,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584035,
         "sources": [
           {
             "label": "Arbitrum PermissionManager",
@@ -315,7 +323,7 @@
             "url": "https://arb1.arbitrum.io/rpc"
           }
         ],
-        "evidence": "At Arbitrum block 485896631 getOwners() returned six owners and getThreshold() returned 3 on this Safe v1.4.1 proxy (masterCopy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762), and getModulesPaginated(0x1, 10) returned an empty module array. getGroups() at block 485896559 returns group 0 for this address, confirming it is the current ADMIN member."
+        "evidence": "Arbitrum block 510584035, 2026-10-01: getOwners() returned the recorded six current owners; getThreshold() = 3; getModulesPaginated(0x1,50) = empty; guard storage = zero; PermissionManager getGroups(Safe) includes ADMIN group 0. Historical owners 0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d and 0xe67d2cbeae3090be017c66e7a6943961619a5d35 from July 20 were replaced by 0x75e0092e7d2c8d854fcf5334f95554852d62746a and 0xd01046472371168721e45dc357296683f026d6b8."
       },
       {
         "chain": "starknet",
@@ -336,10 +344,6 @@
           {
             "label": "Spiko USTBL Starknet token",
             "url": "https://voyager.online/contract/0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6"
-          },
-          {
-            "label": "Starknet mainnet public RPC",
-            "url": "https://rpc.starknet.lava.build"
           }
         ],
         "evidence": "At Starknet block 12085430 symbol() returned USTBL, decimals() returned 5 and total_supply() returned 1036596690077 (10,365,966.90077 shares). The declared class 0x5973b1bed1f0a20a9125fac8ec5499f29f44bb70d9c465658c0da20ca9b75f3 exposes mint, burn, pause, set_permission_manager_contract_address and OpenZeppelin OwnableTwoStep plus IUpgradeable. The permission_manager_contract_address storage variable resolves to 0x7c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3."
@@ -365,10 +369,6 @@
           {
             "label": "Spiko USTBL Starknet token",
             "url": "https://voyager.online/contract/0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6"
-          },
-          {
-            "label": "Starknet mainnet public RPC",
-            "url": "https://rpc.starknet.lava.build"
           }
         ],
         "evidence": "At Starknet block 12085430 the USTBL token owner() returned this account; get_name() returned ArgentMultisig, get_version() returned 0.1.1, get_signers() returned five signers and get_threshold() returned 3. On the PermissionManager 0x7c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3, has_role() at the same block returns true for DEFAULT_ADMIN_ROLE, MINTER_ROLE, PAUSER_ROLE and WHITELISTER_ROLE and false for BURNER_ROLE, while the deploying account 0x60e1556d05eb19141a728424c604b875c60973df80af67b08c2c4c33ba4274f holds neither DEFAULT_ADMIN_ROLE nor MINTER_ROLE. get_role_admin(MINTER_ROLE) returns DEFAULT_ADMIN_ROLE."
@@ -434,6 +434,67 @@
           }
         ],
         "evidence": "The Soroban token instance Owner entry and the PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M Admin entry both resolve to this account at ledger 63567141, and stellar.expert records it as the creator of both contracts. Horizon returns a single ed25519 signer of weight 1 with low, medium and high thresholds all 0 at ledger 63394470, so this is a single-key account with no quorum, unlike the 3-of-6 Safe on the EVM chains and the 3-of-5 Argent multisig on Starknet."
+      },
+      {
+        "chain": "solana",
+        "address": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "deploymentRefs": ["solana:3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn"],
+        "label": "USTBL Solana issuer MinterConfig mint-authority PDA",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The issuer's custom Anchor minter program controls the Token-2022 mint authority. Public source describes initiate/approve mint operations and per-mint daily limits; no current daily-limit value, immutable monetary ceiling, Squads quorum or program upgrade authority is asserted here.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452232837,
+        "sources": [
+          {
+            "label": "Spiko Solana program architecture and mainnet authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko MinterConfig account layout",
+            "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/main/programs/minter/src/state.rs"
+          },
+          {
+            "label": "Solana finalized mint and authority account reads",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "A fresh getMultipleAccounts observation at finalized context slot 452232837 names BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ as the Token-2022 mint authority and identifies its owner as the issuer-published minter program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. Its 106-byte data matches the Anchor MinterConfig discriminator and public layout: admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, mint_initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd, bump 255. Both addresses match the issuer's published mainnet Squads admin vault and operational initiator; no inferred multisig threshold is applied. This is a new current observation, not a replay of the earlier slots."
+      },
+      {
+        "chain": "solana",
+        "address": "2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9",
+        "deploymentRefs": [
+          "solana:3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn"
+        ],
+        "label": "USTBL Solana issuer-published Squads admin vault (quorum not mapped)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452232837,
+        "sources": [
+          {
+            "label": "Spiko mainnet program authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko MinterConfig layout",
+            "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/main/programs/minter/src/state.rs"
+          },
+          {
+            "label": "Spiko admin-signature mint approval",
+            "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/main/programs/minter/src/instructions/approve_mint.rs"
+          },
+          {
+            "label": "Solana finalized configuration account",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized context slot 452232837, a fresh getMultipleAccounts read confirms the USTBL mint authority BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ and its issuer-program-owned MinterConfig admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9. This matches the issuer's mainnet Squads admin vault; public approve_mint source requires that admin's signature. Parent account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A is owned by Squads v4. No quorum, member permissions, timelock, program upgrade controller or immutable cap is asserted, and this entry supplies no protective governance grade. This replaces the earlier observation rather than claiming a historical replay."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -446,8 +507,8 @@
           "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
         },
         {
-          "label": "Sourcify Spiko Token source",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          "label": "Blockscout verified Spiko Token implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
         },
         {
           "label": "Blockscout PermissionManager source",

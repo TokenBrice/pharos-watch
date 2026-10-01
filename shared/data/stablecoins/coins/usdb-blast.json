@@ -10,16 +10,15 @@
   },
   "collateral": "DAI held through Blast's MakerDAO DSR yield manager; USDC, USDT, and DAI are supported bridge deposit inputs, while USDB withdrawals redeem to DAI.",
   "pegMechanism": "Automatic rebasing with yield from underlying centralized stablecoin strategies",
-  "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
-    "disposition": "resolved",
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SONG Safety Score V9 mechanism review",
-    "rationale": "Blast documentation establishes the USDB route and yield-bearing reserve framework, but the reviewed sources do not provide the complete current assurance, reconciliation, custody continuity, valuation, seniority, and loss-recovery inputs required for a full mechanism review.",
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC02)",
+    "rationale": "D18 requires the tracked holder claim and current backing mechanism to determine the archetype. USDB holders receive an auto-rebasing Blast token redeemable to DAI through the Ethereum bridge; at Ethereum block 26097122 the yield manager TOKEN() was DAI and getProviderInfoAt(0) identified its DSR provider. This establishes a bridged protocol-position claim, not direct BRL/USD cash reserves, a Treasury fund share, or borrower CDP issuance by USDB holders. No existing family has a fully evidenced exact-product mapping, so the previous fiat-cash resolution is withdrawn rather than replacing it with the parent's CDP or a marketed T-Bill category. DAI backing and dependency evidence remain intact; approved bridge inputs do not establish FRAX/frxUSD backing. Re-review when Blast publishes enforceable holder-claim terms and a complete current strategy inventory, or when the methodology owner admits an evidenced bridge/yield-claim family.",
     "sources": [
       {
-        "label": "Blast documentation",
-        "url": "https://docs.blast.io/"
+        "label": "Blast USDB rebasing and DAI redemption documentation",
+        "url": "https://docs.blast.io/about-blast"
       },
       {
         "label": "Blast official site",

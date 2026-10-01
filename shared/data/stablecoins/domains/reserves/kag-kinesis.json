@@ -3,7 +3,7 @@
   "reserves": [
     {
       "sourceKey": "chainlink-por:feed:0x3f0543aa057bcaea152fe9462cb3ffab305a6f8d",
-      "name": "Physical silver reserves",
+      "name": "Native KAG reserve claim with physical-silver look-through",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "commodity-allocated",
@@ -30,29 +30,38 @@
       {
         "label": "Kinesis April 2026 audit page",
         "url": "https://kinesis.money/audit-april-2026/"
+      },
+      {
+        "label": "KMS Labs binding ERC-20 terms: native-token reserve and holder rights",
+        "url": "https://kmslabs.money/kms-labs-tcs/"
       }
     ],
-    "rationale": "Bureau Veritas (Inspectorate International) April 2026 cycle (artefact read this pass): silver 3,688,827.985 ozt fine equivalent as at ledger date 20 April 2026 vs 3,683,448.057 KAG per the issuer cover letter (excess matches the five ~1000ozt reserve bars). The BV report reconciles physical holdings to vault records only; the token comparison is the issuer's own cover-letter assertion. Composition is a single allocated-silver category.",
+    "rationale": "Bureau Veritas (Inspectorate International) April 2026 cycle (artefact read this pass): silver 3,688,827.985 ozt fine equivalent as at ledger date 20 April 2026 vs 3,683,448.057 KAG per the issuer cover letter (excess matches the five ~1000ozt reserve bars). The BV report reconciles physical holdings to vault records only; the token comparison is the issuer's own cover-letter assertion. Composition is a single downstream allocated-silver category. KMS Labs terms describe the Ethereum token's immediate reserve as native KAG; this label clarification does not refresh the historical composition or verify current wrapper reserve quantities.",
     "compositionBasis": "Bureau Veritas April 2026 physical audit (ledger date 20 April 2026)",
     "compositionAsOf": "2026-04-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve category is fully allocated physical silver, but the reviewed page does not expose current KAG-only bar quantities, vault-level shares, or redemption inventory.",
+    "knownUnknownExposure": "KMS Labs terms describe the Ethereum token's immediate reserve as native KAG held in segregated issuer-maintained wallets. Physical silver is downstream look-through backing; the reviewed terms, whitepaper and April physical report do not disclose current wrapper reserve-wallet balances or an independent reconciliation against Ethereum KAG supply.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Physical silver reserves",
+        "reserveName": "Native KAG reserve claim with physical-silver look-through",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Allocated physical silver is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+        "rationale": "The historical single slice describes downstream allocated silver; immediate backing is Kinesis Cayman-issued native KAG under the KMS Labs terms. This look-through commodity review does not create a separately tracked native-KAG dependency or verify the wrapper reserve."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
+        "name": "KMS Labs S.A. segregated native-KAG reserve wallets",
+        "role": "custodian",
+        "jurisdiction": "Panama"
+      },
+      {
         "name": "Allocated Bullion Exchange vault network",
-        "role": "custodian"
+        "role": "subcustodian"
       },
       {
         "name": "Brinks",
@@ -65,12 +74,16 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "contractual-only",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA43KAG)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "KMS Labs terms, segregated reserve wallets and no holder title",
+        "url": "https://kmslabs.money/kms-labs-tcs/"
+      },
       {
         "label": "Kinesis trust and security",
         "url": "https://kinesis.money/trust-security/"
@@ -80,6 +93,6 @@
         "url": "https://kinesis.money/audit-april-2026/"
       }
     ],
-    "uncertainty": "Kinesis describes fully allocated bullion, legal ownership, and vault partners, but the reviewed materials do not establish a statutory bankruptcy-remote vehicle or rehypothecation prohibition."
+    "uncertainty": "The Ethereum token's immediate reserve is native KAG held by KMS Labs in segregated wallets. Section 8(e) denies ERC-20 holders legal, equitable or beneficial title to these reserves and disclaims any trust or fiduciary relationship; bankruptcy remoteness and a rehypothecation prohibition are not established. ABX, Brinks and Loomis are downstream physical-bullion custody providers for native KAG; provider shares and the KMS Labs reserve-wallet addresses are undisclosed."
   }
 }

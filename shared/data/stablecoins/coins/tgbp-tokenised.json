@@ -15,24 +15,23 @@
   "detailProvider": "defillama",
   "geckoId": "tokenised-gbp",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf",
-    "provider": "Andersen LLP (UK member of Andersen Global; the site's 'Audited Reserves' copy is contradicted by the artefact's own AUP no-opinion language; the transparency page is a JS shell so the record points at the report PDF)",
+    "type": "agreed-upon-procedures",
+    "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+    "provider": "Andersen LLP",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "United Kingdom",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-14",
+      "periodEnd": "2026-08-31",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "GPT SOL-BIND wave6",
-      "confidence": "probable",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB26MUSD)",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Andersen tGBP independent accountants report - June 2026",
-          "url": "https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf"
+          "label": "Andersen tGBP independent accountants report - August 2026",
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf"
         },
         {
           "label": "Tokenised GBP reserve transparency page",

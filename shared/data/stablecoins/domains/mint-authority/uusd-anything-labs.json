@@ -34,7 +34,9 @@
           "source": "safe-api",
           "observedBlock": 103627514
         },
-        "evidence": "BSC owner() returned this Safe at block 103627514. RPC getOwners() decoded 7 owners (matching stored list); storage slot 4 returned threshold 4. No enabled modules; zero guard confirmed. The owner can mint/burn directly under the UUSD implementation."
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056528,
+        "evidence": "BSC owner() returned this Safe at block 103627514. RPC getOwners() decoded 7 owners (matching stored list); storage slot 4 returned threshold 4. No enabled modules; zero guard confirmed. The owner can mint/burn directly under the UUSD implementation. At pinned BSC block 125056528 on 2026-10-01, token owner(), getOwners(), and getThreshold() reconfirmed the same seven owners and threshold four; this new observation does not refresh the historical modules/guard observation."
       },
       {
         "label": "UUSD proxy-admin ownership chain",
@@ -45,7 +47,9 @@
         "address": "0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "EIP-1967 proxy-admin slot returned this contract; owner() returned 0x2D49CB4194dFa42d711699a87C10C6BbC05d94b6 (reconfirmed at BSC block 103627514), whose owner() resolves to the same 4/7 Safe (0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4). ProxyAdmin is a non-multisig upgrader contract; modules not applicable."
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056528,
+        "evidence": "EIP-1967 proxy-admin slot returned this contract; owner() returned 0x2D49CB4194dFa42d711699a87C10C6BbC05d94b6 (reconfirmed at BSC block 103627514), whose owner() resolves to the same 4/7 Safe (0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4). ProxyAdmin is a non-multisig upgrader contract; modules not applicable. At pinned BSC block 125056528 on 2026-10-01, the corrected EIP-1967 admin slot and both owner() calls reconfirmed the same ownership chain."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -85,8 +89,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "UUSD proxy-admin ownership chain",
-      "observedAt": "2026-06-11",
-      "observedBlock": 103627514,
+      "observedAt": "2026-10-01",
+      "observedBlock": 125056528,
       "sources": [
         {
           "label": "UUSD contract (BscScan)",

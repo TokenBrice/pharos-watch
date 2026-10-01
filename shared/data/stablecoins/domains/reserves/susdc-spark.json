@@ -53,13 +53,17 @@
       {
         "label": "Spark Data Hub savings dashboard",
         "url": "https://data.spark.fi/savings"
+      },
+      {
+        "label": "Spark app Collateral Composition tab: issuer-labeled USDS/USDC accounting split observed 2026-10-01",
+        "url": "https://app.spark.finance/"
       }
     ],
     "rationale": "Spark documents the V2 vault as an ERC-4626 USDC product whose permissioned Spark Liquidity Layer taker can deploy liquidity into strategies. The dated rows measure idle USDC and aggregate assets outstanding; they do not resolve the deployed position's current constituent stablecoins, venues or custody shares. Spark separately describes full USDS backing and a junior/senior capital and token-backstop loss waterfall. That economic USDS relationship is recorded as a manual serial mechanism claim, without converting the deployed accounting remainder into measured USDS custody.",
-    "compositionBasis": "Current ERC-4626 live rows and Spark Vaults V2 architecture",
+    "compositionBasis": "Historical Ethereum ERC-4626 idle-USDC and assetsOutstanding claim accounting; selected observations only, not a reconciled whole-token backing denominator",
     "compositionAsOf": "2026-09-21",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The 96.742127158783% deployed accounting position has unresolved current constituent asset, venue and custodian weights. The reviewed full USDS mechanism claim establishes residual loss dependence after backstops, not a measured strategy allocation.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The historical 96.742127158783% deployed accounting position has unresolved constituent asset, venue and custodian weights. These rows measure Ethereum vault claim accounting, not a reconciled deployment-wide backing mix. The reviewed full USDS mechanism claim establishes residual loss dependence after backstops, not measured strategy allocations. Ruling D24 does not admit the system-wide Sky/Spark backing denominator as spUSDC-specific backing.",
     "knownUnknownExposurePct": 96.742127158783,
     "nonLinkDispositions": [
       {
@@ -98,7 +102,7 @@
         "url": "https://github.com/sparkdotfi/spark-alm-controller"
       }
     ],
-    "uncertainty": "The vault source permits SLL to take liquidity into yield strategies, but the current vault-versus-SLL split, downstream custody venues, legal segregation, and insolvency treatment are not published for spUSDC.",
+    "uncertainty": "The vault source permits SLL to take liquidity into yield strategies. Pinned Ethereum block 26095794 and Avalanche block 96511142 on 2026-10-01 expose idle local-USDC balances and aggregate assetsOutstanding(), so the vault-versus-deployed accounting split is observable. These reads do not identify current downstream asset, venue or custodian weights, legal segregation, or insolvency treatment for the deployed positions.",
     "knownUnknownExposurePct": 100
   }
 }

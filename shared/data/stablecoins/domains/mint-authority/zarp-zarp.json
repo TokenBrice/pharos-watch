@@ -64,17 +64,19 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095811,
         "sources": [
           {
             "label": "Sourcify ZARP source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe6695c23592e84ef37de8b31f24a020af82030e4/sources/contracts/Zarp.sol"
+            "url": "https://sourcify.dev/server/v2/contract/1/0xe6695c23592e84ef37de8b31f24a020af82030e4?fields=matchId,creationMatch,runtimeMatch,sources"
           },
           {
             "label": "ZARP Ethereum token",
             "url": "https://etherscan.io/address/0xb755506531786c8ac63b756bab1ac387bacb0c04"
           }
         ],
-        "evidence": "At Ethereum block 25295023: hasRole(MINTER_ROLE, 0x37b1af...) = true; eth_getCode = 0x (EOA). RoleGranted events confirmed this address received MINTER_ROLE; no corresponding RoleRevoked. hasRole confirmed true on Base and Polygon at same address."
+        "evidence": "At Ethereum block 26095811 on 2026-10-01, hasRole(MINTER_ROLE, 0x37b1af2606b4db2a3e07075efdd034ba864979cd) returned true and eth_getCode returned 0x. The same hasRole call returned true on Base block 52024199 and Polygon block 94755071. Historical RoleGranted/RoleRevoked enumeration at Ethereum block 25295023 identified this same direct minter."
       },
       {
         "chain": "ethereum",
@@ -88,13 +90,15 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095811,
         "sources": [
           {
             "label": "ZARP Ethereum token",
             "url": "https://etherscan.io/address/0xb755506531786c8ac63b756bab1ac387bacb0c04"
           }
         ],
-        "evidence": "At Ethereum block 25295023: hasRole(DEFAULT_ADMIN_ROLE, 0xf50064...) = true; eth_getCode = 0x (EOA). RoleGranted event at genesis plus transfer confirmed. hasRole also true on Base and Polygon."
+        "evidence": "At Ethereum block 26095811 on 2026-10-01, hasRole(DEFAULT_ADMIN_ROLE, 0xf50064312857ee94f378bc79675297a82e4f61bf) returned true and eth_getCode returned 0x. The same hasRole call returned true on Base block 52024199 and Polygon block 94755071. This remains the administrator of the AccessControl role hierarchy."
       },
       {
         "chain": "solana",
@@ -108,13 +112,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212935,
         "sources": [
           {
             "label": "ZARP Solana mint dngKhBQ",
             "url": "https://solscan.io/token/dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk"
           }
         ],
-        "evidence": "Solana getAccountInfo on both ZARP SPL mints (dngKhBQ... and 8v8aBHR...) returned mintAuthority = 797qLH2ZBvMrroZwxsLiWxgvDeLfUeJaHL1xWjfC7J4j. Account owner_program = 11111111111111111111111111111111 (System Program) = EOA-equivalent wallet, not a program."
+        "evidence": "At finalized Solana slot 452212935 on 2026-10-01, one getMultipleAccounts response returned mintAuthority and freezeAuthority 797qLH2ZBvMrroZwxsLiWxgvDeLfUeJaHL1xWjfC7J4j for the tracked Token-2022 mint dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk, with 6 decimals and ZARP token metadata. The authority account is owned by the System Program. Historical research also reported this authority for legacy mint 8v8aBHR..., which was not re-read in this observation."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -14,9 +14,9 @@
   "detailProvider": "coingecko",
   "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency",
-    "provider": "Ankura Trust Company",
+    "provider": "Ankura Trust Company (shared Ondo Stocks/USDon/USDY platform attestation; SLVon-specific allocation and liability reconciliation not disclosed)",
     "attestorTier": "niche",
     "cadence": "daily-nav"
   },
@@ -36,6 +36,10 @@
     {
       "label": "Important Notes",
       "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+    },
+    {
+      "label": "Shared platform attestation: Ondo Stocks/USDon/USDY, September 23, 2026 (no SLVon allocation)",
+      "url": "https://dl.dropboxusercontent.com/scl/fo/jzkrw308mrhsasauqrjqq/AN1ZwaNl07vhb2Gc5RsQAr8/2026/09%20September/Daily%20Report%20-%20Ondo%20Stocks%20-%202026-09-23_20_00_ET%20-%20Ankura%20Attestation.pdf?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
     }
   ],
   "jurisdiction": {

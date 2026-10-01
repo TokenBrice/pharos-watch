@@ -15,6 +15,7 @@
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import MIDAS_MTBILL_CAPTURE from "./fixtures/midas-mtbill-transparency.json";
+import { BLOX_ATTESTATIONS } from "./fixtures/blox-attestations";
 import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
@@ -85,7 +86,7 @@ const CORPUS_BACKLOG_NAMES = [
   "solstice-attestation", "solomon-protocol", "superstate-liquidity", "united-por", "usdgo-transparency",
   "usdai-proof-of-reserves", "usd1-bundle-oracle", "yamato", "youves-tezos", "zephyr-scanner", "djed-cardano",
   "dgld-gold-mapper", "matrixdock-frs", "icp-gldt", "onre-holdings-csv", "avant-reserves-api", "afi-proof",
-  "kerne-signed-por",
+  "kerne-signed-por", "leverup-lvusd",
 ] as const;
 const GENERIC_BACKLOG_OWNERS: Record<string, true> = {
   "moc-v3-buckets": true, "frax-balance-sheet": true, "frax-fpi-collateral": true, "sodax-sonic": true,
@@ -101,6 +102,7 @@ export const CORPUS_BACKLOG = reasonsFromNames(
     "hylo-solana": "Bound to hyusd-hylo but no committed wire capture yet; the happy path and its failure modes are owned by hylo-solana.test.ts.",
     "icp-gldt": "On-chain ICP canister reads; the committed capture covers the swap canister's get_swap_configs candid reply only, and the balance/ledger-supply reads are owned by icp-gldt.test.ts (owner: P4GldtFinish).",
     "kerne-signed-por": "Pre-launch kUSD adapter; the signed payload is synthetic test data rather than a committed wire capture, so replay remains owned by kerne-signed-por.test.ts.",
+    "leverup-lvusd": "Pinned Monad observations are committed, but the adapter test mocks multicall and prices directly; a complete RPC/price wire replay is still owed. Identity, vault census and shortfall behavior remain covered by leverup-lvusd.test.ts.",
   },
 );
 
@@ -120,6 +122,23 @@ const TETHER_CAPTURE = {
 };
 
 export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
+  "blox-attestation-index": {
+    coinId: "myrc-blox",
+    nowSec: Date.parse("2026-10-01T00:00:00Z") / 1000,
+    network: { json: { "https://api.blox.my/blox-admin/attestations": BLOX_ATTESTATIONS } },
+    drift: {
+      label: "the reviewed reserve total changes",
+      network: {
+        json: {
+          "https://api.blox.my/blox-admin/attestations": [
+            { ...BLOX_ATTESTATIONS[0], reservedAmount: BLOX_ATTESTATIONS[0].reservedAmount + 1 },
+            ...BLOX_ATTESTATIONS.slice(1),
+          ],
+        },
+      },
+      outcome: "error",
+    },
+  },
   "tether-transparency": {
     coinId: "usdt-tether",
     nowSec: 1_783_555_140 + 3_600,

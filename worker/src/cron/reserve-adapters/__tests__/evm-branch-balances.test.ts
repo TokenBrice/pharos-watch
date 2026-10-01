@@ -1105,6 +1105,44 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.warnings?.some((w) => w.code === "undercollateralized") ?? false).toBe(false);
   });
 
+  it.each([
+    ["reverted", null],
+    ["oversized", `0x${"00".repeat(33)}`],
+    ["non-hex", "0xnot-a-uint256"],
+  ] as const)("withholds collateral when the configured liability read is %s", async (_label, debt) => {
+    await expect(runBranches(
+      makeBranchConfig([usdcBranch({ priceUsd: 1 })], {
+        params: { debtSelector: "0x18160ddd", debtDecimals: 18 },
+      }),
+      {
+        rpc: branchRpc({
+          balances: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": 100_000_000n },
+          decimals: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": 6n },
+          extra: { "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:totalSupply()": debt },
+        }),
+      },
+    )).rejects.toThrow(/configured liability read/);
+  });
+
+  it("publishes observed zero debt without an undefined or infinite coverage quotient", async () => {
+    const { result } = await runBranches(
+      makeBranchConfig([usdcBranch({ priceUsd: 1 })], {
+        params: { debtSelector: "0x18160ddd", debtDecimals: 18 },
+      }),
+      {
+        rpc: branchRpc({
+          balances: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": 100_000_000n },
+          decimals: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": 6n },
+          extra: { "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:totalSupply()": 0n },
+        }),
+      },
+    );
+    expect(result.metadata?.totalDebtUsd).toBe(0);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.slices).toEqual([expect.objectContaining({ coinId: "usdc-circle", pct: 100 })]);
+    expect(result.warnings?.some((warning) => warning.code === "undercollateralized") ?? false).toBe(false);
+  });
+
   it("supports the USDN wstETH holder balance plus token supply debt shape", async () => {
     const { result } = await runBranches(
       makeBranchConfig([{

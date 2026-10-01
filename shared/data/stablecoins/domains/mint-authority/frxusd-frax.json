@@ -65,11 +65,11 @@
         },
         {
           "label": "Frax frxUSD Fraxtal contract source",
-          "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+          "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
         },
         {
           "label": "Fraxtal ProxyAdmin constants",
-          "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/Constants.sol"
+          "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/Constants.sol"
         },
         {
           "label": "Fraxtal RPC",
@@ -308,11 +308,11 @@
         "sources": [
           {
             "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
           },
           {
             "label": "Permissioned OptiMintable source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
           },
           {
             "label": "Frax frxUSD contract addresses",
@@ -343,7 +343,7 @@
         "sources": [
           {
             "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
           },
           {
             "label": "Fraxtal RPC",
@@ -370,7 +370,7 @@
         "sources": [
           {
             "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
           },
           {
             "label": "Fraxtal RPC",
@@ -415,11 +415,11 @@
         },
         {
           "label": "Frax frxUSD Fraxtal contract source",
-          "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+          "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
         },
         {
           "label": "Permissioned OptiMintable source",
-          "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+          "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
         },
         {
           "label": "Frax frxUSD contract addresses",

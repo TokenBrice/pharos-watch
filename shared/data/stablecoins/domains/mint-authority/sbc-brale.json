@@ -337,8 +337,8 @@
         "threshold": 1,
         "signerCount": 2,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 432863929,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452217200,
         "sources": [
           {
             "label": "SBC Solana mint",
@@ -353,7 +353,7 @@
             "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
           }
         ],
-        "evidence": "At Solana finalized slot 432863929, getAccountInfo for mint DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA returned owner TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA and an 82-byte SPL Mint account with mintAuthority = 8Dn2V6HX6gTwkCid2MUiv3mXvMkTcyxQeqTychdBRBSj. That authority account is a 355-byte SPL Token multisig with m = 1, n = 2, signers 82GvnsFEPfs8xq8poGax4HNjZi98LK7Lg7Btr9zx5cD and 3W4UiZLF5TckYg34mDGe1Kno2RZdp8DiiMRF9pAkxvfk. The canonical Token Program is the immutable minting runtime; the multisig retains direct mint and authority-change capability."
+        "evidence": "At Solana finalized slot 452217200 on 2026-10-01, getMultipleAccounts read the mint and authority in the same RPC context. Mint DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA has 9 decimals, owner TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA, mintAuthority 8Dn2V6HX6gTwkCid2MUiv3mXvMkTcyxQeqTychdBRBSj, and freezeAuthority 3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH. The authority is an initialized SPL Token multisig with one required signer and two valid signers: EmJvvf2DK1oXaLg7k3cYpGUQcswYd2rtMZMkz3J1bPAL and 3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH. The earlier July observation recorded different signer keys; the one-of-two threshold and direct mint authority remain unchanged."
       },
       {
         "chain": "stellar",
@@ -423,9 +423,9 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Current EVM role reads confirm chain-local upgrade authorities: Ethereum block 25712410 uses Safe 0x4d16d9e3; Arbitrum block 483773115, Optimism block 154217718, Base block 48622433, Celo block 72133454, and Ethereum Classic block 24947752 use Brale EOA 0xb180f98; Polygon block 90219432 uses Safe 0xcf64b5d4; Avalanche block 90290804 uses Safe 0xa8cdd1c1. The Ethereum authority was corrected from 'legacy multisig, not Safe' to Safe v1.3.0 after fresh runtime, VERSION(), owner, threshold, module, guard, fallback-handler, and singleton reads; all three Safe authorities are 3-of-6 with no enabled modules and zero guard storage. Solana uses the immutable canonical Token Program with a 1-of-2 mint-authority multisig, and Stellar uses its native issuer account with one weight-1 signer and no threshold elevation. The previously omitted Tempo deployment was closed on 2026-08-08: at block 33856846, TIP-20 roles and configuration identify EOA 0x9b2ac01262756f76cd49a60060b43471c8473e7f as both DEFAULT_ADMIN and ISSUER and report an Unlimited supply cap. This completes the control identity inventory for all 11 tracked deployments. MCCPA/Abdo performs monthly independent examinations; the latest reviewed report covers May 31, 2026, was published June 9, 2026, and fully reconciles SBC liabilities to reserve assets. Brale's disclosed FinCEN MSB and state money-transmitter status does not establish prudential issuer supervision comparable to a banking, trust, or EMI charter, so supervision is attestation-only.",
-      "reviewer": "OpenAI Codex C07 control review; OpenAI Codex SOL-IV regulated-issuer review; Kimi P2 control cohort dc-3",
-      "reviewedAt": "2026-08-08",
+      "evidence": "Historical EVM role reads identify chain-local upgrade authorities: Ethereum Safe 0x4d16d9e3; Brale EOA 0xb180f98 on Arbitrum, Optimism, Base, Celo, and Ethereum Classic; Polygon Safe 0xcf64b5d4; Avalanche Safe 0xa8cdd1c1. Fresh pinned reads on 2026-10-01 confirmed these authorities, unchanged EIP-1967 implementations, and all three Safes' six owners, threshold three, empty modules, and zero canonical guard and fallback-handler slots. Solana finalized slot 452217200 confirms the one-of-two mint-authority multisig with the current signer keys recorded in its control. Stellar Horizon still reports one weight-one signer, zero thresholds, and revocation and clawback enabled. Tempo's role API fetched on 2026-10-01 identifies the recorded issuer EOA as ISSUER and DEFAULT_ADMIN; pinned block 42068475 reads confirm the supply cap is the maximum uint128 value and paused() is false. MCCPA's latest report covers August 31, 2026, is signed September 15, 2026, and reconciles $8,717,242 of reserve assets to 8,717,242 SBC issued. Brale's FinCEN MSB and state money-transmitter disclosures do not establish a bank, trust, or EMI charter; supervision remains attestation-only.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB37SBC)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "sources": [
         {
@@ -477,8 +477,8 @@
           "url": "https://explore.tempo.xyz/block/33856846"
         },
         {
-          "label": "MCCPA SBC Reserve Attestation Report - May 2026",
-          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-05-2026.pdf"
+          "label": "MCCPA SBC Reserve Attestation Report - August 2026",
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf"
         },
         {
           "label": "FinCEN MSB registrant search",

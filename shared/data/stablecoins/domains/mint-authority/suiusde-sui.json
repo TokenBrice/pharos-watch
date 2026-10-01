@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "suiUSDe minting is controlled via a Treasury shared object that wraps the TreasuryCap. The single AdminRole holder (0xe3dbc438…) also holds the package UpgradeCap, giving one EOA full mint and upgrade authority.",
+    "summary": "suiUSDe minting routes through a shared Treasury object that wraps the TreasuryCap. One AdminRole address (0xe3dbc438…) also owns the compatible-policy package UpgradeCap and can replace mint-critical logic. Address ownership does not disclose whether signing custody is single-party or multisig.",
     "upgradeability": {
       "model": "custom",
       "implementationAddresses": [
@@ -15,12 +15,12 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "suiUSDe AdminRole holder (mints via Treasury) and UpgradeCap owner",
-      "observedAt": "2026-07-14",
-      "observedBlock": 298482440,
+      "observedAt": "2026-10-01",
+      "observedBlock": 328964820,
       "sources": [
         {
-          "label": "Sui fullnode RPC: suiUSDe package UpgradeCap",
-          "url": "https://fullnode.mainnet.sui.io:443"
+          "label": "Sui GraphQL RPC: suiUSDe package UpgradeCap at checkpoint 328964820",
+          "url": "https://graphql.mainnet.sui.io/graphql"
         },
         {
           "label": "Suiscan: suiUSDe UpgradeCap object",
@@ -43,13 +43,15 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "TreasuryCap<SUI_USDE> is wrapped inside the shared Treasury object, so minting must route through Treasury module logic rather than an externally held TreasuryCap.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 328964820,
         "sources": [
           {
-            "label": "Sui fullnode RPC: Treasury object",
-            "url": "https://fullnode.mainnet.sui.io:443"
+            "label": "Sui GraphQL RPC: Treasury object at checkpoint 328964820",
+            "url": "https://graphql.mainnet.sui.io/graphql"
           }
         ],
-        "evidence": "At Sui checkpoint 285785957, sui_getObject for 0xe6c3c84c…40366ea returns type treasury::Treasury, owner Shared (initial_shared_version 758887726). Dynamic object field read confirms TreasuryCap<SUI_USDE> (id 0xae5039…54bda) is wrapped inside the Treasury (ObjectOwner pointing to the Treasury's inner dynamic-field wrapper at 0x19a91d…0c21). DenyCap and MetadataCap are also stored inside the Treasury object (deny_cap and metadata_cap fields confirmed)."
+        "evidence": "At Sui checkpoint 328964820, checkpoint-scoped GraphQL reads confirm the shared Treasury (initialSharedVersion 758887726), embedded DenyCapV2 with allow_global_pause=true, and MetadataCap. TreasuryCap<SUI_USDE> 0xae5039079b0cf2bb7694c24b411ea9fc24a1a59f602ca90b0ba2b2095da54bda remains owned by the Treasury's inner dynamic-field wrapper 0x19a91d61e89f99f405e780b372765ea356a552406f92dc2995f9603228c20c21. Treasury configuration records hourly max_mint=10000000000000 and daily max_mint=100000000000000 in six-decimal units; these operational limits are mutable, not an immutable supply ceiling."
       },
       {
         "label": "suiUSDe AdminRole holder (mints via Treasury) and UpgradeCap owner",
@@ -59,13 +61,15 @@
         "chain": "sui",
         "address": "0xe3dbc438a73460dba6442cbefeab033462fb8a97302a6cc28b8ad7ef08b2440d",
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 328964820,
         "sources": [
           {
-            "label": "Sui fullnode RPC: RoleAuthorized events",
-            "url": "https://fullnode.mainnet.sui.io:443"
+            "label": "Sui GraphQL RPC: current roles and UpgradeCap at checkpoint 328964820",
+            "url": "https://graphql.mainnet.sui.io/graphql"
           }
         ],
-        "evidence": "At Sui checkpoint 285785957: suix_queryEvents for RoleAuthorized<AdminRole> returns a single event (tx 97LB9KNbTjNFwq2QXdA6HzSe4RjSXa63Y2WFP6fBaBfx) granting AdminRole to 0xe3dbc438…. Additional events confirm this address also holds EpochPeriodManagerRole, GlobalDisablerRole, CollateralManagerRole, CollateralDisablerRole, BenefactorManagerRole, BenefactorDisablerRole, PegManagerRole, OracleManagerRole, and DenylistManagerRole. suix_getOwnedObjects confirms UpgradeCap 0x764653924d7bc3b8… (policy=0 COMPATIBLE, version=2, current package 0x341079b4…) is also owned by this address; re-read at checkpoint 298482440. sui_getObject for the address returns notExists confirming it is an EOA (Sui address, not a smart contract)."
+        "evidence": "At Sui checkpoint 328964820, the Treasury roles table has admin_count=1 and its complete 22-entry dynamic-field read identifies AdminRole plus EpochPeriodManagerRole, GlobalDisablerRole, CollateralManagerRole, CollateralDisablerRole, BenefactorManagerRole, BenefactorDisablerRole, PegManagerRole, OracleManagerRole, and DenylistManagerRole for 0xe3dbc438a73460dba6442cbefeab033462fb8a97302a6cc28b8ad7ef08b2440d. UpgradeCap 0x764653924d7bc3b889809de7ca077f5dd69ec378cb5d52be448c15613a5116c8 is AddressOwner-owned by the same address, with policy=0, version=3 and package 0xb81bd7d3d18ed48c31286ac66c2dc7f301a8b57227130de0dbddd5f7aa3a0ccc. This confirms the address-based admin and upgrade path; Sui address ownership does not establish whether its signing key is single-party or multisig."
       }
     ],
     "economicCapSemantics": "unbounded",

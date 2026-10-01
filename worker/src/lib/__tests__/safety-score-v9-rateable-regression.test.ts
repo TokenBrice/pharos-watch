@@ -7,7 +7,7 @@ import {
 } from "../../test-helpers/report-cards-fixed-input";
 
 // Frozen producer rows for usdt-tether and usdc-circle, originally captured
-// on 2026-07-13 and coherently reclocked to 2026-09-30 so current registry
+// on 2026-07-13 and coherently reclocked to 2026-10-02 so current registry
 // reviews predate the scoring clock. Fingerprints and the registry extension
 // are rebuilt against the live registry at test time, so this guards the exact
 // failure mode the 2026-07-13 rescue fixed: a future extension or fact-set

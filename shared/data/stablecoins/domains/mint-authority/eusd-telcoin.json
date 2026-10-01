@@ -20,8 +20,8 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-15",
-        "observedBlock": 25295081,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "safe": {
           "owners": [
             "0xdce4ef7679e8a81eee8c71917b21ebbcef45b5ba",
@@ -36,10 +36,10 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": null,
           "version": "1.4.1",
-          "observedBlock": 25295081,
+          "observedBlock": 26095799,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295081: hasRole(MINTER_ROLE, 0x9c745cdf09cd2627290ae2db6421da451d1c8c1b) = true; hasRole(DEFAULT_ADMIN_ROLE, same) = true. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe 1.4.1 L2); threshold() = 3; 6 owners; no modules; no guard. RoleGranted events scanned via Blockscout (block 24035377 initial grants); prior EOA minter 0x6bc27021 revoked at block 25197170.",
+        "evidence": "At Ethereum block 25295081: hasRole(MINTER_ROLE, 0x9c745cdf09cd2627290ae2db6421da451d1c8c1b) = true; hasRole(DEFAULT_ADMIN_ROLE, same) = true. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe 1.4.1 L2); threshold() = 3; 6 owners; no modules; no guard. RoleGranted events scanned via Blockscout (block 24035377 initial grants); prior EOA minter 0x6bc27021 revoked at block 25197170. Re-verified on 2026-10-01 at Ethereum block 26095799: owners and threshold are unchanged, VERSION() is 1.4.1, the modules list is empty and the guard storage slot is zero. Both MINTER_ROLE and DEFAULT_ADMIN_ROLE remain true for this Safe.",
         "sources": [
           {
             "label": "eUSD contract on Etherscan",
@@ -61,8 +61,8 @@
         "threshold": 2,
         "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-15",
-        "observedBlock": 25295003,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "safe": {
           "owners": [
             "0x774e8870e8a2ecef2dc65427ce983d424a03d1aa",
@@ -78,10 +78,10 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": null,
           "version": "1.4.1",
-          "observedBlock": 25295003,
+          "observedBlock": 26095799,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295003: eUSD at 0x14913815 is a BeaconProxy pointing to beacon 0xe7a6d045ddd40087e027139351fdd9abc557f236; beacon.implementation() = 0x7b28d7ba50280cc3b7649866843e49d554af3580 (Stablecoin impl); beacon.owner() = 0x238fb46093128f4d8d6d21cbfd448455478d9b87. masterCopy(0x238fb46) = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe 1.4.1); threshold() = 2; 7 owners; no modules (getModules = 0); guard slot = 0x0.",
+        "evidence": "At Ethereum block 25295003: eUSD at 0x14913815 is a BeaconProxy pointing to beacon 0xe7a6d045ddd40087e027139351fdd9abc557f236; beacon.implementation() = 0x7b28d7ba50280cc3b7649866843e49d554af3580 (Stablecoin impl); beacon.owner() = 0x238fb46093128f4d8d6d21cbfd448455478d9b87. masterCopy(0x238fb46) = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe 1.4.1); threshold() = 2; 7 owners; no modules (getModules = 0); guard slot = 0x0. Re-verified on 2026-10-01 at Ethereum block 26095799: owners and threshold are unchanged, VERSION() is 1.4.1, the modules list is empty and the guard storage slot is zero. Beacon 0xe7a6d045ddd40087e027139351fdd9abc557f236 still names this Safe as owner; implementation is now 0xf145789b4ec62542f1fce6350fed7b42ea0818b2, as already recorded in upgradeability.",
         "sources": [
           {
             "label": "eUSD contract on Etherscan",
@@ -100,12 +100,195 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "observedAt": "2026-07-16",
-        "evidence": "Solana mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L: mintAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG; freezeAuthority = same. The authority account is owned by the System Program (EOA-equivalent on Solana, no on-chain multisig structure). Cannot be independently verified as a multisig; treated as issuer-backend EOA-equivalent.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452232859,
+        "evidence": "Solana mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L: mintAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG; freezeAuthority = same. The authority account is owned by the System Program (EOA-equivalent on Solana, no on-chain multisig structure). Cannot be independently verified as a multisig; treated as issuer-backend EOA-equivalent. Re-verified in one finalized getMultipleAccounts response at Solana slot 452232859: Token-2022 mint has 6 decimals; mintAuthority and freezeAuthority are unchanged, authority account is System Program-owned. The same authority also controls the permanentDelegate, pausableConfig and transferHook configuration extensions; transferHook.programId is null and paused is false.",
         "sources": [
           {
             "label": "Solana Explorer eUSD mint",
             "url": "https://explorer.solana.com/address/HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x9c745cdf09cd2627290ae2db6421da451d1c8c1b",
+        "deploymentRefs": [
+          "base:0x14913815bcfde78baead2111f463d038ac9c2949"
+        ],
+        "label": "Telcoin eUSD base MINTER_ROLE + DEFAULT_ADMIN Safe (6/3)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024128,
+        "safe": {
+          "owners": [
+            "0xdce4ef7679e8a81eee8c71917b21ebbcef45b5ba",
+            "0x774e8870e8a2ecef2dc65427ce983d424a03d1aa",
+            "0xcecc70bd817e651465d8a99586e99da78e0a68fe",
+            "0xfecee4ab07127fff4ee4a3ba61df5fd7b906f84c",
+            "0xf5b3944629f9303fa94670b2a6611ee1b11cd538",
+            "0xb315918fbe976e5493e65f3c64451311784b1193"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.4.1",
+          "observedBlock": 52024128,
+          "source": "onchain"
+        },
+        "evidence": "Pinned base block 52024128, 2026-10-01: hasRole(MINTER_ROLE, controller) and hasRole(DEFAULT_ADMIN_ROLE, controller) both return true; getOwners() returns the recorded 6 owners, getThreshold() returns 3, VERSION() returns 1.4.1, getModulesPaginated returns an empty module list and guard storage is zero. This is a chain-local Safe deployment; key custody and other privileged role holders are not established by this observation.",
+        "sources": [
+          {
+            "label": "eUSD base issuer deployment disclosure",
+            "url": "https://bank.telco.in/eUSD"
+          },
+          {
+            "label": "eUSD base deployment explorer",
+            "url": "https://basescan.org/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x238fb46093128f4d8d6d21cbfd448455478d9b87",
+        "deploymentRefs": [
+          "base:0x14913815bcfde78baead2111f463d038ac9c2949"
+        ],
+        "label": "Telcoin eUSD base beacon upgrade admin Safe (7/2)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024128,
+        "safe": {
+          "owners": [
+            "0x774e8870e8a2ecef2dc65427ce983d424a03d1aa",
+            "0xcecc70bd817e651465d8a99586e99da78e0a68fe",
+            "0xb35ad51ef0469fc030f64a6fba24398304d2ec9b",
+            "0xdce4ef7679e8a81eee8c71917b21ebbcef45b5ba",
+            "0x7423d570ab3782ae7a7ec1900dbdc74600e76c39",
+            "0xfecee4ab07127fff4ee4a3ba61df5fd7b906f84c",
+            "0xf5b3944629f9303fa94670b2a6611ee1b11cd538"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.4.1",
+          "observedBlock": 52024128,
+          "source": "onchain"
+        },
+        "evidence": "Pinned base block 52024128, 2026-10-01: eUSD BeaconProxy points to beacon 0xe7a6d045ddd40087e027139351fdd9abc557f236, whose owner() is this controller and implementation() is 0xf145789b4ec62542f1fce6350fed7b42ea0818b2; getOwners() returns the recorded 7 owners, getThreshold() returns 2, VERSION() returns 1.4.1, getModulesPaginated returns an empty module list and guard storage is zero. This is a chain-local Safe deployment; key custody and other privileged role holders are not established by this observation.",
+        "sources": [
+          {
+            "label": "eUSD base issuer deployment disclosure",
+            "url": "https://bank.telco.in/eUSD"
+          },
+          {
+            "label": "eUSD base deployment explorer",
+            "url": "https://basescan.org/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+          }
+        ]
+      },
+      {
+        "chain": "polygon",
+        "address": "0x9c745cdf09cd2627290ae2db6421da451d1c8c1b",
+        "deploymentRefs": [
+          "polygon:0x14913815bcfde78baead2111f463d038ac9c2949"
+        ],
+        "label": "Telcoin eUSD polygon MINTER_ROLE + DEFAULT_ADMIN Safe (6/3)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94754980,
+        "safe": {
+          "owners": [
+            "0xdce4ef7679e8a81eee8c71917b21ebbcef45b5ba",
+            "0x774e8870e8a2ecef2dc65427ce983d424a03d1aa",
+            "0xcecc70bd817e651465d8a99586e99da78e0a68fe",
+            "0xfecee4ab07127fff4ee4a3ba61df5fd7b906f84c",
+            "0xf5b3944629f9303fa94670b2a6611ee1b11cd538",
+            "0xb315918fbe976e5493e65f3c64451311784b1193"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.4.1",
+          "observedBlock": 94754980,
+          "source": "onchain"
+        },
+        "evidence": "Pinned polygon block 94754980, 2026-10-01: hasRole(MINTER_ROLE, controller) and hasRole(DEFAULT_ADMIN_ROLE, controller) both return true; getOwners() returns the recorded 6 owners, getThreshold() returns 3, VERSION() returns 1.4.1, getModulesPaginated returns an empty module list and guard storage is zero. This is a chain-local Safe deployment; key custody and other privileged role holders are not established by this observation.",
+        "sources": [
+          {
+            "label": "eUSD polygon issuer deployment disclosure",
+            "url": "https://bank.telco.in/eUSD"
+          },
+          {
+            "label": "eUSD polygon deployment explorer",
+            "url": "https://polygonscan.com/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+          }
+        ]
+      },
+      {
+        "chain": "polygon",
+        "address": "0x238fb46093128f4d8d6d21cbfd448455478d9b87",
+        "deploymentRefs": [
+          "polygon:0x14913815bcfde78baead2111f463d038ac9c2949"
+        ],
+        "label": "Telcoin eUSD polygon beacon upgrade admin Safe (7/2)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94754980,
+        "safe": {
+          "owners": [
+            "0x774e8870e8a2ecef2dc65427ce983d424a03d1aa",
+            "0xcecc70bd817e651465d8a99586e99da78e0a68fe",
+            "0xb35ad51ef0469fc030f64a6fba24398304d2ec9b",
+            "0xdce4ef7679e8a81eee8c71917b21ebbcef45b5ba",
+            "0x7423d570ab3782ae7a7ec1900dbdc74600e76c39",
+            "0xfecee4ab07127fff4ee4a3ba61df5fd7b906f84c",
+            "0xf5b3944629f9303fa94670b2a6611ee1b11cd538"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.4.1",
+          "observedBlock": 94754980,
+          "source": "onchain"
+        },
+        "evidence": "Pinned polygon block 94754980, 2026-10-01: eUSD BeaconProxy points to beacon 0xe7a6d045ddd40087e027139351fdd9abc557f236, whose owner() is this controller and implementation() is 0xf145789b4ec62542f1fce6350fed7b42ea0818b2; getOwners() returns the recorded 7 owners, getThreshold() returns 2, VERSION() returns 1.4.1, getModulesPaginated returns an empty module list and guard storage is zero. This is a chain-local Safe deployment; key custody and other privileged role holders are not established by this observation.",
+        "sources": [
+          {
+            "label": "eUSD polygon issuer deployment disclosure",
+            "url": "https://bank.telco.in/eUSD"
+          },
+          {
+            "label": "eUSD polygon deployment explorer",
+            "url": "https://polygonscan.com/address/0x14913815bcfde78baead2111f463d038ac9c2949"
           }
         ]
       }
@@ -129,8 +312,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Beacon upgrade admin Safe (7/2)",
-      "observedAt": "2026-09-04",
-      "observedBlock": 25905192,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095799,
       "sources": [
         {
           "label": "eUSD Ethereum BeaconProxy",

@@ -1,8 +1,5 @@
 {
   "id": "usdd-tron-dao-reserve",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -36,10 +33,10 @@
       },
       {
         "label": "Treasury GENIUS Act state-regime comparability NPRM",
-        "url": "https://www.consumerfinancemonitor.com/2026/04/14/treasury-issues-nprm-on-state-oversight-of-stablecoin-issuers-under-the-genius-act/",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-04-03",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-04-01",
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "USDD live reserve data",

@@ -11,8 +11,8 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-  "pegMechanism": "EUR-denominated NAV-accreting share token (ISIN FR001400ODL1) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed primarily by French and German Eurozone sovereign T-bills (and other top-rated Member-State issuers such as the Netherlands) with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a €1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+  "collateral": "Eurozone-government bonds and money-market instruments held by the AMF-regulated Spiko SICAV short-term VNAV money-market sub-fund, managed by Twenty First Capital; the mandate limits weighted average maturity to 60 days or less and residual instrument maturity to six months",
+  "pegMechanism": "EUR-denominated NAV-accreting share token (ISIN FR001400ODL1) of the Spiko SICAV short-term VNAV money-market sub-fund authorised by the AMF. The mandate permits euro-denominated Eurozone-government bonds and money-market instruments, with weighted average maturity of 60 days or less. Subscriptions, redemptions, and transfers are permissioned through Spiko Finance's shareholder register. The 1 September 2026 prospectus specifies an 11:30 Paris-time order cutoff, execution at the last known NAV subject to exceptional-event recalculation, next-business-day processing for late orders, and €1 minimum subscriptions and redemptions. Spiko has announced Chainlink CCIP interoperability for EUTBL and USTBL. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -39,7 +39,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit, statutory auditor of the Spiko SICAV certifying annual accounts (prospectus art. 24: annual certification plus pre-publication asset-composition checks; reports are sent on written request only, none published; the fund page's 'four audits annually' is template marketing text)",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor of Spiko SICAV. The 1 September 2026 prospectus names PwC and requires certification of financial statements plus pre-publication asset-composition checks. Latest annual reports and asset compositions are available to shareholders within eight working days of written request; no dated audit report was obtained in this review.",
     "attestorTier": "big4",
     "cadence": "annual",
     "attestorJurisdiction": "France"
@@ -144,5 +144,5 @@
       "message": "EUTBL is issued on Ethereum, Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar, with cross-chain transfers relayed via Chainlink CCIP where supported."
     }
   ],
-  "launchDate": "2024-04-19"
+  "launchDate": "2024-06-12"
 }

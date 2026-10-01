@@ -43,8 +43,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (R11 revisit; no newer report than May 2026)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB19spUSD)",
     "confidence": "probable",
     "sources": [
       {
@@ -54,9 +54,13 @@
       {
         "label": "BiLira audit reports",
         "url": "https://www.bilira.co/en/audit-reports"
+      },
+      {
+        "label": "Corpus Denetim TRYB examination dated August 17, 2026; custody notes outside assurance",
+        "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf"
       }
     ],
-    "uncertainty": "BiLira confirms Turkish bank-account reserves and recurring audit reports but does not publish provider names, account segregation, insolvency treatment, or rehypothecation terms.",
+    "uncertainty": "The August 17, 2026 report's unaudited notes state that Turkish-lira reserves are held in segregated accounts at insured depository institutions. The auditor expressly provides no assurance on those notes. Active bank names, provider allocations, enforceable insolvency treatment, and rehypothecation terms remain undisclosed in the reviewed report; the safeguard classifications remain unknown.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -2,10 +2,19 @@
   "id": "pgold-pleasing",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: PGOLD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Pleasing PGOLD token features: address restrictions",
+        "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
+      },
+      {
+        "label": "Pleasing binding Terms of Sale and Service",
+        "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service"
+      }
+    ],
+    "evidence": "The issuer's Token Features disclosure states that specific addresses may be restricted or blacklisted for security and legal compliance. The Terms of Sale and Service reserve freeze/decline powers and emergency restrictions on transfers and wallet addresses. This sourced review retains the existing adverse status; it does not claim that each deployment implements the same blacklist function.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA60fxSAVE)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
@@ -416,7 +425,7 @@
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
         ],
-        "evidence": "At Arbitrum block 495272772 (2026-08-16T21:49:25Z), adapter 0xbfd47e6098017c04957ba218dade65e23f661793 token() returned canonical PGOLD, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, and owner() returned 0x25a6a7fbe039c14b06adb6bda434b960981dbaed. The ApeChain representation's current peer 30110 points to this adapter, preserving the adapter's adverse bridge control and escrow evidence under Bridge Risk."
+        "evidence": "At Arbitrum block 495272772 (2026-08-16T21:49:25Z), adapter 0xbfd47e6098017c04957ba218dade65e23f661793 token() returned canonical PGOLD, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, and owner() returned 0x25a6a7fbe039c14b06adb6bda434b960981dbaed. The ApeChain representation's current peer 30110 points to this adapter, preserving the adapter's adverse bridge control and escrow evidence under Bridge Risk. At Arbitrum block 510591996 on 2026-10-01, adapter owner() again returned 0x25a6a7fbe039c14b06adb6bda434b960981dbaed, whose eth_getCode returned EIP-7702 delegation designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b. The account delegates to 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b, whose source is Sourcify exact-match EIP7702StatelessDeleGator. Delegation does not establish multisig protection or independently controlled signers; authorityType and adverse failure-domain treatment remain unchanged pending control-owner review."
       },
       {
         "id": "pgold-apechain-oft-owner",

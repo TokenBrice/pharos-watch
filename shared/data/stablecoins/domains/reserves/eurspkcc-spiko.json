@@ -7,7 +7,7 @@
       "pct": 100,
       "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Spiko SAS and the eurSPKCC strategy counterparties",
+      "issuerOrObligor": "Spiko Cash and Carry Fund; Marex structured-note counterparty",
       "riskFactors": [
         "market",
         "basis",
@@ -36,12 +36,16 @@
       {
         "label": "Spiko smart contracts",
         "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      },
+      {
+        "label": "Spiko Cash and Carry stakeholders",
+        "url": "https://docs.spiko.io/documentation/product_overview/cash_and_carry/stakeholders"
       }
     ],
-    "rationale": "The current eurSPKCC public share-class API exposes one 100% Digital-asset cash-and-carry strategy slice. The exact strategy positions, counterparties, custody, and any Treasury or cash overlay are not published as a current constituent allocation, so the live slice is retained as one bounded protocol-position row rather than preserving an unsupported 80/20 split.",
+    "rationale": "The eurSPKCC public API publishes aggregate share-class assets and NAV, not a constituent allocation. Spiko's stakeholder documentation identifies Marex as the structured-note counterparty and CACEIS Bank as custodian and depositary. The reviewed 100% strategy row remains a conservative aggregate envelope because no current constituent positions or Treasury/cash weights were obtained; the previously unsupported 80/20 split is not restored.",
     "compositionBasis": "Current Spiko eurSPKCC share-class API snapshot and product documentation",
     "scope": "full-composition",
-    "knownUnknownExposure": "The strategy category and live weight are known, but the underlying digital assets, counterparties, custody, and internal cash or Treasury overlay are not disclosed.",
+    "knownUnknownExposure": "Marex is the disclosed structured-note counterparty and CACEIS Bank the disclosed custodian and depositary. Current constituent positions, look-through digital-asset weights, and any internal cash or Treasury allocation remain undisclosed.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -52,5 +56,45 @@
         "rationale": "Spiko exposes the live strategy category but does not publish the current constituent positions or weights needed for tracked dependency mapping."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CACEIS Bank",
+        "role": "custodian",
+        "jurisdiction": "France"
+      },
+      {
+        "name": "CACEIS Fund Administration",
+        "role": "other",
+        "jurisdiction": "France"
+      },
+      {
+        "name": "Marex",
+        "role": "other"
+      },
+      {
+        "name": "Twenty First Capital",
+        "role": "other",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Pharos curation pass 2026-10-01 (CurB09JUPUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Cash and Carry stakeholders",
+        "url": "https://docs.spiko.io/documentation/product_overview/cash_and_carry/stakeholders"
+      },
+      {
+        "label": "Spiko Cash and Carry fund prospectus, February 1 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
+      }
+    ],
+    "uncertainty": "The prospectus names CACEIS Bank as custodian and depositary, CACEIS Fund Administration as NAV accountant, and Twenty First Capital as manager. Issuer stakeholder documentation names Marex as structured-note counterparty. No current constituent allocation or provider shares were obtained; legal segregation, bankruptcy remoteness, and rehypothecation remain unclassified."
   }
 }

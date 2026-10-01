@@ -19,7 +19,21 @@
     "url": "https://midas.app/transparency",
     "provider": "Midas transparency dashboard and issuer disclosures",
     "attestorTier": "self",
-    "cadence": "weekly"
+    "cadence": "weekly",
+    "latestReport": {
+      "periodEnd": "2026-09-10",
+      "assuranceMethod": "self-verification",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol curation pass 2026-10-01 (ValB16GUSD)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Midas mRe7YIELD weekly report dated September 10, 2026",
+          "url": "https://drive.google.com/file/d/1dv8GfJiUsymD8HzQpkIqEHRq-2D97l8N/view"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -110,12 +124,12 @@
     "rationale": "Midas describes mRe7YIELD as tracking delta-neutral DeFi crypto yields. Its documented strategy uses delta-hedged stablecoin deployments, market-neutral liquidity provision, and market-neutral positioning to reduce directional exposure, which fits the synthetic-delta-neutral archetype.",
     "sources": [
       {
-        "label": "Midas mRe7YIELD docs",
-        "url": "https://docs.midas.app/tokens/mre7yield"
+        "label": "Midas mRe7YIELD Final Terms",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/TXP3spquPMlsrPCVKmtu/Midas_Final_Terms_mRE7YIELD_Update_2025.pdf"
       },
       {
-        "label": "Midas mRe7YIELD risk disclosures",
-        "url": "https://docs.midas.app/tokens/mre7yield/risks"
+        "label": "Midas mRe7YIELD Key Information Document",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf"
       }
     ]
   }

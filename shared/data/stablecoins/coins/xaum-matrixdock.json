@@ -9,16 +9,16 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
-  "pegMechanism": "Direct redemption for physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar) for physical delivery; available to KYC-verified accredited investors in Singapore and Hong Kong",
+  "collateral": "LBMA 99.99% gold; the June 30, 2026 inventory comprised gold bars at Brink's Hong Kong, Brink's Singapore and Malca-Amit Singapore. XAUm terms also permit unallocated gold with a financial institution; no current allocated/unallocated split is disclosed.",
+  "pegMechanism": "Matrixdock redemption for physical gold or supported USD stablecoins after KYC; physical pickup or secured delivery requires at least 32.148 XAUm (1 kg bar). Terms require accreditation only where applicable to the holder's jurisdiction and provide physical pickup in Singapore or Hong Kong.",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "matrixdock-gold",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold",
-    "provider": "Bureau Veritas (Singapore) Pte Ltd (semi-annual physical vault inventory certificates; the July 2026 cycle - periodEnd 2026-07-15, published 2026-07-21 - is queued for a coherent refresh together with the reserve-composition review)",
+    "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit",
+    "provider": "Bureau Veritas (Singapore) Pte Ltd (semi-annual physical inventory inspection; July 17, 2026 certificate covers the Parcel Ownership List dated June 30, 2026, without token-liability reconciliation)",
     "attestorTier": "niche",
     "cadence": "semi-annual",
     "attestorJurisdiction": "Singapore",
@@ -92,8 +92,8 @@
     },
     {
       "chain": "stellar",
-      "address": "XAUM-CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
-      "decimals": 7
+      "address": "CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
+      "decimals": 9
     },
     {
       "chain": "hyperevm",

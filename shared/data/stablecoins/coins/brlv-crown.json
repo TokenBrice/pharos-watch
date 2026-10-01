@@ -22,20 +22,16 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
-      "reviewReference": {
-        "date": "2026-05-31",
-        "reviewedAt": "2026-08-14",
-        "dateKind": "unspecified"
-      },
+      "periodEnd": "2026-08-31",
       "assuranceMethod": "unknown",
-      "scope": "unknown",
-      "liabilityReconciliation": "unknown",
-      "reviewer": "Pharos compliance research",
-      "confidence": "unknown",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA44SAFO)",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Crown BRLV transparency and redemption disclosure (as of 2026-08-14 review; date kind unspecified)",
-          "url": "https://www.crown-brlv.com/transparencia/"
+          "label": "Fact Finance BRLV technical verification memo dated August 31, 2026; publication date not stated",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_8_2026_1ea3d5e0be.pdf"
         }
       ]
     }

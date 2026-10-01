@@ -40,7 +40,7 @@
     "compositionBasis": "Kreston Digital Assets ISRS 4400 gold verification as of 28 November 2025 (single physical-gold category), corroborated by the live gold-only page",
     "compositionAsOf": "2025-11-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "No reserve asset class remains unidentified; current bar-level public allocation, named depository bank, custody concentration, and holder redemption timing remain outside the composition percentage.",
+    "knownUnknownExposure": "The 0% unidentified asset-class share refers only to the dated 2025-11-28 gold composition. The issuer separately describes a fiat liquidity buffer alongside physical gold reserves without disclosing its amount or percentage; this does not establish the current full backing allocation. Current bar-level allocation, bank identity, custody concentration, and holder redemption timing remain undisclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -60,7 +60,7 @@
         "jurisdiction": "Kyrgyzstan"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-20",
@@ -76,7 +76,7 @@
         "url": "https://www.usdkg.com/blog/usdkgs-gold-audit-a-new-standard-for-stablecoins"
       }
     ],
-    "uncertainty": "Kreston's quarterly engagement and USDKG's transparency page verify roughly 376 kg of LBMA Good Delivery gold held in sealed boxes at an unnamed bank under LLC Virelint Group's custody; the depository bank, bankruptcy remoteness, and any reuse permissions are not disclosed.",
+    "uncertainty": "Kreston's 28 November 2025 agreed-upon-procedures report documents roughly 376 kg of gold stored in 15 sealed boxes at an unnamed bank under LLC Virelint Group's storage arrangement. The report does not establish holder-facing legal segregation, bankruptcy remoteness, or reuse permissions. The depository bank is unnamed, and this report does not itself establish LBMA Good Delivery certification or a recurring series of reserve engagements.",
     "knownUnknownExposurePct": 100
   }
 }

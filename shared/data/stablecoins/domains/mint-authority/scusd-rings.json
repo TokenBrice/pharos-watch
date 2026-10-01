@@ -105,7 +105,7 @@
           },
           {
             "label": "Veda Teller architecture",
-            "url": "https://docs.veda.tech/architecture-and-flow-of-funds/teller"
+            "url": "https://docs.veda.tech/architecture-and-flow-of-funds/core-components.md"
           }
         ],
         "evidence": "At Ethereum block 25526164, current RolesAuthority capability reads identified this LayerZeroTeller as the sole external contract authorized to enter the BoringVault and mint scUSD shares against supported deposits and the configured exchange rate."
@@ -181,7 +181,7 @@
           },
           {
             "label": "Veda Teller architecture",
-            "url": "https://docs.veda.tech/architecture-and-flow-of-funds/teller"
+            "url": "https://docs.veda.tech/architecture-and-flow-of-funds/core-components.md"
           }
         ],
         "evidence": "At Sonic block 75897805, current RolesAuthority capability reads identified this LayerZeroTeller as the sole external contract authorized to enter the BoringVault and mint scUSD shares against supported deposits and the configured exchange rate."
@@ -393,7 +393,7 @@
       "sources": [
         {
           "label": "Veda Teller architecture",
-          "url": "https://docs.veda.tech/architecture-and-flow-of-funds/teller"
+          "url": "https://docs.veda.tech/architecture-and-flow-of-funds/core-components.md"
         },
         {
           "label": "Ethereum scUSD RolesAuthority",

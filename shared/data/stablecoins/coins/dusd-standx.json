@@ -2,14 +2,14 @@
   "id": "dusd-standx",
   "name": "StandX DUSD",
   "symbol": "DUSD",
-  "oneLiner": "DUSD is StandX's delta-neutral synthetic dollar, redeemable 1:1 against USDT/USDC and backed by hedged BTC/ETH/SOL positions on CEXes via Ceffu custody.",
+  "oneLiner": "DUSD is StandX's delta-neutral dollar backed by hedged crypto positions; issuer redemption has a 7-day lock, fees, and reserve-loss exposure.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
     "yieldBearing": true
   },
-  "collateral": "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
-  "pegMechanism": "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption",
+  "collateral": "USDT/USDC deposits used to acquire spot crypto with matching short futures positions, held through StandX's custody layer",
+  "pegMechanism": "Delta-neutral hedging on centralized exchanges; issuer redemption into USDT/USDC after a 7-day lock and protocol fees. USDT conversion is 1:1 before fees, while USDC output is calculated at redemption; adverse reserve losses reduce the quote pro rata",
   "mechanismArchetype": "synthetic-delta-neutral",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

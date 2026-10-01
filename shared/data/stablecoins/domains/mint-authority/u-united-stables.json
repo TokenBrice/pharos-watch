@@ -200,7 +200,8 @@
         "directMintAbility": "direct",
         "capDescription": "20,000,000 U per call with no cumulative or time-window cap.",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Ethereum U AutoOwner proxy",
@@ -211,7 +212,7 @@
             "url": "https://eth.blockscout.com/address/0x49ab84e050b614af131c18c2be41379a8e77e568?tab=contract"
           }
         ],
-        "evidence": "The verified AutoOwner can call the token mint path for whitelisted operators. Its 20,000,000 U limit applies per call, with no cumulative or time-window bound, so repeated authorized calls remain economically unbounded; the reviewed 2/4 Safe controls configuration and upgrades."
+        "evidence": "At Ethereum block 26095796, AutoOwner owner() returned the recorded Safe and its implementation slot returned 0x49ab84e050b614af131c18c2be41379a8e77e568. The token autoMintMaxLimit() returned 20,000,000 U; getWhitelist() returned three recipient addresses. Verified source applies the limit per call without a cumulative or time-window bound. The Safe was separately observed as 2/4 at the same block."
       },
       {
         "chain": "bsc",
@@ -225,7 +226,8 @@
         "directMintAbility": "direct",
         "capDescription": "20,000,000 U per call with no cumulative or time-window cap.",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056167,
         "sources": [
           {
             "label": "BSC U AutoOwner proxy",
@@ -236,7 +238,7 @@
             "url": "https://bscscan.com/address/0xce24439f2d9c6a2289f741120fe202248b666666#code"
           }
         ],
-        "evidence": "The verified AutoOwner can call the token mint path for whitelisted operators. Its 20,000,000 U limit applies per call, with no cumulative or time-window bound, so repeated authorized calls remain economically unbounded; the reviewed 2/4 Safe controls configuration and upgrades."
+        "evidence": "At BSC block 125055771, AutoOwner owner() returned the recorded chain-local Safe, which returned the recorded four owners and threshold two. At BSC block 125056167, the AutoOwner implementation slot returned 0x2e3cd2716c220262f7f291e0c766a41e3d047853, the token autoMintMaxLimit() returned 20,000,000 U, and getWhitelist() returned thirteen recipient addresses. The cap remains per call without a cumulative or time-window bound."
       },
       {
         "chain": "tron",

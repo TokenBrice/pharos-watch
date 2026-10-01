@@ -7,8 +7,8 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held by BitGo Trust Company",
-  "pegMechanism": "Direct 1:1 mint and redemption through BitGo Trust Company (issuer); arbitrage incentivizes peg maintenance",
+  "collateral": "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held for USD1 holders by BitGo Bank & Trust, N.A.",
+  "pegMechanism": "Direct 1:1 mint and redemption through BitGo Bank & Trust, N.A.; direct redemption is restricted to registered clients in Good Standing, while holders without a BitGo account rely on secondary markets",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "262",
   "detailProvider": "defillama",
@@ -21,17 +21,21 @@
     "cadence": "real-time",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-27",
+      "periodEnd": "2026-08-31",
+      "reviewReference": {
+        "date": "2026-09-24",
+        "reviewedAt": "2026-10-01",
+        "dateKind": "unspecified"
+      },
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos safety-score curation 2026-09-23",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA07USD1)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG USD1 Reserve Report - July 2026 (examination dated August 27, 2026)",
-          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_July_2026.pdf"
+          "label": "KPMG USD1 Reserve Report - August 2026 (examination dated September 24, 2026; publication date not stated)",
+          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_August_2026.pdf?version=0"
         }
       ]
     }

@@ -36,13 +36,17 @@
       {
         "label": "Chainlink JTRSY NAV feed",
         "url": "https://data.chain.link/feeds/ethereum/mainnet/jtrsy-nav-v2"
+      },
+      {
+        "label": "JTRSY June 2026 fact sheet",
+        "url": "https://centrifuge-files.mypinata.cloud/ipfs/bafybeicdzle2bgqekmvnfqcxjhimnzlfrg7mkfvngxtmfvjzldmtoubneq"
       }
     ],
     "rationale": "Anemoy states that JTRSY holds U.S. Treasury bills with a maximum six-month maturity, offers daily redemptions, and settles investments and redemptions in USDC. The issuer also says the fund portfolio is viewable through Centrifuge, but the reviewed public pages do not support the previous 97%/3% split or a current holding-level allocation. The reserve is therefore represented as one 100% fund portfolio envelope.",
     "compositionBasis": "Anemoy JTRSY fund disclosure and Centrifuge/Chainlink transparency references",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The fund strategy and daily-liquidity model are disclosed, but current Treasury-bill holdings, cash sleeve, counterparties, custodians, and security-level weights are not reproduced in the reviewed public sources.",
+    "knownUnknownExposure": "The fund strategy and daily-liquidity model are disclosed, and the June 2026 fact sheet names J. P. Morgan as custodian and Trident Trust (Cayman) as administrator. Current Treasury-bill holdings, cash sleeve, custody allocation percentages, and security-level weights are not reproduced in the reviewed public sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -61,8 +65,12 @@
         "role": "prime-broker"
       },
       {
-        "name": "Undisclosed independent JTRSY custodian and fund administrator",
+        "name": "J. P. Morgan (June 2026 JTRSY fact sheet)",
         "role": "custodian"
+      },
+      {
+        "name": "Trident Trust (Cayman), fund administrator",
+        "role": "other"
       },
       {
         "name": "Anemoy and Janus Henderson fund entities",
@@ -73,15 +81,19 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA37JTRSY)",
     "confidence": "probable",
     "sources": [
       {
         "label": "Anemoy Janus Henderson Treasury Fund",
         "url": "https://www.anemoy.io/funds/jtrsy"
+      },
+      {
+        "label": "JTRSY June 2026 fact sheet",
+        "url": "https://centrifuge-files.mypinata.cloud/ipfs/bafybeicdzle2bgqekmvnfqcxjhimnzlfrg7mkfvngxtmfvjzldmtoubneq"
       }
     ],
-    "uncertainty": "Anemoy identifies independent prime-broker, custodian, tokenization, issuance, and fund-administrator roles and states that the fund uses a bankruptcy-remote SPV, but does not name the service providers or publish segregation and rehypothecation terms for current holdings."
+    "uncertainty": "The June 2026 issuer fact sheet names J. P. Morgan as custodian and Trident Trust (Cayman) as administrator. It does not disclose custody shares, segregation, rehypothecation terms, or the current prime broker. The March 11, 2025 S&P report named Pershing and StoneX; that historical provider list is not treated as current. The issuer's bankruptcy-remote SPV statement remains a structural claim rather than a reviewed enforceability opinion."
   }
 }

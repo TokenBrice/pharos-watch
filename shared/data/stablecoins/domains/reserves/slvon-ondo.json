@@ -43,7 +43,7 @@
     "compositionBasis": "Ondo SLVon product, trust and transparency, and oracle guidance",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The aggregate basket is known to contain SLV shares and cash in transit, but their current weights, custodial broker-dealer allocation, and a reproducible dated holdings report are not public in the reviewed sources.",
+    "knownUnknownExposure": "Public Ankura-verified consolidated Ondo Stocks daily and monthly reports were retrieved on 2026-10-01, including the September 23 daily report and August monthly report. They do not disclose a SLVon-specific allocation between SLV shares and cash in transit or SLVon-specific custodial provider shares; the aggregate reserve basket remains 100% unresolved.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -60,6 +60,11 @@
       {
         "name": "US-registered custodial broker-dealer(s) holding the underlying SLV shares (undisclosed)",
         "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Alpaca Securities LLC (brokerage services to the token issuer)",
+        "role": "other",
         "jurisdiction": "United States"
       },
       {
@@ -82,9 +87,13 @@
       {
         "label": "Ondo Global Markets important notes",
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      },
+      {
+        "label": "SLVon issuer product page: brokerage provider disclosure",
+        "url": "https://app.ondo.finance/assets/slvon"
       }
     ],
-    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets and accounts, daily Ankura verification, and a first-priority security interest over the collateral, with holdings at one or more US-registered custodial broker-dealers. The broker-dealer identities, provider shares, cash-in-transit allocation, and any reuse restrictions are not published.",
+    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets and accounts, daily Ankura verification, and a first-priority security interest over collateral at US-registered custodial broker-dealers. The SLVon product page names Alpaca Securities LLC as providing brokerage services to the issuer. SLVon-specific custodial provider shares, cash-in-transit allocation, and reuse restrictions remain unpublished; no share is assigned to Alpaca.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -4,16 +4,16 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+        "label": "Verified sAID implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe2986b3e5b3e77896ae0509f6740d1106273374d"
       },
       {
         "label": "Website",
         "url": "https://gaib.ai/"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The implementation observed in the Ethereum EIP-1967 slot at block 26095936 is 0xe2986b3e5b3e77896ae0509f6740d1106273374d. Its verified _update hook rejects sending from an address denied by the underlying AID contract, while intentionally allowing denied addresses to receive sAID. This is a direct holder-level transfer restriction, not an inference from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
+    "reviewedAt": "2026-10-01"
   }
 }

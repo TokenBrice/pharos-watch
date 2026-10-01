@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "WBTC (majority) and wstETH deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized; WBTC custody by BitGo/Coinbase introduces centralized dependency",
+  "collateral": "WBTC (majority in the July 2026 reserve snapshot) and wstETH deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; overcollateralized issuance; WBTC custodial backing introduces centralized dependency, with the current provider split not established",
   "pegMechanism": "CDP-style with overcollateralization and liquidations; f(x) Protocol Stability Pool arbitrages the USDC/fxUSD Curve pool to defend the peg; two yield strategies: (1) Curve LP with FXN gauge, (2) Stability Pool with wstETH real yield, fxSAVE autocompound, or FXN gauge; fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",
   "mechanismArchetype": "cdp",
   "llamaId": "168",

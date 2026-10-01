@@ -8,18 +8,7 @@
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
-        "aptos:0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",
-        "avalanche:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
-        "celo:0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
-        "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
-        "kava:0x919c1c267bc06a7039e03fcc2ef738525769109c",
-        "klaytn:0xd077a400968890eacc75cdc901f0356c943e4fdb",
-        "near:usdt.tether-token.near",
-        "polkadot:1984",
-        "solana:Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-        "tezos:KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o",
-        "ton:EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
-        "tron:TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+        "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7"
       ],
       "adminAddresses": [
         "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
@@ -27,8 +16,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Ethereum USDT token owner multisig",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25711756,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095839,
       "sources": [
         {
           "label": "Sourcify verified USDT deprecate logic",
@@ -39,8 +28,8 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "Ethereum observation block 25711756",
-          "url": "https://etherscan.io/block/25711756"
+          "label": "Ethereum observation block 26095839",
+          "url": "https://etherscan.io/block/26095839"
         }
       ]
     },
@@ -76,8 +65,8 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711756,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095839,
         "sources": [
           {
             "label": "Sourcify verified Ethereum USDT source",
@@ -88,11 +77,42 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828?fields=compilation,sources,proxyResolution"
           },
           {
-            "label": "Ethereum observation block 25711756",
-            "url": "https://etherscan.io/block/25711756"
+            "label": "Ethereum observation block 26095839",
+            "url": "https://etherscan.io/block/26095839"
           }
         ],
-        "evidence": "At Ethereum block 25711756, USDT getOwner() returned this address; deprecated() and paused() were false. The owner contract returned required() = 3 and six owners. Verified USDT source gives that owner unrestricted issue(uint256) and deprecate(address) authority; the verified owner is a legacy MultiSigWallet, so Safe modules and guards do not apply."
+        "evidence": "At Ethereum block 26095839, USDT owner() and getOwner() returned this address; deprecated() and paused() were false. The owner contract returned required() = 3 and six owners. Verified USDT source gives that owner unrestricted issue(uint256) and deprecate(address) authority; the verified owner is a legacy MultiSigWallet, so Safe modules and guards do not apply. This control and its custom migration authority are verified for Ethereum only, not for native deployments on other chains."
+      },
+      {
+        "chain": "solana",
+        "address": "Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi",
+        "deploymentRefs": [
+          "solana:Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+        ],
+        "label": "Solana USDT SPL Token mint and freeze multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452216277,
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Solana Token Program CLI multisig authority semantics",
+            "url": "https://solana.com/docs/references/spl-token-cli"
+          },
+          {
+            "label": "Solana public mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 452216277, getMultipleAccounts read the canonical USDT mint and this authority in one response. The mint's mintAuthority and freezeAuthority were both this address. Both accounts were owned by the original SPL Token Program (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA); the authority parsed as an initialized multisig with numRequiredSigners = 2 and numValidSigners = 3. Its members were 66YZZejVBupBnMwSEqTaCkAMwPacpPzP41GSEst55Kgz, yo4bccTt3FTnMguy2D3NCox8tG1CuHYRfxAdQoiJ7Th, and A3znyaRYUvi7GbQv1pp9CqqiVo7anddU9rPKFH55V28R. This verifies direct mint/freeze authority, not upgrade or migration authority."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -101,8 +121,8 @@
     "review": {
       "sources": [
         {
-          "label": "Tether Q1 2026 BDO assurance report",
-          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
+          "label": "Tether Q2 2026 BDO assurance report",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
         },
         {
           "label": "Tether FAQ",
@@ -117,13 +137,17 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "Ethereum observation block 25711756",
-          "url": "https://etherscan.io/block/25711756"
+          "label": "Ethereum observation block 26095839",
+          "url": "https://etherscan.io/block/26095839"
+        },
+        {
+          "label": "Tether announces KPMG U.S. annual financial-statement audit, 2026-08-13",
+          "url": "https://tether.io/news/tether-completes-the-largest-inaugural-financial-audit-in-history/"
         }
       ],
-      "evidence": "Ethereum block 25711756 confirms the current 3-of-6 owner multisig and an unrestricted owner-only issue path. The existing 2019 accidental 5B issuance remains a resolved mint incident. Tether publishes daily circulation information and quarterly reserve reports, supporting periodic reconciliation but not prudential-supervision treatment.",
-      "reviewer": "Codex C01 control/access review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "Ethereum block 26095839 confirms the current 3-of-6 owner multisig and an unrestricted owner-only issue path on Ethereum; the upgradeability record is scoped to that deployment only. The existing 2019 accidental 5B issuance remains recorded as resolved. Tether publishes daily circulation information and quarterly reserve assurance reports, supporting periodic reconciliation. Tether separately announced a KPMG U.S. audit of its 2025 financial statements on 2026-08-13; a financial-statement audit is not evidence of prudential supervision of minting.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA01USDT)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

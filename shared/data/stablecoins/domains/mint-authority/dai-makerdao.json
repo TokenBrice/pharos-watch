@@ -8,15 +8,15 @@
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-08-08",
-      "observedBlock": 25711852,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095796,
       "sources": [
         {
-          "label": "Sky DSS Dai source",
+          "label": "Sky DSS reference Dai source (altered from production)",
           "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/dai.sol"
         },
         {
-          "label": "Sky DSS DaiJoin source",
+          "label": "Sky DSS reference DaiJoin source (altered from production)",
           "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/join.sol"
         },
         {
@@ -26,6 +26,14 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Ethereum Dwellir RPC, pinned block 26095796",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
+        {
+          "label": "Canonical Ethereum DAI verified deployed source and ABI",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f"
         }
       ]
     },
@@ -42,8 +50,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711852,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "capDescription": "DaiJoin mints ERC-20 DAI only against existing Vat.dai balances and burns DAI on join; it is not an unrestricted off-protocol issuer minter.",
         "sources": [
           {
@@ -52,7 +60,7 @@
           },
           {
             "label": "Maker core accounting docs",
-            "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+            "url": "https://developers.skyeco.com/protocol/core/vat/"
           },
           {
             "label": "Ethereum observation block 25711852",
@@ -61,9 +69,13 @@
           {
             "label": "Ethereum dRPC observation endpoint",
             "url": "https://eth.drpc.org"
+          },
+          {
+            "label": "Ethereum Dwellir RPC, pinned block 26095796",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "Sky Chainlog lists MCD_JOIN_DAI at this address. At Ethereum block 25711852, DAI.wards(DaiJoin) returned 1 and eth_getCode confirmed contract bytecode. DaiJoin mints ERC-20 DAI only against existing Vat.dai balance, so it has no unrestricted off-protocol mint path and cannot raise its own accounting bound."
+        "evidence": "Sky Chainlog lists MCD_JOIN_DAI at this address. At Ethereum block 25711852, DAI.wards(DaiJoin) returned 1 and eth_getCode confirmed contract bytecode. DaiJoin mints ERC-20 DAI only against existing Vat.dai balance, so it has no unrestricted off-protocol mint path and cannot raise its own accounting bound. Re-verified 2026-10-01 at Ethereum block 26095796: DAI.wards(DaiJoin)=1 and DaiJoin bytecode remains live."
       },
       {
         "chain": "ethereum",
@@ -78,8 +90,8 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711852,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "capDescription": "Maker/Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, collateral parameters, and debt ceilings via MCD_VAT.",
         "sources": [
           {
@@ -88,7 +100,7 @@
           },
           {
             "label": "Maker core accounting docs",
-            "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+            "url": "https://developers.skyeco.com/protocol/core/vat/"
           },
           {
             "label": "Ethereum observation block 25711852",
@@ -97,9 +109,13 @@
           {
             "label": "Ethereum dRPC observation endpoint",
             "url": "https://eth.drpc.org"
+          },
+          {
+            "label": "Ethereum Dwellir RPC, pinned block 26095796",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "At Ethereum block 25711852, MCD_PAUSE.delay() returned 172800, MCD_VAT.wards(PauseProxy) returned 1, and eth_getCode confirmed PauseProxy bytecode. Governance can use the two-day delayed executor to authorize system modules and change Vat parameters and debt ceilings. DAI.wards(PauseProxy)=0 is expected because this authority reaches supply through Vat rather than direct token minting."
+        "evidence": "At Ethereum block 25711852, MCD_PAUSE.delay() returned 172800, MCD_VAT.wards(PauseProxy) returned 1, and eth_getCode confirmed PauseProxy bytecode. Governance can use the two-day delayed executor to authorize system modules and change Vat parameters and debt ceilings. DAI.wards(PauseProxy)=0 is expected because this authority reaches supply through Vat rather than direct token minting. Re-verified 2026-10-01 at Ethereum block 26095796: MCD_PAUSE.delay()=172800, MCD_VAT.wards(PauseProxy)=1, DAI.wards(PauseProxy)=0, and PauseProxy bytecode remains live."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -113,7 +129,7 @@
         },
         {
           "label": "Maker core accounting docs",
-          "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+          "url": "https://developers.skyeco.com/protocol/core/vat/"
         },
         {
           "label": "MCD_VAT Etherscan",
@@ -126,6 +142,10 @@
         {
           "label": "Ethereum dRPC observation endpoint",
           "url": "https://eth.drpc.org"
+        },
+        {
+          "label": "Ethereum Dwellir RPC, pinned block 26095796",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
         }
       ],
       "evidence": "At Ethereum block 25711852, DAI.wards(0x9759a6ac90977b93b58547b4a71c78317f391a28)=1, MCD_VAT.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1, and MCD_PAUSE.delay()=172800; both controls had bytecode. DaiJoin can mint only against existing Vat credit, while governance can raise system ceilings or authorize modules only through the two-day Pause path. The economic bound is therefore raiseable rather than unrestricted, and the on-chain Vat accounting path makes reserve reconciliation and prudential issuer supervision not applicable. Economic-posture fields reviewed 2026-08-15: the two-day Pause independently delays ceiling and module changes, Vat issuance is on-chain collateral-accounted, and no prudential supervisor or independent attestor applies.",

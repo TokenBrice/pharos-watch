@@ -30,10 +30,12 @@
         ],
         "label": "srUSD Savingcoin token (non-upgradeable, AccessControl)",
         "role": "wrapper",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095946,
         "sources": [
           {
             "label": "Reservoir contract addresses",
@@ -58,6 +60,8 @@
         "directMintAbility": "unknown",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095946,
         "sources": [
           {
             "label": "Reservoir contract addresses",
@@ -85,6 +89,28 @@
           }
         ],
         "evidence": "srUSD inherits base rUSD mint-path risk from Reservoir rUSD controls, including the Credit Enforcer listed in official docs. Tracked separately on parent rusd-reservoir."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "deploymentRefs": [
+          "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31"
+        ],
+        "label": "srUSD DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095946,
+        "sources": [
+          {
+            "label": "Reservoir Savingcoin source",
+            "url": "https://raw.githubusercontent.com/reservoir-protocol/reservoir/master/src/Savingcoin.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26095946, hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32ded63b25163369d5eb4d8e89e70e5602) returned true on srUSD and eth_getCode for the role holder returned 0x. Savingcoin inherits AccessControl, so this native admin can authorize minters; it is distinct from the token contract."
       }
     ],
     "review": {

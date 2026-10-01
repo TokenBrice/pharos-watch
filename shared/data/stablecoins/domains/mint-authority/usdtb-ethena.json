@@ -52,6 +52,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "keyCustodyAttestation": {
           "kind": "hsm",
           "sources": [
@@ -71,7 +73,7 @@
             "url": "https://etherscan.io/address/0xc139190f447e929f090edeb554d95abb8b18ac1c"
           }
         ],
-        "evidence": "At Ethereum block 25294739, hasRole(MINTER_BURNER_ROLE=0xcfd53186, 0x364366) returned true. eth_getCode returned empty (EOA confirmed). This is the sole active MINTER_BURNER_ROLE holder per Blockscout RoleGranted/RoleRevoked log scan from block 21287284. Issuer-operated model corroborated by USDtb docs (Anchorage Digital Bank)."
+        "evidence": "At Ethereum block 26095796 on 2026-10-01, hasRole(MINTER_BURNER_ROLE=0xcfd53186d792f1ec9d0679afc2dc3ffc86fc31fe1e0f342b838eb6c3eade62b3, 0x364366a7164fb518eafaa42af0c86eddab78e6f3) returned true and eth_getCode returned 0x. The earlier role-log census found this to be the sole holder; this observation confirms the recorded holder without claiming a new exhaustive role census."
       },
       {
         "chain": "ethereum",

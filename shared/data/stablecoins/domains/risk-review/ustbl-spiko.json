@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USTBL has seven independently native canonical deployments on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet. Spiko announced Chainlink CCIP for compliance-aware cross-chain movement, so Pharos retains provisional external-validated-network exposure; however, no production CCIP adapter or token pool, lane, peer, rate limit, or bridge controller is identified in the reviewed primary sources. Native PermissionManager and issuer mint controls remain in Mint Authority, and the unresolved CCIP machinery remains a Bridge Risk evidence gap rather than a Mint Authority control.",
+    "summary": "USTBL's September 2026 prospectus lists eight token deployments, including Solana in addition to the seven recorded EVM, Stellar and Starknet routes. The Solana mint, issuer minter-program configuration PDA and admin-vault identities are identified; protective governance, mutable limits, program-upgrade authority and production bridge-route controls remain unresolved. Spiko announced Chainlink CCIP for compliance-aware cross-chain movement; no production CCIP adapter or token pool, lane, peer, rate limit, or bridge controller was identified in the reviewed primary sources. The provisional external-validated-network tier is unchanged, and issuer mint controls remain in Mint Authority rather than being treated as bridge controls.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint/bridge boundary migration",
     "confidence": "manual-review",
@@ -222,9 +222,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Starknet 2026-07-20 (starknet_call): token 0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6 reports name()='Spiko US T-Bills Money Market Fund', symbol()='USTBL', decimals()=5, and owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d. Spiko's native Starknet deployment; the owner account's internal signer set is not enumerable via the public RPC.",
+        "reviewNote": "At Starknet block 15718037 on 2026-10-01, the prospectus-listed USTBL token reports decimals() = 5 and owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d. The owner account is enumerable through get_signers() and get_threshold(): five signers, threshold three. This corrects the route's prior non-enumerability claim; these are native issuer controls, not identified CCIP adapter controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 15718037,
         "sourceChain": "starknet",
         "canonicalChain": "starknet",
         "sources": [
@@ -235,6 +236,34 @@
           {
             "label": "USTBL on Starknet Voyager (verified 2026-07-20)",
             "url": "https://voyager.online/contract/0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6"
+          }
+        ]
+      },
+      {
+        "id": "solana:3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn",
+        "destinationChain": "solana",
+        "contractAddress": "3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn",
+        "protocol": "Spiko USTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Spiko SICAV's September 2026 prospectus identifies this Solana USD-share register under ISIN FR001400ODM9. A fresh finalized Token-2022 mint observation at context slot 452232837 confirms USTBL metadata and five decimals; this replaces the earlier observation rather than claiming a historical replay. This is the issuer's fund share, not a third-party bridged representation; mint-program identity is identified separately, while protective governance and production CCIP route controls remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452232837,
+        "sourceChain": "solana",
+        "canonicalChain": "solana",
+        "sources": [
+          {
+            "label": "Spiko SICAV September 2026 prospectus, USTBL share-register addresses",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Solana finalized Token-2022 mint read",
+            "url": "https://solana-rpc.publicnode.com"
           }
         ]
       }

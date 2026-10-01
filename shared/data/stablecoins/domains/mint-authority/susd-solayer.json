@@ -15,6 +15,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213349,
         "sources": [
           {
             "label": "Solayer sUSD docs",
@@ -25,7 +27,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At Solana finalized slot 425792161, getAccountInfo on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X (jsonParsed) confirmed mintAuthority=FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG and freezeAuthority=FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG. The authority account is owned by executable program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA (Solayer sUSD program)."
+        "evidence": "At finalized Solana slot 452213349, one getMultipleAccounts response confirmed mintAuthority, freezeAuthority, interest rateAuthority, and token metadata updateAuthority FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG on the official sUSD mint. The authority account is owned by executable Solayer program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA. This re-verifies the authorities previously observed at slot 425792161."
       },
       {
         "chain": "solana",
@@ -36,13 +38,15 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213349,
         "sources": [
           {
             "label": "Solana RPC getAccountInfo",
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At Solana finalized slot 425792161, getAccountInfo on 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru returned owner=11111111111111111111111111111111 (System Program), executable=false, data=empty, confirming a plain keypair (EOA-equivalent), not a multisig or program. This keypair is the BPFUpgradeable upgrade authority for the Solayer sUSD program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA."
+        "evidence": "At finalized Solana slot 452213349, one getMultipleAccounts response linked executable Solayer program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA to ProgramData 7bzcebKDN8qDkftxobwArKJL8xSGaZ6zBPaY4C4wEhkf, whose upgrade authority was 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru. The authority account was System Program owned, non-executable, and empty. This re-verifies the plain-keypair upgrade path previously observed at slot 425792161."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -78,8 +82,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Solayer sUSD program upgrade authority",
-      "observedAt": "2026-06-11",
-      "observedBlock": 425792161,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452213349,
       "sources": [
         {
           "label": "Solana RPC getAccountInfo",

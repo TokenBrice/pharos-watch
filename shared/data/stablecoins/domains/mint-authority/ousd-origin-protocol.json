@@ -62,7 +62,7 @@
           },
           {
             "label": "Origin Protocol - OUSD attack postmortem",
-            "url": "https://blog.originprotocol.com/what-weve-changed-since-the-ousd-attack-5894f2bd77cf"
+            "url": "https://www.originprotocol.com/blog/what-weve-changed-since-the-ousd-attack?lang=en"
           }
         ]
       }
@@ -75,13 +75,15 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "address": "0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70",
-        "evidence": "At block 25295197: Vault governor() = 0x35918c… (48h Timelock); EIP-1967 impl slot = 0x82948060… Users mint OUSD 1:1 by depositing USDC; the Vault deploys backing into Morpho/Curve strategies.",
+        "evidence": "At Ethereum block 26095831, the OUSD token vaultAddress() names 0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70. Vault governor() and admin() both name 0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f; implementation() remains 0x82948060c4b72684bededec342350ab344975145. User minting and redemption semantics are documented by Origin.",
         "sources": [
           {
             "label": "OUSD Vault (Blockscout)",
             "url": "https://eth.blockscout.com/address/0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70"
           }
-        ]
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095831
       },
       {
         "label": "OUSD Timelock (48h) + Origin Governance (AMO/strategy admin)",
@@ -91,13 +93,15 @@
         "chain": "ethereum",
         "address": "0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f",
         "canRaiseCap": true,
-        "evidence": "At block 25295197: Vault governor() = 0x35918c… (OZ TimelockController, minDelay 48h). PROPOSER_ROLE holders: 0x3cdd07c… (Governance), 0x1d3fbd4… (Governance), 0xbe2ab3d… (GnosisSafeProxy). Curve AMO uses privileged mintForStrategy/burnForStrategy path.",
+        "evidence": "At Ethereum block 26095831, the OUSD token and Vault admin()/governor() reads identify Timelock 0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f. Its getMinDelay() returns 172800 seconds. Previously enumerated proposer roles remain historical and were not re-enumerated in this review.",
         "sources": [
           {
             "label": "OUSD Timelock (Blockscout)",
             "url": "https://eth.blockscout.com/address/0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f"
           }
-        ]
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095831
       },
       {
         "label": "OUSD Strategist Safe (strategy allocation)",
@@ -108,34 +112,43 @@
         "address": "0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971",
         "signerCount": 8,
         "threshold": 2,
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "present",
         "canRaiseCap": false,
-        "evidence": "At block 25295197: strategistAddr() on Vault = 0x4ff1b9d…; Blockscout: SafeProxy; getThreshold() = 2; getOwners() returned 8 addresses.",
+        "evidence": "At Ethereum block 26095831, Vault strategistAddr() remains 0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971. The Safe has eight current owners, threshold 2, a zero guard storage slot, and five enabled modules: 0x6241f5e4ad5af39ef3ae54801e0ae431e0b70369, 0x6320db7a3c1b95fd5684dc725c2cda9b82fa20fa, 0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5, 0x1b84e64279d63f48ddd88b9b2a7871e817152a44, 0x630c1763d38abe76301f58909fa174e7b84a7ecd. This contradicts the earlier no-enabled-modules observation; module capabilities were not inferred from their addresses.",
         "safe": {
           "owners": [
             "0x052c01a2a88fa6cba8fc2dbef39a442a140a35e3",
             "0x397729229b3d824ca1b93e6e25e7cb197973df33",
             "0x15ff3859af506d6e4d7e5fdf335628fc1e3ef1ce",
-            "0xce96ae6de784181d8eb2639f1e347fd40b4fd403",
-            "0x17abc3f085fb4b7eaf5002785de22867f964d273",
+            "0x6ac8d65dc698ae07263e3a98aa698c33060b4a13",
+            "0xfdf6c62d170a1943d89cab0b9fa2fa6ee0550190",
             "0x9990c10ceb3c3d1e08060eac7e977279fd7a5920",
-            "0x530d3f8c38c262a619c2686a7f1481815a5e6f92",
-            "0x617a3582bf134fe8ec600ff04a194604dcfb5aab"
+            "0xef4cb0d9ce195d18858c62e1d49504438d937276",
+            "0x091994e67ed0be1527a83c7a16f8b74ca9a53d53"
           ],
           "threshold": 2,
-          "enabledModules": [],
+          "enabledModules": [
+            "0x6241f5e4ad5af39ef3ae54801e0ae431e0b70369",
+            "0x6320db7a3c1b95fd5684dc725c2cda9b82fa20fa",
+            "0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5",
+            "0x1b84e64279d63f48ddd88b9b2a7871e817152a44",
+            "0x630c1763d38abe76301f58909fa174e7b84a7ecd"
+          ],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "unknown",
           "version": "unknown",
-          "observedBlock": 25295197,
-          "source": "onchain"
+          "observedBlock": 26095831,
+          "source": "onchain",
+          "observedAt": "2026-10-01"
         },
         "sources": [
           {
             "label": "OUSD Strategist Safe (Blockscout)",
             "url": "https://eth.blockscout.com/address/0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971"
           }
-        ]
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095831
       }
     ],
     "economicCapSemantics": "raiseable",

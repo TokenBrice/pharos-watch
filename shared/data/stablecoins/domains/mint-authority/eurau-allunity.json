@@ -27,8 +27,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "EURAU EOA DEFAULT_ADMIN_ROLE (all EVM chains)",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25712415,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26096138,
       "sources": [
         {
           "label": "Ethereum EURAU verified proxy/implementation",
@@ -78,8 +78,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712415,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096138,
         "sources": [
           {
             "label": "Ethereum EURAU token",
@@ -90,7 +90,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
           }
         ],
-        "evidence": "Fresh hasRole reads confirm this codeless address is the sole MINTER_ROLE holder at Ethereum block 25712415, Arbitrum 492496443, Optimism 155309746, Base 49714461, Polygon 91675496, and BNB Chain 114795046. The verified mint function has no numeric supply ceiling, so its direct ability is economically unbounded; the minter itself cannot change role administration or upgrade logic."
+        "evidence": "Pinned 2026-10-01 hasRole and eth_getCode reads confirm this codeless address holds MINTER_ROLE at Ethereum block 26096138, Arbitrum 510598895, Optimism 157621452, Base 52026168, Polygon 94757696, and BNB Chain 125064918. These membership reads do not establish an exhaustive role census. The verified mint function has no numeric supply ceiling; the minter itself cannot change role administration or upgrade logic."
       },
       {
         "chain": "multichain",
@@ -109,15 +109,15 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712415,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096138,
         "sources": [
           {
             "label": "Ethereum EURAU token",
             "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
           }
         ],
-        "evidence": "Fresh hasRole reads confirm this codeless address holds DEFAULT_ADMIN_ROLE and PAUSER_ROLE at Ethereum block 25712415, Arbitrum 492496443, Optimism 155309746, Base 49714461, Polygon 91675496, and BNB Chain 114795046. Every proxy still resolves to implementation 0x56c19aea2192ff0ac5f6b252776480db601a1482, whose _authorizeUpgrade is DEFAULT_ADMIN_ROLE-gated with no ProxyAdmin or timelock. It can grant new minters or replace mint logic immediately."
+        "evidence": "Pinned 2026-10-01 reads confirm this codeless address holds DEFAULT_ADMIN_ROLE and PAUSER_ROLE at Ethereum block 26096138, Arbitrum 510598895, Optimism 157621452, Base 52026168, Polygon 94757696, and BNB Chain 125064918. Every proxy resolves to implementation 0x56c19aea2192ff0ac5f6b252776480db601a1482 with a zero EIP-1967 admin slot. The verified _authorizeUpgrade is DEFAULT_ADMIN_ROLE-gated without a timelock; this controller can grant minters or replace mint logic immediately."
       },
       {
         "chain": "solana",
@@ -131,8 +131,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 438052335,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452227640,
         "sources": [
           {
             "label": "Solana mainnet RPC",
@@ -143,7 +143,7 @@
             "url": "https://solscan.io/token/9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS"
           }
         ],
-        "evidence": "At finalized slot 438052335, the Token-2022 EURAU mint reports this program-owned account as mint authority, freeze authority, permanent delegate, and pausable-config authority (paused=false). The authority can issue without a numeric token cap but cannot independently change the EVM role graph."
+        "evidence": "At finalized slot 452227640 on 2026-10-01, the Token-2022 EURAU mint reports this account as mint authority, freeze authority, permanent delegate, and pausable-config authority (paused=false). Metadata identifies AllUnity EURAU with symbol EURAU and 6 decimals. The token has no numeric mint cap; this observation does not establish the authority account's complete program controller graph."
       },
       {
         "label": "AllUnity regulated issuance backend",
@@ -221,8 +221,8 @@
           "url": "https://allunity.com/trust-center"
         },
         {
-          "label": "AllUnity EURAU whitepaper v1.2",
-          "url": "https://allunity.com/wp-content/uploads/2026/02/EURAU-AllUnity-White-Paper_v1.2.pdf"
+          "label": "AllUnity EURAU whitepaper v1.3",
+          "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
         },
         {
           "label": "ESMA MiCA registers",

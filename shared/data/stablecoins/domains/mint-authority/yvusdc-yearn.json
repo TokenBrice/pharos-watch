@@ -13,8 +13,8 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "Yearn v3 USDC vault share accounting",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25573280,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095933,
       "sources": [
         {
           "label": "Yearn v3 USDC vault (verified source)",
@@ -36,8 +36,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573280,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
         "capDescription": "asset() returned USDC; wrapper minting does not create base USDC supply.",
         "sources": [
           {
@@ -49,7 +49,7 @@
             "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
           }
         ],
-        "evidence": "At Ethereum block 25573280, asset() returned USDC and apiVersion() returned 3.0.2. Blockscout's verified YearnV3Vault source shows shares are minted only through the vault deposit/mint accounting path; EIP-1967 implementation, admin, and beacon slots were all zero."
+        "evidence": "At Ethereum block 26095933, asset() returned USDC and apiVersion() returned 3.0.2. The vault bytecode is an EIP-1167 clone with fixed implementation 0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467. Blockscout's verified YearnV3Vault source exposes deposit/mint share accounting rather than privileged creation of base USDC."
       },
       {
         "chain": "ethereum",
@@ -60,8 +60,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573280,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
         "sources": [
           {
             "label": "Yearn v3 USDC vault (verified source)",
@@ -72,7 +72,7 @@
             "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
           }
         ],
-        "evidence": "The fixed-block role_manager() read returned this contract. The verified YearnV3Vault source allows the role manager to assign vault roles, including the deposit-limit manager, but it does not create a direct share-mint method outside deposit/mint accounting."
+        "evidence": "At Ethereum block 26095933, role_manager() returned 0xb3bd6b2e61753c311efbcf0111f75d29706d9a41. The verified YearnV3Vault source allows that manager to assign roles, including DEPOSIT_LIMIT_MANAGER, but does not provide it a direct share-mint method outside deposit/mint accounting."
       }
     ],
     "review": {

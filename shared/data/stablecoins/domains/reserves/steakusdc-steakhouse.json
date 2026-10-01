@@ -31,15 +31,15 @@
         "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-usdc"
       },
       {
-        "label": "Morpho Vaults V1 contract reference",
-        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
+        "label": "Morpho Vaults V2 contract reference",
+        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults-v2"
       },
       {
         "label": "Steakhouse documentation",
         "url": "https://www.steakhouse.financial/docs"
       }
     ],
-    "rationale": "Morpho identifies the vault at 0xbeef088055857739c12cd3765f20b7679def0f51 as a Steakhouse-curated USDC vault that lends into Morpho Blue markets. The live deployed row therefore represents a USDC-denominated protocol position with borrower-collateral, curator, liquidity, and smart-contract exposure.",
+    "rationale": "The exact contract is Morpho Vault V2, not MetaMorpho V1. At Ethereum block 26095798, asset() returned USDC and its sole listed adapter and liquidityAdapter() were 0x2b9681015a1fa2225d1fc8ae40538d3d64c58290, whose verified source is MorphoMarketV1AdapterV2. The deployed exposure remains a USDC-denominated protocol position with borrower-collateral, curator, liquidity, and smart-contract risk. This identity correction does not re-date the historical composition snapshot.",
     "compositionBasis": "Live ERC-4626 deployed balance captured 2026-09-21 and Morpho's current vault identity",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
@@ -49,20 +49,20 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Steakhouse Prime USDC MetaMorpho vault and Morpho Blue market contracts",
+        "name": "Steakhouse Prime USDC Morpho Vault V2 and Morpho Blue adapter contracts",
         "role": "other",
         "jurisdiction": "Ethereum"
       },
       {
-        "name": "Steakhouse Financial",
+        "name": "Carniceria Tropical SA (Steakhouse Financial vault curator)",
         "role": "other"
       }
     ],
     "segregation": "mixed",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA13BUIDL)",
     "confidence": "verified",
     "sources": [
       {
@@ -70,10 +70,14 @@
         "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
       },
       {
-        "label": "Morpho Vaults V1 contract reference",
-        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
+        "label": "Morpho Vaults V2 contract reference",
+        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults-v2"
+      },
+      {
+        "label": "Steakhouse DeFi Vaults terms and service operator",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
       }
     ],
-    "uncertainty": "Assets are held by noncustodial vault and market contracts and are intentionally supplied into lending markets. The changing allocation set, legal bankruptcy treatment, and provider shares are not established by the reviewed static disclosures."
+    "uncertainty": "Assets are held by noncustodial Vault V2 and adapter/market contracts and intentionally supplied into lending markets. Steakhouse's terms name Carniceria Tropical SA as the service operator and vault curator, not a custodian. Legal bankruptcy treatment, changing individual-market allocations, and provider shares remain unknown."
   }
 }

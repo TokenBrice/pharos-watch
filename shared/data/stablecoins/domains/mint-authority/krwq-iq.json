@@ -20,6 +20,8 @@
         "signerCount": 5,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "safe": {
           "threshold": 3,
           "owners": [

@@ -84,11 +84,12 @@
         "deploymentRefs": [
           "base:0xeded6ae915b129b67a4ad49901518f2736427063",
           "ethereum:0x081599e4936d12c46bd48913b2329115cd26cbdd",
-          "redbelly:0x081599e4936d12c46bd48913b2329115cd26cbdd",
-          "solana:CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi"
+          "redbelly:0x081599e4936d12c46bd48913b2329115cd26cbdd"
         ],
         "directMintAbility": "none",
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095809,
         "evidence": "At Ethereum block 25531408, Base block 48624542, and Redbelly block 3061849, hasRole(DEFAULT_ADMIN_ROLE, 0x999071576cc6d7feadb908bede992ab9e19212cf) returned true on each AUDM UUPS proxy. Exact-block eth_getCode returned no bytecode for this address on all three chains, confirming one shared EOA control identity. On Redbelly, getRoleAdmin(UPGRADER_ROLE) and getRoleAdmin(MINTER_ROLE) both returned DEFAULT_ADMIN_ROLE. The verified implementation gates UUPS upgrades with UPGRADER_ROLE, so this DEFAULT_ADMIN holder can grant the upgrade role and change mint logic.",
         "sources": [
           {
@@ -125,11 +126,12 @@
         "deploymentRefs": [
           "base:0xeded6ae915b129b67a4ad49901518f2736427063",
           "ethereum:0x081599e4936d12c46bd48913b2329115cd26cbdd",
-          "redbelly:0x081599e4936d12c46bd48913b2329115cd26cbdd",
-          "solana:CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi"
+          "redbelly:0x081599e4936d12c46bd48913b2329115cd26cbdd"
         ],
         "directMintAbility": "direct",
         "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095809,
         "evidence": "At Ethereum block 25531408, Base block 48624542, and Redbelly block 3061849, hasRole(MINTER_ROLE=0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6, 0x3529a9f8193cce36df81123b59cdb4250219db39) returned true on each AUDM proxy. Exact-block eth_getCode returned no bytecode for this holder on all three chains, confirming the same EOA directly controls minting across the three EVM deployments. On Redbelly, getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE.",
         "sources": [
           {
@@ -164,13 +166,12 @@
         "authorityType": "eoa",
         "address": "BS6KEeboF6Z2yDbxa8FD6UmPvorWwpm4QviYdpNpdAEQ",
         "deploymentRefs": [
-          "base:0xeded6ae915b129b67a4ad49901518f2736427063",
-          "ethereum:0x081599e4936d12c46bd48913b2329115cd26cbdd",
-          "redbelly:0x081599e4936d12c46bd48913b2329115cd26cbdd",
           "solana:CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi"
         ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213528,
         "evidence": "At finalized Solana slot 432868722, getAccountInfo (jsonParsed) for Token-2022 mint CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi returned mintAuthority = BS6KEeboF6Z2yDbxa8FD6UmPvorWwpm4QviYdpNpdAEQ. The authority account remained owned by the System Program (11111111111111111111111111111111), non-executable, and zero-data, confirming a distinct wallet authority.",
         "sources": [
           {

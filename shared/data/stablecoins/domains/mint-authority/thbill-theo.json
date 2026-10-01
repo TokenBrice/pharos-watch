@@ -22,8 +22,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "thBILL UUPS upgrade timelock",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25712112,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095798,
       "sources": [
         {
           "label": "Blockscout thBILL UUPS proxy",
@@ -57,8 +57,8 @@
         "capDescription": "Public deposit and mint create thBILL shares only after the wrapper transfers the corresponding quantity of an accepted collateral asset from the caller; the wrapper exposes no uncollateralized or privileged raw-mint path.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
             "label": "Blockscout verified thBILL implementation",
@@ -80,8 +80,8 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
             "label": "Blockscout verified thBILL implementation",
@@ -124,12 +124,12 @@
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
           "version": "1.4.1",
-          "observedAt": "2026-08-08",
-          "observedBlock": 25712112,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095798,
           "source": "safe-api"
         },
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
             "label": "Theo governance Safe state",

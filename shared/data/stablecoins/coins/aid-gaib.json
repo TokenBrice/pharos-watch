@@ -33,7 +33,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://aid.gaib.ai/transparency",
-    "provider": "GAIB transparency dashboard (the claimed monthly McMillan Woods (Hong Kong) CPA attestation exists only in GAIB blog marketing — no attestation report is retrievable anywhere, McMillan Woods appears nowhere in GAIB's docs corpus, and the docs promise only forward-looking quarterly third-party audits)",
+    "provider": "GAIB transparency dashboard; the linked McMillan Woods (Hong Kong) CPA Limited report provides limited assurance over Spiceflow Corp's asset deployment as of 1 September 2026, not an AID reserve-to-liability reconciliation",
     "attestorTier": "self",
     "cadence": "undisclosed",
     "latestReport": {

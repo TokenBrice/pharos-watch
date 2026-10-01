@@ -13,7 +13,7 @@
   "variantKind": "savings-passthrough",
   "pegReferenceId": "crvusd-curve",
   "collateral": "crvUSD deposited into Curve's savings vault; the wrapper remains fully backed by crvUSD while a share of borrower interest and protocol revenue compounds through the vault exchange rate",
-  "pegMechanism": "Deposit crvUSD to mint scrvUSD and redeem scrvUSD for the current convertToAssets amount of crvUSD; the share price rises as Curve redirects part of crvUSD borrowing revenue to scrvUSD depositors",
+  "pegMechanism": "On Ethereum, deposit crvUSD into the ERC-4626 vault to mint scrvUSD shares and redeem those shares for the vault's current convertToAssets amount of crvUSD. The share price grows through allocated crvUSD interest revenue. Curve also documents bridged scrvUSD representations on other chains, whose transfer and upgrade controls require separate review.",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "savings-crvusd",

@@ -5,7 +5,7 @@
     "sources": [
       {
         "label": "Noon contracts and addresses",
-        "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
+        "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
       },
       {
         "label": "Verified Ethereum USN implementation",
@@ -67,7 +67,7 @@
     "sources": [
       {
         "label": "Noon interoperability docs",
-        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
       },
       {
         "label": "Hyperlane docs",
@@ -100,7 +100,7 @@
         "sources": [
           {
             "label": "Noon interoperability docs",
-            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+            "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
           },
           {
             "label": "Hyperlane docs",
@@ -129,7 +129,7 @@
         "sources": [
           {
             "label": "Noon interoperability docs",
-            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+            "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
           },
           {
             "label": "Hyperlane docs",
@@ -162,7 +162,7 @@
         "sources": [
           {
             "label": "Noon interoperability docs",
-            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+            "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
           },
           {
             "label": "Hyperlane docs",
@@ -195,7 +195,7 @@
         "sources": [
           {
             "label": "Noon interoperability docs",
-            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+            "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
           },
           {
             "label": "Hyperlane docs",
@@ -964,7 +964,7 @@
           },
           {
             "label": "Noon interoperability docs",
-            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+            "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
           }
         ],
         "evidence": "At Starknet block 13501913, token.owner() still returns 0x25beda2.... That account's get_signers/get_public_key establish a single Stark key and zero guardian. Class hash and version string were read via starknet_getClassHashAt / get_version. This closes the prior 'signer quorum unresolved' gap as 1-of-1 without claiming a named wallet product."

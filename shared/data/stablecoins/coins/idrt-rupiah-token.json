@@ -37,6 +37,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/RupiahTokenIDRT"
+    },
+    {
+      "label": "Wirex EEA MiCA-related IDRT delisting (checked October 1, 2026)",
+      "url": "https://help.wirexapp.com/article/non-compliant-mica-tokens-delisted-1479"
     }
   ],
   "jurisdiction": {
@@ -89,30 +93,34 @@
   },
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z",
+    "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
     "provider": "Rupiah Token reserve report (AUP/no assurance)",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Indonesia",
     "attestorLicense": "Public Accountant License No. AP. 1456",
     "latestReport": {
-      "reviewReference": {
-        "date": "2026-03-31",
-        "reviewedAt": "2026-08-14",
-        "dateKind": "unspecified"
-      },
-      "assuranceMethod": "unknown",
-      "scope": "unknown",
-      "liabilityReconciliation": "unknown",
-      "reviewer": "Pharos compliance research",
-      "confidence": "unknown",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-29",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB23EURE)",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Rupiah Token March 2026 AUP (as of 2026-08-14 review; date kind unspecified)",
-          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_March_31_2026_64e7edee6b.pdf?updated_at=2026-04-13T14%3A14%3A20.108Z"
+          "label": "Rupiah Token August 2026 AUP (period end August 31; report dated September 29)",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z"
         }
       ]
     }
   },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Wirex EEA trading restriction",
+      "message": "On October 1, 2026, Wirex's MiCA-related EEA delisting notice listed IDRT among the removed tokens. This records Wirex's venue restriction and assessment, not a token-specific regulator or legal determination. Pharos leaves IDRT's categorical MiCA status not assessed pending that evidence."
+    }
+  ],
   "launchDate": "2019-04-10"
 }

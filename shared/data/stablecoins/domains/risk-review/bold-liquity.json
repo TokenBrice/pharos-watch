@@ -57,8 +57,8 @@
       {
         "id": "weth",
         "label": "WETH branch",
-        "tier": "redundant-with-failover",
-        "summary": "WETH collateral uses Liquity V2 external feeds with response validation, last-good-price fallback, and branch shutdown if oracle checks fail.",
+        "tier": "standard-external",
+        "summary": "WETH collateral uses one Chainlink ETH/USD push feed. Response validation and branch shutdown protect against invalid or stale answers; shutdown freezes lastGoodPrice without a live independent backup feed.",
         "collateralAssets": [
           "WETH"
         ],
@@ -77,10 +77,14 @@
           {
             "label": "Liquity V2 risk disclosure",
             "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          },
+          {
+            "label": "WETHPriceFeed sole-feed and shutdown implementation",
+            "url": "https://raw.githubusercontent.com/liquity/bold/main/contracts/src/PriceFeeds/WETHPriceFeed.sol"
           }
         ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 25520150,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26097116,
         "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch redistribution.",
         "liquidationDelaySec": 0,
         "backstop": "Each branch has a dedicated Stability Pool; uncovered debt can use just-in-time BOLD or same-branch redistribution.",

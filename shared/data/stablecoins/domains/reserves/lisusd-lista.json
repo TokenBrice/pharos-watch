@@ -14,7 +14,7 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "BTCB GemJoin",
@@ -29,7 +29,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "wBETH (Binance ETH LST) GemJoin",
@@ -44,7 +44,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "sUSDX (Stables Labs staked USDX) GemJoin",
@@ -59,7 +59,7 @@
         "credit",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "cewBETH (Ceros CeETHVault receipt) GemJoin",
@@ -74,7 +74,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "ezETH (Renzo ETH LRT) GemJoin",
@@ -89,7 +89,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "wstETH (Lido wrapped stETH) GemJoin",
@@ -103,7 +103,7 @@
         "custody",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "solvBTC GemJoin",
@@ -118,7 +118,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "mCAKE (Cakepie staked CAKE) GemJoin",
@@ -133,7 +133,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "STONE (StakeStone ETH LST) GemJoin",
@@ -148,7 +148,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "FDUSD GemJoin",
@@ -164,7 +164,7 @@
         "legal",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate",
+      "liquidityHorizon": "unknown",
       "coinId": "fdusd-first-digital",
       "depType": "collateral"
     },
@@ -181,7 +181,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "USDT GemJoin",
@@ -197,7 +197,7 @@
         "legal",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate",
+      "liquidityHorizon": "unknown",
       "coinId": "usdt-tether",
       "depType": "collateral"
     }

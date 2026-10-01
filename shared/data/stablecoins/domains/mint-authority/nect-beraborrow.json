@@ -33,6 +33,8 @@
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "NECT mints only via registered Beraborrow collateral-vault (Den) branches against overcollateralized positions, with Liquity-style $1-face-value redemptions; supply is bounded by collateralized borrowing. Branch registration and debt ceilings are controlled by the Registry owner (4-of-7 Beraborrow Safe behind a 3-day timelock), which can raise mint capacity by registering new branches or adjusting parameters.",
         "evidence": "Beraborrow docs describe Dens depositing collateral to mint the overcollateralized stablecoin NECT (Liquity v2-style), with NECT token at 0x1cE0a25D13CE4d52071aE7e02Cf1F6606F4C79d3.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26911487,
         "sources": [
           {
             "label": "Beraborrow contract addresses",

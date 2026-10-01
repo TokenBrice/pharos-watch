@@ -2,14 +2,19 @@
   "id": "zeusd-zoth",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: ZeUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "ZeUSD V1 verified token implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de?fields=sources"
+      }
+    ],
+    "evidence": "The verified implementation at the token's pinned Ethereum block 26095809 exposes setBlacklistStatus(address,bool), restricted to ADMIN_ROLE, which updates the token's blacklist mapping. This confirms direct blacklist authority rather than inferring it from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB27ZeUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "The tracked deprecated V1 uses collateral pricing only when recording a mint. Its verified router later burns the exact recorded ZeUSD debt and returns the recorded collateral, with no ongoing collateral-health oracle or liquidation engine.",
+    "tier": "privileged-internal-pricing",
+    "summary": "The tracked V1 CollateralVault values collateral at mint using a subvault oracle price when available, otherwise a stored collateral price (or fixed stable-asset price). updateSubVaultConfig permits RISK_CONTROLLER_ROLE to change the stored price. This privileged mint-time valuation fallback remains price-sensitive even though subsequent debt burn returns recorded collateral without an ongoing liquidation engine.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -20,7 +25,7 @@
       "sources": [
         {
           "label": "Zoth contract deployments and V1/V2 boundary (last updated 2025-07-10)",
-          "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+          "url": "https://web.archive.org/web/20260519041844/https://docs.zoth.io/zoth/tech-center/contract-deployments"
         },
         {
           "label": "Tracked ZeUSD V1 router verified implementation",
@@ -38,7 +43,7 @@
     "sources": [
       {
         "label": "Zoth contract deployments and V1/V2 boundary",
-        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+        "url": "https://web.archive.org/web/20260519041844/https://docs.zoth.io/zoth/tech-center/contract-deployments"
       },
       {
         "label": "Tracked ZeUSD V1 router proxy",
@@ -65,7 +70,7 @@
         "source": "issuer",
         "name": "LayerZero OFT Adapter (Zoth contract deployments)",
         "slug": "layerzero",
-        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments",
+        "url": "https://web.archive.org/web/20260519041844/https://docs.zoth.io/zoth/tech-center/contract-deployments",
         "bridgeTypes": [
           "external-lock-mint",
           "oft-adapter"
@@ -98,11 +103,11 @@
     "sources": [
       {
         "label": "Zoth contract deployments (Layer Zero Adapter + ZeUSD OFT addresses)",
-        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+        "url": "https://web.archive.org/web/20260519041844/https://docs.zoth.io/zoth/tech-center/contract-deployments"
       },
       {
         "label": "Zoth: ZeUSD omni-chain composable stable token docs",
-        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+        "url": "https://web.archive.org/web/20260606203655/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
       },
       {
         "label": "LayerZero OFTAdapter contract (Etherscan code)",

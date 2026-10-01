@@ -13,7 +13,7 @@
         "chain": "ethereum",
         "contract": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
         "verified": true,
-        "sourceUrl": "https://docs.m0.org/build/pyusdx/deploy-extension"
+        "sourceUrl": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md"
       },
       "assetClass": "stablecoin",
       "issuerOrObligor": "MoonPay-issued PYUSDx, backed by PayPal USD",
@@ -76,8 +76,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA17EURSAFO)",
     "confidence": "probable",
     "sources": [
       {
@@ -85,7 +85,7 @@
         "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
       }
     ],
-    "uncertainty": "The USDat proxy holds the full PYUSDx reserve on-chain, but Saturn does not publish USDat-specific legal ownership, segregation, insolvency treatment, or rehypothecation terms for that position.",
+    "uncertainty": "At Ethereum block 26095799, the USDat proxy held 85,981,412.404485 PYUSDx, equal to USDat totalSupply. This verifies the local reserve location, not downstream PYUSD custody or legal safeguards. Saturn's current terms name the BVI interface counterparty and disclaim deposit protection, but do not resolve USDat-specific legal ownership, segregation, insolvency treatment or rehypothecation of the PYUSDx position.",
     "knownUnknownExposurePct": 100
   }
 }

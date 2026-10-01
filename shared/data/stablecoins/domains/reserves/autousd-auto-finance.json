@@ -38,12 +38,12 @@
     "providers": [
       {
         "name": "autoUSD Autopool and configured destination-vault contracts",
-        "role": "custodian",
+        "role": "other",
         "jurisdiction": "On-chain"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
@@ -58,6 +58,6 @@
         "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopool-contract-security"
       }
     ],
-    "uncertainty": "Assets are segregated in dedicated Autopool and destination-vault contracts and are intentionally deployed to external DeFi destinations. The current destination set and allocation shares were not resolved in this static-document review."
+    "uncertainty": "Assets are held in dedicated Autopool and destination-vault contracts and are intentionally deployed to external DeFi destinations. The current destination set and allocation shares were not resolved in this static-document review. The 2026-10-01 architecture and security review establishes technical contract separation, but does not establish enforceable holder segregation or bankruptcy-remoteness terms under ruling D09."
   }
 }

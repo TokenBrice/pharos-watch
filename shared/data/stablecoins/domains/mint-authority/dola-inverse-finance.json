@@ -2,9 +2,9 @@
   "id": "dola-inverse-finance",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "DOLA minting is controlled by the token operator, a Compound Timelock (48h delay) administered by a Compound GovernorBravo using INV governance token. All DOLA supply changes require an on-chain INV vote followed by a 48-hour timelock execution delay.",
+    "summary": "DOLA's INV-governed 48-hour Timelock operator can mint durable supply without a posted-collateral check or numeric token cap. Four enabled minters remain verified: FiRM and PSM Feds have governance-raiseable ceilings, Frontier Fed has uncapped local expansion into its cToken, and the atomic flash minter repays and burns within one transaction. Under D14 the least-constrained durable operator path determines the unbounded category; neither cToken accounting claims nor flash issuance establish new external backing.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -49,8 +49,12 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": false,
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 172800,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
+        "capDescription": "The token has no hard mint cap. The operator can mint directly and authorize additional minters through its 48-hour Timelock; operational Fed issuance is a separate authorized path.",
         "sources": [
           {
             "label": "Etherscan contract source",
@@ -65,10 +69,110 @@
             "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds"
           }
         ],
-        "evidence": "At Ethereum block 25294782: DOLA.operator() = 0x926dF14a23BE491164dCF93f4c468A50ef659D5B confirmed. Contract bytecode identified as Compound Timelock: admin() = 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6 (GovernorBravo), delay = 0x2a300 = 172800s (48h). GovernorBravo slot 0 stores Timelock address confirming circular DAO governance pairing."
+        "evidence": "At Ethereum block 26095807, DOLA.operator() returned 0x926df14a23be491164dcf93f4c468a50ef659d5b, whose admin() returned 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6 and delay() returned 172800 seconds. The issuer deployment source permits mint() from either the operator or an address whose minters mapping is true; burn() is permissionless for the caller's own balance."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2b34548b865ad66a2b046cb82e59ee43f75b90fd",
+        "deploymentRefs": [
+          "ethereum:0x865377367054516e17014ccded1e7d814edc9ce4"
+        ],
+        "label": "FiRM Fed authorized DOLA minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
+        "capDescription": "Global supplyCeiling() is 100000000000000000000000000000. Verified expansion requires Fed Chair and respects global and per-market ceilings; gov alone can change both ceilings. The governance Timelock can raise the bounds, while the chair cannot.",
+        "sources": [
+          {
+            "label": "Inverse DOLA Fed docs",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds"
+          },
+          {
+            "label": "Verified FiRM Fed issuance and ceiling setters",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b34548b865ad66a2b046cb82e59ee43f75b90fd"
+          }
+        ],
+        "evidence": "At Ethereum block 26095807, DOLA.minters(0x2b34548b865ad66a2b046cb82e59ee43f75b90fd) returned true. gov() returned the operator Timelock and chair() returned 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8, a 2-of-6 Safe. Issuer docs state Fed Chair can execute expansions and contractions within governance-approved parameters."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7",
+        "deploymentRefs": [
+          "ethereum:0x865377367054516e17014ccded1e7d814edc9ce4"
+        ],
+        "label": "Frontier Fed authorized DOLA minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
+        "capDescription": "Verified Frontier Fed expansion has no local numeric supply ceiling: the chair mints DOLA into its cToken. At the pinned block, the cToken mint pause is false and expansion(0) from the chair succeeds. Closing new borrower loans does not revoke this Fed mint permission.",
+        "sources": [
+          {
+            "label": "Inverse DOLA Fed docs",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds"
+          },
+          {
+            "label": "Verified Frontier Fed issuance source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7"
+          }
+        ],
+        "evidence": "At Ethereum block 26095807, DOLA.minters(0x5e075e40d01c82b6bf0b0ecdb4eb1d6984357ef7) returned true, gov() returned the operator Timelock and chair() returned 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8. ctoken() returned 0x7fcb7dac61ee35b3d4a51117a7c58d53f0a8a670, whose Comptroller 0x4dcf7407ae5c07f8681e1659f626e114a7667339 returned false for mintGuardianPaused(ctoken). expansion(0) from the chair succeeded in eth_call. Source has no local supply-ceiling check; a zero-amount simulation is not a claim that every arbitrary amount will succeed."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc",
+        "deploymentRefs": [
+          "ethereum:0x865377367054516e17014ccded1e7d814edc9ce4"
+        ],
+        "label": "PSM Fed authorized DOLA minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
+        "capDescription": "supplyCap() returned 10000000000000000000000000 (10 million DOLA). Verified expansion is chair-only and constrained by supplyCap; setSupplyCap is governance-only, so the governance Timelock can raise the bound while the chair cannot.",
+        "sources": [
+          {
+            "label": "Inverse DOLA Fed docs",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds"
+          },
+          {
+            "label": "Verified PSM Fed issuance and cap setter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc"
+          }
+        ],
+        "evidence": "At Ethereum block 26095807, DOLA.minters(0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc) returned true. gov() returned the operator Timelock and chair() returned 0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8. The issuer API identifies this address as PSM Fed."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6c5fdc0c53b122ae0f15a863c349f3a481de8f1f",
+        "deploymentRefs": [
+          "ethereum:0x865377367054516e17014ccded1e7d814edc9ce4"
+        ],
+        "label": "DOLA atomic flash minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
+        "capDescription": "maxFlashLimit() is 5000000000000000000000000 (5 million DOLA), and owner-only setMaxFlashLimit can raise it. The source retrieves and burns the minted amount before returning; this is atomic flash issuance, not durable unbacked supply.",
+        "sources": [
+          {
+            "label": "Verified MainnetDolaFlashMinter and DolaFlashMinter source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6c5fdc0c53b122ae0f15a863c349f3a481de8f1f"
+          }
+        ],
+        "evidence": "An Alchemy full-history AddMinter/RemoveMinter query through Ethereum block 26095807 returned 54 logs and 29 distinct candidates. Pinned native minters(address) checks identify this flash minter plus the three Feds as the four enabled minters. owner() is the operator Timelock, dola() is the native DOLA token, flashMinted() is zero and maxFlashLoan(DOLA) equals the 5 million DOLA limit. Verified source requires repayment and burns the flash-issued DOLA in the same transaction."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -79,12 +183,13 @@
         },
         {
           "label": "Inverse Finance governance",
-          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/governance/overview"
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/governance/governance-overview"
         }
       ],
-      "evidence": "At Ethereum block 25294782: DOLA operator() confirmed = Timelock 0x926dF14a (48h delay). Timelock admin = 0xbeccb6bb (GovernorBravo, INV-token governance). GovernorBravo slot 0 = Timelock address (standard Compound Bravo pairing). Full DAO governance chain confirmed: INV vote → GovernorBravo → 48h Timelock → DOLA mint/burn. No multisig bypass. DOLA minting is over-collateralised issuance controlled by the token operator, which at block 25294782 is a Compound Timelock with a 48-hour delay administered by INV-token GovernorBravo; every supply change requires an on-chain INV vote followed by the independently enforced 48-hour execution delay, so the encoding-derived direct-mint cap is economically raiseable rather than unbounded and DOLA falls outside the fiat-custodial centralized-mint scope. Economic-posture fields reviewed 2026-08-15: INV governance and its 48-hour Timelock bound all operator minting, issuance is an on-chain collateralized protocol path, and no prudential supervisor or independent attestor applies.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Rechecked all native paths at Ethereum block 26097135 on 2026-10-01. Full-history AddMinter/RemoveMinter logs returned 54 events and 29 candidates; pinned mapping reads confirmed the same four enabled minters. operator() remains 0x926df14a23be491164dcf93f4c468a50ef659d5b with delay() 172800 seconds. A read-only mint(operator, 1e18) simulation from that operator succeeds, and verified token source imposes no collateral or numeric cap. Frontier expansion(1e18) from its chair also succeeds, depositing minted DOLA into a cToken without adding external collateral. FiRM's global ceiling remains 100000000000000000000000000000 raw units and PSM's supplyCap remains 10000000000000000000000000; their governance setters can raise those limits. Flash maxFlashLimit remains 5000000000000000000000000 with the Timelock as owner, and verified flash source retrieves and burns the issued amount before returning. D14 resolves the prior 2026-10-01 cap-mapping question as unbounded based on the durable operator path, separately from adjustable Fed ceilings and atomic flash issuance. Historical mint incidents are retained.",
+      "reviewer": "Sol curation pass 2026-10-01 (RuleC25)",
+      "reviewedAt": "2026-10-01",
+      "disposition": "scoreable"
     }
   }
 }

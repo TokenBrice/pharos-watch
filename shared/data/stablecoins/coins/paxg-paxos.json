@@ -2,14 +2,14 @@
   "id": "paxg-paxos",
   "name": "PAX Gold",
   "symbol": "PAXG",
-  "oneLiner": "PAXG is Paxos's centralized gold token redeemable 1:1 for fine troy ounces of LBMA Good Delivery bars held in Brink's London vaults under OCC trust supervision.",
+  "oneLiner": "PAXG is Paxos's centralized gold token backed by allocated London Good Delivery gold held with Brink's and ICBC Standard Bank under OCC trust supervision.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
+  "collateral": "LBMA Good Delivery physical gold bars allocated in LBMA-approved Brink's Global Services and ICBC Standard Bank vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
   "pegMechanism": "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
@@ -24,17 +24,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-25",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-24",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos reserve research 2026-09-07",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA15PAXG)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG PAXG Redemption Assets Report - July 31, 2026",
-          "url": "https://framerusercontent.com/assets/mZxm7J7vQTwbTmOGENYENSpEU.pdf"
+          "label": "KPMG PAXG Redemption Assets Report - August 31, 2026",
+          "url": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf"
         },
         {
           "label": "Paxos PAXG transparency reports",

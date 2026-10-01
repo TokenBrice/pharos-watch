@@ -24,7 +24,7 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Solstice markets USX as an overcollateralized dollar settlement asset, permits permissionless minting with USDC and USDT, and describes it as a payment rail. The public materials do not resolve the legal issuer, U.S. qualification pathway, or whether an applicable foreign-issuer exception exists, so the token is treated as an apparent payment stablecoin without assuming authorization.",
+      "summary": "Solstice markets USX as an overcollateralized dollar settlement asset and payment rail. Current USX documentation restricts direct minting and redemption to KYC'd institutional partners, with USDC, USDG, or USDT deposits and USDG as the primary redemption asset. The current whitepaper identifies USX Ltd as the purpose-built token issuer; the U.S. qualification pathway and any foreign-issuer exception remain unresolved.",
       "references": [
         {
           "label": "GENIUS Act enacted text: payment stablecoin definition",
@@ -44,6 +44,18 @@
           "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Current USX documentation: institutional minting and USDG redemption",
+          "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-01"
+        },
+        {
+          "label": "Current Solstice whitepaper: purpose-built USX Ltd issuance vehicle",
+          "url": "https://docs.solstice.finance/assets/Solstice%20Whitepaper%202.1.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-01"
         }
       ]
     },
@@ -51,7 +63,7 @@
     "issuerPathway": "unknown",
     "issuerEntity": "Solstice Foundation",
     "foreignExceptionStatus": "unknown",
-    "notes": "No public GENIUS approval, state-qualified status, official application, or OCC foreign registration naming Solstice Foundation or USX was located in the reviewed materials. The classification is not an authorization finding. Solstice's homepage claims a MiCA-ready framework, while its linked EU/EEA MiCA disclosure currently resolves to a page-not-found; a verifier should re-check the EU offering and any later regulator filing.",
+    "notes": "The 2026-08-14 negative-authorization review is retained as historical evidence, not a current approval finding. The current whitepaper names USX Ltd as the purpose-built token issuer, unlike the prior whitepaper's Foundation issuance description; platform Terms still name Solstice Foundation as the agreement counterparty. The issuer-field correction is proposed pending resolution of these entity-role disclosures. The institutional website claims a MiCA notification and EU/EEA access, but Terms exclude EEA and UK users. The 2026-10-01 ESMA OTHER register identifies SLX Ltd, and its registered whitepaper expressly covers the SLX token, not USX; notification is not regulatory approval. No USX/USX Ltd/Solstice Foundation entry was found in the fetched EMT or ART register. The OCC pending digital-asset table also had no such entry, but is not an exhaustive GENIUS authorization register.",
     "references": [
       {
         "label": "GENIUS Act enacted text: payment stablecoin definition",
@@ -84,6 +96,60 @@
         "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Current Solstice whitepaper: purpose-built USX Ltd issuance vehicle",
+        "url": "https://docs.solstice.finance/assets/Solstice%20Whitepaper%202.1.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Current USX documentation: institutional minting and USDG redemption",
+        "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Solstice platform terms: Foundation agreement and jurisdictional restrictions",
+        "url": "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Solstice institutional page: issuer-stated MiCA notification and EU access",
+        "url": "https://solstice.finance/institutions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "OCC pending digital-asset application table reviewed on 2026-10-01",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "ESMA OTHER register: Solstice records concern SLX Ltd",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/OTHER.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Registered Solstice MiCA whitepaper: SLX token scope",
+        "url": "https://assets.solstice.finance/mica/Solstice_MiCA_Whitepaper.xhtml",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "ESMA EMT register reviewed for USX and issuer names",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "ESMA ART register reviewed for USX and issuer names",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {

@@ -25,7 +25,7 @@
     "reserveDisclosureUrl": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDon is issued by a BVI-incorporated SPV (Ondo Global Markets (BVI) Limited) under Regulation S, explicitly restricted to non-U.S. investors. It functions as the internal settlement stablecoin for Ondo Global Markets tokenized-stock platform. The GENIUS Act addresses foreign payment stablecoin issuers (FPSIs) accessing U.S. markets separately from domestic PPSIs; because USDon is structurally excluded from U.S.-person access, the payment-stablecoin classification and any FPSI pathway remain genuinely unresolved pending final FPSI rulemaking.",
+    "notes": "USDon is issued by a BVI-incorporated SPV (Ondo Global Markets (BVI) Limited) under Regulation S, explicitly restricted to non-U.S. investors. It functions as the internal settlement stablecoin for Ondo Global Markets tokenized-stock platform. The GENIUS Act addresses foreign payment stablecoin issuers (FPSIs) accessing U.S. markets separately from domestic PPSIs; because USDon is structurally excluded from U.S.-person access, the payment-stablecoin classification and any FPSI pathway remain genuinely unresolved pending final FPSI rulemaking. Reporting rechecked 2026-10-01 under D23: the August 2026 monthly Ankura report lists USDon quantities alongside Stocks and USDY liabilities and confirms aggregate Collateral, without allocating reserves to USDon. The September 28 daily report has the same platform-wide scope. The previously recorded monthlyAttestationPresent=true is withdrawn: the retained shared-platform reports do not establish a USDon-specific monthly reserve attestation or regulatory authorization.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -53,10 +53,16 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "RWA.xyz USDon asset page: confirms Non-U.S. Investor only, BVI FSC regulation",
-        "url": "https://app.rwa.xyz/assets/USDon",
+        "label": "Ondo issuer USDon disclosure: 1:1 brokerage cash backing and settlement function",
+        "url": "https://docs.ondo.finance/ondo-stocks/available-assets",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "August 2026 monthly Ankura report including USDon liabilities (platform-wide scope)",
+        "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/ABv0vSjd6cIDAUTIlwm2KwA?rlkey=hokf0tffqvezfmsto25cvpovs&st=7ohgw8sv&dl=0",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {

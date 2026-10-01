@@ -10,11 +10,11 @@
     "yieldBearing": true
   },
   "collateral": "An undisclosed Russian-ruble reserve basket that issuer materials variously describe as deposits and as deposits plus short-term assets; current constituent weights, institutions, custody, and assurance evidence are unavailable",
-  "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",
+  "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); the issuer roadmap also identifies A7A5/USDT swaps on Tron, while A7A5's peg currency remains RUB; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.a7a5.io/legal/transparency.md",
-    "provider": "A7A5 docs transparency page (no reserve artefact has ever been published: the page is two marketing sentences, the docs corpus contains no reserve report, and the only audit is a smart-contract code audit)",
+    "provider": "A7A5 issuer transparency page (reviewed 2026-10-01: no current reserve report or composition is published there; the former audit.pdf endpoint serves an application HTML shell)",
     "attestorTier": "none",
     "cadence": "none"
   },
@@ -39,7 +39,7 @@
   "jurisdiction": {
     "country": "Kyrgyzstan",
     "regulator": "Finnadzor",
-    "license": "VASP license (Law on Virtual Assets No. 12, 2022); issuer: Old Vector LLC"
+    "license": "Virtual-asset issue registered by Finnadzor; issuer: Old Vector LLC (regulator statement 2025-07-21); specific VASP licensing scope not independently verified"
   },
   "contracts": [
     {

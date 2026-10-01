@@ -53,24 +53,32 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "ATB Financial (segregated trust accounts for CADC holders)",
+        "name": "ATB Financial (issuer-disclosed segregated cash account)",
         "role": "bank",
         "jurisdiction": "Canada"
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC25)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Loon transparency and monthly CADC reserve attestations",
         "url": "https://loon.finance/transparency/"
+      },
+      {
+        "label": "Loon CADC reserve FAQ: segregated ATB Financial cash account",
+        "url": "https://loon.finance/support-centre/"
+      },
+      {
+        "label": "Issuer report registry: August 2026 ATB bank confirmation for PayTrie AB Inc",
+        "url": "https://loon.finance/api/attestations"
       }
     ],
-    "uncertainty": "Loon's monthly third-party attestation confirms Canadian-dollar cash held one-to-one in segregated ATB Financial accounts in trust for CADC holders; the trust structure supports bankruptcy remoteness, but account-level terms and any reuse permissions are not published.",
+    "uncertainty": "Loon discloses segregated Canadian-dollar cash at ATB Financial. The August 31, 2026 bank confirmation identifies PayTrie AB Inc as the account client; it does not establish a trust deed or enforceable CADC-holder insolvency rights. The prior 2026-07-20 trust-account and structured-remoteness assessment is withdrawn under D09, without asserting that an undisclosed trust cannot exist. Account-level legal safeguards, CADC liability reconciliation and reuse permissions remain unverified.",
     "knownUnknownExposurePct": 0
   }
 }

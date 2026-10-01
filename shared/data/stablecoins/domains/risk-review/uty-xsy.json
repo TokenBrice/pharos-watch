@@ -20,9 +20,9 @@
         "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
       }
     ],
-    "evidence": "The current Base implementation has no deployed holder blacklist or freeze function. At Base block 48619333, Avalanche block 90284859, and Katana block 37285133, however, the same no-code EOA 0xa695bb4b9a86daf0581233031f273697135e3016 directly owned every tracked zero-delay UUPS proxy and could replace token logic with holder-control functionality. The Yes result is therefore an established upgrade-control capability, not a claim that a blacklist is presently deployed.",
-    "reviewer": "GPT SOL-NR-A wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "The prior 2026-07-22 review recorded EOA 0xa695bb4b9a86daf0581233031f273697135e3016 owning the Base, Avalanche and Katana UUPS proxies at their historical blocks. Fresh reads on 2026-10-01 show that Base block 52024972 and Avalanche block 96512712 instead return owner 0xb237eb3c71a0f351bd121b0c467248473fbc2cca, a chain-local 3-of-4 Safe with the four recorded signers. Base retains implementation 0xf2f6e1a62d3d1f0efb01c28e485f1dc8b173ce2b; holder-control exposure through replaceable logic remains, so reviewedStatus stays true. Katana RPC was unavailable and its current owner was not re-verified; this review does not assert that every deployment is still directly EOA-owned.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM06UTY)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

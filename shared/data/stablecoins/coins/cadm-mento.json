@@ -12,12 +12,11 @@
   },
   "collateral": "Shared Mento Reserve: Mento's pinned analytics configuration classifies CADm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a CADm-specific borrower trove.",
   "pegMechanism": "CADm is issued through Mento v2's USDm/CADm Broker and BiPoolManager exchange. A USDm-to-CADm swap burns incoming USDm and mints outgoing CADm; the reverse burns CADm and mints USDm. The virtual pool prices swaps from the CAD/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",
-  "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
-    "disposition": "resolved",
-    "reviewedAt": "2026-07-31",
-    "reviewer": "Claude owner-ruling R2 Mento archetype application",
-    "rationale": "Owner ruling 2026-07-31 places Mento's protocol-reserve-backed FX inventory under the fiat-cash archetype umbrella, following the reserve-backed USDm/EURm precedent already recorded on cusd-celo and ceur-celo. CADm is minted and burned as reserve-backed inventory against the shared Mento Reserve through the Mento Broker at oracle rates: there is no borrower trove, no position health factor, and no liquidation path, so cdp remains inapplicable. Under this ruling fiat-cash reads as reserve-backed cash-equivalent inventory issuance rather than strictly custodial off-chain cash.",
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC09), owner ruling D18",
+    "rationale": "At Celo block 78952821, the tracked CADm token identifies as Mento Canadian Dollar and names the v2 Broker; the Broker's active exchange provider lists the USDm/CADm pair. The pinned issuer configuration explicitly identifies CADm as backed by the diversified shared crypto reserve. Broker source implements stable-asset mint/burn swaps rather than a CAD cash redemption claim or a borrower-specific CDP. The 2026-07-31 owner review mapped pooled reserve inventory to the fiat-cash umbrella; that dated mapping remains history. D18 requires a fit to actual holder rights and current backing, while the cited V3 reserve page covers USDm/EURm and does not establish CADm-specific rights. No replacement archetype or protective grade is inferred pending an exact-product claim and shared-basket methodology mapping.",
     "sources": [
       {
         "label": "Pinned Mento stablecoin backing config",

@@ -62,6 +62,26 @@
       "chain": "xrpl",
       "address": "524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
       "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+      "decimals": 18
+    },
+    {
+      "chain": "ink",
+      "address": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+      "decimals": 18
     }
   ],
   "custodyModel": "institutional-regulated",

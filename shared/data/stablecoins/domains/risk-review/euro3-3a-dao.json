@@ -42,7 +42,7 @@
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",
-    "summary": "EURO3's five residual debt-bearing Polygon collateral branches divide a heartbeat-checked Chainlink token/USD value by a heartbeat-checked Chainlink EUR/USD value. Every leaf enforces a 24-hour staleness bound and reverts on failure; no fallback or last-good cache exists, and all branches share the same EUR/USD Chainlink failure domain.",
+    "summary": "EURO3's five residual debt-bearing Polygon collateral branches divide a heartbeat-checked Chainlink token/USD value by a heartbeat-checked Chainlink EUR/USD value. Every leaf enforces a 24-hour staleness bound and reverts on failure; no fallback or last-good cache exists, and all branches share the same EUR/USD Chainlink failure domain. This description is a historical branch review, not a complete October 2026 debt-bearing branch census; current registry, each active converted feed, leaf heartbeat and shared EUR/USD failure-domain reads are required before renewing the observation date.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -456,9 +456,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native EURO3: non-proxied MintableToken whose owner() = MintableTokenOwner 0x1ba31e955a3e1fbc8caffa64056c58a3e4d86082 (read 2026-07-20); mint rights sit with the 3A VaultFactory 0x4760847023fa0833221ae76e01db1e483a5d20e0 and second minter contract 0x027a597ad044bddb7a6b7ef9ed2b641122801220 under the 3A operator EOA 0x84d28251143df55df1768870fc26983f50364557 (mint-authority review). 3A DAO mints natively on this chain; no bridge contract mints this deployment.",
+        "reviewNote": "At Linea block 32198858 on 2026-10-01, native EURO3 owner() returned MintableTokenOwner 0x1ba31e955a3e1fbc8caffa64056c58a3e4d86082. Its minters(address) returned true for the documented Linea VaultFactory 0x65c6fd9b3a2a892096881e28f07c732ed128893e and false for the Polygon factory 0x4760847023fa0833221ae76e01db1e483a5d20e0 and previously asserted second minter 0x027a597ad044bddb7a6b7ef9ed2b641122801220. The owner chain remains MintableTokenOwner to OwnerProxy 0xc5241aadbd49e3e53dc6549cb7ba24e9d3559826 to operator EOA 0x84d28251143df55df1768870fc26983f50364557. These candidate checks are not an exhaustive minter census; native per-chain issuance remains the reviewed contract model.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 32198858,
         "sources": [
           {
             "label": "linea explorer EURO3 token",

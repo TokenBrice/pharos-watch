@@ -64,5 +64,38 @@
     "scope": "full-composition",
     "knownUnknownExposure": "Both direct reserve assets are identified and linked to tracked upstream stablecoins; their underlying reserve composition is reviewed on those assets.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anchorage Porto",
+        "role": "custodian"
+      },
+      {
+        "name": "Coinbase",
+        "role": "custodian"
+      },
+      {
+        "name": "JupUSD onchain program reserve vault",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Pharos curation pass 2026-10-01 (CurB09JUPUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Jupiter JupUSD reserve custody documentation",
+        "url": "https://docs.jup.ag/user-docs/earn/jupusd"
+      },
+      {
+        "label": "JupUSD named reserve token accounts and custodian labels",
+        "url": "https://api.jupusd.money/api/data"
+      }
+    ],
+    "uncertainty": "Issuer documentation names Anchorage Porto for custody; the live reserve API additionally labels Coinbase and program reserve accounts. The documents do not establish token-holder legal segregation, bankruptcy remoteness, rehypothecation terms, provider replacement arrangements, or custody-provider shares. Onchain account balances verify assets but not the offchain legal safeguards."
   }
 }

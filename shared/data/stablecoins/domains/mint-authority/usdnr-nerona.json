@@ -23,7 +23,7 @@
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
           },
           {
             "label": "M0 protocol docs",
@@ -58,11 +58,11 @@
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+            "url": "https://docs.m0.org/protocol/extensions"
           },
           {
             "label": "SwapFacility on Blockscout",
@@ -96,9 +96,9 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770356,
-        "evidence": "At Ethereum block 25770356, USDnr proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9 EIP-1967 admin slot resolves to this ProxyAdmin contract and its implementation slot resolves to 0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0. This control governs only the canonical Ethereum USDnr wrapper; the identical-address Fluent ProxyAdmin is a separate representation upgrade control under Bridge Risk."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096091,
+        "evidence": "At Ethereum block 26096091, the canonical USDnr proxy's EIP-1967 admin and implementation slots remain 0x9ffe615c92635e5b36de004dd78a94c51aa04256 and 0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0. ProxyAdmin.owner() remains 0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33. This control governs native mint-critical wrapper upgrades on Ethereum; the identical-address Fluent ProxyAdmin remains a separate representation upgrade control under Bridge Risk."
       },
       {
         "chain": "ethereum",
@@ -119,9 +119,9 @@
             "url": "https://eth.blockscout.com/address/0x9ffe615c92635e5b36de004dd78a94c51aa04256?tab=read_write_contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770356,
-        "evidence": "At Ethereum block 25770356, owner() on ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256 returns 0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33; eth_getCode for that address returns 0x, confirming an externally-owned account with no multisig or timelock wrapper. It can replace the canonical Ethereum USDnr wrapper implementation immediately; the Fluent Safe-controlled representation upgrade is scored separately under Bridge Risk."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096091,
+        "evidence": "At Ethereum block 26096091, ProxyAdmin.owner() returns 0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33 and eth_getCode for that account returns 0x. The native Ethereum USDnr wrapper upgrade owner remains an EOA, with no Safe threshold claimed. It can replace the canonical wrapper implementation immediately; the Fluent Safe-controlled representation upgrade remains separately reviewed under Bridge Risk."
       }
     ],
     "economicCapSemantics": "unbounded",

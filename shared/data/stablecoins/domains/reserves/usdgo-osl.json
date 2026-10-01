@@ -7,7 +7,7 @@
       "pct": 7.982203,
       "risk": "low",
       "assetClass": "money-market-fund",
-      "issuerOrObligor": "Goldman Sachs Financial Square Government Fund",
+      "issuerOrObligor": "Goldman Sachs Stablecoin Reserves Fund",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -20,10 +20,10 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:jltxx",
       "name": "JPMorgan JLTXX (CUSIP 46655R119)",
-      "pct": 53.987681,
+      "pct": 53.987682,
       "risk": "low",
       "assetClass": "money-market-fund",
-      "issuerOrObligor": "JPMorgan Liquidity Funds",
+      "issuerOrObligor": "JPMorgan OnChain Liquidity-Token Money Market Fund",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -66,8 +66,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos August assurance report review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv5)",
     "confidence": "verified",
     "sources": [
       {
@@ -77,13 +77,25 @@
       {
         "label": "Anchorage USDGO reserve attestations",
         "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
+      },
+      {
+        "label": "Goldman Sachs STBXX fund identity (CUSIP 38151N205)",
+        "url": "https://am.gs.com/en-us/advisors/funds/detail/PV109514/38151N205/stablecoin-reserves-fund"
+      },
+      {
+        "label": "JPMorgan JLTXX fund identity (CUSIP 46655R119)",
+        "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119"
+      },
+      {
+        "label": "USDGO issuer transparency dashboard",
+        "url": "https://www.usdgo.com/en/transparency"
       }
     ],
-    "rationale": "Deloitte's August 31 examination, signed September 28 (letterhead and signature reviewed visually), reports $1,248,950,562 reserves against 1,244,426,424 redeemable USDGO on Solana; Morph liabilities are zero. Reserves comprise $99,693,768 STBXX, $674,279,453 JLTXX, $462,545,429 BUIDL self-custodied on Solana in segregated wallets and $12,431,912 bank cash ($12,181,912 uninsured). Surplus is $4,524,138. No underlying fund-portfolio allocation is inferred.",
-    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of August 31, 2026",
+    "rationale": "The August 31 USDGO Reserve Report discloses $99,693,768 STBXX, $674,279,453 JLTXX, $462,545,429 BUIDL and $12,431,912 cash, totaling $1,248,950,562. These dated balances normalize to the curated percentages, rounded to six decimals. The issuer's September 29 dashboard snapshot remains a newer issuer observation for the live adapter, but has no corresponding independent examination in the issuer's report index; this curated composition remains aligned to the August 31 examination.",
+    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of August 31, 2026; Schedule II balances normalized by $1,248,950,562 total reserve assets.",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The two money market fund CUSIPs are disclosed but their issuer names and underlying portfolio composition are not identified in the report.",
+    "knownUnknownExposure": "The report discloses the two money market fund CUSIPs; their names are verified against the fund managers' product pages. Underlying fund portfolios and account-level custodians remain outside the report's disclosed scope.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -91,20 +103,19 @@
       {
         "name": "Anchorage Digital Bank, National Association",
         "role": "custodian",
-        "sharePct": 100,
         "jurisdiction": "United States"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-05",
-    "reviewer": "Pharos night watch primary-source report review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA21USDGO)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Anchorage USDGO Reserve Report - July 31, 2026",
-        "url": "https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-signed.pdf"
+        "label": "Anchorage USDGO Reserve Report - August 31, 2026",
+        "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
       },
       {
         "label": "USDGO transparency page (names reserve fund issuers, accessed 2026-07-17)",
@@ -119,6 +130,6 @@
         "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119"
       }
     ],
-    "uncertainty": "The July report states that reserve assets are held in segregated fiduciary trust accounts for token holders and identifies Anchorage as issuer and qualified custodian. It does not state a general rehypothecation prohibition or name the banks holding $11,061,357 cash. Fund custodians remain undisclosed. Anchorage self-custodies the $312,429,373 BUIDL slice in segregated Solana wallets; the report identifies 9yGxs2pSFFBZhJVrwRAgbKHaLQnuHa7BpmCRsHuzG968. The report-time Solana token balance has not been independently replayed by Pharos."
+    "uncertainty": "The August report confirms segregated, unencumbered fiduciary trust accounts for token holders and Anchorage's self-custody of $462,545,429 BUIDL on Solana. It identifies 9yGxs2pSFFBZhJVrwRAgbKHaLQnuHa7BpmCRsHuzG968, but does not name the banks holding $12,431,912 cash or the money market funds' account-level custodians. Anchorage's provider share is not disclosed; no 100% custody allocation is assumed. A standing rehypothecation policy and report-time wallet balances remain unverified."
   }
 }

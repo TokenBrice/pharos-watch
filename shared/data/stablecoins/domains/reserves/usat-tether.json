@@ -70,13 +70,13 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA21USDGO)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USA₮ Reserve Report - May 2026",
-        "url": "https://learn.anchorage.com/05.31.26_USAT_Stablecoin_Attestation_Report_signed.pdf"
+        "label": "Deloitte USA₮ Reserve Report - August 2026",
+        "url": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
       },
       {
         "label": "Tether USA₮ launch and reserve custody disclosure",

@@ -42,14 +42,14 @@
   },
   "oracleRisk": {
     "tier": "oracleless",
-    "summary": "Alchemix alUSD loans are self-repaying and non-liquidating, so the CDP path does not rely on an external liquidation oracle.",
+    "summary": "Current Alchemix V3 positions can be liquidated when losses in the underlying MYT strategies push LTV to the fixed 95% threshold; ETH or USDC price volatility alone does not trigger liquidation because debt and collateral move together. The previous description of all alUSD loans as non-liquidating applies to legacy V2, not the current V3 mechanism. A deployment-scoped review of current MYT valuation authorities is still needed before changing the oracle tier.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
       "reviewedAt": "2026-08-24",
       "reviewer": "OpenAI Codex W1b oracleless-a review",
-      "rationale": "Alchemix has no borrower-specific liquidation oracle branch, but its alUSD Alchemist uses an internal expected-value mark for yield-token collateral: a value drop can disable deposits, withdrawals, and liquidations, and an administrator can reset that mark with snap(). The internal collateral-value authority is therefore a scoreable top-level control without inventing liquidation-feed branches.",
+      "rationale": "The earlier review documented legacy AlchemistV2 expected-value marks and administrator snap() powers as a top-level control. The issuer now states that all V2 borrower positions migrated to V3 in April 2026 and documents MYT-loss-triggered liquidation at 95% LTV. The preserved V2 review does not establish the current V3 borrower-valuation path or settle whether deployment-scoped branches are required.",
       "sources": [
         {
           "label": "Alchemix Multisig Admin Rights (updated 2026-07-06)",
@@ -68,12 +68,20 @@
       {
         "label": "Alchemix Alchemist overview",
         "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist"
+      },
+      {
+        "label": "Current V3 MYT-loss liquidation conditions",
+        "url": "https://docs.alchemix.fi/user/concepts/liquidations"
+      },
+      {
+        "label": "V2-to-V3 migration completed April 2026",
+        "url": "https://docs.alchemix.fi/user/v3-migration"
       }
     ]
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "alUSD has independent native AlchemistV2 CDP issuance on Ethereum, Arbitrum, Optimism, and Fantom. Metis is a bridge-only CrossChainCanonical representation. LayerZero/xERC20 mint, burn, lockbox, rate-limit, and bridge-upgrade capabilities remain scoped under Bridge Risk, including the unresolved Fantom Multichain-era EOA evidence.",
+    "summary": "Current V3 Alchemists use the tracked native alUSD tokens on Ethereum, Arbitrum and Optimism; earlier V2 paths remain historical permission evidence. Metis is a bridge-only representation. LayerZero/xERC20 mint, burn, lockbox, rate-limit and bridge-upgrade controls remain in Bridge Risk, including unresolved Fantom legacy evidence.",
     "reviewedAt": "2026-08-28",
     "reviewer": "Codex",
     "confidence": "verified",
@@ -119,17 +127,17 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
-        "protocol": "Alchemix native issuance (AlchemistV2 CDP)",
+        "protocol": "Alchemix native issuance (current V3 plus legacy V2 permissions)",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical alUSD (8,579-byte token, no proxy or LayerZero endpoint) is minted by AlchemistV2 on Ethereum mainnet. At Ethereum block 25770293, the AlToken ceiling for AlchemistV2 was 1,000,000,000,000 alUSD; L2 xalUSD representations and Metis bridge controls are reviewed separately under Bridge Risk.",
+        "reviewNote": "At Ethereum block 26095800, the current V3 Alchemist 0xeb83112d925268bede86654c13d423a987587e3e returned this canonical alUSD debtToken and had a true AlToken whiteList entry, with nonzero ceiling and hasMinted. The previous V2 ceiling observation remains historical token-permission evidence, not the current borrower mechanism. Separate xERC20 representations and Metis bridge controls remain in Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770293,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "alUSD on Etherscan",
@@ -146,17 +154,17 @@
         "destinationChain": "arbitrum",
         "canonicalChain": "arbitrum",
         "contractAddress": "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
-        "protocol": "Alchemix native issuance (AlchemistV2 CDP) plus LayerZero/xERC20 bridge rail",
+        "protocol": "Alchemix native issuance (current V3 plus legacy V2 permissions) and LayerZero/xERC20 bridge rail",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Arbitrum has an independent native AlchemistV2 CDP path: at block 495266757 its implementation was 0x7554616955e2227c1fcec373e53a809cd37d095c, the collateral minimum was 200%, the global mint limit was 5,000,000 alUSD, and the Alchemist whitelist flag was false. The same token also retains a LayerZero/xERC20 bridge rail: OApp 0xd64ab29cc101e421ee3f4b0eaa721925395ddc05 had a 1M cap and legacy bridges had 500k/100k caps on 2026-07-20; those mint, burn, lockbox, and bridge-owner controls remain scoreable under Bridge Risk.",
+        "reviewNote": "At Arbitrum block 510584266, the issuer-listed V3 Alchemist 0x930750a3510e703535e943e826aba3c364ffc1de returned this alUSD debtToken and native USDC underlying; token.whitelisted(Alchemist) was true, while mintCeiling and totalMinted were zero. Current capacity is unresolved rather than inferred from those zero values. Historical V2 and LayerZero/xERC20 limit observations remain dated legacy evidence. The bridge OApp owner still resolved to 0x7e108711771dfdb10743f016d46d75a9379ca043 at the pinned block; bridge capabilities remain in Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 495266757,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584266,
         "controllerChain": "arbitrum",
         "controllerAddress": "0xd64ab29cc101e421ee3f4b0eaa721925395ddc05",
         "failureDomainKeys": [
@@ -184,17 +192,17 @@
         "destinationChain": "optimism",
         "canonicalChain": "optimism",
         "contractAddress": "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
-        "protocol": "Alchemix native issuance (AlchemistV2 CDP) plus LayerZero/xERC20 bridge rail",
+        "protocol": "Alchemix native issuance (current V3 plus legacy V2 permissions) and LayerZero/xERC20 bridge rail",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Optimism has an independent native AlchemistV2 CDP path: at block 155658381 its implementation was 0xc96cb3a5e76247fdf1c623e85fb535aea566769e, the collateral minimum was 200%, the global mint limit was 5,000,000 alUSD, and the Alchemist whitelist flag was false. The same token also retains a LayerZero/xERC20 bridge rail: OApp 0xd64ab29cc101e421ee3f4b0eaa721925395ddc05 had a 1M mint/burn cap on 2026-07-20; its lockbox, bridge, and Safe-owner controls remain scoreable under Bridge Risk.",
+        "reviewNote": "At Optimism block 157619416, the issuer-listed V3 Alchemist 0x930750a3510e703535e943e826aba3c364ffc1de returned this alUSD debtToken and native USDC underlying; token.whitelisted(Alchemist) was true, while mintCeiling and totalMinted were zero. Current capacity is unresolved rather than inferred from those zero values. Historical V2 and LayerZero/xERC20 limit observations remain dated legacy evidence. The bridge OApp owner still resolved to 0xc224bf25dcc99236f00843c7d8c4194abe8aa94a at the pinned block; bridge capabilities remain in Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 155658381,
+        "observedAt": "2026-10-01",
+        "observedBlock": 157619416,
         "controllerChain": "optimism",
         "controllerAddress": "0xd64ab29cc101e421ee3f4b0eaa721925395ddc05",
         "failureDomainKeys": [
@@ -235,8 +243,8 @@
         "observedBlock": 122918901,
         "sources": [
           {
-            "label": "Fantom alUSD token",
-            "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+            "label": "Archived Fantom alUSD token page (22 March 2025; identity only, current state verified by RPC)",
+            "url": "https://web.archive.org/web/20250322082139/https://ftmscan.com/token/0xB67FA6deFCe4042070Eb1ae1511Dcd6dcc6a532E"
           },
           {
             "label": "Alchemix on L2 docs (Everclear xERC20 + lockbox)",
@@ -482,19 +490,19 @@
         },
         "capDescription": "The historical EOA still holds Fantom alUSD ADMIN_ROLE, and because setWhitelist(address,bool) is onlyAdmin while mint(address,uint256) enforces no ceiling, that role reaches an uncapped mint path; its own current ceiling and whitelist entries are zero. Its retained role evidence is preserved for Bridge Risk scoring, and Multichain-era key custody and liveness remain unresolved.",
         "canRaiseCap": true,
-        "observedAt": "2026-07-20",
-        "observedBlock": 36896627,
+        "observedAt": "2026-10-01",
+        "observedBlock": 123505324,
         "sources": [
           {
-            "label": "Fantom alUSD token",
-            "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+            "label": "Archived Fantom alUSD token page (22 March 2025; identity only, current state verified by RPC)",
+            "url": "https://web.archive.org/web/20250322082139/https://ftmscan.com/token/0xB67FA6deFCe4042070Eb1ae1511Dcd6dcc6a532E"
           },
           {
             "label": "Alchemix on L2 docs",
             "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
           }
         ],
-        "evidence": "Fantom alUSD retained minter role evidence for code-less EOA 0x13c716188c38ce27b9b2b672a59543cf1170eabe from RoleGranted block 36896627, and hasRole still returned true on 2026-07-20. The EOA was not whitelisted and xBridges(EOA) reverted. After Multichain's collapse, its key custody and liveness are unresolved; no active minting assumption is made."
+        "evidence": "The historical RoleGranted evidence at block 36896627 is preserved. At pinned Fantom block 123505324 on 2026-10-01, eth_getCode returned no code for this EOA and hasRole(ADMIN_ROLE, EOA) remained true; whitelisted, mintCeiling and paused were all zero. The token implementation still matched 0x211c74db951c161c5a379363716ebdca5125ef59. Earlier xBridges reads reverted. Multichain-era key custody and liveness remain unresolved; no active minting assumption is made."
       },
       {
         "id": "alusd-fantom-legacy-bridge-safe",
@@ -523,18 +531,19 @@
         },
         "capDescription": "The Safe is Fantom alUSD owner() and holds ADMIN_ROLE, so it can raise any bridge-token mintCeiling through onlyOwner setCeiling and whitelist an uncapped mint(address,uint256) caller through onlyAdmin setWhitelist; its own current ceiling and whitelist entries are zero. Legacy Multichain-era bridge liveness remains unresolved.",
         "canRaiseCap": true,
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 123505324,
         "sources": [
           {
-            "label": "Fantom alUSD token",
-            "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+            "label": "Archived Fantom alUSD token page (22 March 2025; identity only, current state verified by RPC)",
+            "url": "https://web.archive.org/web/20250322082139/https://ftmscan.com/token/0xB67FA6deFCe4042070Eb1ae1511Dcd6dcc6a532E"
           },
           {
             "label": "Fantom public RPC",
             "url": "https://rpcapi.fantom.network"
           }
         ],
-        "evidence": "The Fantom alUSD Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605 is 3-of-7 and retained the minter/admin role in the reviewed evidence. Safe guard and module-guard reads reverted. The separate Multichain-era EOA role and unresolved bridge registry are preserved rather than collapsed into a confident bridge route."
+        "evidence": "At pinned Fantom block 123505324 on 2026-10-01, this Safe remained token owner and held ADMIN_ROLE; its whitelist, mintCeiling and paused entries were zero. getOwners returned the seven recorded signers and getThreshold returned 3. Historical guard and module-guard method calls reverted, so modulesOrGuardsStatus remains unknown. The separate Multichain-era EOA role and unresolved bridge registry are preserved rather than collapsed into a confident bridge route."
       },
       {
         "id": "alusd-metis-layerzero-bridge-minter",

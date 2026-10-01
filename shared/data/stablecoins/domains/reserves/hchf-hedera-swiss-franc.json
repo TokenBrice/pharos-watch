@@ -14,12 +14,12 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-23",
-    "reviewer": "GPT Safety Score V9 Tranche 2 (live re-read)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.HchfReview)",
     "confidence": "verified",
     "sources": [
       {
@@ -43,7 +43,7 @@
         "url": "https://github.com/SwisscoastAG/HLiquity/tree/c20211d0ba512c4f51eb70666854234933a64182/packages/contracts/contracts"
       },
       {
-        "label": "Hedera mainnet Hashio RPC - block 99,191,362 (read 2026-08-23)",
+        "label": "Hedera mainnet Hashio RPC - block 100,587,413 (read 2026-10-01)",
         "url": "https://mainnet.hashio.io/api"
       },
       {
@@ -67,9 +67,9 @@
         "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
       }
     ],
-    "rationale": "Fresh live re-read on 2026-08-23. The current HLiquity chain-295 deployment maps ActivePool to Hedera contract 0.0.6070027 / EVM address 0x00000000000000000000000000000000005c9f0b, DefaultPool to 0.0.6070041 / 0x00000000000000000000000000000000005c9f19, and StabilityPool to 0.0.6070108 / 0x00000000000000000000000000000000005c9f5c. At Hedera mainnet EVM block 99,191,362 (hash 0x4b2512e592bd21c25eb147fb173699aa1c82bcf97156cbb290b08a56029c5664; 2026-08-23 17:30:32 UTC), eth_call getETH() (selector 0x14f6c3be) returned 2,611,489.67796086 HBAR for ActivePool, 0 HBAR for DefaultPool, and 31,327.48841693 HBAR for StabilityPool. At the same block, eth_call getHCHFDebt() (selector 0x6690df1f) returned 64,019.05358754 HCHF for ActivePool and 0 HCHF for DefaultPool; eth_call getTotalHCHFDeposits() (selector 0x1985480d) returned 41,061.53705120 HCHF for StabilityPool. The official HLiquity docs state that it provides interest-free loans using HBAR collateral and that the Stability Pool repays debt from liquidated Troves; the pinned protocol source states HBAR is recorded per user but stored in aggregate pools. This is a borrow-against-collateral design, not an issuer reserve: the unchanged 100% slice is HBAR collateral in protocol pools, not custodied fiat, and no other reserve asset class is asserted.",
+    "rationale": "At Hedera mainnet EVM block 100587413 (hash 0xec92fa0f98bb5c22bef164aee2d36ed1202d776698facee3d7ba430a40ba77d3; 2026-10-01 07:20:31 UTC), getETH() returned 2,379,004.38950113 HBAR for ActivePool 0.0.6070027, 0 for DefaultPool 0.0.6070041, and 230,312.76723166 HBAR for StabilityPool 0.0.6070108. Same-block getHCHFDebt() reads succeeded for ActivePool and DefaultPool, and getTotalHCHFDeposits() succeeded for StabilityPool. Current token metadata and HCHFToken immutable getter reads confirm the unchanged deployment identity. Official documentation and the protocol audit identify HBAR as the sole collateral asset; the full 100% slice remains HBAR collateral in protocol pools, without asserting any fiat reserve or collateral coverage ratio.",
     "compositionBasis": "HLiquity single-collateral HBAR CDP design and same-block Hedera mainnet state reads from ActivePool, DefaultPool, and StabilityPool",
-    "compositionAsOf": "2026-08-23",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve asset class is unclassified; current protocol state shows HBAR collateral in the named pools and HCHF debt/deposits. Per-Trove collateral ratios vary by user, liquidation state can move HBAR between pools, and aggregate coverage floats with the HBAR price.",
     "knownUnknownExposurePct": 0,
@@ -94,8 +94,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-23",
-    "reviewer": "GPT Safety Score V9 Tranche 2 (live re-read)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.HchfReview)",
     "confidence": "verified",
     "sources": [
       {
@@ -107,7 +107,7 @@
         "url": "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts"
       },
       {
-        "label": "Hedera mainnet Hashio RPC - block 99,191,362 (read 2026-08-23)",
+        "label": "Hedera mainnet Hashio RPC - block 100,587,413 (read 2026-10-01)",
         "url": "https://mainnet.hashio.io/api"
       },
       {
@@ -119,7 +119,7 @@
         "url": "https://swisscoast.org/contact"
       }
     ],
-    "uncertainty": "Collateral is pooled in immutable, ownership-renounced protocol contracts rather than held by any bank or custodian, and the 2026-08-23 Hedera reads confirm current HBAR state in the named pools. Legal segregation and bankruptcy-remoteness concepts do not map onto contract custody, so those fields remain unknown; Trove-level collateral is recorded per user in the TroveManager but held in aggregate pools.",
+    "uncertainty": "At Hedera block 100587413 on 2026-10-01, ActivePool, DefaultPool, and StabilityPool returned owner() = 0 and current HBAR balances were read through getETH(). Collateral is held in protocol pools, with per-user Trove accounting, rather than by an identified bank or off-chain custodian. Legal segregation, bankruptcy remoteness, and rehypothecation protections remain unknown; the on-chain custody review does not establish legal safeguards.",
     "knownUnknownExposurePct": 0
   }
 }

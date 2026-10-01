@@ -59,13 +59,21 @@
         "name": "OpenEden Digital Ltd / Adam Eve Capital segregated custodial accounts",
         "role": "other",
         "jurisdiction": "Bermuda / Singapore"
+      },
+      {
+        "name": "BitGo (underlying cUSDO reserve custody; not verified as direct sUSD custodian)",
+        "role": "custodian"
+      },
+      {
+        "name": "Coinbase Prime (underlying cUSDO reserve custody; not verified as direct sUSD custodian)",
+        "role": "custodian"
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-31",
-    "reviewer": "Codex Safety Score V9 reserve review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC25)",
     "confidence": "verified",
     "sources": [
       {
@@ -81,7 +89,7 @@
         "url": "https://openeden.com/news/openeden-launches-cusdo-yield-bearing-stablecoin-on-solana/"
       }
     ],
-    "uncertainty": "Solayer documents QLP self-custody and isolated program accounts, while OpenEden documents segregated custodial accounts and a Bermuda SAC issuer. The underlying custodian-by-fund split, QLP shares, and rehypothecation policy are not disclosed for the sUSD route.",
+    "uncertainty": "OpenEden names BitGo and Coinbase Prime as custodians for underlying cUSDO Treasury reserve assets. These are indirect provider relationships, not verified direct sUSD custody mandates. Provider shares, the qualified-custodian-by-fund split, QLP allocations, direct sUSD legal segregation and rehypothecation remain unresolved. OpenEden's SAC segregation is disclosed for USDO holders. Solayer describes cUSDO self-custody by QLPs, but an enforceable insolvency claim or pass-through right for sUSD holders remains unverified; bankruptcy remoteness is therefore unknown for sUSD.",
     "knownUnknownExposurePct": 100
   }
 }

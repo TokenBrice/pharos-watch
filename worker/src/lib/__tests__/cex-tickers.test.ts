@@ -54,11 +54,14 @@ describe("fetchBinancePricesDetailed", () => {
             { symbol: "USDCUSD", price: "1.0001" },
             { symbol: "BFUSDUSDT", price: "0.9995" },
             { symbol: "BFUSDUSDC", price: "0.9993" },
+            { symbol: "BUSDUSD", price: "0.95" },
+            { symbol: "BUSDUSDT", price: "0.95" },
       ],
     }]);
 
     const results = (await fetchBinancePricesDetailed()).value.prices;
     expect(results.has("BFUSD")).toBe(false);
+    expect(results.has("BUSD")).toBe(false);
   });
 
   it("returns empty map on failure", async () => {
@@ -266,6 +269,19 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.value.prices.has("XYZFAKE")).toBe(false);
   });
 
+  it("does not price Berachain Bera USD from Coinbase's unrelated Hivemapper or Binance USD symbols", async () => {
+    const fetchMock = mockFetch([{
+      match: () => true,
+      body: { price: "0.01" },
+    }]);
+
+    const outcome = await fetchCoinbasePrices(["HONEY", "BUSD"]);
+
+    expect(outcome.kind).toBe("no-data");
+    expect([...outcome.value.prices.entries()]).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("exposes per-pair upstream observed-at derived from Coinbase `time` ISO string", async () => {
     mockFetch([
       {
@@ -388,7 +404,7 @@ describe("fetchCoinbasePrices", () => {
       },
     }]);
 
-    const run = fetchCoinbasePrices(["USDT", "PAXG", "USDS", "USD1", "HONEY"]);
+    const run = fetchCoinbasePrices(["USDT", "PAXG", "USDS", "USD1", "AUDD"]);
     await started.promise;
     const initialInFlight = inFlight;
     gate.resolve();

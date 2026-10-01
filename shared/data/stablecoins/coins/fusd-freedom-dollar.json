@@ -29,7 +29,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://freedomdollar.com/",
-    "provider": "Freedom Dollar live on-chain reserve dashboard: the homepage widget updates in real time (observed 'Last updated: 9/4/2026, 5:08:19 PM' on 2026-09-04); current timestamped reconciliation metrics: circulating 8M fUSD, minted 12M, reserves $9,259,995.74 (1,328,740.96 ZANO x $6.969 + 4,000,001 fUSD), coverage ratio 1.16x; ZANO reserve wallet independently viewable.",
+    "provider": "Freedom Dollar self-reported reserve dashboard; historical numerical observations are retained in reserveReview. On 2026-10-01 the rendered homepage displayed dashes for circulating tokens, minted tokens, public reserves and coverage ratio, so current reconciliation was not verified.",
     "attestorTier": "self",
     "cadence": "ad-hoc"
   },

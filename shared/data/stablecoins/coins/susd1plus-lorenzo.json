@@ -2,7 +2,7 @@
   "id": "susd1plus-lorenzo",
   "name": "staked USD1+",
   "symbol": "sUSD1+",
-  "oneLiner": "sUSD1+ is Lorenzo's staked receipt over the USD1+ synthetic-dollar strategy backed by WLFI USD1 reserve yield and delta-neutral strategy returns on BNB Chain.",
+  "oneLiner": "sUSD1+ is Lorenzo's NAV-accruing fund share combining RWA yield, CeFi basis trading, and DeFi strategies, with redemptions settled in USD1 on BNB Chain.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -13,8 +13,8 @@
   "pegReferenceId": "usd1-world-liberty-financial",
   "variantOf": "usd1-world-liberty-financial",
   "variantKind": "strategy-vault",
-  "collateral": "Staked receipt over Lorenzo USD1+, a synthetic dollar strategy ultimately settled into WLFI USD1 and designed to combine USD1 reserve yield with delta-neutral strategy returns",
-  "pegMechanism": "sUSD1+ accrues yield from the Lorenzo USD1+ vault while final exit depends on unstaking back into USD1+ and settlement into USD1-supported stable liquidity",
+  "collateral": "Lorenzo USD1+ OTF fund shares over a managed portfolio of RWA, CeFi quantitative, and DeFi strategies; accepts USD1, USDT, and USDC deposits and settles withdrawals in USD1",
+  "pegMechanism": "Non-rebasing shares accrue yield through Unit NAV appreciation; withdrawal requests burn sUSD1+ at settlement and pay USD1 based on settlement-day NAV, normally over a 3-6 day cycle that can be extended",
   "mechanismArchetype": "synthetic-delta-neutral",
   "archetypeOverride": true,
   "detailProvider": "coingecko",
@@ -58,7 +58,7 @@
     "semantics": "collateral-mix",
     "breakerScope": "susd1plus-lorenzo",
     "display": {
-      "url": "https://app.lorenzo-protocol.xyz/otf/vault",
+      "url": "https://app.lorenzo-protocol.xyz/launchPad/otf/sUSD1Plus-BNB",
       "label": "Lorenzo Vault"
     },
     "inputs": {
@@ -77,8 +77,8 @@
     "rationale": "sUSD1+ is the strategy-bearing staked layer and intentionally departs from the USD1 fiat-reserve parent mechanism.",
     "sources": [
       {
-        "label": "Lorenzo docs",
-        "url": "https://docs.lorenzo-protocol.xyz/"
+        "label": "Lorenzo USD1+ OTF launch: RWA, CeFi basis trading, and DeFi strategy",
+        "url": "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/"
       }
     ]
   }

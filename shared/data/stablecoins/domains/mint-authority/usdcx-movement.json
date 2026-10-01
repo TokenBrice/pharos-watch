@@ -10,9 +10,9 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Movement ledger version 195984896 and block height 85264354, the authored USDCx deployment is a bridge representation: its mint entry requires an xReserve message and signature, while current get_attesters() returns two keys and the token object exposes no independent permissionless native issuance path. The Movement 4-of-6 admin/package owner can change attesters, pause state, route policy, and compatible function bodies without an observed delay, but those controls govern the bridge representation and are preserved under Bridge Risk. Circle xReserve locks Ethereum USDC and gates remote mint/burn through attestations, so reconciliation remains continuous; no supervisory regime was established for the Movement deployment. The current module response exposes bytecode and ABI but source_digest is null, so no stronger source-level upgrade claim is made.",
-      "reviewer": "Codex mint-bridge boundary migration RELOC-015",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Movement ledger version 220370475 and block height 97379184, token resources identify package 0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83, two attesters, domain 10005, and the admin account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1. The actual package exposes a signed-message mint entry and has compatible upgrade policy 1 at upgrade_number 0, with published source and source_digest 780F94E9BB25259CB190418FB9D76BE1CBC8E0DB4353BD8E671A3456CF4E864B. The current admin/package owner is 3-of-6, superseding historical 4-of-6 evidence; these are bridge-representation capabilities retained under Bridge Risk. Source publication is not independent bytecode equivalence proof. Circle's documentation describes remote tokens backed by deposited USDC and verified deposit/burn attestations; the no-local-issuance boundary is unchanged.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.MovementReview)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "sources": [
         {
@@ -29,11 +29,11 @@
         },
         {
           "label": "Current Movement USDCx resources",
-          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=195984896"
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=220370475"
         },
         {
           "label": "Current Movement USDCx module ABI and bytecode",
-          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83/module/usdcx?ledger_version=195984896"
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475"
         },
         {
           "label": "Current Movement USDCx view reads",

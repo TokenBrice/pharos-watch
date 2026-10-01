@@ -12,7 +12,7 @@
     "rwa": true
   },
   "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
-  "pegMechanism": "HOME is minted and redeemed 1:1 for USDC through Bacon Protocol's Pan contract subject to Pan liquidity. The mortgage-lien portfolio is collateral/backstop exposure rather than a direct user redemption asset.",
+  "pegMechanism": "HOME loan origination mints tokens against servicer-issued property liens. The deployed Pool16 lendPool and redeemPool functions route USDC/HOME swaps through Curve exchange_underlying with caller-specified minimum output; they do not guarantee fixed 1:1 redemption.",
   "mechanismArchetype": "rwa-credit-fund",
   "protocolSlug": "homecoin",
   "links": [

@@ -44,7 +44,7 @@
         ]
       },
       {
-        "label": "ACRDX Centrifuge Spoke ward (direct mint path — Ethereum, Plume, Monad)",
+        "label": "ACRDX Centrifuge Spoke ward (direct mint path, Ethereum)",
         "role": "direct-minter",
         "authorityType": "contract",
         "address": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
@@ -53,6 +53,8 @@
           "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
         ],
         "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
         "evidence": "At Ethereum block 25769985, wards(0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab) on the canonical ACRDX ShareToken (0x9477724bb54ad5417de8baff29e59df3fb4da74f) returned 1. The Centrifuge Spoke is the Ethereum contract that calls mint() and burn() for issuer-side, KYC-gated NAV subscriptions and redemptions; this control is scoped to the canonical Ethereum deployment.",
         "sources": [
           {
@@ -76,9 +78,9 @@
         ],
         "canRaiseCap": false,
         "capDescription": "The ShareToken exposes no separate cap for this ward; issuance is bounded only by auth-gated mint/burn calls and Root ward administration.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25769985,
-        "evidence": "At Ethereum block 25769985, wards(0x12a110ce5f0fc871cc72bc7ecaf35cf39dd0f43e) on the canonical ACRDX ShareToken returned 1. The Centrifuge BalanceSheet is an active contract ward with auth-gated mint() and burn() authority for issuer-side, KYC-gated NAV subscriptions and redemptions.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
+        "evidence": "At Ethereum block 26095797, wards(0x12a110ce5f0fc871cc72bc7ecaf35cf39dd0f43e) on the canonical ACRDX ShareToken returned 1. The historical block 25769985 read also returned 1. This control remains scoped to canonical Ethereum issuance.",
         "sources": [
           {
             "label": "Ethereum Blockscout ACRDX ShareToken",
@@ -100,6 +102,8 @@
           "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
         ],
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
         "evidence": "At Ethereum block 25769985, wards(0x7ed48c31f2fdc40d37407cbabf0870b2b688368f) on the canonical ACRDX ShareToken returned 1. The Centrifuge Root controls rely/deny of the canonical Ethereum wards, so its authority is retained here only for native Ethereum issuance.",
         "sources": [
           {
@@ -138,10 +142,13 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "1.4.1",
-          "observedBlock": 25295029,
+          "observedBlock": 26095797,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "evidence": "The Centrifuge ProtocolGuardian (0xceb7ed5d5b3bad3088f6a1697738b60d829635c6) has a safe() function that returns 0x9711730060c73ee7fcfe1890e8a0993858a7d225. At Ethereum block 25769985, ProtocolGuardian is warded on the canonical Root. The Safe is 4-of-9; the authored on-chain inspection recorded 9 owners, no enabled modules, and no guard at block 25295029. Its authority is retained here only to administer canonical Ethereum issuance wards.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
+        "evidence": "At Ethereum block 26095797, ProtocolGuardian safe() returned 0x9711730060c73ee7fcfe1890e8a0993858a7d225 and Root wards(ProtocolGuardian) returned 1. The Safe retained the same nine owners, threshold 4, no enabled modules, zero guard, version 1.4.1, and fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Historical inspections at blocks 25295029 and 25769985 remain consistent. This control is scoped to canonical Ethereum issuance administration.",
         "sources": [
           {
             "label": "Ethereum Blockscout ProtocolGuardian",

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Delta-neutral gold carry (leased physical gold hedged with CME gold futures)",
-      "pct": 74.0045198,
+      "pct": 73.9938666,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Theo-managed strategy; gold leased to precious-metals businesses including the MG999 fund (FundBridge Capital as manager, Libeara tokenization, Vistra administration) and other independent lessees; CME short futures margined at a US-regulated Fortune-500 FCM in CFTC-segregated customer funds",
@@ -20,7 +20,7 @@
     },
     {
       "name": "Tokenized Treasury basket (thBILL)",
-      "pct": 25.7100372,
+      "pct": 25.7207314,
       "risk": "low",
       "coinId": "thbill-theo",
       "depType": "collateral",
@@ -40,7 +40,7 @@
     },
     {
       "name": "USDC redemption liquidity",
-      "pct": 0.2704497,
+      "pct": 0.2704108,
       "risk": "very-low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -49,7 +49,7 @@
     },
     {
       "name": "USDT redemption liquidity",
-      "pct": 0.0149933,
+      "pct": 0.0149912,
       "risk": "very-low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -58,12 +58,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos reserve research 2026-09-30",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC08)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Theo rendered transparency dashboard (September 30, 2026 composition, accessed 2026-09-30)",
+        "label": "Theo rendered transparency dashboard (October 1, 2026 composition, accessed 2026-10-01)",
         "url": "https://app.theo.xyz/transparency"
       },
       {
@@ -75,9 +75,9 @@
         "url": "https://docs.theo.xyz/products/thusd.md"
       }
     ],
-    "rationale": "The September 30 rendered dashboard discloses $98,716,576 gold carry, $34,295,295 thBILL, $360,760 USDC and $20,000 USDT, totaling $133,392,631. Each percentage is 100 times the displayed USD amount divided by $133,392,631, rounded to seven decimal places: 74.0045198%, 25.7100372%, 0.2704497% and 0.0149933%, respectively, totaling 100%. The dashboard's 74.22%/25.78% labels apply only to $133,011,871 of deployed assets, not all reserves. These are issuer-reported amounts, not an independently attested aggregate balance sheet. The internal gold-lease, futures-margin and Treasury-collateral allocations are not disclosed.",
-    "compositionBasis": "Theo rendered transparency dashboard reserve composition read on 2026-09-30; percentages calculated from displayed USD amounts",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "The October 1 rendered dashboard discloses USD amounts of $98,716,576 gold carry, $34,314,500 thBILL, $360,760 USDC and $20,000 USDT. Disclosed subtotals are $133,031,076 actively deployed and $380,760 liquidity reserves, totaling $133,411,836, consistent with the rounded displayed total of $133.41M. Independently recomputed total-reserve shares are 100 times each displayed USD amount divided by $133,411,836, rounded to seven decimal places: 73.9938666%, 25.7207314%, 0.2704108% and 0.0149912%, totaling 100% within floating-point tolerance. Source time is the dashboard's Last updated: Oct 01, 2026. The 74.21%/25.79% labels apply only to deployed positions. These are rounded issuer-reported amounts, not an independently attested aggregate balance sheet; internal gold-lease, futures-margin and Treasury-collateral allocations remain undisclosed.",
+    "compositionBasis": "Theo rendered transparency dashboard dated 2026-10-01; total-reserve percentages independently calculated from all disclosed USD balances and subtotals",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "The internal composition of the gold carry position (lease book versus CME futures margin versus T-bill collateral, and MG999 versus other lessees) is not published; the dashboard reports the position only as an aggregate. The reserve-side split of staked versus unstaked backing is likewise not published.",
     "knownUnknownExposurePct": 0,
@@ -85,7 +85,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "Delta-neutral gold carry (leased physical gold hedged with CME gold futures)",
-        "pct": 74.0045198,
+        "pct": 73.9938666,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The gold carry position is a managed strategy exposure across gold leases and exchange-traded futures, not a tracked stablecoin or tokenized-fund dependency with a linkable coin identity."
       }

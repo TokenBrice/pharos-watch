@@ -13,10 +13,6 @@
         "url": "https://kmslabs.money/kms-labs-tcs/"
       },
       {
-        "label": "Kinesis supported assets: KAU is available on Kinesis Pay and the platform supports SEPA/EUR rails",
-        "url": "https://support.kinesis.money/hc/en-gb/articles/23830420583069-What-currencies-are-supported-on-the-Kinesis-platform-and-exchange"
-      },
-      {
         "label": "ESMA MiCA Article 3 definitions: ART covers crypto-assets referencing value or rights other than a single official currency",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
@@ -25,7 +21,7 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "KAU represents a claim on physical gold and is not a fixed-value U.S.-dollar payment stablecoin under the GENIUS Act definition.",
+      "summary": "ERC-20 KAU is a discretionary claim redeemable for native Kinesis KAU, whose reference asset is gold rather than a fixed amount of national currency or a national-currency deposit. The GENIUS Act payment-stablecoin definition requires fixed monetary-value redemption; it is not limited to U.S.-dollar tokens.",
       "references": [
         {
           "label": "GENIUS Act Public Law 119-27",

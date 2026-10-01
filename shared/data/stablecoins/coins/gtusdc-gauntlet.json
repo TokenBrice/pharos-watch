@@ -2,7 +2,7 @@
   "id": "gtusdc-gauntlet",
   "name": "Gauntlet USDC Prime V1",
   "symbol": "gtUSDC",
-  "oneLiner": "gtUSDC is the Gauntlet-curated MetaMorpho V1 vault for USDC, an ERC-4626 wrapper compounding USDC lending yield across permissioned Morpho markets.",
+  "oneLiner": "gtUSDC is the Gauntlet-curated MetaMorpho V1 vault for USDC, an ERC-4626 wrapper compounding USDC lending yield across selected Morpho markets.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",

@@ -2,14 +2,14 @@
   "id": "cusd-cap",
   "name": "Cap cUSD",
   "symbol": "CUSD",
-  "oneLiner": "CUSD is Cap's USD stablecoin minted against a vault basket of regulated stablecoins and tokenized T-bill funds, with EigenLayer-secured AVS coverage.",
+  "oneLiner": "CUSD is Cap's USD stablecoin minted against regulated stablecoins and tokenized money-market funds, with borrower guarantees via shared security networks.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
     "rwa": true
   },
   "collateral": "Governance-whitelisted basket of regulated dollar-denominated crypto assets: regulated stablecoins (e.g. USDC) and tokenized government money-market funds (e.g. wrapped WisdomTree Government MMF, wWTGXX); idle reserve capital is deployed into US T-bill yield and crypto lending strategies via the protocol's fractional-reserve module. The accepted assets are governance-controlled rather than a fixed list.",
-  "pegMechanism": "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
+  "pegMechanism": "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of underlying assets, socializing reserve depegs across redeemers. Borrowers obtain underwriting through shared security networks such as Symbiotic and EigenLayer; redemption remains subject to available assets, strategy divestment and protocol pause controls.",
   "llamaId": "296",
   "detailProvider": "defillama",
   "geckoId": "cap-usd",

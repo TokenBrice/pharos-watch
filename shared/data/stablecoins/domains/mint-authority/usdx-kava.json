@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDX is minted by Kava's x/cdp module account (minter/burner) when users draw against overcollateralized CDPs, bounded by per-collateral debt limits and an 8,723,000 USDX global debt limit. Caps and collateral params are raiseable by the 5-member Kava Stability Committee (3-of-5, 7-day proposal) and by KAVA stake governance. There is no proxy: mint logic changes via a Cosmos x/upgrade software upgrade whose authority is the gov module account, reachable by stake vote (20% quorum, 50% threshold, 33.4% veto, 7-day) and by the 1-member Kava Safety Committee holding SoftwareUpgradePermission, though enactment still requires validator binary adoption. The native Kava usdx bank denom is authored as the canonical kava/usdx deployment in the catalog and tied to the reviewed Kava x/cdp issuance route.",
+    "summary": "USDX is minted by Kava's x/cdp module account (minter/burner) when users draw against overcollateralized CDPs, bounded by per-collateral debt limits and an 8,723,000 USDX global debt limit. Caps and collateral params are raiseable by the 5-member Kava Stability Committee (3-of-5, 7-day proposal) and by KAVA stake governance. There is no proxy: mint logic changes via a Cosmos x/upgrade software upgrade whose authority is the gov module account, reachable by stake vote (20% quorum, 50% threshold, 33.4% veto, 7-day) and by the 1-member Kava Safety Committee holding SoftwareUpgradePermission, though enactment still requires validator binary adoption. The native Kava usdx bank denom is observed on-chain but absent from the authored catalog deployments; the catalog contains only the Osmosis IBC representation, whose transfer rail is reviewed under Bridge Risk.",
     "upgradeability": {
       "model": "custom",
       "adminAddresses": [
@@ -39,12 +39,12 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Global debt limit 8,723,000 USDX (8723000000000 uusdx, conversion factor 6) plus 10 per-collateral debt limits and liquidation ratios enforced by x/cdp.",
+        "capDescription": "Global debt limit 8,723,000 USDX (8723000000000 usdx base units, conversion factor 6) plus 10 per-collateral debt limits and liquidation ratios enforced by x/cdp.",
         "failureDomainKeys": [
           "module:kava:cdp"
         ],
-        "observedAt": "2026-09-04",
-        "observedBlock": 22415285,
+        "observedAt": "2026-10-01",
+        "observedBlock": 22821071,
         "sources": [
           {
             "label": "Kava module accounts API",
@@ -59,7 +59,7 @@
             "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
           }
         ],
-        "evidence": "At Kava height 22415285 on 2026-09-04, /cosmos/auth/v1beta1/module_accounts returned cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with permissions [minter, burner]. /kava/cdp/v1beta1/params returned debt_param denom usdx with conversion factor 6, global_debt_limit 8723000000000 uusdx, and 10 collateral parameter sets. /cosmos/bank/v1beta1/supply/by_denom?denom=usdx returned 10013573129816 base units. The module mints USDX only on CDP draw within those bounds and cannot raise its own limit; the current usdx native deployment is the Kava x/cdp liability path."
+        "evidence": "At Kava height 22821071 on 2026-10-01, /cosmos/auth/v1beta1/module_accounts returned cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with permissions [minter, burner]. /kava/cdp/v1beta1/params returned debt_param denom usdx with conversion factor 6, global_debt_limit 8723000000000 usdx base units, and 10 collateral parameter sets. The module mints USDX on CDP draw within the governed debt bounds; the native usdx bank denom remains absent from the authored catalog deployments."
       },
       {
         "chain": "kava",
@@ -150,7 +150,7 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Primary Kava LCD reads on 2026-09-04 at height 22415285 (chain_id kava_2222-10) identify the native USDX issuance path: x/cdp debt_param denom usdx with conversion factor 6 and global debt limit 8723000000000 uusdx; module accounts identify cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with [minter, burner]; the bank supply endpoint returned 10013573129816 usdx base units; evmutil parameters expose no USDX conversion pair; send_enabled?denoms=usdx returned no override, so transfers were enabled while the governance-wired bank keeper retains MsgSetSendEnabled restriction capability. The observed native Kava issuance cannot currently be authored in the catalog because CHAIN_META.kava is type \"evm\" and contracts[]/tradedContracts require a 0x...40 EVM address. The authored deployment is therefore the reviewed Osmosis ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE representation, with its transfer rail reviewed under Bridge Risk.",
+      "evidence": "Primary Kava LCD reads on 2026-09-04 at height 22415285 (chain_id kava_2222-10) identify the native USDX issuance path: x/cdp debt_param denom usdx with conversion factor 6 and global debt limit 8723000000000 usdx base units; module accounts identify cdp at kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp with [minter, burner]; the bank supply endpoint returned 10013573129816 usdx base units; evmutil parameters expose no USDX conversion pair; send_enabled?denoms=usdx returned no override, so transfers were enabled while the governance-wired bank keeper retains MsgSetSendEnabled restriction capability. The observed native Kava issuance cannot currently be authored in the catalog because CHAIN_META.kava is type \"evm\" and contracts[]/tradedContracts require a 0x...40 EVM address. The authored deployment is therefore the reviewed Osmosis ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE representation, with its transfer rail reviewed under Bridge Risk.",
       "reviewer": "Codex CTRL batch; Kava native-control observation 2026-09-04",
       "reviewedAt": "2026-09-04",
       "noLocalIssuance": {

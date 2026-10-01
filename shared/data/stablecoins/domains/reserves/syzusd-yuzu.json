@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA64syzUSD)",
     "confidence": "verified",
     "sources": [
       {
@@ -38,11 +38,36 @@
         "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6#code"
       }
     ],
-    "rationale": "syzUSD is a staking-vault share over yzUSD. The exact direct reserve is one protocol position; yzUSD portfolio, controller, custody, and redemption risks remain inherited through the tracked wrapper dependency.",
-    "compositionBasis": "Exact live ERC-4626 single-asset row, syzUSD vault, and Yuzu product documentation",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "At Plasma block 33896602 on 2026-10-01, the current V3 vault's asset() remains yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. The exact direct reserve remains one protocol position, not a look-through duplication of yzUSD's portfolio. Parent portfolio, controllers, custody and primary redemption risks remain inherited; no risk factor or unknown liquidity horizon is removed.",
+    "compositionBasis": "Standing ERC-4626 single-asset composition confirmed by asset() at Plasma block 33896602 and current issuer wrapper documentation; not a dated financial attestation",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct syzUSD reserve slice is identified; upstream yzUSD strategy allocations are tracked on the parent asset.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Fordefi (upstream Yuzu protocol MPC wallet infrastructure)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA64syzUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yuzu Fordefi MPC wallet infrastructure",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/fordefi-mpc"
+      },
+      {
+        "label": "Yuzu staked yzUSD wrapper documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+      }
+    ],
+    "uncertainty": "Issuer documentation identifies Fordefi as non-custodial MPC wallet infrastructure for upstream Yuzu protocol funds, not as a regulated reserve custodian. syzUSD's direct position is the on-chain yzUSD vault. Provider allocation shares, legal asset segregation, bankruptcy remoteness and rehypothecation safeguards are not established by wallet-security claims; those upstream protections remain unknown."
   }
 }

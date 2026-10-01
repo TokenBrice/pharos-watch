@@ -2,9 +2,108 @@
   "id": "usdgo-osl",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDGO resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "USDGO Solana Token-2022 mint",
+        "url": "https://explorer.solana.com/address/72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"
+      },
+      {
+        "label": "Anchorage covered stablecoin transfer restrictions",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+      }
+    ],
+    "evidence": "Finalized Solana slot 452212365 reconfirmed freezeAuthority FiV6goxf5fYfw9y7XwuG8bVAG6bqTb1sR1rrLomjkXa3, permanentDelegate C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt, and pause authority fEnXbNWPAkmhVK1nL1H2sQVdkF3y4eh8CuqnCsnDXqx. Anchorage's terms explicitly allow freezing, blocking, seizure, and restrictions for Clients and Non-Clients.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA21USDGO)",
+    "reviewedAt": "2026-10-01"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "The authored Solana mint is verified native USDGO issuance. The issuer transparency page also lists Ethereum and Morph deployments, while the August report names an older Morph contract. Their transfer rails, controllers, and deployment continuity remain unresolved; this partial review does not establish asset-wide bridge coverage.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA21USDGO)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "USDGO August 31, 2026 reserve report",
+        "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+      },
+      {
+        "label": "USDGO issuer deployment transparency",
+        "url": "https://www.usdgo.com/en/transparency"
+      }
+    ],
+    "routes": [
+      {
+        "id": "solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu",
+        "protocol": "Anchorage native USDGO issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Schedule I identifies this exact Solana contract as natively minted USDGO; finalized RPC state confirms its Token-2022 issuer mint authority.",
+        "controllerChain": "solana",
+        "controllerAddress": "C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt",
+        "failureDomainKeys": ["issuer:anchorage-digital-bank"],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212365,
+        "sources": [
+          {
+            "label": "USDGO August reserve report Schedule I",
+            "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
+        "protocol": "Issuer-listed deployment; transfer rail unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Issuer transparency lists this exact deployment; pinned symbol, name and six decimals match USDGO. Native-versus-representation issuance, transfer controls and continuity with the older Morph deployment remain unreviewed.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095935,
+        "sources": [
+          {
+            "label": "USDGO issuer deployment transparency",
+            "url": "https://www.usdgo.com/en/transparency"
+          }
+        ]
+      },
+      {
+        "id": "morph-l2:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
+        "destinationChain": "morph-l2",
+        "contractAddress": "0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
+        "protocol": "Issuer-listed deployment; transfer rail unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Issuer transparency lists this exact deployment; pinned symbol, name and six decimals match USDGO. Native-versus-representation issuance, transfer controls and continuity with the older Morph deployment remain unreviewed.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 27634687,
+        "sources": [
+          {
+            "label": "USDGO issuer deployment transparency",
+            "url": "https://www.usdgo.com/en/transparency"
+          }
+        ]
+      }
+    ]
   }
 }

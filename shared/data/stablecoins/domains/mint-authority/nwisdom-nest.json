@@ -201,6 +201,7 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "chain": "ethereum",
         "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
         "deploymentRefs": [
           "ethereum:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
@@ -224,24 +225,24 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x017062a1dE2FE6b99BE3d9d37841FeD19F573804",
-          "version": "1.3.0+L2",
-          "observedBlock": 25647797,
-          "observedAt": "2026-07-30",
-          "source": "safe-api"
+          "version": "1.3.0",
+          "observedBlock": 26095940,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 116342916,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
         "sources": [
           {
             "label": "Nest smart-contract deployments",
             "url": "https://docs.nest.credit/developers/smart-contracts"
           },
           {
-            "label": "nWISDOM integration guide",
-            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+            "label": "Nest nWISDOM vault deployment API",
+            "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault"
           }
         ],
-        "evidence": "The Ethereum and Plume fixed-block reviews and the BNB block 116342916 read identify 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 as the current NestVaultPredicateProxy owner on the EVM native routes. The Safe observation at Ethereum block 25295096 confirmed a 3-of-6 Gnosis Safe v1.3.0+L2 with no enabled modules and no guard; its current route role is native deposit authorization, while LayerZero peer and DVN administration remains under Bridge Risk."
+        "evidence": "At Ethereum block 26095940, getOwners() returned the six recorded owners, getThreshold() returned 3, VERSION() returned 1.3.0, getModulesPaginated(0x1,100) returned an empty module list, the guard slot was zero, and the fallback-handler slot returned 0x017062a1de2fe6b99be3d9d37841fed19f573804. PredicateProxy owner() remained this Safe on Ethereum block 26095940, Plume block 96624727, and BNB block 125059602. The chain-qualified Safe snapshot describes Ethereum; it does not assert the module or guard state of the same address on other chains."
       },
       {
         "label": "BNB NestVaultPredicateProxy ProxyAdmin",

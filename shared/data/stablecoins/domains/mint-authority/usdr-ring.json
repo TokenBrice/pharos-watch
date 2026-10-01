@@ -15,6 +15,8 @@
         "chain": "ethereum",
         "address": "0x9336d0c82299da0ab178271792954adfd6f10fd7",
         "capDescription": "Uncapped mint to any address for any MINTER_ROLE holder. Current EOA minters: 0x9336d0c…, 0x4f0aa59…, 0xf079c35…",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
         "evidence": "At Ethereum block 25295203, getRoleMember(MINTER_ROLE, 0/1/3) on Core (0xb2799ed) returned 0x9336d0c…, 0x4f0aa59…, 0xf079c35…; eth_getCode on all three returned 0x (EOA confirmed).",
         "sources": [
           {
@@ -36,6 +38,8 @@
         "chain": "ethereum",
         "address": "0x8814a2aa2384d65672c7dc0650454e56f62fba8b",
         "capDescription": "Contract holds MINTER_ROLE; minting constrained by launchpad logic.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
         "evidence": "At block 25295203, getRoleMember(MINTER_ROLE, 2) on Core returned 0x8814a2a…; Blockscout shows ContractName: RingLaunchpad.",
         "sources": [
           {
@@ -53,6 +57,8 @@
         "chain": "ethereum",
         "address": "0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4",
         "capDescription": "GOVERN_ROLE holders can grant/revoke MINTER_ROLE at will. Current GOVERN_ROLE: Core itself (0xb2799…) + 2 EOAs (0xff790875…, 0x9336d0c…). No revocations recorded.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
         "evidence": "At block 25295203, getRoleMemberCount(GOVERN_ROLE) on Core = 3; getRoleMember returned 0xb2799…, 0xff790875…, 0x9336d0c…; eth_getCode on 0xff790875… returned 0x (EOA). Core source confirmed as Fei-fork Permissions/AccessControl on Blockscout.",
         "sources": [
           {
@@ -95,8 +101,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Ring Protocol Core / GOVERN_ROLE (minter-admin)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530907,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095797,
       "sources": [
         {
           "label": "USDR AssetToken verified source (Blockscout)",

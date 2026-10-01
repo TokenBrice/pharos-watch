@@ -25,12 +25,12 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "M0 SwapFacility extension router",
-      "observedAt": "2026-06-11",
-      "observedBlock": 8546189,
+      "observedAt": "2026-10-01",
+      "observedBlock": 13367610,
       "sources": [
         {
           "label": "M0 SwapFacility docs",
-          "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+          "url": "https://docs.m0.org/protocol/extensions"
         }
       ]
     },
@@ -46,10 +46,12 @@
         "capDescription": "Base M issuance backing ctUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095808,
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
           },
           {
             "label": "M0 protocol docs",
@@ -76,17 +78,19 @@
         "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 13367610,
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+            "url": "https://docs.m0.org/protocol/extensions"
           }
         ],
-        "evidence": "At Citrea block 8546189: EIP-1967 proxy admin slot on 0xB6807116b3B1B321a390594e31ECD6e0076f6278 returns 0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin contract, same address as Ethereum/Linea). ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe multisig, 3-of-5, owners: 0x8c9b09eb2312311bcabc4069ea2329c734e770cd, 0x028aecb628506ceb931792c89a90d45dec690a67, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0x578ceb2aa7d6a02469450e4121eb4aec827f31cc). Implementation slot: 0xd87c75a92db19fe334fe7812890f893449ff1bda. Note: Citrea has a Safe directly as ProxyAdmin owner (vs TimelockController on Ethereum/Linea), reflecting Citrea's early-stage deployment. Native extension checks retained from the legacy routeChecks block: SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply; extension minting is bounded by available M-backed wrapper flow and base M supply; the cap follows M supply and can change through the M0 governance/admin path; and the earlier review had not independently read a Citrea proxy-admin slot. These are canonical ctUSD extension issuance checks, not bridge machinery."
+        "evidence": "At pinned Citrea block 13367610 on 2026-10-01, SwapFacility's corrected EIP-1967 admin slot returned 0x0f38d8a5583f9316084e9c40737244870c565924, whose owner() returned Safe 0x8c645e201dd944677864479357f8255ea943b18b. Its implementation remains 0xd87c75a92db19fe334fe7812890f893449ff1bda. The current Safe has five owners and threshold three, with an empty enabled-module list and zero guard. The older block-8546189 narrative named a different Safe; the current owner is the address recorded by the dedicated SwapFacility ProxyAdmin control. M0 documentation describes extension wrap/unwrap flows against M and governance-approved extension access; these are canonical extension issuance checks, not bridge controls."
       },
       {
         "chain": "citrea",
@@ -100,7 +104,10 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "timelockDelaySec": 0,
-        "modulesOrGuardsStatus": "none-detected"
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 13367610,
+        "evidence": "At pinned Citrea block 13367610, the ctUSD proxy's corrected EIP-1967 admin slot returned 0x802356e6aea29769a32c46c918fdf1674871480f; owner() on that ProxyAdmin returned this address, whose eth_getCode result was 0x."
       },
       {
         "chain": "citrea",
@@ -117,9 +124,23 @@
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 13367610,
+        "evidence": "At pinned Citrea block 13367610, owner() on SwapFacility ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 returned this Safe. getOwners() returned five owners and getThreshold() returned three; getModulesPaginated(address(1),10) returned an empty list and the guard storage slot was zero.",
         "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f0",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
           "source": "onchain",
-          "observedBlock": 8546189
+          "observedAt": "2026-10-01",
+          "observedBlock": 13367610
         }
       }
     ],
@@ -141,7 +162,7 @@
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         }
       ],
-      "evidence": "At Ethereum block 25294742: MinterGateway confirmed immutable non-proxy (Blockscout ContractName=MinterGateway, IsProxy=false). At Citrea block 8546189 (rpc.mainnet.citrea.xyz): SwapFacility EIP-1967 admin slot = 0x0f38d8a5... (ProxyAdmin); ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe 3-of-5 with 5 owners, getOwners() confirmed); implementation = 0xd87c75a9.... Safe has no modules (getModulesPaginated GS105 revert = no modules). All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: Citrea's direct 3-of-5 Safe can replace SwapFacility logic without a timelock, while the current M-backed route has real-time M0 validator reconciliation and no product-specific prudential authorization. Boundary migration (2026-08-16): the former routeChecks blocks on MinterGateway and SwapFacility describe inherited M issuance and canonical ctUSD extension wrapping; they are not bridge route checks. Current M0 Portal settings do not authorize a direct ctUSD route, so Bridge Risk retains only the reviewed Citrea native route and no bridge control is required.",
+      "evidence": "The inherited MinterGateway was previously reviewed as immutable with M0 collateral, approved-minter, validator, and mint-delay checks. At Ethereum block 26095808 on 2026-10-01 its bytecode was present and the corrected EIP-1967 admin and implementation slots were zero. At Citrea block 13367610, ctUSD and SwapFacility implementations remained 0xf15e4de65adf1d0a5c057f0165a50072fd76804c and 0xd87c75a92db19fe334fe7812890f893449ff1bda. The ctUSD ProxyAdmin owner was EOA 0x55a8103041a1bda35c6ae4c8e4c26656fa83e961; the SwapFacility ProxyAdmin owner was Safe 0x8c645e201dd944677864479357f8255ea943b18b, confirmed 3-of-5 with no enabled modules and zero guard. A prior GS105 pagination revert was not proof of absent modules; the new correctly parameterized read supplies that observation. The old Safe address in the block-8546189 narrative is historical and is not the current upgrade controller. Economic posture remains unbounded: these local upgrade paths can replace mint-critical logic. M0 issuance and canonical extension wrapping are not bridge route checks; this review does not authorize an additional ctUSD bridge deployment.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16"
     }

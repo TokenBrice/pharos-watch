@@ -74,7 +74,7 @@
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
     "url": "https://docs.onre.finance/security-and-verification/independent-attestations",
-    "provider": "Apex Insurance Fund Services Ltd. monthly agreed-upon-procedures NAV reports (series Nov 2025 through Jul 2026; July 31 report marked 'Un-audited', compares management-provided support and recomputes NAV, with no audit, actuarial or assurance conclusion and no direct third-party corroboration)",
+    "provider": "Apex Insurance Fund Services Ltd. monthly agreed-upon-procedures NAV reports (series Nov 2025 through Aug 2026; August 31 report cover marked 'Un-audited', with detailed scope not verified in the current review; the historical July 31 report compares management-provided support and recomputes NAV, with no audit, actuarial or assurance conclusion and no direct third-party corroboration)",
     "attestorTier": "niche",
     "cadence": "monthly"
   },

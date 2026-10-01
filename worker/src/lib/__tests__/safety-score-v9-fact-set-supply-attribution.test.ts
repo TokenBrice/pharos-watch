@@ -1,3 +1,4 @@
+import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -158,7 +159,7 @@ function wmFixedInput() {
 
 function compileWm(fixed: ReportCardsFixedInput) {
   const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-    metaById: new Map([["wm-m0", wmFactSetMeta()]]),
+    metaById: new Map([["wm-m0", { ...wmFactSetMeta(), ...structuredClone(REVIEWED_DEPLOYMENT_CATALOG["wm-m0"]) }]]),
   });
   const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
   return { baseline, compiled, wm: compiled.assets[0]! };

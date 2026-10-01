@@ -15,6 +15,7 @@ import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetW
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_EVALUATION_TEST_TIMEOUT_MS,
+  v9TestClockSec,
   makeV9FixedInput as exactFixedInput,
   makeV9TwoAssetFixedInput as exactTwoAssetFixedInput,
   makeV9Extension as extension,
@@ -81,7 +82,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
   });
 
   it("compiles current operational-resilience evidence and rejects a missing evidence binding", () => {
-    const clockSec = Date.parse("2026-08-09T00:00:00Z") / 1_000;
+    const clockSec = v9TestClockSec();
     const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(usdtMeta()) });
     const overlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", clockSec);

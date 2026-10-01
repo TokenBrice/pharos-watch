@@ -21,8 +21,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "SOFID UPGRADER_ROLE (EOA)",
-      "observedAt": "2026-08-16",
-      "observedBlock": 25770993,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095798,
       "sources": [
         {
           "label": "SOFID contract on Blockscout",
@@ -45,7 +45,7 @@
           "solana:APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS"
         ],
         "canRaiseCap": "unknown",
-        "evidence": "BitGo Bank & Trust operates mint, burn, custody, and smart-contract management for SOFID on behalf of issuer SoFi Bank; supply is created 1:1 against cash at SoFi's Federal Reserve master account. No permissionless mint route.",
+        "evidence": "BitGo Bank & Trust operates mint, burn, custody, and smart-contract management for SOFID on behalf of issuer SoFi Bank; the July 31, 2026 SoFiUSD Reserve Report identifies USD cash in SoFi Bank's Federal Reserve master account and a BitGo-established fiduciary account at a depository institution. No permissionless mint route.",
         "sources": [
           {
             "label": "BitGo selected by SoFi to provide stablecoin infrastructure",
@@ -64,6 +64,8 @@
           "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
         ],
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "evidence": "At Ethereum block 25770993, owner() and hasRole(DEFAULT_ADMIN_ROLE, 0xd84519fc7137e55d37674be353379a27a9bd21fe) returned the authored EOA, and eth_getCode returned no bytecode. The contract is AccessControlDefaultAdminRules; owner() returns DEFAULT_ADMIN. Its 86,400-second default-admin transfer delay is not an independent delay on UUPS upgrades or native minter configuration.",
         "sources": [
           {
@@ -84,6 +86,8 @@
         ],
         "canRaiseCap": true,
         "capDescription": "MASTER_MINTER_ROLE can configure or remove native and bridge minters and set their mint and burn limits; it is an authorizer and is not itself a successful caller of the native mint path.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "evidence": "At Ethereum block 25770993, hasRole(MASTER_MINTER_ROLE, 0x06720dec0fa18bb540eea24c7f196c0bd0c26b7a) returned true and eth_getCode returned no bytecode. The verified source makes MASTER_MINTER_ROLE an authorizer for configureMinter/removeMinter and the corresponding bridge-minter functions; it can change native minter limits but is not itself a successful caller of the native mint path. MASTER_MINTER_ROLE = 0x4d722a319ebda03eb1179096607e87f360b089b3919a0d764a65ea950521a6c9.",
         "sources": [
           {
@@ -103,6 +107,8 @@
           "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
         ],
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "evidence": "At Ethereum block 25770993, hasRole(UPGRADER_ROLE, 0x564fd647254ec3e0bd704c463c1d4494307e88b4) returned true and eth_getCode returned no bytecode. UPGRADER_ROLE = 0xcf6f9f892731e14b8859835f2ff35575f447fb501f46243c4eb8bac19e31a050 and can upgrade the UUPS proxy implementation without an independent timelock.",
         "sources": [
           {
@@ -124,8 +130,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The native minter is configured with a 500000000000000-base-unit daily mint and burn limit. This EOA cannot raise its own limit; MASTER_MINTER_ROLE, DEFAULT_ADMIN, or an implementation upgrade can change the canonical issuance constraints.",
-        "observedAt": "2026-08-13",
-        "observedBlock": 25747120,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
             "label": "SOFID contract on Blockscout",
@@ -153,8 +159,8 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The Token-2022 mint has a live mint authority and no separate token-layer supply ceiling was identified; the 1-of-2 multisig can authorize native issuance.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439738944,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212258,
         "sources": [
           {
             "label": "SOFID Solana Token-2022 metadata",

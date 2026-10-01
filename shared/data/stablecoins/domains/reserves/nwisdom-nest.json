@@ -55,7 +55,7 @@
         "url": "https://docs.nest.credit/about/available-vaults/"
       }
     ],
-    "rationale": "Nest's positions API identifies the dominant yield asset as xCRDYX under the wisdomtree-crdyx strategy. Nest's vault documentation identifies nWISDOM as tokenized exposure to WisdomTree's private credit and alternative income fund, lists WisdomTree CRDYX at 99.8% of the displayed composition, and states a four-day redemption estimate. The live adapter separately reports a 1% NAV reconciliation residual that neither primary source identifies as an asset or claim.",
+    "rationale": "An October 1, 2026 recheck of the exact nWISDOM positions API identifies xCRDYX, nTBILL and liquid stablecoin balances. WisdomTree issuer disclosure corroborates CRDYX exposure to publicly traded alternative-credit investment vehicles. The Nest available-vault directory fetched on that date does not list nWISDOM or verify the earlier four-day redemption estimate. The September 21 composition percentages and NAV reconciliation residual remain historical observations pending dated liability/asset reconciliation; the current API balances do not identify the residual or legal recovery waterfall.",
     "compositionBasis": "Live Nest positions and vault documentation, with the adapter's NAV reconciliation residual retained explicitly",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

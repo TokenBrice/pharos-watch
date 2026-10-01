@@ -72,8 +72,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve); OpenAI Codex NR-recovery review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB29BUCK)",
     "confidence": "verified",
     "sources": [
       {
@@ -87,8 +87,12 @@
       {
         "label": "Telcoin Digital Asset Bank customer agreement",
         "url": "https://bank.telco.in/customer-agreement"
+      },
+      {
+        "label": "Battle Creek State Bank customer agreement, effective July 21, 2026",
+        "url": "https://bank.telco.in/bcsb-customer-agreement"
       }
     ],
-    "uncertainty": "The customer agreement requires segregated reserve accounts at one or more FDIC-insured banks, separate from Telcoin Digital Asset Bank's operating funds and unavailable for its general debts; it gives eUSD holders priority redemption claims subject to applicable law. It does not name the banks, establish statutory bankruptcy remoteness, disclose provider shares, or address reserve-asset reuse."
+    "uncertainty": "The customer agreement requires segregated reserve accounts at one or more FDIC-insured banks, separate from Telcoin Digital Asset Bank's operating funds and unavailable for its general debts; it gives eUSD holders priority redemption claims subject to applicable law. It does not name the banks, establish statutory bankruptcy remoteness, disclose provider shares, or address reserve-asset reuse. The July 21, 2026 Battle Creek State Bank agreement names a purchase/redemption pass-through bank, not a complete reserve-custodian set: balances sweep to a TDAB Settlement Account at BCSB or another TDAB-designated institution. It expressly says the customer BCSB Account is not FDIC-insured; TDAB’s agreement likewise says eUSD is not FDIC-insured and a reserve-bank failure may leave holders without coverage."
   }
 }

@@ -14,27 +14,31 @@
   "detailProvider": "defillama",
   "geckoId": "fidelity-digital-dollar",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://www.fidelitydigitalassets.com/stablecoin",
-    "provider": "PricewaterhouseCoopers",
+    "provider": "PricewaterhouseCoopers; August 2026 examination of outstanding FIDD tokens, redemption assets and reserve surplus at August 7 and August 31, with the authored reserve composition dated August 31",
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-05-29",
-      "publishedAt": "2026-06-25",
+      "periodEnd": "2026-08-31",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "Sol curation pass 2026-10-01 (RuleC10)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "PwC FIDD Reserve Attestation Report - May 2026",
-          "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+          "label": "PwC FIDD Reserve Attestation Report - August 2026",
+          "url": "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026"
         }
-      ]
+      ],
+      "reviewReference": {
+        "date": "2026-09-25",
+        "reviewedAt": "2026-10-01",
+        "dateKind": "unspecified"
+      }
     }
   },
   "links": [

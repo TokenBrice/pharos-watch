@@ -38,8 +38,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0xBEeFFF209270748ddd194831b3fa287a5386f5bC"
       },
       {
-        "label": "Morpho Vaults V1 overview",
-        "url": "https://legacy.docs.morpho.org/morpho-vaults/concepts/overview"
+        "label": "Morpho Vaults V1 contract documentation",
+        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
       }
     ],
     "rationale": "Morpho identifies USDC as the Smokehouse vault asset and the vault as a Steakhouse-curated lending product. The current live rows separate idle USDC from deployed Morpho positions; both retain the USDC wrapper dependency, while the deployed row carries borrower-credit, collateral, liquidity, and smart-contract risks.",
@@ -72,8 +72,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0xBEeFFF209270748ddd194831b3fa287a5386f5bC"
       },
       {
-        "label": "Morpho Vaults V1 overview",
-        "url": "https://legacy.docs.morpho.org/morpho-vaults/concepts/overview"
+        "label": "Morpho Vaults V1 contract documentation",
+        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
       }
     ],
     "uncertainty": "Assets are held by identifiable noncustodial vault and market contracts, with idle and market allocations changing over time. Reuse is explicit because USDC is supplied to borrower markets. Contract-level isolation does not establish legal bankruptcy remoteness, and no static provider allocation is appropriate."

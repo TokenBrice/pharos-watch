@@ -12,13 +12,13 @@
         "url": "https://docs.hliquity.org/overview/overview"
       }
     ],
-    "evidence": "Hedera Mirror Node metadata for HCHF token 0.0.6070123 reports no admin, freeze, wipe, or pause key. The non-null supply_key supports protocol minting against HBAR collateral in HLiquity's Liquity-style CDP system, but does not establish a holder-level freeze or arbitrary transfer restriction.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Hedera Mirror Node metadata retrieved on 2026-10-01 for HCHF token 0.0.6070123 reports no admin, freeze, KYC, wipe, pause, fee, or metadata key. The supply key remains ContractID 0.0.6070122 and supports the fixed collateralized protocol mint path; it does not grant holder-level freeze or wipe authority.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.HchfReview)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",
-    "summary": "HLiquity values its sole HBAR Trove market through Pyth HBAR/USD and USD/CHF prices, falls back to Supra, and retains the last good price when both sources are unusable.",
+    "summary": "HLiquity's cited PriceFeed source describes Pyth HBAR/USD and USD/CHF pricing with Supra fallback and stored lastGoodPrice when both are unusable. At Hedera block 100588071, PriceFeed status was 3 and TIMEOUT was 14,400 seconds. The Stability Pool documentation fetched on October 1, 2026 instead describes Supra as primary and Pyth as fallback; correspondence between the cited source and live deployment remains a review question.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {

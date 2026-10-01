@@ -87,6 +87,11 @@
       "chain": "hyperliquid",
       "address": "0xae87b5246dd9f377b14bbadcf3c72131",
       "decimals": 8
+    },
+    {
+      "chain": "mantle",
+      "address": "0x063c1d1ef6e9099ce3e8e9ad5c6173d12c49c086",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-top",

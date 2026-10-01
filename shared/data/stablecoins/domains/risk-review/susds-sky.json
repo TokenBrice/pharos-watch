@@ -76,13 +76,13 @@
         "url": "https://arbitrum-one-rpc.publicnode.com"
       }
     ],
-    "evidence": "sUSDS is structurally linked to usds-sky by both variantOf and mintAuthority.inheritedFrom. Current-head reads on 2026-08-08 resolved the four tracked proxies as follows: Ethereum block 25711847 to 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; Base block 49711042 to 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8; Optimism block 155306328 to 0x6f0888dda6a5e35451d5be0fabb20171715788b3; Arbitrum block 492469331 to 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. Each EIP-1967 admin slot was zero, and each current verified implementation exposed ordinary holder transfers and ward-gated UUPS upgrades but no current blacklist, pause, seizure, or holder-freeze function. The inherited parent remains freeze-positive: finalized Solana slots 438038182 and 438038183 returned active USDS freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt. Therefore the freeze disposition is inherited from usds-sky, while local UUPS transfer restrictability remains captured by the deployment overlay.",
-    "reviewer": "OpenAI Codex C01 control wave",
-    "reviewedAt": "2026-08-08"
+    "evidence": "sUSDS is structurally linked to usds-sky by variantOf and mintAuthority.inheritedFrom. Pinned reads on 2026-10-01 resolved the tracked proxies to their previously reviewed implementations: Ethereum block 26095796 to 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; Base block 52024108 to 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8; Optimism block 157619394 to 0x6f0888dda6a5e35451d5be0fabb20171715788b3; Arbitrum block 510584105 to 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. Each correct EIP-1967 admin slot was zero. The re-fetched verified implementations expose ordinary holder transfers and ward-gated UUPS upgrades, with no current blacklist, pause, seizure, or holder-freeze function. Finalized Solana USDS mint observations at slots 452212936 and 452212938 both returned active freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt. The inherited freeze disposition remains adverse; local upgrade-driven transfer restrictability is retained.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA06sUSDS)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
-    "tier": "medianized-with-delay",
-    "summary": "sUSDS is an ERC-4626 savings wrapper over USDS and has no borrower-owned collateral positions or local liquidation engine. Its required USDS parent carries the separately reviewed Sky Vault oracle, auction, backstop, and bad-debt branch.",
+    "tier": "privileged-internal-pricing",
+    "summary": "sUSDS conversion values are calculated from the governance-controlled SSR and savings accumulator. The wrapper has no local borrower positions or liquidation engine; USDS parent collateral-oracle exposure remains inherited separately.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -92,8 +92,8 @@
       "rationale": "sUSDS's ERC-4626 conversion functions use the savings accumulator to value USDS assets per share for deposits, minting, withdrawals, and redemption, making the share exchange rate a price-sensitive top-level authority. The wrapper has no borrower debt or local liquidation markets, so no branch rows are required.",
       "sources": [
         {
-          "label": "Sky sUSDS implementation (source revision 2024-06-05)",
-          "url": "https://github.com/sky-ecosystem/sdai/blob/eea30a68bbed2dc808698b19c96e8f4561701294/src/SNst.sol"
+          "label": "Pinned current sUSDS implementation",
+          "url": "https://github.com/sky-ecosystem/sdai/blob/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol"
         },
         {
           "label": "Sky Oracle Security Module documentation",
@@ -101,8 +101,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "ORCL-MAX data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValA06sUSDS)",
     "confidence": "verified",
     "sources": [
       {
@@ -112,6 +112,14 @@
       {
         "label": "Sky Oracle Security Module documentation",
         "url": "https://developers.skyeco.com/protocol/core/osm/"
+      },
+      {
+        "label": "Pinned sUSDS SSR configuration and share conversion implementation",
+        "url": "https://raw.githubusercontent.com/sky-ecosystem/sdai/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol"
+      },
+      {
+        "label": "Sky sUSDS governance-set Savings Rate explanation",
+        "url": "https://sky.money/blog/what-is-susds"
       }
     ]
   },
@@ -438,7 +446,7 @@
           },
           {
             "label": "Sky governance Optimism bridge initialization",
-            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+            "url": "https://raw.githubusercontent.com/sky-ecosystem/executive-votes/main/2025/executive-vote-2025-05-29-MKR-to-SKY-upgrade-phase-two.md"
           },
           {
             "label": "Optimism sUSDS token",
@@ -479,7 +487,7 @@
         "sources": [
           {
             "label": "Sky governance Optimism bridge initialization",
-            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+            "url": "https://raw.githubusercontent.com/sky-ecosystem/executive-votes/main/2025/executive-vote-2025-05-29-MKR-to-SKY-upgrade-phase-two.md"
           },
           {
             "label": "SkyLink Arbitrum Token Bridge repository",
@@ -567,12 +575,13 @@
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "lockboxOrEscrow": "The Base L1 bridge transfers canonical sUSDS into Ethereum escrow 0x7f311a4d48377030bd810395f4ccfc03bdbe9ef on deposit and releases it after a finalized withdrawal message.",
+          "lockboxOrEscrow": "The Base L1 bridge transfers canonical sUSDS into Ethereum escrow 0x7f311a4d48377030bd810395f4ccfc03bdbe9ef3 on deposit and releases it after a finalized withdrawal message.",
           "trustedPeerOrRemote": "Sky's Base initialization binds this L1 bridge to the Base L2 bridge 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7 and the Ethereum-to-Base sUSDS mapping.",
-          "pausersAdminsUpgraders": "The Base bridge is an upgradeable SkyLink route administered through the L1 governance relay 0x1ee0ae8a993f2f5abdb51eaf4ac2876202b65c3b; bridge proxy and implementation identities are recorded by the official initialization.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095796, the Base L1 bridge returned wards(Pause Proxy) = 1 and wards(0x1ee0ae8a993f2f5abdb51eaf4ac2876202b65c3b) = 0. Its UUPS implementation was 0xaefd31c2e593dc971f9cb42cbbd5d4ad7f1970b6. The L1 governance relay forwards governance to Base; it is not an authorized ward on this L1 bridge.",
           "onchainAmountBounds": "The intended route is canonical lock/mint and burn/release accounting; bridge administration remains able to alter the route machinery."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "SkyLink Base ETH native bridge guide",
@@ -643,10 +652,11 @@
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "The L1 governance relay is the canonical-side relay named in Sky's Base initialization and forwards governance administration to the Base bridge route.",
-          "pausersAdminsUpgraders": "The relay can administer the Base L1 bridge and its route configuration; the corresponding L2 relay and destination-token ward are recorded in the Base L2 controls."
+          "trustedPeerOrRemote": "The Base L1 governance relay sends messages to the corresponding Base L2 governance relay.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095796, this relay was not a ward on the Base L1 bridge, whose Pause Proxy ward was active. The corresponding L2 relay remained an active ward on Base sUSDS at Base block 52024108."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Sky governance Base bridge initialization",
@@ -679,10 +689,11 @@
         "routeChecks": {
           "lockboxOrEscrow": "The Optimism L1 bridge transfers canonical sUSDS into Ethereum escrow 0x467194771dae2967aef3ecbedd3bf9a310c76c65 on deposit and releases it after a finalized withdrawal message.",
           "trustedPeerOrRemote": "Sky's Optimism initialization binds this L1 bridge to the OP Mainnet L2 bridge 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6 and the Ethereum-to-Optimism sUSDS mapping.",
-          "pausersAdminsUpgraders": "The Optimism bridge is an upgradeable SkyLink route administered through the L1 governance relay 0x09b354cda89203bb7b3131cc728dfa06ab09ae2f; the official initialization records the bridge and implementation identities.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095796, the Optimism L1 bridge returned wards(Pause Proxy) = 1 and wards(0x09b354cda89203bb7b3131cc728dfa06ab09ae2f) = 0. Its UUPS implementation was 0xa50adbad34c1e9786979bd44220f8fd46e43a6b0. The L1 governance relay forwards governance to Optimism; it is not an authorized ward on this L1 bridge.",
           "onchainAmountBounds": "The intended route is canonical lock/mint and burn/release accounting; bridge administration remains able to alter the route machinery."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "SkyLink OP Token Bridge repository",
@@ -690,7 +701,7 @@
           },
           {
             "label": "Sky governance Optimism bridge initialization",
-            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+            "url": "https://raw.githubusercontent.com/sky-ecosystem/executive-votes/main/2025/executive-vote-2025-05-29-MKR-to-SKY-upgrade-phase-two.md"
           },
           {
             "label": "Optimism SkyLink L1 bridge",
@@ -724,7 +735,7 @@
         "sources": [
           {
             "label": "Sky governance Optimism bridge initialization",
-            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+            "url": "https://raw.githubusercontent.com/sky-ecosystem/executive-votes/main/2025/executive-vote-2025-05-29-MKR-to-SKY-upgrade-phase-two.md"
           },
           {
             "label": "SkyLink OP Token Bridge repository",
@@ -753,14 +764,15 @@
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "The L1 governance relay is the canonical-side relay named in Sky's Optimism initialization and forwards governance administration to the Optimism bridge route.",
-          "pausersAdminsUpgraders": "The relay can administer the Optimism L1 bridge and its route configuration; the corresponding L2 relay and destination-token ward are recorded in the Optimism L2 controls."
+          "trustedPeerOrRemote": "The Optimism L1 governance relay sends messages to the corresponding Optimism L2 governance relay.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095796, this relay was not a ward on the Optimism L1 bridge, whose Pause Proxy ward was active. The corresponding L2 relay remained an active ward on OP Mainnet sUSDS at OP Mainnet block 157619394."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Sky governance Optimism bridge initialization",
-            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+            "url": "https://raw.githubusercontent.com/sky-ecosystem/executive-votes/main/2025/executive-vote-2025-05-29-MKR-to-SKY-upgrade-phase-two.md"
           }
         ],
         "evidence": "Sky's official Optimism initialization identifies 0x09b354cda89203bb7b3131cc728dfa06ab09ae2f as the L1 governance relay for the Optimism SkyLink bridge. Its authority governs the cross-chain rail and is not native Ethereum sUSDS issuance."
@@ -789,10 +801,11 @@
         "routeChecks": {
           "lockboxOrEscrow": "The Arbitrum L1 gateway transfers canonical sUSDS into Ethereum escrow 0xa10c7ce4b876998858b1a9e12b10092229539400 on deposit and releases it after the Arbitrum retryable-ticket withdrawal finalization period.",
           "trustedPeerOrRemote": "The Arbitrum gateway binds Ethereum sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd to Arbitrum sUSDS 0xddb46999f8891663a8f2828d25298f70416d7610 and its L2 gateway 0x13f7f24ca959359a4d710d32c715d4bce273c793.",
-          "pausersAdminsUpgraders": "The Arbitrum gateway uses the verified Sky UUPS token-bridge implementation model and is administered through the L1 governance relay 0x9ba25c289e351779e0d481ba37489317c34a899d.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095796, the Arbitrum L1 gateway returned wards(Pause Proxy) = 1 and wards(0x9ba25c289e351779e0d481ba37489317c34a899d) = 0. Its UUPS implementation was 0x12ede82637d5507026d4cdb3515b4b022ed157b1. The L1 governance relay forwards governance to Arbitrum; it is not an authorized ward on this L1 gateway.",
           "onchainAmountBounds": "The intended route is canonical lock/mint and burn/release accounting; bridge administration remains able to alter the route machinery."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "SkyLink Arbitrum Token Bridge repository",
@@ -859,10 +872,11 @@
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "The L1 governance relay is the canonical-side relay named by the Sky Arbitrum bridge deployment and forwards governance administration to the Arbitrum bridge route.",
-          "pausersAdminsUpgraders": "The relay can administer the Arbitrum L1 gateway and route configuration; the corresponding shared L2 relay and destination-token ward are recorded in the Arbitrum L2 control."
+          "trustedPeerOrRemote": "The Arbitrum L1 governance relay sends messages to the corresponding Arbitrum L2 governance relay.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095796, this relay was not a ward on the Arbitrum L1 gateway, whose Pause Proxy ward was active. The corresponding L2 relay remained an active ward on Arbitrum sUSDS at Arbitrum block 510584105."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "SkyLink Arbitrum Token Bridge repository",

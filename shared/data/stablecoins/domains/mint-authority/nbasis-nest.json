@@ -48,13 +48,15 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
         "sources": [
           {
             "label": "Nest smart contracts (Teller/Manager addresses)",
             "url": "https://docs.nest.credit/developers/smart-contracts"
           }
         ],
-        "evidence": "At Ethereum block 25295023, owner() on 0xAD60d43a33cA26e40eAcc5BBc60f1C7136FFB89b returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6 Safe). Contract has bytecode (confirmed contract)."
+        "evidence": "At Ethereum block 26095940 on 2026-10-01, owner() on 0xAD60d43a33cA26e40eAcc5BBc60f1C7136FFB89b returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. The owner Safe retains six owners and threshold 3."
       },
       {
         "label": "Nest Basis Vault Manager (strategy/admin)",
@@ -68,13 +70,15 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
         "sources": [
           {
             "label": "Nest smart contracts (Teller/Manager addresses)",
             "url": "https://docs.nest.credit/developers/smart-contracts"
           }
         ],
-        "evidence": "At Ethereum block 25295023, owner() on 0x17767f384cead5182cAaf9056635bAc14aFC24a1 returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (same 3-of-6 Safe as Teller owner)."
+        "evidence": "At Ethereum block 26095940 on 2026-10-01, owner() on 0x17767f384cead5182cAaf9056635bAc14aFC24a1 returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, the same 3-of-6 Safe as the Teller owner."
       },
       {
         "label": "Nest vault owner Safe (3-of-6)",
@@ -90,13 +94,15 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
         "safe": {
           "owners": [
             "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
             "0x98be74d3d5604904d0686eef9b4267f681f9520a",
             "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
             "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
-            "0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a",
+            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
             "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           ],
           "threshold": 3,
@@ -104,7 +110,8 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "1.3.0",
-          "observedBlock": 25295023,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095940,
           "source": "onchain"
         },
         "sources": [
@@ -113,7 +120,7 @@
             "url": "https://docs.nest.credit/developers/smart-contracts"
           }
         ],
-        "evidence": "At Ethereum block 25295023, getOwners() returned 6 addresses; getThreshold() = 3. modules() returned sentinel only (no modules). guard slot (0x4a204f...) = 0x00. masterCopy slot = 0xfb1bffc9d739b8d520daf37df666da4c687191ea (Safe v1.3.0 L1 mainnet)."
+        "evidence": "At Ethereum block 26095940 on 2026-10-01, getOwners() returned the six recorded owners, including 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9 in place of the previously recorded 0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a. getThreshold() returned 3; getModulesPaginated returned an empty array; the guard slot was zero, the fallback handler was 0x017062a1de2fe6b99be3d9d37841fed19f573804, and singleton slot 0 was 0xfb1bffc9d739b8d520daf37df666da4c687191ea."
       },
       {
         "label": "Nest Basis Vault Teller (issuance/redemption) — BSC",

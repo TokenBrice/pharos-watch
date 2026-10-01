@@ -4,13 +4,13 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
-        "url": "https://sui.io/"
+        "label": "Sui GraphQL RPC: Treasury DenyCapV2 and UpgradeCap at checkpoint 328964820",
+        "url": "https://graphql.mainnet.sui.io/graphql"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Sui checkpoint 328964820, the Treasury object embeds DenyCapV2<SUI_USDE> with allow_global_pause=true. The current roles table assigns DenylistManagerRole to the same address that owns the compatible-policy package UpgradeCap. These direct issuer control surfaces support the retained blacklistability verdict; no absence of admin powers is inferred from reserve custody.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.SuiReview)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

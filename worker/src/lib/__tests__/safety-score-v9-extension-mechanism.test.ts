@@ -378,7 +378,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.assuranceAndReconciliation.quality).toBe("adequate");
   });
 
-  it("derives xDAI assurance from its onchain proof instead of a duplicate overlay claim", () => {
+  it("keeps xDAI onchain observations bounded without an independently published assurance report", () => {
     const overlay = mechanismReviewOverlaysAsset.overlays.find(
       (candidate) => candidate.assetId === "xdai-gnosis",
     );
@@ -389,7 +389,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     const fallback = buildSafetyScoreV9MechanismReview(
       fixedInputStub(
         { "xdai-gnosis": [{}] },
-        Date.parse("2026-07-24T00:00:00Z") / 1_000,
+        Date.parse("2026-10-02T00:00:00Z") / 1_000,
       ),
       xdaiMetaSource as unknown as MechanismMeta,
       "fiat-cash",
@@ -402,8 +402,8 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       throw new Error("unexpected archetype");
     }
     expect(review.assuranceAndReconciliation).toMatchObject({
-      quality: "adequate",
-      status: { observationState: "known" },
+      quality: null,
+      status: { observationState: "bounded-unknown" },
     });
   });
 
@@ -618,15 +618,21 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.shutdownAndBadDebt.quality).toBe("failed");
   });
 
-  it("publishes Mento conversion inventory only as a structural analogue", () => {
-    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "audm-mento" } as MechanismMeta, "cdp");
-    if (review?.archetype !== "cdp") throw new Error("expected the curated Mento CDP overlay");
+  it("publishes CHFm conversion inventory only as a structural analogue", () => {
+    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "chfm-mento" } as MechanismMeta, "cdp");
+    if (review?.archetype !== "cdp") throw new Error("expected the curated CHFm CDP overlay");
     expect(review.collateralizationRatio).toBeNull();
     expect(review.liquidationCapacityRatio).toBeNull();
     expect(review.metricApplicability.collateralizationRatio.state).toBe("not-applicable");
     expect(review.metricApplicability.liquidationCapacityRatio.state).toBe("not-applicable");
     expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
-    expect(review.structuralRedemption.quality).toBe("adequate");
+    expect(review.structuralRedemption.quality).toBe("limited");
+  });
+
+  it("does not publish a CDP review for AUDm's shared crypto reserve", () => {
+    expect(
+      buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "audm-mento" } as MechanismMeta, "cdp"),
+    ).toBeNull();
   });
 
   describe("commodity-claim (v9.14)", () => {

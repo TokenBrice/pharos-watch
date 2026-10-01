@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "StraitsX XUSD uses Circle-style MasterMinter deployments on Ethereum and BNB Chain with separate chain-local 3/5 owner and master-minter Safes. The BNB Chain token is a legacy ZeppelinOS proxy controlled by another 3/5 Safe; the Solana mint authority is a 3/10 multisig.",
+    "summary": "StraitsX XUSD uses Circle-style MasterMinter paths on Ethereum and BNB Chain with separate chain-local 3/5 owner and master-minter Safes. Both tokens are legacy ZeppelinOS proxies: Ethereum has a separate 2/5 legacy multisig proxy admin, and BNB Chain a separate 3/5 Safe proxy admin. The Solana mint/freeze authority is a 3/11 SPL Token multisig.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -41,8 +41,8 @@
           "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
         },
         {
-          "label": "Ethereum XUSD legacy proxy admin (5-owner Safe)",
-          "url": "https://etherscan.io/address/0x5daab87246b8f8556e159a54f1b21832e1376951"
+          "label": "Ethereum XUSD legacy proxy admin (2-of-5 multisig)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5daab87246b8f8556e159a54f1b21832e1376951"
         }
       ]
     },
@@ -304,7 +304,7 @@
       },
       {
         "chain": "solana",
-        "address": "5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj",
+        "address": "CrtdStZqGrcqrpDZ5XnmaEKvzyBNLgq6uvNKCokFgo6v",
         "deploymentRefs": [
           "solana:4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
         ],
@@ -313,9 +313,11 @@
         "authorityType": "multisig",
         "directMintAbility": "direct",
         "threshold": 3,
-        "signerCount": 10,
+        "signerCount": 11,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213986,
         "sources": [
           {
             "label": "Solana XUSD mint",
@@ -323,10 +325,38 @@
           },
           {
             "label": "Solana XUSD mint-authority multisig",
-            "url": "https://explorer.solana.com/address/5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj"
+            "url": "https://explorer.solana.com/address/CrtdStZqGrcqrpDZ5XnmaEKvzyBNLgq6uvNKCokFgo6v"
           }
         ],
-        "evidence": "At finalized Solana slot 425774906, the XUSD mint account 4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z had this address as both mint and freeze authority. The authority account decoded as an initialized SPL Token multisig with m=3 and n=10."
+        "evidence": "At finalized Solana slot 452213986 on 2026-10-01, getMultipleAccounts(jsonParsed) returned mintAuthority and freezeAuthority CrtdStZqGrcqrpDZ5XnmaEKvzyBNLgq6uvNKCokFgo6v for XUSD mint 4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z. The authority is an initialized SPL Token multisig with m=3 and n=11; the prior 3-of-10 authority is no longer assigned to this mint."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5daab87246b8f8556e159a54f1b21832e1376951",
+        "deploymentRefs": [
+          "ethereum:0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+        ],
+        "label": "Ethereum XUSD legacy proxy-admin multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 2,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095805,
+        "sources": [
+          {
+            "label": "Ethereum XUSD legacy proxy admin verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5daab87246b8f8556e159a54f1b21832e1376951"
+          },
+          {
+            "label": "Ethereum pinned Dwellir RPC",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          }
+        ],
+        "evidence": "At Ethereum block 26095805, the token legacy ZeppelinOS implementation slot resolved 0x671ac667a0a7677fe3fd5768a66f788d093203e8 and legacy admin slot resolved this multisig. getOwners() returned five addresses and required() returned 2. The verified MultiSigWalletWithDailyLimit source is not a Safe; calls with nonempty calldata require the configured confirmation threshold."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -359,9 +389,9 @@
           "url": "https://eservices.mas.gov.sg/fid/institution?term=StraitsX"
         }
       ],
-      "evidence": "Direct reads identify chain-local XUSD owner and MasterMinter controls on Ethereum and BNB Chain. At BNB Chain block 109962664, owner() and masterMinter() resolved separate 3-of-5 Safe v1.4.1 instances; neither had enabled modules, while the MasterMinter Safe carried guard 0x3653d130.... Although standard EIP-1967 slots were zero, legacy ZeppelinOS slots resolved implementation 0xCD6c...A599 and a separate 3-of-5 proxy-admin Safe. Ethereum remains a direct immutable deployment, and the Solana mint/freeze authority remains a 3-of-10 SPL Token multisig. KK Yap & Associates performs recurring reserve examinations; the latest reviewed report covers May 31, 2026, was published June 23, 2026, and fully reconciles XUSD liabilities to reserve assets on the recorded semi-monthly cadence. The MAS directory matches the issuer, StraitsX USD Issuance Pte. Ltd., as a Major Payment Institution, supporting prudential supervision of the same legal entity. Economic-posture fields reviewed 2026-08-15: chain-local owner and MasterMinter controls can authorize uncapped minting and the BNB proxy admin can replace logic without delay; existing periodic reconciliation and MAS prudential supervision remain supported.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Pinned 2026-10-01 reads re-confirmed Ethereum and BNB Chain token owner and MasterMinter controls as separate 3-of-5 Safes. Standard EIP-1967 slots were zero on both tokens, but legacy ZeppelinOS slots resolved live implementations and separate proxy admins: Ethereum is controlled by a 2-of-5 MultiSigWalletWithDailyLimit, and BNB Chain by a 3-of-5 Safe. Solana finalized slot 452213986 identified a new 3-of-11 SPL Token mint/freeze authority. KK Yap & Associates performs recurring reserve examinations; the latest fetched report covers 31 August 2026, was signed 28 September 2026, and reconciles USD46,182,310 XUSD circulation against USD46,324,677 cash.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB13XUSD)",
+      "reviewedAt": "2026-10-01"
     }
   }
 }

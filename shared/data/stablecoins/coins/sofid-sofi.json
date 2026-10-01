@@ -118,11 +118,29 @@
     }
   ],
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "attestation",
     "url": "https://www.sofi.com/crypto/sofiusd/",
-    "provider": "SoFi product disclosures; the May 2026 retail-launch release cites regular reserve attestations by an independent U.S.-licensed CPA, but no SoFiUSD attestation report is publicly filed — SEC EDGAR full-text search (2026-09-29) returns no SoFiUSD attestation, and SoFi Bank N.A.'s ABS-15G filings are agreed-upon-procedures reports for its consumer-loan securitization trusts",
-    "attestorTier": "self",
-    "cadence": "undisclosed",
-    "attestorJurisdiction": "United States"
+    "provider": "Deloitte & Touche LLP",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-07-31",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol curation pass 2026-10-01 (ValA36SOFID)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Deloitte SoFiUSD July 31, 2026 reserve examination (signed August 31, 2026; publication date unverified)",
+          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf"
+        },
+        {
+          "label": "SoFiUSD issuer monthly attestation report archive",
+          "url": "https://www.sofi.com/crypto/sofiusd/"
+        }
+      ]
+    }
   }
 }

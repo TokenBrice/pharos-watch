@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "EURC's eight Circle native issuer deployments, now including Arc, are not evidence of a CCTP route. No current EURC CCTP v1/v2 burn-mint path was verified: the official V2 TokenMinter 0xfd78EE919681417d192449715b2594ab58f5D002 returned zero EURC minterAllowance at Ethereum block 25770757, Base block 50066185, and Avalanche block 92981816, while the official Ethereum V1 TokenMinter 0xc4922d64a24675E16e1586e3e3Aa56C06fABe907 also returned zero EURC allowance at Ethereum block 25770757. Polygon and Sonic remain reviewed bridge representations; Tempo's Stargate pool, peers, and controller are incomplete; Cardano's Wanchain route is unresolved after the current token-pairs API omitted Cardano. Bridge exposure therefore remains conservatively classified as single-chain-or-native.",
+    "summary": "Circle's current EURC address registry and August 2026 examination identify nine native issuer deployments, including Arc, Plasma, and Cronos. Native issuance does not establish a CCTP route; the earlier zero-allowance CCTP observations remain historical evidence. Polygon and Sonic are reviewed bridge representations. Tempo's Stargate escrow pool, OFT, and owner are identified, while TIP-20 local role administration remains unresolved. Cardano's outstanding Wanchain representation is identified by its minting policy and token metadata; availability of new bridge mints remains uncertain.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex EURC mint-bridge-boundary migration",
     "confidence": "verified",
@@ -412,6 +412,32 @@
           {
             "label": "DefiLlama EURC chain balances",
             "url": "https://stablecoins.llama.fi/stablecoin/50"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x3ee196e78d4d4248b849b8e1c7f44c5457fafd2c",
+        "destinationChain": "plasma",
+        "contractAddress": "0x3ee196e78d4d4248b849b8e1c7f44c5457fafd2c",
+        "protocol": "Circle native EURC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Circle's current address registry lists this Plasma mainnet EURC deployment and the August 2026 examination includes Plasma among EURC Approved Blockchains used to issue and redeem EURC. At Plasma block 33896735, symbol() returned EURC, decimals() returned 6, owner() returned 0xdffa58b33369be9c4b807aa8644ff5fe22c54c03, and masterMinter() returned 0xb847eabce1017f5d6ea266ffe79cd33b8b027fe4. This establishes native issuer deployment identity, not a CCTP transfer path.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896735,
+        "sources": [
+          {
+            "label": "Circle current EURC contract addresses",
+            "url": "https://developers.circle.com/stablecoins/eurc-contract-addresses"
+          },
+          {
+            "label": "Deloitte EURC examination report - August 2026",
+            "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
           }
         ]
       }

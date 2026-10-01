@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "SAFO is issuer-minted natively on all seven chains under Spiko's Permission Manager (authority() verified on the EVM deployments); no third-party bridge carries the claim.",
+    "summary": "The seven existing reviewed route records retain their issuer-native classifications under Spiko's Permission Manager. The September 2026 prospectus additionally identifies a Solana USD share register, now recorded with explicitly unknown route and control attribution; no native-issuance or no-third-party-bridge conclusion is asserted for that deployment.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
@@ -186,6 +186,28 @@
           {
             "label": "Spiko",
             "url": "https://www.spiko.xyz/"
+          }
+        ]
+      },
+      {
+        "id": "solana:BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo",
+        "destinationChain": "solana",
+        "contractAddress": "BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo",
+        "protocol": "Spiko fund share registration",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "September 1 prospectus identifies this USD share register. Finalized Solana slot 452222773 confirms the SAFO Token-2022 mint and five decimals; native-versus-representation topology and controller authority remain unresolved. No protective route classification or control is asserted.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452222773,
+        "sources": [
+          {
+            "label": "Spiko SICAV prospectus, September 1, 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
           }
         ]
       }

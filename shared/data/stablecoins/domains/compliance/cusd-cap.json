@@ -1,26 +1,5 @@
 {
   "id": "cusd-cap",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register and scope page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ESMA MiCA Article 2 scope",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      },
-      {
-        "label": "Cap cUSD vault mechanics: protocol mint and proportional redemption",
-        "url": "https://docs.cap.app/concepts/vault"
-      },
-      {
-        "label": "Cap platform terms: Covered Agents S.A. operator and EU user clause",
-        "url": "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use"
-      }
-    ]
-  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
@@ -53,10 +32,10 @@
       },
       {
         "label": "FDIC GENIUS Act prudential requirements NPRM (FR 2026-06974)",
-        "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06974/genius-act-requirements-and-standards-for-fdic-supervised-permitted-payment-stablecoin-issuers-and",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-04-10/pdf/2026-06974.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-10",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "FinCEN/OFAC AML NPRM (FR 2026-06963)",

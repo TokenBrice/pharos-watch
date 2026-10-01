@@ -32,6 +32,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095795,
         "sources": [
           {
             "label": "Centrifuge protocol docs - vaults",
@@ -42,7 +44,7 @@
             "url": "https://etherscan.io/token/0x8c213ee79581ff4984583c6a801e5263418c4b86"
           }
         ],
-        "evidence": "At Ethereum block 25,296,225, the JTRSY Tranche token wards are: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f, contract), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e, contract), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, contract). Same ward set as JAAA (shared Centrifuge protocol deployment). Root's ProtocolGuardian routes to the Centrifuge protocol Safe.",
+        "evidence": "At Ethereum block 26,095,795 on 2026-10-01, wards(Root 0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), wards(BalanceSheet 0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), and wards(Spoke 0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB) each returned 1. The verified Tranche/Auth source permits authorized wards to rely or deny other wards. The earlier review traced Root's ProtocolGuardian to the protocol Safe; that intervening guardian path was not re-enumerated in this observation.",
         "chain": "ethereum",
         "address": "0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f",
         "deploymentRefs": [
@@ -78,8 +80,9 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "version": "1.4.1",
-          "observedBlock": 25296225,
-          "source": "safe-api"
+          "observedBlock": 26095795,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
         "sources": [
           {
@@ -87,9 +90,11 @@
             "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
           }
         ],
-        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Shared with JAAA, same Centrifuge protocol Safe.",
+        "evidence": "Pinned Ethereum RPC at block 26,095,795 on 2026-10-01 confirms the nine recorded owners, threshold 4, Safe version 1.4.1, no enabled modules, zero guard, and the recorded CompatibilityFallbackHandler. This observation confirms Safe state, not signer independence or off-chain key custody.",
         "chain": "ethereum",
         "address": "0x9711730060C73Ee7Fcfe1890e8A0993858a7D225",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095795,
         "deploymentRefs": [
           "ethereum:0x8c213ee79581ff4984583c6a801e5263418c4b86"
         ],

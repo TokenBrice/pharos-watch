@@ -9,7 +9,7 @@
       "coinId": "usdc-circle",
       "depType": "wrapper",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "issuerOrObligor": "Circle Internet Financial, LLC and Circle Internet Financial Europe SAS (USDC issuers)",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -36,6 +36,10 @@
       {
         "label": "Morpho curation docs",
         "url": "https://docs.morpho.org/curate/"
+      },
+      {
+        "label": "USDC Reserve Report May 2026: legal issuer entities (fetched 2026-10-01)",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
       }
     ],
     "rationale": "The official Morpho vault page identifies USDC as the sole deposit asset and describes Gauntlet's allocation across curated lending markets. The reserve envelope is therefore one 100% USDC dependency; market allocation and available withdrawal liquidity remain dynamic.",

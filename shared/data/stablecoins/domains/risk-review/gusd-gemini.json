@@ -2,10 +2,23 @@
   "id": "gusd-gemini",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: GUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "GUSD proxy verified source: custodian-controlled implementation replacement",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd"
+      },
+      {
+        "label": "Active GUSD implementation verified source: delegated sweep",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade"
+      },
+      {
+        "label": "Gemini custodian source: two-signature callbacks and time locks",
+        "url": "https://raw.githubusercontent.com/gemini/dollar/master/Custodian.sol"
+      }
+    ],
+    "evidence": "D28 scoped review at Ethereum block 26097118 on 2026-10-01: the GUSD proxy and balance store both point to implementation 0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade and custodian 0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421. Current direct power: sweeper 0xd24400ae8bfebb18ca49be86258a3c749cf46853 can enable sweeping with holder signatures and replay it for previously delegated accounts; this is not demonstrated unilateral seizure of arbitrary holders. Immediately restorable permission: no separate revoked account-freeze role and regrant path was established by this review. Future-upgrade power: the current custodian can confirm replacement of proxy/store implementation through two distinct signer callbacks, with observed default/extended delays of 172800/604800 seconds. Replacement logic could change transfers or balances, so that adverse control exposure remains. The broad true verdict from the 2026-05-12 inferred review is retained conservatively; it must not be read as proof of an active arbitrary-account blacklist selector. Bridge escrow controls remain separately documented in bridgeRouteRisk.",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC26), D28 capability-scope review",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
@@ -70,9 +83,10 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Rainbow Bridge representation: the NEAR-side token 056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near is issued by the Rainbow factory, with the underlying GUSD locked in the Rainbow ERC20 locker 0x23ddd3e3692d1861ed57ede224608875809e127f on Ethereum (same locker contract documented for the USDC Aurora route).",
+        "reviewNote": "Rainbow Bridge representation: the NEAR-side token 056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near is issued by the Rainbow factory, with underlying GUSD locked in Ethereum ERC20Locker 0x23ddd3e3692d1861ed57ede224608875809e127f. At Ethereum block 26095801, admin() returned 0x2468603819bf09ed3fb6f3efeff24b1955f3cde1 and paused() returned 253. Verified source defines PAUSED_LOCK as 1 and PAUSED_UNLOCK as 2 and tests each flag separately; the raw mask is recorded without treating it as evidence of halted withdrawals. The admin can bypass pause flags and has adminTransfer, arbitrary storage-write and delegatecall capabilities. NEAR metadata at height 218027439 confirms GUSD with two decimals.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sourceChain": "ethereum",
         "controllerChain": "ethereum",
         "controllerAddress": "0x23ddd3e3692d1861ed57ede224608875809e127f",
@@ -88,6 +102,10 @@
           {
             "label": "NEAR blocks: GUSD factory token",
             "url": "https://nearblocks.io/token/056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near"
+          },
+          {
+            "label": "Rainbow ERC20Locker verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23ddd3e3692d1861ed57ede224608875809e127f"
           }
         ]
       }

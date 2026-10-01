@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA47sGHO)",
     "confidence": "verified",
     "sources": [
       {
@@ -28,10 +28,36 @@
         "url": "https://aave.com/docs/aave-v3/guides/sgho"
       }
     ],
-    "rationale": "sGHO is the Aave Savings module receipt claim for deposited GHO. Its single backing asset is the tracked GHO parent token.",
-    "compositionBasis": "Aave sGHO product documentation",
+    "rationale": "The current sGHO implementation and asset() at Ethereum block 26095797 identify GHO as the sole ERC-4626 accounting asset. Deposited GHO remains in the vault; yield is funded separately by the DAO.",
+    "compositionBasis": "Aave sGHO product documentation and asset() at Ethereum block 26095797 on 2026-10-01",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No material unclassified reserve exposure is present; sGHO inherits GHO protocol and facilitator risk.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Aave sGHO Ethereum vault 0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA47sGHO)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aave sGHO documentation",
+        "url": "https://aave.com/docs/ecosystem/gho/sgho"
+      },
+      {
+        "label": "Aave sGHO launch configuration",
+        "url": "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346"
+      }
+    ],
+    "uncertainty": "GHO is held on-chain in the savings vault and is not rehypothecated. This does not establish legal segregation or bankruptcy remoteness, and the governance-controlled proxy and pause roles remain applicable."
   }
 }

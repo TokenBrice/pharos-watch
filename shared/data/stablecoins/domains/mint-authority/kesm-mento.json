@@ -46,6 +46,7 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "capDescription": "Broker swap issuance is constrained by registered exchange-provider execution and per-exchange/per-token trading-limit checks in guardTradingLimits. The Broker owner can configure those limits through configureTradingLimit; the observed owner is the 172800-second Mento Timelock. These are configurable flow limits, not an immutable total-supply ceiling; no current numeric limit is asserted.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-22",

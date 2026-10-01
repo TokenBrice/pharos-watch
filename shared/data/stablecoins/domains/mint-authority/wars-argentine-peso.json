@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "WARS has six reviewed independent native issuer deployments on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis. The shared issuer EOA 0x466c02e2 has direct DEFAULT_ADMIN, MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE on each; the 4-of-7 WARS Safe 0x2b839174 can authorize native minters; and the Ethereum LimitedMinter 0xd168cfbb is a separate fixed-destination native mint facility. The BridgeDeposit/LimitedMinterBridge transfer rail is assessed only in Bridge Risk. Celo is a live but unlisted native deployment pending catalog-owner adjudication and is not included in this Mint Authority scope.",
+    "summary": "WARS has six reviewed independent native issuer deployments on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis. The shared issuer EOA 0x466c02e2 has direct DEFAULT_ADMIN, MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE on each; the 4-of-7 WARS Safe 0x2b839174 can authorize native minters; and the Ethereum LimitedMinter 0xd168cfbb is a separate fixed-destination native mint facility. The BridgeDeposit/LimitedMinterBridge transfer rail is assessed only in Bridge Risk. Celo is catalog-listed and reviewed separately as a bridge representation in Bridge Risk, not included in this native Mint Authority scope.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [

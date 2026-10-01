@@ -18,8 +18,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Solomon program upgrade authority (Squads v4 3-of-9 multisig vault)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 432852804,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452216430,
       "sources": [
         {
           "label": "Solana mainnet RPC",
@@ -41,8 +41,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 432852804,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452216430,
         "sources": [
           {
             "label": "Solana mainnet RPC",
@@ -67,8 +67,8 @@
         "timelockDelaySec": 0,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 432852804,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452216430,
         "sources": [
           {
             "label": "Solana mainnet RPC",

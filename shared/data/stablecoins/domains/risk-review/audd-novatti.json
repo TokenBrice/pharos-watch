@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Novatti issues AUDD natively on every tracked chain (Stellar, Ethereum, Solana, XDC, Base, Hedera, Redbelly, XRPL); per-chain mint authority resolves to issuer-controlled accounts, and the XRPL issuer account is cryptographically locked (no residual mint capability). No third-party bridge carries any representation.",
+    "summary": "AUDC issues AUDD natively on every tracked chain (Stellar, Ethereum, Solana, XDC, Base, Hedera, Redbelly, XRPL). Current issuer controls include an Ethereum ProxyAdmin-owner Safe, Stellar and XRPL 3-of-7 signing arrangements, a Solana SPL multisig and a Hedera issuer contract. XRPL's master key is disabled, but an active SignerList preserves native issuance capability; the earlier locked-account conclusion is superseded. These tracked tokens are native issuer deployments, not third-party bridge representations.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
@@ -47,9 +47,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: EIP-1967 proxy with token owner() = Novatti EOA 0x59a50cbd643347296e2cf5573b40eda3099d0c54 and ProxyAdmin 0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b (owner EOA 0x840b18b93e44ded7d616a0f61aff8562f2548743), read 2026-07-20. No bridge contract holds mint authority.",
+        "reviewNote": "Pinned Ethereum block 26095936: native token owner remains EOA 0x59a50cbd643347296e2cf5573b40eda3099d0c54 and ProxyAdmin remains 0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b, but ProxyAdmin owner is now Safe 0x0cc2ecc9b227f98c1628c1dbfb73bdfcab0623f2 (3-of-5, empty modules, zero guard). This supersedes the historical ProxyAdmin-owner EOA 0x840b18b93e44ded7d616a0f61aff8562f2548743; it does not make the token a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095936,
         "sources": [
           {
             "label": "AUDD Ethereum token",
@@ -97,9 +98,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment (the original AUDD chain, live 2022-11-01): the Stellar issuer account has master weight 0 with thresholds 3/3/3 and 11 weight-1 co-signers (effective 3-of-11 multisig, read 2026-07-19).",
+        "reviewNote": "Issuer-native AUDD Stellar deployment. Current Horizon issuer account returns master weight 0, thresholds 3/3/3 and seven weight-1 signers (3-of-7). The previously recorded 3-of-11 signer count is superseded; the historical 2022-11-01 launch boundary is unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "AUDD Stellar issuer account",
@@ -147,9 +148,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native XRPL issued currency. Read 2026-07-19: the issuer account has disableMasterKey=true, no RegularKey and no SignerList, the account is cryptographically locked, so no mint capability remains on this deployment.",
+        "reviewNote": "Native XRPL AUDD issuer account at validated ledger 107355092 has disableMasterKey=true and no RegularKey, but account_info signer_lists=true returns an active SignerList with quorum 3 and seven weight-1 signers. The prior locked-account/no-mint conclusion is superseded by this residual multisigning authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 107355092,
         "sources": [
           {
             "label": "AUDD XRPL issuer account",
@@ -172,9 +174,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment (fourth native chain per issuer statements): SPL mintAuthority = EOA CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF, freezeAuthority = 6yusyKzzPDydZeGu1JCNTcXjyEJzGRjLK8xwqAK9wqFs, read 2026-07-19.",
+        "reviewNote": "Issuer-native SPL mint. Finalized mint observation at slot 452225454 identifies mint authority CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF and freeze authority 6yusyKzzPDydZeGu1JCNTcXjyEJzGRjLK8xwqAK9wqFs. The mint-authority account at finalized slot 452225929 is an initialized 2-of-3 SPL Token multisig, superseding the historical EOA label.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452225929,
         "sources": [
           {
             "label": "AUDD Solana mint",
@@ -197,9 +200,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native Hedera Token Service deployment (HTS token 0.0.8317071, treasury 0.0.8317070); admin/freeze/pause/supply/wipe keys are the issuer's own HTS key, read 2026-07-19. Announced June 2025 as the first commercial Hedera Stablecoin Studio implementation.",
+        "reviewNote": "Issuer-native HTS token 0.0.8317071. Current mirror keys for admin/freeze/pause/supply/wipe are protobuf 4205188ed1fb03, decoding to delegatable contract 0.0.8317070; its mirror record maps to issuer EVM contract 0x39ceba2b467fa987546000eb5d1373acf1f3a2e1. This is contract-controlled token administration, not a standalone issuer private key. Ultimate wrapper role and upgrade permissions remain separately reviewable.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "AUDD launches on Hedera (native HTS issuance)",

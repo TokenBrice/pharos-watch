@@ -122,5 +122,34 @@
     "scope": "full-composition",
     "knownUnknownExposure": "All positive collateral rows in the captured issuer dashboard have reviewed underlying identities. Future unreviewed positive rows remain unlinked with a named informational warning and measured unknown exposure; zero rows contribute no exposure.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Flying Tulip collateral strategy wrappers",
+        "role": "other"
+      },
+      {
+        "name": "Aave lending strategies",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB23EURE)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flying Tulip ftUSD dashboard API (wrapper addresses and strategy state)",
+        "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
+      },
+      {
+        "label": "Flying Tulip ftUSD product documentation",
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+      }
+    ],
+    "uncertainty": "The issuer API snapshot lastUpdated 2026-10-01T06:53:18Z itemizes collateral wrapper addresses across Ethereum, Sonic, and BNB Smart Chain, and the product documentation describes lending stablecoin collateral through Aave strategies. No provider shares, legal segregation, bankruptcy-remoteness protections, or rehypothecation restrictions are inferred. Strategy assets remain exposed to lending-venue, borrow-and-stake, liquidation, and wrapper-control risks."
   }
 }

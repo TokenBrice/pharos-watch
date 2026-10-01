@@ -19,8 +19,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Aave Governance V3 Level-1 Executor (proxy upgrade admin owner)",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25295167,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095800,
       "sources": [
         {
           "label": "Aave address book",
@@ -42,6 +42,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "Aave Umbrella docs",
@@ -63,6 +65,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "Aave address book",

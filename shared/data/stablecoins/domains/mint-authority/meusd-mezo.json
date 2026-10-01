@@ -6,21 +6,32 @@
     "confidence": "manual-review",
     "summary": "MUSD's only canonical native issuance route is on Mezo: BorrowerOperations opens BTC-collateralized troves at a 110% minimum collateral ratio and InterestRateManager mints accrued interest. The Mezo token owner's 5-of-9 Safe administers the canonical mintList and can authorize arbitrary additional Mezo minters, so canonical issuance remains unbounded-or-compromised. Ethereum and Base are Wormhole NTT burning-spoke representations; their bridge minting, burn, rate-limit, upgrade, peer, pause, and Guardian-attestation controls are assessed under bridgeRouteRisk.",
     "upgradeability": {
-      "model": "immutable",
-      "implementationAddresses": [
-        "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "mezo:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
       ],
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579960,
+      "proxyAddresses": [
+        "0x44b1bac67dda612a41a58aaf779143b181dee031"
+      ],
+      "implementationAddresses": [
+        "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+        "0x501670bbbe2ec8c11449c28c0c9e6677d5ea9b61"
+      ],
+      "adminAddresses": [
+        "0x778f4ef6cbe4492a6c87abab98821e4242663e58"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Mezo protocol owner Safe (canonical MUSD token owner)",
+      "observedAt": "2026-10-01",
+      "observedBlock": 12211531,
       "sources": [
         {
-          "label": "MUSD token on Etherscan",
-          "url": "https://etherscan.io/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+          "label": "Mezo MUSD contracts",
+          "url": "https://github.com/mezo-org/musd"
         },
         {
-          "label": "Ethereum public RPC (EIP-1967 slot reads)",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Mezo pinned BorrowerOperations implementation and ProxyAdmin owner reads",
+          "url": "https://jsonrpc-mezo.boar.network"
         }
       ]
     },
@@ -37,7 +48,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "BorrowerOperations mints MUSD only against troves collateralized by BTC at or above the 110% minimum collateral ratio; the InterestRateManager 0x4a453700d157717Fe02fB62E7700ED7845048285 is the second system minter for accrued interest. No separate cap-raising authority exists for this route.",
+        "capDescription": "BorrowerOperations currently mints against BTC-collateralized troves at a 110% minimum collateral ratio; InterestRateManager 0x4a453700d157717Fe02fB62E7700ED7845048285 is a separate accrued-interest minter. BorrowerOperations is an upgradeable transparent proxy: ProxyAdmin 0x778f4ef6cbe4492a6c87abab98821e4242663e58 is owned by the Mezo protocol Safe, so the current collateral constraint is not immutable.",
         "observedAt": "2026-08-16",
         "observedBlock": 11179505,
         "failureDomainKeys": [
@@ -135,11 +146,11 @@
         },
         {
           "label": "MUSD stablecoin overview",
-          "url": "https://mezo.org/docs/users/musd/"
+          "url": "https://mezo.org/docs/users/borrow/"
         },
         {
-          "label": "MUSD architecture and terminology",
-          "url": "https://mezo.org/docs/users/musd/architecture-and-terminology/"
+          "label": "MUSD architecture and terminology (archived 2026-02-16)",
+          "url": "https://web.archive.org/web/20260216165149/https://mezo.org/docs/users/musd/architecture-and-terminology"
         }
       ]
     }

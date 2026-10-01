@@ -108,7 +108,7 @@
     }
   },
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
     "provider": "Wolf & Company, P.C. examines Preference Foundation's monthly securities-balance assertions (including brokerage STRC/SATA and tokenized STRCx in self-custodied wallets). The August 2026 opinion, signed September 11, corroborates this preferred-equity sleeve but does not reconcile all external reserve buckets or apxUSD redeemable liabilities.",
     "attestorTier": "niche",

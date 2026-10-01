@@ -71,7 +71,7 @@
     "compositionBasis": "Ember Earn product disclosure, verified vault contract identity, and live ERC-4626 idle-versus-deployed observer reads",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The observer identifies idle USDC separately from the Ember-managed deployed strategy position. Ember discloses the strategy families but not a current constituent-by-constituent allocation, so the deployed slice remains a reviewed non-link rather than a direct USDC dependency.",
+    "knownUnknownExposure": "The observer identifies idle USDC separately from the Ember-managed deployed strategy position. Ember discloses the strategy families but not a current constituent-by-constituent allocation, so the deployed slice remains a reviewed non-link rather than a direct USDC dependency. On 2026-10-01, the cited eEARN product URL serves a generic Ember landing page; protocol-wide core concepts describe pooled deposits deployed into DeFi, cross-chain, and CeFi strategies, not current eEARN-specific constituents or venue allocations.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

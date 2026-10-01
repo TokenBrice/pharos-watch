@@ -15,7 +15,7 @@
     "reserveDisclosureUrl": "https://jupusd.money/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "JupUSD's primary reserve asset (USDtb) is now issued in the US by Anchorage Digital Bank N.A. under a GENIUS-compliant framework (announced July 24, 2025; Anchorage is the USDtb issuer, not JupUSD's issuer). JupUSD itself has no GENIUS authorization: it is a separate token issued by Jupiter on Solana with no disclosed US legal entity or regulatory registration. Jupiter restricts US users in its ToS but no formal foreign-exception determination has been made. No public GENIUS approval, application, or issuer pathway source for JupUSD itself was located.",
+    "notes": "Anchorage Digital and Ethena announced a USDtb regulatory issuance partnership on July 24, 2025; this concerns the reserve asset and does not establish authorization for the separate Jupiter-issued JupUSD token. No JupUSD-specific public approval, application, or issuer pathway was located in the checked issuer disclosures and OCC materials; this is a bounded negative search, not proof that no authorization exists anywhere. Jupiter's interface Terms of Use exclude US-based wallets, but an interface access restriction does not establish a formal GENIUS foreign-issuer exception. Issuer pathway and foreign-exception status remain unknown.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

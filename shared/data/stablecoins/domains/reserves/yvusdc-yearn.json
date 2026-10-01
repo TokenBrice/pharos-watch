@@ -54,7 +54,7 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
+    "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
@@ -68,6 +68,6 @@
         "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
       }
     ],
-    "uncertainty": "The reviewed sources establish the Yearn v3 vault and strategy allocator, but do not establish statutory segregation, bankruptcy remoteness, or provider shares. Rehypothecation is marked permitted because the vault deploys USDC into whitelisted strategies."
+    "uncertainty": "The reviewed sources establish the Yearn v3 vault and strategy allocator, but do not establish statutory segregation, bankruptcy remoteness, provider shares, or legal permission to reuse pledged assets. The 2026-07-14 review marked rehypothecation permitted solely because USDC was deployed into strategies; that inference was withdrawn on 2026-10-01 under ruling D10. Strategy and lending exposure remain present."
   }
 }

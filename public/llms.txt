@@ -162,7 +162,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Gauntlet USDC Prime (gtUSDCp)](https://pharos.watch/stablecoin/gtusdcp-gauntlet/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Gauntlet USDC Prime V1 (gtUSDC)](https://pharos.watch/stablecoin/gtusdc-gauntlet/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Yearn v3 USDC Vault (yvUSDC-1)](https://pharos.watch/stablecoin/yvusdc-yearn/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Steakhouse USDC V2 (steakUSDC)](https://pharos.watch/stablecoin/steakusdc-steakhouse/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Steakhouse Prime USDC (steakUSDC)](https://pharos.watch/stablecoin/steakusdc-steakhouse/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Smokehouse USDC (bbqUSDC)](https://pharos.watch/stablecoin/bbqusdc-steakhouse/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Ethena USDe (USDe)](https://pharos.watch/stablecoin/usde-ethena/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Strata Senior USDe (srUSDe)](https://pharos.watch/stablecoin/srusde-strata/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -269,7 +269,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Noble Dollar (USDN)](https://pharos.watch/stablecoin/usdn-noble/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [SMARDEX USDN (USDN)](https://pharos.watch/stablecoin/usdn-smardex/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [USD CoinVertible (USDCV)](https://pharos.watch/stablecoin/usdcv-societe-generale-forge/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [Honey (HONEY)](https://pharos.watch/stablecoin/honey-berachain/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Bera USD (BUSD)](https://pharos.watch/stablecoin/honey-berachain/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Frankencoin (ZCHF)](https://pharos.watch/stablecoin/zchf-frankencoin/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Swiss Franc.
 - [USDB Blast (USDB)](https://pharos.watch/stablecoin/usdb-blast/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Zoth ZeUSD (ZeUSD)](https://pharos.watch/stablecoin/zeusd-zoth/): centralized stablecoin backed by real-world assets pegged to US Dollar.

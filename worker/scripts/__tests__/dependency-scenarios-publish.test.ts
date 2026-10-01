@@ -13,7 +13,9 @@ import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../../src/lib/report-cards-v9-cache";
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-codec";
-import { makeV9FixedInput, withV9WmReviewedDeploymentAttribution } from "../../src/test-helpers/v9-fixed-input";
+import { makeV9FixedInput, makeXautObservation } from "../../src/test-helpers/v9-fixed-input";
+import { normalizeFixedInput } from "../../src/lib/report-cards-fixed-input";
+import { deriveXautRepresentationGroupSupplyAttribution } from "../../src/lib/safety-score-v9/xaut-supply-attribution-contract";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 
 const temporaryDirectories: string[] = [];
@@ -89,8 +91,20 @@ function prepareComputeFixture(directory: string) {
 describe("dependency scenario accepted-publication verification stamp", () => {
   it("reproduces accepted compute-time supply attribution rather than the stripped base capture", async () => {
     const fixture = setup();
-    const base = makeV9FixedInput({ assetId: "wm-m0", clockSec: 1_800_000_000, aggregateCirculating: { peggedUSD: 87_020_618.58982982 } });
-    const fixedInput = withV9WmReviewedDeploymentAttribution(base);
+    // The current wM catalog has newly discovered routes without reviewed code
+    // identities. Use the supported XAUT packet for this real-child-CLI replay.
+    const base = makeV9FixedInput({ assetId: "xaut-tether", clockSec: 1_800_000_000, aggregateCirculating: { peggedGOLD: 2_480_000_000 } });
+    const attribution = deriveXautRepresentationGroupSupplyAttribution({
+      aggregateSupplyUsd: 2_480_000_000,
+      registryFingerprint: base.registryFingerprint,
+      scoringClockSec: base.clockSec,
+      observation: makeXautObservation({ clockSec: base.clockSec }),
+    });
+    if (!attribution) throw new Error("Could not derive XAUT supply attribution");
+    const fixedInput = normalizeFixedInput({
+      ...base,
+      safetyScoreV9SupplyAttributionById: { "xaut-tether": attribution },
+    });
     const candidate = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: base.clockSec }).pipeline.candidate;
     const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 1, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
     const invoke = () => spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts", "--mode", "compute", "--input", resolve(fixture.directory, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", fixture.directory], { encoding: "utf8", timeout: 30_000 });

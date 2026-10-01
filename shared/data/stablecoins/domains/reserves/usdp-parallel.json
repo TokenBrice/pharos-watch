@@ -182,5 +182,30 @@
     "scope": "full-composition",
     "knownUnknownExposure": "No unidentified reserve assets were returned by the four on-chain collateral lists; any future collateral address without a curated descriptor is emitted as an explicitly unlinked slice and fails the next full-composition review until re-curated.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "ParallelizerUSDp smart contracts on Ethereum, Base, HyperEVM and Avalanche",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Parallel proof of solvency and reserve addresses",
+        "url": "https://docs.parallel.best/security/proof-of-solvency"
+      },
+      {
+        "label": "Parallel USDp backing implementation",
+        "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation"
+      }
+    ],
+    "uncertainty": "The issuer identifies four public Parallelizer contracts as the direct backing holders; pinned 2026-10-01 collateral-list and balance reads corroborate those holders. This records on-chain custody, not legal segregation or bankruptcy protection. Upstream stablecoin custodians and yield-vault strategies retain their own custody and rehypothecation exposure. The DAO's ability to replace diamond facets remains an adverse control fact despite the documentation's claim that governance cannot withdraw backing."
   }
 }

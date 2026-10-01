@@ -18,6 +18,8 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095938,
         "sources": [
           {
             "label": "MXNB whitepaper (FiatToken fork, masterMinter)",
@@ -38,6 +40,8 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095938,
         "sources": [
           {
             "label": "MXNB Ethereum proxy",

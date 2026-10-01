@@ -23,7 +23,7 @@ describe("USDY report reconciliation and scope", () => {
   it("keeps the undiscoverable daily series out of runtime live evidence", () => {
     const usdy = withoutSuspendedLiveReserves(StablecoinMetaSourceAssetSchema.parse({ ...coinSource, ...reservesSource }));
     expect(usdy?.reserves?.find((slice) => slice.sourceKey === "usdy-holdings-report:excluded-issuance"))
-      .toMatchObject({ pct: 5.967260269898646, risk: "high" });
+      .toMatchObject({ pct: 5.9490355116630695, risk: "high" });
     expect(usdy?.liveReservesConfig).toBeUndefined();
   });
 

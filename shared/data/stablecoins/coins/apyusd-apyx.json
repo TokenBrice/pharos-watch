@@ -104,9 +104,9 @@
     }
   },
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
-    "provider": "Wolf & Company, P.C. monthly AICPA attestation opinions (latest published report July 2026 as of 2026-09-04; the Accountable real-time dashboard runs on Apyx-deployed infrastructure and is treated as secondary, not independent assurance)",
+    "type": "attestation",
+    "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
+    "provider": "Wolf & Company, P.C. monthly AICPA examination-level attestation opinions on Preference Foundation securities holdings; the August 2026 report covers assets only, not apyUSD liabilities or a reserve-to-liability reconciliation",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "United States"

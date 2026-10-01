@@ -239,7 +239,7 @@
           "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() on the Polygon PoS child token at Polygon block 90651088 on 2026-07-22 returned 556,606,180.655442 DAI, 12.00075% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI). Independently corroborated by the L1 Polygon ERC20 predicate 0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf holding 584,895,715 DAI and DefiLlama per-chain attribution (554,072,601 DAI = 11.44% of DAI's 4,845,197,470 total). Above the 10% materiality threshold, so the polygon-pos-bridge common-mode cap is measured rather than fail-closed.",
+        "reviewNote": "Pinned totalSupply() on the Polygon PoS child token at Polygon block 90651088 on 2026-07-22 returned 556,606,180.655442 DAI, 12.00075% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI). Independently corroborated by the L1 Polygon ERC20 predicate 0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf holding 584,895,715 DAI and DefiLlama per-chain attribution (554,072,601 DAI = 11.44% of DAI's 4,845,197,470 total). Above the 10% materiality threshold, so the polygon-pos-bridge common-mode cap is measured rather than fail-closed. Validation 2026-10-01 at Polygon block 94756336: implementation() remains 0x490e379c9cff64944be82b849f8fd5972c7999a7 and proxyOwner() is address(1). DEPOSITOR_ROLE() returns 0x8f4f2da22e8ac8f11e15f9fc141cddbb5deea8800186560abb6e68c5496619a9; hasRole for the recorded ChildChainManagerProxy 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa returns true. Historical materiality measurements are not refreshed by these authority reads.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 90651088,
@@ -574,6 +574,7 @@
           "contract:klaytn:0x60070f5d2e1c1001400a04f152e7abd43410f7b9"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "Validation 2026-10-01 at Klaytn block 228638106: owner() returns 0x3460f4c458c8c268f43d55f5b3ecece13062e26a. Orbit documentation identifies the recorded 0x60070F5D2e1C1001400A04F152E7ABD43410F7B9 as the KLAYTN minter. Owner and minter are distinct roles; minter()/getMinter() revert at the pinned block, so no current mint-role grant or controller replacement is established.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-14",
         "sources": [
@@ -642,6 +643,7 @@
           "contract:near:factory.bridge.near"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "Validation 2026-10-01 at NEAR block 218030517 (G9f7MSBLqYV1rMoZyxw6wbWXjYoufoPnbAhxKAtHCAp9): ft_metadata returns Dai Stablecoin, DAI and 18 decimals; ft_total_supply returns 836861403263946681389107 raw units. get_controller and get_owner return MethodNotFound. Rainbow connector source requires the stored controller to call mint, but the current stored controller and factory privileges were not independently established by these reads. Historical route posture and observation date remain unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-14",
         "sources": [
@@ -796,15 +798,18 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "controllerChain": "astar",
-        "controllerAddress": "0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573",
+        "controllerAddress": "0x3b53d2c7b44d40be05fa5e2309ffeb6eb2492d88",
         "failureDomainKeys": [
           "protocol:celer-cbridge",
-          "contract:astar:0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573"
+          "contract:astar:0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573",
+          "contract:astar:0x3b53d2c7b44d40be05fa5e2309ffeb6eb2492d88",
+          "contract:astar:0xbdd2739ae69a054895be33a22b2d2ed71a1de778"
         ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "reviewNote": "Verified MintSwapCanonicalToken: owner is RestrictedMultiBridgeTokenOwner 0xbdd2739ae69a054895be33a22b2d2ed71a1de778 whose constructor (tx 0x35cd6f2707...) sets bridge = PeggedTokenBridge 0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573 (verified contract on Astar blockscout), the sole mint-cap bridge.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 14899613,
+        "reviewNote": "The original deployment constructor set RestrictedMultiBridgeTokenOwner.bridge to PeggedTokenBridge 0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573. At Astar block 14899613 on 2026-10-01, token.owner() remains 0xbdd2739ae69a054895be33a22b2d2ed71a1de778, but that owner's bridge() now returns verified PeggedTokenBridgeV2 0x3b53d2c7b44d40be05fa5e2309ffeb6eb2492d88. Token.bridges(current bridge) reports cap = uint256 maximum; token.bridges(original bridge) reports cap = 1 wei and total = 0. The original bridge is not the sole mint-cap controller and retains a one-wei allowance, so its failure-domain key is preserved. The owner contract can change the current bridge and its cap through owner-authorized changeBridge/updateBridgeSupplyCap; no protective issuance bound is inferred.",
         "sources": [
           {
             "label": "Astar blockscout DAI (MintSwapCanonicalToken)",
@@ -813,6 +818,22 @@
           {
             "label": "Astar blockscout PeggedTokenBridge (mint bridge)",
             "url": "https://astar.blockscout.com/address/0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573"
+          },
+          {
+            "label": "Astar verified RestrictedMultiBridgeTokenOwner source",
+            "url": "https://astar.blockscout.com/api/v2/smart-contracts/0xbdd2739ae69a054895be33a22b2d2ed71a1de778"
+          },
+          {
+            "label": "Astar verified MintSwapCanonicalToken and MultiBridgeToken source",
+            "url": "https://astar.blockscout.com/api/v2/smart-contracts/0x6de33698e9e9b787e09d3bd7771ef63557e148bb"
+          },
+          {
+            "label": "Astar verified current PeggedTokenBridgeV2",
+            "url": "https://astar.blockscout.com/api/v2/smart-contracts/0x3b53d2c7b44d40be05fa5e2309ffeb6eb2492d88"
+          },
+          {
+            "label": "Astar official RPC, pinned block 14899613",
+            "url": "https://evm.astar.network"
           }
         ]
       },
@@ -1042,7 +1063,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "reviewNote": "starknet_call symbol() on 0x05574eb6... returns DAI and totalSupply is live; the companion legacy Dai v0 token (0x00da1142...) remains minor. L1 bridge 0xCA14057f85F2662257fd2637FdEc558626bCe554 holds the collateral.",
+        "reviewNote": "starknet_call symbol() on 0x05574eb6... returns DAI and totalSupply is live; the companion legacy Dai v0 token (0x00da1142...) remains minor. L1 bridge 0xCA14057f85F2662257fd2637FdEc558626bCe554 holds the collateral. Validation 2026-10-01 at Starknet block 15718832, hash 0x26dd4cf0e409a1af5db89683d8b75dc9b50f7b128f9e23ab68ff52928a2fa4: class hash is 0xb45dbc3714180381c5680e41931172d67194d77d504413465390e0bef194ec, symbol decodes to DAI and decimals is 18. The official token registry maps this exact deployment to the recorded L2 bridge. These identity reads do not establish a current mint authorization grant or refresh collateral balances.",
         "sources": [
           {
             "label": "Starknet bridged tokens registry (starknet-io/starknet-addresses)",
@@ -1075,7 +1096,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "reviewNote": "axlDAI on Osmosis is the IBC voucher of Axelar-chain dai-wei (channel-208), minted under Axelar validator consensus against DAI locked in the Ethereum AxelarGateway contract 0x4F4495243837681061C4743b74B3eEdf548D56A5.",
+        "reviewNote": "axlDAI on Osmosis is the IBC voucher of Axelar-chain dai-wei (channel-208), minted under Axelar validator consensus against DAI locked in the Ethereum AxelarGateway contract 0x4F4495243837681061C4743b74B3eEdf548D56A5. Validation 2026-10-01: the official Osmosis LCD denom-trace query returned path transfer/channel-208 and base_denom dai-wei for this exact denom, corroborating the chain registry Axelar lineage. The request specified height 71679605, and the response header grpc-metadata-x-cosmos-block-height reports 71679605, corroborating the requested historical height; the JSON body itself has no height field. The trace does not measure escrow balances or current Axelar validator/upgrade privileges; historical backing and authority claims are not refreshed.",
         "sources": [
           {
             "label": "Cosmos chain-registry Osmosis assetlist (DAI from Axelar channel-208/dai-wei)",
@@ -1108,7 +1129,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "reviewNote": "Koios asset_info: DAI (fingerprint asset19gaqdfcckssln6cttx3gr7yf45kfz26jh6w7gs) minted 2023-09-24 under policy 25c5de5f... with Wanchain tokenPairID 563 (wanscan token registry); mint authority is the Wanchain Cardano bridge monetary policy controlled by the Wanchain storeman group.",
+        "reviewNote": "Koios asset_info: DAI (fingerprint asset19gaqdfcckssln6cttx3gr7yf45kfz26jh6w7gs) minted 2023-09-24 under policy 25c5de5f... with Wanchain tokenPairID 563 (wanscan token registry); mint authority is the Wanchain Cardano bridge monetary policy controlled by the Wanchain storeman group. Validation 2026-10-01: Cardano registry metadata for the exact subject 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935444149 lists DAI, The Mapping token of DAI., six decimals and a wanscan.org URL. Wanchain documentation explicitly identifies the policy as Wanchain-mapped. Registry signatures were not cryptographically verified here, and the current minting-policy script, signers and timelock/expiry remain unverified; historical authority posture is not refreshed.",
         "sources": [
           {
             "label": "Cardano token registry subject 25c5de5f...444149",

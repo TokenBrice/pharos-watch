@@ -37,7 +37,7 @@
         },
         {
           "label": "Armed dormant sUSN upgrade target source",
-          "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaaca6e7?fields=sources,abi,metadata"
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaca6e7?fields=sources,abi,metadata"
         },
         {
           "label": "sUSN upgrade timelock event history on Etherscan",
@@ -106,6 +106,7 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "cap-limited",
+        "capDescription": "Inherited MinterHandlerV2 limits: at Ethereum block 26095806, mintLimitPerBlock() and directMintLimitPerDay() each returned 10000000000000000000000000 USN base units (18 decimals). These are mutable transaction/window limits, not a hard economic supply cap; this Safe retains DEFAULT_ADMIN_ROLE and can raise them.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "failureDomainKeys": [
@@ -174,7 +175,7 @@
           },
           {
             "label": "Armed dormant sUSN upgrade target source",
-            "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaaca6e7?fields=sources,abi,metadata"
+            "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaca6e7?fields=sources,abi,metadata"
           },
           {
             "label": "sUSN upgrade timelock event history on Etherscan",
@@ -203,7 +204,7 @@
         },
         {
           "label": "Armed dormant sUSN upgrade target source",
-          "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaaca6e7?fields=sources,abi,metadata"
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaca6e7?fields=sources,abi,metadata"
         },
         {
           "label": "sUSN WithdrawalHandler source",

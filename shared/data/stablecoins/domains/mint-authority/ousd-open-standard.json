@@ -116,6 +116,7 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "capDescription": "At Tempo block 42066472 on 2026-10-01, OUSD supplyCap() returned 1000000001000000 raw units. This is a token-level supply cap checked on minting, not a per-minter allowance or an independently fixed economic bound: DEFAULT_ADMIN_ROLE can change it through setSupplyCap.",
         "deploymentRefs": [
           "tempo:0x20c0000000000000000000006a37da5c996874be"
         ],
@@ -253,6 +254,7 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "capDescription": "At Base block 52024130 on 2026-10-01, OUSD supplyCap() returned 1000000001000000 raw units. This is a token-level supply cap, not a per-minter allowance or an independently fixed economic bound: DEFAULT_ADMIN_ROLE can change it through updateSupplyCap.",
         "deploymentRefs": [
           "base:0xb2000000000000000000002feb517dfec7415344"
         ],

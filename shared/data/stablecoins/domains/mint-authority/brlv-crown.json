@@ -27,7 +27,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "BRLV Base DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0x239d4a",
-      "observedAt": "2026-08-16",
+      "observedAt": "2026-10-01",
+      "observedBlock": 52024106,
       "sources": [
         {
           "label": "BRLV Base token verified implementation",
@@ -110,7 +111,6 @@
         ]
       },
       {
-        "chain": "base",
         "chain": "base",
         "address": "0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
         "deploymentRefs": [

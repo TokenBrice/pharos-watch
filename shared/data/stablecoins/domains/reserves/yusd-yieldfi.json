@@ -45,7 +45,7 @@
     "compositionBasis": "Exact live ERC-4626 deployed-strategy row and YieldFi yUSD token terms",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The live adapter identifies the full 100% as deployed yUSD strategy accounting, but the official yUSD terms and accessible transparency materials disclose no current venue, protocol, counterparty, custodian, or constituent weights.",
+    "knownUnknownExposure": "The live adapter identifies the full 100% as deployed yUSD strategy accounting. The yUSD terms name ForDeFi as an MPC/custody service provider, but do not disclose current venue, protocol, counterparty, custody allocation, or constituent weights.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -56,5 +56,27 @@
         "rationale": "The deployed yUSD strategy envelope is identified, but current look-through weights across protocols, venues, counterparties, and custody arrangements are not published."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "ForDeFi (MPC/custody service provider named in yUSD terms)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM13YUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "YieldFi yUSD token terms",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+      }
+    ],
+    "uncertainty": "The terms name an MPC/custody service provider, not a current allocation or an independently verified legal custodian. Provider shares, legal segregation, bankruptcy treatment, and rehypothecation restrictions remain unverified.",
+    "knownUnknownExposurePct": 100
   }
 }

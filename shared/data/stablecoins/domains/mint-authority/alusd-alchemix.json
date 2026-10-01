@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "alUSD has independent native AlchemistV2 CDP issuance on Ethereum, Arbitrum, Optimism, and Fantom. Each local path is collateral-gated and carries an on-chain mint-limit or token ceiling, but local token admins can re-authorize the Alchemist or raise ceilings, and the Alchemist/debt-token proxy paths remain mutable. Metis is a bridge-only CrossChainCanonical representation and is excluded from Mint Authority; all LayerZero/xERC20 mint, burn, lockbox, rate-limit, and bridge-upgrade capabilities remain under Bridge Risk.",
+    "confidence": "unknown",
+    "summary": "Current Alchemix V3 native alUSD Alchemists are deployed on Ethereum, Arbitrum and Optimism and use USDC-denominated MYT collateral. The April 2026 migration supersedes the previous description of V2 as the current issuance mechanism. Legacy V2/token controls remain recorded where their permissions have not been disproved; V3 minter identity and proxy state are pinned, with remaining L2 cap and upgrade-envelope questions explicit. Metis remains a bridge representation.",
     "controls": [
       {
         "label": "AlchemistV2 (CDP minter)",
@@ -142,7 +142,7 @@
           },
           {
             "label": "Current AlchemistV2 ProxyAdmin owner Safe API",
-            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9/"
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x9e2b6378ee8ad2A4A95Fe481d63CAba8FB0EBBF9/"
           }
         ],
         "evidence": "At Ethereum block 25770293, the AlchemistV2 EIP-1967 admin slot resolved to ProxyAdmin 0xe0fc5cb7665041cda26969a2d1ceb5cd5046347d, whose owner() returned this 3-of-7 Safe. Safe API returned the listed owners with no modules and zero guards. This Safe can replace collateral and mint-critical Alchemist logic through the ProxyAdmin without an external timelock.",
@@ -191,7 +191,7 @@
           },
           {
             "label": "Ethereum native-admin Safe API",
-            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xf56d660138815fc5d7a06cd0e1630225e788293d/"
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xF56D660138815fC5d7a06cd0E1630225E788293D/"
           }
         ],
         "chain": "ethereum",
@@ -768,8 +768,8 @@
         "evidence": "At Fantom block 122918901, Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605 held token ADMIN_ROLE while AlchemistV2 was not whitelisted. It can re-enable local native issuance and set the native token ceiling. Safe version 1.3.0 and a 3-of-7 owner set were observed; guard and module-guard reads reverted.",
         "sources": [
           {
-            "label": "Fantom alUSD token",
-            "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+            "label": "Archived Fantom alUSD token page (22 March 2025; identity only, current state verified by RPC)",
+            "url": "https://web.archive.org/web/20250322082139/https://ftmscan.com/token/0xB67FA6deFCe4042070Eb1ae1511Dcd6dcc6a532E"
           },
           {
             "label": "Fantom public RPC",
@@ -848,8 +848,8 @@
         "evidence": "At Fantom block 122918901, alUSD token 0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e resolved to implementation 0x211c74db951c161c5a379363716ebdca5125ef59. The current token proxy upgrade controller was not independently resolved; the code-less Multichain-era EOA remains only an unresolved Bridge Risk fact.",
         "sources": [
           {
-            "label": "Fantom alUSD token",
-            "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+            "label": "Archived Fantom alUSD token page (22 March 2025; identity only, current state verified by RPC)",
+            "url": "https://web.archive.org/web/20250322082139/https://ftmscan.com/token/0xB67FA6deFCe4042070Eb1ae1511Dcd6dcc6a532E"
           },
           {
             "label": "Fantom verified token implementation",
@@ -861,16 +861,88 @@
         "failureDomainKeys": [
           "implementation:fantom:0x211c74db951c161c5a379363716ebdca5125ef59"
         ]
+      },
+      {
+        "label": "Alchemix V3 Ethereum alUSD Alchemist",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xeb83112d925268bede86654c13d423a987587e3e",
+        "deploymentRefs": [
+          "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        ],
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "capDescription": "The canonical AlToken whiteList entry is true and ceiling(address) is nonzero. Token ADMIN_ROLE can raise that ceiling. The V3 Alchemist uses USDC-denominated MYT collateral and is an upgradeable proxy.",
+        "evidence": "At Ethereum block 26095800, version() returned 3.0.0, debtToken() returned the tracked canonical alUSD, underlyingToken() returned USDC, and AlToken.whiteList(this Alchemist) was true. ceiling and hasMinted were nonzero. EIP-1967 implementation was 0xd5f26c90ead033554bf36227d0bbe993f6f76570 and admin was 0xdf0dd1203a3a607d34ac01824abbd4f91367272b; ProxyAdmin.owner() and Alchemist.admin() both returned the existing V3 admin Safe 0xf56d660138815fc5d7a06cd0e1630225e788293d.",
+        "sources": [
+          {
+            "label": "Official Alchemix V3 Ethereum contracts",
+            "url": "https://docs.alchemix.fi/dev/contracts/ethereum"
+          },
+          {
+            "label": "Canonical AlToken verified source and whitelist/ceiling ABI",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+          }
+        ]
+      },
+      {
+        "label": "Alchemix V3 Arbitrum alUSD Alchemist",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "chain": "arbitrum",
+        "address": "0x930750a3510e703535e943e826aba3c364ffc1de",
+        "deploymentRefs": [
+          "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584266,
+        "evidence": "At Arbitrum block 510584266, debtToken() returned tracked alUSD, underlyingToken() returned native USDC, token.whitelisted(this Alchemist) was true, and mintCeiling()/totalMinted() were zero. EIP-1967 implementation was 0x40ba0d16ec0a0df332de9fa394a4591b2264999e and admin was 0x31058ad1296f72203ec563f18b2f48764d7c380c; ProxyAdmin.owner() returned existing V3 admin 0xee1aa1c3d0622fced823c7720cf9e8079558484b. Zero ceiling semantics and callable current mint capacity are not assumed.",
+        "sources": [
+          {
+            "label": "Official Alchemix V3 Arbitrum contracts",
+            "url": "https://docs.alchemix.fi/dev/contracts/arbitrum"
+          }
+        ]
+      },
+      {
+        "label": "Alchemix V3 Optimism alUSD Alchemist",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "chain": "optimism",
+        "address": "0x930750a3510e703535e943e826aba3c364ffc1de",
+        "deploymentRefs": [
+          "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 157619416,
+        "evidence": "At Optimism block 157619416, debtToken() returned tracked alUSD, underlyingToken() returned native USDC, token.whitelisted(this Alchemist) was true, and mintCeiling()/totalMinted() were zero. EIP-1967 implementation was 0x031b6228a825e0e1a37653e153cea6c02b571385 and admin was 0x31058ad1296f72203ec563f18b2f48764d7c380c; ProxyAdmin.owner() returned existing V3 admin 0x3dda174aa9e897e18b8e10e6ce39c2a52398181d. Zero ceiling semantics and callable current mint capacity are not assumed.",
+        "sources": [
+          {
+            "label": "Official Alchemix V3 Optimism contracts",
+            "url": "https://docs.alchemix.fi/dev/contracts/optimism"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25770293 and the reviewed Arbitrum, Optimism, and Fantom blocks, alUSD has independent native AlchemistV2 CDP issuance paths. Ethereum has a 1,000,000,000,000 alUSD token ceiling and the L2 paths each showed a 200% minimum collateral ratio, a 5,000,000 alUSD global mint limit, and a false Alchemist whitelist flag at review time. The local token ADMIN_ROLE Safes can re-authorize an Alchemist and raise its token ceiling; the Alchemist and debt-token proxy families remain replaceable through their ProxyAdmin paths. Metis is a bridge-only representation and is excluded from Mint Authority. LayerZero/xERC20 mint, burn, lockbox, rate-limit, and bridge-upgrade powers remain under Bridge Risk. Aggregate economic cap semantics are raiseable/unbounded, reconciliation is on-chain/not applicable, and no prudential supervisor or independent attestor applies.",
-      "reviewer": "Claude Phase 0c continuation; FIX2-18 alusd-alchemix migration review",
-      "reviewedAt": "2026-08-16",
-      "disposition": "scoreable",
+      "evidence": "Re-reviewed 2026-10-01: the issuer states that all V2 borrower positions migrated to V3 in April 2026. Current V3 Alchemist and MYT addresses on Ethereum, Arbitrum and Optimism were checked at pinned blocks, confirming canonical debt tokens, USDC underlyings, token whitelist entries, and mutable proxy paths. The historical V2 and token-admin observations are retained as legacy permission evidence, not a current portfolio or borrower-mechanism description. V3 proxy owner identities are recorded in the new controls; the legacy aggregate upgradeability envelope has not yet been remapped to those V3 paths. Metis and LayerZero/xERC20 representation powers stay in Bridge Risk.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+      "reviewedAt": "2026-10-01",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Complete the deployment-scoped V3 native upgradeability envelope and determine current L2 mint-cap semantics where whitelisted V3 Alchemists have zero mintCeiling and totalMinted.",
+        "Reconcile all current and legacy token-authorized minters with the issuer's V3 deployment list before treating this multi-chain native mint review as complete."
+      ],
       "sources": [
         {
           "label": "AlToken (alUSD) on Etherscan",
@@ -939,8 +1011,8 @@
           "url": "https://optimistic.etherscan.io/token/0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
         },
         {
-          "label": "Fantom alUSD on FtmScan",
-          "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+          "label": "Archived Fantom alUSD token page (22 March 2025; identity only, current state verified by RPC)",
+          "url": "https://web.archive.org/web/20250322082139/https://ftmscan.com/token/0xB67FA6deFCe4042070Eb1ae1511Dcd6dcc6a532E"
         },
         {
           "label": "Alchemix V2 Developer Docs",

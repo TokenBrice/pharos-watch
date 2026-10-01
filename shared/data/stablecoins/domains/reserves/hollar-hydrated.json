@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB06GBPSAFO)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -30,12 +30,20 @@
       {
         "label": "Hydration borrow markets",
         "url": "https://app.hydration.net/borrow/markets"
+      },
+      {
+        "label": "Hydration token facilitator source",
+        "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/GhoToken.sol"
+      },
+      {
+        "label": "Hydration public RPC, block 15249643",
+        "url": "https://rpc.hydradx.cloud"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Hydration HOLLAR docs: HOLLAR is GHO-style overcollateralized mint against crypto collateral including DOT, ETH, vDOT, USDT, USDC, tBTC, WBTC, plus HOLLAR Stability Module. Borrow markets app URL still live. No public per-asset weight table; envelope remains 100% aggregate borrow-market/HSM collateral with ku=100.",
+    "rationale": "Reviewed Hydration's HOLLAR and Borrow documentation on 2026-10-01 and read the token at Hydration block 15249643. The token registers five facilitators: Hydration Market, HOLLAR FlashMinter, HOLLAR Stability Module, GIGAHDX, and BIL. Their bucket capacities and levels describe mint authority and liabilities, not collateral holdings or asset weights. Public documentation names eligible collateral and HSM yield strategies but does not provide a dated complete allocation spanning these paths. Keep the unresolved aggregate and known-unknown exposure at 100%; this review does not refresh the composition date.",
     "compositionBasis": "Hydration's documented HOLLAR collateral set; current per-asset and HSM-versus-borrow-market weights are unpublished",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current per-asset collateral weights, the share held via the HOLLAR Stability Module versus borrow positions, and per-asset utilization are not published as a dated aggregate.",
+    "knownUnknownExposure": "A complete dated collateral and HSM-asset denominator is not established. Current facilitator bucket levels do not reveal per-asset reserve weights, HSM holdings, GIGAHDX/BIL collateral coverage, cross-venue debt, or double-counting adjustments.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

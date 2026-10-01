@@ -140,9 +140,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "SPL mint authority is the reviewed 3-of-10 multisig (mint-authority profile); XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "At finalized Solana slot 452222569 on 2026-10-01, XSGD's native SPL mint and freeze authority was CrtdStZqGrcqrpDZ5XnmaEKvzyBNLgq6uvNKCokFgo6v, a 3-of-11 SPL multisig. This replaces the historically reviewed 3-of-10 authority; XSGD remains issuer-minted natively, not through a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452222569,
         "sources": [
           {
             "label": "StraitsX XSGD",

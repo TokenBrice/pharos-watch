@@ -132,9 +132,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: AUDm is the Mento StableToken whose sole authorized minter is the Mento Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad (broker() getter), with token owner and proxy admin both resolving to the Mento Timelock 0x890Db8a597940165901372Dd7Db61C9f246e2147, matching the reviewed mintAuthority. Issuer-native deployment; no bridge control carries the claim.",
+        "reviewNote": "At Celo block 78936863, AUDm broker() returned 0x777a8255ca72412f0d706dc03c9d1987306b4cad. Token owner and the corrected EIP-1967 admin slot both returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147. This is native Broker issuance, not a bridge representation. Broker is not the sole token-level minter: verified StableTokenV2 also authorizes the nonzero validators() address, whose independent control path requires separate review.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78936863,
         "sources": [
           {
             "label": "AUDm token on Celoscan",

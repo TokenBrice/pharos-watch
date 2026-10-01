@@ -34,11 +34,23 @@
       {
         "label": "Sonic crvUSD bridge token",
         "url": "https://sonicscan.org/address/0x7fff4c4a827c84e32c5e175052834111b2ccd270#code"
+      },
+      {
+        "label": "Verified canonical crvUSD token source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+      },
+      {
+        "label": "Curve current collateral markets",
+        "url": "https://prices.curve.finance/v1/crvusd/markets/ethereum"
+      },
+      {
+        "label": "Verified cbBTC collateral implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7458bfdc30034eb860b265e6068121d18fa5aa72"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The canonical crvUSD Stablecoin remained a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified Vyper source has ordinary transfer and allowance-gated transferFrom/burnFrom paths without blacklist, holder freeze, arbitrary-holder seizure, or global transfer pause. The ten tracked bridge representations were previously reviewed through verified source or canonical mappings and likewise exposed bridge mint/burn or upgrade controls rather than a current Curve-controlled holder restriction. Collateral-issuer and bridge impairment remain separate upstream/deployment risks and do not make the direct blacklist verdict inherited.",
-    "reviewer": "OpenAI Codex C02 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-verified 2026-10-01 at Ethereum block 26095803. Canonical crvUSD's verified Vyper implementation has ordinary transfers and allowance-gated transferFrom/burnFrom, with no blacklist or global transfer-pause path; the zero EIP-1967 slots are consistent with this direct deployment but are not themselves proof of immutability. Inherited collateral restrictions remain material: Curve's current markets API identifies debt-bearing cbBTC controller 0xf8c786b1064889ffd3c8a08b48d5e0c159f4cbe3, backed by token 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf. Its legacy Zeppelinos implementation slot resolves to 0x7458bfdc30034eb860b265e6068121d18fa5aa72, whose verified FiatTokenV2_1 source exposes blacklist and pause. Pinned cbBTC reads resolve nonzero blacklister 0x5130bf38bf5342aa06cc79b8cc198cce832b01af and pauser 0x7399168043b684b57f198c42fc31558467cf2d6a. The inherited reviewedStatus is retained; canonical-holder restrictions and upstream collateral impairment are distinct, and no collateral-issuer risk is removed. Earlier bridge-source observations remain historical rather than a new assertion that every bridge lacks restrictions.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA25EUTBL)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "standard-external",

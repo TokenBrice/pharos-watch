@@ -24,7 +24,7 @@
     "sources": [
       {
         "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
-        "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
       },
       {
         "label": "VNX Gold",
@@ -65,10 +65,10 @@
     "sources": [
       {
         "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
-        "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
       }
     ],
-    "uncertainty": "AREVA confirmed that Philoro's custody statement was in VNX Commodities AG's name and reported all 13,100 gross grams there, but did not physically observe the gold or validate quality, legal rights, segregation, bankruptcy remoteness, or rehypothecation restrictions.",
+    "uncertainty": "AREVA's December 2025 report names Philoro in Liechtenstein and reports all 13,100 gross grams there, but did not physically observe the gold or validate quality, legal rights, segregation, bankruptcy remoteness, or rehypothecation restrictions. The issuer case study fetched on 2026-10-01 describes storage in Liechtenstein and Switzerland without naming current provider allocations. The historical 100% Philoro share is not a current allocation measurement.",
     "knownUnknownExposurePct": 0
   }
 }

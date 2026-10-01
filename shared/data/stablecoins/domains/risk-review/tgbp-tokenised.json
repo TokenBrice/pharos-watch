@@ -2,10 +2,19 @@
   "id": "tgbp-tokenised",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: tGBP resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "BCP StableTokenV1OFT source",
+        "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
+      },
+      {
+        "label": "Solana finalized mint authority read",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "The issuer's StableTokenV1OFT source exposes owner-only pause() for all token transfers. Pinned owner() reads on all seven authored EVM deployments returned 0xaf4fce2984fb307a368f3ff01f900909956595c0. At finalized Solana slot 452213538, the tGBP SPL mint's freezeAuthority was 3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs, an initialized 1-of-2 multisig. Direct transfer impairment is therefore evidenced independently of centralized-governance inference.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB26MUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

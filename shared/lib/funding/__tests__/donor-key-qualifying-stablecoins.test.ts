@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DONOR_KEY_QUALIFYING_STABLECOINS } from "../donor-eligibility";
+import { DONOR_KEY_QUALIFYING_STABLECOINS, resolveDonorKeyQualifyingStablecoin } from "../donor-eligibility";
 import type { FundingChain } from "../schema";
 
 const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
@@ -78,6 +78,13 @@ describe("donor key qualifying stablecoins", () => {
       for (const address of Object.values(coin.contracts)) expect(address).toMatch(/^0x[0-9a-f]{40}$/);
     },
   );
+
+  it.each(["base", "optimism"] as const)("qualifies issuer-listed RLUSD on %s without granting cross-chain identity", (chain) => {
+    const deployment = "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258";
+    expect(resolveDonorKeyQualifyingStablecoin(chain, deployment.toUpperCase())?.stablecoinId).toBe("rlusd-ripple");
+    expect(resolveDonorKeyQualifyingStablecoin("ethereum", deployment)).toBeNull();
+    expect(resolveDonorKeyQualifyingStablecoin(chain, "0x8292bb45bf1ee4d140127049757c2e0ff06317ed")).toBeNull();
+  });
 
   it("never lists a contract that another catalog coin claims on the same chain", () => {
     const allowlisted = new Map<string, string>();

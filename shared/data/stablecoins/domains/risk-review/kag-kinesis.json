@@ -2,10 +2,19 @@
   "id": "kag-kinesis",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: KAG resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "KMS Labs terms, section 11 freezing and recovery powers",
+        "url": "https://kmslabs.money/kms-labs-tcs/"
+      },
+      {
+        "label": "ERC20F verified implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      }
+    ],
+    "evidence": "KMS Labs terms section 11 expressly permits freezing, blacklisting, restrictions and recovery without advance notice. At Ethereum block 26095796, the KAG proxy retained ERC20F implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 and accessRegistry() returned 0x25f604795215fc9468f8d2cc60e96330110b4861; paused() returned false. Verified ERC20F source checks registry access on transfers and supports role-gated pause and recovery. The existing true verdict is now primary-sourced rather than inferred from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA43KAG)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
@@ -23,8 +32,8 @@
         "url": "https://kinesis.money/trust-security/"
       },
       {
-        "label": "Kinesis ERC-20 silver announcement",
-        "url": "https://kinesis.money/unternehmensnachrichten/silver-kag-listed-on-ascendex/"
+        "label": "Kinesis current ERC-20 silver disclosure",
+        "url": "https://kinesis.money/silver/"
       },
       {
         "label": "Kinesis ERC-20 silver MEXC announcement",
@@ -63,8 +72,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Official Kinesis material identifies native KAG as issued by Kinesis Cayman on the Kinesis network and the Ethereum ERC-20 as a KMS Labs 1:1 claim on Kinesis KAG held in KMS Labs reserves, redeemable into Kinesis KAG subject to compliance. That disclosure establishes an issuer-custody representation route, but the reviewed sources do not expose a verifiable Kinesis-side lockbox, reserve account, or supply-conserving mint/burn invariant, so the route remains at the adverse opaque-or-unknown tier rather than receiving a favorable issuer-native lock/mint classification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770003,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Kinesis trust and security disclosure",
@@ -108,8 +117,8 @@
           "caps": "The ERC20F source defines mint(address,uint256) as onlyRole(MINTER_ROLE) without a numeric cap or per-minter allowance.",
           "pausersAdminsUpgraders": "This is a plain EOA with no multisig, timelock, or guard evidence in front of the representation minter control."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770003,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "KAG token proxy on Etherscan",
@@ -124,7 +133,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25770003 on 2026-08-16, hasRole(MINTER_ROLE, 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e) on the KAG proxy returned true and eth_getCode returned 0x (EOA). The verified ERC20F source defines mint(address,uint256) as onlyRole(MINTER_ROLE) with no supply cap or per-minter allowance, so this key can mint an unbounded amount of the Ethereum representation. The role was granted at deployment block 23337287 and was not revoked in the reviewed role state."
+        "evidence": "At Ethereum block 26095796 on 2026-10-01, hasRole(MINTER_ROLE, 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e) on the KAG proxy returned true and eth_getCode returned 0x (EOA). The implementation remained 0x0f25045d15c163478bb67c56c5d9d602628f4f62. Its verified ERC20F mint function is onlyRole(MINTER_ROLE) with no numeric supply cap or per-minter allowance."
       },
       {
         "id": "kag-ethereum-erc20f-default-admin",
@@ -150,8 +159,8 @@
           "caps": "The ERC20F source imposes no mint cap; granting another MINTER_ROLE or replacing the implementation can expand representation supply without an on-chain ceiling.",
           "pausersAdminsUpgraders": "At the observed block, DEFAULT_ADMIN_ROLE and CONTRACT_ADMIN_ROLE are held by this plain EOA. It is the role admin for MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE, and PAUSER_ROLE, and no multisig, timelock, or guard sits in front of it."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770003,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "KAG token proxy on Etherscan",
@@ -166,7 +175,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25770003 on 2026-08-16, hasRole(DEFAULT_ADMIN_ROLE, 0x24945ec1be35c11c1fc13c72c910851541afb10f) returned true and eth_getCode returned 0x (EOA). getRoleAdmin() for MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE, and PAUSER_ROLE returned DEFAULT_ADMIN_ROLE, so this key can grant MINTER_ROLE to any address and can self-grant UPGRADER_ROLE to replace the ERC20F implementation. No timelock, multisig, or guard sits in front of this representation administrator."
+        "evidence": "At Ethereum block 26095796 on 2026-10-01, hasRole(DEFAULT_ADMIN_ROLE, 0x24945ec1be35c11c1fc13c72c910851541afb10f) and hasRole(CONTRACT_ADMIN_ROLE, that address) both returned true; eth_getCode returned 0x (EOA). getRoleAdmin for MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE and PAUSER_ROLE returned DEFAULT_ADMIN_ROLE. This administrator can grant mint and UUPS upgrade authority without an intervening on-chain multisig or timelock."
       }
     ]
   }

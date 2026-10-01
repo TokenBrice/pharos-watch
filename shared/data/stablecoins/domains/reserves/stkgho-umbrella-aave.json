@@ -9,5 +9,52 @@
       "coinId": "gho-aave",
       "depType": "wrapper"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aave Umbrella staking documentation",
+        "url": "https://aave.com/help/umbrella/umbrella"
+      },
+      {
+        "label": "stkGHO verified proxy and ERC-4626 asset observation at Ethereum block 26095800",
+        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+      }
+    ],
+    "rationale": "At Ethereum block 26095800, asset() returned GHO 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f and convertToAssets(1e18) returned 1e18. The single-asset ERC-4626 wrapper holds GHO, with automated slashing able to reduce the redeemable value. The 100% slice describes the wrapper's underlying identity, not a measured diversification or absence of slashing risk.",
+    "compositionBasis": "Standing single-asset ERC-4626 wrapper structure, confirmed by pinned asset() at Ethereum block 26095800",
+    "compositionAsOf": "2026-10-01",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The wrapper's GHO identity is verified; GHO's own backing and controls remain parent exposure. Future deficits can reduce redeemable assets through automated slashing.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Aave Umbrella stkGHO smart contract (Ethereum)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aave Umbrella staking documentation",
+        "url": "https://aave.com/help/umbrella/umbrella"
+      },
+      {
+        "label": "stkGHO asset() at Ethereum block 26095800",
+        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+      }
+    ],
+    "uncertainty": "GHO is held in an upgradeable on-chain staking vault and is exposed to Umbrella slashing. The reviewed documents do not establish legal segregation, insolvency treatment, or reuse restrictions.",
+    "knownUnknownExposurePct": 100
+  }
 }

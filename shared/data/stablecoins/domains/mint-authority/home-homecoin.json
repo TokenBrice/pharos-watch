@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "verified",
-    "summary": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is an EIP-1967 proxy. The ProxyAdmin (0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f) is owned by a 5-signer legacy Gnosis MultiSigWallet (0xa42f6fb68607048dde54fcd53d2195cc8ca5f486, threshold 3-of-5). Minting occurs only through Bacon Protocol Pan contracts when borrowers draw lien-backed loans. BACON governance controls Pan additions.",
+    "confidence": "manual-review",
+    "summary": "HOME is an EIP-1967 proxy pointing to Pool16. ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f is owned by Gnosis Safe v1.3.0 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486, currently 3-of-5. The Safe is also the Pool16 servicer. Loan origination is lien-gated, but proxy upgrades can replace mint-critical logic without a recorded delay.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -19,9 +19,9 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "HomeCoin ProxyAdmin owner (legacy Gnosis MultiSigWallet)",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25580037,
+      "controlRef": "HomeCoin ProxyAdmin owner (Gnosis Safe 3/5)",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095802,
       "sources": [
         {
           "label": "HOME Ethereum proxy",
@@ -46,7 +46,7 @@
         "directMintAbility": "cap-limited",
         "capDescription": "HOME supply expands only as new overcollateralized home loans are originated through a Pan; minting is tied to lien-backed loan creation rather than free issuer mint.",
         "canRaiseCap": false,
-        "evidence": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is a proxy (EIP-1967 impl slot = 0x366049d336e73cfaf39c6a933780ca4c96ea084c, 24022 bytes); owner() reverts on the proxy; minting is contract-controlled via Pan loan origination. Follow-up 2026-07-20: the HOME token proxy's implementation is the Pool16 lending contract (blockscout-verified): borrow() mints HOME permissionlessly against servicer-issued property NFT liens (99% to borrower, 0.5% to servicer, 0.5% to DAO); getServicerAddress() = 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 (the reviewed 3-of-5 MultiSigWallet) and the liquidity token is USDC 0xa0b86991... There is no aggregate on-chain supply cap; mint volume is bounded only by servicer-originated loans.",
+        "evidence": "At Ethereum block 26095802, HOME retained Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c and ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f. getServicerAddress() returned Safe 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 and getSupplyableTokenAddress() returned canonical USDC. Verified borrow() requires a property lien NFT; no aggregate mint cap is disclosed by this implementation.",
         "sources": [
           {
             "label": "HOME token on Etherscan",
@@ -54,20 +54,22 @@
           }
         ],
         "address": "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
-        "modulesOrGuardsStatus": "not-applicable"
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802
       },
       {
-        "label": "HomeCoin ProxyAdmin owner (legacy Gnosis MultiSigWallet)",
+        "label": "HomeCoin ProxyAdmin owner (Gnosis Safe 3/5)",
         "role": "minter-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0xa42f6fb68607048dde54fcd53d2195cc8ca5f486",
         "threshold": 3,
         "signerCount": 5,
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "unknown",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295203: HOME token EIP-1967 proxy admin slot = 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f (ProxyAdmin, verified via Blockscout). ProxyAdmin.owner() = 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486. getOwners() on that address returns 5 EOA addresses; storage slot 4 = 3 (required/threshold); storage slot 3 = 5 (ownerCount). Contract is 342 bytes, classic Gnosis MultiSigWallet (pre-Safe, no module system).",
+        "evidence": "At Ethereum block 26095802, ProxyAdmin.owner() remained 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486. Verified code identifies GnosisSafeProxy, slot zero identifies singleton 0xd9db270c1b5e3bd161e8c8503c55ceabee709552, VERSION() is 1.3.0, getOwners() returns five addresses and getThreshold() is three. getModulesPaginated(0x1,10) returned no enabled modules. Guard and fallback handler were not read. The previous legacy MultiSigWallet/no-module-system description was incorrect.",
         "sources": [
           {
             "label": "HOME ProxyAdmin on Etherscan",
@@ -77,16 +79,34 @@
             "label": "HOME multisig on Etherscan",
             "url": "https://etherscan.io/address/0xa42f6fb68607048dde54fcd53d2195cc8ca5f486"
           }
-        ]
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
+        "safe": {
+          "owners": [
+            "0x1ecf03378e82858fe1158f1cda3bb4ce3f94b53e",
+            "0xab376293a4c30b8c7eeeafd26d8a5f30083432ad",
+            "0x6764f11917dbc8d8d8c0dade66e0c088ce2ae825",
+            "0x8498713797dba114ba6f0345db699adfc68ee27b",
+            "0xad545bf1ec9621a0f85c624fd14a7732dfa90976"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "version": "1.3.0",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095802,
+          "source": "onchain"
+        }
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295203: HOME token (0xb8919522...) EIP-1967 proxy admin slot = 0x5729890f... (ProxyAdmin); impl slot = 0x366049d3... (24022 bytes). ProxyAdmin.owner() = 0xa42f6fb6... (legacy Gnosis MultiSigWallet, 342 bytes). getOwners() = 5 EOAs; required (slot 4) = 3; ownerCount (slot 3) = 5. No Safe module system. Minting is via Pan contracts (loan origination); no direct issuer-discretion mint path. Economic-posture fields reviewed 2026-08-15: the no-delay proxy authority can replace collateral-gated mint logic, while no current loan-tape reconciliation, independent attestation, or named prudential supervisor is evidenced. Wave 2 external research reviewed 2026-08-15: HomeCoin's public pages claim all loans are viewable but the referenced live statistics endpoint no longer resolves and no current portfolio-to-supply report or independent attestation is published, so reconciliation remains unknown. Sol reconciliation adjudication 2026-08-15: although HomeCoin's Pans mint HOME through collateralized loan accounting, the no-delay proxy authority can replace that gating; without a current portfolio-to-whole-supply report or independent attestation, reconciliation is applicable but remains unknown.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 26095802, HOME retained Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c and ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f. getServicerAddress() returned Safe 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 and getSupplyableTokenAddress() returned canonical USDC. Verified borrow() requires a property lien NFT; no aggregate mint cap is disclosed by this implementation. At Ethereum block 26095802, ProxyAdmin.owner() remained 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486. Verified code identifies GnosisSafeProxy, slot zero identifies singleton 0xd9db270c1b5e3bd161e8c8503c55ceabee709552, VERSION() is 1.3.0, getOwners() returns five addresses and getThreshold() is three. getModulesPaginated(0x1,10) returned no enabled modules. Guard and fallback handler were not read. The previous legacy MultiSigWallet/no-module-system description was incorrect. The existing unbounded economic-cap posture, unknown reconciliation and absent supervision are retained; no favorable reconciliation or reserve claim is inferred.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB22mGLOBAL)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "HomeCoin / Bacon Protocol docs",

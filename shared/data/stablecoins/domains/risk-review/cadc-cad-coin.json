@@ -2,10 +2,15 @@
   "id": "cadc-cad-coin",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: CADC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Solana mainnet RPC (finalized slot 452218719)",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "At finalized Solana slot 452218719, CADC SPL mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 retained a non-null freezeAuthority, 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg. Direct SPL account-freeze capability establishes holder-level transfer restriction without inferring it from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
@@ -150,9 +155,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native CADC on Solana: SPL mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 (6 decimals, supply 10,001,000,000 raw) has mintAuthority 5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw and freezeAuthority CwAYsAH3HpJSFvmxUCxd3sExavu9TeEvz49zruhei6w4, the Loon issuance authorities (read 2026-07-20 via Solana RPC).",
+        "reviewNote": "Native CADC on Solana: at finalized slot 452218719, SPL mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 had decimals 6 and mintAuthority and freezeAuthority 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg. The authority is a zero-data, non-executable System Program account, not an SPL multisig.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452218719,
         "sources": [
           {
             "label": "CAD Coin",

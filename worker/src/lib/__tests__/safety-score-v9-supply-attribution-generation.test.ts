@@ -1,3 +1,4 @@
+import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { beforeAll, describe, expect, it } from "vitest";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";

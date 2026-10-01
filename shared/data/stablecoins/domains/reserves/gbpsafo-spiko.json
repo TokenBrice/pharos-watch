@@ -27,11 +27,11 @@
         "url": "https://www.spiko.io/spiko-pound"
       }
     ],
-    "rationale": "Spiko describes GBPsAFO as a tokenized GBP overnight total-return swap fund. The reviewed public product materials do not publish current collateral instruments, swap counterparties, or position weights.",
+    "rationale": "Spiko describes GBPSAFO as a tokenized GBP overnight total-return swap fund. Its product page identifies BNP Paribas as a counterparty, and the September 2026 prospectus permits bonds, equities and money-market instruments under total-return swaps; neither source supplies a dated current portfolio or counterparty-weight table.",
     "compositionBasis": "Spiko GBP fund product disclosure",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The live collateral and overnight swap counterparty allocation are not publicly disclosed.",
+    "knownUnknownExposure": "Current security-level holdings and measured swap-counterparty allocation are undisclosed in the reviewed public sources; BNP Paribas is named, but no portfolio weight is established.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -39,8 +39,34 @@
         "reserveName": "Fully collateralized overnight total-return swap exposure",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Issuer disclosure does not provide component weights or counterparties."
+        "rationale": "The issuer names BNP Paribas but does not provide current constituent or counterparty weights."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CACEIS Bank",
+        "role": "custodian",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB06GBPSAFO)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, 1 September 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "GBPSAFO key information document, 29 July 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf"
+      }
+    ],
+    "uncertainty": "The GBP key information document states that product assets are separate from the management company and legally segregated from the depositary's assets. CACEIS Bank is the named depositary and custodian. Current subcustodian allocations, provider shares, and rehypothecation terms were not established; no separate bankruptcy-remoteness tier is inferred."
   }
 }

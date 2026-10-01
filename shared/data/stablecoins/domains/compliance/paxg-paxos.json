@@ -1,7 +1,13 @@
 {
   "id": "paxg-paxos",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Pax Gold official product page: PAXG is currently unavailable in the EU",
+        "url": "https://www.paxos.com/pax-gold"
+      }
+    ]
   },
   "genius": {
     "applicability": "non-payment-token",

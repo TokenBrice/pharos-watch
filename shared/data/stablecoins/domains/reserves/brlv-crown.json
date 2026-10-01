@@ -34,7 +34,7 @@
         "url": "https://www.crown-brlv.com/en/transparency/"
       }
     ],
-    "rationale": "Verified both pages of Fact Finance's technical verification memo dated August 31, 2026, linked by Crown's current monthly-report index alongside the June and July reports. The memo reports R$380,315,618.44 of reserves against R$378,063,743.00 of circulating BRLV (100.60% coverage). Its two Brazilian Treasury bond rows total R$380,258,017.98 and its two Treasury ETF rows total R$57,540.25; R$60.21 is cash. Aggregating the stated balances and rounding to two decimals produces 99.98% government bonds and 0.02% ETFs, with cash below 0.0001%. The report identifies the tracked Base contract 0xd7Ca0e2C36d647446b782D1b72308E598373E2F5. It is signed by Fact Finance's technical lead and carries no accountant assurance standard or opinion; freshness does not upgrade that engagement classification.",
+    "rationale": "Verified both pages of Fact Finance's technical verification memo dated August 31, 2026, linked by Crown's current monthly-report index alongside the June and July reports. The memo reports R$380,315,618.44 of reserves against R$378,063,743.00 of circulating BRLV (100.60% coverage). Its two Brazilian Treasury bond rows total R$380,258,017.98 and its two Treasury ETF rows total R$57,540.25; R$60.21 is cash. Aggregating the stated balances and rounding to two decimals produces 99.98% government bonds and 0.02% ETFs, with cash below 0.0001%. The report labels distribution as Base but links a Base explorer URL for 0xd7Ca0e2C36d647446b782D1b72308E598373E2F5, which Crown's official deployment table and pinned Ethereum reads identify as Ethereum bridgedBRLV; the canonical Base contract is 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36. This report identity inconsistency prevents using its chain label or address as deployment-level supply evidence. It is signed by Fact Finance's technical lead and carries no accountant assurance standard or opinion; freshness does not upgrade that engagement classification.",
     "compositionBasis": "Fact Finance BRLV technical verification memo dated August 31, 2026; category percentages computed from its stated reserve balances and rounded to two decimals; PDF SHA-256 68325f70157b6d549f534900917e84d40bdcbc9bc9348de2a717c11f8e01f8cd",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
@@ -60,18 +60,27 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed institutions regulated by the Central Bank of Brazil",
+        "name": "Banco Genial S.A.",
         "role": "custodian",
-        "sharePct": 100,
+        "jurisdiction": "Brazil"
+      },
+      {
+        "name": "Krona Two S.à.r.l.",
+        "role": "other",
+        "jurisdiction": "Luxembourg"
+      },
+      {
+        "name": "Vórtx Serviços Fiduciários Ltda.",
+        "role": "other",
         "jurisdiction": "Brazil"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve re-verification",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA44SAFO)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Crown BRLV reserve transparency (re-opened 2026-07-28)",
@@ -80,8 +89,12 @@
       {
         "label": "Crown BRLV product disclosure (re-opened 2026-07-28)",
         "url": "https://www.crown-brlv.com/brlv/"
+      },
+      {
+        "label": "Crown binding platform terms updated September 18, 2026, sections IV-VI",
+        "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
       }
     ],
-    "uncertainty": "Crown states that reserves are legally segregated, linked to BRLV holders through an independent collateral agent (Agente de Garantia), and held at institutions regulated by the Central Bank of Brazil under a bankruptcy-remote structure, but it does not name the custodians, allocate balances among them, or disclose rehypothecation terms. Re-opened 2026-07-28: both product and transparency pages still state those claims without naming providers."
+    "uncertainty": "The September 18, 2026 binding terms identify Banco Genial S.A. as the reserve-asset custodian, Krona Two S.à.r.l., a Luxembourg SPV, as guarantor and reserve-account holder, and Vórtx Serviços Fiduciários Ltda. (CNPJ 17.595.680/0001-36) as the security agent holding fiduciary liens registered in SELIC/B3. No provider-level allocations are disclosed, so no shares are asserted. The terms describe segregation and enforcement upon specified defaults, with KYC, notice, cure-period and coverage exclusions; the orphan guarantor has two independent directors and Dutch stichting ownership, while remaining within Crown's economic group for governance and reporting. Rehypothecation terms remain unverified."
   }
 }

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Cash and deposit accounts in the BBI Reserve",
-      "pct": 6.2,
+      "pct": 7,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Depository institutions holding the Bridge Building Inc Reserve (institutions undisclosed)",
@@ -16,7 +16,7 @@
     },
     {
       "name": "U.S. Treasury bills and U.S. government money-market funds (T-bill ladders under 3-month duration)",
-      "pct": 93.8,
+      "pct": 93,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury and U.S. government money-market funds (fund issuers undisclosed)",
@@ -25,13 +25,12 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day",
-      "maturityDaysMax": 90
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "Pharos reserve research (GLM issue-sweep 2026-09-29)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA24GHO)",
     "confidence": "verified",
     "sources": [
       {
@@ -51,9 +50,9 @@
         "url": "https://www.usecash.xyz/"
       }
     ],
-    "rationale": "2026-09-29 review (all four sources fetched HTTP 200 same day): Bridge now publishes a per-coin reserves dashboard at reserves.bridge.xyz/cash, page last updated Sep 29, 2026, 2:20 PM UTC, reporting 131,419,065 CASH in circulation against $131,420,074 of reserve assets ($1,009 overcollateralized, 100.00% collateralized) with an issuer-stated investment allocation of Cash $8,111,025 (6.2%) and Treasury $123,309,049 (93.8%); the page footnote states that Treasuries include money-market funds comprised of T-bill ladders with less than 3-month duration. Identity verified against the local asset: the dashboard lists Chains Solana CASHx9… and HyperEVM 0x061A…Ed06, matching this coin's contracts, and its 131.4M supply matches the evaluated canonical supply. The two buckets reconcile to the published reserve total (8,111,025 + 123,309,049 = 131,420,074) and their stated percentages (6.2/93.8) recompute from those amounts. The BBI Stablecoin Terms §02 (retrieved unchanged) still define the Reserve test at 5:00 pm New York time each business day and eligible classes (a) U.S. T-bills ≤3 months, (b) overnight Treasury reverse repo, (c) U.S. government MMFs, (d) deposit accounts, (e)/(f) tokenized equivalents, so both dashboard buckets sit inside the disclosed eligible envelope; the usecash.xyz FAQ restates the same envelope and 1:1 redemption. The prior aggregate basket with a basket-needs-split disposition is therefore replaced by the issuer's own split. No independent attestation exists yet: the Bridge FAQ still says quarterly audits and transparency reports will be issued, and none was found for CASH, so the composition remains issuer-self-reported at bucket granularity.",
-    "compositionBasis": "Bridge reserves dashboard (reserves.bridge.xyz/cash) issuer-stated allocation as of the page update stamped Sep 29, 2026, 2:20 PM UTC: Cash $8,111,025 (6.2%) and Treasury $123,309,049 (93.8%) against $131,420,074 total reserve assets and 131,419,065 CASH circulating; Treasuries include MMFs of T-bill ladders under 3-month duration. Corroborated by BBI Stablecoin Terms §02 eligible-class envelope and Bridge issuance FAQ.",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "Bridge's CASH-specific dashboard, last updated Oct 1, 2026, 6:10 AM UTC, reports 130,542,113 CASH circulating and $130,543,126 reserve assets, with $9,102,116 Cash (7.0%) and $121,441,011 Treasury (93.0%). The dashboard lists the exact authored Solana and HyperEVM contracts. Its Treasury footnote includes money-market funds comprised of T-bill ladders with less than three-month duration; this does not establish a 90-day maximum maturity for every asset in the combined bucket. BBI Terms section 02 and the Bridge issuance FAQ corroborate the eligible reserve classes, segregation and issuer self-reporting. No provider weights or direct Treasury versus money-market-fund split are inferred.",
+    "compositionBasis": "Issuer-published CASH dashboard allocation at its Oct 1, 2026, 6:10 AM UTC update: Cash $9,102,116 (7.0%) and Treasury $121,441,011 (93.0%), against $130,543,126 reserve assets and 130,542,113 CASH circulating.",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "The dashboard fully allocates reserve assets between its two published buckets, so no notional is unclassified at the asset-class level. Residual unknowns: the dashboard is issuer self-reported with no independent attestation yet (quarterly audits are promised, none published for CASH); per-provider splits inside the Treasury bucket (direct T-bills vs specific government MMFs), the deposit banks behind the Cash bucket, and any tokenized-asset usage permitted by eligible classes (e)/(f) are not broken out; repo holdings within the eligible envelope are not separately reported.",
     "knownUnknownExposurePct": 0
@@ -91,6 +90,6 @@
         "url": "https://www.usecash.xyz/"
       }
     ],
-    "uncertainty": "2026-09-29 refresh: the Bridge issuance FAQ (retrieved HTTP 200) still states the portfolio is held in a segregated account for the benefit of token holders and custodied by BlackRock and Fidelity, and that reserves sit in segregated, bankruptcy-remote accounts with regulated financial institutions; the Terms still require Reserve segregation from BBI operating assets at depository institutions/securities custodians; usecash.xyz still states bankruptcy-remote accounts at leading custodians. Provider shares, account-level placement of the dashboard's Cash and Treasury buckets between the named custodians, and rehypothecation terms remain undisclosed."
+    "uncertainty": "2026-09-29 refresh: the Bridge issuance FAQ (retrieved HTTP 200) still states the portfolio is held in a segregated account for the benefit of token holders and custodied by BlackRock and Fidelity, and that reserves sit in segregated, bankruptcy-remote accounts with regulated financial institutions; the Terms still require Reserve segregation from BBI operating assets at depository institutions/securities custodians; usecash.xyz still states bankruptcy-remote accounts at leading custodians. Provider shares, account-level placement of the dashboard's Cash and Treasury buckets between the named custodians, and rehypothecation terms remain undisclosed. Scope limitation: the named BlackRock/Fidelity disclosure is a platform-wide Bridge FAQ, not a CASH-specific account inventory or provider allocation. Do not infer provider shares, treatment of every CASH deposit account, or legal enforceability beyond the issuer terms."
   }
 }

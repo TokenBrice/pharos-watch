@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "PUSD's only authored deployment is a Polygon-native UUPS-proxy ERC-20 whose current wrapper-role contracts mint only against USDC/USDC.e or legacy position settlement, while three UUPS prediction-market modules hold the token's separate minter role and mint only against burned position claims in their current implementations. A 3-of-6 Safe controls all roles and upgrades through a custom 12-hour Timelock. These are native PUSD issuance controls; the external Bridge API is reviewed separately under Bridge Risk. PUSD does not create base USDC supply; inherits Circle mint authority.",
+    "summary": "PUSD has one authored Polygon-native UUPS-proxy ERC-20 deployment. The reviewed wrapper contracts deposit USDC or USDC.e before minting; three upgradeable market modules hold its separate minter role and mint against position-claim settlement in their current implementations. A 3-of-7 Safe controls the 12-hour Timelock. The newly identified PermissionedRamp holds wrapper role 2 and requires witness signatures. The token and all three module implementations have changed since the July observation. External transfer rails remain separately reviewed under Bridge Risk; PUSD does not create base USDC supply.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "uups",
@@ -18,10 +18,10 @@
         "0x30000034706c7d8e12009dab006be20000c031a8"
       ],
       "implementationAddresses": [
-        "0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f",
-        "0x492fec596ec347459e1ebe30b9245eb3b49b1bba",
-        "0xa61e7ca374f721d5b9fd5b0fee6fb90f27d448d7",
-        "0xb529b2430d78868422c47934d9d61cc9d0c53dbb"
+        "0xce84e053301a82937f90ee2c2c1889cab1db25de",
+        "0xf6428c0b5fa9361c0708cddb95468cf54c56e9a2",
+        "0x39a5b01a100edf811f2748aa37b1313715ded70e",
+        "0xf96968a44022b17240b42c557693e7c383d2d8a3"
       ],
       "adminAddresses": [
         "0x47ebfac3353314c788b96cdcbf41daadfe03629c",
@@ -30,8 +30,8 @@
       "canChangeMintLogic": true,
       "delaySec": 43200,
       "controlRef": "Polymarket governance Safe through 12-hour Timelock",
-      "observedAt": "2026-07-16",
-      "observedBlock": 90347258,
+      "observedAt": "2026-10-01",
+      "observedBlock": 94755001,
       "sources": [
         {
           "label": "Polygon Blockscout - PUSD token",
@@ -62,11 +62,11 @@
         "deploymentRefs": [
           "polygon:0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb"
         ],
-        "capDescription": "CollateralToken.wrap() accepts only USDC or USDC.e and transfers the same amount to the immutable vault before completing the mint.",
+        "capDescription": "CollateralToken.wrap() accepts only USDC or USDC.e, mints the requested amount, and transfers the same amount of pre-deposited collateral to the immutable vault within the same atomic transaction.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-16",
-        "observedBlock": 90347258,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755001,
         "sources": [
           {
             "label": "Polymarket pUSD docs",
@@ -77,7 +77,7 @@
             "url": "https://polygon.blockscout.com/address/0x93070a847efEf7F70739046A929D47a521F5B8ee"
           }
         ],
-        "evidence": "At Polygon block 88325248: onramp owner() = 0x47ebfac3353314c788b96cdcbf41daadfe03629c (Timelock, 12h). EIP-1967 proxy slots both 0x0, immutable. Onramp has pause admin (ABI includes pause/unpause), modulesOrGuardsStatus=present for the pause surface. Cannot create base USDC. At block 90347258, token rolesOf(onramp) returned wrapper role 2. Verified source shows wrap() transfers supported collateral into the token before CollateralToken.wrap() moves it to the vault and mints 1:1."
+        "evidence": "At Polygon block 94755001, token rolesOf(onramp) returned 2 and owner() returned Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. Correct EIP-1967 implementation and admin slots were zero. The verified immutable onramp transfers collateral from the caller to PUSD before calling wrap(); the current token implementation atomically mints and forwards that amount to VAULT. The onramp's per-asset pause surface remains present; USDC.e was unpaused."
       },
       {
         "label": "Polymarket CollateralOfframp",
@@ -91,15 +91,15 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-16",
-        "observedBlock": 90347258,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755001,
         "sources": [
           {
             "label": "Polygon Blockscout - CollateralOfframp",
             "url": "https://polygon.blockscout.com/address/0x2957922eb93258b93368531d39facca3b4dc5854"
           }
         ],
-        "evidence": "At block 90347258, token rolesOf(offramp) returned wrapper role 2. The immutable verified contract exposes only unwrap(), which burns PUSD held by the token and releases supported collateral; it cannot call the token's wrap() or mint() entry points."
+        "evidence": "At Polygon block 94755001, token rolesOf(offramp) returned 2 and owner() returned the Timelock. Correct EIP-1967 implementation and admin slots were zero. Verified immutable source exposes unwrap(), not mint() or wrap(); it transfers caller-approved PUSD into the token before burning and paying collateral. Its USDC.e pause gate was unpaused at the pinned block."
       },
       {
         "label": "Polymarket legacy CTF collateral adapter",
@@ -114,15 +114,15 @@
         "capDescription": "Wraps only USDC.e returned by merging or redeeming legacy conditional-token positions and transfers the same amount into PUSD before minting.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-16",
-        "observedBlock": 90347258,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755001,
         "sources": [
           {
             "label": "Polygon Blockscout - CtfCollateralAdapter",
             "url": "https://polygon.blockscout.com/address/0xada100db00ca00073811820692005400218fce1f"
           }
         ],
-        "evidence": "At block 90347258, token rolesOf(adapter) returned wrapper role 2. Verified source transfers realized USDC.e into the PUSD token and then calls wrap() for exactly that amount."
+        "evidence": "At Polygon block 94755001, token rolesOf(adapter) returned 2, owner() returned the Timelock, and correct EIP-1967 implementation and admin slots were zero. Verified source transfers realized legacy USDC.e into PUSD and calls wrap() for that amount."
       },
       {
         "label": "Polymarket legacy NegRisk collateral adapter",
@@ -137,15 +137,15 @@
         "capDescription": "Wraps only USDC.e returned by legacy neg-risk position conversion and transfers the same amount into PUSD before minting.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-16",
-        "observedBlock": 90347258,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755001,
         "sources": [
           {
             "label": "Polygon Blockscout - NegRiskCtfCollateralAdapter",
             "url": "https://polygon.blockscout.com/address/0xada2005600dec949baf300f4c6120000bdb6eaab"
           }
         ],
-        "evidence": "At block 90347258, token rolesOf(adapter) returned wrapper role 2. Verified source transfers realized USDC.e into the PUSD token and then calls wrap() for exactly that amount."
+        "evidence": "At Polygon block 94755001, token rolesOf(adapter) returned 2, owner() returned the Timelock, and correct EIP-1967 implementation and admin slots were zero. Verified source transfers realized legacy USDC.e into PUSD and calls wrap() for that amount."
       },
       {
         "label": "Polymarket BinaryModule",
@@ -160,8 +160,8 @@
         "capDescription": "Current implementation mints only when merging a complete YES/NO pair or redeeming a resolved position, with the corresponding position claims burned.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-16",
-        "observedBlock": 90347258,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755001,
         "sources": [
           {
             "label": "Polygon Blockscout - BinaryModule proxy",
@@ -169,10 +169,10 @@
           },
           {
             "label": "Polygon Blockscout - BinaryModule implementation",
-            "url": "https://polygon.blockscout.com/address/0x492fec596ec347459e1ebe30b9245eb3b49b1bba"
+            "url": "https://polygon.blockscout.com/address/0xf6428c0b5fa9361c0708cddb95468cf54c56e9a2"
           }
         ],
-        "evidence": "At block 90347258, token rolesOf(module) returned minter role 1, the EIP-1967 implementation was 0x492fec596ec347459e1ebe30b9245eb3b49b1bba, and owner() returned the 12-hour Timelock. Verified source burns the matched or resolved position claims whenever it mints PUSD."
+        "evidence": "At Polygon block 94755001, rolesOf(module) returned 1, owner() returned the Timelock, and the current implementation was 0xf6428c0b5fa9361c0708cddb95468cf54c56e9a2. Verified BaseModule source mints PUSD and burns corresponding position claims in the same transaction. Its separately permissioned mintFromBridge() creates position claims; the bridge-role census and conservation boundary require separate review."
       },
       {
         "label": "Polymarket NegRiskModule",
@@ -187,8 +187,8 @@
         "capDescription": "Current implementation mints only when merging a complete neg-risk position set or redeeming resolved positions, with the corresponding claims burned.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-16",
-        "observedBlock": 90347258,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755001,
         "sources": [
           {
             "label": "Polygon Blockscout - NegRiskModule proxy",
@@ -196,10 +196,10 @@
           },
           {
             "label": "Polygon Blockscout - NegRiskModule implementation",
-            "url": "https://polygon.blockscout.com/address/0xa61e7ca374f721d5b9fd5b0fee6fb90f27d448d7"
+            "url": "https://polygon.blockscout.com/address/0x39a5b01a100edf811f2748aa37b1313715ded70e"
           }
         ],
-        "evidence": "At block 90347258, token rolesOf(module) returned minter role 1, the EIP-1967 implementation was 0xa61e7ca374f721d5b9fd5b0fee6fb90f27d448d7, and owner() returned the 12-hour Timelock. Verified source burns the matched or resolved position claims whenever it mints PUSD."
+        "evidence": "At Polygon block 94755001, rolesOf(module) returned 1, owner() returned the Timelock, and the current implementation was 0x39a5b01a100edf811f2748aa37b1313715ded70e. Verified source burns corresponding position claims when it mints PUSD. Its separately permissioned mintFromBridge() creates position claims; the bridge-role census and conservation boundary require separate review."
       },
       {
         "label": "Polymarket CombinatorialModule",
@@ -214,8 +214,8 @@
         "capDescription": "Current implementation mints only when compressing, merging, or redeeming position claims, with the corresponding position claims burned.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-16",
-        "observedBlock": 90347258,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755001,
         "sources": [
           {
             "label": "Polygon Blockscout - CombinatorialModule proxy",
@@ -223,10 +223,10 @@
           },
           {
             "label": "Polygon Blockscout - CombinatorialModule implementation",
-            "url": "https://polygon.blockscout.com/address/0xb529b2430d78868422c47934d9d61cc9d0c53dbb"
+            "url": "https://polygon.blockscout.com/address/0xf96968a44022b17240b42c557693e7c383d2d8a3"
           }
         ],
-        "evidence": "At block 90347258, token rolesOf(module) returned minter role 1, the EIP-1967 implementation was 0xb529b2430d78868422c47934d9d61cc9d0c53dbb, and owner() returned the 12-hour Timelock. Verified source burns the relevant position claims whenever it mints PUSD."
+        "evidence": "At Polygon block 94755001, rolesOf(module) returned 1, owner() returned the Timelock, and the current implementation was 0xf96968a44022b17240b42c557693e7c383d2d8a3. Verified source burns corresponding position claims when it mints PUSD in merge, compress, and redemption paths."
       },
       {
         "label": "Polymarket governance Safe through 12-hour Timelock",
@@ -239,12 +239,13 @@
           "polygon:0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb"
         ],
         "threshold": 3,
-        "signerCount": 6,
+        "signerCount": 7,
         "timelockDelaySec": 43200,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "present",
         "safe": {
           "owners": [
+            "0x3b0dfce5306c98789533e22e61f8102ab00985cb",
             "0xdccd5d77a0d15ba3c6a5904869a266181a8f3a33",
             "0x687c423646a4fae6561908cfc28265f73f95b32f",
             "0xdba96793a909415b0748f48626cf207b7e1a887f",
@@ -255,13 +256,13 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
-          "observedBlock": 90347258,
+          "observedBlock": 94755196,
           "source": "onchain"
         },
-        "observedAt": "2026-07-16",
-        "observedBlock": 90347258,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755196,
         "sources": [
           {
             "label": "Polygon Blockscout - Polymarket governance Safe",
@@ -276,16 +277,43 @@
             "url": "https://polygon.blockscout.com/address/0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb"
           }
         ],
-        "evidence": "At Polygon block 88325248: EIP-1967 impl slot = 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f (UUPS proxy). Proxy admin slot = 0x0 (UUPS upgrade controlled by owner). owner() = 0x47ebfac3353314c788b96cdcbf41daadfe03629c (same Timelock, 12h). No separate proxy admin contract, upgrade gated by Timelock. At block 90347258, the Timelock's admin, proposer, executor, and canceller roleHolders() each returned only this Safe; minDelay() returned 43200. The Safe was 3-of-6 with no enabled modules, zero guard, and zero fallback handler. The Timelock can add token minters/wrappers and upgrade the token and all three minter modules."
+        "evidence": "At Polygon block 94755001, the token owner remained Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c; minDelay() returned 43200, and admin, proposer, executor, and canceller roleHolders(uint256) each returned only this Safe. At block 94755196, Safe getThreshold() returned 3 and getOwners() returned seven addresses, including new owner 0x3b0dfce5306c98789533e22e61f8102ab00985cb. No enabled modules were returned; guard storage was zero; fallback-handler storage was 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. VERSION() remained 1.3.0. The previous 3-of-6 and zero-fallback descriptions are stale."
+      },
+      {
+        "label": "Polymarket PermissionedRamp (witness-gated wrapper)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "polygon",
+        "address": "0xebc2459ec962869ca4c0bd1e06368272732bcb08",
+        "deploymentRefs": [
+          "polygon:0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb"
+        ],
+        "capDescription": "Requires a valid EIP-712 witness signature and transfers the same amount of supported USDC or USDC.e from the caller into the token before wrapping.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755001,
+        "sources": [
+          {
+            "label": "Polymarket collateral contract registry",
+            "url": "https://docs.polymarket.com/resources/contracts"
+          },
+          {
+            "label": "Polygon PermissionedRamp verified source",
+            "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0xebc2459ec962869ca4c0bd1e06368272732bcb08"
+          }
+        ],
+        "evidence": "At Polygon block 94755001, PUSD rolesOf(PermissionedRamp) returned 2, owner() returned the Timelock, and correct EIP-1967 implementation/admin slots were zero. Verified PermissionedRamp source gates wrap/unwrap on per-asset pause state and an EIP-712 witness signature, then transfers collateral before wrapping. The witness-role census remains unverified; the signature gate is not represented as an independent protective multisig."
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Polygon block 88325248: PUSD is a UUPS proxy (impl=0x6bbcef9f...) and Onramp is immutable. Both are owned by custom Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. minDelay() = 43200s (12h, confirmed via selector 0xc63c4e9b). Prior blocker 'confirm admin/owner address' is resolved: Timelock is the sole admin of both token and onramp. At block 90347258, the complete RolesUpdated history and rolesOf() reads resolved four current wrapper-role holders (Onramp, Offramp, legacy CTF adapter, legacy NegRisk adapter) and three current minter-role holders (BinaryModule, NegRiskModule, CombinatorialModule). Current verified implementations bind wrapper minting to deposited USDC/USDC.e or legacy settlement and bind module minting to burned position claims. The same 3-of-6 Safe exclusively holds every Timelock role, can change token roles and UUPS implementations after 12 hours, and directly holds the onramp pause-admin role. These controls are scoped to Polygon-native PUSD issuance; the separately documented external Bridge API is reviewed under Bridge Risk and supplies no additional Mint Authority control. Economic-posture fields reviewed 2026-08-16: every local minter-role or mint-logic replacement requires the enforced 12-hour Timelock, while local issuance is on-chain collateral or position-claim accounting with no separate reconciliation or named supervisor.",
-      "reviewer": "Codex P3 control review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Pinned Polygon block 94755001 confirms changed token and module implementations, unchanged Timelock ownership, four previously authored wrapper holders plus PermissionedRamp with wrapper role 2, and three market modules with minter role 1. Each Timelock role returns the same Safe and minDelay() remains 43200. Polygon block 94755196 shows the Safe is now 3-of-7 with a nonzero fallback handler. Current verified source retains collateral-backed wrapping and position-claim settlement, but this session did not establish a complete token role history, PermissionedRamp witness census, or module bridge-role conservation boundary; no exhaustive authority claim is inferred.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA12RLUSD)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Polymarket pUSD docs",

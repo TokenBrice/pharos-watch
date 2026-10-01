@@ -106,8 +106,8 @@
         ],
         "sources": [
           {
-            "label": "Anemoy",
-            "url": "https://anemoy.com/"
+            "label": "Centrifuge verified ACRDX deployments",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
           }
         ]
       },
@@ -135,8 +135,8 @@
         ],
         "sources": [
           {
-            "label": "Anemoy",
-            "url": "https://anemoy.com/"
+            "label": "Centrifuge verified ACRDX deployments",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
           }
         ]
       },
@@ -164,8 +164,8 @@
         ],
         "sources": [
           {
-            "label": "Anemoy",
-            "url": "https://anemoy.com/"
+            "label": "Centrifuge verified ACRDX deployments",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
           }
         ]
       },
@@ -218,7 +218,7 @@
         "controllerChain": "solana",
         "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Centrifuge's official deployment registry identifies this exact ACRDX Solana mint. Finalized RPC at slot 434941163 returned Token-2022 ownership, symbol ACDRX, 6 decimals, zero current supply, and the pinned direct mint/freeze/permanent-delegate authority. Centrifuge V3 burns source-chain shares before hub-authorized destination minting.",
+        "reviewNote": "The exact Solana Token-2022 mint and authorities are on-chain verified, but current Centrifuge bridge documentation expressly limits share-token bridging to EVM networks. No current issuer source establishing the Ethereum-to-Solana burn/mint transfer semantics was found; the historical route attribution requires owner adjudication.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-24",
         "observedBlock": 434941163,

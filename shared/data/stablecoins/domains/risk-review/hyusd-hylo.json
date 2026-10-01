@@ -30,14 +30,14 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "The observable Hylo deployment uses Sanctum LST accounting and Pyth SOL/USD, while current V2 documentation specifies independent SOL/USD, BTC/USD, and USDC/USD paths. A 2026-09-04 Solana RPC read shows the tracked exchange and router programs remain upgradeable and were recently redeployed, but the official address directory does not publish a complete current V2 pool/branch inventory. The production oracle and liquidation branch topology therefore remains unresolved.",
+    "summary": "Current Hylo V2 documentation specifies Sanctum SOL-LST accounting plus Pyth SOL/USD, BTC/USD, HYPE/USD, and a USDC/USD gating path. The official address directory still labels the tracked exchange as V1 and leaves the V2 xBTC mint TBD. Current ProgramData reads show exchange deployment slot 447625876 and router slot 439863765 under the mutable upgrade vault. These sources do not independently certify a complete deployed collateral/oracle branch inventory or its failure and liquidation semantics, so the branch review remains unresolved.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-09-04",
-      "reviewer": "OpenAI Codex W1c oracle applicability review",
-      "rationale": "The reviewed source set confirms a live V1-style SOL-LST path with Pyth SOL/USD and Sanctum accounting, but does not establish whether the recently upgraded Solana programs at the tracked exchange/router IDs are operating the documented V2 multi-asset pools. The 2026-09-04 negative search covered Hylo's official on-chain address directory, current Solana ProgramData for the exchange and router, the V2 audit's program IDs, and the published V2 architecture; no complete deployed V2 pool, branch, oracle, or liquidation inventory was available. Keep the oracle branch fact open until those deployed branches and their liquidation semantics are identified.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB30hyUSD)",
+      "rationale": "Rechecked 2026-10-01 against the official address directory, current V2 architecture, July V2 audit, SDK v2.0.5 IDL, and pinned finalized ProgramData/config accounts. The V2 docs now include HYPE/USD alongside SOL/USD, BTC/USD, and USDC/USD, but the address directory still presents V1 programs and xBTC TBD. Exchange ProgramData was last deployed at slot 447625876, after the earlier September review. No identity-bound deployed oracle-feed and complete branch/failure-behavior inventory was certified from these sources; retain unresolved rather than promote a docs-only branch map.",
       "sources": [
         {
           "label": "Hylo on-chain address directory read 2026-09-04",
@@ -57,8 +57,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-09-04",
-    "reviewer": "OpenAI Codex W1c oracle applicability review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB30hyUSD)",
     "confidence": "limited",
     "sources": [
       {

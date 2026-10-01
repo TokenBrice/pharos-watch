@@ -2,14 +2,19 @@
   "id": "paxg-paxos",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: PAXG resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "PAX Gold terms and conditions, section 14",
+        "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
+      }
+    ],
+    "evidence": "Section 14.1 explicitly grants Paxos the ability and right to freeze and upgrade all PAXG tokens regardless of where they are held. Sections 14.2-14.5 cover legal directives, discretionary freezes, seizure, forfeiture, and destruction. Finalized Solana slot 452212686 also reports Paxos admin 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk as freeze authority and permanent delegate.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA15PAXG)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "PAXG is now covered as issuer-native on Ethereum and Solana, while the Ethereum-side LayerZero adapter is authored here as bridge machinery rather than global native Mint Authority. Paxos documents Ethereum-to-Solana movement through its platform or LayerZero Stargate, and the adapter has a current owner, implementation, bridge-mint/burn capacity, and rate limit. The exact LayerZero endpoint/OApp peers, DVN/validator set, current rate-limit state, burn/mint supply-conservation invariant, and Solana mint-authority attribution remain unresolved, so the route assessment is intentionally opaque-or-unknown rather than external-validated-network.",
+    "summary": "PAXG has reviewed issuer-native deployments on Ethereum and Solana. At Ethereum block 26095800 the LayerZero adapter retains owner 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b, implementation 0xc54ca36efe594e4c774ba8463adf67ba3de1236f, and SupplyController capacity 13,320 PAXG with 0.155 PAXG-per-second refill. endpoint() and the configured peers(30168) value are observed, while the complete DVN/validator configuration and burn/mint conservation remain unresolved. Solana mint-authority attribution is confirmed by the finalized multisig read, but bridge authorization is still assessed conservatively as opaque-or-unknown.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
     "confidence": "manual-review",
@@ -145,14 +150,14 @@
         ],
         "authorityType": "eoa",
         "routeChecks": {
-          "trustedPeerOrRemote": "Paxos documents LayerZero Stargate as a PAXG bridge path, but the PAXG-specific endpoint/OApp peer and remote-token configuration were not enumerated.",
-          "rateLimits": "At Ethereum block 25526129, the adapter was an active SupplyController with a 13,320-PAXG capacity and 0.155-PAXG-per-second refill. The current post-block-25526129 rate-limit state was not re-read.",
-          "pausersAdminsUpgraders": "At Ethereum block 25770003, adapter implementation was 0xc54ca36efe594e4c774ba8463adf67ba3de1236f and owner() was 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. The exact endpoint/DVN/validator and route pause/upgrade administrator graph remains unresolved."
+          "trustedPeerOrRemote": "At Ethereum block 26095800, endpoint() returns 0x1a44076050125825900e736c501f859c50fe728c and peers(30168) returns 0xace816a69b5d84f10f53cf805efe907278b544ab262bb2c2c9347c522222c530. This is a pinned configured value, not verification of the complete bidirectional peer or DVN graph.",
+          "rateLimits": "At Ethereum block 26095800 the adapter remains an active SupplyController with capacity 13320000000000000000000 base units (13,320 PAXG), refillPerSecond 155000000000000000 (0.155 PAXG), and allowAnyMintAndBurnAddress=true.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095800, adapter implementation remains 0xc54ca36efe594e4c774ba8463adf67ba3de1236f and owner() remains 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. The complete DVN/validator and route pause/upgrade administrator graph remains unresolved."
         },
         "capDescription": "The adapter's bridge SupplyController capacity and refill are distinct from the two native Paxos controller capacities; the controller-manager EOA can change adapter membership and limits immediately.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770003,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "PAXG LayerZero adapter proxy",
@@ -171,7 +176,7 @@
             "url": "https://docs.layerzero.network/v2/get-started/overview"
           }
         ],
-        "evidence": "At Ethereum block 25526129, PAXG SupplyControl getAllSupplyControllerAddresses() included adapter proxy 0xd09ede557ef195983c9544a5724046fbd6e8a3c6, whose configuration had 13,320 PAXG capacity and 0.155 PAXG-per-second refill. At block 25770003, the adapter implementation resolved to 0xc54ca36efe594e4c774ba8463adf67ba3de1236f and owner() returned controller-manager EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. This is canonical-side bridge machinery and is not included in the native Mint Authority controls."
+        "evidence": "At Ethereum block 26095800, getAllSupplyControllerAddresses() still includes adapter 0xd09ede557ef195983c9544a5724046fbd6e8a3c6; getSupplyControllerConfig(adapter) confirms capacity 13,320 PAXG and refill 0.155 PAXG per second. The EIP-1967 implementation and owner() match the prior review. endpoint() and peers(30168) were read without assigning a stronger bridge tier."
       },
       {
         "id": "paxg-solana-layerzero-oft-store",

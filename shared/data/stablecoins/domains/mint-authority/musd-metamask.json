@@ -48,10 +48,12 @@
         "capDescription": "Base M issuance backing MUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/raw/resources/addresses/m0-platform.md"
           },
           {
             "label": "M0 protocol docs",
@@ -66,7 +68,7 @@
             "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "At Ethereum block 25294742: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders). M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold. MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint. Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable; MinterGateway is confirmed immutable/non-proxy and Registrar governance remains the parameter authority."
+        "evidence": "At Ethereum block 25294742: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders). M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold. MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint. Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable; MinterGateway is confirmed immutable/non-proxy and Registrar governance remains the parameter authority. At Ethereum block 26095802, canonical EIP-1967 implementation and admin slots are both zero. The official M0 deployment table identifies this address as MinterGateway; no live validator key-custody conclusion is drawn from those slots. M0 protocol documentation requires Validator collateral attestations and a mint-delay review before approved Minters create M; the live complete validator threshold remains unverified."
       },
       {
         "deploymentRefs": [
@@ -80,7 +82,8 @@
         "timelockDelaySec": 259200,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "failureDomainKeys": [
           "m0-musd-token-upgrade-governance"
         ],
@@ -106,7 +109,7 @@
             "url": "https://rpc.monad.xyz"
           }
         ],
-        "evidence": "At Ethereum block 25770417, the canonical MUSD proxy's EIP-1967 admin is ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9. ProxyAdmin owner() returns TimelockController 0x7701f4fa4592f59a6cd0e3ac1c182b3c3173c280, whose 259,200-second delay and 3-of-5 Safe proposer, executor, and canceller path govern the Ethereum native MUSD proxy. getMinDelay() returned 259,200 seconds for the Ethereum MUSD upgrade timelock. The Linea and Monad proxy implementation/admin observations remain preserved in bridgeRouteRisk controls as representation upgrade facts."
+        "evidence": "At Ethereum block 25770417, the canonical MUSD proxy's EIP-1967 admin is ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9. ProxyAdmin owner() returns TimelockController 0x7701f4fa4592f59a6cd0e3ac1c182b3c3173c280, whose 259,200-second delay and 3-of-5 Safe proposer, executor, and canceller path govern the Ethereum native MUSD proxy. getMinDelay() returned 259,200 seconds for the Ethereum MUSD upgrade timelock. The Linea and Monad proxy implementation/admin observations remain preserved in bridgeRouteRisk controls as representation upgrade facts. At Ethereum block 26095802, the canonical token EIP-1967 admin is ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9, whose owner() is this TimelockController. getMinDelay() returns 259200 seconds. This controls upgrades, not a separate direct-mint role."
       },
       {
         "chain": "ethereum",
@@ -124,18 +127,20 @@
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/raw/resources/addresses/m0-platform.md"
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+            "url": "https://docs.m0.org/raw/protocol/extensions.md"
           },
           {
             "label": "SwapFacility on Blockscout",
             "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
           }
         ],
-        "evidence": "At Ethereum block 25531380, SwapFacility remained a TransparentUpgradeableProxy using implementation 0x45bf08d042a8958f01f8e8319b791e4584550da8. The canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, and the proxy runtime independently embedded the same immutable admin address. ProxyAdmin owner() returned TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (3-day minDelay=259200s). Timelock proposer was Gnosis Safe 0xb7a9b5f301ef3bad36c2b4964e82931dd7fb989c (5 owners, threshold 3); executor was 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply; extension minting is bounded by available M-backed wrapper flow and base M supply. SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap. Ethereum SwapFacility is controlled by ProxyAdmin -> TimelockController with a 3-day delay and Gnosis Safe proposer; canRaiseCap=true via M0 TTG governance."
+        "evidence": "At Ethereum block 25531380, SwapFacility remained a TransparentUpgradeableProxy using implementation 0x45bf08d042a8958f01f8e8319b791e4584550da8. The canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, and the proxy runtime independently embedded the same immutable admin address. ProxyAdmin owner() returned TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (3-day minDelay=259200s). Timelock proposer was Gnosis Safe 0xb7a9b5f301ef3bad36c2b4964e82931dd7fb989c (5 owners, threshold 3); executor was 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply; extension minting is bounded by available M-backed wrapper flow and base M supply. SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap. Ethereum SwapFacility is controlled by ProxyAdmin -> TimelockController with a 3-day delay and Gnosis Safe proposer; canRaiseCap=true via M0 TTG governance. The implementation, EIP-1967 admin and ProxyAdmin owner were re-read unchanged at Ethereum block 26095802 on 2026-10-01. The MUSD audit describes approved users depositing M into SwapFacility for equivalent mUSD and reversing the flow by burning mUSD for M. At Ethereum block 26095802, the EIP-1967 admin is ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. owner() returns TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468. The reviewed mUSD wrap and unwrap lifecycle exchanges equivalent M and mUSD; this is not evidence of an immutable whole-system supply ceiling.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802
       }
     ],
     "economicCapSemantics": "unbounded",

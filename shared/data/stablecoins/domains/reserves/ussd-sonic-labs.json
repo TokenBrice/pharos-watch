@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB06GBPSAFO)",
     "confidence": "verified",
     "sources": [
       {
@@ -41,9 +41,9 @@
         "url": "https://docs.soniclabs.com/sonic/ussd"
       }
     ],
-    "rationale": "Re-verified on 2026-07-20 at Sonic block 76202676: BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 held 2,199,114.887818332 Sonic frxUSD, exactly equal to USSD totalSupply at the same block. The custodied token 0x80eede496655fb9047dd39d9f418d5483ed600df is the Sonic deployment of the tracked frxusd-frax record, and Sonic's USSD documentation (fetched 2026-07-20) confirms USSD is built on Frax's frxUSD infrastructure. USSD's direct reserve is therefore 100% frxUSD, a wrapper dependency on frxusd-frax; Frax's WTGXX, USTB, BUIDL, and other reserve rows are inherited look-through exposure and must not be duplicated as direct USSD slices.",
+    "rationale": "Pinned Sonic block 80179059 on 2026-10-01: BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 totalAssets() and USSD totalSupply() are exactly equal at 970622.051101100913413464 tokens. custodianTkn() returns 0x80eede496655fb9047dd39d9f418d5483ed600df, and brandedStablecoin() returns the tracked USSD contract. Frax's BrandedCustodian documentation describes 1:1 frxUSD backing. The direct reserve remains 100% Sonic frxUSD with a wrapper dependency on frxusd-frax; underlying Treasury and approved-stablecoin reserves remain inherited look-through exposure, not direct USSD slices.",
     "compositionBasis": "Fixed-block Sonic frxUSD balanceOf the USSD BrandedCustodian reconciled to USSD totalSupply",
-    "compositionAsOf": "2026-07-20",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve asset is fully identified as frxUSD. Asset-level reserve and custody risks beneath frxUSD remain inherited from the linked upstream record rather than repeated here.",
     "knownUnknownExposurePct": 0

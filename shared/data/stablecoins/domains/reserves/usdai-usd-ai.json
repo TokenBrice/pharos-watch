@@ -8,23 +8,27 @@
       "coinId": "pyusd-paypal",
       "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Paxos Trust Company, LLC / PayPal, Inc.",
+      "issuerOrObligor": "Paxos Trust Company, N.A. (PYUSD issuer; PayPal brand)",
       "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity"],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA27A7A5)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "USD.AI Terms of Service, modified 2026-09-25: every base USDai is backed 1:1 by PYUSD",
+        "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md"
+      },
       {
         "label": "USD.AI March 2026 mint/redeem upgrade - 1:1 PYUSD backing",
         "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade"
       },
       {
-        "label": "USDai Arbitrum implementation and baseToken",
-        "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+        "label": "USDai current Arbitrum v1.7 implementation, verified source and constructor",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
       },
       {
         "label": "USD.AI sUSDai product - GPU-loan yield layer",
@@ -35,9 +39,9 @@
         "url": "https://arbitrum-one-rpc.publicnode.com"
       }
     ],
-    "rationale": "USD.AI's March 26, 2026 upgrade states that every USDai is backed 1:1 by PYUSD. At Arbitrum block 483800206, baseToken() returned canonical PYUSD; canonical totalSupply plus bridgedSupply was 196,394,460.208802187811855903 USDai, while the hub held 196,394,460.221193 PYUSD. The small surplus reconciles the complete base-token liability. USD.AI separately assigns GPU-loan yield exposure to sUSDai, so DEAL rows are not attributed to base USDai.",
-    "compositionBasis": "Issuer disclosure plus fixed-block canonical and bridged liability reconciliation against the hub's PYUSD balance",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The issuer Terms modified September 25, 2026 state directly that each base USDai is backed 1:1 by PYUSD and distinguish sUSDai as the separate loan-exposed vault. This new dated disclosure supports the unchanged 100% PYUSD composition. At Arbitrum block 510584307 on 2026-10-01, baseToken() returned PYUSD 0x46850ad61c2b7d64d08c9c754f45254596696984; canonical totalSupply() returned 247981344002558527787203743 raw 18-decimal units, bridgedSupply() returned 946860797538000000000000 raw 18-decimal units, and PYUSD.balanceOf(hub) returned 248928204812831 raw 6-decimal units. These corroborating observations are base-token liabilities and hub collateral, not protocol TVL or the separate sUSDai portfolio.",
+    "compositionBasis": "Explicit 1:1 PYUSD base-token backing in issuer Terms dated 2026-09-25, corroborated by current fixed-block hub reads",
+    "compositionAsOf": "2026-09-25",
     "scope": "full-composition",
     "knownUnknownExposure": "No unidentified base-USDai reserve exposure remained in the fixed-block liability reconciliation. This conclusion does not classify the separate sUSDai strategy portfolio.",
     "knownUnknownExposurePct": 0
@@ -57,6 +61,10 @@
     "confidence": "probable",
     "sources": [
       {
+        "label": "PayPal PYUSD disclosure: issuance and custody performed by Paxos Trust Company, N.A.",
+        "url": "https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd"
+      },
+      {
         "label": "USD.AI March 2026 mint/redeem upgrade - 1:1 PYUSD backing",
         "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade"
       },
@@ -65,6 +73,6 @@
         "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
       }
     ],
-    "uncertainty": "Base-USDai PYUSD collateral is held by the canonical USDai hub contract on Arbitrum rather than with a named legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; underlying PYUSD issuance custody sits with Paxos Trust Company."
+    "uncertainty": "Base-USDai PYUSD collateral is held by the canonical USDai hub contract on Arbitrum rather than with a named legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; PayPal identifies underlying PYUSD issuance and custody as performed by Paxos Trust Company, N.A."
   }
 }

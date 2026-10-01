@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
-    "summary": "steakUSDC is an immutable MetaMorpho ERC-4626 vault (no proxy). Shares mint only through deposits. Vault owner is VaultV2Supervisor (0x4d7bd498bb24098ca281c05519629c605407f71d), itself owned by the observed Steakhouse 5-of-10 Safe; base USDC issuance remains inherited from Circle.",
+    "summary": "steakUSDC is an immutable Morpho Vault V2 ERC-4626 vault. User shares mint against USDC deposits, and interest accrual can mint fee shares; both fee rates were zero at the observed block. VaultV2Supervisor owns the vault and is owned by the observed Steakhouse 5-of-10 Safe. Base USDC issuance remains inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
@@ -12,17 +12,17 @@
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "controlRef": "steakUSDC MetaMorpho vault (immutable, deposit-only mint)",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25573280,
+      "controlRef": "steakUSDC Morpho Vault V2 (immutable, asset-backed shares)",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095798,
       "sources": [
         {
           "label": "Morpho vault page",
           "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
         },
         {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Verified deployed VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
         }
       ]
     },
@@ -30,25 +30,25 @@
       {
         "chain": "ethereum",
         "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
-        "label": "steakUSDC MetaMorpho vault (immutable, deposit-only mint)",
+        "label": "steakUSDC Morpho Vault V2 (immutable, asset-backed shares)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573280,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
             "label": "Morpho vault page",
             "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
           },
           {
-            "label": "MetaMorpho source",
-            "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+            "label": "Verified deployed VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
           }
         ],
-        "evidence": "At Ethereum block 25295178: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (immutable, not upgradeable). owner() = 0x4d7bd498bb24098ca281c05519629c605407f71d (VaultV2Supervisor, Blockscout confirmed). Fixed-block reads at Ethereum block 25573280 reconfirmed asset() = USDC, owner() = VaultV2Supervisor, and VaultV2Supervisor.owner() = the Steakhouse Safe. The vault has no privileged share-mint method outside the ERC-4626 deposit flow."
+        "evidence": "At Ethereum block 26095798, asset() was USDC and owner() was VaultV2Supervisor. The verified exact-deployment source is VaultV2, with no upgrade entrypoint; the EIP-1967 implementation, corrected admin, and beacon slots were zero. User deposit/mint calls transfer underlying assets before creating shares. accrueInterest() can also create management and performance fee shares; both configured fee rates were zero. The old MetaMorpho/deposit-only description did not cover this deployment's fee-share path."
       },
       {
         "chain": "ethereum",
@@ -63,32 +63,32 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0xfc615395336aade67fd853a0157001a215ea1279",
-            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
-            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
-            "0xd2b8dd0fd51d80bf939047a9aaa55919112838e8",
-            "0xd8baa2606c4f0d121d4a08b0d83acf0dee9dca77",
-            "0xcc771952fde840e30c6802734e5ad20479c2959f",
-            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120",
-            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
-            "0x86bd534a95fb2cc36d526ba149464c4477315c32",
-            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344"
+            "0xc04f9610694a9e07e0d6a361bec53abeadf9cf9e",
+            "0x005398827d00c2951ffb52bd91164ef402bcf105",
+            "0x2e8c25a6f7f7f34666b998813abf97d8b617f111",
+            "0x5571a6fef340a9d26f1428684b9e893ea84b46ac",
+            "0x32e5cb1a68761a0cff88d4baa21e398422b5166e",
+            "0x21c1e5be991bf1544ca9759a601f66dc60083f7d",
+            "0x9a86713145f38cd688969c0ecc87b314b23254b2",
+            "0xbc27046213d34d4a153cf57a48c74d74239e8968",
+            "0x394e6ef80c6f4ad14a891a3987d8bd1387afa0b1",
+            "0x86bd534a95fb2cc36d526ba149464c4477315c32"
           ],
           "threshold": 5,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 25573280,
-          "observedAt": "2026-07-20",
-          "source": "safe-api"
+          "observedBlock": 26095798,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
         },
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573280,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "failureDomainKeys": [
           "safe:ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
         ],
         "sources": [
           {
-            "label": "steakUSDC MetaMorpho vault",
+            "label": "steakUSDC Morpho Vault V2",
             "url": "https://etherscan.io/address/0xbeef088055857739c12cd3765f20b7679def0f51"
           },
           {
@@ -100,7 +100,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25573280, vault owner() = VaultV2Supervisor and VaultV2Supervisor.owner() = this Safe. getOwners() returned the listed 10 EOAs, getThreshold() returned 5, and getModulesPaginated() returned an empty list. The reviewed Safe service state reports a zero guard. The Safe controls curator, allocator, and fee parameters only; it cannot mint shares outside deposits."
+        "evidence": "At Ethereum block 26095798, VaultV2Supervisor.owner() returned this Safe. getOwners() returned the listed 10 owners, including nine replacements relative to the previous observation, and getThreshold() returned 5. getModulesPaginated(0x1,100) returned an empty list; the Safe guard storage slot was zero. Vault governance remains parameter control rather than discretionary creation of USDC."
       }
     ],
     "review": {
@@ -114,9 +114,9 @@
           "url": "https://eth.blockscout.com/address/0x4d7bd498bb24098ca281c05519629c605407f71d"
         }
       ],
-      "evidence": "At Ethereum block 25573280, the vault remained direct code with zero EIP-1967 implementation, admin, and beacon slots. asset() = USDC, and the owner chain resolves to the listed 5-of-10 Safe; its modules list is empty, while guard enumeration remains unavailable through this Safe ABI. The vault is an immutable deposit-only wrapper, so wrapper reconciliation is not a separate issuer reserve regime and durable USDC issuance remains inherited from Circle.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 26095798, the exact deployed code was immutable Morpho Vault V2, with zero EIP-1967 implementation, corrected admin, and beacon slots. The USDC asset and VaultV2Supervisor-to-5-of-10-Safe owner chain were reconfirmed, with current owners, empty modules, and zero guard. User minting is asset-backed; interest accrual can mint fee shares. Durable USDC issuance remains inherited from Circle.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA13BUIDL)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

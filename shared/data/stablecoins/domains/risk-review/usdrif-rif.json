@@ -4,21 +4,21 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq"
+        "label": "Verified current USDRIF implementation and MocRC20 privileged burn/upgrade source",
+        "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x6d1bb87856a2b2351d87ba5772a93dc911325af9"
       },
       {
         "label": "Dapp",
         "url": "https://dapp.rifonchain.com/"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Rootstock block 9286813 on 2026-10-01, the native USDRIF EIP-1967 implementation slot resolved to 0x6d1bb87856a2b2351d87ba5772a93dc911325af9. Its verified MocRC20 source exposes burn(address to,uint256 amount) restricted by BURNER_ROLE, without a holder allowance check, and UUPS _authorizeUpgrade restricted by onlyAuthorizedChanger. The token's two BURNER_ROLE members were the RIF and DOC V3 collateral buckets. These are privileged burn and governed-upgrade capabilities; the explicit Yes verdict is retained without alleging an exercised seizure or freeze.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB19spUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "RIF on Chain uses a replaceable RIF/USD PriceProvider and published Medianizer for one global RIF reserve bucket; no stronger failover tier is documented.",
+    "summary": "RIF On Chain V3 has separate RIF and DOC collateral buckets. At Rootstock block 9286813 on 2026-10-01, both buckets returned a USDRIF collateral price through getPACtps(); the earlier one-global-RIF-bucket description does not cover the current multi-collateral deployment. A stronger failover tier has not been established.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -52,6 +52,14 @@
       {
         "label": "RIF on Chain system states",
         "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states"
+      },
+      {
+        "label": "Rootstock V3 RIF and DOC bucket getPACtps() reads at block 9286813 on 2026-10-01",
+        "url": "https://public-node.rsk.co"
+      },
+      {
+        "label": "Verified V3 MocCARC20 implementation",
+        "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x5316384Be99310FdEa0dA0b3Cc0d0bB9E7f0887F"
       }
     ]
   },

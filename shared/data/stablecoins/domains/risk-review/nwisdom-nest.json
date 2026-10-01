@@ -4,13 +4,13 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.nest.credit/"
+        "label": "Nest terms: illicit activity screening and vault-token freezing",
+        "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
       }
     ],
-    "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
-    "reviewer": "Codex RWA expansion review",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Nest's terms state that vault tokens associated with wallets subsequently classified as suspicious may be frozen and identify Kimber Labs Inc.'s limited administrative privileges over that freezing code. At finalized Solana slot 452218955, nWISDOM mint 77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT retained freezeAuthority 9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y; at slot 452218956 that authority was a 1-of-2 SPL Token multisig.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.NestReview)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

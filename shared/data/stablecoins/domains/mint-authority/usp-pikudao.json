@@ -35,7 +35,7 @@
       "sources": [
         {
           "label": "Piku USP workflow contracts",
-          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"
+          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp-yield-vault.md"
         },
         {
           "label": "USP token implementation",
@@ -180,7 +180,7 @@
         },
         {
           "label": "Piku USP workflow contracts",
-          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"
+          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp-yield-vault.md"
         },
         {
           "label": "InverterBeacon implementation",

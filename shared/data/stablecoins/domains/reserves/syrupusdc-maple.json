@@ -3,20 +3,18 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "name": "USDC-denominated institutional loans and supporting strategies",
+      "name": "Maple syrupUSDC pooled loans and strategy claim",
       "pct": 100,
       "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "wrapper",
-      "assetClass": "private-credit",
-      "issuerOrObligor": "Maple permissioned borrower pool",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Maple International Operations SPC, Secured Loan Segregated Portfolio 1",
       "riskFactors": ["credit", "liquidity", "counterparty", "legal", "concentration", "smart-contract"],
       "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC06)",
     "confidence": "verified",
     "sources": [
       {
@@ -30,14 +28,42 @@
       {
         "label": "Maple proof of reserves",
         "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+      },
+      {
+        "label": "Maple legal withdrawal-risk disclosure, reviewed 2026-10-01",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+      },
+      {
+        "label": "Maple lender FAQ withdrawal terms, reviewed 2026-10-01",
+        "url": "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md"
+      },
+      {
+        "label": "Maple operational withdrawal guide, reviewed 2026-10-01",
+        "url": "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/risk.md"
+      },
+      {
+        "label": "Maple syrupUSDC legal product disclosure",
+        "url": "https://docs.maple.finance/legal/syrupusdc-product-disclosures-and-disclaimers.md"
+      },
+      {
+        "label": "Maple pool accounting",
+        "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
       }
     ],
-    "rationale": "Maple documents an ERC-4626 claim on a segregated USDC-denominated pool whose assets include overcollateralized institutional loans and supporting basis/liquidity strategies. Withdrawal queues can take up to 30 days, so the reserve is classified as private credit with an over-seven-day liquidity horizon.",
-    "compositionBasis": "Maple pool structure and proof-of-reserves disclosures",
-    "compositionAsOf": "2026-05-07",
+    "rationale": "Maple documents a USDC-denominated claim on a segregated portfolio of institutional loans and supporting yield strategies. The legal risk disclosure states FIFO withdrawals depend on available liquidity and have no guaranteed maximum period, although the FAQ and operational withdrawal guide still mention 30 days. The static composition is a standing structural description rather than measured current allocation weights.",
+    "compositionBasis": "Standing whole-token pooled claim; pinned Ethereum accounting at block 26097123 reconciles cash and all four strategy AUM balances, but is not a look-through portfolio allocation.",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unlinked reserve exposure is recorded; borrower, collateral, and supporting-strategy allocations vary within the linked USDC-denominated pool and are not stored as fixed weights.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The whole-token claim covers institutional loans, pool cash and supporting strategies. USDC denomination does not establish 100% USDC cash backing or 100% private-credit look-through exposure. Strategy AUM and pool cash reconcile to totalAssets, but no reconciled underlying-asset allocation is published in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Maple syrupUSDC pooled loans and strategy claim",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The pooled claim is identified, but strategy AUM is not a measured look-through asset allocation. Preserve the opaque basket until the adapter owner reviews a reconciled whole-token denominator and underlying holdings."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
@@ -72,6 +98,6 @@
         "url": "https://maple.finance/insights/introducing-proof-of-reserves"
       }
     ],
-    "uncertainty": "Maple identifies approved institutional custodians and a segregated SPV, but collateral is allocated across custodians and may be staked under strategy controls. Provider-level shares and the live borrower/collateral allocation are not published in the static review."
+    "uncertainty": "The listed provider names are retained from the historical review, not confirmed as the complete current syrupUSDC custodian set. On 2026-10-01 the current lender FAQ did not name custodians; The Network Firm dashboard verified combined syrupUSDC and syrupUSDT collateral without provider allocations or custody terms. Anchorage's case study concerns Maple treasury, token launches and borrower collateral, while the September 2026 Zodia arrangement concerns borrower-owned segregated wallets. Neither establishes a complete syrupUSDC-specific custody profile, segregation or reuse policy."
   }
 }

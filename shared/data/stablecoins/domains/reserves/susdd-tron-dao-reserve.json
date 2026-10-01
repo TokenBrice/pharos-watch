@@ -51,5 +51,38 @@
     "scope": "full-composition",
     "knownUnknownExposure": "The deployed row identifies the sUSDD savings position inside the USDD protocol's Smart Allocator-managed reserve; the issuer does not attribute specific lending venues or platforms to the sUSDD vault's deposited USDD, and the underlying USDD reserve composition is tracked on the parent asset.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ethereum SavingsUsdd wrapper, USDD Join and Pot smart contracts",
+        "role": "other"
+      },
+      {
+        "name": "BNB Chain SavingsUsdd wrapper, USDD Join and Pot smart contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA28USDTB)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethereum SavingsUsdd verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+      },
+      {
+        "label": "BNB Chain SavingsUsdd verified source",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution"
+      },
+      {
+        "label": "USDD sUSDD mechanism",
+        "url": "https://docs.usdd.io/system-architecture/susdd-mechanism"
+      }
+    ],
+    "uncertainty": "Verified SavingsUsdd source routes deposits through USDD Join into Pot accounting and reverses that path for withdrawals. Ethereum block 26095796 and BNB Chain block 125055874 confirm the chain-local asset, Join and Pot addresses and zero idle USDD balances. These are on-chain savings claims, not identified off-chain custody accounts. The issuer's global Smart Allocator disclosures do not assign venue-specific positions to each wrapper; legal segregation, bankruptcy treatment and rehypothecation restrictions remain unknown. Provider shares are not estimated."
   }
 }

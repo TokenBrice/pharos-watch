@@ -2,14 +2,19 @@
   "id": "tryb-bilira",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: TRYB resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Solana finalized TRYB mint observation at slot 452213543 on 2026-10-01",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "At finalized Solana slot 452213543 on 2026-10-01, getAccountInfo for TRYB mint A94X2fRy3wydNShU4dRaDyap2UuoeWJGWyATtyp61WZf reported SPL Token freezeAuthority 2HSrubRZSb63hjvhjE8bg4JCbCbCgjM9xJ2crKfjSGqP and mintAuthority 33DNQBuPFT3EmyEuqZvGWG2vs29Mfc3HgvgScD32SNDE. A configured freeze authority can freeze individual token accounts; the explicit Yes verdict no longer relies solely on the centralized-governance metadata inference.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB19spUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "TRYB is issuer-minted natively by BiLira on all nine networks (per-chain masterMinter/owner reads verified on the EVM deployments; Solana SPL mint authority verified); no third-party bridge carries the claim.",
+    "summary": "TRYB has issuer-managed native deployments and a Polygon BiLira (PoS) child-token deployment. Polygon minting is restricted to the PoS ChildChainManager depositor role; its full root-token, escrow and bridge-control mapping remains unresolved and is excluded from the native-issuance assessment.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
@@ -124,22 +129,31 @@
         "id": "polygon:0x4fb71290ac171e1d144f7221d882becac7196eb5",
         "destinationChain": "polygon",
         "contractAddress": "0x4fb71290ac171e1d144f7221d882becac7196eb5",
-        "protocol": "BiLira native issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "issuer-native deployment under BiLira's mint controls; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
+        "protocol": "Polygon PoS child-token representation; full route mapping unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "At Polygon block 94756435 on 2026-10-01, implementation() returned verified UChildERC20 0x33044b8f720030489040e028e31eaa92b1104c67; DEPOSITOR_ROLE member 0 was Polygon PoS ChildChainManagerProxy 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa. Verified deposit() mints only for that role and withdraw() burns the caller. This disproves the issuer-backend native-mint assertion. Exact root-token, escrow and bridge-admin joins remain unreviewed, so the complete route classification stays unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
         "sources": [
           {
-            "label": "BiLira",
-            "url": "https://www.bilira.co/"
+            "label": "Polygon TRYB UChildERC20Proxy",
+            "url": "https://polygonscan.com/address/0x4fb71290ac171e1d144f7221d882becac7196eb5#code"
+          },
+          {
+            "label": "Verified active UChildERC20 deposit and withdraw implementation",
+            "url": "https://polygonscan.com/address/0x33044b8f720030489040e028e31eaa92b1104c67#code"
+          },
+          {
+            "label": "Polygon PoS ChildChainManagerProxy depositor",
+            "url": "https://polygonscan.com/address/0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa#code"
           }
-        ]
+        ],
+        "observedBlock": 94756435
       },
       {
         "id": "plasma:0x90729a45948c3078890bc80f2a4e7870a2ea4c5e",

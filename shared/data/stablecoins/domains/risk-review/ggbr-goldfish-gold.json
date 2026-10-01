@@ -2,9 +2,18 @@
   "id": "ggbr-goldfish-gold",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: GGBR resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "GoldfishToken verified implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35fef16fea897dd6ca2e28041dbfb8d56e2978d6"
+      },
+      {
+        "label": "Goldfish Cyfrin smart-contract audit",
+        "url": "https://goldfishgold.com/Goldfish-Cyfrin.pdf"
+      }
+    ],
+    "evidence": "The pinned token implementation at Ethereum block 26,095,795 exposes FREEZER_ROLE-controlled freezeAccount and DEFAULT_ADMIN-controlled setBlacklisted and forceTransfer. Its _update rejects frozen or blacklisted senders, recipients, and spenders. The recorded 2-of-3 Safe currently holds DEFAULT_ADMIN_ROLE. Cyfrin's October 10, 2025 report explicitly describes administrator seizure powers and excludes centralization risks from its audit scope.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA37JTRSY)",
+    "reviewedAt": "2026-10-01"
   }
 }

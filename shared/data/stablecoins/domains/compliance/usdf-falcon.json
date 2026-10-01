@@ -1,18 +1,31 @@
 {
   "id": "usdf-falcon",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Falcon terms clause 7.2(f): no active EU offer or solicitation, as reviewed 2026-10-01",
+        "url": "https://docs.falcon.finance/resources/terms-of-use"
+      }
+    ]
   },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDf is an overcollateralized synthetic dollar backed by crypto assets (BTC, ETH, SOL, stablecoins, altcoins) with delta-neutral strategies: not a fiat-redeemable payment instrument. Issued by Falcon Digital Limited (BVI). Terms of Use explicitly prohibit US persons: 'The Falcon Assets are not offered or sold, and will not be offered or sold, in the United States or to U.S. Persons.' Falcon Finance created a separate GENIUS-ready product (fUSD, issued by Anchorage Digital Bank N.A.) expressly because USDf cannot serve compliance-constrained US institutions.",
+      "summary": "Falcon Digital Limited's USDf Terms permit USDf-funded card payments and redemption for originally deposited digital collateral or other stablecoins. GENIUS section 2(22) separately requires an issuer obligation to redeem for fixed monetary value and defines exclusions. Under owner ruling D17, crypto collateral, U.S. access restrictions and the separate fUSD product do not establish a USDf exemption. Applicability remains unclear pending qualified token-specific holder-contract analysis; authorization research is separate.",
       "references": [
         {
           "label": "Falcon Finance Terms of Use",
           "url": "https://docs.falcon.finance/resources/terms-of-use",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-10-01"
+        },
+        {
+          "label": "GENIUS Act section 2(17) and 2(22): monetary value and payment-stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-01"
         },
         {
           "label": "Falcon Finance / Anchorage fUSD announcement",
@@ -23,8 +36,8 @@
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
     "issuerEntity": "Falcon Digital Limited",
     "issuerDomicile": "British Virgin Islands",
     "enforcementStatus": "no-public-action-found",
@@ -32,7 +45,7 @@
     "reserveDisclosureUrl": "https://app.falcon.finance/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDf is a crypto-collateralized synthetic dollar (mechanismArchetype: synthetic-delta-neutral), not a fiat-backed payment stablecoin. US persons are explicitly excluded from the Terms of Use; the United States is listed as a restricted jurisdiction. Falcon Finance launched a separate GENIUS-ready token (fUSD) issued by Anchorage Digital Bank N.A. (federally chartered) on 2026-05-27 as the compliant US payment stablecoin counterpart, confirming that USDf itself is out of GENIUS scope. A quarterly audit report was published in October 2025 confirming full reserve backing; attestation cadence is quarterly, not monthly.",
+    "notes": "The prior 2026-06-07 editorial non-payment-token classification is withdrawn on 2026-10-01 under D17 pending qualified USDf-specific legal analysis. Current Terms expressly support USDf card payments, while direct redemption returns digital collateral or other stablecoins; neither fact alone resolves the statutory monetary-value obligation. U.S. access restrictions and the distinct Anchorage-issued fUSD product do not establish a USDf exclusion or authorization. Historical reserve-report observations are retained: the quarterly HT Digital report covers 2026-04-30 and is signed 2026-06-19; weekly collateral letters do not establish monthly formal assurance.",
     "references": [
       {
         "label": "Falcon Finance Terms of Use: US persons restriction",
@@ -55,14 +68,14 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Falcon Finance Q4-2025 Quarterly Audit confirming full reserve backing (BVI)",
+        "label": "News report: Falcon Finance announces its first independent quarterly audit on 2025-10-01",
         "url": "https://x.com/press_newswire/status/1973314120960131348",
-        "sourceKind": "auditor-report",
+        "sourceKind": "news",
         "sourceDate": "2025-10-01",
         "accessedAt": "2026-06-07"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC04): GENIUS applicability review; other historical observations retain their prior scope",
+    "reviewedAt": "2026-10-01"
   }
 }

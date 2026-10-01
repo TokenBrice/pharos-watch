@@ -3,6 +3,7 @@
   "reserves": [
     {
       "name": "USDC liquidity-layer collateral",
+      "sourceKey": "evm-branch-balances:monad:0x754704bc059f8c67012fed69bc8a327a5aafb603",
       "pct": 100,
       "risk": "low",
       "coinId": "usdc-circle",
@@ -19,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv33)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM12eEARN)",
     "confidence": "verified",
     "sources": [
       {
@@ -32,7 +33,7 @@
         "url": "https://github.com/leverup-xyz/DefiLlama-Adapters/blob/main/projects/leverup/index.js"
       },
       {
-        "label": "Monad public RPC observation at block 106701666",
+        "label": "Monad pinned RPC observation at block 109550480",
         "url": "https://rpc.monad.xyz"
       },
       {
@@ -44,11 +45,11 @@
         "url": "https://paragraph.com/@leverup/lvusd-stablecoin-design"
       }
     ],
-    "rationale": "At Monad block 106701666 on 2026-09-21, the LVUSD issuer's transparency() contract returned one vault, 0xc69d584b3118e94b3443cc6c67076281242fa704. The vault's reserveToken() was USDC at 0x754704bc059f8c67012fed69bc8a327a5aafb603, and its balance was 910,505.752902 USDC. LVUSD totalSupply() was 1,410,506.752902. LeverUp's August 28 design disclosure confirms that LVUSD is minted for USDC-collateralized positions and that trader profit and loss can cause USDC reserves and circulating LVUSD to diverge. The 500,001 LVUSD shortfall is a coverage risk, not a second reserve asset; MON collateral supports the separate LVMON token.",
+    "rationale": "At Monad block 109550480 on 2026-10-01, the LVUSD issuer's transparency() resolved to 0x0ef8fd8f36cae470aff8b9d9bbd2e5f44fb23d51 and getAllVaults() returned one vault, 0xc69d584b3118e94b3443cc6c67076281242fa704. Its reserveToken() was USDC at 0x754704bc059f8c67012fed69bc8a327a5aafb603; the vault's USDC balance was 905,948.910803 and LVUSD totalSupply() was 1,405,949.910803. LeverUp's re-fetched documentation and August 28 design disclosure explain that trader profit and loss can cause USDC reserves and circulating LVUSD to diverge. The 500,001 LVUSD shortfall is a coverage risk, not a second reserve asset; MON collateral supports the separate LVMON token. This snapshot inventories the issuer-designated reserve vaults, not incidental tokens sent to the vault or a proof of the contracts' full liabilities.",
     "compositionBasis": "LeverUp documentation and a fixed-block read of the complete LVUSD issuer transparency vault list, reserve token, USDC balance, and LVUSD supply",
-    "compositionAsOf": "2026-09-21",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer transparency contract returned one LVUSD vault and that vault held only USDC. No additional LVUSD reserve asset was identified. The observed USDC balance was 500,001 below LVUSD supply, so the composition is complete while reserve coverage is below 100%.",
+    "knownUnknownExposure": "The complete issuer-designated LVUSD vault list contained one vault whose reserveToken() was USDC. No additional designated LVUSD reserve asset was identified. Its USDC balance was 500,001 below LVUSD supply, so the designated reserve composition is complete while reserve coverage is below 100%.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

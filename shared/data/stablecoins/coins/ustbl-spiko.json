@@ -11,14 +11,14 @@
     "navToken": true
   },
   "mechanismArchetype": "tbill",
-  "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-  "pegMechanism": "USD-denominated NAV-accreting share token (ISIN FR001400ODM9) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed exclusively by short-dated U.S. Treasury bills with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a $1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+  "collateral": "Short-dated U.S. Treasury bills and operational bank balances held by an AMF-authorized UCITS short-term VNAV money market fund, with a regulatory weighted-average maturity ceiling of 60 days",
+  "pegMechanism": "USD-denominated NAV-accreting share token (ISIN FR001400ODM9) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, invested in short-dated U.S. Treasury bills and operational bank balances with a regulatory weighted-average maturity ceiling of 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (next-business-day clearing for late orders) and a $1 prospectus minimum. The management company may gate redemptions at a 10% net-assets threshold for up to 20 NAVs over three months, with a maximum one-month duration; electronic-money-token redemptions may not settle the same day. Chainlink CCIP interoperability was announced, but no production adapter was identified in the reviewed sources. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
   "detailProvider": "coingecko",
   "geckoId": "spiko-us-t-bills-money-market-fund",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit, statutory auditor of the Spiko SICAV certifying annual accounts (prospectus art. 24: annual certification plus pre-publication asset-composition checks; reports are sent on written request only, none published; the fund page's 'four audits annually' is template marketing text)",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor of the Spiko SICAV certifying annual accounts (prospectus art. 24: financial-statement certification and pre-publication asset-composition checks). AMF GECO publishes the fund's 2026-06-30 semiannual report, which names PwC but does not contain an audit opinion; a current dated annual auditor report was not verified.",
     "attestorTier": "big4",
     "cadence": "annual",
     "attestorJurisdiction": "France"
@@ -77,6 +77,11 @@
       "chain": "starknet",
       "address": "0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6",
       "decimals": 5
+    },
+    {
+      "chain": "solana",
+      "address": "3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn",
+      "decimals": 5
     }
   ],
   "collateralQuality": "rwa",
@@ -117,7 +122,7 @@
     {
       "type": "info",
       "title": "Multi-chain EU-regulated MMF",
-      "message": "USTBL is issued on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet, with cross-chain transfers relayed via Chainlink CCIP."
+      "message": "USTBL's prospectus lists issuer-native deployments on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, Starknet, and Solana. Spiko announced Chainlink CCIP interoperability; production adapter and lane controls were not identified in the reviewed sources."
     }
   ],
   "launchDate": "2024-06-12"

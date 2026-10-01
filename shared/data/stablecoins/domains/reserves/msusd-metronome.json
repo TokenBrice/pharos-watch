@@ -65,7 +65,7 @@
         "role": "other"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "conditional",
     "reviewedAt": "2026-07-20",
@@ -81,7 +81,7 @@
         "url": "https://docs.metronome.io/metronome-synth/contracts"
       }
     ],
-    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design, hence conditional reuse. No legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody; published audits could not be located in primary sources.",
+    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design, hence conditional reuse. The 2026-10-01 protocol and deployment-documentation review establishes technical per-asset contract separation, but did not establish enforceable legal segregation or bankruptcy-remoteness rights under ruling D09. Legal rehypothecation terms and a primary-source custody agreement were not located in that review.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -220,7 +220,8 @@
           "observedAt": "2026-07-13",
           "source": "onchain"
         },
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095809,
         "sources": [
           {
             "label": "Ethereum MidasTimelockController",
@@ -231,7 +232,7 @@
             "url": "https://plasma-explorer.com/address/0xe4ccb596112d35c9862d58a113342d122cfd3c2e"
           }
         ],
-        "evidence": "At Ethereum block 25770940 and Plasma block 29982696, the native token, MidasAccessControl, and issuance-vault proxies resolved through the Ethereum and Plasma chain-local ProxyAdmins. ProxyAdmin owners were timelocks 0xe3eee3e0d2398799c884a47fc40c029c8e241852 and 0xe4ccb596112d35c9862d58a113342d122cfd3c2e; each returned getMinDelay() = 172800 and assigned sole proposer/executor/canceller authority to its local 1-of-3 Safe. Monad and Katana representation-token/access-control upgrade paths are retained in route-scoped Bridge Risk controls."
+        "evidence": "At Ethereum block 25770940 and Plasma block 29982696, the native token, MidasAccessControl, and issuance-vault proxies resolved through the Ethereum and Plasma chain-local ProxyAdmins. ProxyAdmin owners were timelocks 0xe3eee3e0d2398799c884a47fc40c029c8e241852 and 0xe4ccb596112d35c9862d58a113342d122cfd3c2e; each returned getMinDelay() = 172800 and assigned sole proposer/executor/canceller authority to its local 1-of-3 Safe. Monad and Katana representation-token/access-control upgrade paths are retained in route-scoped Bridge Risk controls. Re-verified 2026-10-01 at Ethereum block 26095809 and Plasma block 33896737: native token and access-control EIP-1967 admin slots retain the chain-local ProxyAdmins, their owners retain the documented timelocks, getMinDelay() remains 172800, and both local Safes retain the listed three owners with threshold 1. Nested Safe module and guard observations remain historical."
       }
     ],
     "economicCapSemantics": "unbounded",

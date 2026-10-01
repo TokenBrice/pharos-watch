@@ -9,15 +9,43 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "yvUSDC-1 is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "yvUSDC-1 is the Ethereum-native Yearn v3 USDC vault share. Its deposit and mint functions create vault shares against USDC deposits; this deployment is not a cross-chain bridge representation.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1)",
     "confidence": "verified",
     "sourceFreeRationale": "The tracked yvUSDC-1 vault is a single Ethereum Yearn vault; bridge-route risk is inherited from underlying USDC routes, not this vault contract.",
     "sources": [
       {
         "label": "Yearn v3 vault",
         "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+        "protocol": "Yearn v3",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Ethereum block 26095933: asset() returned USDC, decimals() returned 6, and the immutable EIP-1167 clone targets verified YearnV3Vault 0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467. Shares are issued through deposit and mint accounting on this canonical vault.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
+        "sources": [
+          {
+            "label": "Verified Yearn v3 vault clone",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+          },
+          {
+            "label": "Verified YearnV3Vault implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2eBEb73da7D40C70E7202ae14467"
+          }
+        ]
       }
     ]
   }

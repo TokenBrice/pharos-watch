@@ -24,13 +24,13 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "EURAU is a 1:1 euro-denominated EMT marketed for payments and settlement, but AllUnity's MiCA whitepaper expressly excludes U.S. offers; its GENIUS posture is therefore tracked without assuming U.S. authorization.",
+      "summary": "EURAU is a 1:1 euro-denominated EMT marketed for payments and settlement. The current MiCA whitepaper disclaims a U.S. offer and separately restricts offers or sales within the United States or to U.S. persons, with specified Securities Act exemptions and additional U.S.-person definitions. Those restrictions do not establish a GENIUS authorization or foreign-issuer pathway.",
       "references": [
         {
-          "label": "AllUnity EURAU whitepaper",
-          "url": "https://allunity.com/wp-content/uploads/2026/02/EURAU-AllUnity-White-Paper_v1.2.pdf",
+          "label": "AllUnity EURAU whitepaper v1.3",
+          "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-01"
         },
         {
           "label": "GENIUS Act, Public Law 119-27",
@@ -53,7 +53,7 @@
     "reserveDisclosureUrl": "https://allunity.com/trust-center",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "AllUnity's MiCA whitepaper expressly states that EURAU may not be offered or sold in the United States or to U.S. persons. No token-specific U.S. PPSI approval, state-qualified approval, official application, or foreign-issuer registration was located. The negative status is not a finding that AllUnity is unauthorized under MiCA; the existing MiCA authorization is preserved above.",
+    "notes": "The current MiCA whitepaper both disclaims a U.S. offer and restricts offers or sales within the United States or to U.S. persons, subject to its stated Securities Act exemptions and additional U.S.-person definitions. It is not accurate to summarize this solely as an offer disclaimer or as an exception-free blanket prohibition. The historical 2026-08-14 negative authorization review remains dated below; MiCA authorization is preserved.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
@@ -76,10 +76,10 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "AllUnity EURAU whitepaper",
-        "url": "https://allunity.com/wp-content/uploads/2026/02/EURAU-AllUnity-White-Paper_v1.2.pdf",
+        "label": "AllUnity EURAU whitepaper v1.3",
+        "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "AllUnity Trust Center",
@@ -97,7 +97,7 @@
         "AllUnity EURAU whitepaper, Trust Center, and redemption materials",
         "Public U.S. PPSI, state-qualified, official-application, and foreign-exception materials"
       ],
-      "summary": "No public token-specific GENIUS approval, state-qualified approval, official application, or foreign-issuer registration was located for EURAU or AllUnity GmbH as of 2026-08-14; the issuer's whitepaper instead excludes U.S. offers and sales.",
+      "summary": "No public token-specific GENIUS approval, state-qualified approval, official application, or foreign-issuer registration was located for EURAU or AllUnity GmbH in the 2026-08-14 review. The current whitepaper separately contains U.S. offer/sale restrictions with specified exemptions; these are not evidence of a U.S. GENIUS authorization.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-08-14",
       "references": [
@@ -115,10 +115,10 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "AllUnity EURAU whitepaper",
-          "url": "https://allunity.com/wp-content/uploads/2026/02/EURAU-AllUnity-White-Paper_v1.2.pdf",
+          "label": "AllUnity EURAU whitepaper v1.3",
+          "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-01"
         }
       ]
     },

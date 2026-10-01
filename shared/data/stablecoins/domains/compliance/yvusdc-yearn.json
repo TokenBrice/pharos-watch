@@ -1,33 +1,16 @@
 {
   "id": "yvusdc-yearn",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register landing page: no yvUSDC EMT/ART authorization located in the reviewed register",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "EUR-Lex MiCA Regulation: financial-instrument/deposit/fund exclusions and Union offer scope",
-        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
-      },
-      {
-        "label": "Yearn USDC-1 vault: ERC-4626-style multi-strategy vault share with yield-bearing strategy allocations",
-        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
-      }
-    ]
-  },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "yvUSDC-1 is a Yearn multi-strategy vault share whose value accrues through strategy allocations and redemption into underlying USDC; it is a yield wrapper, not a fixed-value payment stablecoin issued by a legal issuer.",
+      "summary": "yvUSDC-1 is a Yearn multi-strategy vault share redeemable for underlying USDC under contract share accounting. GENIUS applicability remains unclear pending qualified token-specific analysis of holder rights, the fixed-monetary-value repayment obligation, and any securities or deposit exclusion. Vault mechanics and yield generation alone do not establish a legal exclusion.",
       "references": [
         {
           "label": "GENIUS Act statutory text",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-01"
         },
         {
           "label": "OCC GENIUS Act proposed rule: rulemaking remains non-final",
@@ -44,19 +27,19 @@
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-applicable",
-    "notes": "Explicitly assessed because the dashboard-listed $25M+ yvUSDC product is labelled a stablecoin by the product page and could be confused with the underlying USDC. Its vault-share, yield-bearing design places it outside the GENIUS payment-stablecoin posture; this is an applicability exclusion, not a U.S. authorization finding.",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "daspOfferSaleStatus": "unknown",
+    "notes": "The 2026-08-14 review classified this vault as non-payment-token and its authorization, issuer pathway, foreign exception, and DASP posture as not-applicable based on its yield-bearing share design; it also recorded no-public-action-found. On 2026-10-01, ruling D17 withdrew that categorical exclusion and its dependent not-applicable labels. The current review confirms vault mechanics and statutory definitions, but does not establish token-specific legal applicability, authorization, enforcement, or offer/sale posture. Qualified holder-contract analysis remains required. Ruling D06 separately withdrew the unsupported MiCA out-of-scope row after rechecking its cited sources; MiCA is now not assessed.",
     "references": [
       {
         "label": "GENIUS Act statutory text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
@@ -70,9 +53,21 @@
         "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Yearn v3 vault documentation: strategy-vault mechanics",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Verified Yearn v3 vault implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2eBEb73da7D40C70E7202ae14467",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC12)",
+    "reviewedAt": "2026-10-01"
   }
 }

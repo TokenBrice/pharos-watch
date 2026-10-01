@@ -61,7 +61,9 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25539955, BOLD and the WETH, wstETH, and rETH branch registries in the pinned manifest had owner() = 0x0000000000000000000000000000000000000000; the token, registries, BorrowerOperations, and ActivePools had direct code with zero EIP-1967 implementation, admin, and beacon slots. The verified source restricts mint to the registered BorrowerOperations or ActivePool addresses."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
+        "evidence": "At Ethereum block 26095807, BOLD and all three branch address registries had owner() = 0x0000000000000000000000000000000000000000. The token, registries, BorrowerOperations, and ActivePools returned zero EIP-1967 implementation and admin slots. The pinned verified source restricts mint to registered BorrowerOperations or ActivePool addresses. The historical block 25539955 review additionally checked beacon slots; the current token beacon slot remains zero."
       }
     ],
     "economicCapSemantics": "bounded",

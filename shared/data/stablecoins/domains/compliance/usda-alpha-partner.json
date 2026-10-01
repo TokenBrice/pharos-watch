@@ -1,26 +1,9 @@
 {
   "id": "usda-alpha-partner",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA/European Commission MiCA Q&A: crypto-assets without an identifiable issuer do not fall under Titles II-IV",
-        "url": "https://www.esma.europa.eu/print/pdf/node/219621"
-      },
-      {
-        "label": "ESMA MiCA register portal: no Alpha Partner/USDA issuer record located in the reviewed issuer registers",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Alpha Partner official site: no legal issuer, EU offer, or MiCA authorization disclosed in the reviewed public material",
-        "url": "https://alphapartner.vip/"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDA is marketed as a dollar-backed stablecoin and is tracked as a one-dollar issuer-controlled token, so it is treated as an apparent payment stablecoin even though the public issuer and reserve disclosures are inadequate.",
+      "summary": "Inherited catalog metadata tracks USDA as a one-dollar, issuer-controlled token, so apparent-payment-stablecoin applicability remains provisional. The October1 recheck of AP U-Card and Alpha Partners documentation does not establish a current USDA-specific fixed-dollar redemption obligation or identify the legal issuer.",
       "references": [
         {
           "label": "Alpha Partner official site",
@@ -41,12 +24,11 @@
     "issuerPathway": "unknown",
     "issuerEntity": "AP Web3 / Alpha Partners (legal entity not disclosed in reviewed public materials)",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found. The reviewed public Alpha Partner material did not identify a legal issuer, reserve composition, redemption policy, or regulator; the applicability call is based on the token's marketed dollar-stablecoin function rather than evidence of compliance.",
+    "notes": "The scoped October1 recheck of Alpha Partners documents and the OCC digital-assets application page found no identifiable USDA issuer or token-specific authorization record. Unknown legal identity prevents an exhaustive regulator or enforcement search; no public-action absence is established by this check. Reserve composition, binding holder redemption terms, and monthly independent reconciliation remain undisclosed in the reviewed issuer corpus. Historical metadata, not current USDA issuer documentation, underlies the apparent dollar-payment-token mapping.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",

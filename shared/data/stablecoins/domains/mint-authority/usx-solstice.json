@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account (Ze3CQhTMi6...), and the program upgrade authority is a Solstice-operated EOA (BzMuMbtah9...). All mint-capable controls confirmed on-chain.",
+    "summary": "USX mint and freeze authority remain with the Solstice program-owned account Ze3CQhTMi6... at finalized Solana slot 452212332. ProgramData retains the system-owned, non-executable upgrade authority BzMuMbtah9.... Public documentation claims multisig governance and the product page claims non-upgradeability, but neither description matches the observed on-chain upgrade-authority account; its off-chain key custody is not established by the RPC read.",
     "controls": [
       {
         "chain": "solana",
@@ -14,6 +14,8 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212332,
         "sources": [
           {
             "label": "USX Solscan token",
@@ -24,7 +26,7 @@
             "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
           }
         ],
-        "evidence": "The USX Solana mint had this address as both mintAuthority and freezeAuthority at finalized slot 421873034; the account is owned by the Solstice USX program and is not executable."
+        "evidence": "Reconfirmed at finalized Solana slot 452212332: the USX SPL mint has this address as mintAuthority and freezeAuthority, with decimals 6. The authority account is owned by USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx and is not executable. This agrees with the historical observation at slot 421873034."
       },
       {
         "chain": "solana",
@@ -34,6 +36,8 @@
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212332,
         "sources": [
           {
             "label": "Solstice USX program",
@@ -44,7 +48,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At Solana slot 425778559, getAccountInfo for BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb returned owner: 11111111111111111111111111111111 (System Program), executable: false, lamports: 8097020. This is a funded EOA (Solstice backend/dev wallet, not a multisig or program). It holds the BPF upgrade authority for program USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx."
+        "evidence": "At finalized Solana slot 452212332, ProgramData 3P5mNf86DSd2CNu1DToPBxbvqQL4V2kNwAQjErCwZxMq lists BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb as upgrade authority (last deployment slot 441672563). The authority account is System Program-owned, non-executable, with 92087740 lamports and zero data bytes. Historical slot 425778559 also identified this account. RPC establishes a single on-chain account, not its off-chain signer custody or threshold."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -77,9 +81,9 @@
           "url": "https://api.mainnet-beta.solana.com"
         }
       ],
-      "evidence": "At Solana slot 425778559: mint authority Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 (program-owned account) confirmed as direct-minter; program upgrade authority BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb confirmed as funded EOA (owner: System Program, not executable, 8M lamports). All mint-capable controls are issuer-operated EOA/program-owned, consistent with centralized-dependent permissioned-minter model.",
-      "reviewer": "Claude Phase 0c continuation / SOL-IV calibration",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Finalized Solana slot 452212332 reconfirms the USX mint/freeze authority Ze3CQhTMi6... as program-owned, and ProgramData 3P5mNf86... retains upgrade authority BzMuMbtah9..., a System Program-owned non-executable account. The historical authority identities are unchanged. The smart-contract documentation's multisig assertion and the USX product page's non-upgradeable assertion conflict with this observed BPF upgrade path; no off-chain quorum attestation was verified.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA11USYC)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     },
     "upgradeability": {
@@ -89,8 +93,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Solstice USX program upgrade authority (EOA)",
-      "observedAt": "2026-06-11",
-      "observedBlock": 425778559,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452212332,
       "sources": [
         {
           "label": "Solstice USX program",

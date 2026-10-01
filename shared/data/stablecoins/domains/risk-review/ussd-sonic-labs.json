@@ -10,11 +10,19 @@
       {
         "label": "Website",
         "url": "https://soniclabs.com/ussd"
+      },
+      {
+        "label": "USSD Sonic implementation verified source",
+        "url": "https://sonicscan.org/address/0x155384be16fa171e6d97e4136643a9ac31678d04#code"
+      },
+      {
+        "label": "Sonic public RPC",
+        "url": "https://rpc.soniclabs.com"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Sonic block 80179059 on 2026-10-01, USSD delegates to implementation 0x155384be16fa171e6d97e4136643a9ac31678d04. Its verified ABI exposes FREEZER_ROLE, freeze(address), freezeMany(address[]) and thaw functions. The correct EIP-1967 admin slot points to ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912, whose owner is the 3-of-6 Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac. The current FREEZER_ROLE holder set was not exhaustively resolved; the issuer-controlled upgrade path remains evidenced, so the adverse blacklistability verdict is retained.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB06GBPSAFO)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -990,7 +998,7 @@
           "trustedPeerOrRemote": "At Sonic block 77630948, remoteHop(30255) pointed to Fraxtal Hop 0x00000000e18afc20afe54d4b2c8688bb60c06b36. The Hop's local EID was 30332 and its approved local frxUSD OFT was 0x80eede496655fb9047dd39d9f418d5483ed600df.",
           "attestorQuorum": "At Sonic block 77630948, the Hop reported endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, numDVNs 5, executor 0x4208d6e27538189bb48e603d6123a94b8abe0a0b, DVN 0x282b3386571f7f794450d5789911a9804fa346b4, and treasury 0x4514fc667a944752ee8a29f544c1b20b1a315f25. The full five-DVN membership/configuration was not independently enumerated.",
           "rateLimits": "No route-specific rate-limit control was resolved in the Sonic Hop evidence.",
-          "pausersAdminsUpgraders": "The current Hop paused() read was false. Sonic role reads show two DEFAULT_ADMIN_ROLE accounts, six pausers, and Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac as recovery role. No proxy upgrade path was evidenced."
+          "pausersAdminsUpgraders": "At Sonic block 80179059 on 2026-10-01, paused() remains false and DEFAULT_ADMIN_ROLE has two members. EIP-1967 slots now explicitly establish implementation 0x0000000f9a66622c8885e1071b78e37b2b3ecccd and proxy admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c, owned by the 3-of-6 Sonic Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac. This upgrade authority is recorded in the separate Hop proxy-upgrade control."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 77630948,
@@ -1043,7 +1051,7 @@
           "trustedPeerOrRemote": "At Fraxtal block 40053292, the Hop's remoteHop mapping pointed the five representation EIDs 30101, 30110, 30111, 30184, and 30214 plus Sonic EID 30332 to Sonic RemoteHop 0x0000006d38568b00b457580b734e0076c62de659. The verified source rejects destinations without a configured remote hop.",
           "attestorQuorum": "At Fraxtal block 40053292, the Hop reported local EID 30255, endpoint 0x1a44076050125825900e736c501f859c50fe728c, numDVNs 5, executor 0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d, DVN 0xcce466a522984415bc91338c232d98869193d46e, and treasury 0xc1b621b18187f74c8f6d52a6f709dd2780c09821. The full five-DVN membership/configuration was not independently enumerated.",
           "rateLimits": "No route-specific rate-limit control was resolved in the Fraxtal Hop evidence.",
-          "pausersAdminsUpgraders": "The current Hop paused() read was false. Fraxtal role reads show default admins 0x34029e02821178b4387e12644896994f910d6e73, 0x5f25218ed9474b721d6a38c115107428e832fa2e, and 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, six pausers, and 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 as recovery role. No proxy upgrade path was evidenced."
+          "pausersAdminsUpgraders": "At Fraxtal block 42013458 on 2026-10-01, paused() remains false and the three recorded DEFAULT_ADMIN_ROLE addresses remain members. EIP-1967 slots explicitly establish implementation 0x00000000d25b8809150b59ce5dae5699ffd26485 and proxy admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c, owned by the 3-of-5 Safe 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. This upgrade authority is recorded in the separate Hop proxy-upgrade control."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 40053292,
@@ -1062,6 +1070,88 @@
           }
         ],
         "evidence": "At Fraxtal block 40053292, FraxtalHopV201 0x00000000e18afc20afe54d4b2c8688bb60c06b36 reported local EID 30255, the LayerZero endpoint, five DVNs, executor, DVN, treasury, paused=false, and remoteHop mappings for all five representation EIDs plus Sonic EID 30332 to Sonic RemoteHop 0x0000006d38568b00b457580b734e0076c62de659. The Hop's remote validation, pause, admin, recovery, and composed route surfaces remain scoreable here; complete DVN membership and destination-specific OFT allowlists remain gaps."
+      },
+      {
+        "id": "ussd-sonic-hop-proxy-upgrade",
+        "label": "USSD Sonic RemoteHop proxy upgrade owner",
+        "routeRefs": [
+          "sonic:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": ["upgrade", "admin"],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "proxy-admin:sonic:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "safe:sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 80179059,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "RemoteHop 0x0000006d38568b00b457580b734e0076c62de659 uses implementation 0x0000000f9a66622c8885e1071b78e37b2b3ecccd and FraxProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. The verified admin exposes owner-controlled upgrade and upgradeAndCall; its owner is this Safe.",
+          "unsupportedReason": "No separate timelock or key-custody attestation was established. The Safe's getMinDelay call reverted; that failed call is not evidence of a zero delay."
+        },
+        "sources": [
+          {
+            "label": "Sonic Hop FraxProxyAdmin verified source",
+            "url": "https://sonicscan.org/address/0x223a681fc5c5522c85c96157c0efa18cd6c5405c#code"
+          },
+          {
+            "label": "Sonic public RPC",
+            "url": "https://rpc.soniclabs.com"
+          }
+        ],
+        "evidence": "Pinned Sonic block 80179059 on 2026-10-01: correct EIP-1967 admin and implementation slots identify the RemoteHop upgrade path; ProxyAdmin.owner returns this Safe. getOwners returns six owners, getThreshold returns 3, getModulesPaginated returns an empty module list and the Safe guard slot is zero. This is transfer-rail upgrade authority, not canonical native USSD issuance."
+      },
+      {
+        "id": "ussd-fraxtal-hop-proxy-upgrade",
+        "label": "USSD Fraxtal Hop proxy upgrade owner",
+        "routeRefs": [
+          "sonic:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": ["upgrade", "admin"],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "proxy-admin:fraxtal:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "safe:fraxtal:0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 42013458,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Fraxtal Hop 0x00000000e18afc20afe54d4b2c8688bb60c06b36 uses implementation 0x00000000d25b8809150b59ce5dae5699ffd26485 and ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c, whose owner is this 3-of-5 Safe.",
+          "unsupportedReason": "Modules, guard, key custody and any separate upgrade timelock remain unverified; a getMinDelay return of empty bytes is not evidence of zero delay."
+        },
+        "sources": [
+          {
+            "label": "Fraxtal Hop ProxyAdmin verified source",
+            "url": "https://fraxscan.com/address/0x223a681fc5c5522c85c96157c0efa18cd6c5405c#code"
+          },
+          {
+            "label": "Fraxtal public RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "Pinned Fraxtal block 42013458 on 2026-10-01: correct EIP-1967 admin and implementation slots identify the Hop proxy upgrade path. ProxyAdmin.owner returns 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, whose getOwners returns five owners and getThreshold returns 3. This control upgrades the common cross-chain transfer rail."
       }
     ]
   }

@@ -8,16 +8,16 @@
         "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
       },
       {
-        "label": "syzUSD Plasma implementation",
-        "url": "https://plasmascan.to/address/0xa3982582016375a0b25cb7d572379d3d49e5e9c8#code"
+        "label": "Current verified syzUSD Plasma StakedYuzuUSDV3 implementation",
+        "url": "https://plasmascan.to/address/0x4ad9f1db810146b660eb863cc6f56649e0824a6e#code"
       },
       {
         "label": "syzUSD Monad deployment",
         "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
       },
       {
-        "label": "Pinned official StakedYuzuUSD source (commit 49676c4)",
-        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/49676c494d850337af96aaf48db7f4cb53ee8af4/src/StakedYuzuUSD.sol"
+        "label": "Pinned official StakedYuzuUSDV3 source (commit 8f0e681)",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/8f0e681f228c5b9dbd452f8700e4e3726118af30/src/StakedYuzuUSDV3.sol"
       },
       {
         "label": "Plasma public RPC used for fixed-block reads",
@@ -28,10 +28,10 @@
         "url": "https://rpc.monad.xyz"
       }
     ],
-    "sourceFreeRationale": "The wrapper implementations establish no direct holder freeze, while upstream yzUSD and reserve-asset access exposure remains inherited.",
-    "evidence": "Re-verified 2026-08-09 on both deployments. At Plasma block 29369955 the syzUSD proxy 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 resolves EIP-1967 implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8 and admin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, asset() returns yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, paused() is false, and freeze-family probes such as isBlacklisted(address) revert; that ProxyAdmin's owner() is Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d with getThreshold() 4 and no timelock. At Monad block 94595184 the proxy 0x484be0540ad49f351eaa04eeb35df0f937d4e73f resolves implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53 and admin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331, whose owner() is TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e with getMinDelay() 43200 seconds. The issuer's pinned source documents pause() as scoped to mint and redeem, adds no transfer hook, and blocks rescueTokens on the vault asset while supply is nonzero, so no live holder-selective freeze exists locally; the live proxy admins mean one could be added by upgrade. Backing is the single 100% reserve slice yzusd-yuzu, whose own verdict is possible over issuer-freezable reserve assets, so the named upstream exposure is retained and the verdict stays inherited rather than being collapsed into a token-local possible.",
-    "reviewer": "GPT SOL-NR-A wave6; re-verified by Kimi ACCESS-FREEZE AF03 and Claude FV-B access/freeze verification",
-    "reviewedAt": "2026-08-09"
+    "sourceFreeRationale": "The current V3 wrapper tracks same-block received shares for redemption eligibility, but the reviewed transfer update does not add a holder blacklist. Upstream yzUSD and reserve-asset access exposure remains inherited.",
+    "evidence": "At Plasma block 33896602 on 2026-10-01, the canonical proxy resolves to verified StakedYuzuUSDV3 implementation 0x4ad9f1db810146b660eb863cc6f56649e0824a6e and ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0; asset() remains yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. The ProxyAdmin owner is now 48-hour TimelockController 0x2130457539612ae9838e0314cda1a8abbdb7cfbc, with the 4-of-5 Safe acting through proposer/executor/canceller roles. The verified V3 source overrides _update to track received shares for a same-block redemption guard; this is not a selective transfer-freeze mechanism. V3 also introduces role-managed mint/redeem throttles, pause and exit settings, and distribution controls, so the historical V1 claim of no transfer hook is not current. At Monad block 109541441 the implementation and ProxyAdmin remain 0xe536b80e7f859e72ad095d769da1da45b7312d53 and 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331, owned by the 12-hour timelock. Live upgrade paths can change these access controls. The single direct yzUSD dependency and its issuer-freezable reserve exposure remain inherited; neither the new timelock nor local absence of a blacklist removes that upstream adverse exposure.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA64syzUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "oracleless",
@@ -70,9 +70,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Plasma is the only reviewed native syzUSD issuance route. Its CCIP LockReleaseTokenPool is cross-chain escrow and remains Bridge Risk rather than native Mint Authority. Ethereum, Monad, HyperEVM, Sei, Pharos, and Berachain are bridge representations with active Chainlink CCIP burn/mint routes: Ethereum, Monad, HyperEVM, Sei, and Pharos run BurnMintTokenPool 1.6.1 pools that are the local token's verified CCIP minter and burner, with the Yuzu owner controlling pool administration and rate limits; Berachain runs BurnMintTokenPool 1.5.1 over a FactoryBurnMintERC20 1.6.2 whose sole minter and burner is the pool, with the Yuzu EOA as token owner and CCIP admin. The canonical Plasma pool now carries six supported CCIP lanes, each mapping back to the canonical Plasma token. The dual-surface BridgeableTokenUpgradeable deployments on HyperEVM, Sei, and Pharos also expose LayerZero OFT machinery, but LayerZero peers read zero on HyperEVM and Sei, and Pharos holds only a one-sided peer to the issuer's Plasma contract 0x0cddd7515586550f16dec1732e0386109e1859e8 whose own peer mapping is empty, so LayerZero remains an exposed surface rather than a live rail; Bridge upgrade/admin and pool controls are explicitly scored here, with an external-validated-network tier.",
-    "reviewedAt": "2026-09-05",
-    "reviewer": "OpenAI Codex syzUSD bridge-boundary canonicality verification; extended 2026-09-05 by Claude YuzuRailsCloseout (HyperEVM/Sei/Pharos/Berachain live RPC rail verification)",
+    "summary": "Plasma remains the reviewed native syzUSD ERC-4626 issuance route; its CCIP LockReleaseTokenPool is cross-chain escrow assessed in Bridge Risk. At Plasma block 33896602, seven configured satellite selectors are present: the six reviewed EVM destinations plus Aptos mainnet. Aptos ledger version 7436709932 confirms the 6-decimal syzUSD metadata object, reciprocal Plasma pool/token binding, ManagedTokenPool 1.6.0, a sole pool store minter/burner and enabled rate limits. Published Move source enforces CCIP callback, remote-pool and limiter checks, while owner-controlled configuration and compatible package upgrades remain privileged surfaces; no unverified signer threshold or timelock protection is inferred. The Ethereum ProxyAdmin owner is a runtime-matched 12-hour TimelockController, while the Pharos proxy admin is a deployed contract whose controller's getMinDelay() returns 300 seconds; former EOA descriptions are superseded by chain-specific observations. Named EVM LayerZero peer probes remain empty except the one-sided Pharos pointer, which does not establish another active rail. Runtime chain-supply materiality remains a separate unresolved production input.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA64syzUSD)",
     "confidence": "verified",
     "protocols": [
       {
@@ -128,11 +128,11 @@
         "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
       },
       {
-        "label": "Current syzUSD Ethereum adapter proxy",
+        "label": "Current syzUSD Ethereum token proxy",
         "url": "https://etherscan.io/address/0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12#code"
       },
       {
-        "label": "Current syzUSD Ethereum adapter implementation",
+        "label": "Current syzUSD Ethereum BridgeableTokenUpgradeable implementation",
         "url": "https://etherscan.io/address/0x692d91e94b55ec1360f20970010538263ce29b58#code"
       },
       {
@@ -149,7 +149,7 @@
       },
       {
         "label": "Chainlink CCIP Ethereum directory",
-        "url": "https://docs.chain.link/ccip/directory/mainnet/chain/ethereum-mainnet"
+        "url": "https://docs.chain.link/ccip/directory/mainnet/chain/mainnet"
       },
       {
         "label": "Chainlink CCIP Monad directory",
@@ -180,15 +180,15 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Plasma block 30024507 on 2026-08-17, the transparent-proxy syzUSD ERC-4626 vault resolves to implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8 and ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, whose owner is the 4-of-5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d. asset() returns yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, so current share issuance is native and deposit-bounded; the vault owner() EOA is operational-only. The separate Plasma CCIP LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2 escrows syzUSD for bridge egress and validates configured remote pools/tokens; it does not create independent native syzUSD liabilities.",
+        "reviewNote": "At Plasma block 33896602 on 2026-10-01, the native ERC-4626 vault resolves to verified StakedYuzuUSDV3 implementation 0x4ad9f1db810146b660eb863cc6f56649e0824a6e and ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, now owned by 48-hour TimelockController 0x2130457539612ae9838e0314cda1a8abbdb7cfbc. asset() remains yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc; the former direct-owner Safe acts through the timelock. CCIP LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2 returns this native token and seven configured remote selectors, including newly identified Aptos. The pool escrows canonical shares and remains a bridge control, not an independent native minter.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "contract:plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
           "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
         ],
-        "observedAt": "2026-08-17",
-        "observedBlock": 30024507,
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896602,
         "sources": [
           {
             "label": "syzUSD vault on Plasmascan",
@@ -210,14 +210,14 @@
         "destinationChain": "ethereum",
         "canonicalChain": "plasma",
         "contractAddress": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
-        "protocol": "Yuzu syzUSD BridgeableTokenAdapterUpgradeable representation with Chainlink CCIP",
+        "protocol": "Yuzu syzUSD BridgeableTokenUpgradeable representation with Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Ethereum block 25774413 on 2026-08-17, this representation resolves to BridgeableTokenAdapterUpgradeable implementation 0x692d91e94b55ec1360f20970010538263ce29b58. Chainlink TokenAdminRegistry 0xb22764f98dd05c789929716d677382df22c05cb6 maps it to BurnMintTokenPool 0xd915adf1b64854dd312550f6831afa151e7b2590 (typeAndVersion 1.6.1), whose getToken() returns this token, getRouter() returns 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, and owner/rate-limit administrator is 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool holds both CCIP_MINTER_ROLE and CCIP_BURNER_ROLE; it validates inbound CCIP route machinery and is not a canonical native issuance deployment. The pool has one configured Plasma remote pool/token and active inbound/outbound rate limits. LayerZero peers for the checked EIDs remain zero.",
+        "reviewNote": "At Ethereum block 26095798 on 2026-10-01, the proxy resolves to implementation 0x692d91e94b55ec1360f20970010538263ce29b58, whose matched Sourcify source names BridgeableTokenUpgradeable, not BridgeableTokenAdapterUpgradeable. ProxyAdmin 0xab08de77a15ae9dc675eeeb89b3bd558069341a9 owner 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38 is a verified TimelockController, whose runtime matches the pinned code and getMinDelay() is 43200 seconds; the former EOA description is superseded. The separate BurnMintTokenPool 0xd915adf1b64854dd312550f6831afa151e7b2590 returns this token, the official Ethereum router, one reciprocal Plasma token/pool and enabled inbound/outbound capacities 3,300,000/3,000,000 syzUSD. Privileged upgrades remain possible after the timelock. Named LayerZero peer probes return zero; static calls do not constitute a transaction replay.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
@@ -226,16 +226,16 @@
           "contract:ethereum:0xd915adf1b64854dd312550f6831afa151e7b2590",
           "proxy-admin:ethereum:0xab08de77a15ae9dc675eeeb89b3bd558069341a9"
         ],
-        "observedAt": "2026-08-17",
-        "observedBlock": 25774413,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
-            "label": "Current syzUSD Ethereum adapter proxy",
+            "label": "Current syzUSD Ethereum token proxy",
             "url": "https://etherscan.io/address/0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12#code"
           },
           {
-            "label": "Current syzUSD Ethereum adapter implementation",
-            "url": "https://etherscan.io/address/0x692d91e94b55ec1360f20970010538263ce29b58#code"
+            "label": "Matched Ethereum BridgeableTokenUpgradeable source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x692d91e94b55ec1360f20970010538263ce29b58?fields=compilation,sources"
           },
           {
             "label": "Ethereum public RPC",
@@ -243,7 +243,7 @@
           },
           {
             "label": "Chainlink CCIP Ethereum directory",
-            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/ethereum-mainnet"
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/mainnet"
           },
           {
             "label": "Ethereum syzUSD CCIP pool",
@@ -407,7 +407,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Pharos block 16770324 on 2026-09-05, the syzUSD proxy resolves to implementation 0x7cc8c6fb97139dc884342561ad5d6d671bb0e0fa with EIP-1967 admin 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38, the Yuzu deployer EOA that also owns the Ethereum syzUSD ProxyAdmin. The implementation is unverified on the Pharos explorer, but its runtime bytecode is byte-length identical (15,693 bytes) and selector-identical to the verified HyperEVM BridgeableTokenUpgradeable implementation, including the LayerZero OFT dispatch and grantRole machinery. Unlike HyperEVM and Sei, the LayerZero surface here holds one configured peer: peers(uint32) for Plasma EID 30383 returns 0x0cddd7515586550f16dec1732e0386109e1859e8, the issuer-key-addresses-listed Plasma-side contract (owner() is the Yuzu EOA, no ERC-20 surface); that contract's own peers(uint32) reads return zero across EIDs 30100-30400, so the LayerZero lane is one-sided and not live. The issuer's security-infrastructure CCIP page lists Pharos on the syzUSD Token Manager lanes 'Plasma <> Monad / Ethereum / HyperEVM / Sei / Pharos'. TokenAdminRegistry 0xb79791184973589c38e114d43eb8e4588c283a18 maps this token to BurnMintTokenPool 0x00a495d9abc6587e06a6a5b1401eb7c20a66d1ec (typeAndVersion 1.6.1) whose getToken() returns this token, getRouter() returns 0x4e52dd94e9bcfefe3c78153bdfb0ab1d30687297 matching the Chainlink CCIP Pharos directory, owner() and getRateLimitAdmin() return the Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, getSupportedChains() returns only the Plasma selector 9335212494177455608, getRemoteToken(Plasma) returns canonical syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and inbound (capacity 3,300,000 syzUSD, refill 38.19444 syzUSD/s) and outbound (capacity 3,000,000 syzUSD, refill 34.72222 syzUSD/s) rate limits are enabled. The pool holds both CCIP_MINTER_ROLE and CCIP_BURNER_ROLE on the token, the token's default admin role is held by the Yuzu EOA, decimals are 18, and total supply read 3,356,487.02 syzUSD. This is a CCIP burn/mint representation, not a native issuance deployment.",
+        "reviewNote": "At Pharos block 19075613 on 2026-10-01, the proxy still resolves to implementation 0x7cc8c6fb97139dc884342561ad5d6d671bb0e0fa, but its EIP-1967 admin 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38 is a deployed contract with owner() 0xb1c0ddd38502147086ed9efb4c20bd8edf1a7a37; the owner's getMinDelay() returns 300 seconds. This Pharos address must not be described as an EOA merely because the same address owns a ProxyAdmin on Ethereum. The local CCIP pool remains 0x00a495d9abc6587e06a6a5b1401eb7c20a66d1ec with getToken() this token, router 0x4e52dd94e9bcfefe3c78153bdfb0ab1d30687297, owner/rate-limit admin 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, typeAndVersion BurnMintTokenPool 1.6.1, and a single configured Plasma remote token. The enabled rate buckets remain inbound 3,300,000 and outbound 3,000,000 syzUSD. peers(30383) still points to Plasma 0x0cddd7515586550f16dec1732e0386109e1859e8; the probed reciprocal EVM peers on that Plasma contract are zero, which does not establish an active additional LayerZero rail. CCIP remains the reviewed bridge representation; current explorer source retrieval is rate-limited.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
@@ -417,8 +417,8 @@
           "contract:plasma:0x0cddd7515586550f16dec1732e0386109e1859e8",
           "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
         ],
-        "observedAt": "2026-09-05",
-        "observedBlock": 16770324,
+        "observedAt": "2026-10-01",
+        "observedBlock": 19075613,
         "sources": [
           {
             "label": "Yuzu Chainlink CCIP (Transporter Bridge) page",
@@ -485,6 +485,41 @@
           {
             "label": "Plasma public RPC (canonical pool lane reads)",
             "url": "https://rpc.plasma.to"
+          }
+        ]
+      },
+      {
+        "id": "aptos:0x5763307032c1971376260ca48cc627eb7cfde4d021aabc6bce9ffb9c7aa30619",
+        "sourceChain": "plasma",
+        "destinationChain": "aptos",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x5763307032c1971376260ca48cc627eb7cfde4d021aabc6bce9ffb9c7aa30619",
+        "protocol": "Yuzu syzUSD Aptos ManagedTokenPool 1.6.0 CCIP representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Plasma block 33896602 the canonical pool names Aptos mainnet selector 4741433654826277614, this 6-decimal metadata object and remote pool 0x040993fb3f03b98e878d7d1a79a0df43e0d7417662843917d4eb48215ccb8467. At Aptos ledger version 7436709932, ManagedTokenPool 1.6.0 returns this token, router 0x20f808de3375db34d17cc946ec6b43fc26962f6afa125182dc903359756caf6b and only the reciprocal Plasma pool/token; its store signer 0x541b2fcaf72c091ef1890132aa488a60e217affd8ad62b76732273d4d9fd88b3 is the sole allowed local minter/burner. Source-published registered callbacks validate CCIP input, source pool and rate limits before burning/minting. Enabled inbound/outbound capacity is 3,300,000/3,000,000 syzUSD with 6-decimal refill 38.194444/34.722222 per second. Pool owner 0x148f643dec51f86b7f21bbd89ae707776c907b9de969b0fc4f8174f53b1363b9 can change route, allowlist and rate configuration; compatible package upgrades and token minter grants remain privileged. Full signer-custody protections and runtime materiality are not inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "sources": [
+          {
+            "label": "Pinned Aptos syzUSD metadata resources (ledger version 7436709932)",
+            "url": "https://api.mainnet.aptoslabs.com/v1/accounts/0x5763307032c1971376260ca48cc627eb7cfde4d021aabc6bce9ffb9c7aa30619/resources?ledger_version=7436709932"
+          },
+          {
+            "label": "Pinned Aptos configured CCIP pool resources (ledger version 7436709932)",
+            "url": "https://api.mainnet.aptoslabs.com/v1/accounts/0x040993fb3f03b98e878d7d1a79a0df43e0d7417662843917d4eb48215ccb8467/resources?ledger_version=7436709932"
+          },
+          {
+            "label": "Chainlink authoritative Aptos mainnet selector",
+            "url": "https://raw.githubusercontent.com/smartcontractkit/chain-selectors/main/selectors_aptos.yml"
+          },
+          {
+            "label": "Plasma canonical syzUSD CCIP pool",
+            "url": "https://plasmascan.to/address/0x31672de4726227feb22f2dfbcfa985c71bea86b2"
           }
         ]
       }
@@ -578,7 +613,7 @@
           },
           {
             "label": "Chainlink CCIP Ethereum directory",
-            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/ethereum-mainnet"
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/mainnet"
           },
           {
             "label": "Ethereum public RPC",
@@ -761,7 +796,7 @@
           "lockboxOrEscrow": "This BurnMintTokenPool 1.6.1 is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
           "trustedPeerOrRemote": "At Pharos block 16770324, the pool had one supported Plasma route (selector 9335212494177455608) with remote token 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, and the canonical Plasma LockReleaseTokenPool's supportedChains() now includes the Pharos selector 7801139999541420232 with getRemoteToken() mapping back to this chain's token.",
           "rateLimits": "At Pharos block 16770324, inbound limits were enabled at capacity 3,300,000 syzUSD with refill 38.19444 syzUSD/s and outbound limits at capacity 3,000,000 syzUSD with refill 34.72222 syzUSD/s; getRateLimitAdmin() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae.",
-          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool is the token's CCIP_MINTER_ROLE and CCIP_BURNER_ROLE holder; the token's default admin role is held by the same EOA, and the token proxy's EIP-1967 admin is 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38 (the Yuzu deployer EOA that also owns the Ethereum ProxyAdmin). The unverified implementation matches the dual-surface BridgeableTokenUpgradeable bytecode; its LayerZero surface holds one configured peer, peers(30383) = 0x0cddd7515586550f16dec1732e0386109e1859e8 on Plasma, but that Plasma-side contract's own peers read zero across EIDs 30100-30400, so no LayerZero lane is live."
+          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator remain Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. At Pharos block 19075613, EIP-1967 admin 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38 has deployed code and owner() 0xb1c0ddd38502147086ed9efb4c20bd8edf1a7a37; that owner's getMinDelay() is 300 seconds. The historical description of the Pharos proxy admin as an EOA was incorrect. The LayerZero Plasma peer remains one-sided in the named destination probes. Source verification and full controller-role enumeration remain distinct from these pinned address and call observations."
         },
         "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, while the Yuzu owner can reconfigure the pool, raise or reconfigure those limits, or complete the one-sided LayerZero peer into a live rail.",
         "canRaiseCap": true,
@@ -834,7 +869,7 @@
       },
       {
         "id": "syzusd-ethereum-proxy-admin-owner",
-        "label": "Yuzu Ethereum syzUSD adapter ProxyAdmin owner",
+        "label": "Yuzu Ethereum syzUSD ProxyAdmin 12-hour timelock",
         "routeRefs": [
           "ethereum:0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12"
         ],
@@ -846,26 +881,28 @@
         "controllerAddress": "0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38",
         "failureDomainKeys": [
           "proxy-admin:ethereum:0xab08de77a15ae9dc675eeeb89b3bd558069341a9",
-          "eoa:ethereum:0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38"
+          "timelock:ethereum:0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38"
         ],
-        "authorityType": "eoa",
+        "authorityType": "timelock",
+        "timelockDelaySec": 43200,
+        "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": true,
         "routeChecks": {
-          "pausersAdminsUpgraders": "At Ethereum block 25770862, the syzUSD adapter proxy admin is 0xab08de77a15ae9dc675eeeb89b3bd558069341a9 and its owner is EOA 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38; this upgrade path can replace the current lockbox/OFT-adapter implementation. The active LayerZero/CCIP lane and its role/limit controls were not verified."
+          "pausersAdminsUpgraders": "At Ethereum block 26095798, ProxyAdmin 0xab08de77a15ae9dc675eeeb89b3bd558069341a9 owner() is verified TimelockController 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38, with pinned runtime matching Sourcify and getMinDelay() 43200 seconds. Scheduled upgrades can replace BridgeableTokenUpgradeable logic. Current CCIP token, pool, router and Plasma counterparty are established in the separate pool control; message-level behavior and signer-custody safeguards are not inferred."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770862,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
-            "label": "Current syzUSD Ethereum adapter proxy",
+            "label": "Current syzUSD Ethereum token proxy",
             "url": "https://etherscan.io/address/0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12#code"
           },
           {
-            "label": "Current syzUSD Ethereum adapter implementation",
-            "url": "https://etherscan.io/address/0x692d91e94b55ec1360f20970010538263ce29b58#code"
+            "label": "Matched Ethereum ProxyAdmin owner TimelockController source and bytecode",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38?fields=compilation,sources,creationBytecode,runtimeBytecode"
           }
         ],
-        "evidence": "At Ethereum block 25770862 on 2026-08-16, the verified syzUSD proxy 0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12 resolved to BridgeableTokenAdapterUpgradeable implementation 0x692d91e94b55ec1360f20970010538263ce29b58. Its EIP-1967 ProxyAdmin 0xab08de77a15ae9dc675eeeb89b3bd558069341a9 had owner EOA 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38. The owner can replace the bridge-adapter implementation, but no current CCIP pool/router or LayerZero peer/control set was established."
+        "evidence": "At Ethereum block 26095798 on 2026-10-01, proxy implementation 0x692d91e94b55ec1360f20970010538263ce29b58 is matched BridgeableTokenUpgradeable, not the previously named adapter class. ProxyAdmin 0xab08de77a15ae9dc675eeeb89b3bd558069341a9 owner() remains 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38, but pinned eth_getCode matches the Sourcify-verified TimelockController runtime and getMinDelay() returns 43200 seconds. Historical EOA/no-delay ownership wording is superseded, not retained as current. CCIP pool 0xd915adf1b64854dd312550f6831afa151e7b2590 returns this token, the official router and one configured Plasma counterparty with enabled limits. Upgrade powers remain retained adverse controls despite the verified 12-hour delay."
       },
       {
         "id": "syzusd-monad-proxy-admin-timelock",
@@ -888,10 +925,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": true,
         "routeChecks": {
-          "pausersAdminsUpgraders": "At Monad block 96617731 on 2026-08-16, ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 owner() is TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e and getMinDelay() is 43,200 seconds. A completed timelocked upgrade can replace the current bridgeable/OFT implementation and change its CCIP or LayerZero mint/burn surfaces; the current role grants, pool, router, allowlists, limits, and message traces remain unverified."
+          "pausersAdminsUpgraders": "At Monad block 109541441, ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 owner() remains TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e with getMinDelay() 43200 seconds. Scheduled upgrades can replace the bridgeable implementation. The local CCIP pool, router, configured Plasma remote token and limits are now established by the separate pool control; full message traces and complete controller-role enumeration are not proven by these static observations."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 96617731,
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541441,
         "sources": [
           {
             "label": "Current syzUSD Monad proxy",
@@ -906,7 +943,56 @@
             "url": "https://rpc.monad.xyz"
           }
         ],
-        "evidence": "At Monad block 96617731 on 2026-08-16, the syzUSD proxy 0x484be0540ad49f351eaa04eeb35df0f937d4e73f resolved to current implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53 and ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331. ProxyAdmin.owner() returned TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e with getMinDelay() = 43,200 seconds. The timelock can replace the bridgeable/OFT implementation; current CCIP and LayerZero route configuration was not established."
+        "evidence": "At Monad block 109541441 on 2026-10-01, the syzUSD proxy resolves to implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53 and ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331. ProxyAdmin.owner() is TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e with getMinDelay() 43200 seconds. The separate CCIP pool 0x012247950ee154dc26d4514b84b3b60336c55ea5 reports this token, the official router, the canonical Plasma remote token and enabled inbound/outbound limits. The timelock can still replace mint-critical bridge logic; the former no-current-CCIP-configuration-established wording is superseded without claiming transaction-level bridge proof."
+      },
+      {
+        "id": "syzusd-aptos-ccip-managed-token-pool",
+        "label": "syzUSD Aptos CCIP ManagedTokenPool",
+        "routeRefs": [
+          "aptos:0x5763307032c1971376260ca48cc627eb7cfde4d021aabc6bce9ffb9c7aa30619"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit",
+          "upgrade"
+        ],
+        "controllerChain": "aptos",
+        "controllerAddress": "0x040993fb3f03b98e878d7d1a79a0df43e0d7417662843917d4eb48215ccb8467",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:aptos:0x040993fb3f03b98e878d7d1a79a0df43e0d7417662843917d4eb48215ccb8467",
+          "controller:aptos:0x148f643dec51f86b7f21bbd89ae707776c907b9de969b0fc4f8174f53b1363b9"
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "At Aptos ledger version 7436709932, get_token() returns the tracked 6-decimal syzUSD metadata object. Published managed_token_pool callbacks call managed_token mint/burn through pool store signer 0x541b2fcaf72c091ef1890132aa488a60e217affd8ad62b76732273d4d9fd88b3, the sole enabled minter and burner in TokenState.",
+          "trustedPeerOrRemote": "The Aptos pool exposes only Plasma selector 9335212494177455608 with remote canonical syzUSD and pool 0x31672de4726227feb22f2dfbcfa985c71bea86b2. The Plasma pool reciprocally names this Aptos token and pool. Published callbacks validate registered CCIP input and allowed source-pool binding; static verification is not a transaction replay.",
+          "rateLimits": "Pinned inbound/outbound buckets are enabled with capacities 3300000000000/3000000000000 raw units and refill 38194444/34722222 raw units per second, scaled by 6 decimals. Pool owner can replace rate configurations.",
+          "pausersAdminsUpgraders": "Pinned owner() is 0x148f643dec51f86b7f21bbd89ae707776c907b9de969b0fc4f8174f53b1363b9; published owner-gated methods manage routes, allowlists and limits. PackageRegistry shows upgrade policy 1 (compatible), not immutable policy, for pool packages. Token package holds extend/mint/burn/transfer references and owner-gated minter/burner grants. Signer thresholds, key custody, independent timelock and financial reconciliation are not established."
+        },
+        "bypassSurfaces": [
+          "Owner-controlled compatible Move package upgrades and token minter/burner grants can alter the currently reviewed CCIP path; no independent immutable economic mint cap is established."
+        ],
+        "observedAt": "2026-10-01",
+        "sources": [
+          {
+            "label": "Pinned Aptos pool resources and published Move sources (ledger version 7436709932)",
+            "url": "https://api.mainnet.aptoslabs.com/v1/accounts/0x040993fb3f03b98e878d7d1a79a0df43e0d7417662843917d4eb48215ccb8467/resources?ledger_version=7436709932"
+          },
+          {
+            "label": "Pinned Aptos token authority state (ledger version 7436709932)",
+            "url": "https://api.mainnet.aptoslabs.com/v1/accounts/0x6eb7fcdb24b42d3f831154c0b6de803a1a374780090846cee8be9948fddd27f2/resources?ledger_version=7436709932"
+          },
+          {
+            "label": "Pinned Aptos ManagedToken package (ledger version 7436709932)",
+            "url": "https://api.mainnet.aptoslabs.com/v1/accounts/0x60d9db8bb07f6ad5b55decc72419747e682a46ddf3434010be111b0df2784aea/resources?ledger_version=7436709932"
+          }
+        ],
+        "evidence": "Pinned Aptos views at ledger version 7436709932 return ManagedTokenPool 1.6.0, the tracked syzUSD metadata object, 6 decimals, the CCIP router, a single reciprocal Plasma route, pool store signer and owner. Published Move callback source matches registered V2 callbacks and validates remote input and limiters before mint/burn. TokenState authorizes only the returned pool store signer for mint and burn. Current limiters are enabled, while owner-gated configuration, grant and compatible upgrade surfaces remain retained adverse powers rather than assumed immutable safeguards."
       }
     ]
   }

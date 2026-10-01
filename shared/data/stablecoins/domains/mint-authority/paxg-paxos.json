@@ -18,14 +18,13 @@
         "0xbb9f637fae6972ea9adeb2ac717c16590cec33e3"
       ],
       "adminAddresses": [
-        "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
-        "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
+        "0x4a515afe11581fd87ba90d6459dc93db6591f5e3",
+        "0x6d8b8f7ebd9860e80694665f05033df06ddc3acc"
       ],
       "canChangeMintLogic": true,
-      "delaySec": 0,
-      "controlRef": "PAXG independent token and supply-path upgrade EOAs",
-      "observedAt": "2026-08-16",
-      "observedBlock": 25770003,
+      "controlRef": "PAXG outer token proxy administrator contract",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095800,
       "sources": [
         {
           "label": "PAXG legacy proxy source",
@@ -45,7 +44,7 @@
         }
       ]
     },
-    "summary": "PAXG's legacy token proxy delegates to PAXG V2, which accepts native mint requests through a UUPS SupplyControl proxy. Two direct Paxos controller EOAs can mint under recorded rate limits, while the immediate Paxos controller-manager EOA can raise limits, add controllers, redirect SupplyControl, and upgrade the native SupplyControl path. A separate immediate EOA can replace the outer token implementation. Solana is a second native Token-2022 issuance surface whose mint authority is a 1-of-4 multisig (Paxos admin EOA, two rate-limited Paxos minter-controller PDAs, and a LayerZero OFT store); the Ethereum LayerZero adapter and the Solana OFT store are assessed separately in Bridge Risk.",
+    "summary": "PAXG's Ethereum token retains PAXG V2 and the same UUPS SupplyControl implementation. Two native controller EOAs retain 177,000-PAXG capacity and 50-PAXG-per-second refill. The immediate controller-manager EOA still adds controllers and raises limits, but no longer holds token or SupplyControl DEFAULT_ADMIN. Those roles now belong to contract 0x6d8b8f7ebd9860e80694665f05033df06ddc3acc; the outer proxy admin is contract 0x4a515afe11581fd87ba90d6459dc93db6591f5e3. Both administrator contracts return getMinDelay() = 86,400 seconds, but enforcement and bypass paths have not been verified, so no protective delay is authored. Solana retains its Token-2022 1-of-4 multisig with Paxos admin, two native controller PDAs, and the LayerZero OFT store. Bridge controls remain separately assessed under Bridge Risk.",
     "controls": [
       {
         "chain": "ethereum",
@@ -61,8 +60,8 @@
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "EOAs 0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7 and 0x2fb074fa59c9294c71246825c1c9a0c7782d41a4 each had a 177,000-PAXG capacity and 50-PAXG-per-second refill for native issuance. The controller-manager EOA can change native controller membership and these bounds immediately; the separate LayerZero adapter limit is recorded only in Bridge Risk.",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526129,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "failureDomainKeys": [
           "ethereum:0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7",
           "ethereum:0x2fb074fa59c9294c71246825c1c9a0c7782d41a4"
@@ -77,7 +76,7 @@
             "url": "https://github.com/paxosglobal/paxos-token-contracts/blob/ac239fd78bb4330e94c78e306bc1539db9544e16/contracts/SupplyControl.sol"
           }
         ],
-        "evidence": "At Ethereum block 25526129, token supplyControl() returned this proxy and getAllSupplyControllerAddresses() returned exactly the two direct Paxos EOAs plus the separate LayerZero adapter. getSupplyControllerConfig() returned the recorded native capacities, refill rates, whitelists, and allow-any flags; the adapter's separate capacity is retained under Bridge Risk. Recompiling pinned Paxos source with Solidity 0.8.28 matched implementation 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3 byte-for-byte after substituting standard UUPS self-address immutables."
+        "evidence": "Historical block 25526129 identified this SupplyControl proxy and exact-source implementation. At block 26095800, supplyControl() still returns this proxy and the implementation remains 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3. The two native EOAs retain capacity 177000000000000000000000 and refillPerSecond 50000000000000000000; the LayerZero adapter is assessed separately."
       },
       {
         "chain": "ethereum",
@@ -85,15 +84,15 @@
         "deploymentRefs": [
           "ethereum:0x45804880de22913dafe09f4980848ece6ecbaf78"
         ],
-        "label": "PAXG DEFAULT_ADMIN and controller-manager EOA",
+        "label": "PAXG controller-manager EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526129,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "failureDomainKeys": [
           "ethereum:0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
         ],
@@ -107,29 +106,28 @@
             "url": "https://github.com/paxosglobal/paxos-token-contracts/blob/ac239fd78bb4330e94c78e306bc1539db9544e16/contracts/SupplyControl.sol"
           }
         ],
-        "evidence": "At Ethereum block 25526129, this no-code EOA was token defaultAdmin/owner, SupplyControl defaultAdmin, and SupplyControl SUPPLY_CONTROLLER_MANAGER_ROLE holder. It can immediately redirect token supplyControl, change or add native mint controllers, change native rate limits and whitelists, and upgrade the SupplyControl UUPS proxy. The three-hour default-admin delay applies only to transferring DEFAULT_ADMIN_ROLE, not these current-admin actions. Ownership, implementation, and rate-limit facts for the separate LayerZero adapter are recorded under Bridge Risk."
+        "evidence": "Historical block 25526129 identified this EOA as both DEFAULT_ADMIN and controller-manager. At block 26095800 it retains SUPPLY_CONTROLLER_MANAGER_ROLE and empty code, allowing immediate membership, rate-limit, and whitelist changes. It no longer holds DEFAULT_ADMIN_ROLE on either token or SupplyControl. Both defaultAdmin() getters instead return contract 0x6d8b8f7ebd9860e80694665f05033df06ddc3acc."
       },
       {
         "chain": "ethereum",
-        "address": "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
+        "address": "0x4a515afe11581fd87ba90d6459dc93db6591f5e3",
         "deploymentRefs": [
           "ethereum:0x45804880de22913dafe09f4980848ece6ecbaf78"
         ],
-        "label": "PAXG independent token and supply-path upgrade EOAs",
+        "label": "PAXG outer token proxy administrator contract",
         "role": "proxy-admin",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "timelockDelaySec": 0,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526129,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "failureDomainKeys": [
-          "ethereum:0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
-          "ethereum:0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
+          "ethereum:0x4a515afe11581fd87ba90d6459dc93db6591f5e3",
+          "ethereum:0x6d8b8f7ebd9860e80694665f05033df06ddc3acc"
         ],
         "bypassSurfaces": [
-          "Separate EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b can independently upgrade SupplyControl or redirect SupplyControl without the outer proxy admin."
+          "Separate token and SupplyControl DEFAULT_ADMIN contract 0x6d8b8f7ebd9860e80694665f05033df06ddc3acc controls the native supply-path upgrade or redirection; its authorization graph remains unverified."
         ],
         "sources": [
           {
@@ -141,7 +139,36 @@
             "url": "https://github.com/paxosglobal/paxos-token-contracts/tree/ac239fd78bb4330e94c78e306bc1539db9544e16"
           }
         ],
-        "evidence": "At Ethereum block 25526129, the legacy Zeppelinos proxy admin slot returned no-code EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c, which can replace outer PAXG logic immediately. The separate no-code DEFAULT_ADMIN EOA can independently upgrade SupplyControl or redirect the token to a different native supply controller. Both native paths have zero execution delay; LayerZero adapter upgrade exposure is recorded under Bridge Risk."
+        "evidence": "Historical block 25526129 used proxy-admin EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c. At block 26095800, the source-defined legacy admin slot returns this deployed contract, while implementation remains 0x7da4c5d9eca180a03765a6d27196f2a0380fa543. getMinDelay() returns 86400; no protective delay is assigned without verified authorization and bypass semantics."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6d8b8f7ebd9860e80694665f05033df06ddc3acc",
+        "deploymentRefs": [
+          "ethereum:0x45804880de22913dafe09f4980848ece6ecbaf78"
+        ],
+        "label": "PAXG token and SupplyControl DEFAULT_ADMIN contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "failureDomainKeys": [
+          "ethereum:0x6d8b8f7ebd9860e80694665f05033df06ddc3acc"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum pinned RPC observation, block 26095800",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Paxos SupplyControl source",
+            "url": "https://github.com/paxosglobal/paxos-token-contracts/blob/ac239fd78bb4330e94c78e306bc1539db9544e16/contracts/SupplyControl.sol"
+          }
+        ],
+        "evidence": "At block 26095800, token and SupplyControl defaultAdmin() and hasRole(DEFAULT_ADMIN_ROLE, this address) identify this deployed contract. It does not hold SUPPLY_CONTROLLER_MANAGER_ROLE. getMinDelay() returns 86400; getOwners()/getThreshold() revert, and EIP-1967 implementation/admin slots are zero. The proposer, executor, cancellation, and bypass graph is unknown; the getter is not promoted into a scored protective delay."
       },
       {
         "chain": "solana",

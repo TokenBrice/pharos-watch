@@ -17,7 +17,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://fusd.finchain.global/#reserves",
-    "provider": "FinChain reserve dashboard (reserve section captioned 'as of August 2026'; figures do not render in the static page response). Keep cadence and assurance classification subject to separate verification of the advertised Chainlink PoR feed.",
+    "provider": "FinChain reserve dashboard (reserve section captioned 'as of September 2026'; figures do not render in the static page response). The issuer API itemizes three reserve products but carries updated_at 1776736295 (2026-04-21); the page caption does not establish a new reserve report. Keep cadence and assurance classification subject to separate verification of the advertised Chainlink PoR feed.",
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Bermuda"

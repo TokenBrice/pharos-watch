@@ -11,7 +11,7 @@
     "navToken": true
   },
   "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
-  "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+  "pegMechanism": "Vault share whose value follows the BlackOpal LiquidStone II credit strategy NAV; Nest minting and redemption use route-specific supported stablecoins, with USDC on the currently documented Arc route and USDC, pUSD, and USDT entrypoints listed in the issuer deployment registry.",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "nest-blackopal-liquidstone-ii-vault",
@@ -66,6 +66,11 @@
     },
     {
       "chain": "avalanche",
+      "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+      "decimals": 6
+    },
+    {
+      "chain": "arc",
       "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
       "decimals": 6
     }

@@ -41,8 +41,8 @@
           "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
         ],
         "canRaiseCap": true,
-        "observedAt": "2026-07-14",
-        "observedBlock": 25531116,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096009,
         "failureDomainKeys": [
           "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
           "plume:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
@@ -56,18 +56,18 @@
             "0x98be74d3d5604904d0686eef9b4267f681f9520a",
             "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
             "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
-            "0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a",
+            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
             "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           ],
           "threshold": 3,
           "enabledModules": [],
-          "guard": null,
-          "fallbackHandler": null,
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "GnosisSafeL2 (masterCopy=0xfb1bffc9d739b8d520daf37df666da4c687191ea)",
-          "observedBlock": 25295054,
+          "observedBlock": 26096009,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295054 (2026-06-11), owner() on pUSD BoringVault (0xdddd73f5df1f0dc31373357beac77545dc5a6f3f) returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. getOwners()=[6 addresses], threshold()=3. getModulesPaginated returned 0 modules. masterCopy slot0=0xfb1bffc9d739b8d520daf37df666da4c687191ea (GnosisSafeL2). BoringVault has no proxy admin (non-upgradeable). Same owner confirmed on Plume block 74171616. authority()=0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 (RolesAuthority) on both chains; RolesAuthority owner = same Safe.",
+        "evidence": "Reverified by CurM16cNGN on 2026-10-01 at pinned Ethereum block 26096009 and Plume block 96626677: BoringVault and RolesAuthority owners remain Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Both Safes are 3-of-6 with the listed signer set, no enabled modules, zero guard storage, fallback handler 0x017062a1de2fe6b99be3d9d37841fed19f573804 and masterCopy 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The previous signer 0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a is absent; current signer 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9 is present. The vault implementation, admin and beacon EIP-1967 slots remain zero and authority() remains 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 on both chains. No signer key-custody or fallback-handler safety claim is made.",
         "sources": [
           {
             "label": "pUSD BoringVault on Etherscan",

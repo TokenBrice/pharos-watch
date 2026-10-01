@@ -31,5 +31,39 @@
     "scope": "dependency-relationships",
     "knownUnknownExposure": "The linked YUSD backing is disclosed; dynamic reward accrual is not modeled as a separate reserve slice.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ethereum sYUSD ERC-4626 vault 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 and its cooldown silo",
+        "role": "other"
+      },
+      {
+        "name": "BSC sYUSD ERC-4626 vault 0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM06UTY)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Current Ethereum sYUSD verified implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c63bb1667b6e9215aee562af2957739b2676fe"
+      },
+      {
+        "label": "Ethereum sYUSD contract",
+        "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+      },
+      {
+        "label": "BSC sYUSD contract",
+        "url": "https://bscscan.com/address/0x24db057b19241eefb9b522e8627c293ed8f93af2#code"
+      }
+    ],
+    "uncertainty": "This profile identifies local custody of deposited YUSD, confirmed by asset() reads on Ethereum and BSC. The cex custodyModel concerns the underlying YUSD strategy; this wrapper review does not establish its custodians, allocations, segregation, bankruptcy protection, or reuse rights. No provider shares are inferred.",
+    "knownUnknownExposurePct": 100
   }
 }

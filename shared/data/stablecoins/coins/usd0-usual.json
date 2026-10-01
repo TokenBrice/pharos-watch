@@ -25,8 +25,8 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena (via UsualUSDtb wrapper), and indirect USDC gateway liquidity",
-  "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
+  "collateral": "Issuer documentation identifies USYC, M by M0 and Spiko USTBL as eligible direct RWA collateral and USDC as an indirect minting route; technical documentation also describes the UsualUSDtb wrapper. Eligibility and wrapper availability do not establish current holdings or allocation.",
+  "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; direct redemption returns underlying RWA assets via DaoCollateral, with a documented 0.10% DAO Treasury redemption fee; arbitrageurs enforce the peg",
   "llamaId": "195",
   "detailProvider": "defillama",
   "geckoId": "usual-usd",
