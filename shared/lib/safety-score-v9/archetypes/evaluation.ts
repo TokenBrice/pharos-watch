@@ -1,5 +1,6 @@
 import type { V9AssetFactsBase } from "../../../types/safety-score-v9-facts";
 import type { V9ReasonCode } from "../../../types/safety-score-v9";
+import type { V9MechanismRiskReview } from "../../../types/safety-score-v9-backing";
 import { clampScore } from "../../math";
 import { sha256Hex } from "../../sha256";
 import { stableJsonStringifyV1 } from "../../stable-json";
@@ -79,6 +80,57 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest">): V9
     ...canonical,
     traceDigest: sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.backing-trace.v1", trace: canonical })),
   };
+}
+
+/**
+ * Reserve composition identifies the assets, not how much liability they cover.
+ * Price the measured uncovered share at zero after either local evaluation or
+ * parent-quality inheritance; existing reserve/mechanism quality stays visible.
+ */
+export function applyV9MeasuredCollateralization(
+  result: V9BackingResult,
+  measurement: V9MechanismRiskReview["collateralizationMeasurement"],
+): V9BackingResult {
+  if (measurement == null || measurement.ratio >= 1 || result.score === null) return result;
+  const ratio = measurement.ratio;
+  const score = result.score * ratio;
+  const evidenceRefIds = measurement.status.evidenceRefIds;
+  const { traceDigest: _traceDigest, ...trace } = result;
+  return finalizeBackingResult({
+    ...trace,
+    score,
+    pillarCeiling: Math.min(result.pillarCeiling ?? score, score),
+    contributions: [
+      ...result.contributions.map((row) => ({ ...row, effectiveWeight: row.effectiveWeight * ratio })),
+      {
+        componentKey: "mechanism:uncovered-liability",
+        source: "mechanism",
+        score: 0,
+        normalizedWeight: 1,
+        weightedScore: 0,
+        effectiveWeight: 1 - ratio,
+        observationState: "known",
+        provenance: null,
+        evidenceRefIds,
+        failureDomains: [],
+        upstreamAssetId: null,
+      },
+    ],
+    structuralReasons: [
+      ...result.structuralReasons,
+      {
+        kind: "unsafe-backing",
+        severity: "critical",
+        responsibility: "measured-adverse",
+        pathKey: "mechanism:collateralization-ratio",
+        materialShare: 1 - ratio,
+        ceiling: score,
+        evidenceRefIds,
+        failureDomains: [],
+      },
+    ],
+    evidenceRefIds: [...result.evidenceRefIds, ...evidenceRefIds],
+  });
 }
 
 // Only the whole-review fallback may price missing serial components locally;

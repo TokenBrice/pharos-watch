@@ -200,7 +200,7 @@ export function ScreenerToolbar({
           defaultMin={SCREENER_FILTER_DEFAULTS.dewsMin}
         />
         <ThresholdField
-          label="V9 Mint Component"
+          label="V10 Mint Component"
           min={0}
           max={100}
           step={1}
@@ -278,7 +278,7 @@ export function ScreenerToolbar({
           defaultMin={SCREENER_FILTER_DEFAULTS.liquidityScoreMin}
         />
         <FilterPillGroup
-          kicker="V9 Evidence"
+          kicker="V10 Evidence"
           options={SAFETY_EVIDENCE_OPTIONS}
           selected={filters.safetyEvidence}
           justEntered={justEnteredEvidence}
@@ -333,7 +333,7 @@ export function ScreenerToolbar({
           onChange={(next) => update("mintAuthority", next)}
         />
         <FilterPillGroup
-          kicker="V9 Mint Component"
+          kicker="V10 Mint Component"
           options={MINT_AUTHORITY_SCORE_OPTIONS}
           selected={filters.mintAuthorityScores}
           justEntered={justEnteredMintAuthorityScores}

@@ -988,37 +988,71 @@ describe("buildReviewedReserveClassifications", () => {
 });
 
 describe("assurance report freshness", () => {
-  it("does not keep an over-age latest report known", () => {
-    const maxAgeSec =
-      V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec;
-    const periodEnd = "2026-01-01";
-    const periodEndSec = Date.parse(`${periodEnd}T00:00:00Z`) / 1_000;
-    const fixedInput = makeV9TwoAssetFixedInput({ clockSec: periodEndSec + maxAgeSec + 1 });
-    const review = buildSafetyScoreV9MechanismReview(
-      fixedInput,
-      {
-        id: "alpha",
-        proofOfReserves: {
-          type: "attestation",
-          url: "https://example.com/report",
-          latestReport: {
-            periodEnd,
-            publishedAt: "2026-01-02",
-            assuranceMethod: "examination",
-            scope: "assets-and-liabilities",
-            liabilityReconciliation: "full",
-            reviewer: "fixture",
-            confidence: "verified",
-            sources: [{ label: "Report", url: "https://example.com/report.pdf" }],
-          },
+  it.each([
+    { publishedAt: "2026-01-02", expectedState: "known", expectedQuality: "strong" },
+    { publishedAt: undefined, expectedState: "bounded-unknown", expectedQuality: null },
+  ] as const)("credits a signed stand-in only with its sourced date: %j", ({ publishedAt, expectedState, expectedQuality }) => {
+    const fixedInput = makeV9TwoAssetFixedInput({ clockSec: Date.UTC(2026, 0, 10) / 1_000 });
+    const review = buildSafetyScoreV9MechanismReview(fixedInput, {
+      id: "alpha",
+      proofOfReserves: {
+        type: "independent-audit",
+        url: "https://example.com/report",
+        latestReport: {
+          periodEnd: "2026-01-01",
+          publishedAt,
+          publishedAtBasis: publishedAt ? "signed-date-standin" : undefined,
+          assuranceMethod: "examination",
+          scope: "assets-and-liabilities",
+          liabilityReconciliation: "full",
+          reviewer: "fixture",
+          confidence: "verified",
+          sources: [{ label: "Signed report", url: "https://example.com/report.pdf" }],
         },
       },
-      "fiat-cash",
-    );
-
-    expect(review?.archetype).toBe("fiat-cash");
+    }, "fiat-cash");
     if (!review || review.archetype !== "fiat-cash") throw new Error("expected fiat-cash review");
-    expect(review.assuranceAndReconciliation.status.observationState).toBe("stale");
-    expect(review.assuranceAndReconciliation.quality).toBeNull();
+    expect(review.assuranceAndReconciliation).toMatchObject({
+      status: { observationState: expectedState },
+      quality: expectedQuality,
+    });
   });
+
+  it.each([undefined, "explicit", "signed-date-standin"] as const)(
+    "does not keep an over-age latest report known (%s)",
+    (publishedAtBasis) => {
+      const maxAgeSec =
+        V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec;
+      const periodEnd = "2026-01-01";
+      const periodEndSec = Date.parse(`${periodEnd}T00:00:00Z`) / 1_000;
+      const fixedInput = makeV9TwoAssetFixedInput({ clockSec: periodEndSec + maxAgeSec + 1 });
+      const review = buildSafetyScoreV9MechanismReview(
+        fixedInput,
+        {
+          id: "alpha",
+          proofOfReserves: {
+            type: "attestation",
+            url: "https://example.com/report",
+            latestReport: {
+              periodEnd,
+              publishedAt: "2026-01-02",
+              publishedAtBasis,
+              assuranceMethod: "examination",
+              scope: "assets-and-liabilities",
+              liabilityReconciliation: "full",
+              reviewer: "fixture",
+              confidence: "verified",
+              sources: [{ label: "Report", url: "https://example.com/report.pdf" }],
+            },
+          },
+        },
+        "fiat-cash",
+      );
+
+      expect(review?.archetype).toBe("fiat-cash");
+      if (!review || review.archetype !== "fiat-cash") throw new Error("expected fiat-cash review");
+      expect(review.assuranceAndReconciliation.status.observationState).toBe("stale");
+      expect(review.assuranceAndReconciliation.quality).toBeNull();
+    },
+  );
 });

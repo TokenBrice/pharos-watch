@@ -61,6 +61,15 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
     profileReview: V9MechanismProfileReviewSchema.optional(),
     metricApplicability: z.record(z.string(), SafetyScoreV9MechanismMetricApplicabilitySchema).optional(),
     analogousMetrics: z.record(z.string(), z.number().finite()).optional(),
+    collateralizationMeasurement: z
+      .object({
+        ratio: z.number().finite().nonnegative(),
+        rationale: z.string().trim().min(1),
+        sourceUrl: z.string().url(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
     venueShares: z
       .array(
         z
@@ -94,6 +103,13 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
       }
     }
     const sourceUrls = new Set(overlay.sources.map((source) => source.url));
+    if (overlay.collateralizationMeasurement && !sourceUrls.has(overlay.collateralizationMeasurement.sourceUrl)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["collateralizationMeasurement", "sourceUrl"],
+        message: "Collateralization measurement sourceUrl must match an overlay source",
+      });
+    }
     for (const [componentKey, component] of Object.entries(overlay.components)) {
       if (
         "applicability" in component &&

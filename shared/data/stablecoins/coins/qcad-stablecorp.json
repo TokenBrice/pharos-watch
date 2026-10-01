@@ -31,7 +31,7 @@
   "geckoId": "stablecorp-qcad",
   "llamaId": "424",
   "proofOfReserves": {
-    "type": "attestation",
+    "type": "independent-audit",
     "url": "https://stablecorp.ca/transparency",
     "provider": "Davidson & Company LLP (Vancouver; Nexia International member) - the monthly CSAE 3000 reasonable-assurance attestations are signed by Davidson, not by Kingston Ross Pasnak LLP as previously recorded",
     "attestorTier": "regional",
@@ -48,7 +48,7 @@
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (FixInv6): retain the May 31, 2026 Davidson & Company CSAE 3000 reasonable-assurance report as the lockstep report for the existing May-dated reserve envelope; no new aggregate composition or favorable-tier date refresh is supported. The newer July 5 and July 31, 2026 trust-only report, signed September 14, 2026, remains a reference below and is not the periodEnd authority for this composition. Stablecorp expressly excludes pre-November 20, 2025 legacy QCAD and holds its reserves separately, so the newer trust-only cash split is not evidence for the full catalog denominator. Publication dates remain unestablished; reviewReference records the newer report's signature date only.",
+      "reviewer": "Sol curation pass 2026-10-01 (FixInv6; OwnerFollowups D21): retain the May 31, 2026 Davidson & Company CSAE 3000 reasonable-assurance report as the lockstep report for the existing May-dated reserve envelope; no new aggregate composition or favorable-tier date refresh is supported. Under D21, independent-audit is the schema reporting family for an examination-equivalent reasonable-assurance opinion, not a financial-statement audit. Assets-and-liabilities and full reconciliation describe the report's trust-scope reserve-to-circulation reconciliation only, not all catalog deployments or legacy QCAD. The newer July 5 and July 31, 2026 trust-only Ethereum report, independently browser-verified this pass and signed September 14, 2026, remains a reference below and is not the periodEnd authority for this composition. Stablecorp excludes pre-November 20, 2025 legacy QCAD and holds its reserves separately; the newer trust-only cash split cannot establish the full catalog denominator. Publication dates remain unestablished; reviewReference records the newer report's signature date only.",
       "confidence": "verified",
       "sources": [
         {

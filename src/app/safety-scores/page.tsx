@@ -17,16 +17,16 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 
 const reportCardsDescription =
-  "Compare active Safety Score V9 stablecoin ratings across backing, exit, economic control, evidence quality, dependencies, and structural caps.";
+  "Compare active Safety Score V10 stablecoin ratings across backing, exit, economic control, evidence quality, dependencies, and structural caps.";
 
 const FAQ_ITEMS = [
   {
     question: "How are stablecoin safety grades calculated?",
     answer:
-      "Safety Score V9 combines three pillars: Backing, Exit, and Economic Control. Evidence quality, dependencies, access posture, binding caps, and peg behavior can limit the published score. The resulting 0–100 score maps to a letter grade from A+ to F, while insufficient evidence is shown as NR.",
+      "Safety Score V10 combines three pillars: Backing, Exit, and Economic Control. Evidence quality, dependencies, access posture, binding caps, and peg behavior can limit the published score. The resulting 0–100 score maps to a letter grade from A+ to F, while insufficient evidence is shown as NR.",
   },
   {
-    question: "What do the three V9 pillars measure?",
+    question: "What do the three V10 pillars measure?",
     answer:
       "Backing measures the quality and reliability of the assets supporting a stablecoin. Exit measures whether holders can leave at meaningful size through independent routes. Economic Control measures governance, issuance, transfer, and intervention powers that can affect holders.",
   },
@@ -43,7 +43,7 @@ const FAQ_ITEMS = [
   {
     question: "Why do most stablecoins receive a C grade?",
     answer:
-      "A C grade means the asset has meaningful weaknesses or evidence gaps in at least one V9 pillar. Strong backing alone cannot offset a weak exit route, concentrated economic control, or a binding structural cap.",
+      "A C grade means the asset has meaningful weaknesses or evidence gaps in at least one V10 pillar. Strong backing alone cannot offset a weak exit route, concentrated economic control, or a binding structural cap.",
   },
 ] as const satisfies readonly FaqItem[];
 

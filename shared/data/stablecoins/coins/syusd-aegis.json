@@ -62,7 +62,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "cex",
+  "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Aegis staking (sYUSD)",

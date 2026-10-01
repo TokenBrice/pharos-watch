@@ -22,6 +22,8 @@
     "cadence": "ad-hoc",
     "latestReport": {
       "periodEnd": "2024-03-31",
+      "publishedAt": "2024-03-31",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "self-verification",
       "scope": "assets-only",
       "liabilityReconciliation": "none",

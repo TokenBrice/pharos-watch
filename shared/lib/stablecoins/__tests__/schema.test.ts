@@ -1333,6 +1333,23 @@ describe("StablecoinMeta schema — PoR / composition lockstep", () => {
     expect(() => parseStablecoinMetaAssets([coin("2026-06-30")], "fixture")).not.toThrow();
   });
 
+  it("requires a dated stand-in and preserves report/composition chronology", () => {
+    const withReport = (report: Record<string, unknown>, compositionAsOf = "2026-06-30") =>
+      makeCoin({
+        ...coin(compositionAsOf),
+        proofOfReserves: { type: "self-reported", url: "https://example.com/por", latestReport: report },
+      });
+    const standin = { ...latestReport, publishedAtBasis: "signed-date-standin" };
+    expect(parseStablecoinMetaAssets([withReport(standin)], "fixture")[0].proofOfReserves?.latestReport)
+      .toMatchObject({ publishedAt: "2026-07-10", publishedAtBasis: "signed-date-standin" });
+    expect(() => parseStablecoinMetaAssets([withReport({ ...standin, publishedAt: undefined })], "fixture"))
+      .toThrow(/publishedAtBasis requires publishedAt/);
+    expect(() => parseStablecoinMetaAssets([withReport({ ...standin, publishedAt: "2026-06-29" })], "fixture"))
+      .toThrow(/cannot precede periodEnd/);
+    expect(() => parseStablecoinMetaAssets([withReport(standin, "2026-07-12")], "fixture"))
+      .toThrow(/PoR lockstep/);
+  });
+
   it("rejects a composition dated after the report period end", () => {
     expect(() => parseStablecoinMetaAssets([coin("2026-07-12")], "fixture")).toThrow(/PoR lockstep/);
   });

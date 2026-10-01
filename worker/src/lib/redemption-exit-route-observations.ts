@@ -2,6 +2,8 @@ import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backsto
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import { resolveV9RedemptionRouteCostBpsAtNotional } from "@shared/lib/redemption-backstop-configs/shared";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
+import { evaluatePhysicalToUsdExit } from "@shared/lib/physical-to-usd-exit";
+import { PHYSICAL_TO_USD_EXIT_POLICY, resolveExitScoringRequest } from "@shared/lib/exit-route-scoring";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
@@ -480,5 +482,47 @@ export function deriveSupplyModelExitRouteObservation(
     freshnessSeconds: Math.max(0, (floorTimestampSec(now) ?? 0) - reviewTimestamp),
     commonModeKeys,
     capacityCurve,
+  };
+}
+
+/** Safety-only composed capability; legacy physical delivery stays diagnostic. */
+export function buildPhysicalToUsdExitObservation(input: {
+  assetId: string;
+  config: RedemptionBackstopConfig;
+  supplyUsd: number | null;
+  reference: { usdPerTroyOunce: number; observedAtSec: number };
+  clockSec: number;
+  routeOpen: boolean;
+}): ExitRouteObservation | null {
+  const terms = input.config.physicalToUsd;
+  const request = resolveExitScoringRequest("stress-grid", input.supplyUsd, EXIT_ROUTE_SCORING_TABLES.request);
+  if (!terms || !request) return null;
+  const physical = evaluatePhysicalToUsdExit(terms, input.reference, request.requestedNotionalUsd, input.clockSec);
+  const cash = terms.bestEffortIssuerCashOut
+    ? evaluatePhysicalToUsdExit(terms, input.reference, request.requestedNotionalUsd, input.clockSec, "best-effort-issuer-cash-out")
+    : null;
+  const trace = physical.rejectionReason === null ? physical : cash?.rejectionReason === null ? cash : physical;
+  const selected = input.routeOpen ? trace : { ...trace, rejectionReason: "physical-route-not-open" };
+  const admitted = selected.rejectionReason === null;
+  const capacityCurve = EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd.map((notional) => {
+    const value = evaluatePhysicalToUsdExit(terms, input.reference, notional, input.clockSec, selected.branch);
+    const executableUsd = input.routeOpen && value.rejectionReason === null ? value.grossUsd! : 0;
+    return { requestedNotionalUsd: notional, maxCostBps: PHYSICAL_TO_USD_EXIT_POLICY.maxCostBps,
+      executableUsd, completionRatio: executableUsd / notional,
+      ...(executableUsd > 0 ? { executionCostBps: Math.min(PHYSICAL_TO_USD_EXIT_POLICY.maxCostBps, value.costBps!) } : {}) };
+  });
+  const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === request.requestedNotionalUsd)!;
+  const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.assetId, "offchain-issuer");
+  return {
+    routeId: `physical-to-usd:${input.assetId}`,
+    routeFamily: "issuer-redemption", scope,
+    ...point, capacityCurve,
+    settlementHorizonSec: Math.max(1, selected.maximumSettlementSec ?? 1),
+    output: { kind: "fiat", currency: "USD" },
+    evidenceKind: "documented-terms", confidence: "medium", modelConfidence: selected.modelConfidence,
+    scoreEligible: false,
+    observedAt: input.clockSec, freshnessSeconds: 0, commonModeKeys,
+    ...(admitted ? { executionCostBps: point.executionCostBps, allInCostBps: point.executionCostBps } : {}),
+    physicalToUsd: selected,
   };
 }

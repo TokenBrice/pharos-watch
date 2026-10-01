@@ -77,6 +77,15 @@ describe("deriveOracleBranchMateriality", () => {
     });
   });
 
+  it.each([9.99, 10, undefined])("does not classify privileged pricing at share %s as a weak-oracle ceiling", (share) => {
+    expect(deriveOracleBranchMateriality([
+      branch("safe", "standard-external", 90),
+      branch("internal", "privileged-internal-pricing", share),
+    ], "privileged-internal-pricing")).toEqual({
+      tier: share === 9.99 ? "standard-external" : "privileged-internal-pricing",
+    });
+  });
+
   it("bands a sub-material weak branch below 5% as a low diagnostic only", () => {
     const branches = [
       branch("safe", "standard-external", 90),

@@ -9,7 +9,7 @@ export function SafetyScoresOverview() {
   return (
     <>
       <p>
-        Safety Score V9 is the active model for identity-aware consumers. It evaluates three material risk pillars:
+        Safety Score V10 is the active model for identity-aware consumers. It evaluates three material risk pillars:
         Backing (40%), Exit (35%), and Economic Control (25%). The aggregation allows bounded headroom above the
         weakest material path, then applies peg behavior, structural ceilings, evidence sufficiency, track record,
         dependencies, and wrapper-local risk. A strong unrelated pillar therefore cannot erase a weak material
@@ -19,7 +19,7 @@ export function SafetyScoresOverview() {
         Exit selects the strongest exact same-notional route and may add a bounded independent-backup credit:
         {" "}<span className="font-mono">min(10, 100 - primary) × backup / 100</span>. The score card shows the
         selected route, backup credit, and actual stress-request completion separately. The standalone DEX market
-        score and redemption route score describe their own modules; neither is the V9 Exit score.
+        score and redemption route score describe their own modules; neither is the V10 Exit score.
       </p>
       <p>
         Since methodology v9.96, issuer redemption routes honor reviewed explicit stablecoin payouts before the legacy
@@ -64,13 +64,13 @@ export function SafetyScoresOverview() {
         unproven settlement bound takes the bounded floor and exit-unverified ceiling instead of Exit 0.
       </p>
       <p>
-        Equal-score route ties and every other canonical V9 array use locale-independent JavaScript code-unit order.
+        Equal-score route ties and every other canonical V10 array use locale-independent JavaScript code-unit order.
         The same facts therefore select the same primary and backup routes, dependency paths, ordered traces, and
         digest inputs on every runtime host. This ordering can rotate identity or provenance where an older locale
         collated a non-ASCII or case-sensitive key differently, but it does not change numeric score or grade math.
       </p>
       <p>
-        V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing
+        V10 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing
         integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an
         unbounded required fact remains NR. F is reserved for causally attributed measured danger, while a D requires
         measured weakness or traceable policy-bounded uncertainty.
@@ -130,7 +130,7 @@ export function SafetyScoresOverview() {
         are not production freshness evidence or score forecasts.
       </p>
       <p>
-        Since methodology v9.99, a current known circulating USD amount can size the Exit stress request even when
+        Since methodology v10.0, a current known circulating USD amount can size the Exit stress request even when
         its chain or bridge distribution is bounded-unknown. This changes only the request notional: bridge
         materiality, transfer scope, Economic Control, and their evidence gaps and ceilings remain unresolved.
         Unknown, stale, or unavailable circulating amounts still receive no request, and sizing does not establish
@@ -218,12 +218,15 @@ export function SafetyScoresOverview() {
         immediately. Freeze and economic-control scope remain independent.
       </p>
       <p>
-        Since methodology v9.8, reviewed physical gold or silver delivery is valued at USD per troy ounce
-        times deliverable ounces, less published percentage and flat fees. Bounded delivery fees are
-        deducted as before, with output quality capped at 65. Unpriced delivery or handling is not
-        invented as a fee: it explicitly lowers the output tier to 55. Requests below the documented
-        minimum have zero deliverable value. Physical metal never earns fiat or same-notional credit;
-        a missing or stale raw commodity reference remains unresolved, never replaced by a token price.
+        Physical delivery alone remains diagnostic. This methodology can compose reviewed gold or silver
+        redemption with a modelled in-vault sale to USD for any verified customer. Minimums and bar
+        increments constrain the same stress request; all-in costs must not exceed 500 bps (other
+        routes retain 200 bps), and output quality and the offchain route ceiling remain 65.
+        Published fees and explicit settlement maxima win; unpublished fees and stated typical times
+        use conservative, publicly traced policy assumptions at lower confidence. Explicit unbounded
+        terms, unstated timing, expired 90-day reviews or missing/stale 24-hour metal references earn
+        no credit. Sale costs are charged once, with no metal-price-movement charge; best-effort issuer
+        cash-out can qualify independently at lower confidence when its lot, cost and timing are established.
       </p>
       <p>
         Since methodology v9.47, a dependent&apos;s exposure to an upstream with an open reserve gap counts once per
@@ -325,7 +328,7 @@ export function SafetyScoresOverview() {
         the affected liability.
       </p>
       <p>
-        Publication is fail-closed. Global, stale, or identity failures retain the last accepted V9 ratings and expose
+        Publication is fail-closed. Global, stale, or identity failures retain the last accepted V10 ratings and expose
         the publication as held. Attributable asset-local producer failures instead quarantine affected assets to NR
         and can publish while at least 90% of active assets remain unaffected. Active consumers do not recompute or
         fall back to V8.

@@ -11820,6 +11820,11 @@
         "uncoveredSupplyUsd": 500001,
         "measurementBlock": 88937390
       },
+      "collateralizationMeasurement": {
+        "ratio": 0.638707,
+        "rationale": "The complete designated-vault census at Monad block 88937390 measured 883918.753795 USD of USDC reserves against 1383919.753795 circulating LVUSD, leaving 500001 USD uncovered; USDC-only composition does not establish full collateralization.",
+        "sourceUrl": "https://rpc.monad.xyz"
+      },
       "components": {
         "contractionCapacity": {
           "quality": "limited"

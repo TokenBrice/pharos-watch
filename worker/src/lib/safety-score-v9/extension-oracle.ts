@@ -6,7 +6,6 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import type { OracleRiskBranch, OracleRiskProfile, OracleRiskTier } from "@shared/types/core";
-import { ORACLE_RISK_TIER_VALUES } from "@shared/types/core";
 import {
   confidenceForResearch,
   requiredStatus,
@@ -52,7 +51,6 @@ const ORACLE_SUB_MATERIAL_MODERATE_MIN_SHARE_PCT = 5;
 
 function isWeakOracleTier(tier: OracleRiskTier): boolean {
   return (
-    tier === "privileged-internal-pricing" ||
     tier === "single-source-or-laggy" ||
     tier === "opaque-or-unknown"
   );
@@ -67,11 +65,12 @@ export function deriveOracleBranchMateriality(
   const isMaterial = (branch: OracleRiskBranch): boolean =>
     branch.debtSharePct === undefined || branch.debtSharePct >= ORACLE_BRANCH_MATERIAL_SHARE_PCT;
   const materialTiers = branches.filter(isMaterial).map((branch) => branch.tier);
+  const tierQuality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
   const tier =
     materialTiers.length === 0
       ? authoredTier
       : materialTiers.reduce((worst, candidate) =>
-          ORACLE_RISK_TIER_VALUES.indexOf(candidate) > ORACLE_RISK_TIER_VALUES.indexOf(worst) ? candidate : worst,
+          tierQuality[candidate] < tierQuality[worst] ? candidate : worst,
         );
   const subMaterialWeak = branches.filter(
     (branch) => branch.debtSharePct !== undefined && !isMaterial(branch) && isWeakOracleTier(branch.tier),

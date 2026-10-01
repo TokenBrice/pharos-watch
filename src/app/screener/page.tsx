@@ -6,13 +6,13 @@ import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const screenerDescription =
-  "Filter the screenable stablecoin catalog by DEWS, Safety Grade, V9 pillars and mint-control posture, supply, type, mechanism, peg, and lifecycle.";
+  "Filter the screenable stablecoin catalog by DEWS, Safety Grade, V10 pillars and mint-control posture, supply, type, mechanism, peg, and lifecycle.";
 
 const FAQ_ITEMS = [
   {
     question: "What does the Pharos Screener do?",
     answer:
-      "The Screener filters active, pre-launch, and frozen catalog records by DEWS, Safety Grade, the three V9 pillars, V9 mint-control component and posture, supply, type, mechanism, peg, mint route, and lifecycle. Quarantined and delisted records remain available through static detail pages. Share the URL to share the exact filter state.",
+      "The Screener filters active, pre-launch, and frozen catalog records by DEWS, Safety Grade, the three V10 pillars, V10 mint-control component and posture, supply, type, mechanism, peg, mint route, and lifecycle. Quarantined and delisted records remain available through static detail pages. Share the URL to share the exact filter state.",
   },
   {
     question: "How is filter state shared?",
@@ -39,9 +39,9 @@ const SCREENER_SUPPORT_SECTION = (
         <div className="space-y-2">
           <p className="pharos-kicker">Reading the Filters</p>
           <p>
-            Numeric thresholds narrow the candidate set on DEWS stress, the V9 mint component, the three Safety Score
+            Numeric thresholds narrow the candidate set on DEWS stress, the V10 mint component, the three Safety Score
             pillars, and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism
-            archetype, curated mint-authority route and V9 mint-posture band, peg, and lifecycle.
+            archetype, curated mint-authority route and V10 mint-posture band, peg, and lifecycle.
           </p>
           <p>
             Cross-reference results against the{" "}

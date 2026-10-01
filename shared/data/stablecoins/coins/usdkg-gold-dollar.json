@@ -23,6 +23,8 @@
     "cadence": "ad-hoc",
     "latestReport": {
       "periodEnd": "2025-11-28",
+      "publishedAt": "2025-11-30",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",

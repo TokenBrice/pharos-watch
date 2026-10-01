@@ -159,7 +159,9 @@ function adjustmentContext(
   return adjustments.map((adjustment, index) => {
     const label = adjustment.kind === "operational-resilience-credit"
       ? "Resilience credit"
-      : "Dependency limit";
+      : adjustment.kind === "unresolved-deployment-share"
+        ? "Unresolved deployment share"
+        : "Dependency limit";
     return {
       key: `${adjustment.kind}-${index}`,
       label,

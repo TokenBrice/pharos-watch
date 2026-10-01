@@ -405,7 +405,7 @@ export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTa
   return {
     rows,
     formula:
-      "route score = weighted(access, settlement, execution, capacity, output, cost) with route-family caps; Safety Score V9 separately re-evaluates exact same-notional route evidence, freshness, failure domains, and physical-resource independence inside Exit",
+      "route score = weighted(access, settlement, execution, capacity, output, cost) with route-family caps; Safety Score V10 separately re-evaluates exact same-notional route evidence, freshness, failure domains, and physical-resource independence inside Exit",
     topic: "redemptionBackstop",
   };
 }

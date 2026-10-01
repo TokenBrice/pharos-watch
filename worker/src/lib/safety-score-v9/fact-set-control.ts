@@ -88,7 +88,8 @@ export function buildControls(context: AssetBuildContext): {
   return {
     controlStatus: status,
     controls: review.controls.map((control) => {
-      const controlStatus = controlCanCarryKnownStatus(control)
+      // Materiality bounds the charge, not our knowledge of the authority.
+      const controlStatus = control.economicLossScope === "access-only" || controlSemanticsAreKnown(control)
         ? createV9FactStatus({
             applicability: controlNeedsNonApplicableStatus(control)
               ? notApplicableV9Fact(
@@ -128,16 +129,19 @@ function controlNeedsNonApplicableStatus(control: ExtensionControlOverlay): bool
   );
 }
 
-export function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
+function controlSemanticsAreKnown(control: ExtensionControlOverlay): boolean {
   return (
-    controlIsNonBinding(control) ||
-    (control.capSemantics.kind !== "unknown" &&
-      control.claimImpairment !== "unknown" &&
-      control.economicLossScope !== "unknown" &&
-      control.incidentState !== "unknown" &&
-      control.authority !== null &&
-      control.authority.model !== "unknown")
+    control.capSemantics.kind !== "unknown" &&
+    control.claimImpairment !== "unknown" &&
+    control.economicLossScope !== "unknown" &&
+    control.incidentState !== "unknown" &&
+    control.authority !== null &&
+    control.authority.model !== "unknown"
   );
+}
+
+export function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
+  return controlIsNonBinding(control) || controlSemanticsAreKnown(control);
 }
 
 function boundedControlSemanticsStatus(

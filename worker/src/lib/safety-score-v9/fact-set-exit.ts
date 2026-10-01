@@ -421,6 +421,7 @@ function buildRoute(
     observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
     ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
+    ...(args.observation.physicalToUsd ? { physicalToUsd: args.observation.physicalToUsd } : {}),
     coverageClass: args.review.coverageClass,
     capacityScoringHorizon: args.review.capacityScoringHorizon ?? "unknown",
     settlementModel: args.review.settlementModel,

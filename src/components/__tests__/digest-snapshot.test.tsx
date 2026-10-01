@@ -3,6 +3,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DigestSnapshot } from "@/components/digest-snapshot";
+import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 
 const { useDigestSnapshotMock } = vi.hoisted(() => ({
   useDigestSnapshotMock: vi.fn(),
@@ -25,6 +26,26 @@ function mockSnapshot(inputData: Record<string, unknown>, depegEvents: unknown[]
 }
 
 describe("DigestSnapshot", () => {
+  it.each([
+    ["9.98", "V9"],
+    ["10.0", "V10"],
+  ])("labels the captured %s publication without relabelling historical editions", (methodologyVersion, majorLabel) => {
+    const { safetyScoreIdentity } = makeReportCardsV9Response();
+    mockSnapshot({
+      totalMcapUsd: 250_000_000_000,
+      safetyScores: {
+        model: "v9",
+        mentionedCoins: [],
+        gradeDistribution: { A: 1, B: 2 },
+        provenance: { ...safetyScoreIdentity, methodologyVersion, publishedAt: 1_756_684_800 },
+      },
+    });
+
+    render(<DigestSnapshot date="2026-09-01" />);
+
+    expect(screen.getByText(`${majorLabel} distribution: A 1, B 2`)).toBeTruthy();
+  });
+
   it("keeps the edition's captured depeg count when the day-overlap query returns other episodes", () => {
     mockSnapshot(
       {

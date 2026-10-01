@@ -171,7 +171,7 @@ export const START_HERE_SCORES: readonly StartHereScore[] = [
     fullName: "Composite risk grade (A+ to F)",
     question: "How risky is this stablecoin overall?",
     inputs:
-      "Weighted V9 composite: Backing Quality (40%), Exit Strength (35%), and Economic Control (25%), followed by peg, deployment, and binding-cap adjustments.",
+      "Weighted V10 composite: Backing Quality (40%), Exit Strength (35%), and Economic Control (25%), followed by peg, deployment, and binding-cap adjustments.",
     cadence: "Recomputed continuously from live inputs; bands A+ (87+) through F (0–39).",
     methodologyHref: "/methodology/#safety-scores-methodology",
     surfacedOn: "Open the Safety Scores leaderboard",
@@ -230,7 +230,7 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   {
     term: "Safety Score",
     meaning:
-      "Composite V9 risk grade rendered A+ to F across Backing, Exit, and Economic Control, with bounded aggregation and explicit peg, evidence, dependency, wrapper, track-record, and structural constraints. Required unbounded evidence gaps return NR. Surfaces on every detail page and the Safety Scores leaderboard.",
+      "Composite V10 risk grade rendered A+ to F across Backing, Exit, and Economic Control, with bounded aggregation and explicit peg, evidence, dependency, wrapper, track-record, and structural constraints. Required unbounded evidence gaps return NR. Surfaces on every detail page and the Safety Scores leaderboard.",
   },
   {
     term: "Report Card",
@@ -329,7 +329,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       {
         title: "Safety Scores",
         description:
-          "A+ to F grades from V9 Backing Quality, Exit Strength, and Economic Control, with live reserve and redemption evidence, peg behavior, deployment adjustments, and binding caps.",
+          "A+ to F grades from V10 Backing Quality, Exit Strength, and Economic Control, with live reserve and redemption evidence, peg behavior, deployment adjustments, and binding caps.",
         href: "/safety-scores/",
         icon: FlaskConical,
       },
@@ -348,7 +348,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       {
         title: "Dependency Map",
         description:
-          "Live V9 dependency graph showing which stablecoins inherit serial or basket exposure from other assets and shared backing.",
+          "Live V10 dependency graph showing which stablecoins inherit serial or basket exposure from other assets and shared backing.",
         href: "/dependency-map/",
         icon: Network,
       },

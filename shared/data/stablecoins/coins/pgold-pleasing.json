@@ -65,6 +65,8 @@
     "cadence": "ad-hoc",
     "latestReport": {
       "periodEnd": "2026-06-25",
+      "publishedAt": "2026-06-25",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",

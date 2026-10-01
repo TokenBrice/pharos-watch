@@ -143,6 +143,8 @@ export interface V9ControlStructuralFailure {
 
 export interface V9EconomicControlResult {
   score: number | null;
+  /** Proportional unresolved-deployment pricing, before resilience and dependency adjustments. */
+  unresolvedDeploymentAdjustment?: { scoreBefore: number; scoreAfter: number };
   state: "rated" | "not-rated";
   oracleApplicability: V9FactStatusV2["applicability"]["state"];
   components: readonly V9ControlComponent[];
@@ -150,6 +152,39 @@ export interface V9EconomicControlResult {
   structuralFailures: readonly V9ControlStructuralFailure[];
   failureDomains: readonly V9FailureDomainRef[];
 }
+/** Derive posture from recorded semantics; aggregate review confidence cannot clear an adverse fact. */
+export function deriveV9MintPosture(
+  control: V9DeploymentControlFactV2 | null,
+  mint: V9MintMechanismReview,
+  immutableMechanism: boolean,
+): V9MintPosture {
+  if (control?.incidentState === "active") return "unbounded-or-compromised";
+  if (!control) return immutableMechanism ? "none-resolved" : "unknown";
+  if (
+    control.capSemantics.kind === "unknown" ||
+    control.claimImpairment === "unknown" ||
+    control.economicLossScope === "unknown"
+  ) {
+    return "unknown";
+  }
+  if (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded") {
+    if (
+      mint.reconciliation === "continuous" ||
+      mint.reconciliation === "periodic" ||
+      mint.supervision === "prudential"
+    ) return "unbounded-reconciled";
+    if (mint.reconciliation === "unknown") return "unbounded-reconciliation-unknown";
+    return "unbounded-or-compromised";
+  }
+  if (control.claimImpairment === "none") return "none-resolved";
+  if (control.capSemantics.kind === "collateral-gated") return "collateral-gated";
+  if (control.capSemantics.kind === "raiseable" || mint.reconciliation === "periodic") {
+    return "partially-bounded-admin";
+  }
+  if (control.capSemantics.kind === "bounded") return "bounded-admin";
+  return "concentrated-admin";
+}
+
 export function isKnownRequired(status: V9FactStatusV2): boolean {
   return status.applicability.state === "required" && status.observationState === "known";
 }

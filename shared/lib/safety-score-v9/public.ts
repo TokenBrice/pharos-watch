@@ -56,7 +56,7 @@ export interface V9PublicCardProjectionInput {
     | "diversificationBonus"
     | "routes"
   >;
-  control?: Pick<V9EconomicControlResult, "score" | "components">;
+  control?: Pick<V9EconomicControlResult, "score" | "components" | "unresolvedDeploymentAdjustment">;
   display?: {
     labels?: Readonly<Record<string, string>>;
     exitHolderEligibility?: Readonly<Record<string, V9ExitHolderEligibility>>;
@@ -157,6 +157,17 @@ function projectPillarAdjustments(
 ): SafetyScoreV9PillarAdjustment[] {
   const adjustments: SafetyScoreV9PillarAdjustment[] = [];
   let score = evaluatedScore;
+  const unresolvedDeploymentAdjustment = pillar === "control"
+    ? input.control?.unresolvedDeploymentAdjustment
+    : undefined;
+  if (unresolvedDeploymentAdjustment !== undefined) {
+    adjustments.push({
+      kind: "unresolved-deployment-share",
+      ...unresolvedDeploymentAdjustment,
+      delta: unresolvedDeploymentAdjustment.scoreAfter - unresolvedDeploymentAdjustment.scoreBefore,
+    });
+    score = unresolvedDeploymentAdjustment.scoreAfter;
+  }
   const configuredCredit = input.trace.operationalResilience?.pillarCredits[pillar] ?? 0;
   const creditedScore = Math.min(100, score + configuredCredit);
   if (creditedScore > score) {
@@ -320,6 +331,7 @@ function projectExitBreakdown(
       confidenceFactor: route.confidenceFactor,
       capacityScoringHorizon: route.capacityScoringHorizon,
       settlementDelaySec: route.settlementDelaySec,
+      ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
     }));
   const publishedScore = input.scoreInput.pillars.exit.score!;
   return {
@@ -342,6 +354,7 @@ function projectExitBreakdown(
             label: routeLabel(input, completePrimary),
             routeFamily: completePrimary.routeFamily,
             score: completePrimary.score!,
+            ...(completePrimary.physicalToUsd ? { physicalToUsd: completePrimary.physicalToUsd } : {}),
             components,
             confidenceFactor: completePrimary.confidenceFactor!,
             eligibilityMultiplier: policy.holderEligibilityMultipliers[holderEligibility!],

@@ -23,6 +23,8 @@
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
       "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-24",
+      "publishedAtBasis": "signed-date-standin",
       "reviewReference": {
         "date": "2026-09-24",
         "reviewedAt": "2026-10-01",

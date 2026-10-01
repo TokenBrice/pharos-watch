@@ -16,6 +16,7 @@ import {
   ExitRouteEvidenceKindSchema,
   ExitRouteFamilySchema,
   ExitRouteObservationHistorySchema,
+  PhysicalToUsdTraceSchema,
 } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
 import { ReserveAssetClassSchema } from "./reserves";
@@ -575,6 +576,7 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
     routeFamily: ExitRouteFamilySchema,
     observationConfidence: ExitRouteConfidenceSchema,
     observationHistory: ExitRouteObservationHistorySchema.nullable().optional(),
+    physicalToUsd: PhysicalToUsdTraceSchema.optional(),
     evidenceKind: ExitRouteEvidenceKindSchema,
     /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
     feeEvidence: z.literal("undisclosed-reviewed").optional(),

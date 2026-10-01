@@ -47,7 +47,7 @@
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM06UTY)",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM06UTY); owner ruling D08 follow-up (OwnerFollowups)",
     "confidence": "verified",
     "sources": [
       {
@@ -63,7 +63,7 @@
         "url": "https://bscscan.com/address/0x24db057b19241eefb9b522e8627c293ed8f93af2#code"
       }
     ],
-    "uncertainty": "This profile identifies local custody of deposited YUSD, confirmed by asset() reads on Ethereum and BSC. The cex custodyModel concerns the underlying YUSD strategy; this wrapper review does not establish its custodians, allocations, segregation, bankruptcy protection, or reuse rights. No provider shares are inferred.",
+    "uncertainty": "The onchain custodyModel describes wrapper-local custody of deposited YUSD in the Ethereum and BSC sYUSD vault contracts and the Ethereum cooldown silo. Fresh pinned asset(), totalAssets(), and YUSD balanceOf(vault) reads confirm the vault-held parent asset. Under owner ruling D08, YUSD's underlying strategy custody risk remains on yusd-aegis through the existing parent dependency; this wrapper review does not establish upstream custodians, allocations, segregation, bankruptcy protection, or reuse rights. No provider shares are inferred.",
     "knownUnknownExposurePct": 100
   }
 }

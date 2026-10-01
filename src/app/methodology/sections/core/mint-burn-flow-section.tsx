@@ -251,7 +251,7 @@ export function MintBurnFlowMethodologySection() {
                   <ul className="list-disc list-inside space-y-1">
                     <li>
                       <span className="text-foreground">Safety cohorts</span> &mdash; safe is B- or above, neutral is C-/C/C+,
-                      and risky is below C-. Classification is unavailable for inactive assets or when the canonical V9
+                      and risky is below C-. Classification is unavailable for inactive assets or when the canonical V10
                       publication is missing, held, stale, invalid, or identity-incompatible
                     </li>
                     <li>

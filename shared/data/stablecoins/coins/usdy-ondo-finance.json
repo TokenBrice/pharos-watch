@@ -25,6 +25,8 @@
     "attestorJurisdiction": "United States",
     "latestReport": {
       "periodEnd": "2026-09-25",
+      "publishedAt": "2026-09-25",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",

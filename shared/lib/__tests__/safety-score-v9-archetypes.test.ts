@@ -125,6 +125,132 @@ describe("Safety Score v9 archetype backing adapters", () => {
     expect(new Set(results.map((result) => result.traceDigest)).size).toBe(7);
   });
 
+  it.each(Object.keys(reviews) as V9MechanismRiskReview["archetype"][])(
+    "caps %s Backing by the measured covered liability share",
+    (archetype) => {
+      const review = reviews[archetype];
+      const baseline = evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1);
+      const result = evaluateV9Backing(asset(), {
+        ...review,
+        collateralizationMeasurement: {
+          ratio: 0.64,
+          status: knownStatus("evidence:vault-census", "mechanism.required"),
+        },
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(result.score).toBeCloseTo(baseline.score! * 0.64, 8);
+      expect(result.structuralReasons).toContainEqual(expect.objectContaining({
+        kind: "unsafe-backing",
+        responsibility: "measured-adverse",
+        pathKey: "mechanism:collateralization-ratio",
+        ceiling: baseline.score! * 0.64,
+        evidenceRefIds: ["evidence:vault-census"],
+      }));
+      expect(result.contributions.reduce((sum, row) => sum + row.score * row.effectiveWeight, 0))
+        .toBeCloseTo(result.score!, 8);
+    },
+  );
+
+  it.each([null, 1, 1.5])("does not credit absent or solvent collateralization (%s)", (ratio) => {
+    const baseline = evaluateV9Backing(asset(), reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
+    const result = evaluateV9Backing(asset(), {
+      ...reviews.algorithmic,
+      collateralizationMeasurement: ratio === null ? null : {
+        ratio,
+        status: knownStatus("evidence:vault-census", "mechanism.required"),
+      },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result).toEqual(baseline);
+  });
+
+  it("retains the measured solvency haircut when a complete live reserve inherits parent quality", () => {
+    const inheritedAsset: V9BackingAssetInput = {
+      ...asset(),
+      reserveExposures: [{
+        ...reserveExposure("usdc"),
+        weight: 1,
+        provenance: "live",
+        trackedAssetId: "usdc-circle",
+      }],
+      inheritedStablecoinBacking: {
+        parentAssetId: "usdc-circle",
+        parentBackingScore: 90,
+        weight: 1,
+        failureDomains: [],
+      },
+    };
+    const baseline = evaluateV9Backing(inheritedAsset, reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
+    const result = evaluateV9Backing(inheritedAsset, {
+      ...reviews.algorithmic,
+      collateralizationMeasurement: {
+        ratio: 0.64,
+        status: knownStatus("evidence:vault-census", "mechanism.required"),
+      },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(baseline.score).toBe(90);
+    expect(result.score).toBeCloseTo(57.6, 8);
+    expect(result.pillarCeiling).toBeCloseTo(57.6, 8);
+    expect(result.structuralReasons).toContainEqual(expect.objectContaining({
+      pathKey: "mechanism:collateralization-ratio",
+      responsibility: "measured-adverse",
+    }));
+    expect(result.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "reserve:inherited-backing:usdc-circle",
+      score: 90,
+      effectiveWeight: 0.64 * 0.85,
+    }));
+    expect(result.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:uncovered-liability",
+      score: 0,
+      effectiveWeight: 0.36,
+      observationState: "known",
+    }));
+  });
+
+  it("prices a measured zero as uncovered rather than missing collateralization", () => {
+    const result = evaluateV9Backing(asset(), {
+      ...reviews.algorithmic,
+      collateralizationMeasurement: {
+        ratio: 0,
+        status: knownStatus("evidence:vault-census", "mechanism.required"),
+      },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.rateability).toBe("rateable");
+    expect(result.score).toBe(0);
+    expect(result.pillarCeiling).toBe(0);
+  });
+
+  it("does not replace an unrated required mechanism with a measured solvency result", () => {
+    const missing = missingMechanism("contraction-capacity", "missing-contraction", "mechanism.required", "Unbounded contraction");
+    const result = evaluateV9Backing(asset([missing.gap]), {
+      ...reviews.algorithmic,
+      contractionCapacity: missing.fact,
+      collateralizationMeasurement: {
+        ratio: 0.64,
+        status: knownStatus("evidence:vault-census", "mechanism.required"),
+      },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.rateability).toBe("NR");
+    expect(result.score).toBeNull();
+    expect(result.structuralReasons.some((reason) => reason.pathKey === "mechanism:collateralization-ratio")).toBe(false);
+  });
+
+  it.each(["bounded-unknown", "stale", "missing"] as const)(
+    "rejects a %s observation posing as a measured collateralization ratio",
+    (observationState) => {
+      expect(V9MechanismRiskReviewSchema.safeParse({
+        ...reviews.algorithmic,
+        collateralizationMeasurement: {
+          ratio: 0.64,
+          status: {
+            ...knownStatus("evidence:vault-census", "mechanism.required"),
+            observationState,
+            gapIds: ["unadmitted-measurement"],
+          },
+        },
+      }).success).toBe(false);
+    },
+  );
+
   describe("commodity-claim (v9.14)", () => {
     const commodityReview = reviews["commodity-claim"];
 

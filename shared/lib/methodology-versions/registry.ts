@@ -40,6 +40,7 @@ import { SAFETY_SCORE_V6 } from "../../data/methodology-changelogs/safety-score/
 import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/v7";
 import { SAFETY_SCORE_V8 } from "../../data/methodology-changelogs/safety-score/v8";
 import { SAFETY_SCORE_V9 } from "../../data/methodology-changelogs/safety-score/v9-activation";
+import { SAFETY_SCORE_V10 } from "../../data/methodology-changelogs/safety-score/v10";
 import { STABILITY_INDEX_V1 } from "../../data/methodology-changelogs/stability-index/v1";
 import { STABILITY_INDEX_V2 } from "../../data/methodology-changelogs/stability-index/v2";
 import { STABILITY_INDEX_V3 } from "../../data/methodology-changelogs/stability-index/v3";
@@ -134,6 +135,7 @@ const METHODOLOGY_VERSION_CONFIGS: readonly ManagedMethodologyVersionConfig[] = 
     currentVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     changelog: [
+      ...SAFETY_SCORE_V10,
       ...SAFETY_SCORE_V9,
       ...SAFETY_SCORE_V8,
       ...SAFETY_SCORE_V7,

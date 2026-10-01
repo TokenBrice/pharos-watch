@@ -150,9 +150,10 @@ export const ProofOfReservesSchema = z
     attestorLicense: z.string().optional(),
     latestReport: z
       .object({
-        // Omit either date when the cited evidence does not establish its meaning.
+        // A signed/as-of date is a conservative publication bound, never a later inferred date.
         periodEnd: StrictIsoDateSchema.optional(),
         publishedAt: StrictIsoDateSchema.optional(),
+        publishedAtBasis: z.enum(["explicit", "signed-date-standin"]).optional(),
         reviewReference: z
           .object({
             date: StrictIsoDateSchema,
@@ -174,6 +175,13 @@ export const ProofOfReservesSchema = z
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "latestReport requires a sourced date or an explicitly uncertain review reference",
+          });
+        }
+        if (report.publishedAtBasis != null && report.publishedAt == null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "latestReport publishedAtBasis requires publishedAt",
+            path: ["publishedAtBasis"],
           });
         }
         if (report.publishedAt != null && report.periodEnd != null && report.publishedAt < report.periodEnd) {

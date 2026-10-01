@@ -38,7 +38,7 @@ export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
   {
     id: "dependency-is-contagion",
     title: "Dependency propagates risk.",
-    body: "Safety Scores apply dependency limits through V9 parent and backing relationships. Serial claims inherit the required parent's final score, while collateral baskets inherit upstream backing quality in proportion to their mapped shares. The dependency map shows direct collateral and wrapper links, not a failure simulator. The 2023 USDC depeg showed why those links matter.",
+    body: "Safety Scores apply dependency limits through V10 parent and backing relationships. Serial claims inherit the required parent's final score, while collateral baskets inherit upstream backing quality in proportion to their mapped shares. The dependency map shows direct collateral and wrapper links, not a failure simulator. The 2023 USDC depeg showed why those links matter.",
   },
   {
     id: "failed-coins-stay-visible",

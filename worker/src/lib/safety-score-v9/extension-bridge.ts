@@ -657,7 +657,11 @@ function buildUnprovenRouteJoins(
         if (row.reviewedRouteKind === "native") return joined.length === 0;
         if (row.reviewedRouteKind !== "controlled" || single === null) return false;
         return (
-          controlSemanticsResolved(single) &&
+          (controlSemanticsResolved(single) ||
+            (single.scope === "deployment" &&
+              single.economicLossScope === "deployment" &&
+              single.materialSupplyShare !== null &&
+              single.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)) &&
           single.materialSupplyShare !== null &&
           bridgeJoinSharesReconcile(single.materialSupplyShare, row.supplyShare)
         );

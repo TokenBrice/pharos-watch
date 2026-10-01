@@ -1002,6 +1002,38 @@ const V9ExitPolicySchema = z
         settlementHorizonSec: z.number().finite().positive(),
       })
       .strict(),
+    physicalToUsd: z.object({
+      maxCostBps: z.number().finite().nonnegative(),
+      termsMaxAgeSec: z.number().int().positive(),
+      metalPriceMaxAgeSec: z.number().int().positive(),
+      modelledSaleTypicalBusinessDays: z.number().finite().nonnegative(),
+      inVaultTaxBps: z.number().finite().nonnegative(),
+      deliveredTaxBps: z.record(z.enum(["london", "zurich", "singapore", "hong-kong", "eu", "other"]),
+        z.object({ XAU: z.number().finite().nonnegative(), XAG: z.number().finite().nonnegative() }).strict()),
+      taxExemptionMinimumFineness: z.object({ singapore: z.object({ XAU: z.number().finite().min(0).max(1), XAG: z.number().finite().min(0).max(1) }).strict(), otherGold: z.number().finite().min(0).max(1) }).strict(),
+      unqualifiedTaxBps: z.number().finite().nonnegative(),
+      deliveredLogistics: z.record(z.enum(["good-delivery", "kilobar", "small-bar-or-coin"]),
+        z.object({ deliveryUsdPerLot: z.number().finite().nonnegative(), insuranceBps: z.number().finite().nonnegative(), assayUsdPerLot: z.number().finite().nonnegative() }).strict()),
+      vagueTypicalBusinessDays: z.object({ "several-business-days": z.number().finite().positive() }).strict(),
+      assumptions: z.object({
+        typicalTimeMultiplier: z.number().finite().positive(),
+        minimumBusinessDays: z.number().finite().positive(),
+        maximumBusinessDays: z.number().finite().positive(),
+        issuerFeeBps: z.number().finite().nonnegative(),
+        conversionBps: z.number().finite().nonnegative(),
+        unknownFixedUsd: z.number().finite().nonnegative(),
+      }).strict(),
+      saleSpreadBps: z.object({
+        "good-delivery": z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+        kilobar: z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+        "small-bar-or-coin": z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+      }).strict(),
+      silverSaleSpreadBps: z.object({
+        "good-delivery": z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+        kilobar: z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+        "small-bar-or-coin": z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+      }).strict(),
+    }).strict(),
     componentWeights: z
       .object({
         access: z.number().finite().min(0).max(1),

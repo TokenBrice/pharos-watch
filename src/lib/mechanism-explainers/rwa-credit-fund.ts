@@ -98,7 +98,7 @@ export const content: ArchetypeContent = {
   whatToWatch: [
     "Redemption Backstop route family on `/stablecoin/[id]/`. Credit-fund tokens typically show off-chain issuer routing with a quarterly window and explicit gating language; the published settlement delay and daily redemption cap are the structural feature, not the failure mode.",
     "Yield Score (PYS) on `/yield/`. PYS separates Treasury-derived yield from credit-derived yield; excess yield above the T-Bill baseline is the credit spread, and it compounds both redemption-gate and default risk.",
-    "V9 Backing evidence on the report card. Senior secured private credit and AAA CLO tranches are assessed through credit quality, seniority, enforceability, valuation, maturity/liquidity, custody, and recovery evidence; mezzanine, equity-tranche, and concentrated borrower exposure remain adverse facts.",
+    "V10 Backing evidence on the report card. Senior secured private credit and AAA CLO tranches are assessed through credit quality, seniority, enforceability, valuation, maturity/liquidity, custody, and recovery evidence; mezzanine, equity-tranche, and concentrated borrower exposure remain adverse facts.",
     "Proof-of-Reserves cadence and attestor tier on the detail page. Credit funds frequently rely on monthly or quarterly NAV reports from a fund administrator rather than daily attestations; Big 4 administrators publish more rigorous and timely marks than niche firms.",
     "Live Reserve view where available. A minority of credit-fund tokens expose live portfolio composition; most expose only the latest published NAV and a manager-disclosed allocation slice.",
     "Freezewatch surface on `/freezewatch`. These are securities: the transfer agent maintains the registry of record, and admin-controlled transfer restrictions are a structural feature. Sudden registry actions surface here before they show up as a peg deviation.",
@@ -114,7 +114,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/methodology/",
-      label: "Methodology: how RWA collateral is evaluated in V9 Backing",
+      label: "Methodology: how RWA collateral is evaluated in V10 Backing",
     },
     {
       href: "/yield/",

@@ -1,4 +1,8 @@
-import { createUnknownArchetypeV9BackingResult, evaluateV9ArchetypeBacking } from "./evaluation";
+import {
+  applyV9MeasuredCollateralization,
+  createUnknownArchetypeV9BackingResult,
+  evaluateV9ArchetypeBacking,
+} from "./evaluation";
 import {
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
@@ -32,7 +36,7 @@ const SUPPORTED_MECHANISM_ARCHETYPES: ReadonlySet<string> = new Set(MECHANISM_AR
 type V9SimpleArchetype = "fiat-cash" | "commodity-claim" | "tbill";
 type V9SimpleReview = Extract<V9MechanismRiskReview, { archetype: V9SimpleArchetype }>;
 type V9MechanismFactKey<T> = {
-  [K in keyof T]: T[K] extends V9MechanismFactV1 ? K : never;
+  [K in keyof T]-?: T[K] extends V9MechanismFactV1 ? K : never;
 }[keyof T];
 type V9SimpleArchetypeDescriptor<A extends V9SimpleArchetype> = readonly [
   componentKey: string,
@@ -100,6 +104,17 @@ export function evaluateV9Backing(
   }
   // No re-parse: the review reached here through the compiled fact set, whose
   // `V9MechanismRiskReviewFactV2Schema.review` field is this exact schema.
+  return applyV9MeasuredCollateralization(
+    evaluateReviewedBacking(asset, review, policy),
+    review.collateralizationMeasurement,
+  );
+}
+
+function evaluateReviewedBacking(
+  asset: V9BackingAssetInput,
+  review: V9MechanismRiskReview,
+  policy: V9BackingEvaluationPolicy,
+): V9BackingResult {
   switch (review.archetype) {
     case "fiat-cash":
     case "commodity-claim":

@@ -345,7 +345,7 @@ export function ReportCardsV9Client() {
       <section id="data" aria-label="Safety score cards" tabIndex={-1}>
         {!reportCardsQuery.data ? (
           <p className="pharos-empty-note text-sm text-muted-foreground" role="alert">
-            Safety Score V9 ratings are temporarily unavailable. V8 ratings are not used as a fallback.
+            Safety Score V10 ratings are temporarily unavailable. V8 ratings are not used as a fallback.
           </p>
         ) : filteredCards.length === 0 ? (
           <SafetyEmptyState

@@ -22,6 +22,8 @@
     "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires",
     "latestReport": {
       "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-28",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",

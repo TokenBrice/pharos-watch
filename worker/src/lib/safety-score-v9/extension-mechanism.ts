@@ -317,6 +317,12 @@ export function expandOverlayReview(
       ? (fallbackReview as unknown as Record<string, V9MechanismFactV1>)
       : null;
   const review: Record<string, unknown> = { archetype: overlay.archetype, ...metrics };
+  review.collateralizationMeasurement = overlay.collateralizationMeasurement
+    ? {
+        ratio: overlay.collateralizationMeasurement.ratio,
+        status: status("known", "collateralization-ratio"),
+      }
+    : null;
   const partialMetricArchetypes = ["cdp", "synthetic-delta-neutral", "rwa-credit-fund"] as const;
   if ((partialMetricArchetypes as readonly string[]).includes(overlay.archetype)) {
     const metricApplicability: Record<string, unknown> = {};

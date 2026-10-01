@@ -348,6 +348,7 @@ function independentlyAttestedComposition(
     proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
   const reviewAtSec = review ? conservativeDateEndSec(review.reviewedAt, clockSec) : null;
   const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
+  // Explicit publication and marked signed-date stand-ins share chronology/freshness gates.
   const reportAtSec = report ? conservativeDateEndSec(report.publishedAt, clockSec) : null;
   const periodEndSec = report ? conservativeDateEndSec(report.periodEnd, clockSec) : null;
   if (

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.99",
+  "releaseVersion": "10.0",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -680,6 +680,47 @@
         "capUsd": 25000000,
         "maxCostBps": 200,
         "settlementHorizonSec": 300
+      },
+      "physicalToUsd": {
+        "maxCostBps": 500,
+        "termsMaxAgeSec": 7776000,
+        "metalPriceMaxAgeSec": 86400,
+        "modelledSaleTypicalBusinessDays": 2,
+        "inVaultTaxBps": 0,
+        "deliveredTaxBps": {
+          "london": { "XAU": 0, "XAG": 2000 },
+          "zurich": { "XAU": 0, "XAG": 810 },
+          "singapore": { "XAU": 0, "XAG": 0 },
+          "hong-kong": { "XAU": 0, "XAG": 0 },
+          "eu": { "XAU": 0, "XAG": 2000 },
+          "other": { "XAU": 0, "XAG": 2000 }
+        },
+        "taxExemptionMinimumFineness": { "singapore": { "XAU": 0.995, "XAG": 0.999 }, "otherGold": 0.995 },
+        "unqualifiedTaxBps": 2000,
+        "deliveredLogistics": {
+          "good-delivery": { "deliveryUsdPerLot": 3000, "insuranceBps": 100, "assayUsdPerLot": 1000 },
+          "kilobar": { "deliveryUsdPerLot": 500, "insuranceBps": 100, "assayUsdPerLot": 100 },
+          "small-bar-or-coin": { "deliveryUsdPerLot": 100, "insuranceBps": 100, "assayUsdPerLot": 50 }
+        },
+        "vagueTypicalBusinessDays": { "several-business-days": 7 },
+        "assumptions": {
+          "typicalTimeMultiplier": 3,
+          "minimumBusinessDays": 10,
+          "maximumBusinessDays": 30,
+          "issuerFeeBps": 100,
+          "conversionBps": 50,
+          "unknownFixedUsd": 100
+        },
+        "saleSpreadBps": {
+          "good-delivery": { "primaryVault": 100, "otherVault": 200 },
+          "kilobar": { "primaryVault": 200, "otherVault": 300 },
+          "small-bar-or-coin": { "primaryVault": 400, "otherVault": 500 }
+        },
+        "silverSaleSpreadBps": {
+          "good-delivery": { "primaryVault": 100, "otherVault": 200 },
+          "kilobar": { "primaryVault": 300, "otherVault": 400 },
+          "small-bar-or-coin": { "primaryVault": 800, "otherVault": 900 }
+        }
       },
       "componentWeights": {
         "access": 0.2,

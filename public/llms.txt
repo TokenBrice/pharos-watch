@@ -5,7 +5,7 @@
 ## Core Data
 
 - [Dashboard homepage](https://pharos.watch/): Market overview with KPI bar, peg-score heatmap, and stablecoin list.
-- [Safety Scores](https://pharos.watch/safety-scores/): Safety Score V9 three-pillar Backing / Exit / Economic Control model with evidence-backed grades from A+ to F.
+- [Safety Scores](https://pharos.watch/safety-scores/): Safety Score V10 three-pillar Backing / Exit / Economic Control model with evidence-backed grades from A+ to F.
 - [Pharos Stability Index](https://pharos.watch/stability-index/): Aggregate market-stability gauge with history chart.
 - [DEWS (Depeg Early Warning System)](https://pharos.watch/depeg/): Active depegs, watch-list, and historical DEWS bands.
 - [Liquidity](https://pharos.watch/liquidity/): DEX liquidity scores, pool counts, TVL depth.
@@ -23,7 +23,7 @@
 
 ## Methodology
 
-- [Methodology Hub](https://pharos.watch/methodology/): Scoring methods for safety, peg, liquidity and yield; dependency limits through V9 parent and backing relationships, not a contagion simulator.
+- [Methodology Hub](https://pharos.watch/methodology/): Scoring methods for safety, peg, liquidity and yield; dependency limits through V10 parent and backing relationships, not a contagion simulator.
 - [Safety Scores Changelog](https://pharos.watch/methodology/scoring-changelog/): Every weight change since v1.0.
 - [Depeg + DEWS Changelog](https://pharos.watch/methodology/depeg-changelog/): Peg-deviation detection and early-warning stress methodology history.
 - [Depeg Duration Resolver Changelog](https://pharos.watch/methodology/depeg-resolver-changelog/): Forecasting, resolution, and review methodology history for confirmed depeg incidents.
@@ -42,7 +42,7 @@
 - [Glossary: PSI](https://pharos.watch/learn/glossary/#psi): Pharos Stability Index. A 30-minute ecosystem-wide condition score, 0 to 100, that subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term. The result maps into six condition bands from BEDROCK to MELTDOWN. PSI is conservative by design: one small depeg should not move the index, but simultaneous broad stress should. Always uppercase.
 - [Glossary: DEWS](https://pharos.watch/learn/glossary/#dews): Depeg Early Warning System. A forward-looking per-coin stress score, 0 to 100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.
 - [Glossary: PegScore](https://pharos.watch/learn/glossary/#pegscore): Composite peg-stability score, 0 to 100. PegScore combines time-at-peg (50%) and event severity (50%) over a window capped by the coin's actual age, then enters the safety grade through a power-curve multiplier at exponent 0.40. The multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. One word, capital P, capital S.
-- [Glossary: Safety Score](https://pharos.watch/learn/glossary/#safety-score): Pharos's V9 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0 to 39), with NR for insufficient required evidence.
+- [Glossary: Safety Score](https://pharos.watch/learn/glossary/#safety-score): Pharos's V10 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0 to 39), with NR for insufficient required evidence.
 - [Glossary: LiquidityScore](https://pharos.watch/learn/glossary/#liquidity-score): DEX liquidity score, 0 to 100, combining TVL depth (30%), 24-hour volume (20%), pool quality (20%), durability (20%), and pair diversity (10%). Discovery is source-aware: thin, stale, or identity-poor pools remain visible for diagnostics but do not receive scoring weight. LiquidityScore measures exit capacity, not market presence. One word, capital L, capital S.
 - [Glossary: FreezeWatch](https://pharos.watch/learn/glossary/#freezewatch): The live ledger of issuer-intervention events (freeze, unfreeze, pause, block, wipe) across supported centralized stablecoin contracts. Events are normalized by chain, action type, native amount, and USD amount, with provenance attached. FreezeWatch is the surface Pharos publishes for issuer power; the underlying methodology is the Blacklist Tracker. One word, capital F, capital W.
 - [Stablecoin Mechanisms](https://pharos.watch/learn/mechanisms/): 7 plain-English explainers for the stablecoin mechanism archetypes Pharos tracks.

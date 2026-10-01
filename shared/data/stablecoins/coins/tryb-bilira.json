@@ -19,6 +19,8 @@
     "attestorJurisdiction": "Turkey",
     "latestReport": {
       "periodEnd": "2026-08-17",
+      "publishedAt": "2026-08-17",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",

@@ -26,6 +26,7 @@ import {
 import {
   bindingByMateriality,
   controlCanRepresent,
+  deriveV9MintPosture,
   hasFreshScopedQuestion,
   isControlEconomicallyRelevant,
   isKnownRequired,
@@ -37,7 +38,6 @@ import {
   type V9EconomicControlAssetSource,
   type V9EconomicControlResult,
   type V9EconomicControlReviewExtension,
-  type V9MintPosture,
   type V9OracleBranchKind,
   type V9OracleBranchReview,
 } from "./control-primitives";
@@ -221,6 +221,23 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   }
 
   const mint = args.mint;
+  const retainedAdverseMintControls =
+    mint.status.applicability.state !== "not-applicable" &&
+    (mint.status.observationState === "bounded-unknown" ||
+      (mint.status.applicability.state === "unresolved" && mint.status.observationState === "known")) &&
+    mint.status.evidenceRefIds.length > 0
+      ? controls.filter((control) => {
+          if (
+            control.controlKind === "bridge" ||
+            control.status.applicability.state === "not-applicable" ||
+            (control.status.observationState !== "known" && control.status.observationState !== "bounded-unknown") ||
+            control.status.evidenceRefIds.length === 0 ||
+            (!control.capabilities.includes("mint") && control.controlKey !== mint.controlKey)
+          ) return false;
+          const posture = deriveV9MintPosture(control, mint, false);
+          return posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown";
+        })
+      : [];
   if (mint.status.applicability.state === "not-applicable") {
     const noneResolvedScore = policy.control.mintPostureQuality["none-resolved"];
     components.push({
@@ -246,7 +263,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       "mint",
       mint.controlKey,
     );
-  } else {
+  }
+  if (isKnownRequired(mint.status) || retainedAdverseMintControls.length > 0) {
     const mintControl = mint.controlKey === null ? null : (controlsByKey.get(mint.controlKey) ?? null);
     const immutableMechanism =
       mint.controlKey === null && mint.upgrade.state === "immutable" && mint.reconciliation === "not-applicable";
@@ -274,12 +292,14 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     // The review key anchors admission; it is not an exhaustive mint inventory.
     // Every non-bridge durable-mint path must compete, including separate
     // deployment observations of the same authority.
-    const mintControls = controls.filter(
-      (control) =>
-        control.controlKind !== "bridge" &&
-        control.status.applicability.state !== "not-applicable" &&
-        (control.capabilities.includes("mint") || control === mintControl),
-    );
+    const mintControls = isKnownRequired(mint.status)
+      ? controls.filter(
+          (control) =>
+            control.controlKind !== "bridge" &&
+            control.status.applicability.state !== "not-applicable" &&
+            (control.capabilities.includes("mint") || control === mintControl),
+        )
+      : retainedAdverseMintControls;
     for (const mintControl of mintControls.length > 0 ? mintControls : [null]) {
       if (mintControl?.capSemantics.kind === "unknown") {
         addReason("unknown-control-cap-authority", "local-component", "mint:cap", mintControl.controlKey);
@@ -297,43 +317,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       }
 
       const compromised = mintControl?.incidentState === "active";
-      const posture: V9MintPosture = (() => {
-        if (compromised) return "unbounded-or-compromised";
-        if (!mintControl) return immutableMechanism ? "none-resolved" : "unknown";
-        if (
-          mintControl.capSemantics.kind === "unknown" ||
-          mintControl.claimImpairment === "unknown" ||
-          mintControl.economicLossScope === "unknown"
-        ) {
-          return "unknown";
-        }
-        if (mintControl.capSemantics.kind === "unbounded" || mintControl.claimImpairment === "unbounded") {
-          // Economically unbounded minting that is reconciled against reserves is
-          // a distinct, higher-quality posture than an unreconciled one; only the
-          // latter (and any compromise, handled above) stays unbounded-or-compromised.
-          // Prudential supervision by a named financial regulator is itself evidence
-          // that issuance is constrained by the supervisory regime, so it qualifies
-          // as reconciled even when reserve-reconciliation cadence is not-applicable.
-          const reconciled =
-            mint.reconciliation === "continuous" ||
-            mint.reconciliation === "periodic" ||
-            mint.supervision === "prudential";
-          // MINT-LADDER 9.32 (2026-08-21): split the exposed floor when review
-          // positively establishes no reconciliation from a still-unverified one.
-          if (reconciled) return "unbounded-reconciled";
-          if (mint.reconciliation === "unknown") return "unbounded-reconciliation-unknown";
-          return "unbounded-or-compromised";
-        }
-        if (mintControl.claimImpairment === "none") return "none-resolved";
-        // MINT-LADDER 9.32 (2026-08-21): collateral-gated minting is bounded by
-        // construction while retaining its concentrated administrator surface.
-        if (mintControl.capSemantics.kind === "collateral-gated") return "collateral-gated";
-        if (mintControl.capSemantics.kind === "raiseable" || mint.reconciliation === "periodic") {
-          return "partially-bounded-admin";
-        }
-        if (mintControl.capSemantics.kind === "bounded") return "bounded-admin";
-        return "concentrated-admin";
-      })();
+      const posture = deriveV9MintPosture(mintControl, mint, immutableMechanism);
       const componentControlKeys = uniqueSorted(
         [mintControl?.controlKey, upgradeControl?.controlKey].filter((value): value is string => value !== undefined),
       );
@@ -582,7 +566,6 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         failureDomains,
       });
       if (
-        oracle.tier === "privileged-internal-pricing" ||
         oracle.tier === "single-source-or-laggy" ||
         oracle.tier === "opaque-or-unknown"
       ) {
@@ -662,9 +645,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     // known-required leaves `selected-bridge-route-unresolved` and contributes no
     // component, so an inventory whose rows are all unresolved still reaches the
     // `bridge:unverified` fallback.
-    if (bridge.status.observationState !== "known") {
-      addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
-    }
+    // A bounded subthreshold inventory needs no whole-coin bridge fallback
+    // only when every exact supply row has a proved control join.
     const completeSubthresholdUnresolvedJoins = evaluateV9SubthresholdUnresolvedBridgeJoins(
       args.facts,
       controls,
@@ -672,6 +654,12 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       materialShareThreshold,
       policy.materiality.commonModeShareThreshold,
     ).complete;
+    if (
+      bridge.status.observationState !== "known" &&
+      !(bridge.status.observationState === "bounded-unknown" && completeSubthresholdUnresolvedJoins)
+    ) {
+      addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
+    }
     const unresolvedBridgeResidueBinds =
       unattributedBridgeShare === null ||
       (unattributedBridgeShare > 0 && !completeSubthresholdUnresolvedJoins);
@@ -804,6 +792,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     let hasBindingGap = false;
     let hasUnverifiedGap = false;
     for (const reason of reasons.values()) {
+      if (resolveV9ReasonPolicy(args.policy, reason.code).reason.defaultTreatment === "diagnostic") continue;
       const sectionMatch = reason.path === fallback.kind || reason.path.startsWith(`${fallback.kind}:`);
       const reasonControl = reason.controlKey === null ? undefined : controlsByKey.get(reason.controlKey);
       const controlMatch = reasonControl !== undefined && controlFallbackKind(reasonControl) === fallback.kind;

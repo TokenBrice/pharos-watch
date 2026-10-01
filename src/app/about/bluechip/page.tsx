@@ -195,13 +195,13 @@ export default function AboutBluechipPage() {
 
         <BluechipSection eyebrow="Section 5" title="Active Bluechip stablecoins">
           <p className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]">
-            The roster is suspended while the V9 grade floor is under review. The rule it
+            The roster is suspended while the V10 grade floor is under review. The rule it
             resumes under is unchanged: the live intersection of external Bluechip A-tier
             ratings and Pharos A-tier report cards, current-state rather than historical, so a
             coin that falls below either floor leaves the list in the next refresh.
           </p>
           <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
-            Roster suspended pending the V9 grade-floor review.
+            Roster suspended pending the V10 grade-floor review.
           </p>
         </BluechipSection>
 

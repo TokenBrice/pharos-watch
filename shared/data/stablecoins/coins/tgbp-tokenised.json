@@ -23,6 +23,8 @@
     "attestorJurisdiction": "United Kingdom",
     "latestReport": {
       "periodEnd": "2026-08-31",
+      "publishedAt": "2026-08-31",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",

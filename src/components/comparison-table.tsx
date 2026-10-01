@@ -234,7 +234,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
     {
       key: "safety",
       title: "Safety Construction",
-      description: "Exact V9 pillars, binding constraints, access posture, and dependency exposure.",
+      description: "Exact V10 pillars, binding constraints, access posture, and dependency exposure.",
       metrics: [
         { key: "backing-pillar", label: "Backing pillar", numeric: true, render: (coin) => formatScore100(coin.safetyCard?.pillars.backing.score) },
         { key: "exit-pillar", label: "Exit pillar", numeric: true, render: (coin) => formatScore100(coin.safetyCard?.pillars.exit.score) },

@@ -50,10 +50,12 @@ describe("Safety Score v9 methodology policy", () => {
     // pathKinds is per-reason-code, so the rows cannot be admitted separately.
     // 9.8 adds the explicit unbounded delivery cap below the bounded physical
     // tier; releaseVersion remains metadata excluded from the digest.
+    // 10.0 adds the reviewed physical-to-USD Exit block (cost ceiling, modelled
+    // sale spreads, fee/logistics/tax fallbacks, timing vocabulary).
     // Rotate only with reviewed semantic changes; release history lives in
-    // shared/data/methodology-changelogs/safety-score/v9-activation.ts.
+    // shared/data/methodology-changelogs/safety-score/.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "55217d24772395557c900c403edb62fc7e0d993bf2502f23126d8026c7eeccd3",
+      "224c5920ca3253d7346ea73524676dc64a7c76337df6a66da487870cfad6ef5d",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,

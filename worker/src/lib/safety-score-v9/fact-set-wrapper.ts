@@ -576,10 +576,7 @@ function buildWrapperStructuralDimensions(
     input.peg.status.observationState === "known"
   ) {
     const oracleTier = input.economicControlReview.oracle.tier;
-    const weakOracle =
-      oracleTier === "privileged-internal-pricing" ||
-      oracleTier === "single-source-or-laggy" ||
-      oracleTier === "opaque-or-unknown";
+    const weakOracle = oracleTier === "single-source-or-laggy" || oracleTier === "opaque-or-unknown";
     shareAccountingNavOracle = reviewedWrapperFact(
       context,
       weakOracle ? "high" : "moderate",

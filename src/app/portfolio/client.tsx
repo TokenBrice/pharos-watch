@@ -153,7 +153,7 @@ export function PortfolioClient() {
         <Card className="pharos-card-shell">
           <CardContent className="space-y-5 pt-6">
             <div>
-              <p className="pharos-kicker">Weighted V9 safety aggregate</p>
+              <p className="pharos-kicker">Weighted V10 safety aggregate</p>
               <p className="mt-1 pharos-numeric text-3xl font-semibold text-foreground">
                 {v9Projection.value.score}<span className="text-sm text-muted-foreground">/100</span>
               </p>
@@ -182,7 +182,7 @@ export function PortfolioClient() {
           <h2 className="pharos-kicker">Holdings Safety Grades</h2>
           {v9Projection?.status === "unavailable" ? (
             <p className="text-sm text-muted-foreground" role="alert">
-              V9 portfolio safety is unavailable ({v9Projection.reason}).
+              V10 portfolio safety is unavailable ({v9Projection.reason}).
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">

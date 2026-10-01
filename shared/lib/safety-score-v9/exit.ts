@@ -1,6 +1,6 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9AssetFactsBase, V9ExitRouteFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
-import type { ExitRouteObservationHistory } from "../../types/exit-route";
+import type { ExitRouteObservationHistory, PhysicalToUsdTrace } from "../../types/exit-route";
 import type {
   RedemptionAccessModel,
   RedemptionExecutionModel,
@@ -78,6 +78,7 @@ export interface V9ExitEvaluationRoute {
   outputResolved: boolean;
   outputValueRetention: number;
   unboundedDeliveryCap?: number;
+  physicalToUsd?: PhysicalToUsdTrace;
   capacityCurve: readonly V9ExitCapacityPoint[];
   routeScoreCap: "queue-redeem" | "offchain-issuer" | null;
   failureDomains: readonly string[];
@@ -90,6 +91,7 @@ export interface V9ExitRouteTrace {
   observationConfidence: V9ExitEvaluationRoute["observationConfidence"];
   modelConfidence: V9ExitEvaluationRoute["modelConfidence"];
   observationHistory: ExitRouteObservationHistory | null;
+  physicalToUsd?: PhysicalToUsdTrace;
   horizon: V9ExitHorizon;
   capacityScoringHorizon: V9ExitCapacityScoringHorizon;
   settlementDelaySec: number;
@@ -386,6 +388,7 @@ function isCreditableNonAtomicRedemption(
 function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
   if (route.applicability === "not-applicable") return null;
   if (route.applicability === "unresolved") return "missing-same-notional-route";
+  if (route.physicalToUsd?.rejectionReason != null) return "missing-same-notional-route";
   if (route.settlementBoundUnproven) return "unproven-settlement-bound";
   if (route.outputResolved === false) return "unresolved-exit-output";
   // `missing` means no retained observation at all and still excludes. `stale`
@@ -440,7 +443,9 @@ function resolveIncludedRouteCapacity(
   if (exclusionReason !== null || route.applicability === "not-applicable") {
     return { state: "excluded", exclusionReason };
   }
-  const capacityPoint = resolveV9ExitCapacityAtRequest(route.capacityCurve, request);
+  const capacityPoint = resolveV9ExitCapacityAtRequest(route.capacityCurve, route.physicalToUsd
+    ? { ...request, maxCostBps: envelope.policy.semantic.exit.physicalToUsd.maxCostBps }
+    : request);
   if (capacityPoint === null) return { state: "incomparable" };
   if (
     !Number.isFinite(route.outputValueRetention) ||
@@ -543,6 +548,7 @@ function evaluateRoute(
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
+    ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
     horizon,
     capacityScoringHorizon: route.capacityScoringHorizon,
     settlementDelaySec: route.settlementDelaySec,
@@ -660,7 +666,7 @@ function evaluateRoute(
     executionCertainty: policy.executionScores[route.execution],
     capacity,
     outputAssetQuality: Math.min(
-      policy.outputAssetScores[route.outputQuality],
+      route.physicalToUsd ? policy.outputAssetScores["physical-commodity-delivery"] : policy.outputAssetScores[route.outputQuality],
       route.unboundedDeliveryCap === undefined ? 100 : policy.unboundedDeliveryCap,
     ) * route.outputValueRetention,
     // A cost sitting exactly on the request bound is an upper bound, not a
@@ -668,9 +674,11 @@ function evaluateRoute(
     // realized marginal cost. Bounded-unknown cost scores at the policy
     // midpoint instead of pricing the worst case as if it were observed.
     cost:
-      capacityPoint.executionCostBps >= request.maxCostBps
-        ? policy.boundedCostScore
-        : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
+      route.physicalToUsd
+        ? clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, policy.physicalToUsd.maxCostBps)))
+        : capacityPoint.executionCostBps >= request.maxCostBps
+          ? policy.boundedCostScore
+          : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
   };
   let score = composeExitComponentScore(components, policy.componentWeights);
   const capsApplied: string[] = [...constraintMultipliers];
@@ -715,6 +723,7 @@ function evaluateRoute(
   if (route.observationState === "stale") capsApplied.push("observation:stale");
   score *= confidenceFactor * policy.holderEligibilityMultipliers[route.holderEligibility];
   const routeCap =
+    route.physicalToUsd ? policy.routeFamilyCaps.offchainIssuer :
     route.routeScoreCap === "queue-redeem" ||
     route.capacityScoringHorizon === "daily" ||
     route.capacityScoringHorizon === "queued" ||
@@ -853,6 +862,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
+    ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
     ...access,
     capacityScoringHorizon: route.capacityScoringHorizon ?? "unknown",
     settlement: mapSettlement(route),

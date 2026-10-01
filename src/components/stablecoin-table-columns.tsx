@@ -140,7 +140,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="safetyScore" />,
     sortKey: "grade",
     className: "w-[124px] text-center",
-    title: "Pharos Grade: V9 safety score across Backing, Exit, and Economic Control, then constrained by peg behavior, dependencies, evidence, and structural caps",
+    title: "Pharos Grade: V10 safety score across Backing, Exit, and Economic Control, then constrained by peg behavior, dependencies, evidence, and structural caps",
   },
   {
     id: "stability",
@@ -165,7 +165,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="mintAuthorityScore" />,
     sortKey: "mintAuthority",
     className: "w-[160px] text-center",
-    title: "Safety V9 mint-control component (0-100): reviewed privileged-mint evidence within Economic Control.",
+    title: "Safety V10 mint-control component (0-100): reviewed privileged-mint evidence within Economic Control.",
   },
   { id: "backing", label: "Backing", className: "w-[92px] text-center", title: "Collateral backing type" },
   { id: "type", label: "Type", className: "w-[92px] text-center", title: "Stablecoin mechanism type" },

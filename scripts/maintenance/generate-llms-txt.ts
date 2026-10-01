@@ -59,7 +59,7 @@ const coreDataLinks = [
   [
     "Safety Scores",
     absolute("/safety-scores/"),
-    "Safety Score V9 three-pillar Backing / Exit / Economic Control model with evidence-backed grades from A+ to F.",
+    "Safety Score V10 three-pillar Backing / Exit / Economic Control model with evidence-backed grades from A+ to F.",
   ],
   ["Pharos Stability Index", absolute("/stability-index/"), "Aggregate market-stability gauge with history chart."],
   ["DEWS (Depeg Early Warning System)", absolute("/depeg/"), "Active depegs, watch-list, and historical DEWS bands."],
@@ -90,7 +90,7 @@ const coreDataLinks = [
 ] as const;
 
 const methodologyLinks = [
-  ["Methodology Hub", absolute("/methodology/"), "Scoring methods for safety, peg, liquidity and yield; dependency limits through V9 parent and backing relationships, not a contagion simulator."],
+  ["Methodology Hub", absolute("/methodology/"), "Scoring methods for safety, peg, liquidity and yield; dependency limits through V10 parent and backing relationships, not a contagion simulator."],
   ...METHODOLOGY_CHANGELOG_REGISTRY.map((entry) => [
     entry.linkTitle ?? entry.markdownTitle,
     absolute(entry.publicPath),

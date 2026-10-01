@@ -49,9 +49,30 @@ const V9MechanismFactV1Schema = z
   });
 export type V9MechanismFactV1 = z.infer<typeof V9MechanismFactV1Schema>;
 
+const V9CollateralizationMeasurementSchema = z
+  .object({
+    status: V9FactStatusV2Schema,
+    ratio: z.number().finite().nonnegative(),
+  })
+  .strict()
+  .superRefine((measurement, ctx) => {
+    if (
+      measurement.status.observationState !== "known" ||
+      measurement.status.applicability.state !== "required" ||
+      measurement.status.evidenceRefIds.length === 0
+    ) {
+      ctx.addIssue({ code: "custom", path: ["status"], message: "Collateralization needs current measured evidence" });
+    }
+  });
+
+const COLLATERALIZATION_MEASUREMENT_FIELDS = {
+  collateralizationMeasurement: V9CollateralizationMeasurementSchema.nullable().optional(),
+};
+
 const V9FiatCashMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("fiat-cash"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     claimAndSegregation: V9MechanismFactV1Schema,
     custodyContinuity: V9MechanismFactV1Schema,
     assuranceAndReconciliation: V9MechanismFactV1Schema,
@@ -80,6 +101,7 @@ export type V9FiatCashMechanismRiskReview = z.infer<typeof V9FiatCashMechanismRi
 const V9CommodityClaimMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("commodity-claim"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     titleAndAllocation: V9MechanismFactV1Schema,
     custodyContinuity: V9MechanismFactV1Schema,
     assuranceAndReconciliation: V9MechanismFactV1Schema,
@@ -91,6 +113,7 @@ export type V9CommodityClaimMechanismRiskReview = z.infer<typeof V9CommodityClai
 const V9TbillMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("tbill"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     fundClaimAndSeniority: V9MechanismFactV1Schema,
     navValuation: V9MechanismFactV1Schema,
     durationAndLiquidity: V9MechanismFactV1Schema,
@@ -306,6 +329,7 @@ export type V9CdpStressCoverageFact = z.infer<typeof V9CdpStressCoverageFactSche
 const V9CdpMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("cdp"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     collateralizationRatio: z.number().finite().nonnegative().nullable(),
     liquidationCapacityRatio: z.number().finite().nonnegative().nullable(),
     metricApplicability: z
@@ -355,6 +379,7 @@ const V9SyntheticVenueShareSchema = z
 const V9SyntheticDeltaNeutralMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("synthetic-delta-neutral"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     hedgeCoverageRatio: z.number().finite().nonnegative().nullable(),
     marginBufferPct: z.number().finite().nonnegative().nullable(),
     lossAbsorptionShare: z.number().finite().min(0).max(1).nullable(),
@@ -399,6 +424,7 @@ export type V9SyntheticDeltaNeutralMechanismRiskReview = z.infer<
 const V9AlgorithmicMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("algorithmic"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     exogenousBackingShare: z.number().finite().min(0).max(1),
     reflexiveBackingShare: z.number().finite().min(0).max(1),
     contractionCapacityRatio: z.number().finite().nonnegative(),
@@ -419,6 +445,7 @@ export type V9AlgorithmicMechanismRiskReview = z.infer<typeof V9AlgorithmicMecha
 const V9RwaCreditFundMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("rwa-credit-fund"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     weightedAverageMaturityDays: z.number().finite().nonnegative().nullable(),
     valuationCadenceDays: z.number().finite().nonnegative().nullable(),
     /** Absent = every metric is measured (legacy full-metric reviews). */

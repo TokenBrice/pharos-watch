@@ -24,6 +24,8 @@
     "attestorJurisdiction": "Australia",
     "latestReport": {
       "periodEnd": "2026-09-01",
+      "publishedAt": "2026-09-01",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",

@@ -464,7 +464,7 @@ export function DigestSnapshot({ date }: { date: string }) {
                   </ul>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  V9 distribution:{" "}
+                  V{inputData.safetyScores.provenance.methodologyVersion.replace(/^v/i, "").split(".")[0]} distribution:{" "}
                   {Object.entries(inputData.safetyScores.gradeDistribution)
                     .map(([grade, count]) => `${grade} ${count}`)
                     .join(", ")}

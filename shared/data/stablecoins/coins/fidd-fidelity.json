@@ -23,6 +23,8 @@
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
       "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-25",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ExitRouteFamilySchema } from "./exit-route";
+import { ExitRouteFamilySchema, PhysicalToUsdTraceSchema } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
 import {
@@ -12,7 +12,7 @@ import {
 
 const SafetyScoreV9PillarAdjustmentSchema = z
   .object({
-    kind: z.enum(["operational-resilience-credit", "dependency-limit"]),
+    kind: z.enum(["unresolved-deployment-share", "operational-resilience-credit", "dependency-limit"]),
     scoreBefore: ScoreSchema,
     scoreAfter: ScoreSchema,
     delta: z.number().finite().min(-100).max(100),
@@ -36,11 +36,11 @@ const SafetyScoreV9PillarAdjustmentSchema = z
         message: "V9 operational-resilience credit must increase the pillar score",
       });
     }
-    if (adjustment.kind === "dependency-limit" && adjustment.delta >= 0) {
+    if (adjustment.kind !== "operational-resilience-credit" && adjustment.delta >= 0) {
       ctx.addIssue({
         code: "custom",
         path: ["delta"],
-        message: "V9 dependency limit must reduce the pillar score",
+        message: "V9 deployment-share and dependency adjustments must reduce the pillar score",
       });
     }
   });
@@ -52,24 +52,20 @@ const SafetyScoreV9BreakdownPillarBaseShape = {
   evaluatedScore: ScoreSchema,
   publishedScore: ScoreSchema,
   aggregationWeight: z.number().finite().min(0).max(1),
-  adjustments: z.array(SafetyScoreV9PillarAdjustmentSchema).max(2),
+  adjustments: z.array(SafetyScoreV9PillarAdjustmentSchema).max(3),
 } as const;
 
 function refineBreakdownAdjustments(
   breakdown: {
     evaluatedScore: number;
     publishedScore: number;
-    adjustments: readonly {
-      kind: "operational-resilience-credit" | "dependency-limit";
-      scoreBefore: number;
-      scoreAfter: number;
-      delta: number;
-    }[];
+    adjustments: readonly SafetyScoreV9PillarAdjustment[];
   },
   ctx: z.RefinementCtx,
 ): void {
   const kinds = breakdown.adjustments.map((adjustment) => adjustment.kind);
   const canonicalKinds = [
+    "unresolved-deployment-share",
     "operational-resilience-credit",
     "dependency-limit",
   ].filter((kind) => kinds.includes(kind as (typeof kinds)[number]));
@@ -218,6 +214,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
         label: z.string().min(1).max(160),
         routeFamily: ExitRouteFamilySchema,
         score: ScoreSchema,
+        physicalToUsd: PhysicalToUsdTraceSchema.optional(),
         components: z.array(
           z
             .object({
@@ -270,6 +267,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
           score: ScoreSchema.nullable(),
           included: z.boolean(),
           exclusionReason: V9ReasonCodeSchema.nullable(),
+          physicalToUsd: PhysicalToUsdTraceSchema.optional(),
           confidenceFactor: z.number().finite().min(0).max(1).nullable().optional(),
           capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
           settlementDelaySec: z.number().finite().nonnegative().optional(),

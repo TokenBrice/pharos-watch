@@ -85,7 +85,7 @@ export const content: ArchetypeContent = {
   ],
   whatToWatch: [
     "NAV-tag treatment on the peg table. Coins flagged as NAV tokens show \"NAV\" rather than bps in the peg-deviation column, because per-token price is supposed to drift.",
-    "Reserve composition on the detail page. These should be majority Treasuries, repos, and cash, the slices V9 Backing grades as lowest-risk. Anything else is unusual.",
+    "Reserve composition on the detail page. These should be majority Treasuries, repos, and cash, the slices V10 Backing grades as lowest-risk. Anything else is unusual.",
     "Redemption Backstop route family. Most NAV tokens show off-chain issuer routing with bank-wire settlement; watch the settlement delay, daily redemption cap, minimum redeem size, and holder eligibility tier.",
     "Yield Score (PYS) on /yield. PYS rewards consistent Treasury-derived yield over reward-heavy or single-source-dependent venues.",
     "DEWS exclusion for NAV tokens. DEWS skips fund-share tokens; the closest equivalent stress signal is the Redemption Backstop snapshot and issuer reserve cadence.",
@@ -98,7 +98,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/methodology/#safety-scores-methodology",
-      label: "Safety Scores methodology: how RWA reserve evidence enters V9 Backing",
+      label: "Safety Scores methodology: how RWA reserve evidence enters V10 Backing",
     },
     { href: "/yield/", label: "Yield-bearing stablecoins ranked by PYS" },
     {

@@ -179,6 +179,29 @@ export const MAX_EXIT_ROUTE_COMMON_MODE_KEYS = 16;
  */
 export const MAX_DEX_EXIT_ROUTE_OBSERVATIONS = 24;
 
+export const PhysicalToUsdTraceSchema = z.object({
+  endpoint: z.literal("USD"),
+  holderScope: z.literal("verified-customer"),
+  branch: z.enum(["modelled-metal-sale", "best-effort-issuer-cash-out"]),
+  requestedNotionalUsd: z.number().finite().positive(),
+  lots: z.number().int().nonnegative().nullable(),
+  tokens: z.number().finite().nonnegative().nullable(),
+  grossUsd: z.number().finite().nonnegative().nullable(),
+  netUsd: z.number().finite().nonnegative().nullable(),
+  costBps: z.number().finite().nonnegative().nullable(),
+  minimumUsd: z.number().finite().positive().nullable(),
+  maximumSettlementSec: z.number().int().nonnegative().nullable(),
+  modelConfidence: z.enum(["medium", "low"]),
+  assumptions: z.array(z.enum(["fee-policy-assumed", "settlement-maximum-policy-assumed"])),
+  reviewedAt: z.string(),
+  reviewExpiresAt: z.string(),
+  termsMaxAgeSec: z.number().int().positive(),
+  metalPriceMaxAgeSec: z.number().int().positive(),
+  metalPriceObservedAtSec: z.number().int().nonnegative(),
+  rejectionReason: z.string().min(1).nullable(),
+}).strict();
+export type PhysicalToUsdTrace = z.infer<typeof PhysicalToUsdTraceSchema>;
+
 const ExitRouteObservationBaseSchema = z.object({
   routeId: z.string().min(1),
   routeFamily: ExitRouteFamilySchema,
@@ -220,6 +243,7 @@ const ExitRouteObservationBaseSchema = z.object({
   commonModeKeys: z.array(z.string().min(1)).max(MAX_EXIT_ROUTE_COMMON_MODE_KEYS),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).min(1).max(16).optional(),
   observationHistory: ExitRouteObservationHistorySchema.optional(),
+  physicalToUsd: PhysicalToUsdTraceSchema.optional(),
 });
 
 const DEX_EXIT_ROUTE_FAMILIES = new Set<ExitRouteFamily>(["dex-amm", "dex-orderbook"]);

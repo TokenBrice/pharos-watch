@@ -1,4 +1,5 @@
 import { valuePhysicalCommodityDelivery } from "@shared/lib/physical-commodity-delivery";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
@@ -21,6 +22,7 @@ import {
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import {
   deriveSupplyModelExitRouteObservation,
+  buildPhysicalToUsdExitObservation,
   REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
 } from "../redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
@@ -250,6 +252,21 @@ function buildOutputReview(
   assetId: string,
 ): RouteOutputReview | null {
   const output = observation.output;
+  if (observation.physicalToUsd) {
+    const trace = observation.physicalToUsd;
+    if (trace.rejectionReason !== null) return null;
+    // All fees and spread belong to execution cost, not USD output retention.
+    return {
+      kind: "fiat", assetKeys: ["fiat:USD"], basketWeights: [],
+      valuation: { basis: "price", referenceAssetKey: "fiat:USD",
+        unitValueUsd: 1, expectedUnitValueUsd: 1, confidence: "medium",
+        observedAtSec: trace.metalPriceObservedAtSec,
+        sourceId: "physical-to-usd-modelled-endpoint", sourceGenerationId,
+        maxAgeSec: trace.metalPriceMaxAgeSec,
+        url: getRedemptionBackstopConfig(assetId)?.physicalToUsd?.evidence[0]?.url ?? null,
+        contentSha256: null },
+    };
+  }
   if (output.kind === "physical-commodity-delivery") {
     const config = getRedemptionBackstopConfig(assetId);
     const terms = config?.physicalCommodityDelivery;
@@ -806,6 +823,22 @@ function buildRedemptionRouteReview(
   };
 }
 
+function buildPhysicalRouteReview(fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string, observation: ExitRouteObservation): RouteReview {
+  const trace = observation.physicalToUsd!;
+  return {
+    lane: "redemption", routeId: observation.routeId, holderAccess: "institutional-eligible",
+    executionModel: "deterministic", executionCertainty: trace.modelConfidence === "low" ? "discretionary" : "conditional",
+    modelConfidence: trace.modelConfidence,
+    coverageClass: trace.rejectionReason === null ? "exact-lower-bound" : "diagnostic",
+    capacityScoringHorizon: "eventual", settlementModel: "bounded-delay",
+    settlementSlaSec: trace.maximumSettlementSec, settlementHorizonSec: observation.settlementHorizonSec,
+    queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: trace.minimumUsd,
+    executionCosts: canonicalExecutionCosts(observation, () => observation.maxCostBps),
+    physicalResourceKeys: [`issuer:${assetId}`], failureDomains: [],
+    output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, assetId),
+  };
+}
+
 /**
  * Projects the exact captured DEX and redemption observations into reviewed v9
  * route semantics. Every semantic value is carried or conservatively bounded
@@ -838,10 +871,14 @@ export function buildSafetyScoreV9RouteReviews(
     }
   }
   const redemption = fixedInput.redemptionBackstopMap[assetId];
+  const retainedRedemption = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId);
+  for (const retained of retainedRedemption.filter((route) => route.observation.physicalToUsd)) {
+    addReview(buildPhysicalRouteReview(fixedInput, assetId, retained.observation));
+  }
   for (const observation of redemption?.capacityProfile?.exitRouteObservations ?? []) {
     addReview(buildRedemptionRouteReview(fixedInput, redemption!, observation));
   }
-  for (const retained of buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId)) {
+  for (const retained of retainedRedemption.filter((route) => !route.observation.physicalToUsd)) {
     addReview(buildRedemptionRouteReview(fixedInput, redemption!, retained.observation));
   }
   return reviews.sort((left, right) => compareText(`${left.lane}:${left.routeId}`, `${right.lane}:${right.routeId}`));
@@ -859,10 +896,25 @@ export function buildSafetyScoreV9RetainedRedemptionRoutes(
   assetId: string,
 ): RetainedRoute[] {
   const redemption = fixedInput.redemptionBackstopMap[assetId];
-  if (!redemption || (redemption.capacityProfile?.exitRouteObservations?.length ?? 0) > 0) return [];
-  const observation = deriveSupplyModelExitRouteObservation(redemption, fixedInput.clockSec);
-  if (!observation) return [];
-  return [{ lane: "redemption", observation, disposition: "observed", rejection: null }];
+  const retained: RetainedRoute[] = [];
+  const config = getRedemptionBackstopConfig(assetId);
+  if (config?.physicalToUsd) {
+    const reference = fixedInput.pegDataById[assetId]?.pegReference;
+    const expectedCurrency = config.physicalToUsd.metal === "XAU" ? "GOLD" : "SILVER";
+    const metal = fixedInput.pegDataById[assetId]?.pegCurrency === expectedCurrency ? reference : null;
+    const observation = buildPhysicalToUsdExitObservation({
+      assetId, config, clockSec: fixedInput.clockSec,
+      supplyUsd: getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
+      reference: { usdPerTroyOunce: metal?.usdPerTroyOunce ?? NaN, observedAtSec: metal?.asOf ?? 0 },
+      routeOpen: redemption?.routeStatus === "open",
+    });
+    if (observation) retained.push({ lane: "redemption", observation, disposition: "observed", rejection: null });
+  }
+  if (redemption && (redemption.capacityProfile?.exitRouteObservations?.length ?? 0) === 0) {
+    const observation = deriveSupplyModelExitRouteObservation(redemption, fixedInput.clockSec);
+    if (observation) retained.push({ lane: "redemption", observation, disposition: "observed", rejection: null });
+  }
+  return retained;
 }
 
 export function buildSafetyScoreV9RetainedRoutes(

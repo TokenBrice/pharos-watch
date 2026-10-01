@@ -637,7 +637,7 @@ export function AboutPageContent() {
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Pharos Safety Score V9 grades stablecoins across Backing Quality, Exit Strength, and Economic Control,
+            Pharos Safety Score V10 grades stablecoins across Backing Quality, Exit Strength, and Economic Control,
             then applies peg behavior, deployment adjustments, and binding caps. The methodology page covers the
             full grading formula, peg score computation, DEX liquidity scoring, and dependency propagation.
           </p>

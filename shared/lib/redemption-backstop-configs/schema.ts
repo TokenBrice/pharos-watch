@@ -161,6 +161,58 @@ export const PhysicalCommodityDeliveryTermsSchema = z.strictObject({
   sameNotionalEligible: z.literal(false),
 });
 
+const PhysicalBoundSchema = z.union([NonNegativeNumberSchema, z.literal("unbounded")]).nullable();
+const PhysicalRouteFeesSchema = z.strictObject({
+  issuerFeeBps: PhysicalBoundSchema,
+  issuerFixedUsd: PhysicalBoundSchema,
+  deliveryUsdPerLot: PhysicalBoundSchema,
+  insuranceBps: PhysicalBoundSchema,
+  assayUsdPerLot: PhysicalBoundSchema,
+  taxBps: PhysicalBoundSchema,
+  conversionBps: PhysicalBoundSchema,
+});
+const PhysicalSettlementLegSchema = z.strictObject({
+  leg: z.string().min(1),
+  maximumBusinessDays: PhysicalBoundSchema,
+  typicalBusinessDays: z.union([NonNegativeNumberSchema, z.literal("several-business-days")]).nullable().optional(),
+});
+const PhysicalLotSchema = z.strictObject({
+  minimumTokens: PositiveNumberSchema.nullable(),
+  incrementTokens: PositiveNumberSchema.nullable(),
+  // Fine weight floor counts delivered capacity; upper weight sizes the deposit.
+  bars: z.array(z.strictObject({
+    barId: z.string().min(1),
+    fineTroyOunces: PositiveNumberSchema.nullable(),
+    maximumFineTroyOunces: PositiveNumberSchema.optional(),
+  })).max(32),
+});
+export const PhysicalToUsdRouteSchema = z.strictObject({
+  metal: z.enum(["XAU", "XAG"]),
+  fineTroyOuncesPerToken: PositiveNumberSchema,
+  lot: PhysicalLotSchema,
+  vaultLocations: z.array(z.enum(["london", "zurich", "singapore", "hong-kong", "eu", "other"])).min(1),
+  barClass: z.enum(["good-delivery", "kilobar", "small-bar-or-coin"]),
+  saleLocation: z.enum(["in-vault", "delivered"]).default("in-vault"),
+  deliveryScope: z.enum(["same-jurisdiction", "cross-border"]).default("same-jurisdiction"),
+  fineness: z.number().finite().min(0).max(1).nullable().optional(),
+  eligibility: z.literal("verified-customer"),
+  fees: PhysicalRouteFeesSchema,
+  settlementLegs: z.array(PhysicalSettlementLegSchema).min(1),
+  bestEffortIssuerCashOut: z.strictObject({
+    operatingProcess: z.string().min(1),
+    lot: PhysicalLotSchema,
+    fees: PhysicalRouteFeesSchema,
+    settlementLegs: z.array(PhysicalSettlementLegSchema).min(1),
+  }).optional(),
+  reviewedAt: ReviewedAtSchema,
+  reviewExpiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isValidIsoDateOnly),
+  evidence: z.array(z.strictObject({
+    url: HttpUrlSchema,
+    quote: z.string().min(1),
+  })).min(1),
+});
+export type PhysicalToUsdRoute = z.infer<typeof PhysicalToUsdRouteSchema>;
+
 export const RedemptionBackstopConfigSchema = z
   .strictObject({
     routeFamily: RedemptionRouteFamilySchema,
@@ -169,6 +221,7 @@ export const RedemptionBackstopConfigSchema = z
     executionModel: RedemptionExecutionModelSchema,
     outputAssetType: RedemptionOutputAssetTypeSchema,
     physicalCommodityDelivery: PhysicalCommodityDeliveryTermsSchema.optional(),
+    physicalToUsd: PhysicalToUsdRouteSchema.optional(),
     capacityModel: RedemptionCapacityModelSchema,
     costModel: RedemptionCostModelSchema,
     /**

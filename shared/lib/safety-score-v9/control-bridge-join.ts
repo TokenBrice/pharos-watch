@@ -233,7 +233,13 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
       const control = joined[0]!;
       if (
         controlCanRepresent(control, "bridge") &&
-        isKnownRequired(control.status) &&
+        (isKnownRequired(control.status) ||
+          (control.status.applicability.state === "required" &&
+            control.status.observationState === "bounded-unknown" &&
+            control.scope === "deployment" &&
+            control.economicLossScope === "deployment" &&
+            control.materialSupplyShare !== null &&
+            control.materialSupplyShare < materialShareThreshold)) &&
         control.materialSupplyShare !== null &&
         bridgeSharesReconcile(control.materialSupplyShare, route.supplyShare) &&
         bridgeRouteCounts.get(control.controlKey) === 1

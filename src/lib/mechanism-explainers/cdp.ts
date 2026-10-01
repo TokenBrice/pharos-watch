@@ -89,10 +89,10 @@ export const content: ArchetypeContent = {
   ],
   whatToWatch: [
     "Active depeg cap on the Safety Score. Severe active depegs hard-cap the grade; for CDPs this is the most common failure mode.",
-    "Chain, deployment, bridge, and oracle evidence in the V9 report card. Unresolved or weak infrastructure evidence can constrain the affected pillar or publication instead of receiving a generic Decentralization penalty.",
+    "Chain, deployment, bridge, and oracle evidence in the V10 report card. Unresolved or weak infrastructure evidence can constrain the affected pillar or publication instead of receiving a generic Decentralization penalty.",
     "Redemption Backstop route family. CDPs usually show `collateral-redeem` or `psm-swap`. Liquity-style forks expose `liquity-v1` and `liquity-v2-branches` live adapters with on-chain capacity.",
-    "V9 dependency exposure via PSMs. DAI ↔ USDC, GHO ↔ USDC/USDT, and USDS ↔ USDC are tracked as `mechanism` dependencies and bound the downstream claim under the current dependency policy.",
-    "Economic Control evidence. Review the actual upgrade, mint, freeze, governance, timelock, and key-custody surfaces; V9 does not award a generic governance-label band.",
+    "V10 dependency exposure via PSMs. DAI ↔ USDC, GHO ↔ USDC/USDT, and USDS ↔ USDC are tracked as `mechanism` dependencies and bound the downstream claim under the current dependency policy.",
+    "Economic Control evidence. Review the actual upgrade, mint, freeze, governance, timelock, and key-custody surfaces; V10 does not award a generic governance-label band.",
     "Live Reserve view. Systems with live-reserve telemetry (Maker, Liquity v1/v2, GHO, crvUSD) show the 4-hourly vault and PSM composition instead of a quarterly snapshot.",
   ],
   crossLinks: [

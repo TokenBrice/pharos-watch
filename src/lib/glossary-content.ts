@@ -185,7 +185,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "Safety Score",
     letter: "S",
     definition:
-      "Pharos's V9 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0 to 39), with NR for insufficient required evidence.",
+      "Pharos's V10 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0 to 39), with NR for insufficient required evidence.",
     methodologyAnchor: "/methodology/#safety-scores-methodology",
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["bluechip", "pegscore", "liquidity-score"],

@@ -618,6 +618,68 @@ function controlPillar(
   envelope: V9ValidatedPolicyEnvelope,
   gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
+  const materialShareThreshold = envelope.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+  const unresolvedDeploymentControls = asset.controls.filter(
+    (control) =>
+      control.scope === "deployment" &&
+      control.economicLossScope === "deployment" &&
+      (control.materialSupplyShare === null || control.materialSupplyShare < materialShareThreshold) &&
+      control.status.applicability.state === "required" &&
+      control.status.observationState !== "known",
+  );
+  const pricedControlKeys = new Set<string>();
+  const unresolvedShareByDeployment = new Map<string, number>();
+  let joinedUnreviewedShare = 0;
+  for (const control of unresolvedDeploymentControls) {
+    const supplyRow = asset.supply.selectedBridgeRoutes.find(
+      (row) => row.deploymentRouteKey === control.deploymentKey,
+    );
+    // Only an admitted exact supply row licenses proportional pricing. Neither
+    // a missing chain row nor a null-share upper bound is observed zero.
+    if (
+      control.status.observationState !== "bounded-unknown" ||
+      asset.supply.status.applicability.state !== "required" ||
+      asset.supply.status.observationState !== "known" ||
+      control.materialSupplyShare === null ||
+      supplyRow === undefined ||
+      supplyRow.reviewState === "unmatched" ||
+      supplyRow.supplyShare !== control.materialSupplyShare
+    ) continue;
+    pricedControlKeys.add(control.controlKey);
+    // Several unresolved authorities on one deployment impair the same supply.
+    if (!unresolvedShareByDeployment.has(control.deploymentKey) && supplyRow.reviewState === "selected-unresolved") {
+      joinedUnreviewedShare += supplyRow.supplyShare;
+    }
+    unresolvedShareByDeployment.set(control.deploymentKey, supplyRow.supplyShare);
+  }
+  const unresolvedShare = [...unresolvedShareByDeployment.values()].reduce((sum, share) => sum + share, 0);
+  const unresolvedCohortIsImmaterial =
+    asset.supply.unknownRouteSupplyShare !== null &&
+    asset.supply.unreviewedRouteSupplyShare !== null &&
+    unresolvedShare + asset.supply.unknownRouteSupplyShare +
+      Math.max(0, asset.supply.unreviewedRouteSupplyShare - joinedUnreviewedShare) < materialShareThreshold;
+  if (!unresolvedCohortIsImmaterial) pricedControlKeys.clear();
+  const score = result.score === null
+    ? null
+    : decimalSnap(
+        result.score - Math.max(0, result.score - envelope.policy.semantic.control.boundedUnknownQuality) *
+          (unresolvedCohortIsImmaterial ? unresolvedShare : 0),
+      );
+  const scoreBearingReasons = [
+    ...result.reasons.filter(
+      (reason) => reason.controlKey === null || !pricedControlKeys.has(reason.controlKey),
+    ),
+    ...unresolvedDeploymentControls
+      .filter((control) => !pricedControlKeys.has(control.controlKey))
+      .map((control): V9EconomicControlResult["reasons"][number] => ({
+        code: "unresolved-control-identity",
+        controlKey: control.controlKey,
+        path: `control:${control.controlKey}:materiality`,
+        pathKind: "deployment-control",
+        critical: false,
+        label: "Unresolved deployment exposure is material or lacks an admitted supply share.",
+      })),
+  ];
   const gapsForStatus = (status: V9FactStatusV2) => gapsForV9Ids(gapIndex, status.gapIds);
   const controlDomainGaps = [...gapIndex.byDomainAndCode.values()]
     .flat()
@@ -684,15 +746,15 @@ function controlPillar(
   };
 
   return {
-    score: result.score,
+    score,
     evidenceLevel: reasonClassifiedEvidenceLevel(
-      result.score,
-      result.reasons.map((reason) => reason.code),
+      score,
+      scoreBearingReasons.map((reason) => reason.code),
       envelope,
       "strong",
     ),
     reasons: canonicalReasons(
-      result.reasons.flatMap((reason) => {
+      scoreBearingReasons.flatMap((reason) => {
         return pillarReasonsForGapIds(
           envelope,
           gapIndex,
@@ -1336,6 +1398,16 @@ export function evaluateV9Asset({
   const peg = pegInput(asset, envelope, gapIndex);
   const backingPillarEvaluation = backingPillar(backing, envelope, gapIndex);
   const controlPillarEvaluation = controlPillar(asset, control, envelope, gapIndex);
+  if (
+    control.score !== null &&
+    controlPillarEvaluation.score !== null &&
+    controlPillarEvaluation.score < control.score
+  ) {
+    control.unresolvedDeploymentAdjustment = {
+      scoreBefore: control.score,
+      scoreAfter: controlPillarEvaluation.score,
+    };
+  }
   // The exit pillar's SIM-EXIT-L2 undisclosed-fee credit is withheld from an
   // asset already held down by a non-exit adverse fact. The gate reads the same
   // structural-signal set the scorer assembles (backing + control + dependency;

@@ -274,7 +274,12 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     });
     expect(bridgeControls).toHaveLength(1);
     expect(bridgeControls[0]).toMatchObject({
-      status: { applicability: { state: "required" }, observationState: "known", gapIds: [] },
+      // Unresolved authority stays bounded-unknown; the sub-threshold share is priced proportionally.
+      status: {
+        applicability: { state: "required" },
+        observationState: "bounded-unknown",
+        gapIds: ["xaut-tether:gap:deployment-control:bridge-group:xaut-tether:bebc8ec91244873497e0"],
+      },
       deploymentKey: "representation-group:xaut-tether:xaut0-omnichain",
       capSemantics: { kind: "unbounded" },
       claimImpairment: "unbounded",
