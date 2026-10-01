@@ -4,28 +4,40 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "pUSD is a Nucleus BoringVault (non-upgradeable) on both Ethereum and Plume; owner()=3-of-6 Plume Safe (0xa08a…) on both chains; a RolesAuthority (0x97bc…, same Safe as owner) gates enter(). Teller at 0x41bdb4 (Plume) is the OFAC-gated deposit gateway confirmed by live mint transactions.",
+    "summary": "pUSD's Ethereum and Plume BoringVaults share a 3-of-6 Safe owner and RolesAuthority. The current authorized enter callers on both chains are the collateral-bound LayerZero Teller 0x16424e… and NestVaultOFT 0xf6aada…. The issuer-documented predicate proxy 0x6104fe… forwards deposits to the Teller; the former 0x41bdb4… label identified an unrelated Executor proxy. The Safe can call enter with zero assets, replace authorized callers, and upgrade the Nest native-deposit implementation without a timelock; bridge-credit powers are reviewed separately.",
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-14",
-      "observedBlock": 25531116,
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+        "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+      ],
+      "proxyAddresses": [
+        "0xf6aada00bc2a206f06bce86ddd8348b70daa1059"
+      ],
+      "implementationAddresses": [
+        "0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2",
+        "0x5766a40abfb8802303235a2f5f12a71ed84d4700"
+      ],
+      "adminAddresses": [
+        "0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "BoringVault Safe owner (3-of-6)",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26098751,
       "sources": [
         {
-          "label": "pUSD BoringVault on Etherscan",
-          "url": "https://etherscan.io/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f#code"
+          "label": "Ethereum NestVaultOFT native-deposit implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2"
         },
         {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Plume NestVaultOFT native-deposit implementation",
+          "url": "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
         },
         {
-          "label": "pUSD BoringVault on Plume Explorer",
-          "url": "https://explorer.plume.org/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
-        },
-        {
-          "label": "Plume RPC",
-          "url": "https://rpc.plume.org"
+          "label": "Safe-owned Nest ProxyAdmin",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da"
         }
       ]
     },
@@ -38,9 +50,15 @@
         "chain": "ethereum",
         "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
         "deploymentRefs": [
-          "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+          "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+          "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
         ],
         "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The BoringVault owner is independently authorized to call enter with zero assetAmount and arbitrary shareAmount, bypassing ordinary collateral-bound deposits.",
+          "The same Safe owns RolesAuthority and can change enter permissions immediately on both native deployments.",
+          "The Safe owns ProxyAdmin 0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da on both chains and can replace NestVaultOFT's native-deposit mint logic without a timelock."
+        ],
         "observedAt": "2026-10-01",
         "observedBlock": 26096009,
         "failureDomainKeys": [
@@ -80,31 +98,106 @@
         ]
       },
       {
-        "label": "Nucleus Teller (Plume deposit gateway)",
+        "label": "pUSD Plume collateral-deposit Teller",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "cap-limited",
         "chain": "plume",
-        "address": "0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d",
+        "address": "0x16424edf021697e34b800e1d98857536b0f2287b",
         "deploymentRefs": [
           "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-14",
-        "observedBlock": 81049017,
+        "capDescription": "Native deposits require positive collateral, an enabled deposit asset and accountant.getRateInQuoteSafe before vault.enter transfers collateral and mints rate-derived shares. The predicate proxy is an authorized deposit caller, not the direct enter caller. LayerZero zero-asset credit is a separate bridge capability.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96703539,
         "failureDomainKeys": [
-          "plume:0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d"
+          "contract:plume:0x16424edf021697e34b800e1d98857536b0f2287b"
         ],
-        "evidence": "At Plume block 74171811 (2026-06-11), live mint transactions (e.g. 0xcf58692fa0f5…) showed callers invoking 0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d (Teller, 2304 bytes) which in turn triggered Transfer-from-zero on the BoringVault. The Teller is the OFAC-gated predicate proxy deposit gateway; RolesAuthority owned by same 3-of-6 Safe controls which addresses can call enter().",
+        "evidence": "At Plume block 96703539, vault() returns pUSD 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f and RolesAuthority.canCall(Teller,vault,enter) is true. The deployment-to-pin UserRoleUpdated census identifies this Teller and NestVaultOFT as the two current non-owner enter callers. canCall(predicate,Teller,deposit) is true; deposit is not public. Verified source binds native shares to transferred collateral and the accountant rate.",
         "sources": [
           {
-            "label": "pUSD Teller on Plume Explorer",
-            "url": "https://explorer.plume.org/address/0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d"
-          },
+            "label": "Verified Plume collateral-deposit Teller",
+            "url": "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+          }
+        ]
+      },
+      {
+        "label": "pUSD Ethereum collateral-deposit Teller",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x16424edf021697e34b800e1d98857536b0f2287b",
+        "deploymentRefs": [
+          "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "capDescription": "Native deposits require positive collateral, an enabled deposit asset and accountant.getRateInQuoteSafe before vault.enter transfers collateral and mints rate-derived shares. LayerZero zero-asset credit is a separate bridge capability.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098751,
+        "failureDomainKeys": [
+          "contract:ethereum:0x16424edf021697e34b800e1d98857536b0f2287b"
+        ],
+        "evidence": "At Ethereum block 26098751, vault() returns the Ethereum pUSD BoringVault and canCall(Teller,vault,enter) is true. The deployment-to-pin UserRoleUpdated census identifies this Teller and NestVaultOFT as the two current non-owner enter callers. canCall(predicate,Teller,deposit) is true; deposit is not public. Verified Ethereum source enforces collateral transfer and rate-derived native minting.",
+        "sources": [
           {
-            "label": "Nucleus vault framework",
-            "url": "https://docs.nucleusearn.io/nucleus-architecture/vault-framework"
+            "label": "Verified Ethereum collateral-deposit Teller",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+          }
+        ]
+      },
+      {
+        "label": "pUSD Plume NestVaultOFT native-deposit path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "plume",
+        "address": "0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
+        "deploymentRefs": [
+          "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "capDescription": "Native ERC-4626 deposits validate amounts and the accountant rate, transfer the configured asset from the caller and pass net assets to shareToken.safeEnter. Native limits are replaceable through the Safe-owned transparent proxy; LayerZero zero-asset credit is reviewed separately.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96703539,
+        "failureDomainKeys": [
+          "contract:plume:0xf6aada00bc2a206f06bce86ddd8348b70daa1059"
+        ],
+        "evidence": "At Plume block 96703539, share() returns the pUSD BoringVault, asset() returns native USDC 0x222365ef19f7947e5484218551b56bb3965aa7af and canCall(NestVaultOFT,vault,enter) is true. Implementation is verified NestVaultOFT 0x5766a40abfb8802303235a2f5f12a71ed84d4700; ProxyAdmin and Nest owner are controlled by Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982.",
+        "sources": [
+          {
+            "label": "Verified Plume NestVaultOFT",
+            "url": "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
+          }
+        ]
+      },
+      {
+        "label": "pUSD Ethereum NestVaultOFT native-deposit path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
+        "deploymentRefs": [
+          "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "capDescription": "Native ERC-4626 deposits validate amounts and the accountant rate, transfer USDC from the caller and pass net assets to shareToken.safeEnter. Native limits are replaceable through the Safe-owned transparent proxy; LayerZero zero-asset credit is reviewed separately.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098751,
+        "failureDomainKeys": [
+          "contract:ethereum:0xf6aada00bc2a206f06bce86ddd8348b70daa1059"
+        ],
+        "evidence": "At Ethereum block 26098751, share() returns the pUSD BoringVault, asset() returns USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and canCall(NestVaultOFT,vault,enter) is true. Implementation is verified NestVaultOFT 0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2; ProxyAdmin and Nest owner are controlled by Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982.",
+        "sources": [
+          {
+            "label": "Verified Ethereum NestVaultOFT",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2"
           }
         ]
       }
@@ -113,9 +206,9 @@
     "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25531116 and Plume block 81049017 (2026-07-14), the pUSD BoringVault at 0xdddd… has zero EIP-1967 implementation, admin, and beacon slots on both tracked deployments, confirming an immutable mint-critical vault. owner() remains the 3-of-6 GnosisSafeL2 at 0xa08a… with no enabled modules; authority() remains RolesAuthority 0x97bc…, owned by the same Safe. The Plume Teller at 0x41bdb4aa remains the deposit gateway and is the only reviewed direct mint route. Economic-posture fields reviewed 2026-08-15: the undelayed owner Safe can replace authorized enter callers, while the live reserve configuration covers Ethereum only and the repo names no prudential supervisor or independent attestor. Economic-posture fields reviewed 2026-08-15: Wave 2 external research verified EO's independent on-chain proof-of-reserves service for pUSD, but no public feed scope reconciles both tracked pUSD deployments, so reconciliation remains unknown. Wave 1 reconciliation research 2026-08-15: EO's public Plume directory lists a pUSD/USD price feed with a 24-hour heartbeat, while EO's Plume announcement says pUSD benefits from proof-of-reserves/on-chain NAV without publishing a reserve-to-liability scope covering both Ethereum and Plume pUSD supplies; no dated recurring whole-supply reconciliation was found.",
-      "reviewer": "Codex CTRL curation; Sol economic-posture batch 2026-08-15; Codex Wave 2 external research 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Native issuance was re-reviewed at Ethereum block 26098751 and Plume block 96703539 on 2026-10-01. Full UserRoleUpdated log censuses from each RolesAuthority deployment, followed by current canCall reads for every historical user, identify Teller 0x16424edf021697e34b800e1d98857536b0f2287b and NestVaultOFT 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 as the two non-owner enter callers on both chains; enter is not public. The old 0x41bdb4aa label is an Executor proxy, not a current direct minter. Predicate proxy 0x6104fe10ca937a086ba7adbd0910a4733d380cb6 is authorized to call Teller.deposit but is not authorized to call BoringVault.enter directly. Ordinary deposits are collateral-bound; the owner Safe can nevertheless call enter with zero assets and arbitrary shares or change RolesAuthority permissions, so the root economic cap remains unbounded. The BoringVaults themselves remain immutable, but the Nest native-deposit path is transparently upgradeable by the same Safe through ProxyAdmin 0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da, with no timelock. Each minter also has a distinct LayerZero bridge-credit capability, excluded from these native-deposit controls. EO's fetched announcement confirms a pUSD proof-of-reserves service but does not reconcile both native deployments; its current feed directory fails DNS and the recovered March 2025 archive does not establish pUSD scope or heartbeat. Whole-claim reconciliation remains unknown rather than none, and no new prudential-supervision claim is made.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMintRecon)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Plume pUSD docs",
@@ -136,6 +229,26 @@
         {
           "label": "EO Plume pUSD price feed directory",
           "url": "https://docs.eo.app/docs/eprice/feeds-addresses/price-feed-addresses/plume"
+        },
+        {
+          "label": "Verified Plume RolesAuthority and authorization events",
+          "url": "https://explorer.plume.org/api/v2/smart-contracts/0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90"
+        },
+        {
+          "label": "Verified Ethereum Teller",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+        },
+        {
+          "label": "Verified Plume Teller",
+          "url": "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+        },
+        {
+          "label": "Verified Ethereum NestVaultOFT",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2"
+        },
+        {
+          "label": "Verified Plume NestVaultOFT",
+          "url": "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
         }
       ]
     }

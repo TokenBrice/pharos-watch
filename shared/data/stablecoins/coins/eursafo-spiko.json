@@ -30,10 +30,28 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit is the statutory auditor named in the Spiko SICAV prospectus. The linked AMF authorization certificate is not an audit or reserve-to-liability report; no current SAFO-specific financial audit report was verified in the public sources reviewed on 2026-10-01.",
+    "provider": "PricewaterhouseCoopers Audit is the statutory auditor named in the Spiko SICAV prospectus. The linked AMF authorization certificate is not a financial assurance report. The AMF-hosted 30 June 2026 semiannual report contains SAFO assets, liabilities, share counts and NAVs, but no audit opinion; a current SAFO-specific financial audit opinion remains unverified.",
     "attestorTier": "big4",
     "cadence": "annual",
-    "attestorJurisdiction": "France"
+    "attestorJurisdiction": "France",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AMF-hosted Spiko SICAV semiannual report at 30 June 2026, SAFO pages 26–43; reports assets and liabilities, but on-chain liability reconciliation and assurance scope are unknown; no audit opinion",
+          "url": "https://geco.amf-france.org/back-office/document/download/429960"
+        },
+        {
+          "label": "Spiko SICAV prospectus, statutory auditor and annual reporting engagement",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {

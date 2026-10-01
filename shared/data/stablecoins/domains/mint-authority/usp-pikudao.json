@@ -82,13 +82,15 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098749,
         "sources": [
           {
             "label": "USP implementation",
             "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
           }
         ],
-        "evidence": "At Ethereum block 25294782: USP.owner() = 0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a (confirmed EOA in prior reads). cap() = max uint256 (effectively uncapped). ProxyAdmin 0x45540a475a66674566fa9a3c5d4d7e6214b739de owner = Safe 0xc9996a03d7979003b65ae76c1154792bc24bce43 (3 owners, threshold 2, GnosisSafe v1.4.1, no modules)."
+        "evidence": "At Ethereum block 26098749, USP.owner() is 0x3d7dbec2f6bee780f6c5dad61a7a905239e9e61a, eth_getCode(owner) is empty, and cap() is max uint256. allowedMinters(owner) is false: this EOA can authorize minting through owner-only setMinter(), but is not itself a currently allowed direct minter. Issuer documentation describes Fireblocks MPC for minting operations without identifying this owner address or its signing policy; exact owner-key custody remains unverified. Historical ProxyAdmin Safe evidence remains in the separate upgrade control."
       },
       {
         "chain": "ethereum",

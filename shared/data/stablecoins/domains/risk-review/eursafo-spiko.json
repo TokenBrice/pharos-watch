@@ -16,6 +16,49 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "CACEIS calculates the SAFO fund NAV, which determines subscriptions and redemptions. Chainlink publishes the exact EURSAFO NAV through Ethereum proxy 0x799fdc55150583b5baa0b47065e1c901862c95d5. At block 26098764, description() returned EURSAFO NAV, decimals() returned 6, and aggregator() returned 0xe774bc668d300e3ac157e405149aaff89eed1df6. The EURSAFO/EURCV Morpho oracle 0x8bb55b19f2ea18d4684b59a3b768a1926ab41409 uses this proxy as its immutable BASE_FEED_1. This establishes the external NAV publication path, without claiming independent valuation of CACEIS data, a second feed, or automatic failover. The documented feed heartbeat is 97200 seconds; the Morpho consumer does not enforce a staleness bound.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+      "rationale": "EURSAFO is the EUR UCITS share class FR0014015LD3, valued at the fund NAV for subscriptions and redemptions. It has a top-level NAV publication authority, not borrower-specific liquidation branches. The separate Morpho lending market is an integration using the same NAV feed and does not turn EURSAFO's own issuance mechanism into a CDP.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus dated 1 September 2026, SAFO share-class and NAV terms",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Amundi and Spiko SAFO launch release identifying Chainlink NAV publication",
+          "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Chainlink Ethereum feed directory, exact EURSAFO NAV identity and CACEIS source",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Amundi and Spiko SAFO launch release identifying Chainlink NAV publication",
+        "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4"
+      },
+      {
+        "label": "EURSAFO Morpho oracle verified source and immutable feed configuration",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8bb55b19f2ea18d4684b59a3b768a1926ab41409"
+      },
+      {
+        "label": "Ethereum EURSAFO NAV feed, observed at block 26098764",
+        "url": "https://etherscan.io/address/0x799fdc55150583b5baa0b47065e1c901862c95d5"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Spiko's cited 2025 CCIP announcement explicitly concerns EUTBL and USTBL, not EURSAFO. The EURSAFO deployments below are documented fund-share issuance routes; that source does not establish EURSAFO-specific CCIP participation. The existing adverse external-validation tier is retained pending token-specific transport and deployment-control evidence, rather than removed on the strength of an inapplicable announcement.",

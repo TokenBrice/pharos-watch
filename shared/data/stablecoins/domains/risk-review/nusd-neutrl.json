@@ -17,41 +17,49 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "NUSD is minted 1:1 from admitted liquid assets and backed by a managed delta-neutral portfolio, not by user debt positions subject to oracle-triggered collateral liquidation.",
+    "tier": "standard-external",
+    "summary": "At Ethereum block 26098752 on 2026-10-01, StableMinter prices its three configured assets (USDC, USDT and USDe) through immutable Euler ChainlinkOracle adapters. Each adapter rejects non-positive prices and prices older than 90,000 seconds; StableMinter rejects prices below its admin-set minimum and clips prices above $1. The minter admin can replace asset/oracle configurations. This describes the deployed pricing path, not restoration of ordinary minting or redemption after the August pause.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "Neutrl's Minter performs a price-sensitive top-level issuance check: it queries onchain price oracles, determines the USD value of deposited collateral, and calculates the NUSD output. The reviewed NUSD path has no borrower-owned debt positions or collateral liquidation branches, so the oracle authority is top-level-only and no branch rows are invented.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WStrategy)",
+      "rationale": "Verified StableMinter.quoteDeposit reads assetInfo[token].oracle.getQuote and determines NUSD output from the resulting USD valuation. Explorer AssetAdded/AssetRemoved history reaches the deployment with no next page and identifies USDC, USDT and USDe; pinned assetInfo reads confirm all three current adapters. There are no borrower-liquidation branches in this top-level mint valuation path.",
       "sources": [
         {
           "label": "Neutrl minting documentation (Minter queries onchain price oracles)",
           "url": "https://docs.neutrl.finance/protocol-mechanics/minting"
         },
         {
-          "label": "Neutrl transparency dashboard announcement (2025-11-12; collateralization-ratio valuation)",
-          "url": "https://www.neutrl.fi/blog/neutrl-transparency-dashboard"
+          "label": "Verified StableMinter and inherited asset/oracle administration",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xff0b98c0b1d8390b2a7cffbccd4e20bfcfb8191d"
         },
         {
-          "label": "Neutrl Ethereum deployment observation block 25770368 (2026-08-16)",
-          "url": "https://etherscan.io/block/25770368"
+          "label": "StableMinter complete explorer event history",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0xff0b98c0b1d8390b2a7cffbccd4e20bfcfb8191d/logs"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WStrategy)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Neutrl protocol design",
-        "url": "https://docs.neutrl.finance/protocol-design/how-neutrl-works"
+        "label": "Verified USDC ChainlinkOracle adapter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6213f24332d35519039f2afa7e3bffe105a37d3f"
       },
       {
-        "label": "Neutrl NUSD docs",
-        "url": "https://docs.neutrl.finance/protocol-design/nusd"
+        "label": "Verified USDT ChainlinkOracle adapter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x587cabe0521f5065b561a6e68c25f338ed037ff9"
+      },
+      {
+        "label": "Verified USDe ChainlinkOracle adapter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8211b9ae40b06d3db0215e520f232184af355378"
+      },
+      {
+        "label": "Pinned Ethereum assetInfo, feed and price-source observations, block 26098752",
+        "url": "https://etherscan.io/block/26098752"
       }
     ]
   },

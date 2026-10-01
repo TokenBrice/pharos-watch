@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { LiveReservesConfig } from "./live-reserves";
 import type { CauseOfDeath } from "./cause-of-death";
 import type { ReserveSlice } from "./reserves";
+import type { ParentBackingInheritance } from "./stablecoin-meta-schemas";
 import {
   type GovernanceType,
   type MechanismArchetype,
@@ -142,7 +143,7 @@ export const MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES = ["resolved", "unres
 /** Review record for a direct mechanism classification or a reason-coded unresolved design. */
 export type MechanismArchetypeReview = import("./stablecoin-meta-schemas").MechanismArchetypeReview;
 
-export const RESERVE_REVIEW_SCOPE_VALUES = ["full-composition", "dependency-relationships", "selected-slices"] as const;
+export const RESERVE_REVIEW_SCOPE_VALUES = ["full-composition", "classification-only", "dependency-relationships", "selected-slices"] as const;
 export const RESERVE_NON_LINK_DISPOSITION_VALUES = [
   "untracked-exogenous-asset",
   "self-reserve",
@@ -699,6 +700,8 @@ export interface StablecoinMeta {
   variantKind?: VariantKind;
   /** Required for risk-absorption variants, whose product taxonomy does not establish wrapper ownership. */
   wrapperOperator?: WrapperOperator;
+  /** Reviewed adverse inheritance boundary; does not remove the serial parent or peg relationship. */
+  parentBackingInheritance?: ParentBackingInheritance;
   /** When true, this coin's mechanismArchetype is an intentional departure from its parent's archetype. */
   archetypeOverride?: boolean;
   reserves?: ReserveSlice[];

@@ -73,7 +73,10 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest">): V9
       compareText(`${left.kind}:${left.severity}:${left.pathKey}`, `${right.kind}:${right.severity}:${right.pathKey}`),
     ),
     unresolved,
-    evidenceRefIds: uniqueSorted(result.evidenceRefIds),
+    evidenceRefIds: uniqueSorted([
+      ...result.evidenceRefIds,
+      ...(result.collateralizationApplications ?? []).flatMap((application) => application.evidenceRefIds),
+    ]),
     failureDomains: canonicalDomains(result.failureDomains),
   };
   return {
@@ -90,8 +93,30 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest">): V9
 export function applyV9MeasuredCollateralization(
   result: V9BackingResult,
   measurement: V9MechanismRiskReview["collateralizationMeasurement"],
+  policy: V9BackingEvaluationPolicy,
+  asOfSec?: number,
 ): V9BackingResult {
-  if (measurement == null || measurement.ratio >= 1 || result.score === null) return result;
+  if (
+    measurement == null ||
+    measurement.ratio >= 1 ||
+    result.score === null ||
+    measurement.status.observationState !== "known" ||
+    measurement.status.applicability.state !== "required" ||
+    measurement.status.evidenceRefIds.length === 0 ||
+    measurement.measuredAt == null ||
+    asOfSec === undefined ||
+    !Number.isFinite(asOfSec)
+  ) return result;
+  const measuredAtSec = Date.parse(`${measurement.measuredAt}T00:00:00.000Z`) / 1_000;
+  const maxAgeSec = policy.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
+  if (
+    !Number.isFinite(measuredAtSec) ||
+    measuredAtSec + 86_400 > asOfSec ||
+    measuredAtSec + maxAgeSec <= asOfSec ||
+    result.collateralizationApplications?.some(
+      (application) => application.measurementId === measurement.measurementId,
+    )
+  ) return result;
   const ratio = measurement.ratio;
   const score = result.score * ratio;
   const evidenceRefIds = measurement.status.evidenceRefIds;
@@ -100,6 +125,17 @@ export function applyV9MeasuredCollateralization(
     ...trace,
     score,
     pillarCeiling: Math.min(result.pillarCeiling ?? score, score),
+    collateralizationApplications: [
+      ...(result.collateralizationApplications ?? []),
+      {
+        measurementId: measurement.measurementId,
+        measuredAt: measurement.measuredAt,
+        ratio,
+        evidenceRefIds,
+        appliedByAssetId: result.assetId,
+        inheritedFromAssetId: null,
+      },
+    ],
     contributions: [
       ...result.contributions.map((row) => ({ ...row, effectiveWeight: row.effectiveWeight * ratio })),
       {
@@ -157,6 +193,18 @@ function evaluateV9ArchetypeBackingInternal(
       : input.asset,
     policy,
   );
+  // Carry only applications actually embedded in inherited reserve quality,
+  // not a parent measurement attached to an unused inheritance candidate.
+  const inherited = input.asset.inheritedStablecoinBacking;
+  const inheritedApplications =
+    inherited !== undefined && reserve.contributions.some(
+      (contribution) => contribution.componentKey === `reserve:inherited-backing:${inherited.parentAssetId}`,
+    )
+      ? inherited.collateralizationApplications?.map((application) => ({
+          ...application,
+          inheritedFromAssetId: inherited.parentAssetId,
+        }))
+      : undefined;
   const verifiedLiveInheritance =
     input.asset.inheritedStablecoinBacking === undefined
       ? undefined
@@ -176,6 +224,7 @@ function evaluateV9ArchetypeBackingInternal(
       policySemanticDigest: policy.semanticDigest,
       rateability: reserve.rateability,
       score: reserve.score,
+      ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
       pillarCeiling:
         reserve.structuralReasons.length === 0
           ? null
@@ -317,6 +366,7 @@ function evaluateV9ArchetypeBackingInternal(
     policySemanticDigest: policy.semanticDigest,
     rateability,
     score,
+    ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
     pillarCeiling,
     contributions: effectiveBackingContributions(
       contributions,

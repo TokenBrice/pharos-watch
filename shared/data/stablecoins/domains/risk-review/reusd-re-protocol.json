@@ -435,7 +435,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Historical July 2026 review identified this CCIP pool and token mapping. At Ethereum block 26095799 the Tempo selector still maps to this token, and at Tempo block 42066454 the pool getToken() returns it and typeAndVersion() is BurnMintTokenPool 2.0.0. However, a mint(Safe,1) eth_call simulation from the pool reverts Unauthorized on both this legacy token and the issuer's newly listed Tempo token 0x20c000000000000000000000383a23bacb546ab9. Both tokens have nonzero supply. The current executable issuance/bridge path is therefore unresolved; a configured peer is not proof of working mint authorization. No deployment is retired and no alternative route is invented.",
+        "reviewNote": "Historical July 2026 review identified CCIP pool 0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e and this token mapping. At Tempo block 42130411, its getToken() still returns the legacy token, but mint(Safe,1) simulated from that pool reverts Unauthorized on both the legacy token and issuer-listed replacement 0x20c000000000000000000000383a23bacb546ab9. A complete RoleMembershipUpdated log scan from token creation block 12906370 through 42130411, in 293 successful public-RPC ranges of at most 100000 blocks, found five grants and no revocations. The actual ISSUER_ROLE holders are contracts 0x2ba8aa49603958b78eb23968039417cd1552ab86 and 0xbb631b504d3d30ee89948afb97b74c1c7eedfeb0; pinned hasRole calls confirm both, while the recorded CCIP pool and Safe lack ISSUER_ROLE. Mint calls impersonating either actual holder succeed, establishing token-level authorization but not a publicly callable contract mint path. The second holder has EIP-1967 implementation 0x6530660eb4834d8758e5c12946a8d0420af45fd7. Neither implementation was source-verified by the attempted Sourcify or explorer reads. The current native-versus-bridge issuance model and privileged caller reach therefore remain unresolved; no deployment is retired or alternative route invented.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "tempo",
         "controllerAddress": "0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e",
@@ -444,7 +444,7 @@
           "contract:tempo:0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e"
         ],
         "observedAt": "2026-10-01",
-        "observedBlock": 42066454,
+        "observedBlock": 42130411,
         "sources": [
           {
             "label": "Re Protocol: current Tempo deployment disclosure",

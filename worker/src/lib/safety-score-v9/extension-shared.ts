@@ -24,6 +24,7 @@ export type V9ExtensionRegistryMeta = Pick<
   | "variantOf"
   | "variantKind"
   | "wrapperOperator"
+  | "parentBackingInheritance"
   | "archetypeOverride"
   | "mechanismArchetype"
   | "implementationLaunchDate"

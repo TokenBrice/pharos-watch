@@ -17,6 +17,19 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Banking Circle EURI launch: minting and burning secured by Fireblocks MPC-CMP",
+              "url": "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
+            },
+            {
+              "label": "Fireblocks Banking Circle customer case: EURI mint and burn keys",
+              "url": "https://www.fireblocks.com/customers/banking-circle-2"
+            }
+          ]
+        },
         "sources": [
           {
             "label": "Eurite about page",
@@ -41,6 +54,23 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Banking Circle EURI launch: minting and burning secured by Fireblocks MPC-CMP",
+              "url": "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
+            },
+            {
+              "label": "Fireblocks Banking Circle customer case: EURI mint and burn keys",
+              "url": "https://www.fireblocks.com/customers/banking-circle-2"
+            },
+            {
+              "label": "PeckShield Banking Circle audit: mint restricted to token owner",
+              "url": "https://www.eurite.com/wp-content/uploads/2024/06/PeckShield-Audit-Report-ERC20-BankingCircle-v1.0-2.pdf"
+            }
+          ]
+        },
         "observedAt": "2026-10-01",
         "observedBlock": 26095806,
         "sources": [

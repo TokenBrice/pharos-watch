@@ -186,7 +186,8 @@ const NON_ACTIVE_LIFECYCLE_STATUSES = [
 
 describe("Mint Authority / Bridge Risk ownership boundary", () => {
   it.each([
-    { assetId: "usdai-usd-ai", unresolvedChains: ["solana"] },
+    // Round-two R2F1 verification confirms Solana as a reviewed satellite OFT for both assets.
+    { assetId: "usdai-usd-ai", unresolvedChains: [] },
     { assetId: "susdai-usd-ai", unresolvedChains: [] },
   ])(
     "$assetId keeps canonical Arbitrum issuance in Mint Authority and satellite issuance in Bridge Risk",
@@ -215,7 +216,7 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
       expect(satelliteRoutes.length).toBeGreaterThan(0);
       const reviewedSatelliteRoutes = satelliteRoutes.filter((route) => route.reviewDisposition === "reviewed");
       expect(reviewedSatelliteRoutes.map((route) => route.destinationChain).sort()).toEqual([
-        "base", "ethereum", "plasma",
+        "base", "ethereum", "plasma", "solana",
       ]);
       expect(reviewedSatelliteRoutes.every((route) => route.controllerChain && route.controllerAddress)).toBe(true);
       const unresolvedRoutes = satelliteRoutes.filter((route) => route.reviewDisposition !== "reviewed");

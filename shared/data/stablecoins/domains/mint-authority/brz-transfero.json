@@ -101,7 +101,7 @@
         "threshold": 1,
         "signerCount": 2,
         "observedAt": "2026-10-01",
-        "observedBlock": 452232837,
+        "observedBlock": 452345314,
         "sources": [
           {
             "label": "Current BRZ Solana mint",
@@ -109,10 +109,10 @@
           },
           {
             "label": "Solana mainnet RPC mint and authority reads",
-            "url": "https://solana-rpc.publicnode.com"
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At Solana finalized context slot 452232837 on 2026-10-01, a fresh getMultipleAccounts(jsonParsed) observation identifies BRZ Token-2022 mint BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN with mintAuthority DzZjd63zf674JCbQcGD7mZ8AXxrAfFE2of5coe2ZV5K1. The authority account in the same response is an initialized Token-2022 multisig requiring 1 of 2 signers. This replaces the earlier observation rather than claiming a historical replay."
+        "evidence": "At Solana finalized context slot 452345314 on 2026-10-01, getMultipleAccounts(jsonParsed) identifies BRZ Token-2022 mint BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN with mintAuthority DzZjd63zf674JCbQcGD7mZ8AXxrAfFE2of5coe2ZV5K1. The authority account in the same response is an initialized Token-2022 multisig requiring 1 of 2 signers: EAV3JfBxdoLqdfZeMZ6vd9RS6HynU6rhvgTUedBQRpzm and CmrrgBrSZ9K1y9XLDGShTfUC8FzwE6B9KmT2cMq1VeCv. Either signer can satisfy the native issuance threshold; the public disclosures reviewed do not establish their off-chain key custody."
       },
       {
         "label": "BRZ Ethereum masterMinter — current 2-of-4 Safe",

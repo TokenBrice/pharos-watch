@@ -19,7 +19,8 @@
       "assetClass": "repo",
       "issuerOrObligor": "Selected commercial banks and broker-dealers; Treasury obligations as collateral",
       "riskFactors": ["counterparty", "liquidity", "custody"],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
     }
   ],
   "reserveReview": {
@@ -36,7 +37,7 @@
         "url": "https://www.paxos.com/usdp-transparency"
       }
     ],
-    "rationale": "Exhibit B of the KPMG-examined USDP report at August 31, 2026, 5:00 PM Eastern Time discloses USD $22,220,905 cash, $6,969,000 Treasury-collateralized reverse repos, no government money-market funds or direct Treasury obligations, and total redemption assets $29,189,905. Independently reproduced division by that disclosed total and rounding to two decimal places yields 76.13% cash and 23.87% repo. The observed repo matures September 1; this does not establish a standing three-day maximum, which is removed. Repo collateral may not be sold or repledged. Asset categories and existing liquidity labels are unchanged.",
+    "rationale": "Exhibit B of the KPMG-examined USDP report at August 31, 2026, 5:00 PM Eastern Time discloses USD $22,220,905 cash, $6,969,000 Treasury-collateralized reverse repos, no government money-market funds or direct Treasury obligations, and total redemption assets $29,189,905. Independently reproduced division by that disclosed total and rounding to two decimal places yields 76.13% cash and 23.87% repo. The complete repo maturity table contains one position purchased August 31 and maturing September 1; maturityDaysMax is therefore one day for this dated composition, not a standing investment-policy maximum. The report separately states that the repurchase agreements mature overnight. The unsupported standing three-day maximum remains removed. Repo collateral may not be sold or repledged. Asset categories and existing liquidity labels are unchanged.",
     "compositionBasis": "KPMG examination of the USDP Redemption Assets Report, Exhibit B as of August 31, 2026, 5:00 PM Eastern Time; USD amounts divided by disclosed USD total",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

@@ -22,9 +22,17 @@
       {
         "label": "stkGHO verified proxy and ERC-4626 asset observation at Ethereum block 26095800",
         "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+      },
+      {
+        "label": "Verified deployed stkGHO implementation and asset-accounting restrictions",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,abi"
+      },
+      {
+        "label": "Verified deployed Umbrella implementation and deficit-slashing controls",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
       }
     ],
-    "rationale": "At Ethereum block 26095800, asset() returned GHO 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f and convertToAssets(1e18) returned 1e18. The single-asset ERC-4626 wrapper holds GHO, with automated slashing able to reduce the redeemable value. The 100% slice describes the wrapper's underlying identity, not a measured diversification or absence of slashing risk.",
+    "rationale": "The single-asset GHO wrapper was re-confirmed at Ethereum block 26098749: asset() is canonical GHO, and its GHO balance exactly equals totalAssets(). The deployed implementation has deposit/withdrawal accounting and no borrowing or external lending strategy; underlying-token rescue is limited to balance minus accounted assets and maxRescue(GHO) is zero. The vault owner is Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8, whose GHO slashing configuration covers the Ethereum Core Pool only. Staked principal is loss-absorption capital: automated deficit slashing can reduce redeemable value. The 100% slice describes underlying identity, not absence of loss risk.",
     "compositionBasis": "Standing single-asset ERC-4626 wrapper structure, confirmed by pinned asset() at Ethereum block 26095800",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
@@ -52,9 +60,17 @@
       {
         "label": "stkGHO asset() at Ethereum block 26095800",
         "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+      },
+      {
+        "label": "Verified deployed stkGHO implementation and asset-accounting restrictions",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,abi"
+      },
+      {
+        "label": "Verified deployed Umbrella implementation and deficit-slashing controls",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
       }
     ],
-    "uncertainty": "GHO is held in an upgradeable on-chain staking vault and is exposed to Umbrella slashing. The reviewed documents do not establish legal segregation, insolvency treatment, or reuse restrictions.",
+    "uncertainty": "At Ethereum block 26098749, accounted GHO principal is held in the staking vault, with no deployed borrowing or external lending path and no rescuable GHO excess. This is fully on-chain custody, while legal segregation and insolvency treatment remain unestablished. Capital reuse is specifically GHO-deficit loss absorption through Umbrella slashing, rather than an unidentified rehypothecation strategy. Governance can upgrade the proxy and change pause, cooldown and slashing configuration, so current executable restrictions do not establish a permanent legal prohibition on reuse.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -90,9 +90,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Canonical sUSDai issuance is native to the USDai-backed Arbitrum vault. Ethereum, Base, and Plasma use LayerZero OAdapter burn/mint representations. Their current OToken 1.1 implementations restrict mint/burn to an immutable adapter; the former grantable BRIDGE_ADMIN_ROLE path is historical. The chain-local DEFAULT_ADMIN Safe is 3-of-3 on Ethereum and Base and 3-of-4 on Plasma. Bridge controls remain separate from canonical Mint Authority.",
+    "summary": "Canonical sUSDai issuance is native to the USDai-backed Arbitrum vault. Ethereum, Base, and Plasma use LayerZero OAdapter burn/mint representations. Their current OToken 1.1 implementations restrict mint/burn to an immutable adapter; the former grantable BRIDGE_ADMIN_ROLE path is historical. The chain-local DEFAULT_ADMIN Safe is 3-of-3 on Ethereum and Base and 3-of-4 on Plasma. Solana is a verified LayerZero burn-mint representation, but its 1-of-2 SPL mint authority admits a Squads vault independently of the OFT program; that vault requires a verified 3-of-3 quorum and can also upgrade the program, with no onchain timelock. Bridge controls remain separate from canonical Mint Authority.",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA30sUSDai)",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA30sUSDai); R2WUsdAi Solana follow-up",
     "confidence": "verified",
     "protocols": [
       {
@@ -242,6 +242,119 @@
         ],
         "observedAt": "2026-10-01",
         "observedBlock": 33896599
+      },
+      {
+        "id": "solana:sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE",
+        "sourceChain": "arbitrum",
+        "destinationChain": "solana",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE",
+        "protocol": "USD.AI Console OFT (LayerZero V2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Finalized Solana slot 452346084 binds the six-decimal Token-2022 mint to SPL multisig EFHsswyND6b1D6SDyp4xxQqUBWh7tZKQUr9ZNxudoRYe: threshold 1, signers GknzTiXk2Yq5PQb4zGzkfruYQiuCyrbzCjXsNgNyX3xi and OFTStore 2xVEUsPGGv9Fe3NFc4UmhWd7Y2Ni7MjiSCL8oQJ9bzLZ. The store is owned by official Console OFT program BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm; its token_mint matches and oft_type=0 means BurnMint. Arbitrum peer 0xffb20098fd7b8e84762eea4609f299d101427f24 reciprocally matches at block 510720428. Gknz is an off-curve Squads vault PDA, not an EOA: official PDA seeds derive it as vault index 0 of 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj; finalized slot 452350705 decodes that autonomous multisig as 3-of-3 with zero timelock. Its quorum can authorize direct SPL minting independently of OFT/DVN/rate-limit checks and upgrade the program. Default admin/freeze/permanent-delegate 5dnCPcdGKQ5CToUq4AbafWN2aP7aU9UQTENgzbNHjQw8 is vault 0 of CrzPtmcfAGwkCsDfnoEbGHSRsWPiVEiPmryXShy9sfsz (3-of-3, zero timelock); pause authority 9baATD75Nxgeh96dSwJmyctJreYZNRNqFmrU7uXsSYRx is vault 0 of Aht5ivj7NnZvAJVKshuMaoaC9hq2FiBiST4fccYaNAn5 (2-of-3, zero timelock, separately observed at finalized slot 452350848). Each has zero config_authority, requiring normal quorum votes for configuration changes. Offchain member-key custody and production circulating-supply materiality remain unknown; neither is inferred from account ownership or raw mint supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj",
+        "failureDomainKeys": [
+          "protocol:usdai-obridge",
+          "multisig:solana:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj",
+          "program:solana:BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452346084,
+        "sources": [
+          {
+            "label": "USD.AI official deployed contracts, Solana sUSDai OFT",
+            "url": "https://docs.usd.ai/technical-overview/contract-addresses.md"
+          },
+          {
+            "label": "USD.AI Console OFT source pinned to deployed-state layout",
+            "url": "https://github.com/usdai-foundation/solana-oft-deployment/tree/7b3e659e224d06dac703b363df47dbe9f840eb42"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "solana-susdai-spl-minter",
+        "routeRefs": [
+          "solana:sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj",
+        "label": "sUSDai Solana direct SPL minter via Squads 3-of-3",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "capDescription": "An autonomous Squads 3-of-3 vault can authorize direct Token-2022 minting without collateral, a LayerZero message, or the OFT rate limiter; no economic mint cap or onchain timelock is enforced on this quorum path.",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "multisig:solana:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj"
+        ],
+        "bypassSurfaces": [
+          "Squads multisig 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj must reach 3-of-3 quorum to sign as vault GknzTiXk2Yq5PQb4zGzkfruYQiuCyrbzCjXsNgNyX3xi; that PDA alone then satisfies the outer SPL 1-of-2 threshold independently of OFTStore 2xVEUsPGGv9Fe3NFc4UmhWd7Y2Ni7MjiSCL8oQJ9bzLZ"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452350705,
+        "sources": [
+          {
+            "label": "USD.AI official Solana deployment",
+            "url": "https://docs.usd.ai/technical-overview/contract-addresses.md"
+          },
+          {
+            "label": "Solana token multisig authorization semantics",
+            "url": "https://www.solana-program.com/docs/token#multisig-usage"
+          },
+          {
+            "label": "Squads v4 vault PDA seeds and autonomous multisig governance account layout",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+          }
+        ],
+        "evidence": "Finalized mint snapshot at slot 452346084 gives outer SPL m=1/n=2. Derived Squads vault 0 Gknz from multisig 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj; governance state at slot 452350705 gives threshold=3, three members with permissions=7, time_lock=0 and config_authority=11111111111111111111111111111111. A successful VaultTransactionExecute invocation in transaction 63awK9FLbrXBDfwcoPbhShXC7c2WrfyJ5wjjpyjDyAwvtsjSoYod3bnTAtPi1u6g6pctffjv2DZJzTCHtLFAuXrA identifies the same governing multisig and vault. System-owned vault PDA is not an EOA. Offchain member-key custody remains unknown."
+      },
+      {
+        "id": "solana-console-oft-upgrade",
+        "routeRefs": [
+          "solana:sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj",
+        "label": "USD.AI Console OFT program upgrade via Squads 3-of-3",
+        "authorityType": "multisig",
+        "timelockDelaySec": 0,
+        "capDescription": "The BPF upgradeable-loader authority is Squads vault Gknz, controlled by an autonomous 3-of-3 quorum. It can replace the OFT program without an onchain timelock; neither single-key control nor protected offchain custody is inferred.",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "multisig:solana:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj",
+          "program:solana:BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452350705,
+        "sources": [
+          {
+            "label": "USD.AI official Console OFT program",
+            "url": "https://github.com/usdai-foundation/solana-oft-deployment/tree/7b3e659e224d06dac703b363df47dbe9f840eb42"
+          },
+          {
+            "label": "Squads v4 vault PDA seeds and autonomous multisig governance account layout",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+          }
+        ],
+        "evidence": "At finalized slot 452346084, ProgramData BSmpVMLvu8r7nA1Dz4Sb3c8PEEqZagi9qtmYsrmXtbC7 gives deployment slot 438647697 and upgrade authority GknzTiXk2Yq5PQb4zGzkfruYQiuCyrbzCjXsNgNyX3xi. This off-curve authority derives exactly as Squads vault 0 of 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj. Governance at slot 452350705 is autonomous 3-of-3 with zero timelock; successful transaction 63awK9FLbrXBDfwcoPbhShXC7c2WrfyJ5wjjpyjDyAwvtsjSoYod3bnTAtPi1u6g6pctffjv2DZJzTCHtLFAuXrA invoked Squads VaultTransactionExecute using that vault and program metadata.",
+        "threshold": 3,
+        "signerCount": 3
       }
     ]
   }

@@ -43,7 +43,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "USDA has no maximum-supply check; this EOA can mint directly and, as DEFAULT_ADMIN_ROLE, can grant or revoke MINT.",
         "observedAt": "2026-10-01",
-        "observedBlock": 125055866,
+        "observedBlock": 125134982,
         "sources": [
           {
             "label": "USDA verified BSC token source",
@@ -58,7 +58,7 @@
             "url": "https://bscscan.com/tx/0x3fff5ba4101cd945dbb2679c84c948fba3033481bfa89b6432f883a66db1606c"
           }
         ],
-        "evidence": "Historical blocks 88662302 and 88662792 recorded the DEFAULT_ADMIN and MINT grants. At block 125055866, hasRole(MINT, this address) and hasRole(DEFAULT_ADMIN_ROLE, this address) both still return true, and eth_getCode returns 0x. The matched source assigns MINT's role admin to DEFAULT_ADMIN_ROLE. Named key ownership, custody, and threshold remain undisclosed; exhaustive current role enumeration was not repeated."
+        "evidence": "Historical blocks 88662302 and 88662792 recorded the DEFAULT_ADMIN and MINT grants. At BSC block 125134982, hasRole(MINT, this address) and hasRole(DEFAULT_ADMIN_ROLE, this address) both return true, and eth_getCode returns 0x. The matched USDAWithPremium source assigns MINT's role admin to DEFAULT_ADMIN_ROLE and contains no mint amount cap. The complete current Alpha Partners documentation corpus and archived public site did not identify this key's operator, custody, or threshold; an empty-code EOA does not itself prove single-person or non-MPC custody. Exhaustive current role enumeration was not repeated."
       },
       {
         "label": "USDA MINT-role minter-contract owner — BSC",

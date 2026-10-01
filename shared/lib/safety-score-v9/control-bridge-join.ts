@@ -95,6 +95,51 @@ export function materialBridgeSeverity(
   return materialSupplyShare >= highShareThreshold ? "high" : "moderate";
 }
 
+/** Unresolved deployment exposure, including unattributed route residue. Bounds are join-only, never exact pricing. */
+export function unresolvedDeploymentCohort(
+  facts: V9EconomicControlAssetFacts,
+  controls: readonly V9DeploymentControlFactV2[],
+  allowProvenBounds = false,
+): { share: number | null; controlKeys: ReadonlySet<string> } {
+  const controlKeys = new Set<string>();
+  const rows = reconciledSupplyPartition(facts);
+  if (rows === null) return { share: null, controlKeys };
+  const sharesByDeployment = new Map<string, number>();
+  let joinedUnreviewedShare = 0;
+  for (const control of controls) {
+    if (
+      control.scope !== "deployment" ||
+      control.economicLossScope !== "deployment" ||
+      control.status.applicability.state === "not-applicable" ||
+      isKnownRequired(control.status)
+    ) continue;
+    const row = rows.find((candidate) => candidate.deploymentRouteKey === control.deploymentKey);
+    const share = control.materialSupplyShare ??
+      (allowProvenBounds ? provenNullShareDeploymentBound(facts, control) : null);
+    if (
+      control.status.applicability.state !== "required" ||
+      control.status.observationState !== "bounded-unknown" ||
+      share === null ||
+      (row === undefined && (!allowProvenBounds || share !== 0)) ||
+      (row !== undefined && !bridgeSharesReconcile(row.supplyShare, share))
+    ) return { share: null, controlKeys: new Set<string>() };
+    controlKeys.add(control.controlKey);
+    // Unmatched rows already belong to unknownRouteSupplyShare. Admitting
+    // their controls must neither invalidate the cohort nor count them twice.
+    if (row === undefined || row.reviewState === "unmatched") continue;
+    if (!sharesByDeployment.has(control.deploymentKey) && row.reviewState === "selected-unresolved") {
+      joinedUnreviewedShare += row.supplyShare;
+    }
+    sharesByDeployment.set(control.deploymentKey, row.supplyShare);
+  }
+  return {
+    share: Math.min(1, [...sharesByDeployment.values()].reduce((sum, share) => sum + share, 0) +
+      facts.supply.unknownRouteSupplyShare! +
+      Math.max(0, facts.supply.unreviewedRouteSupplyShare! - joinedUnreviewedShare)),
+    controlKeys,
+  };
+}
+
 /**
  * Why the sub-threshold unresolved bridge-join completeness proof failed.
  *
@@ -148,6 +193,7 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
   bridgeRoutes: readonly V9BridgeRouteControlReview[],
   materialShareThreshold: number,
   commonModeShareThreshold: number,
+  unresolvedFullCeilingShareThreshold: number,
 ): V9SubthresholdUnresolvedBridgeJoinResult {
   const incomplete = (
     code: V9BridgeJoinFailureCode,
@@ -166,6 +212,8 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
 
   const rows = reconciledSupplyPartition(facts);
   if (rows === null) return incomplete("supply-partition-unreconciled");
+  const cohortShare = unresolvedDeploymentCohort(facts, controls, true).share;
+  const canRelaxUnresolvedRows = cohortShare !== null && cohortShare < unresolvedFullCeilingShareThreshold;
 
   // Native issuance rows are not bridge exposure. A profile may still carry
   // canonical-side adapter controls for one, but those controls belong to the
@@ -204,10 +252,11 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
     // common-mode materiality floor is an accepted bounded row, not a proof
     // failure. At or above the floor the pool keeps the ordinary fail-closed
     // per-row checks below (the material unrecognized-chain latency case).
-    if (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) && route.supplyShare < commonModeShareThreshold) {
+    if (canRelaxUnresolvedRows && isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) && route.supplyShare < commonModeShareThreshold) {
       continue;
     }
     if (
+      canRelaxUnresolvedRows &&
       route.reviewState === "unmatched" &&
       !isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) &&
       route.supplyShare < materialShareThreshold
@@ -231,17 +280,19 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
         return incomplete("reviewed-row-control-join-not-unique", { ...rowDetail, controlKeys: joinedControlKeys });
       }
       const control = joined[0]!;
+      const share = control.materialSupplyShare ?? provenNullShareDeploymentBound(facts, control);
       if (
         controlCanRepresent(control, "bridge") &&
         (isKnownRequired(control.status) ||
-          (control.status.applicability.state === "required" &&
+          (canRelaxUnresolvedRows &&
+            control.status.applicability.state === "required" &&
             control.status.observationState === "bounded-unknown" &&
             control.scope === "deployment" &&
             control.economicLossScope === "deployment" &&
-            control.materialSupplyShare !== null &&
-            control.materialSupplyShare < materialShareThreshold)) &&
-        control.materialSupplyShare !== null &&
-        bridgeSharesReconcile(control.materialSupplyShare, route.supplyShare) &&
+            share !== null &&
+            share < (control.materialSupplyShare === null ? materialShareThreshold : unresolvedFullCeilingShareThreshold))) &&
+        share !== null &&
+        bridgeSharesReconcile(share, route.supplyShare) &&
         bridgeRouteCounts.get(control.controlKey) === 1
       ) {
         continue;
@@ -252,12 +303,16 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
       return incomplete("unresolved-row-control-join-not-unique", { ...rowDetail, controlKeys: joinedControlKeys });
     }
     const control = joined[0]!;
+    const share = control.materialSupplyShare ?? provenNullShareDeploymentBound(facts, control);
     if (
+      canRelaxUnresolvedRows &&
       control.scope === "deployment" &&
       control.economicLossScope === "deployment" &&
-      control.materialSupplyShare !== null &&
-      bridgeSharesReconcile(control.materialSupplyShare, route.supplyShare) &&
-      control.materialSupplyShare < materialShareThreshold
+      share !== null &&
+      bridgeSharesReconcile(share, route.supplyShare) &&
+      share < (route.reviewState === "unmatched" || control.materialSupplyShare === null
+        ? materialShareThreshold
+        : unresolvedFullCeilingShareThreshold)
     ) {
       continue;
     }

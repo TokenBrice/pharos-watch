@@ -40,8 +40,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
       }
     ],
-    "evidence": "Historical review 2026-08-08 established permissionless local share transfers across the three tracked deployments. Re-verified at Ethereum block 26095807 on 2026-10-01: sendSharesGate() and receiveSharesGate() returned zero; abdicated(selector) returned true and timelock(selector) returned 604800 seconds for both setSendSharesGate(address) and setReceiveSharesGate(address). The exact verified source prevents execution of an abdicated function. Base MetaMorpho and Arbitrum MetaMorphoV1_1 retain ordinary ERC-20 share-transfer code, and pinned asset() reads at Base block 52024171 and Arbitrum block 510584559 confirm chain-local native USDC. Freeze exposure remains inherited from usdc-circle; this review does not remove upstream USDC blacklist powers.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA57DOLA)",
+    "evidence": "Re-verified on 2026-10-01 at Ethereum block 26098754, Base block 52041959 and Arbitrum block 510719674. Ethereum sendSharesGate() and receiveSharesGate() are zero; abdicated(selector) is true and timelock(selector) is 604800 seconds for both share-gate setters. The exact deployed VaultV2 source prevents execution of abdicated functions. sendAssetsGate() and receiveAssetsGate() are also zero, but the send-assets gate setter is not abdicated and retains a seven-day timelock, so permissionless share transfer does not prove immutable redemption access. Base MetaMorpho and Arbitrum MetaMorphoV1_1 retain ordinary ERC-20 share transfers in their exact verified sources. Native chain-local USDC asset() and zero EIP-1967 slots were confirmed across all three vaults. Freeze exposure remains inherited from usdc-circle; no upstream blacklist or pause exposure is removed.",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WCircle), exact three-deployment source and pinned gate review",
     "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {

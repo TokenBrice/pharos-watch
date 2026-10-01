@@ -138,7 +138,7 @@
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
-        "observedBlock": 452212680,
+        "observedBlock": 452345314,
         "failureDomainKeys": [
           "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
         ],
@@ -152,7 +152,7 @@
             "url": "https://explorer.solana.com/tx/23biLsrUSuYhnDDvRhQUu7u7bnHNVB5nhE5nVDEJHLFvzztHKb5h4DXBmA5gWosN9v1FcmLqTMaJQCkihwWnpSHa"
           }
         ],
-        "evidence": "At finalized Solana slot 452212680, native CASH remained owned by Token-2022 and retained Bridge mint authority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7. Bridge program BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm pointed to ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu, whose loader state named 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q as upgrade authority using the Option tag at byte 12 and key bytes 13-44. The authority is an on-curve public key, not a program-derived address. The standard Solana loader exposes this externally signable program-upgrade authority without an on-chain execution timelock; native allowance checks remain changeable through program replacement. Finalized getTransaction(23biLsr...) returned successful slot 401157588 with loader log New authority Some(76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q), confirming the historical transfer from transaction signer BozdeWNZHmpVWcKSYZo9W8rYbvtK8U8jMnYMQggsGkQH."
+        "evidence": "At finalized Solana context slot 452345314 on 2026-10-01, getMultipleAccounts(jsonParsed) confirmed CASH mintAuthority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7. The reviewed Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu is owned by the upgradeable loader and its parsed authority remains 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q. In the same response, that authority account is System Program-owned, non-executable and zero-data. No on-chain multisig or execution delay protects this loader authority; off-chain key custody is not established by the account type. Historical confirmation retained: finalized getTransaction(23biLsr...) previously returned successful slot 401157588 with loader log New authority Some(76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q), confirming the transfer from transaction signer BozdeWNZHmpVWcKSYZo9W8rYbvtK8U8jMnYMQggsGkQH."
       },
       {
         "chain": "solana",

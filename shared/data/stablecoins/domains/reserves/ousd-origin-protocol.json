@@ -32,12 +32,20 @@
       {
         "label": "Origin OUSD collateral analytics",
         "url": "https://analytics.originprotocol.com/"
+      },
+      {
+        "label": "Origin OUSD itemized collateral API (snapshot retrieved 2026-10-01)",
+        "url": "https://api.originprotocol.com/api/v2/1:OUSD/collaterals"
+      },
+      {
+        "label": "Origin OUSD collateral API snapshot timestamp",
+        "url": "https://api.originprotocol.com/cache/last-updated?key=collaterals-1%3AOUSD"
       }
     ],
-    "rationale": "Origin states that OUSD became 100% USDC-backed after the November 2025 simplification and deploys the collateral across Morpho lending and Curve liquidity provision. The reviewed current disclosure does not publish a fixed strategy allocation, so the prior 90/10 Morpho/Curve estimate was replaced with one aggregate USDC protocol-position basket.",
-    "compositionBasis": "Current Origin OUSD collateral and strategy disclosure; strategy weights undisclosed",
+    "rationale": "Origin states that OUSD became 100% USDC-backed after the November 2025 simplification and deploys the collateral across Morpho lending and Curve liquidity provision. The original standing-envelope review replaced an unsupported 90/10 estimate with one aggregate USDC protocol-position basket. The itemized Origin API recovered on 2026-10-01 now publishes per-strategy USDC amounts and available liquidity; the aggregate row is retained to match the live adapter's existing USDC source key.",
+    "compositionBasis": "Standing 100% USDC collateral envelope with itemized strategy amounts in Origin's 2026-10-01T16:47:47.582Z API snapshot; aggregate source-key mapping retained",
     "scope": "full-composition",
-    "knownUnknownExposure": "No reserve exposure is unlinked: the full basket is USDC collateral. Origin identifies Morpho and Curve as the complete strategy set but does not publish current per-strategy weights in the reviewed disclosure.",
+    "knownUnknownExposure": "The full basket is USDC collateral. The itemized Origin API snapshot lastUpdated 2026-10-01T16:47:47.582Z reports Ethereum Morpho 3335316.773004 USDC, Base Morpho 1214120.29941 USDC, Hyper Morpho 28.205328 USDC, Curve AMO 386863.442444 USDC, and unallocated 550011.831906 USDC. The aggregate USDC row remains aligned with the existing live adapter source key; strategy weights are now observable, but Morpho's utilization-dependent residual has no fixed full-liquidation horizon.",
     "knownUnknownExposurePct": 0
   }
 }

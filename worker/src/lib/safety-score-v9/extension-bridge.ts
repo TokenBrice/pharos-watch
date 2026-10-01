@@ -6,6 +6,7 @@ import { resolveChainId } from "@shared/lib/chains";
 import { normalizeDeploymentId } from "@shared/lib/deployment-id";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type {
   V9BridgeJoinDiagnosticsV1,
   V9BridgeSupplyRouteJoinV1,
@@ -646,10 +647,23 @@ function buildUnprovenRouteJoins(
       control,
     ]);
   }
+  const fullCeilingShare = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
+  const reviewedUnresolvedDeploymentKeys = new Set(
+    bridgeControls.filter((control) => !controlSemanticsResolved(control) &&
+      control.scope === "deployment" && control.economicLossScope === "deployment")
+      .map((control) => control.deploymentKey),
+  );
+  const cohortShare = supplyReview?.unknownRouteSupplyShare == null || supplyReview.unreviewedRouteSupplyShare == null
+    ? null
+    : supplyReview.unknownRouteSupplyShare + supplyReview.unreviewedRouteSupplyShare +
+      supplyReview.selectedBridgeRoutes.reduce((sum, row) => sum +
+        (row.reviewState === "selected-reviewed" && reviewedUnresolvedDeploymentKeys.has(row.deploymentRouteKey)
+          ? row.supplyShare : 0), 0);
+  const canRelaxUnresolvedRows = cohortShare !== null && cohortShare < fullCeilingShare;
   const unproven: V9BridgeSupplyRouteJoinV1[] = [];
   for (const row of supplyReview?.selectedBridgeRoutes ?? []) {
     // Accepted bounded rows are not join failures.
-    if (classifyBridgeSupplyRow(row) !== "control-required") continue;
+    if (canRelaxUnresolvedRows && classifyBridgeSupplyRow(row) !== "control-required") continue;
     const joined = controlsByDeployment.get(row.deploymentRouteKey) ?? [];
     const single = joined.length === 1 ? joined[0]! : null;
     const proven = (() => {
@@ -659,20 +673,22 @@ function buildUnprovenRouteJoins(
         return (
           (controlSemanticsResolved(single) ||
             (single.scope === "deployment" &&
+              canRelaxUnresolvedRows &&
               single.economicLossScope === "deployment" &&
               single.materialSupplyShare !== null &&
-              single.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)) &&
+              single.materialSupplyShare < fullCeilingShare)) &&
           single.materialSupplyShare !== null &&
           bridgeJoinSharesReconcile(single.materialSupplyShare, row.supplyShare)
         );
       }
       if (single === null) return false;
       return (
+        canRelaxUnresolvedRows &&
         single.scope === "deployment" &&
         single.economicLossScope === "deployment" &&
         single.materialSupplyShare !== null &&
         bridgeJoinSharesReconcile(single.materialSupplyShare, row.supplyShare) &&
-        single.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD
+        single.materialSupplyShare < fullCeilingShare
       );
     })();
     if (proven) continue;

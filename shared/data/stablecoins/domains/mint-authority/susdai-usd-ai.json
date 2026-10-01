@@ -15,7 +15,7 @@
         "0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
       ],
       "implementationAddresses": [
-        "0xef07186d90ca00107c4fc73a6fbfcb5ec3d3860d"
+        "0x4637193852df85b7ac05dd052b187460d81551f6"
       ],
       "adminAddresses": [
         "0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f"
@@ -24,15 +24,15 @@
       "delaySec": 172800,
       "controlRef": "sUSDai Arbitrum ProxyAdmin timelock",
       "observedAt": "2026-10-01",
-      "observedBlock": 510584190,
+      "observedBlock": 510720428,
       "sources": [
         {
           "label": "Arbitrum sUSDai proxy",
           "url": "https://arbitrum.blockscout.com/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9?tab=contract"
         },
         {
-          "label": "Arbitrum verified StakedUSDai implementation",
-          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xef07186d90ca00107c4fc73a6fbfcb5ec3d3860d"
+          "label": "Arbitrum verified StakedUSDai v1.14 implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4637193852df85b7ac05dd052b187460d81551f6"
         },
         {
           "label": "USD.AI StakedUSDai source",

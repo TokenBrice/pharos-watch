@@ -180,6 +180,7 @@ function bridgeJoinForAsset(
   asset: V9AssetFactsV3,
   materialShareThreshold: number,
   commonModeShareThreshold: number,
+  unresolvedFullCeilingShareThreshold: number,
 ): V9EvidenceGapBridgeJoinV1 {
   const bridge = asset.economicControlReview.bridge;
   const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
@@ -188,6 +189,7 @@ function bridgeJoinForAsset(
     bridge.routes,
     materialShareThreshold,
     commonModeShareThreshold,
+    unresolvedFullCeilingShareThreshold,
   );
   return {
     diagnostics: bridge.diagnostics ?? null,
@@ -292,7 +294,10 @@ export function buildV9EvidenceGapQueue(args: {
     // One join evaluation per asset, shared by every bridge-scoped gap on it.
     let assetBridgeJoin: V9EvidenceGapBridgeJoinV1 | null = null;
     const bridgeJoin = (): V9EvidenceGapBridgeJoinV1 =>
-      (assetBridgeJoin ??= bridgeJoinForAsset(asset, materialShareThreshold, materiality.commonModeShareThreshold));
+      (assetBridgeJoin ??= bridgeJoinForAsset(
+        asset, materialShareThreshold, materiality.commonModeShareThreshold,
+        materiality.unresolvedDeploymentFullCeilingSharePct / 100,
+      ));
     return asset.gaps.map((gap) => {
       const reasonPolicy = resolveV9ReasonPolicy(args.policy, gap.reasonCode);
       const policyBindingIssues: V9EvidenceGapPolicyBindingIssue[] = [];

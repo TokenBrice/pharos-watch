@@ -99,6 +99,11 @@ const ROLE_TITLES: Record<OracleRiskRole, string> = {
 function resolveOracleRiskRole(coin: StablecoinMeta): OracleRiskRole {
   const profile = coin.oracleRisk;
   if (profile?.role) return profile.role;
+  if (profile?.paths) {
+    return profile.paths.some((path) => path.applicability?.disposition === "branches-required")
+      ? "collateral-pricing"
+      : "coin-price-feed";
+  }
   if (profile?.branchApplicability?.disposition === "branches-required") return "collateral-pricing";
   if (
     profile?.branchApplicability == null &&
@@ -195,9 +200,15 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
   const sources = dedupeStablecoinLinksByUrl([
     ...(profile.sources ?? []),
     ...(profile.branches ?? []).flatMap((branch) => branch.sources ?? []),
+    ...(profile.paths ?? []).flatMap((path) => path.applicability?.sources ?? []),
   ]);
 
-  const notApplicable = profile.branchApplicability?.disposition === "not-applicable";
+  const notApplicable = profile.paths
+    ? profile.paths.every((path) =>
+        path.pricingAuthority === "none" && path.applicability?.disposition === "not-applicable" &&
+        path.applicability.confidence === "verified",
+      )
+    : profile.branchApplicability?.disposition === "not-applicable";
   const role = resolveOracleRiskRole(coin);
 
   return {

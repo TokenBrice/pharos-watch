@@ -186,10 +186,16 @@ const PhysicalLotSchema = z.strictObject({
     maximumFineTroyOunces: PositiveNumberSchema.optional(),
   })).max(32),
 });
+const PhysicalThroughputSchema = z.strictObject({
+  tokens: PositiveNumberSchema,
+  periodSec: z.number().int().positive(),
+  evidence: z.strictObject({ url: HttpUrlSchema, quote: z.string().min(1) }),
+});
 export const PhysicalToUsdRouteSchema = z.strictObject({
   metal: z.enum(["XAU", "XAG"]),
   fineTroyOuncesPerToken: PositiveNumberSchema,
   lot: PhysicalLotSchema,
+  throughput: PhysicalThroughputSchema.optional(),
   vaultLocations: z.array(z.enum(["london", "zurich", "singapore", "hong-kong", "eu", "other"])).min(1),
   barClass: z.enum(["good-delivery", "kilobar", "small-bar-or-coin"]),
   saleLocation: z.enum(["in-vault", "delivered"]).default("in-vault"),
@@ -201,6 +207,7 @@ export const PhysicalToUsdRouteSchema = z.strictObject({
   bestEffortIssuerCashOut: z.strictObject({
     operatingProcess: z.string().min(1),
     lot: PhysicalLotSchema,
+    throughput: PhysicalThroughputSchema.optional(),
     fees: PhysicalRouteFeesSchema,
     settlementLegs: z.array(PhysicalSettlementLegSchema).min(1),
   }).optional(),

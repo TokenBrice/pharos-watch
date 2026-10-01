@@ -333,7 +333,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
-        "observedBlock": 452218719,
+        "observedBlock": 452345314,
         "sources": [
           {
             "label": "Solana mainnet RPC",
@@ -344,7 +344,7 @@
             "url": "https://faq.paytrie.com/en/help/what-is-the-cadc-address"
           }
         ],
-        "evidence": "At finalized Solana slot 452218719, getAccountInfo(jsonParsed) for CADC mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 returned mintAuthority and freezeAuthority 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg, replacing the previously observed authority. At the same slot, the authority account was System Program-owned, non-executable and zero-data, not an SPL multisig. This is a single-key direct-issuance and freeze controller."
+        "evidence": "At finalized Solana context slot 452345314 on 2026-10-01, getMultipleAccounts(jsonParsed) for CADC mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 returned mintAuthority and freezeAuthority 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg. In the same response, the authority account was System Program-owned, non-executable and zero-data, not an SPL multisig. This is an externally signable direct-issuance and freeze controller. Loon's general institutional multisignature claim does not identify an off-chain signing arrangement for this exact authority; no MPC, HSM or custody tier is inferred."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -25,19 +25,22 @@
         "evidence": "Issuer-operated mint/redeem: AUDC Pty Ltd creates and redeems AUDD supply 1:1 against custodied AUD reserves; no permissionless or user-collateralized mint route exists across its native multichain deployments."
       },
       {
-        "label": "AUDD Ethereum token owner",
+        "label": "AUDD Ethereum contract-native mint quorum",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "address": "0x59a50cbd643347296e2cf5573b40eda3099d0c54",
+        "authorityType": "multisig",
+        "address": "0x4cce605ed955295432958d8951d0b176c10720d5",
+        "threshold": 3,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "not-applicable",
         "deploymentRefs": [
           "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5"
         ],
         "chain": "ethereum",
         "observedAt": "2026-10-01",
-        "observedBlock": 26095936,
+        "observedBlock": 26098746,
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295029, owner() on the AUDD ERC1967 proxy (0x4cce...0c54, impl 0xc6114a25) returned 0x59a50cbd643347296e2cf5573b40eda3099d0c54. eth_getCode returns no bytecode → EOA.",
+        "evidence": "At Ethereum block 26098746, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. Signatory and threshold changes also require three approvals. Verified implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 requires an ACCEPTED request owned by the executor before minting. owner() remains EOA 0x59a50cbd643347296e2cf5573b40eda3099d0c54, but ownership alone does not bypass the three-signatory mint path. The separate governance-token swap() and proxy-upgrade paths are not covered by this quorum.",
         "sources": [
           {
             "label": "Ethereum Blockscout AUDD contract",
@@ -71,19 +74,22 @@
         ]
       },
       {
-        "label": "AUDD Base token owner",
+        "label": "AUDD Base contract-native mint quorum",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "address": "0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127",
+        "authorityType": "multisig",
+        "address": "0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+        "threshold": 3,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "not-applicable",
         "deploymentRefs": [
           "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
         ],
         "chain": "base",
         "observedAt": "2026-10-01",
-        "observedBlock": 52024948,
+        "observedBlock": 52041974,
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Base block 47200702, owner() on the AUDD Base proxy (0x449b...ae65, impl 0x3c9ead9a) returned 0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127. eth_getCode returns no bytecode → EOA.",
+        "evidence": "At Base block 52041974, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. Verified implementation 0x3c9ead9ac7732b76beac828ea4ab92d8b758383b requires an ACCEPTED request owned by the executor before minting. owner() remains 0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127, but ownership alone does not bypass the three-signatory mint path. The separate governance-token swap() path is outside this quorum; the EOA-controlled Base proxy-upgrade path remains independently adverse.",
         "sources": [
           {
             "label": "Base Blockscout AUDD contract",
@@ -201,23 +207,34 @@
         ]
       },
       {
-        "label": "AUDD XDC token owner (EOA)",
+        "label": "AUDD XDC contract-native mint quorum",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "address": "0x994a586f6df51acefb6a417f13ce659a3150e30d",
+        "authorityType": "multisig",
+        "address": "0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+        "threshold": 3,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "not-applicable",
         "deploymentRefs": [
           "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8"
         ],
         "chain": "xdc",
         "observedAt": "2026-10-01",
-        "observedBlock": 107873488,
+        "observedBlock": 107888340,
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "XDC rpc.xinfin.network: owner() on AUDD contract 0x9fe4e6321eeb7c4bc537570f015e4734b15002b8 returned 0x994a586f6df51acefb6a417f13ce659a3150e30d. eth_getCode returned 0x → EOA.",
+        "evidence": "At XDC block 107888340, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. EIP-1967 implementation 0xbf6db4baae78071777a208924290b77601895273 has byte-for-byte identical runtime to verified Ethereum StableCoin implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 at Ethereum block 26098826. Native request minting requires distinct signatory approvals and an ACCEPTED request owned by the executor; owner() 0x994a586f6df51acefb6a417f13ce659a3150e30d does not bypass this quorum. The separate governance-token swap() and proxy-upgrade paths are outside this quorum and remain unresolved for XDC.",
         "sources": [
           {
             "label": "XDC RPC",
             "url": "https://rpc.xinfin.network"
+          },
+          {
+            "label": "XDCScan exact-match StableCoin implementation",
+            "url": "https://xdcscan.com/address/0xbf6db4baae78071777a208924290b77601895273#code"
+          },
+          {
+            "label": "Verified identical Ethereum StableCoin source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6114a25f69c8115b1778c1c301efa9bd7154e72"
           }
         ]
       }

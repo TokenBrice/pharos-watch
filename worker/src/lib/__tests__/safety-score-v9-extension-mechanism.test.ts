@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { evaluateV9Backing } from "@shared/lib/safety-score-v9/archetypes";
+import { asset as backingAsset, exposure, knownStatus } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
@@ -158,6 +160,51 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(
       buildSafetyScoreV9MechanismReview(fixedInputStub({ alpha: [{}] }), ATTESTED_META, "synthetic-delta-neutral"),
     ).toBeNull();
+  });
+
+  it("prices the dated LVUSD census while current and withdraws the expired measurement", () => {
+    const overlay = MechanismReviewOverlaySchema.parse(
+      mechanismReviewOverlaysAsset.overlays.find((row) => row.assetId === "lvusd-leverup"),
+    );
+    const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00Z`) / 1_000;
+    const admittedClockSec = reviewedAtSec + 86_400;
+    const review = buildSafetyScoreV9MechanismReview(
+      fixedInputStub({}, admittedClockSec),
+      { id: overlay.assetId } as MechanismMeta,
+      overlay.archetype,
+    );
+    if (!review) throw new Error("expected a current LVUSD mechanism review");
+    expect(review.collateralizationMeasurement).toMatchObject({
+      measurementId: "lvusd-leverup:monad:88937390",
+      measuredAt: overlay.reviewedAt,
+      sourceUrl: "https://rpc.monad.xyz",
+      status: {
+        evidenceRefIds: ["extension-evidence:mechanism:collateralization:lvusd-leverup:monad:88937390"],
+      },
+    });
+    const input = {
+      ...backingAsset([exposure({
+        key: "usdc",
+        weight: 1,
+        policyRuleId: "mechanism.required",
+      })], [], knownStatus("evidence:reserves", "mechanism.required")),
+      asOfSec: admittedClockSec,
+    };
+    const baseline = evaluateV9Backing(input, {
+      ...review,
+      collateralizationMeasurement: null,
+    }, V9_CANDIDATE_POLICY_V1);
+    const measured = evaluateV9Backing(input, review, V9_CANDIDATE_POLICY_V1);
+    expect(measured.score).toBeCloseTo(baseline.score! * 0.638707, 8);
+    const expiredClockSec = reviewedAtSec
+      + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
+    expect(evaluateV9Backing({ ...input, asOfSec: expiredClockSec }, review, V9_CANDIDATE_POLICY_V1))
+      .toEqual(baseline);
+    expect(buildSafetyScoreV9MechanismReview(
+      fixedInputStub({}, expiredClockSec),
+      { id: overlay.assetId } as MechanismMeta,
+      overlay.archetype,
+    )).toBeNull();
   });
 
   it("expands a curated overlay with sourced metrics, component facts, and archetype guarding", () => {

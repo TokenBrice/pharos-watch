@@ -313,6 +313,7 @@ export const V9ScoringInputSchema = z
     pegApplicable: z.boolean(),
     evidenceLevel: V9EvidenceLevelSchema,
     trackRecordMonths: z.number().finite().nonnegative(),
+    unresolvedDeploymentShare: z.number().finite().min(0).max(1).optional(),
     activeDepegBps: z.number().finite().nonnegative().nullable(),
     parentRequired: z.boolean(),
     parentScore: ScoreSchema.nullable(),
@@ -1004,6 +1005,7 @@ const V9ExitPolicySchema = z
       .strict(),
     physicalToUsd: z.object({
       maxCostBps: z.number().finite().nonnegative(),
+      undocumentedThroughputLotsPerSettlementWindow: z.number().int().positive().max(1),
       termsMaxAgeSec: z.number().int().positive(),
       metalPriceMaxAgeSec: z.number().int().positive(),
       modelledSaleTypicalBusinessDays: z.number().finite().nonnegative(),
@@ -1101,6 +1103,7 @@ const V9ExitPolicySchema = z
       .object({
         "any-holder": z.number().finite().min(0).max(1),
         "verified-customer": z.number().finite().min(0).max(1),
+        "verified-customer-neutral": z.number().finite().min(0).max(1),
         "whitelisted-primary": z.number().finite().min(0).max(1),
         "pre-incident-holder": z.number().finite().min(0).max(1),
         "issuer-discretionary": z.number().finite().min(0).max(1),
@@ -1141,6 +1144,8 @@ const V9MaterialityPolicySchema = z
     serialRequiredPathsAlwaysBind: z.literal(true),
     basketExposureTreatment: z.literal("proportional"),
     deploymentMaterialSharePct: z.number().finite().min(0).max(100),
+    unresolvedDeploymentBlendStartSharePct: z.number().finite().min(0).max(100),
+    unresolvedDeploymentFullCeilingSharePct: z.number().finite().min(0).max(100),
     commonModeOracleMinBranches: z.number().int().positive(),
     commonControlMinAssets: z.number().int().positive(),
     commonControlMinPaths: z.number().int().positive(),
@@ -1161,6 +1166,13 @@ const V9MaterialityPolicySchema = z
   })
   .strict()
   .superRefine((materiality, ctx) => {
+    if (materiality.unresolvedDeploymentBlendStartSharePct >= materiality.unresolvedDeploymentFullCeilingSharePct) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["unresolvedDeploymentFullCeilingSharePct"],
+        message: "Unresolved-deployment full-ceiling share must exceed the blend-start share",
+      });
+    }
     if (materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold) {
       ctx.addIssue({
         code: "custom",

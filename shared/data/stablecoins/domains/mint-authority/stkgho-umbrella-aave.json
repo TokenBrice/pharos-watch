@@ -78,6 +78,45 @@
           }
         ],
         "evidence": "At Ethereum block 25295167: stkGHO EIP-1967 proxy admin slot = ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a. ProxyAdmin.owner() = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A, the Aave Governance V3 Level-1 Executor. Implementation upgrades require Aave on-chain governance; this is a bounded admin path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd400fc38ed4732893174325693a63c30ee3881a8",
+        "label": "Umbrella stkGHO owner and deficit-slashing controller",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098867,
+        "sources": [
+          {
+            "label": "Verified deployed stkGHO implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,abi"
+          },
+          {
+            "label": "Verified deployed Umbrella implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+          }
+        ],
+        "evidence": "At Ethereum block 26098867, stkGHO.owner() is Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8 and the GHO slashing configuration targets this stake token in the Ethereum Core Pool. Deployed stkGHO source restricts slash, pause and cooldown/unstake-window changes to its owner; Umbrella executes deficit-conditioned slashing and exposes role-gated pause and configuration methods. These powers impair local receipt principal or access; they do not mint durable GHO. Current role-holder identity and configuration-change delays are not established by the owner() read."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Umbrella slashing configuration and pause role holders (unresolved)",
+        "role": "governor",
+        "authorityType": "unknown",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "sources": [
+          {
+            "label": "Verified Umbrella role-gated configuration and emergency methods",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+          }
+        ],
+        "evidence": "UmbrellaConfiguration.updateSlashingConfigs/removeSlashingConfigs and UmbrellaStkManager.setCooldownStk/setUnstakeWindowStk require DEFAULT_ADMIN_ROLE; pauseStk/unpauseStk require PAUSE_GUARDIAN_ROLE. The reviewed owner and slashing-config reads do not enumerate the current role holders or establish an independent delay on configuration changes. Retain unknown authority rather than infer the active role census from initialization or proxy-admin ownership."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -92,6 +131,10 @@
         {
           "label": "stkGHO token",
           "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+        },
+        {
+          "label": "Verified deployed Umbrella slashing and emergency-control source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
         }
       ],
       "evidence": "At Ethereum block 25295167: asset() = GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f confirmed; proxy impl = 0x75e8ac0c063b6966e2a9954adedf39bde9370197; ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a owned by Aave Governance V3 Level-1 Executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. Upgrade admin surface confirmed and bounded by on-chain governance. Durable mint authority inherits from reviewed parent GHO. stkGHO shares are minted only against deposited GHO, and changing the wrapper's mint economics requires the Aave Governance executor; the encoding-derived unbounded value is therefore superseded by raiseable economic semantics. 2026-07-21 gap-fill pass: the mintAuthority.upgradeability object was added, structuring this same already-verified EIP-1967 proxy/ProxyAdmin/executor evidence into the record's canChangeMintLogic/controlRef fields; no new on-chain read was required. Economic-posture fields reviewed 2026-08-15: deposit-gated shares can be altered only through Aave governance, while local reconciliation is not applicable and no local attestor or prudential supervisor is evidenced.",

@@ -2,9 +2,9 @@
   "id": "susds-sky",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS and is natively issued only by the Ethereum vault. Vault share minting is backed by deposited USDS and inherits reviewed USDS_JOIN plus Sky governance authority for base supply; Base, Optimism, and Arbitrum bridge representation administration is scored separately under bridgeRouteRisk.",
+    "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS and is natively issued only by the Ethereum vault. Ordinary share minting requires deposited USDS, but governance-set savings accrual creates durable USDS through authenticated Vat.suck and USDS_JOIN.exit without a numeric mint ceiling or posted-collateral test. The unbounded annotation describes this verified funding path, not a reported compromise. Sky governance retains a two-day delayed upgrade and rate-setting path; Base, Optimism, and Arbitrum bridge representation administration is scored separately under bridgeRouteRisk.",
     "inheritedFrom": "usds-sky",
     "upgradeability": {
       "model": "uups",

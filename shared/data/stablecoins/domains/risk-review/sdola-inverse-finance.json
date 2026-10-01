@@ -40,7 +40,7 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. Verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum, and Berachain expose no local holder blacklist, freeze, pause, seizure, or transfer-stop method. sDOLA is nevertheless a tracked 100% DOLA savings-passthrough variant, and its parent DOLA has a confirmed direct holder-control posture. Variant inheritance therefore resolves sDOLA as Upstream; the prior explicit false override incorrectly suppressed the parent relationship.",
+    "evidence": "Re-reviewed 2026-08-08. Verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum, and Berachain expose no local holder blacklist, freeze, pause, seizure, or transfer-stop method. sDOLA is nevertheless a tracked 100% DOLA savings-passthrough variant, and its parent DOLA has a confirmed direct holder-control posture. Variant inheritance therefore resolves sDOLA as Upstream; the prior explicit false override incorrectly suppressed the parent relationship. Rechecked parent identity at Ethereum block 26098749 on 2026-10-01: canonical asset() returns DOLA 0x865377367054516e17014ccded1e7d814edc9ce4. At BSC block 125135317, the tracked parent DOLA representation permits burn(address(1),0) from its enabled minter 0x58892974758a4013377a45fad698d2ff1f08d98e and rejects an unrelated caller. The inherited verdict is retained on current parent-control evidence; this does not assert local holder controls on sDOLA.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
@@ -153,7 +153,7 @@
         "controllerChain": "base",
         "controllerAddress": "0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. At Base block 52024171, that pool returned no supported chains. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. This deployment is not a live bridge destination.",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. Rechecked Base block 52041917 on 2026-10-01: the pool returns no supported chains, and mint(address,uint256) of 1e18 from the pool reverts msg.sender not minter. Both token and pool owner() return governance proxy 0x1c064265e053d23d120c518fdbb542e6537f82d1; setMinter(address,bool) from that owner succeeds in eth_call. The proxy's allowedSender() is Ethereum GovernanceSender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3 and allowedSourceChain() is 5009297550715157269. The token pool has no separate rate-limit admin. Current CCIP transfer and pool mint permissions are disabled, but owner re-authorization remains; no zero-risk or zero-supply conclusion is implied.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -186,7 +186,7 @@
         "controllerChain": "optimism",
         "controllerAddress": "0x8404024d8f74ad2d20e82c184816b64d4184a018",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. At Optimism block 157619456, that pool returned no supported chains. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. This deployment is not a live bridge destination.",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. Rechecked Optimism block 157637202 on 2026-10-01: the pool returns no supported chains, and mint(address,uint256) of 1e18 from the pool reverts msg.sender not minter. Both token and pool owner() return governance proxy 0xaf956837af704d825c1fcbe2651d5c3c37ad5289; setMinter(address,bool) from that owner succeeds in eth_call. The proxy's allowedSender() is Ethereum GovernanceSender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3 and allowedSourceChain() is 5009297550715157269. The token pool has no separate rate-limit admin. Current CCIP transfer and pool mint permissions are disabled, but owner re-authorization remains; no zero-risk or zero-supply conclusion is implied.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -219,7 +219,7 @@
         "controllerChain": "arbitrum",
         "controllerAddress": "0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. At Arbitrum block 510584562, that pool returned no supported chains. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. This deployment is not a live bridge destination.",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. Rechecked Arbitrum block 510719353 on 2026-10-01: the pool returns no supported chains, and mint(address,uint256) of 1e18 from the pool reverts msg.sender not minter. Both token and pool owner() return governance proxy 0x607bcd974bb69c78ecdbf0b68748b791bba24d94; setMinter(address,bool) from that owner succeeds in eth_call. The proxy's allowedSender() is Ethereum GovernanceSender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3 and allowedSourceChain() is 5009297550715157269. The token pool has no separate rate-limit admin. Current CCIP transfer and pool mint permissions are disabled, but owner re-authorization remains; no zero-risk or zero-supply conclusion is implied.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -252,7 +252,7 @@
         "controllerChain": "berachain",
         "controllerAddress": "0x8bbd036d018657e454f679e7c4726f7a8ece2773",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. At Berachain block 26911486, that pool returned no supported chains. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. This deployment is not a live bridge destination.",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. Rechecked Berachain block 26929232 on 2026-10-01: the pool returns no supported chains, and mint(address,uint256) of 1e18 from the pool reverts msg.sender not minter. Both token and pool owner() return governance proxy 0x1992af61fbf8ee38741bcc57d636caa22a1a7702; setMinter(address,bool) from that owner succeeds in eth_call. The proxy's allowedSender() is Ethereum GovernanceSender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3 and allowedSourceChain() is 5009297550715157269. The token pool has no separate rate-limit admin. Current CCIP transfer and pool mint permissions are disabled, but owner re-authorization remains; no zero-risk or zero-supply conclusion is implied.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

@@ -90,8 +90,12 @@
       {
         "label": "KMS Labs terms, segregation and custody clause",
         "url": "https://kmslabs.money/kms-labs-tcs/"
+      },
+      {
+        "label": "Kinesis native-KAU reserve wallet signer and threshold observation, October 1, 2026",
+        "url": "https://kau-mainnet.kinesisgroup.io/accounts/GAJ6XIVDKRHVMYF5ZUDDJCX755F25JXGIAWX4JO2OUHC4B2XHVTA6ERC"
       }
     ],
-    "uncertainty": "KMS Labs administers the segregated native-KAU reserve wallet linked on its website. Its terms expressly deny ERC-20 holders legal, equitable, or beneficial title to reserves and a trust or fiduciary relationship. ABX, Brinks, and Loomis describe underlying native-KAU bullion custody only. Independent ERC-20 reserve verification, statutory bankruptcy remoteness, and a rehypothecation prohibition are not established."
+    "uncertainty": "KMS Labs administers the segregated native-KAU reserve wallet linked on its website. The October 1, 2026 Kinesis account response lists four ed25519 signers of weight 3, a master-key weight of 0, and medium/high thresholds of 5; spending therefore requires at least two listed signers under the reported threshold configuration. Signer identity, independence, and MPC/HSM custody are not disclosed. Its terms expressly deny ERC-20 holders legal, equitable, or beneficial title to reserves and a trust or fiduciary relationship. ABX, Brinks, and Loomis describe underlying native-KAU bullion custody only. Independent ERC-20 reserve verification, statutory bankruptcy remoteness, and a rehypothecation prohibition are not established."
   }
 }

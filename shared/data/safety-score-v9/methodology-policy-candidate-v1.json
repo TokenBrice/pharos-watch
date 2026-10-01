@@ -284,6 +284,8 @@
       "serialRequiredPathsAlwaysBind": true,
       "basketExposureTreatment": "proportional",
       "deploymentMaterialSharePct": 10,
+      "unresolvedDeploymentBlendStartSharePct": 5,
+      "unresolvedDeploymentFullCeilingSharePct": 15,
       "commonModeOracleMinBranches": 2,
       "commonControlMinAssets": 2,
       "commonControlMinPaths": 2,
@@ -683,6 +685,7 @@
       },
       "physicalToUsd": {
         "maxCostBps": 500,
+        "undocumentedThroughputLotsPerSettlementWindow": 1,
         "termsMaxAgeSec": 7776000,
         "metalPriceMaxAgeSec": 86400,
         "modelledSaleTypicalBusinessDays": 2,
@@ -896,6 +899,7 @@
       "holderEligibilityMultipliers": {
         "any-holder": 1,
         "verified-customer": 0.9,
+        "verified-customer-neutral": 1,
         "whitelisted-primary": 0.85,
         "pre-incident-holder": 0.85,
         "issuer-discretionary": 0.6,

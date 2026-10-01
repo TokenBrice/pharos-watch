@@ -287,15 +287,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 116349979,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125134982,
         "sources": [
           {
             "label": "BNB USD1 token explorer record",
             "url": "https://bscscan.com/address/0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d#code"
           }
         ],
-        "evidence": "At BNB block 116349979, hasRole(MINTER_ROLE, 0x2ce40f5c4ca78337f281d85245a4977d4ab5eef1) returned true on the independent BNB TokenGovernor controller. This address is a native direct-minter role holder; the separate BNB CCIP pool holds only BRIDGE_MINTER_OR_BURNER_ROLE."
+        "evidence": "At BNB block 125134982, hasRole(MINTER_ROLE, 0x2ce40f5c4ca78337f281d85245a4977d4ab5eef1) returned true on TokenGovernor 0xee9b1a09aedaced9dcda74964ea447feb93861c2 and eth_getCode on this minter returned 0x. This confirms a current native EOA minter, not its off-chain signing architecture. WLFI identifies BitGo as the exclusive minting operator, but the reviewed USD1 product, minting, infrastructure and BitGo security materials do not map this address to an MPC or HSM custody attestation."
       },
       {
         "chain": "bsc",
@@ -309,15 +309,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 116349979,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125134982,
         "sources": [
           {
             "label": "BNB USD1 token explorer record",
             "url": "https://bscscan.com/address/0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d#code"
           }
         ],
-        "evidence": "At BNB block 116349979, hasRole(MINTER_ROLE, 0x8217fb24d076d71864eb69684de2024c3c111151) returned true on the independent BNB TokenGovernor controller. This address is a native direct-minter role holder; the separate BNB CCIP pool holds only BRIDGE_MINTER_OR_BURNER_ROLE."
+        "evidence": "At BNB block 125134982, hasRole(MINTER_ROLE, 0x8217fb24d076d71864eb69684de2024c3c111151) returned true on TokenGovernor 0xee9b1a09aedaced9dcda74964ea447feb93861c2 and eth_getCode on this minter returned 0x. This confirms a current native EOA minter, not its off-chain signing architecture. WLFI identifies BitGo as the exclusive minting operator, but the reviewed USD1 product, minting, infrastructure and BitGo security materials do not map this address to an MPC or HSM custody attestation."
       },
       {
         "chain": "bsc",

@@ -22,9 +22,10 @@
         "0x6d8b8f7ebd9860e80694665f05033df06ddc3acc"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 86400,
       "controlRef": "PAXG outer token proxy administrator contract",
       "observedAt": "2026-10-01",
-      "observedBlock": 26095800,
+      "observedBlock": 26098748,
       "sources": [
         {
           "label": "PAXG legacy proxy source",
@@ -44,7 +45,7 @@
         }
       ]
     },
-    "summary": "PAXG's Ethereum token retains PAXG V2 and the same UUPS SupplyControl implementation. Two native controller EOAs retain 177,000-PAXG capacity and 50-PAXG-per-second refill. The immediate controller-manager EOA still adds controllers and raises limits, but no longer holds token or SupplyControl DEFAULT_ADMIN. Those roles now belong to contract 0x6d8b8f7ebd9860e80694665f05033df06ddc3acc; the outer proxy admin is contract 0x4a515afe11581fd87ba90d6459dc93db6591f5e3. Both administrator contracts return getMinDelay() = 86,400 seconds, but enforcement and bypass paths have not been verified, so no protective delay is authored. Solana retains its Token-2022 1-of-4 multisig with Paxos admin, two native controller PDAs, and the LayerZero OFT store. Bridge controls remain separately assessed under Bridge Risk.",
+    "summary": "PAXG's Ethereum token retains PAXG V2 and the same UUPS SupplyControl implementation. Two native controller EOAs retain 177,000-PAXG capacity and 50-PAXG-per-second refill. The immediate controller-manager EOA still adds controllers and raises limits, but no longer holds token or SupplyControl DEFAULT_ADMIN. Those roles now belong to TimelockController 0x6d8b8f7ebd9860e80694665f05033df06ddc3acc; the outer proxy admin is separate TimelockController 0x4a515afe11581fd87ba90d6459dc93db6591f5e3. Verified deployed source, complete role-event histories, and pinned state establish a 24-hour delay on both upgrade/admin paths. Each timelock is self-administered, with sole proposer, executor, and canceller EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. The delay does not constrain that EOA's separate immediate controller-manager role. Solana retains its Token-2022 1-of-4 multisig with Paxos admin, two native controller PDAs, and the LayerZero OFT store. Bridge controls remain separately assessed under Bridge Risk.",
     "controls": [
       {
         "chain": "ethereum",
@@ -119,15 +120,16 @@
         "authorityType": "contract",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
-        "observedBlock": 26095800,
+        "observedBlock": 26098748,
         "failureDomainKeys": [
           "ethereum:0x4a515afe11581fd87ba90d6459dc93db6591f5e3",
           "ethereum:0x6d8b8f7ebd9860e80694665f05033df06ddc3acc"
         ],
         "bypassSurfaces": [
-          "Separate token and SupplyControl DEFAULT_ADMIN contract 0x6d8b8f7ebd9860e80694665f05033df06ddc3acc controls the native supply-path upgrade or redirection; its authorization graph remains unverified."
+          "Separate token and SupplyControl DEFAULT_ADMIN TimelockController 0x6d8b8f7ebd9860e80694665f05033df06ddc3acc enforces its own 24-hour delay. Controller-manager EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b retains immediate native controller-membership and rate-limit changes; the upgrade delay does not bound issuance."
         ],
         "sources": [
           {
@@ -137,9 +139,13 @@
           {
             "label": "PAXG V2 and SupplyControl source",
             "url": "https://github.com/paxosglobal/paxos-token-contracts/tree/ac239fd78bb4330e94c78e306bc1539db9544e16"
+          },
+          {
+            "label": "Verified PAXG outer-admin TimelockController source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4a515afe11581fd87ba90d6459dc93db6591f5e3"
           }
         ],
-        "evidence": "Historical block 25526129 used proxy-admin EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c. At block 26095800, the source-defined legacy admin slot returns this deployed contract, while implementation remains 0x7da4c5d9eca180a03765a6d27196f2a0380fa543. getMinDelay() returns 86400; no protective delay is assigned without verified authorization and bypass semantics."
+        "evidence": "At Ethereum block 26098748, the token legacy admin slot identifies this TimelockController, getMinDelay() is 86400, and runtime bytecode exactly matches Blockscout's verified OpenZeppelin v5.5 TimelockController source. Full RoleGranted/RoleRevoked logs from deployment block 25755561 through 26098748 contain only four constructor grants: self DEFAULT_ADMIN and EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b as proposer, executor, and canceller. Current hasRole reads confirm these memberships, no open executor, and no external admin. Verified execute/executeBatch require a ready scheduled operation; updateDelay is self-call-only. Immediate controller-manager authority is retained separately."
       },
       {
         "chain": "ethereum",
@@ -152,9 +158,10 @@
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
-        "observedBlock": 26095800,
+        "observedBlock": 26098748,
         "failureDomainKeys": [
           "ethereum:0x6d8b8f7ebd9860e80694665f05033df06ddc3acc"
         ],
@@ -166,9 +173,13 @@
           {
             "label": "Paxos SupplyControl source",
             "url": "https://github.com/paxosglobal/paxos-token-contracts/blob/ac239fd78bb4330e94c78e306bc1539db9544e16/contracts/SupplyControl.sol"
+          },
+          {
+            "label": "Verified PAXG default-admin TimelockController source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6d8b8f7ebd9860e80694665f05033df06ddc3acc"
           }
         ],
-        "evidence": "At block 26095800, token and SupplyControl defaultAdmin() and hasRole(DEFAULT_ADMIN_ROLE, this address) identify this deployed contract. It does not hold SUPPLY_CONTROLLER_MANAGER_ROLE. getMinDelay() returns 86400; getOwners()/getThreshold() revert, and EIP-1967 implementation/admin slots are zero. The proposer, executor, cancellation, and bypass graph is unknown; the getter is not promoted into a scored protective delay."
+        "evidence": "At Ethereum block 26098748, token and SupplyControl defaultAdmin()/owner() identify this TimelockController, getMinDelay() is 86400, and runtime bytecode exactly matches the verified OpenZeppelin v5.5 source. Full RoleGranted/RoleRevoked logs from deployment block 25755561 through 26098748 contain only four constructor grants: self DEFAULT_ADMIN and EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b as proposer, executor, and canceller. Current hasRole reads confirm the memberships, no open executor, and no external admin. execute/executeBatch enforce scheduled readiness and updateDelay requires a self-call. SupplyControl _authorizeUpgrade is DEFAULT_ADMIN-only. The EOA's separately verified SUPPLY_CONTROLLER_MANAGER_ROLE remains immediately exercisable and is not protected by this delay."
       },
       {
         "chain": "solana",

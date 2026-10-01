@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
     "confidence": "verified",
     "sources": [
       {
@@ -39,12 +39,17 @@
       {
         "label": "Spiko UKTBL share-class totals API",
         "url": "https://public-api.spiko.io/share-classes/UKTBL/totals"
+      },
+      {
+        "label": "AMF GECO: Spiko SICAV semiannual statement at June 30, 2026",
+        "url": "https://geco.amf-france.org/back-office/document/download/429960"
       }
     ],
-    "rationale": "The producer emits one 100% 'UK Treasury Bills and cash' identity. The KID and prospectus identify the referenced regulated fund, daily dealing, an explicit 180-day maximum residual maturity for eligible instruments, and a UK-government-instrument mandate. The prior 95/5 Treasury-bill and cash split was not a reported live allocation, so this review classifies the exact aggregate producer identity at the fund-share level.",
-    "compositionBasis": "Exact spiko-api single-asset identity cross-checked against Spiko's current product page, prospectus, KID, and share-class totals API",
+    "rationale": "The producer emits one 100% 'UK Treasury Bills and cash' identity. The KID and prospectus identify the referenced regulated fund, daily dealing, an explicit 180-day maximum residual maturity for eligible instruments, and a UK-government-instrument mandate. The prior 95/5 Treasury-bill and cash split was not a reported live allocation, so this review classifies the exact aggregate producer identity at the fund-share level. The AMF-hosted June 30, 2026 semiannual statement identifies the GBP share with 15300167.12344 outstanding shares and NAV GBP 1.022602. The sub-fund reports GBP 14365078.38 in Treasury securities and GBP 1334891.77 in bank balances; these dated amounts remain inside the single fund-share identity rather than becoming invented current producer weights.",
+    "compositionBasis": "100% native UKTBL GBP fund/share identity; June 30, 2026 AMF-hosted share statement and sub-fund holdings, not a current look-through allocation",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "No exposure outside the emitted aggregate fund identity is indicated. The producer does not publish separate live weights for Treasury bills and operational settlement cash, so no look-through split is authored.",
+    "knownUnknownExposure": "The June 30, 2026 report publishes Treasury-security and bank-balance amounts, while the current producer emits only the aggregate fund identity. Post-June portfolio weights and named bank-account allocations remain unknown; no live look-through split is authored.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

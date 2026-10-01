@@ -877,6 +877,17 @@ const V9OracleControlReviewV2Schema = z
     tier: z.enum(ORACLE_RISK_TIER_VALUES).nullable(),
     liquidationBranchesApplicable: z.boolean().optional(),
     branches: canonicalArrayBy(V9OracleBranchReviewV2Schema, (branch) => branch.branch),
+    paths: canonicalArrayBy(
+      z.object({
+        id: CanonicalTextSchema,
+        chain: CanonicalChainIdSchema,
+        address: CanonicalTextSchema,
+        branchId: CanonicalTextSchema.nullable(),
+        applicability: V9FactStatusV2Schema.shape.applicability,
+        observationState: V9ObservationStateSchema,
+      }).strict(),
+      (path) => path.id,
+    ).optional(),
     // Worst severity band contributed by weak market branches whose measured
     // debt share is below the deployment-materiality threshold. These branches
     // do not drive the (material-only) top-level tier; the control lane surfaces
@@ -1709,6 +1720,9 @@ function validateAssetReferences(
     captureRefs("wrapper-local:not-wrapper", wrapperLocalFacts.evidenceRefIds, []);
   } else if (wrapperLocalFacts?.applicability === "wrapper") {
     captureRefs("wrapper-local:form", wrapperLocalFacts.formEvidenceRefIds, []);
+    if (wrapperLocalFacts.parentBackingInheritance) {
+      captureRefs("wrapper-local:parentBackingInheritance", wrapperLocalFacts.parentBackingInheritance.evidenceRefIds, []);
+    }
     for (const [factKey, fact] of Object.entries(wrapperLocalFacts.facts) as Array<
       [keyof V9ApplicableWrapperLocalFacts["facts"], V9ApplicableWrapperLocalFacts["facts"][keyof V9ApplicableWrapperLocalFacts["facts"]]]
     >) {

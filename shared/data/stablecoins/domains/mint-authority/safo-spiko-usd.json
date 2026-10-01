@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "SAFO's Ethereum token and Permission Manager are UUPS-upgradeable, with the PM ADMIN group controlled by a 3-of-6 Gnosis Safe at 0x4eaa52b6280593a8820c45ce38f974290ae52cea. Pinned block 26095796 confirms that token mint permission accepts ADMIN or group 2. The removed historical EOA 0x60a98f4b7d6e3f0b71d9ad3dd74b6a416f00c84a is not the complete mint-group census: six contract addresses currently hold group 2, including the verified native Minter proxy 0x5ed5a75eeed1934ea060186e35187eaa73331366. Two group-10 EOAs can initiate native minting through this proxy within a shared 5000000-share daily limit; six group-9 EOAs and a 1-of-4 Safe can approve pending mints without that daily-limit check. ADMIN can raise the limit or upgrade the token, PM and Minter, so these operational controls do not bound ultimate mint capacity. Five additional group-2 contracts have verified mint permission but unresolved implementation/topology attribution and are recorded as curation proposals rather than assumed safe or bridge-only.",
+    "summary": "SAFO's Ethereum token and Permission Manager are UUPS-upgradeable, with the PM ADMIN group controlled by a 3-of-6 Gnosis Safe at 0x4eaa52b6280593a8820c45ce38f974290ae52cea. Pinned block 26095796 confirms that token mint permission accepts ADMIN or group 2. The removed historical EOA 0x60a98f4b7d6e3f0b71d9ad3dd74b6a416f00c84a is not the complete mint-group census: six contract addresses currently hold group 2, including the verified native Minter proxy 0x5ed5a75eeed1934ea060186e35187eaa73331366. Two group-10 EOAs can initiate native minting through this proxy within a shared 5000000-share daily limit; six group-9 EOAs and a 1-of-4 Safe can approve pending mints without that daily-limit check. ADMIN can raise the limit or upgrade the token, PM and Minter, so these operational controls do not bound ultimate mint capacity. Five additional group-2 contracts return BurnWithFromMintTokenPool 1.6.1 and identify other configured fund tokens, not SAFO, at Ethereum block 26098894. Their broad PermissionManager mint grant is retained as observed; configured-token-only execution still requires deployed-source equivalence before they are removed from the unresolved native-path candidates. Solana native issuance is now traced at finalized slot 452345677: the configured admin vault is a 1-of-1 Squads path, and its sole member also retains the minter program upgrade authority. These are verified single-signature controls; daily operational limits are bypassable through admin approval and replaceable by a program upgrade.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -315,6 +315,136 @@
         "observedAt": "2026-10-01",
         "observedBlock": 26095796,
         "evidence": "Pinned PM getGroups includes group 9; canCall(address, native Minter, approveMint) returned true. The corresponding Minter requirement is ADMIN or group 9. setDailyLimit requires ADMIN; this address has no ADMIN group. eth_getCode is empty; no off-chain key-custody or signing-provider claim is made."
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452345677,
+        "sources": [
+          {
+            "label": "Spiko Solana mainnet minter and authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko Solana minter audit, June 12, 2026",
+            "url": "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf"
+          },
+          {
+            "label": "Finalized Solana account observation",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "SAFO Solana MinterConfig native mint authority",
+        "address": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The issuer minter has per-mint daily operational limits. Above-limit requests are pending; admin approve_mint executes without the daily-limit check. No immutable monetary cap is established.",
+        "evidence": "Finalized slot 452345677: the token mintAuthority is BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ, owned by issuer minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. Decoded MinterConfig admin is 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd, bump 255. The source and audit identify native issuance and the above-limit approval path."
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452345677,
+        "sources": [
+          {
+            "label": "Spiko Solana mainnet minter and authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko Solana minter audit, June 12, 2026",
+            "url": "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf"
+          },
+          {
+            "label": "Finalized Solana account observation",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "SAFO Solana MinterConfig admin Squads vault",
+        "address": "2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "solana:key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"
+        ],
+        "evidence": "Finalized slot 452345677: issuer-published parent Squads v4 account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A has threshold 1, one member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h with permission mask 7 (initiate, vote, execute), zero time_lock and zero config_authority. This is a one-signature governance path, not an independent quorum. The configured vault can approve pending mints without a daily-limit check, change limits and nominate admin/initiator authority."
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452345677,
+        "sources": [
+          {
+            "label": "Spiko Solana mainnet minter and authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko Solana minter audit, June 12, 2026",
+            "url": "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf"
+          },
+          {
+            "label": "Finalized Solana account observation",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "SAFO Solana operational mint initiator",
+        "address": "5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Can initiate native mints within the configured daily limit; above-limit requests require the separately authorized admin approval. A current numerical daily limit is not asserted.",
+        "evidence": "Finalized slot 452345677: this exact operational key is the decoded MinterConfig mint_initiator and matches the issuer mainnet address table. initiate_mint requires its signature. Off-chain MPC/HSM custody for this address is not documented in the fetched issuer source or audit."
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452345677,
+        "sources": [
+          {
+            "label": "Spiko Solana mainnet minter and authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko Solana minter audit, June 12, 2026",
+            "url": "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf"
+          },
+          {
+            "label": "Finalized Solana account observation",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "SAFO Solana minter program upgrade authority",
+        "address": "GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "solana:key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"
+        ],
+        "evidence": "Finalized slot 452345677: BPF upgradeable-loader program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw points to ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; parsed ProgramData authority is this key, last deployed at slot 443429864. It can replace the native mint program and is also the sole admin-Squads member. The audit confirms that program replacement can override all on-chain mint rules. No protective custody claim is inferred."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -325,6 +455,208 @@
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0x7a493c05479f6132cb895c72c49439139b595eb4",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "solana:5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        },
+        {
+          "controlRef": "solana:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h",
+          "question": "Which custody scheme (MPC, HSM or other) and signing-policy approval boundary secure this exact privileged key? Spiko identifies Dfns for multi-chain relayer signing but does not map this address to a key-security model. No protective custody attestation is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        }
+      ],
       "sources": [
         {
           "label": "Spiko smart contracts (tech blog)",

@@ -29,13 +29,17 @@
       {
         "label": "Nereus pinned Avalanche deployment manifest",
         "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/deployments/avalanche"
+      },
+      {
+        "label": "Nereus live NXUSD market application",
+        "url": "https://nxusd.nereus.finance/"
       }
     ],
     "rationale": "Write-time re-open 2026-08-08: Nereus still describes NXUSD as an overcollateralized borrow against crypto collateral in its Avalanche and Polygon lending markets. docs.nereus.finance now redirects to the marketing landing page, and neither the landing page nor the pinned GitHub deployment manifest publishes a reconciled, dated per-market collateral inventory or weights. The envelope therefore remains one aggregate classified basket rather than invented weights. The curated-validated adapter probes live token supply and carries this reviewed composition into runtime scoring.",
     "compositionBasis": "Nereus protocol documentation; per-market collateral weights are undisclosed",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "At Avalanche block 96513135, all 17 authored Cauldrons exposed readable totalCollateralShare, collateral and BentoBox addresses with nonzero totalBorrow. These raw shares and debt observations do not establish a reconciled, USD-valued whole-system collateral composition covering both native deployments, share-to-asset conversions and Polygon markets. No DAI or other tracked dependency weight is inferred from one market or a protocol TVL figure.",
+    "knownUnknownExposure": "Round-2 browser recovery on 2026-10-01 found five additional debt-bearing Avalanche markets beyond the historical 17-Cauldron manifest: aAvaUSDT (0x51a8ff60fbaf277df02eeadc011f5c26dbae1991), aAvaUSDC (0x2ecbcb8757f43676b5d280e706b1a2c0d1975b6a), aAvaDAI (0x2d2005feeabaf7dc54ebd9b33115a2fb6e2a80da), qiUSDCn (0x9fb5a0bbee451643504524ddbfce8a1e09783d5b) and NRS (0x6d0cc0e3e2c63f84b55d86b4a1312805c3b99a2c). At Avalanche block 96542834, each exposed nonzero totalBorrow and totalCollateralShare, its application-matched collateral address and BentoBox 0x0b1f9c2211f77ec3fa2719671c5646cf6e59b775. The live application also lists Polygon and Base networks. Raw shares and application TVL do not establish a reconciled, USD-valued whole-system composition: complete market/deployment coverage, receipt-token look-through, share conversion and a priced denominator remain required. No dependency weight is inferred.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

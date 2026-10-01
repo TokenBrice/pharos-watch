@@ -55,7 +55,7 @@ describe("Safety Score v9 methodology policy", () => {
     // Rotate only with reviewed semantic changes; release history lives in
     // shared/data/methodology-changelogs/safety-score/.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "224c5920ca3253d7346ea73524676dc64a7c76337df6a66da487870cfad6ef5d",
+      "bfbf3e30d2d7ce3ad62a128b5a67f4254e815e7d0b442675da2346f2d7738097",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,

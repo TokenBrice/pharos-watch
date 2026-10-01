@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "USDU cannot be minted by users directly; only DAO-approved/whitelisted adapter contracts (Curve, TermMax, Morpho) can mint or burn USDU, and the set of approved adapters is curated under USDU Finance DAO risk governance.",
+    "summary": "At Ethereum block 26098754, three modules can mint USDU: the curator-operated Morpho USDU adapter and two permissionless SwapBridgeMorphoV1 modules accepting USDC or USDT into ERC-4626 vaults. The token itself remains module-gated; users can invoke the approved swap modules. Historical expired modules retain burn rights, and the uncapped Morpho/curator issuance path remains adverse.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -30,10 +30,10 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 26095942 on 2026-10-01, checkValidModule(address) returned true for 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45 and false for the four other previously recorded adapters: 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, and 0x397fb4a34757ac180c0841b26131f25040e2e50b. This is a re-check of the five historical candidates, not an exhaustive current module enumeration. The 2026-07-20 historical review found nine submitted modules and five then-valid modules; its 2027 expiry descriptions do not establish present validity.",
+        "evidence": "Round-2 enumeration of all 19 indexed SetModule events returned 11 distinct historical modules with no next page. At Ethereum block 26098754, checkValidModule returned true only for 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45 and the newly reviewed USDC/USDT swap modules 0x6b6893d82edbc8d6769ba3c407102d33da2b623f and 0xd9141f634ef9e871a5fe4f64195747db77a13f3e; the other eight candidates returned false. MorphoAdapterV1_2.deposit(amount) is onlyCurator, mints USDU and deposits that USDU into its own-denominated Morpho vault without a fixed mint cap. The historical failure-domain keys are retained because expiration removes mint validity but does not remove burnModule rights.",
         "address": "0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
         "observedAt": "2026-10-01",
-        "observedBlock": 26095942,
+        "observedBlock": 26098754,
         "failureDomainKeys": [
           "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
           "ethereum:0x8f36bbee57acb4857cb97898020b529969fdf221",
@@ -49,10 +49,56 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "canRaiseCap": "unknown",
-        "evidence": "curator() on the USDU token returns this ERC1967Proxy (the curator DAO, implementation behind the proxy), read 2026-07-20. It is the sole submitter of all historical SetModule events and governs adapter approval and risk parameters.",
+        "evidence": "At Ethereum block 26098754, curator() returned 0x9fe66037c44236c87d9ac8345f489b4413fdff06, guardian() was zero and timelock() was 604800 seconds. The curator still governs module approval. Indexed SetModule events include permissionless finalizers other than the curator, so the earlier sole-submitter description does not describe the complete current event history.",
         "address": "0x9fe66037c44236c87d9ac8345f489b4413fdff06",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573280
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098754
+      },
+      {
+        "label": "USDU USDC SwapBridgeMorphoV1 module",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x6b6893d82edbc8d6769ba3c407102d33da2b623f",
+        "canRaiseCap": false,
+        "capDescription": "Immutable 100000-USDU mintCap bounds principal swap issuance; fee and surplus-reconciliation minting are not a hard total-liability cap. Permissionless swapIn accepts USDC and deposits into ERC-4626 vault 0xbeef088055857739c12cd3765f20b7679def0f51; swapOut burns USDU and withdraws USDC. Both fees are 1000 ppm.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098754,
+        "failureDomainKeys": [
+          "ethereum:0x6b6893d82edbc8d6769ba3c407102d33da2b623f",
+          "ethereum:0xbeef088055857739c12cd3765f20b7679def0f51"
+        ],
+        "sources": [
+          {
+            "label": "Verified USDC swap module and ModuleRevenueV1 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b6893d82edbc8d6769ba3c407102d33da2b623f"
+          }
+        ],
+        "evidence": "At Ethereum block 26098754, stable() returned the tracked USDU token, coin() returned canonical USDC, vault() returned 0xbeef088055857739c12cd3765f20b7679def0f51 and checkValidModule was true. mintCap() returned 100000e18, totalAssets() returned 2470328000000000000 and totalMinted() returned 2468706000000000000. Source uses _mintWithCap for principal, uncapped _mint for fees and surplus, and atomic vault.withdraw for swapOut."
+      },
+      {
+        "label": "USDU USDT SwapBridgeMorphoV1 module",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xd9141f634ef9e871a5fe4f64195747db77a13f3e",
+        "canRaiseCap": false,
+        "capDescription": "Immutable 100000-USDU mintCap bounds principal swap issuance; fee and surplus-reconciliation minting are not a hard total-liability cap. Permissionless swapIn accepts USDT and deposits into ERC-4626 vault 0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9; swapOut burns USDU and withdraws USDT. Both fees are 1000 ppm.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098754,
+        "failureDomainKeys": [
+          "ethereum:0xd9141f634ef9e871a5fe4f64195747db77a13f3e",
+          "ethereum:0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9"
+        ],
+        "sources": [
+          {
+            "label": "Verified USDT swap module and ModuleRevenueV1 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9141f634ef9e871a5fe4f64195747db77a13f3e"
+          }
+        ],
+        "evidence": "At Ethereum block 26098754, stable() returned the tracked USDU token, coin() returned canonical USDT, vault() returned 0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9 and checkValidModule was true. mintCap() returned 100000e18, totalAssets() returned 1003271000000000000 and totalMinted() returned 1000000000000000000. Source uses _mintWithCap for principal, uncapped _mint for fees and surplus, and atomic vault.withdraw for swapOut."
       }
     ],
     "economicCapSemantics": "unbounded",

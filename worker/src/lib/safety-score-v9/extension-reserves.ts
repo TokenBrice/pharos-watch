@@ -67,6 +67,7 @@ function overlayReviewedReserveClassification(
   reviewed: ReserveSlice,
   reviewKey: string,
   reviewedNonLink: boolean,
+  reviewedLinkAllowed: boolean,
 ): ReserveClassification {
   const assetClass = live.assetClass ?? reviewed.assetClass ?? null;
   const issuerOrObligorKey =
@@ -74,11 +75,11 @@ function overlayReviewedReserveClassification(
   const riskFactors = live.riskFactors?.length ? [...live.riskFactors] : [...(reviewed.riskFactors ?? [])];
   const liquidityHorizon = live.liquidityHorizon ?? reviewed.liquidityHorizon ?? null;
   const maturityDaysMax = live.maturityDaysMax ?? reviewed.maturityDaysMax ?? null;
-  const trackedAssetId = live.coinId ?? reviewed.coinId ?? null;
+  const trackedAssetId = live.coinId ?? (reviewedLinkAllowed ? reviewed.coinId : null) ?? null;
   const usesReviewedMetadata =
     (live.assetClass == null && reviewed.assetClass != null) ||
     (live.issuerOrObligor == null && (reviewed.issuerOrObligor != null || reviewed.coinId != null)) ||
-    (live.coinId == null && reviewed.coinId != null) ||
+    (reviewedLinkAllowed && live.coinId == null && reviewed.coinId != null) ||
     (!live.riskFactors?.length && Boolean(reviewed.riskFactors?.length)) ||
     (live.liquidityHorizon == null && reviewed.liquidityHorizon != null) ||
     (live.maturityDaysMax == null && reviewed.maturityDaysMax != null);
@@ -124,7 +125,8 @@ function reviewedReserveMatches(
     : null;
   if (
     reviewedReserves.length === 0 ||
-    review?.scope !== "full-composition" ||
+    !review ||
+    (review.scope !== "full-composition" && review.scope !== "classification-only") ||
     review.confidence === "unknown" ||
     !Number.isFinite(reviewedAtSec) ||
     reviewedAtSec > clockSec ||
@@ -133,13 +135,19 @@ function reviewedReserveMatches(
   ) {
     return [];
   }
+  // Classification-only evidence identifies keyed source categories; it does
+  // not certify a book or enable the historical whole-composition name join.
   const reviewedCandidatesByLive = liveReserves.map((live) =>
     reviewedReserves
       .map((reviewed, reviewedIndex) => ({ reviewed, reviewedIndex }))
-      .filter(({ reviewed }) => reserveSlicesMatch(live, reviewed)),
+      .filter(({ reviewed }) =>
+        (review.scope !== "classification-only" || Boolean(live.sourceKey)) && reserveSlicesMatch(live, reviewed),
+      ),
   );
   const liveCandidateCountByReviewed = reviewedReserves.map((reviewed) =>
-    liveReserves.filter((live) => reserveSlicesMatch(live, reviewed)).length,
+    liveReserves.filter((live) =>
+      (review.scope !== "classification-only" || Boolean(live.sourceKey)) && reserveSlicesMatch(live, reviewed),
+    ).length,
   );
   return reviewedCandidatesByLive.flatMap((candidates, liveIndex) => {
     if (candidates.length !== 1) return [];
@@ -157,7 +165,9 @@ export function dependencyReserveSlices(
 ): { slices: ReserveSlice[]; rejectionReasons: DependencyRejectionReason[] } {
   const reviewedMatches = reviewedReserveMatches(liveReserves, meta, clockSec);
   const reviewedByLiveIndex = new Map(
-    reviewedMatches.map((match) => [match.liveIndex, match.reviewed]),
+    meta.reserveReview?.scope === "full-composition"
+      ? reviewedMatches.map((match) => [match.liveIndex, match.reviewed])
+      : [],
   );
   const nonLinkReviewedIndexes = new Set(
     meta.reserveReview?.nonLinkDispositions?.map((disposition) => disposition.reserveIndex) ?? [],
@@ -216,8 +226,8 @@ export function dependencyReserveSlices(
 
 /**
  * Bridges reviewed registry classifications onto live reserve identities.
- * Explicit source keys match exactly and fail closed; historical unkeyed rows
- * use a unique normalized-name match. Percentage weights are never identity.
+ * Explicit source keys match exactly and fail closed; only full-composition
+ * reviews admit historical unkeyed rows by unique normalized name. Weights are never identity.
  */
 export function buildReviewedReserveClassifications(
   liveReserves: readonly ReserveSlice[],
@@ -253,6 +263,7 @@ export function buildReviewedReserveClassifications(
           match.reviewed,
           reviewKey,
           match.reviewedNonLink,
+          review.scope === "full-composition",
         )
       : classification;
   });

@@ -24,7 +24,8 @@ import {
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
 import { evaluateV9EconomicControlAssetFacts } from "./control";
-import type { V9EconomicControlResult } from "./control-primitives";
+import { unresolvedDeploymentCohort } from "./control-bridge-join";
+import { deriveV9MintPosture, type V9EconomicControlResult } from "./control-primitives";
 import {
   projectV9RoleDependencyPillarLimits,
   type V9DependencyEvaluationPlan,
@@ -283,11 +284,21 @@ function structuralSignalFromControl(
         control.status.applicability.state === "required" &&
         control.status.observationState === "known",
     );
+  const controlsCarryAdverseMintEvidence =
+    (failure.kind === "centralized-mint" || failure.kind === "active-control-incident") &&
+    controls.length > 0 && controls.length === failure.controlKeys.length &&
+    controls.every((control) => {
+      const posture = deriveV9MintPosture(control, asset.economicControlReview.mint, false);
+      return control.controlKind !== "bridge" &&
+        control.status.applicability.state !== "not-applicable" &&
+        control.status.evidenceRefIds.length > 0 &&
+        (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown");
+    });
   const responsibility: V9EvidenceResponsibility =
     failure.kind !== "unreviewed-upgrade" &&
-    reviewStatus.applicability.state === "required" &&
-    reviewStatus.observationState === "known" &&
-    controlsKnown &&
+    ((reviewStatus.applicability.state === "required" && reviewStatus.observationState === "known") ||
+      failure.kind === "centralized-mint" || failure.kind === "active-control-incident") &&
+    (controlsKnown || controlsCarryAdverseMintEvidence) &&
     economicLossScope !== undefined
       ? "measured-adverse"
       : failure.kind === "unreviewed-upgrade"
@@ -618,52 +629,23 @@ function controlPillar(
   envelope: V9ValidatedPolicyEnvelope,
   gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
-  const materialShareThreshold = envelope.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+  const fullCeilingShare = envelope.policy.semantic.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
   const unresolvedDeploymentControls = asset.controls.filter(
     (control) =>
       control.scope === "deployment" &&
       control.economicLossScope === "deployment" &&
-      (control.materialSupplyShare === null || control.materialSupplyShare < materialShareThreshold) &&
-      control.status.applicability.state === "required" &&
-      control.status.observationState !== "known",
+      control.status.applicability.state !== "not-applicable" &&
+      (control.status.applicability.state !== "required" || control.status.observationState !== "known"),
   );
-  const pricedControlKeys = new Set<string>();
-  const unresolvedShareByDeployment = new Map<string, number>();
-  let joinedUnreviewedShare = 0;
-  for (const control of unresolvedDeploymentControls) {
-    const supplyRow = asset.supply.selectedBridgeRoutes.find(
-      (row) => row.deploymentRouteKey === control.deploymentKey,
-    );
-    // Only an admitted exact supply row licenses proportional pricing. Neither
-    // a missing chain row nor a null-share upper bound is observed zero.
-    if (
-      control.status.observationState !== "bounded-unknown" ||
-      asset.supply.status.applicability.state !== "required" ||
-      asset.supply.status.observationState !== "known" ||
-      control.materialSupplyShare === null ||
-      supplyRow === undefined ||
-      supplyRow.reviewState === "unmatched" ||
-      supplyRow.supplyShare !== control.materialSupplyShare
-    ) continue;
-    pricedControlKeys.add(control.controlKey);
-    // Several unresolved authorities on one deployment impair the same supply.
-    if (!unresolvedShareByDeployment.has(control.deploymentKey) && supplyRow.reviewState === "selected-unresolved") {
-      joinedUnreviewedShare += supplyRow.supplyShare;
-    }
-    unresolvedShareByDeployment.set(control.deploymentKey, supplyRow.supplyShare);
-  }
-  const unresolvedShare = [...unresolvedShareByDeployment.values()].reduce((sum, share) => sum + share, 0);
-  const unresolvedCohortIsImmaterial =
-    asset.supply.unknownRouteSupplyShare !== null &&
-    asset.supply.unreviewedRouteSupplyShare !== null &&
-    unresolvedShare + asset.supply.unknownRouteSupplyShare +
-      Math.max(0, asset.supply.unreviewedRouteSupplyShare - joinedUnreviewedShare) < materialShareThreshold;
-  if (!unresolvedCohortIsImmaterial) pricedControlKeys.clear();
+  const cohort = unresolvedDeploymentCohort(asset, asset.controls);
+  const canPriceProportionally = cohort.share !== null && cohort.share < fullCeilingShare;
+  const pricedControlKeys = canPriceProportionally ? cohort.controlKeys : new Set<string>();
+  if (canPriceProportionally && cohort.share! > 0) result.unresolvedDeploymentShare = cohort.share!;
   const score = result.score === null
     ? null
     : decimalSnap(
         result.score - Math.max(0, result.score - envelope.policy.semantic.control.boundedUnknownQuality) *
-          (unresolvedCohortIsImmaterial ? unresolvedShare : 0),
+          (canPriceProportionally ? cohort.share! : 0),
       );
   const scoreBearingReasons = [
     ...result.reasons.filter(
@@ -773,9 +755,12 @@ function controlPillar(
           .filter((component) => component.binding)
           .flatMap((component) => component.controlKeys),
       );
-      return result.structuralFailures
-        .filter((failure) => failure.binding)
-        .map((failure) => structuralSignalFromControl(asset, failure, bindingComponentControlKeys));
+      return result.structuralFailures.flatMap((failure) => {
+        const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys);
+        return failure.binding || (signal.economicLossScope === "deployment" && signal.responsibility === "measured-adverse")
+          ? [signal]
+          : [];
+      });
     })(),
   };
 }
@@ -1024,6 +1009,7 @@ function resolveInheritedStablecoinBacking(
   return {
     parentAssetId: upstreamAssetId,
     parentBackingScore: projectV9EffectiveBackingPillarScore(parent)!,
+    collateralizationApplications: parent.backing.collateralizationApplications,
     weight: Math.min(1, weight),
     tier: wrapped ? "wrapped" : "pure",
     failureDomains: canonicalDomains([
@@ -1368,6 +1354,7 @@ export function evaluateV9Asset({
       : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
     ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
     trackRecordMonths,
+    asOfSec: identity.asOfSec,
   };
   const backing =
     asset.mechanismRiskReview.review === null
@@ -1511,6 +1498,7 @@ export function evaluateV9Asset({
     pillars,
     peg,
     trackRecordMonths,
+    unresolvedDeploymentShare: control.unresolvedDeploymentShare,
     parent: parentInput(
       asset,
       resolved,

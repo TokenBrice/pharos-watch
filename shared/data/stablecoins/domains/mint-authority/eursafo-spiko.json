@@ -64,7 +64,7 @@
         "canRaiseCap": "unknown",
         "observedAt": "2026-10-01",
         "observedBlock": 26095799,
-        "evidence": "At Ethereum block 26095799, the formerly recorded relayers 0xa0769f7a8fc65e47de93797b4e21c073c117fc80 and 0xe4880249745eac5f1ed9d8f7df844792d560e750 return symbols EUTBL and USTBL and fail PermissionManager canCall(caller, EURSAFO, 0x40c10f19). They are other fund-token proxies, not current EURSAFO minters. Internal-transaction discovery identified Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, independently confirmed by current getGroups() mask including group 2 and canCall() = true. The complete other-minter and Minter initiator/approver rosters across native deployments remain unresolved. Broad historical log recovery failed Dwellir's range limit, PublicNode archive restrictions and Blockscout's filtered-log rate limit; recent trace candidates were separately checked rather than assumed authorized.",
+        "evidence": "At Ethereum block 26095799, the formerly recorded relayers were identified as other fund-token proxies, not EURSAFO minters. Round-2 recovery of PermissionManager GroupAdded and GroupRemoved logs from deployment through block 26098764 succeeded using the filtered Blockscout logs API. Current getGroups reads confirm one group-0 super-admin Safe, six group-2 contract principals, seven group-9 approvers and two group-10 initiators. Five group-2 contracts return other fund tokens from getToken(); the sixth is the known Minter. The Ethereum initiator/approver roster is now documented in the Minter evidence. Remaining non-Ethereum operator rosters and exact principal-to-key-custody mappings remain unresolved; the issuer documents Dfns-managed relayer signing without identifying these addresses.",
         "sources": [
           {
             "label": "Spiko smart contracts",
@@ -88,7 +88,7 @@
         "capDescription": "At Ethereum block 26095799, dailyLimit(EURSAFO) is 500000000000 raw, or 5,000,000 five-decimal shares; getMintedToday(EURSAFO) is zero. Exceeding the ordinary limit creates a pending mint. A privileged approveMint call can execute that pending mint without applying the daily-limit check, and the super-admin Safe can change dailyLimit immediately. maxDelay() = 86400 is the pending-operation expiry window, not an enforced approval delay or immutable economic ceiling.",
         "observedAt": "2026-10-01",
         "observedBlock": 26095799,
-        "evidence": "Discovered through EURSAFO internal calls, then independently read at Ethereum block 26095799: Minter group mask includes bit 2; EURSAFO mint permission = true; authority() = the current PermissionManager; implementation slot = 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; dailyLimit = 500000000000 raw; maxDelay = 86400. Current Safe permission checks authorize initiateMint, approveMint, setDailyLimit and upgradeToAndCall. Verified implementation code makes over-limit approval discretionary and does not impose a waiting delay. The ordinary per-token daily limit is 5,000,000 EURSAFO shares. The verified Minter implementation's initiateMint checks the limit but approveMint directly calls token.mint for a pending operation, without a second daily-limit test. Minter authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Current requirements allow group 9 or admin to initiate, group 10 or admin to approve, and admin to change the limit or upgrade. The super-admin Safe passed canCall for all four actions at the pinned block; ordinary initiator and approver rosters are not enumerated. The Minter's group-2 membership and canCall(Minter, EURSAFO, mint) are verified. ERC-1967 implementation is 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043, verified as Minter. The cap is bypassable by approval and raiseable by admin, so it is not a hard reserve-backed mint ceiling.",
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
         "sources": [
           {
             "label": "Verified current Ethereum Minter implementation",
@@ -97,6 +97,14 @@
           {
             "label": "Spiko permission and daily-operator architecture",
             "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          },
+          {
+            "label": "Verified PermissionManager group-event and requirements interface",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          },
+          {
+            "label": "Spiko managed Dfns transaction-signing architecture",
+            "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
           }
         ]
       },
@@ -150,16 +158,16 @@
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "At Ethereum block 26095799, EURSAFO and PermissionManager retain their recorded implementations, and the super-admin Safe is now 3-of-6. The two formerly recorded minters are EUTBL and USTBL token proxies and do not have current EURSAFO mint permission. The actual Ethereum Minter proxy 0x5ed5a75eeed1934ea060186e35187eaa73331366 is authorized and has implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043. Its ordinary daily limit of 5,000,000 EURSAFO shares is not a hard economic ceiling: the Safe can immediately change the limit, approve over-limit pending mints or replace logic. The 86400-second maxDelay is an expiry window, not an approval timelock. Complete operator rosters on other deployments and current group-9/10 principals remain unresolved. CACEIS daily NAV valuation is documented; the current prospectus names PwC as statutory auditor, but no current SAFO-specific financial assurance report was verified. AMF fund authorization remains separate from assurance.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA17EURSAFO)",
+      "evidence": "The earlier pinned implementation, 3-of-6 Safe, raiseable daily limit, discretionary over-limit approval and lack of enforced approval timelock remain confirmed. Round-2 indexed role-history recovery and current reads at Ethereum block 26098764 resolve the seven group-9 approvers and two group-10 initiators and correct their previously reversed labels. Ethereum mint requirements are group 0 or group 2; all current group-2 principals were identified, including the Minter and five contracts whose getToken() values name other funds. Complete non-Ethereum operator rosters and exact key-custody mappings remain open. CACEIS daily valuation and Chainlink's exact EURSAFO NAV feed are now verified separately in oracleRisk. PwC appointment and AMF authorization remain separate from a current financial assurance report.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
       "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "scopedQuestions": [
         {
           "controlRef": "Spiko daily-operator backend (current addresses unresolved)",
-          "question": "Which other addresses can mint EURSAFO on each native deployment, and which principals hold group-9 initiation and group-10 approval permission on the verified Ethereum Minter? Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366 is currently authorized; the old EUTBL/USTBL token proxies are not. The complete roster was not recovered under the historical-log provider restrictions.",
+          "question": "Which principals control native EURSAFO minting on each non-Ethereum deployment, and which exact current signing addresses are covered by Dfns-managed custody or other documented key protections? Ethereum PermissionManager groups 0, 2, 9 and 10 were recovered from complete filtered event history and current reads at block 26098764. Group 10 initiates and group 9 approves the Minter's pending operations; those rosters are no longer unknown. The reach of the five other-token group-2 contracts must remain token-bound in any cross-fund capability analysis.",
           "reviewedAt": "2026-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (CurA17EURSAFO)",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
           "sources": [
             {
               "label": "Spiko permission and daily-operator architecture",

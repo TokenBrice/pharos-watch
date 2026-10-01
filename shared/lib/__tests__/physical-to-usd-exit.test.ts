@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { evaluatePhysicalToUsdExit } from "../physical-to-usd-exit";
 import { PhysicalToUsdRouteSchema, type PhysicalToUsdRoute } from "../redemption-backstop-configs/schema";
-import { evaluateV9Exit } from "../safety-score-v9/exit";
+import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "../safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import { makeExitRoute } from "./safety-score-v9-exit.test-support";
+import { makeExitRoute, makeNormalizedExitRoute } from "./safety-score-v9-exit.test-support";
 import type { PhysicalToUsdTrace } from "../../types/exit-route";
 
 const clock = Date.UTC(2026, 9, 1, 12) / 1000;
@@ -11,6 +11,7 @@ const reference = { usdPerTroyOunce: 1000, observedAtSec: clock };
 function terms(): PhysicalToUsdRoute {
   return PhysicalToUsdRouteSchema.parse({ metal: "XAU", fineTroyOuncesPerToken: 1,
     lot: { minimumTokens: 100, incrementTokens: 100, bars: [] },
+    throughput: { tokens: 100_000, periodSec: 86400, evidence: { url: "https://example.com/terms", quote: "The reviewed desk processes 100,000 tokens per calendar day." } },
     vaultLocations: ["london"], barClass: "good-delivery", eligibility: "verified-customer",
     fees: { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 },
     settlementLegs: [{ leg: "release", maximumBusinessDays: 1 }, { leg: "sale", maximumBusinessDays: 1 }],
@@ -34,6 +35,51 @@ describe("physical-to-USD exit", () => {
     expect(evaluatePhysicalToUsdExit(terms(), reference, 100_000, clock)).toMatchObject({ grossUsd: 100_000, lots: 1, rejectionReason: null });
     expect(evaluatePhysicalToUsdExit(terms(), reference, 199_999, clock)).toMatchObject({ grossUsd: 100_000, lots: 1 });
     expect(evaluatePhysicalToUsdExit(terms(), reference, 200_000, clock)).toMatchObject({ grossUsd: 200_000, lots: 2 });
+  });
+  it("credits only one minimum lot without documented throughput, not the full request", () => {
+    const config = terms();
+    delete config.throughput;
+    expect(evaluatePhysicalToUsdExit(config, reference, 99_999, clock).grossUsd).toBe(0);
+    expect(evaluatePhysicalToUsdExit(config, reference, 25_000_000, clock)).toMatchObject({ grossUsd: 100_000, lots: 1 });
+    config.lot = { minimumTokens: 430, incrementTokens: null, bars: [{ barId: "variable-bar", fineTroyOunces: 350, maximumFineTroyOunces: 430 }] };
+    expect(evaluatePhysicalToUsdExit(config, reference, 25_000_000, clock)).toMatchObject({ grossUsd: 350_000, tokens: 350, lots: 1 });
+    config.lot.bars.push({ barId: "larger-bar", fineTroyOunces: 1000 });
+    expect(evaluatePhysicalToUsdExit(config, reference, 25_000_000, clock)).toMatchObject({ grossUsd: 350_000, lots: 1 });
+  });
+  it("caps documented throughput over the full settlement window and still respects request and lot limits", () => {
+    const config = terms();
+    config.throughput = { tokens: 100, periodSec: 86400, evidence: { url: "https://example.com/terms", quote: "100 tokens per calendar day." } };
+    const bounded = evaluatePhysicalToUsdExit(config, reference, 25_000_000, clock);
+    expect(bounded).toMatchObject({ maximumSettlementSec: 18 * 86400, grossUsd: 1_800_000, lots: 18 });
+    expect(evaluatePhysicalToUsdExit(config, reference, 250_000, clock).grossUsd).toBe(200_000);
+    config.throughput.tokens = 1;
+    expect(evaluatePhysicalToUsdExit(config, reference, 25_000_000, clock).grossUsd).toBe(0);
+    config.throughput.evidence.quote = "";
+    expect(evaluatePhysicalToUsdExit(config, reference, 25_000_000, clock).rejectionReason).toBe("physical-throughput-invalid-or-unevidenced");
+  });
+  it("prices physical costs on the common denominator without subsidizing expensive metal exits", () => {
+    const config = terms();
+    for (const costBps of [100, 150]) {
+      config.fees.issuerFeeBps = costBps - 100;
+      const physical = evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock);
+      const ordinary = makeExitRoute({ capacityCurve: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: costBps }] });
+      const ordinaryScore = evaluateV9Exit({ circulatingUsd: 10_000_000, routes: [ordinary] }, V9_CANDIDATE_POLICY_V1);
+      expect(score(physical).routes[0]?.components?.cost).toBe(ordinaryScore.routes[0]?.components?.cost);
+    }
+    config.fees.issuerFeeBps = 150;
+    expect(score(evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock)).routes[0]).toMatchObject({ included: true, components: { cost: 0 } });
+  });
+  it("removes only physical KYC's institutional discount and keeps modelled coverage weaker than exact observation", () => {
+    const ordinary = projectV9ExitEvaluationRoute(makeNormalizedExitRoute({ holderAccess: "institutional-eligible", modelConfidence: "medium" }));
+    const physical = projectV9ExitEvaluationRoute(makeNormalizedExitRoute({ holderAccess: "verified-customer-neutral", modelConfidence: "medium", coverageClass: "modelled-terms-lower-bound" }));
+    const evaluate = (route: typeof physical) => evaluateV9Exit({ circulatingUsd: 10_000_000, routes: [route] }, V9_CANDIDATE_POLICY_V1).routes[0]!;
+    const neutral = evaluate(physical);
+    const gated = evaluate(ordinary);
+    expect(neutral.included).toBe(true);
+    expect(neutral.confidenceFactor).toBe(gated.confidenceFactor);
+    expect(gated.score).toBeCloseTo(neutral.score! * 0.9, 1);
+    expect(evaluate({ ...physical, coverageClass: "exact-complete" }).score).toBeGreaterThanOrEqual(neutral.score!);
+    expect(evaluate({ ...physical, coverageClass: "diagnostic" })).toMatchObject({ included: false, score: null });
   });
   it("sizes variable bars at upper fine weight and counts lower fine weight without charging refunds", () => {
     const config = terms();
@@ -110,14 +156,24 @@ describe("physical-to-USD exit", () => {
   });
   it("keeps best-effort cash confidence low and charges cost once, leaving USD retention one", () => {
     const config = terms();
-    config.bestEffortIssuerCashOut = { operatingProcess: "Issuer operates conversion and bank payout", lot: config.lot, fees: config.fees, settlementLegs: config.settlementLegs };
+    config.bestEffortIssuerCashOut = { operatingProcess: "Issuer operates conversion and bank payout", lot: config.lot, throughput: config.throughput, fees: config.fees, settlementLegs: config.settlementLegs };
     const cash = evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock, "best-effort-issuer-cash-out");
-    expect(cash).toMatchObject({ costBps: 0, netUsd: 1_000_000, modelConfidence: "low" });
+    expect(cash).toMatchObject({ costBps: 100, netUsd: 990_000, modelConfidence: "low" });
     const physical = evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock);
     const evaluated = score(physical).routes[0]!;
     expect(physical.netUsd).toBe(990_000);
-    expect(evaluated).toMatchObject({ included: true, components: { outputAssetQuality: 65, cost: 80 }, confidenceFactor: 0.75 });
+    expect(evaluated).toMatchObject({ included: true, components: { outputAssetQuality: 65, cost: 50 }, confidenceFactor: 0.75 });
     expect(evaluated.score).toBeLessThanOrEqual(65);
     expect(score(cash).routes[0]?.confidenceFactor).toBe(0.35);
+  });
+  it("does not admit costly small-silver cash-outs by pretending issuer sale spread is zero", () => {
+    const config = terms();
+    config.bestEffortIssuerCashOut = { operatingProcess: "Issuer attempts sale and wires USD", lot: config.lot, throughput: config.throughput, fees: config.fees, settlementLegs: config.settlementLegs };
+    expect(evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock, "best-effort-issuer-cash-out")).toMatchObject({ costBps: 100, rejectionReason: null });
+    config.metal = "XAG";
+    config.barClass = "small-bar-or-coin";
+    const rejected = evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock, "best-effort-issuer-cash-out");
+    expect(rejected).toMatchObject({ costBps: 800, rejectionReason: "physical-cost-ceiling-exceeded" });
+    expect(score(rejected).routes[0]?.score).toBeNull();
   });
 });

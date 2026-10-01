@@ -29,13 +29,17 @@
       {
         "label": "Circle USYC developer overview",
         "url": "https://developers.circle.com/tokenized/usyc/overview"
+      },
+      {
+        "label": "Circle 2025 annual report: SDYF financial summary and no sponsor guarantee",
+        "url": "https://s206.q4cdn.com/265218871/files/doc_financials/2025/ar/CRCL_AR_2026_WO13_WKV_PR-1.pdf"
       }
     ],
     "rationale": "Current Circle disclosures identify the fund strategy as short-term U.S. Treasury bills and reverse repurchase agreements backed by U.S. government securities, but do not publish a durable current allocation between those categories. The reviewed row therefore preserves the exact aggregate identity emitted by the Chainlink NAV adapter.",
     "compositionBasis": "Circle USYC fund and developer disclosures",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The allocation between Treasury bills and reverse-repo positions and the repo counterparties are not disclosed in the reviewed public materials. Circle's reviewed product and developer disclosures also do not state a USYC fund loss-recovery or loss-allocation design; that evidence boundary was rechecked on 2026-07-14 by SONG Safety Score V9 mechanism review.",
+    "knownUnknownExposure": "Current Treasury-bill versus reverse-repo weights and repo counterparties remain undisclosed in the reviewed public materials. Circle's 2025 annual report identifies SDYF as an unconsolidated managed fund and states that Circle provides no guarantees or other financial obligations to the funds; it does not establish a sponsor first-loss backstop. The report includes SDYF's December 31, 2025 total assets and income, but is an audit of Circle's consolidated financial statements, not a current independent SDYF reserve-to-USYC-liability reconciliation. Current loss-allocation and recovery mechanics beyond that no-guarantee boundary remain unresolved.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

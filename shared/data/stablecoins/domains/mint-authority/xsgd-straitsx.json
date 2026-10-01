@@ -884,8 +884,8 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "observedAt": "2026-08-16",
-        "observedBlock": 106342527,
+        "observedAt": "2026-10-01",
+        "observedBlock": 107363456,
         "sources": [
           {
             "label": "XRPL validated account read",
@@ -896,7 +896,7 @@
             "url": "https://livenet.xrpl.org/accounts/rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw"
           }
         ],
-        "evidence": "XRPL validated ledger 106342527 identifies rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw as the live issuing account for the XSGD.rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw issued asset. The issuer account is the native issuance authority; no separate issuer operational control was verified for authoring."
+        "evidence": "At validated XRPL ledger 107363456 on 2026-10-01, account_info reports disableMasterKey=false and no RegularKey for the issuer identified in StraitsX's XRPL launch announcement. account_objects at the same ledger returns one signer list with quorum 2 and four entries weighted 1, 2, 1, 1; the weight-2 signer can independently meet quorum, and the enabled master key remains an independent signing path. This is not a mandatory multi-party mint quorum. Operational key custody is not established by these ledger observations."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -17,6 +17,7 @@ import {
   evaluateV9SubthresholdUnresolvedBridgeJoins,
   materialBridgeSeverity,
   provenNullShareDeploymentBound,
+  unresolvedDeploymentCohort,
 } from "./control-bridge-join";
 import {
   applyMergedMintSignals,
@@ -108,6 +109,20 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   assertV9ValidatedPolicyEnvelope(args.policy);
   const policy = args.policy.policy.semantic;
   const materialShareThreshold = policy.materiality.deploymentMaterialSharePct / 100;
+  const unresolvedFullCeilingShareThreshold = policy.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
+  const unresolvedCohort = unresolvedDeploymentCohort(args.facts, args.facts.controls);
+  const controlBinding = (control: V9DeploymentControlFactV2, bound: number | null = null) =>
+    bindingByMateriality(
+      control,
+      unresolvedCohort.share !== null && unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
+        unresolvedCohort.controlKeys.has(control.controlKey) &&
+        args.facts.supply.selectedBridgeRoutes.some(
+          (row) => row.deploymentRouteKey === control.deploymentKey && row.reviewState !== "unmatched",
+        )
+        ? unresolvedFullCeilingShareThreshold
+        : materialShareThreshold,
+      bound,
+    );
   const controls = [...args.facts.controls].sort((left, right) => compareText(left.controlKey, right.controlKey));
   const controlsByKey = new Map(controls.map((control) => [control.controlKey, control]));
   const components: V9ControlComponent[] = [];
@@ -167,7 +182,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (control.status.applicability.state === "not-applicable") continue;
     const nullShareBound = provenNullShareDeploymentBound(args.facts, control);
     const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
-    const binding = bindingByMateriality(control, materialShareThreshold, nullShareBound);
+    const binding = controlBinding(control, nullShareBound);
     const pathKind = control.controlKind === "bridge" ? "deployment-control" : "local-component";
     const path = `control:${control.controlKey}`;
     if (control.status.applicability.state === "unresolved" || control.status.observationState !== "known") {
@@ -223,19 +238,18 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   const mint = args.mint;
   const retainedAdverseMintControls =
     mint.status.applicability.state !== "not-applicable" &&
-    (mint.status.observationState === "bounded-unknown" ||
-      (mint.status.applicability.state === "unresolved" && mint.status.observationState === "known")) &&
-    mint.status.evidenceRefIds.length > 0
+    !isKnownRequired(mint.status)
       ? controls.filter((control) => {
           if (
             control.controlKind === "bridge" ||
             control.status.applicability.state === "not-applicable" ||
-            (control.status.observationState !== "known" && control.status.observationState !== "bounded-unknown") ||
-            control.status.evidenceRefIds.length === 0 ||
+            !isControlEconomicallyRelevant(control) ||
             (!control.capabilities.includes("mint") && control.controlKey !== mint.controlKey)
           ) return false;
           const posture = deriveV9MintPosture(control, mint, false);
-          return posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown";
+          return posture === "unknown" ||
+            (control.status.evidenceRefIds.length > 0 &&
+              (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown"));
         })
       : [];
   if (mint.status.applicability.state === "not-applicable") {
@@ -329,7 +343,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       const mintFailureDomains = canonicalDomains(mintControl?.failureDomains ?? []);
       const upgradeControlKeys = upgradeControl === null ? [] : [upgradeControl.controlKey];
       const upgradeFailureDomains = canonicalDomains(upgradeControl?.failureDomains ?? []);
-      const mintBinding = mintControl === null ? true : bindingByMateriality(mintControl, materialShareThreshold);
+      const mintBinding = mintControl === null ? true : controlBinding(mintControl);
       const mintReconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
       const gradedPostureScore =
         (posture === "concentrated-admin" || posture === "unbounded-reconciled") && mintReconciled
@@ -468,7 +482,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       }
       if (upgradeUnreviewed) {
         const upgradeBinding =
-          upgradeControl === null ? mintBinding : bindingByMateriality(upgradeControl, materialShareThreshold);
+          upgradeControl === null ? mintBinding : controlBinding(upgradeControl);
         addStructuralFailure({
           kind: "unreviewed-upgrade",
           severity: "high",
@@ -615,7 +629,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       ? null
       : Math.min(1, unknownRouteSupplyShare + unreviewedRouteSupplyShare);
   const boundedBridgeGapIsImmaterial =
-    unattributedBridgeShare !== null && unattributedBridgeShare < materialShareThreshold;
+    unattributedBridgeShare !== null && unattributedBridgeShare < unresolvedFullCeilingShareThreshold;
 
   const bridge = args.bridge;
   if (bridge.status.applicability.state === "not-applicable") {
@@ -639,20 +653,18 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     // so this evaluator emits only the common reason code.
     addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
   } else {
-    // A bounded section whose unattributed supply is immaterial keeps its reason
-    // (and its reason-coded ceiling) but does not discard the rows it did review.
-    // Each row below still fails closed on its own: a row that is not
-    // known-required leaves `selected-bridge-route-unresolved` and contributes no
-    // component, so an inventory whose rows are all unresolved still reaches the
-    // `bridge:unverified` fallback.
-    // A bounded subthreshold inventory needs no whole-coin bridge fallback
-    // only when every exact supply row has a proved control join.
+    // Retain reviewed rows under a bounded residual. An unresolved route
+    // contributes no component, but needs no whole-coin fallback when the
+    // full cohort is bounded and every selected supply row has a proved join.
+    // A reconciled partition may prove a null-share deployment immaterial;
+    // that join relief is not admission of an exact share for pricing.
     const completeSubthresholdUnresolvedJoins = evaluateV9SubthresholdUnresolvedBridgeJoins(
       args.facts,
       controls,
       bridge.routes,
       materialShareThreshold,
       policy.materiality.commonModeShareThreshold,
+      unresolvedFullCeilingShareThreshold,
     ).complete;
     if (
       bridge.status.observationState !== "known" &&
@@ -681,7 +693,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       if (!isControlEconomicallyRelevant(control)) continue;
       const nullShareBound = provenNullShareDeploymentBound(args.facts, control);
       const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
-      const binding = bindingByMateriality(control, materialShareThreshold, nullShareBound);
+      const binding = controlBinding(control, nullShareBound);
       if (!isKnownRequired(control.status)) {
         if (binding) {
           addReason("selected-bridge-route-unresolved", "deployment-control", "bridge:route", route.controlKey);
@@ -751,23 +763,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       1,
       (unknownRouteSupplyShare ?? 0) + (unreviewedRouteSupplyShare ?? 0),
     );
-    // The aggregate residue is graded on the same deployment-materiality floor the
-    // per-row branch above already applies, which is what the reason's own name
-    // asserts. Firing the material reason on any residue at all read a rounding
-    // tail as a material control gap: on the 2026-08-18 capture EURC ($257 of
-    // $470M), PYUSD ($201), frxUSD ($40), and AUSD ($874) each took the 55
-    // control-unverified ceiling for a residue under a thousandth of a percent,
-    // and because a ceiling-treatment reason also classifies its pillar as
-    // limited evidence, the same gap applied the 69 evidence ceiling underneath.
-    // A sub-material residue is still published, as the diagnostic twin that
-    // scores nothing and keeps the row in the BRIDGE_MATERIALITY curation queue.
-    //
-    // The material branch does not consult the completeness proof. That proof
-    // clears each unmatched row against the materiality floor individually, so a
-    // long tail of sub-material rows could sum past the floor and still prove
-    // complete — harmless while the trigger was `> 0`, an escape once it is the
-    // floor itself. A material aggregate now fails closed on its own terms.
-    if (unknownBridgeShare >= materialShareThreshold) {
+    // Unknown route supply keeps the deployment-material floor (including the
+    // RULED D-J pool). Joined unresolved routes instead use the full-cohort
+    // band, so they cannot regain the old 10% ceiling through this residue path.
+    if (
+      (unknownRouteSupplyShare ?? 0) >= materialShareThreshold ||
+      (unknownBridgeShare >= materialShareThreshold && !completeSubthresholdUnresolvedJoins)
+    ) {
       addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply");
     } else if (unknownBridgeShare > 0 && !completeSubthresholdUnresolvedJoins) {
       addReason("nonmaterial-bridge-supply-unmatched", "deployment-control", "bridge:supply");
@@ -848,19 +850,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     (left, right) =>
       compareText(left.kind, right.kind) || compareText(left.controlKeys.join("+"), right.controlKeys.join("+")),
   );
-  // A deployment-scoped control leaves the whole-asset pillar in exactly two
-  // cases, and component binding must agree with attribution in both:
-  //
-  //  1. Its loss is already priced proportionally, i.e. a binding structural
-  //     failure carries its known share. Deployment risk owns it from there.
-  //  2. Its reconciled share is below the deployment-materiality threshold, so
-  //     it cannot bind the global claim at all.
-  //
-  // Case 2 was missing. An immaterial deployment-local control stayed binding at
-  // its adverse component score while its scoped adjustment computed zero
-  // points, so the card kept an adverse pillar with no causal attribution and
-  // the D/F gate withheld it — turning unchanged cards into NR. Material,
-  // non-adverse deployment controls still bind.
+  // Deployment-local adverse loss is owned by proportional deployment risk;
+  // retain its component for publication even when it cannot bind the pillar.
   const pricedDeploymentControlKeys = new Set(
     normalizedStructuralFailures
       .filter((failure) => failure.binding && failure.materialSharePct !== null)
@@ -877,12 +868,14 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       .filter(
         (control) =>
           control.economicLossScope === "deployment" &&
-          !bindingByMateriality(control, materialShareThreshold),
+          !controlBinding(control),
       )
       .map((control) => control.controlKey),
   ]);
   const normalizedComponents: V9ControlComponent[] = [];
   let worstMint: V9ControlComponent | null = null;
+  let worstBindingMint: V9ControlComponent | null = null;
+  const scopedMintComponents: V9ControlComponent[] = [];
   for (const component of components) {
     const normalized =
       component.binding &&
@@ -892,20 +885,35 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         : component;
     if (normalized.kind !== "mint") {
       normalizedComponents.push(normalized);
-    } else if (
+      continue;
+    }
+    if (!normalized.binding) scopedMintComponents.push(normalized);
+    if (normalized.binding && (worstBindingMint === null || normalized.score < worstBindingMint.score)) {
+      worstBindingMint = normalized;
+    }
+    if (
       worstMint === null ||
-      (normalized.binding && !worstMint.binding) ||
-      (normalized.binding === worstMint.binding && normalized.score < worstMint.score)
+      normalized.score < worstMint.score ||
+      (normalized.score === worstMint.score && normalized.binding && !worstMint.binding)
     ) {
       worstMint = normalized;
     }
   }
   if (worstMint !== null) normalizedComponents.push(worstMint);
+  for (const component of scopedMintComponents) {
+    if (component !== worstMint) normalizedComponents.push({
+      ...component,
+      componentKey: `mint:deployment:${component.controlKeys.join("+")}`,
+    });
+  }
+  if (worstBindingMint !== null && worstBindingMint !== worstMint) {
+    normalizedComponents.push({ ...worstBindingMint, componentKey: "mint:binding" });
+  }
   normalizedComponents.sort((left, right) => compareText(left.componentKey, right.componentKey));
   const bindingControlFailureDomains = controls
     .filter(isControlEconomicallyRelevant)
     .filter((control) => isKnownRequired(control.status))
-    .filter((control) => bindingByMateriality(control, materialShareThreshold))
+    .filter((control) => controlBinding(control))
     .flatMap((control) => control.failureDomains);
   const failureDomains = canonicalDomains([
     ...bindingControlFailureDomains,

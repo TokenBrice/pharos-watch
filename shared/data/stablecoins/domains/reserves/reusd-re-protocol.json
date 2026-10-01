@@ -136,7 +136,7 @@
     "rationale": "The current issuer metrics payload includes byAsset.reusd and byAsset.reusde on-chain numerators, but publishes offchain_capital as a protocol aggregate. It does not supply the attributable off-chain denominator and quantified tranche waterfall needed to turn these numerators into reUSD backing percentages. The measured protocol-pooled composition is retained as unlinked context. Every token link is withheld, including sUSDe (NC-116), so a reviewed overlay cannot turn protocol percentages into tranche dependencies.",
     "compositionBasis": "Protocol-pooled Re Metrics embedded payload captured 2026-09-30, normalized without rounding. These percentages describe protocol holdings, not attributable reUSD tranche backing.",
     "compositionAsOf": "2026-09-30",
-    "scope": "dependency-relationships",
+    "scope": "classification-only",
     "knownUnknownExposure": "The full protocol-pooled composition has unresolved reUSD attribution. Token-specific on-chain numerators alone do not establish an off-chain denominator or tranche loss allocation.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [

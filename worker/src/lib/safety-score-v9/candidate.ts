@@ -230,6 +230,8 @@ function publicExitHolderEligibility(
       return "any-holder";
     case "institutional-eligible":
       return "verified-customer";
+    case "verified-customer-neutral":
+      return "verified-customer-neutral";
     case "allowlisted":
       return "whitelisted-primary";
     case "issuer-only":

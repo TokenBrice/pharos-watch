@@ -11,8 +11,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-29",
-    "reviewer": "Pharos reserve research (GLM issue-sweep 2026-09-29)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WMisc07)",
     "confidence": "verified",
     "sources": [
       {
@@ -26,8 +26,12 @@
       {
         "label": "SBI Shinsei Trust statutory disclosure page (trustee custodies JPYSC reserve assets)",
         "url": "https://www.shinseitrust.com/stablecoin/jpysc.html"
+      },
+      {
+        "label": "JPYSC governing terms updated June 30, 2026; sections 4(6), 6 and 13 document successor trustee, insolvency treatment and delegated segregation",
+        "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260630.pdf"
       }
     ],
-    "uncertainty": "2026-09-29: JPYSC is a trust-type Type III Electronic Payment Instrument; SBI Shinsei Trust Bank, as issuer-trustee, holds the backing assets as trust property segregated from its own assets under the FSA framework, with SBI VC Trade as issuing entity giving investment instructions. The underlying deposit banks for the yen demand-deposit portion and the custody venue of the JGB positions are not disclosed, and no rehypothecation terms are published; shares between custodial arrangements are therefore omitted rather than estimated."
+    "uncertainty": "Current trustee product disclosure and the June 30, 2026 governing terms were recovered on October 1. JPYSC trust property is separate from the trustee's bankruptcy estate; section 4(6) provides six months' notice for trustee resignation, successor appointment by the income beneficiary, court appointment if necessary, and transfer of trust assets and records to the successor. Section 13 requires segregation arrangements for qualifying delegated trust administration. Underlying deposit-bank identities, bank allocations, JGB custody venues and positions, and rehypothecation terms remain undisclosed. Bank failure and investment loss can impair redemption value under section 4(4). The statutory balance table remains dated June 30 and the September 7 release gives only a partial JGB figure, so no current full reserve split or provider shares are inferred."
   }
 }

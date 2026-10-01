@@ -737,15 +737,14 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
     });
     expect(oraclePriced.result.warnings?.some((warning) => warning.code === "defillama-quote-missing")).toBe(false);
 
-    // DefiLlama misses the pumpBTC underlying and the branch oracle is
-    // unreadable: the miss cannot be superseded, so the run fails closed
-    // instead of publishing an unpriced branch.
-    await expect(
-      runAdapter("liquity-v2-branches", "nect-beraborrow", {
-        network: beraborrowNetwork({ pumpBtcProtocolPrice: null }),
-        nowSec: NOW,
-      }),
-    ).rejects.toThrow("Missing DefiLlama price for pumpBTC");
+    // With neither price path available, the unknown share cannot be valued.
+    const { result } = await runAdapter("liquity-v2-branches", "nect-beraborrow", {
+      network: beraborrowNetwork({ pumpBtcProtocolPrice: null }),
+      nowSec: NOW,
+    });
+    expect(result.metadata?.unknownExposurePct).toBe(100);
+    expectWarningEffect(result, "branch-reserve-book-partial", "degraded");
+    expect(result.slices.some((slice) => slice.name === "pumpBTC")).toBe(false);
   });
 
   it("derives the same branch redemption fee from the individual fallback as from the batch", async () => {

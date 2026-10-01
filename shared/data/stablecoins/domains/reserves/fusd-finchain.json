@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30; R13 re-open",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WMisc05)",
     "confidence": "verified",
     "sources": [
       {
@@ -38,12 +38,28 @@
       {
         "label": "FinChain FUSD reserve dashboard",
         "url": "https://fusd.finchain.global/#reserves"
+      },
+      {
+        "label": "Pinned Ethereum FUSDLP reserve-token and treasury balance reads at block 26098753",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Verified current FUSDLP implementation: tracked reserves and reserve pricing",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe137edbc766b97f6d0a8c227b4d60c656a3040e"
+      },
+      {
+        "label": "Verified current reserve bundle aggregator implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbb199ed75d4fdd04833bb4477285eda0bd91abc1"
+      },
+      {
+        "label": "FinChain reserve API product-address mapping; embedded April 21 timestamp is not a fresh report",
+        "url": "https://api.finchain.global/api/v0/fusd-data"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-30 of the FinChain FUSD reserves, reserve-assets, and vendors docs: FUSD is collateralized by tokenized U.S. Treasury / money-market products from Taikang Asset Management (HK), China Asset Management (HK), and BNY Mellon Fund Management (Luxembourg) under a stated minimum 100% collateralization ratio. The reserve-assets page names the tokenized share classes (TKUSD, CUMFU, FUIDL-AC), the tokenization agents (BC Technology (Hong Kong), Standard Chartered Bank (Hong Kong), Finloop Finance Technology Services), and BNY Mellon fund ratings (S&P AAAm, Moody's Aaa-mf, Fitch AAAmmf). Current product weights remain undisclosed, so the envelope stays one 100% fund-share basket with knownUnknownExposurePct=100. R13 re-open 2026-08-08: the FinChain reserve dashboard still shows only aggregate reserve-ratio placeholders ('as of July 2026') and no per-product percentage breakdown; Gitbook docs remain unchanged. No current weights can be authored without fabrication.",
-    "compositionBasis": "FinChain named FUSD reserve-fund inventory",
+    "rationale": "Current issuer reserve-assets documentation identifies Taikang, ChinaAMC and BNY Mellon money-market fund products. At Ethereum block 26098753 on 2026-10-01, FUSDGateway.lp resolves to 0x3fea1cb36d2c5523c062d0e060eac253608b4daf. Its three configured reserve tokens match the issuer API product-address mapping, and each tracked reserve amount exactly equals that token's balance at reserveTreasury 0x7c2e652f8bb1da76d172e11f8a099c663b3fff54. This independently observed live token inventory supports retaining the coarse 100% fund-share basket with compositionAsOf 2026-10-01; it is not a refresh inferred from a webpage caption or the API's April 21 timestamp. The contract's USD values imply approximately 24.875721% Taikang, 24.807229% ChinaAMC and 50.317050% Finloop/BNY, but those values are publisher-supplied NAV marks rather than an independently reconciled fund report. Configuration updateAt remains April 21 while the price bundle timestamp is October 1. The bundle's PoR values are all zero, and its report forwarder and author/workflow guards are unconfigured. No verified off-chain collateralization, fund-holder priority, underlying maturity or recovery assurance is inferred. Unknown look-through exposure remains 100%.",
+    "compositionBasis": "Live on-chain reserve-token inventory at Ethereum block 26098753, mapped to issuer-disclosed fund products; coarse asset-class composition only",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current weights across the Taikang, ChinaAMC, and BNY Mellon products, plus their underlying holdings and maturity profile, are not published.",
+    "knownUnknownExposure": "Current reserve token quantities and publisher-marked product weights are observable on-chain. Independent reconciliation to fund-held assets, fund NAV administration, underlying holdings and maturities, holder priority and recovery safeguards remain unverified.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -51,10 +67,10 @@
         "reserveName": "Tokenized Treasury and money-market fund basket",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The three products are identified, but their current allocations are not disclosed."
+        "rationale": "The observed reserve tokens map to money-market fund products, not tracked stablecoins. Current on-chain holdings do not establish the funds' underlying obligor exposures or an independently verified collateral inventory."
       }
     ],
-    "compositionAsOf": "2026-07-30"
+    "compositionAsOf": "2026-10-01"
   },
   "custodyProfile": {
     "providers": [

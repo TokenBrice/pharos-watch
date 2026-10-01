@@ -52,7 +52,11 @@ describe("LeverUp LVUSD reserve census", () => {
   it("preserves the measured coverage deficit instead of treating USDC composition as solvency", async () => {
     const result = await observe();
     expect(result.slices).toEqual([expect.objectContaining({ coinId: "usdc-circle", pct: 100 })]);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(0.6442697295182127, 10);
+    expect(result.metadata?.censusComplete).toBe(true);
+    expect(result.metadata?.unknownExposurePct).toBe(0);
+    // The measured ~$906k reserve covers ~64.427% of ~$1.406m liabilities;
+    // do not pin floating-point quote digits beyond shared USD valuation precision.
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(0.64427, 5);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "undercollateralized", effect: "degraded" }));
     expect(result.metadata?.redemption).toBeUndefined();
   });

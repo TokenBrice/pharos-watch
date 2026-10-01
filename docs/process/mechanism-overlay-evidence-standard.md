@@ -100,6 +100,28 @@ Wave-6 packet research produced the canonical negative examples; they remain the
 - CDP metrics never use `unavailable` (the collateralization banding needs a numeric
   ratio); the adapter rejects it with a directed error.
 
+## Measured collateralization
+
+The optional collateralization measurement is a sourced reserve-to-liability
+pin, not a reserve-composition or surplus-credit claim. The compiler carries
+its source URL, evidence references, and `measuredAt` (the overlay's evidence-pin
+`reviewedAt` date); it uses the existing
+`evidenceExpiry.mechanismOverlayMaxAgeSec` budget, including the elapsed-UTC-day
+admission guard. An expired, undated, or unevidenced measurement is unknown and
+produces neither a haircut nor credit; a current measured ratio below one
+scales Backing and its ceiling, while ratios at or above one grant no credit.
+
+Every authored measurement requires a stable `measurementId` identifying the
+measured subject and immutable pin (for an on-chain census: asset, chain, block).
+A serial wrapper that
+inherits already-haircut parent Backing carries the application identity,
+date, evidence references, originating asset, and immediate inheritance parent
+in its Backing trace; the same pin is never multiplied again. A distinct
+wrapper-local shortfall remains chargeable. Copy the parent's `measurementId`
+unchanged when asserting the same measurement, even when an overlay review is
+re-pinned or its rationale is reworded; only a genuinely different measurement
+receives a new identity.
+
 ## Process requirements
 
 - Every overlay entry carries `reviewedAt` (ISO date of the evidence pin), descriptive

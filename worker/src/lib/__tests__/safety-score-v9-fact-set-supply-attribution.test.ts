@@ -450,7 +450,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
   });
 
-  it("fails closed when the circulating-liability denominator pushes XAUt0 above materiality", () => {
+  it("fails closed when the circulating denominator makes an unresolved-scope XAUt0 control material", () => {
     const clockSec = XAUT_FACT_SET_CLOCK_SEC;
     const aggregateSupplyUsd = 2_480_000_000;
     const fixed = xautFactSetFixedInput({
@@ -497,16 +497,16 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline),
       V9_CANDIDATE_POLICY_V1,
     ).assets[0]!;
+    // Measured exposure alone does not establish deployment-local loss scope.
+    // This group still has unknown economic semantics, so the smooth band
+    // cannot discharge the material bridge-supply ceiling.
     expect(evaluated.scoreInput.pillars.control.reasons.map(
       (reason) => reason.code,
-    )).toContain("runtime-bridge-materiality-unavailable");
-    expect(evaluated.trace.caps).toContainEqual(expect.objectContaining({
-      kind: "reason:runtime-bridge-materiality-unavailable",
-      limit: 55, source: "evidence", binding: true,
-    }));
+    )).toContain("material-bridge-supply-unmatched");
     expect(evaluated.trace.bindingCap).toMatchObject({
-      kind: "reason:runtime-bridge-materiality-unavailable", limit: 55, source: "evidence",
+      kind: "reason:material-bridge-supply-unmatched", limit: 55, source: "evidence",
     });
+    expect(evaluated.trace.finalScore).toBeLessThanOrEqual(55);
   });
 
   it("restores the bridge-materiality cap when the wM packet is absent", () => {

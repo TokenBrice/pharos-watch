@@ -145,6 +145,8 @@ export interface V9EconomicControlResult {
   score: number | null;
   /** Proportional unresolved-deployment pricing, before resilience and dependency adjustments. */
   unresolvedDeploymentAdjustment?: { scoreBefore: number; scoreAfter: number };
+  /** Admitted full unresolved cohort share used by the composite ceiling band. */
+  unresolvedDeploymentShare?: number;
   state: "rated" | "not-rated";
   oracleApplicability: V9FactStatusV2["applicability"]["state"];
   components: readonly V9ControlComponent[];

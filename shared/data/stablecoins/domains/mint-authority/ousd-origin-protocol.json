@@ -136,8 +136,8 @@
           ],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "unknown",
-          "version": "unknown",
-          "observedBlock": 26095831,
+          "version": "1.4.1",
+          "observedBlock": 26098752,
           "source": "onchain",
           "observedAt": "2026-10-01"
         },

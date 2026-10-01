@@ -570,6 +570,36 @@ export async function fetchEvmBranchBalancesReserves(
   const attemptCtx = { ...ctx, ioLimiter: ctx?.ioLimiter ?? createAdapterIoLimiter(2) };
   const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx: attemptCtx, ...params });
   ctx = plan.ctx;
+  const onchain = makeOnchainCallers(input, {
+    signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
+  });
+  if (params.priceOracle && params.branches.some((branch) =>
+    (branch.chain ?? branch.token.chain) !== input.chain || branch.priceUsd != null
+  )) {
+    throw new Error(`${ADAPTER_KEY}: pinned price oracle requires same-chain branches without fixed prices`);
+  }
+  if (params.census?.kind === "onchain-registry") {
+    const census = params.census;
+    if (params.branches.length > census.maxAssets ||
+        params.branches.some((branch) => (branch.chain ?? branch.token.chain) !== input.chain)) {
+      throw new Error(`${ADAPTER_KEY}: registry census exceeds its bound or crosses chains`);
+    }
+    const registryRaw = await onchain.raw(census.contract, census.selector);
+    const registryWords = decodeWords(registryRaw, "reserve registry");
+    if (registryWords[0] !== 32n || registryWords.length !== params.branches.length + 2) {
+      throw new Error(`${ADAPTER_KEY}: reserve registry census length or ABI layout changed`);
+    }
+    const assets = decodeUintArray(
+      registryRaw,
+      params.branches.length,
+      "reserve registry",
+    ).map((address) => addressFromWord(address, "reserve registry asset").toLowerCase());
+    const configured = new Set(params.branches.map((branch) => branch.token.address.toLowerCase()));
+    if (configured.size !== params.branches.length || new Set(assets).size !== assets.length ||
+        assets.some((address) => !configured.has(address))) {
+      throw new Error(`${ADAPTER_KEY}: reserve registry drift; reviewed constituents no longer match`);
+    }
+  }
   const chainPlans = new Map([[input.chain, plan]]);
   for (const branch of params.branches) {
     const chain = branch.chain ?? input.chain;
@@ -587,17 +617,16 @@ export async function fetchEvmBranchBalancesReserves(
       signal, chainPlan.ctx,
     );
   });
-  const observationDetails = chainPlans.size > 1
-    ? { observedBlocks: [...chainPlans.values()].map((entry) => entry.observedBlock) }
-    : undefined;
+  const observationDetails = {
+    ...(chainPlans.size > 1
+      ? { observedBlocks: [...chainPlans.values()].map((entry) => entry.observedBlock) }
+      : {}),
+    censusScope: params.census?.kind ?? "configured-branches",
+    ...(params.census ? { census: params.census } : {}),
+    ...(params.priceOracle ? { priceOracle: params.priceOracle } : {}),
+  };
   const debtSelector = params.debtSelector;
   const debtDecimals = params.debtDecimals ?? DEFAULT_DEBT_DECIMALS;
-  const onchain = makeOnchainCallers(input, {
-    signal,
-    ctx,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-  });
   const redemptionCapacityParams = params.redemptionCapacity;
 
   const [balances, redemptionFeeBps, debtRaw, redemptionCapacity] = await Promise.all([
@@ -657,7 +686,18 @@ export async function fetchEvmBranchBalancesReserves(
   }
 
   const priceMapWarnings: LiveReserveWarning[] = [];
-  const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
+  const priceMap = params.priceOracle
+    ? new Map((await Promise.all(balances.map(async ({ branch, balanceRaw }) => {
+        if (balanceRaw == null || balanceRaw === 0n) return null;
+        const oracle = params.priceOracle!;
+        const raw = await onchain.uint256(
+          oracle.contract, encodeAddressCallData(oracle.selector, branch.token.address),
+        );
+        return raw != null && raw > 0n
+          ? [branch.name, decimalNumberFromBigInt(raw, oracle.decimals)] as const
+          : null;
+      }))).filter((entry): entry is readonly [string, number] => entry != null))
+    : await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
 
   const baseMetadata = {
     observedBlock: plan.observedBlock,
@@ -671,49 +711,28 @@ export async function fetchEvmBranchBalancesReserves(
   };
   const commonWarnings = [...priceMapWarnings, ...redemptionCapacity.warnings];
 
-  // If debt reconciliation is configured, compute collateralizationRatio from
-  // the sum of priced branch balances and the on-chain debt read.
-  if (debtSelector && debtRaw != null) {
-    const totalDebtUsd = decimalNumberFromBigInt(debtRaw, debtDecimals);
-    const totalCollateralUsd = balances.reduce((sum, entry) => {
-      if (entry.balanceRaw == null || entry.balanceRaw <= 0n) return sum;
-      const price = entry.branch.priceUsd ?? priceMap.get(entry.branch.name);
-      if (price == null) return sum;
-      return sum + decimalNumberFromBigInt(entry.balanceRaw, entry.balanceDecimals ?? entry.branch.token.decimals) * price;
-    }, 0);
-    // Observed zero debt is valid, but cannot produce a finite coverage ratio.
-    const collateralizationRatio = totalDebtUsd > 0 ? totalCollateralUsd / totalDebtUsd : null;
-    const warnings: LiveReserveWarning[] = [];
-    if (collateralizationRatio != null && collateralizationRatio < 1.0) {
-      warnings.push(reserveDegradedWarning(
-        "undercollateralized",
-        `${ADAPTER_KEY} collateralization ratio ${collateralizationRatio.toFixed(4)} below 1.0 (collateral ${totalCollateralUsd.toFixed(2)} USD vs debt ${totalDebtUsd.toFixed(2)} USD)`,
-      ));
-    }
-    const result = adaptBranchBalanceReserves({
-      adapterKey: ADAPTER_KEY,
-      balances,
-      priceMap,
-      details: observationDetails,
-      metadata: {
-        ...(baseMetadata ?? {}),
-        totalDebtUsd,
-        ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
-      },
-    });
-    const merged = [...warnings, ...commonWarnings];
-    return merged.length > 0
-      ? { ...result, warnings: [...(result.warnings ?? []), ...merged] }
-      : result;
-  }
-
+  const totalDebtUsd = debtRaw != null ? decimalNumberFromBigInt(debtRaw, debtDecimals) : undefined;
   const result = adaptBranchBalanceReserves({
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
+    censusComplete: params.census != null,
+    liabilityUsd: totalDebtUsd,
     details: observationDetails,
-    metadata: baseMetadata,
+    metadata: { ...baseMetadata, ...(totalDebtUsd != null ? { totalDebtUsd } : {}) },
   });
+  // Unknown or circular claims cannot become a full collateralization numerator.
+  if (totalDebtUsd != null && totalDebtUsd > 0 && result.metadata?.valuationComplete === true) {
+    const details = result.metadata.details as { knownReserveValueUsd: number };
+    const ratio = details.knownReserveValueUsd / totalDebtUsd;
+    result.metadata.collateralizationRatio = ratio;
+    if (ratio < 1) {
+      commonWarnings.push(reserveDegradedWarning(
+        "undercollateralized",
+        `${ADAPTER_KEY} collateralization ratio ${ratio.toFixed(4)} below 1.0 (collateral ${details.knownReserveValueUsd.toFixed(2)} USD vs debt ${totalDebtUsd.toFixed(2)} USD)`,
+      ));
+    }
+  }
   return commonWarnings.length > 0
     ? { ...result, warnings: [...(result.warnings ?? []), ...commonWarnings] }
     : result;

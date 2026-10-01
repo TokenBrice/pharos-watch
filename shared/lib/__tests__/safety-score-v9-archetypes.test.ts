@@ -23,8 +23,17 @@ const weakObservedFact = (id: string): V9MechanismFactV1 => ({
 const reserveExposure = (key: string) => exposure({ key, weight: 0.25, policyRuleId: "mechanism.required" });
 
 function asset(gaps: readonly V9FactGapV2[] = []): V9BackingAssetInput {
-  return backingAsset(["a", "b", "c", "d"].map(reserveExposure), gaps, knownStatus("evidence:reserves", "mechanism.required"));
+  return {
+    ...backingAsset(["a", "b", "c", "d"].map(reserveExposure), gaps, knownStatus("evidence:reserves", "mechanism.required")),
+    asOfSec: Date.parse("2026-07-22T00:00:00Z") / 1_000,
+  };
 }
+
+const measurementPin = {
+  measuredAt: "2026-07-20",
+  measurementId: "measurement:lvusd-vault-census",
+  sourceUrl: "https://example.com/vault-census",
+};
 
 const reviews: { [A in V9MechanismRiskReview["archetype"]]: Extract<V9MechanismRiskReview, { archetype: A }> } = {
   "fiat-cash": {
@@ -133,6 +142,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
       const result = evaluateV9Backing(asset(), {
         ...review,
         collateralizationMeasurement: {
+          ...measurementPin,
           ratio: 0.64,
           status: knownStatus("evidence:vault-census", "mechanism.required"),
         },
@@ -155,11 +165,122 @@ describe("Safety Score v9 archetype backing adapters", () => {
     const result = evaluateV9Backing(asset(), {
       ...reviews.algorithmic,
       collateralizationMeasurement: ratio === null ? null : {
+        ...measurementPin,
         ratio,
         status: knownStatus("evidence:vault-census", "mechanism.required"),
       },
     }, V9_CANDIDATE_POLICY_V1);
     expect(result).toEqual(baseline);
+  });
+
+  it("admits a dated shortfall only after its UTC day and before the policy expiry boundary", () => {
+    const measuredAtSec = Date.parse(`${measurementPin.measuredAt}T00:00:00Z`) / 1_000;
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
+    const review = {
+      ...reviews.algorithmic,
+      collateralizationMeasurement: {
+        ...measurementPin,
+        ratio: 0.64,
+        status: knownStatus("evidence:vault-census", "mechanism.required"),
+      },
+    };
+    for (const asOfSec of [measuredAtSec + 86_400 - 1, measuredAtSec + maxAgeSec]) {
+      const input = { ...asset(), asOfSec };
+      const baseline = evaluateV9Backing(input, reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
+      expect(evaluateV9Backing(input, review, V9_CANDIDATE_POLICY_V1)).toEqual(baseline);
+    }
+    for (const asOfSec of [measuredAtSec + 86_400, measuredAtSec + maxAgeSec - 1]) {
+      const input = { ...asset(), asOfSec };
+      const baseline = evaluateV9Backing(input, reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
+      expect(evaluateV9Backing(input, review, V9_CANDIDATE_POLICY_V1).score)
+        .toBeCloseTo(baseline.score! * 0.64, 8);
+    }
+  });
+
+  it("treats undated or unevidenced ratios as unknown rather than perpetual adverse measurements", () => {
+    const baseline = evaluateV9Backing(asset(), reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
+    const measurement = {
+      ...measurementPin,
+      ratio: 0.64,
+      status: knownStatus("evidence:vault-census", "mechanism.required"),
+    };
+    for (const unadmitted of [
+      { ...measurement, measuredAt: null },
+      { ...measurement, status: { ...measurement.status, evidenceRefIds: [] } },
+    ]) {
+      expect(evaluateV9Backing(asset(), {
+        ...reviews.algorithmic,
+        collateralizationMeasurement: unadmitted,
+      }, V9_CANDIDATE_POLICY_V1)).toEqual(baseline);
+    }
+    expect(evaluateV9Backing({ ...asset(), asOfSec: undefined }, {
+      ...reviews.algorithmic,
+      collateralizationMeasurement: measurement,
+    }, V9_CANDIDATE_POLICY_V1)).toEqual(baseline);
+  });
+
+  it("applies a shared parent measurement once across serial wrappers but still charges a distinct local shortfall", () => {
+    const measurement = {
+      ...measurementPin,
+      ratio: 0.64,
+      status: knownStatus("evidence:vault-census", "mechanism.required"),
+    };
+    const parent = evaluateV9Backing({ ...asset(), assetId: "parent" }, {
+      ...reviews.algorithmic,
+      collateralizationMeasurement: measurement,
+    }, V9_CANDIDATE_POLICY_V1);
+    const wrappedInput = (assetId: string, upstream: typeof parent): V9BackingAssetInput => ({
+      ...asset(),
+      assetId,
+      reserveExposures: [{
+        ...reserveExposure(upstream.assetId),
+        weight: 1,
+        provenance: "live",
+        trackedAssetId: upstream.assetId,
+      }],
+      inheritedStablecoinBacking: {
+        parentAssetId: upstream.assetId,
+        parentBackingScore: upstream.score!,
+        weight: 1,
+        tier: "wrapped",
+        failureDomains: [],
+        collateralizationApplications: upstream.collateralizationApplications,
+      },
+    });
+    const wrapperInput = wrappedInput("wrapper", parent);
+    const duplicateReview = { ...reviews.algorithmic, collateralizationMeasurement: measurement };
+    const wrapper = evaluateV9Backing(wrapperInput, duplicateReview, V9_CANDIDATE_POLICY_V1);
+    expect(wrapper.score).toBeCloseTo(parent.score!, 8);
+    expect(wrapper.collateralizationApplications).toEqual([{
+      measurementId: measurement.measurementId,
+      measuredAt: measurement.measuredAt,
+      ratio: measurement.ratio,
+      evidenceRefIds: ["evidence:vault-census"],
+      appliedByAssetId: "parent",
+      inheritedFromAssetId: "parent",
+    }]);
+    const outer = evaluateV9Backing(wrappedInput("outer", wrapper), duplicateReview, V9_CANDIDATE_POLICY_V1);
+    expect(outer.score).toBeCloseTo(parent.score!, 8);
+    expect(outer.collateralizationApplications?.[0]).toMatchObject({
+      appliedByAssetId: "parent",
+      inheritedFromAssetId: "wrapper",
+    });
+    const local = evaluateV9Backing(wrapperInput, {
+      ...reviews.algorithmic,
+      collateralizationMeasurement: {
+        ...measurement,
+        measurementId: "measurement:wrapper-local-census",
+        ratio: 0.8,
+        status: knownStatus("evidence:wrapper-census", "mechanism.required"),
+      },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(local.score).toBeCloseTo(parent.score! * 0.8, 8);
+    expect(local.pillarCeiling).toBeCloseTo(parent.score! * 0.8, 8);
+    expect(local.collateralizationApplications).toContainEqual(expect.objectContaining({
+      measurementId: "measurement:wrapper-local-census",
+      appliedByAssetId: "wrapper",
+      inheritedFromAssetId: null,
+    }));
   });
 
   it("retains the measured solvency haircut when a complete live reserve inherits parent quality", () => {
@@ -175,6 +296,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
         parentAssetId: "usdc-circle",
         parentBackingScore: 90,
         weight: 1,
+        tier: "wrapped",
         failureDomains: [],
       },
     };
@@ -182,6 +304,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     const result = evaluateV9Backing(inheritedAsset, {
       ...reviews.algorithmic,
       collateralizationMeasurement: {
+        ...measurementPin,
         ratio: 0.64,
         status: knownStatus("evidence:vault-census", "mechanism.required"),
       },
@@ -210,6 +333,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     const result = evaluateV9Backing(asset(), {
       ...reviews.algorithmic,
       collateralizationMeasurement: {
+        ...measurementPin,
         ratio: 0,
         status: knownStatus("evidence:vault-census", "mechanism.required"),
       },
@@ -225,6 +349,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
       ...reviews.algorithmic,
       contractionCapacity: missing.fact,
       collateralizationMeasurement: {
+        ...measurementPin,
         ratio: 0.64,
         status: knownStatus("evidence:vault-census", "mechanism.required"),
       },
@@ -240,6 +365,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
       expect(V9MechanismRiskReviewSchema.safeParse({
         ...reviews.algorithmic,
         collateralizationMeasurement: {
+          ...measurementPin,
           ratio: 0.64,
           status: {
             ...knownStatus("evidence:vault-census", "mechanism.required"),

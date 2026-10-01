@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
     "confidence": "verified",
     "sources": [
       {
@@ -39,12 +39,24 @@
       {
         "label": "Spiko eurSAFO share-class totals API",
         "url": "https://public-api.spiko.io/share-classes/eurSAFO/totals"
+      },
+      {
+        "label": "Spiko dated SAFO securities, swap-leg and cash holdings API",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+      },
+      {
+        "label": "S&P Global Ratings exact EUR share-class fund review dated 29 September 2026",
+        "url": "https://www.spglobal.com/ratings/en/regulatory/article/-/view/sourceId/101707884"
+      },
+      {
+        "label": "AMF-hosted Spiko SICAV semiannual report at 30 June 2026, SAFO assets, liabilities and securities/swap inventory pages 26–43",
+        "url": "https://geco.amf-france.org/back-office/document/download/429960"
       }
     ],
-    "rationale": "The producer emits one 100% fully collateralized overnight total-return swap identity. Spiko's product page and legal documents identify BNP Paribas as the current TRS counterparty, daily dealing, and residual counterparty and market-liquidity risk; this review classifies that exact producer identity without treating the fund's changing securities portfolio as a separately weighted reserve slice.",
-    "compositionBasis": "Exact spiko-api single-asset identity cross-checked against Spiko's current product page, prospectus, KID, and share-class totals API",
+    "rationale": "The producer emits the whole EURSAFO fund-share claim as one asset identity; the 100% slice describes this immediate claim rather than a measured 100% derivatives allocation. The current SAFO holdings API publishes dated equity, swap-leg and cash rows for 1 October 2026, including signed derivative market values. The AMF-hosted 30 June 2026 semiannual report independently locates the exact EUR share class, assets, liabilities and securities/swap inventory within the public filing; it is not an audit opinion. The prospectus establishes proportional UCITS portfolio ownership and portfolio-performance hedging through TRS. S&P's 29 September 2026 exact EUR share-class review identifies BNP Paribas as the sole TRS counterparty and daily swap unwind. Physical holdings and signed hedge legs must not be substituted for the existing positive-percentage reserve slices without a derivative-aware look-through method.",
+    "compositionBasis": "Single EURSAFO fund-share producer identity, with separately sourced 1 October 2026 securities, swap-leg and cash look-through, 30 June 2026 filed securities/swap inventory and 1 September 2026 prospectus",
     "scope": "full-composition",
-    "knownUnknownExposure": "No exposure outside the emitted 100% TRS identity is indicated. The fund's changing securities portfolio and any future change of eligible TRS counterparty are look-through details, not separately reported producer slices.",
+    "knownUnknownExposure": "The current public fund-assets API discloses the physical portfolio, signed swap legs, cash, valuation day and instrument identifiers; the earlier lack of dated public holdings is resolved. The producer still emits one fund-share identity, so its zero unknown-slice percentage does not measure counterparty-default losses, derivative netting, currency conversion, encumbrance or rehypothecation. Future counterparty changes require a fresh review.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

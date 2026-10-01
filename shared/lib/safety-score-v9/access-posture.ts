@@ -176,7 +176,7 @@ function derivePrimaryExit(
     }
     if (route.holderAccess === "permissionless" || route.holderAccess === "retail-open") {
       known.push("permissionless");
-    } else if (route.holderAccess === "institutional-eligible" || route.holderAccess === "allowlisted") {
+    } else if (route.holderAccess === "institutional-eligible" || route.holderAccess === "verified-customer-neutral" || route.holderAccess === "allowlisted") {
       known.push("eligibility-gated");
     } else {
       known.push("issuer-discretionary");

@@ -247,6 +247,68 @@
         "evidence": "At Base block 50068610, the canonical BRLV proxy resolves through a zero EIP-1967 admin slot to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3; the shared DEFAULT_ADMIN EOA 0x239d4a can manage Base minters and grant UPGRADE_ROLE, while active Base UPGRADE_ROLE EOA 0xcdfc72 provides an immediate token upgrade path. Base's issuer relay directly mints, and BRLVRewards retains its canonical-domain surplus-bounded reward branch; the rewards proxy has active and role-admin upgrade EOAs with zero delay. Ethereum bridgedBRLV, the Base canonical gateway's remote mint/burn machinery, and their bridge administrators are retained as structured Bridge Risk controls rather than compiled into canonical Mint Authority. Crown backs BRLV with segregated Brazilian federal Treasury bonds and Tesouro Selic ETFs; Fact Finance performs daily independent reserve verification with full liability reconciliation published on Crown's transparency page, so supply is continuously reconciled. Reserve custody sits at BCB-regulated banks, but that is custodial regulation, not issuer supervision: no BCB or CVM registry names Crown/BRLV as a licensed stablecoin issuer, so supervision is attestation-only and BRLV remains in the high tier.",
         "reviewer": "Codex mint/bridge boundary migration; verified finding 2026-08-16",
         "reviewedAt": "2026-08-16",
+      "scopedQuestions": [
+        {
+          "controlRef": "base:0x239d4a24efa36a8987b86184c080ace26b3a8968",
+          "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
+          "sources": [
+            {
+              "label": "Crown September 18 binding platform terms, section VI",
+              "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
+          "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
+          "sources": [
+            {
+              "label": "Crown September 18 binding platform terms, section VI",
+              "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
+          "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
+          "sources": [
+            {
+              "label": "Crown September 18 binding platform terms, section VI",
+              "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x548634f237eae194f5e20982c9819d917fe17f04",
+          "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
+          "sources": [
+            {
+              "label": "Crown September 18 binding platform terms, section VI",
+              "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
+          "question": "Does Crown’s disclosed Fireblocks virtual-asset custody infrastructure protect this specific native issuance or mint-logic upgrade key, and under which MPC/HSM and approval policy? The September 18 terms name the provider but do not bind it to this address.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2VMisc02)",
+          "sources": [
+            {
+              "label": "Crown September 18 binding platform terms, section VI",
+              "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
+            }
+          ]
+        }
+      ],
       "disposition": "scoreable"
     }
   }

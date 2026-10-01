@@ -483,12 +483,10 @@ describe("fetchEvmBranchBalancesReserves", () => {
       { validate: false },
     );
 
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "branch-token-decimals-mismatch",
-        effect: "fatal",
-      }),
-    ]);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "branch-token-decimals-mismatch",
+      effect: "fatal",
+    }));
     expect(hasFatalWarnings(result.warnings)).toBe(true);
   });
 
@@ -770,9 +768,9 @@ describe("fetchEvmBranchBalancesReserves", () => {
     });
   });
 
-  it("fails when any branch balance cannot be read", async () => {
+  it("preserves unreadable constituents as unknown instead of normalizing the remaining balance", async () => {
     const config = makeBranchConfig([wstEthBranch(), wbtcBranch()]);
-    const run = runBranches(config, {
+    const { result } = await runBranches(config, {
       json: priceJson({ [assetKey("ethereum", "0xdddddddddddddddddddddddddddddddddddddddd")]: 60000 }),
       rpc: branchRpc({
         balances: {
@@ -782,7 +780,9 @@ describe("fetchEvmBranchBalancesReserves", () => {
       }),
     });
 
-    await expect(run).rejects.toThrow("could not read balances for: wstETH");
+    expect(result.metadata?.unknownExposurePct).toBe(100);
+    expect(result.metadata?.valuationComplete).toBe(false);
+    expect(result.slices).toEqual([{ name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" }]);
   });
 
   it("filters out branches with zero balances", async () => {
@@ -804,16 +804,20 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.slices[0].pct).toBe(100);
   });
 
-  it.each([
-    { name: "all balances are zero", balance: 0n, expected: "no non-zero balances" },
-    { name: "all balances are null", balance: null, expected: "could not read balances for: wstETH" },
-  ])("throws when $name", async ({ balance, expected }) => {
-    const run = runBranches(
+  it("rejects an empty observed book without a liability denominator", async () => {
+    await expect(runBranches(
       makeBranchConfig([wstEthBranch()]),
-      { rpc: branchRpc({ balances: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": balance } }) },
-    );
+      { rpc: branchRpc({ balances: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": 0n } }) },
+    )).rejects.toThrow();
+  });
 
-    await expect(run).rejects.toThrow(expected);
+  it("publishes an unreadable book as unknown rather than observed zero", async () => {
+    const { result } = await runBranches(
+      makeBranchConfig([wstEthBranch()]),
+      { rpc: branchRpc({ balances: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": null } }) },
+    );
+    expect(result.metadata?.unknownExposurePct).toBe(100);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "branch-reserve-book-partial", effect: "degraded" }));
   });
 
   it("propagates optional coinId and depType to slices", async () => {
@@ -907,7 +911,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
   });
 
   it("fails closed when an underlying price substitution has not been reviewed", async () => {
-    const run = runBranches(
+    const { result } = await runBranches(
       makeBranchConfig([usdcBranch()]),
       {
         json: {
@@ -920,7 +924,9 @@ describe("fetchEvmBranchBalancesReserves", () => {
       },
     );
 
-    await expect(run).rejects.toThrow(/Missing DefiLlama price/);
+    expect(result.metadata?.unknownExposurePct).toBe(100);
+    expect(result.slices.some((slice) => slice.coinId === "usdc-circle")).toBe(false);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "branch-reserve-book-partial", effect: "degraded" }));
   });
 
   it("falls back to the stablecoins cache price for tracked branches missing DefiLlama address prices", async () => {

@@ -4,6 +4,7 @@ import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@sha
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
 import {
   buildRedemptionExitRouteObservation,
+  buildPhysicalToUsdExitObservation,
   deriveSupplyModelExitRouteObservation,
 } from "../redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
@@ -19,6 +20,27 @@ const config: RedemptionBackstopConfig = {
   docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["capacity", "fees", "settlement"] }],
   reviewedAt: "2026-07-01",
 };
+
+describe("physical-to-USD modelled capacity", () => {
+  it("caps every grid point at the documented window throughput or one conservative minimum lot", () => {
+    const clockSec = Date.UTC(2026, 9, 1, 12) / 1000;
+    const physicalConfig = structuredClone(getRedemptionBackstopConfig("paxg-paxos")!);
+    const terms = physicalConfig.physicalToUsd!;
+    terms.fees = { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 };
+    terms.settlementLegs = [{ leg: "issuer-release", maximumBusinessDays: 1 }];
+    delete terms.throughput;
+    const input = { assetId: "paxg-paxos", config: physicalConfig, supplyUsd: 500_000_000,
+      reference: { usdPerTroyOunce: 1000, observedAtSec: clockSec }, clockSec, routeOpen: true };
+    const undocumented = buildPhysicalToUsdExitObservation(input)!;
+    expect(undocumented.capacityCurve?.map((point) => point.executableUsd)).toEqual([0, 350_000, 350_000, 350_000]);
+    terms.throughput = { tokens: 700, periodSec: 15 * 86400,
+      evidence: { url: "https://example.com/terms", quote: "At most 700 tokens of delivered fine metal per fifteen calendar days." } };
+    const documented = buildPhysicalToUsdExitObservation(input)!;
+    expect(documented.capacityCurve?.map((point) => point.executableUsd)).toEqual([0, 700_000, 700_000, 700_000]);
+    expect(documented.physicalToUsd).toMatchObject({ grossUsd: 700_000, netUsd: 693_000, costBps: 100 });
+    expect(buildPhysicalToUsdExitObservation({ ...input, routeOpen: false })?.capacityCurve?.map((point) => point.executableUsd)).toEqual([0, 0, 0, 0]);
+  });
+});
 
 const profile: RedemptionCapacityProfile = {
   scoringUsd: 10_000_000,

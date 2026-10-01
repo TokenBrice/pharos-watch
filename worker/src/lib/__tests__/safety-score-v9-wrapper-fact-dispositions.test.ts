@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import lorenzoMeta from "@shared/data/stablecoins/coins/susd1plus-lorenzo.json";
+import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
@@ -56,7 +58,7 @@ function wrapperFacts(
 }
 
 describe("Safety Score V9 wrapper fact dispositions", () => {
-  it("withholds sUSD1+ parent backing while preserving serial caps, peg, supply and other wrappers' inheritance", () => {
+  it("withholds reviewed mixed-book backing for any asset ID while preserving other wrappers' inheritance, caps, peg and supply", () => {
     const fixed = makeV9CohortFixedInput(["susd1plus-lorenzo"]);
     const edge: V9ExtensionDependencyEdge = {
       upstreamAssetId: "alpha",
@@ -78,10 +80,14 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       review.custodyContinuity.quality = "weak";
       review.assuranceAndReconciliation.quality = "weak";
     }
+    // Deliberately attach the review to a different ID: the former exception
+    // asset inherits normally when no withholding review is authored.
+    extension.assets.find((asset) => asset.assetId === "beta")!.parentBackingInheritance =
+      ParentBackingInheritanceSchema.parse(lorenzoMeta.parentBackingInheritance);
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
-    const strategy = evaluated.assets.find((asset) => asset.assetId === "susd1plus-lorenzo")!;
-    const wrapper = evaluated.assets.find((asset) => asset.assetId === "beta")!;
+    const strategy = evaluated.assets.find((asset) => asset.assetId === "beta")!;
+    const wrapper = evaluated.assets.find((asset) => asset.assetId === "susd1plus-lorenzo")!;
     const parent = evaluated.assets.find((asset) => asset.assetId === "alpha")!;
     expect(wrapper.backing.contributions).toContainEqual(expect.objectContaining({
       componentKey: "reserve:inherited-backing:alpha",
@@ -117,7 +123,7 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
   });
 
   it.each(["pure-wrapper", "savings-passthrough"] as const)(
-    "keeps an authored onchain %s custody profile outside local legal and reuse scoring",
+    "keeps an uncorroborated onchain %s custody profile conservative",
     (variantKind) => {
       const fixed = fixedInputWithTrackedParent();
       const extension = wrapperExtension(fixed, variantKind);
@@ -134,8 +140,8 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
       if (asset.wrapperLocalFacts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
       expect(asset.wrapperLocalFacts.facts).toMatchObject({
-        custodyEscrow: { disposition: "not-applicable", assessment: null },
-        rehypothecationCorrelation: { disposition: "not-applicable", assessment: null },
+        custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
+        rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
       });
     },
   );

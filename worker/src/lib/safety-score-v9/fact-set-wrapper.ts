@@ -302,7 +302,16 @@ function buildWrapperStructuralDimensions(
     allocationEvidenceRefIds,
   } = state;
   const directSerialWrapper = isDirectSerialWrapper(context, form, wrapperEdge);
-  const allocation = context.asset.wrapperAllocationReview ?? null;
+  const authoredAllocation = context.asset.wrapperAllocationReview ?? null;
+  // Reuse the A3 date/custody gate at the compiler boundary as well as intake:
+  // retained extensions cannot turn expired or future allocation proof into relief.
+  const allocation =
+    authoredAllocation !== null &&
+    Date.parse(`${authoredAllocation.reviewedAt}T00:00:00.000Z`) <= context.fixedInput.clockSec * 1_000 &&
+    context.fixedInput.clockSec * 1_000 < Date.parse(`${authoredAllocation.expiresAt}T00:00:00.000Z`) &&
+    authoredAllocation.custody === "fully-onchain-no-offchain-custodian"
+      ? authoredAllocation
+      : null;
   let contractMutability: V9WrapperLocalDimensionFact;
   const upgrade = input.economicControlReview.mint.upgrade;
   if (input.economicControlReview.mint.status.observationState !== "known") {
@@ -355,17 +364,21 @@ function buildWrapperStructuralDimensions(
 
   let custodyEscrow: V9WrapperLocalDimensionFact;
   const custody = context.asset.wrapperCustodyReview ?? null;
-  // Only the authored on-chain model of a direct serial wrapper scopes this
-  // review to contract custody; parent legal safeguards and reuse stay upstream.
-  const directOnchainCustody = directSerialWrapper && custody?.custodyModel === "onchain";
+  const hasUnknownCustody =
+    custody === null ||
+    custody.segregation === "unknown" ||
+    custody.bankruptcyRemoteness === "unknown" ||
+    custody.knownUnknownExposureShare === null ||
+    custody.knownUnknownExposureShare > 0;
+  // The on-chain enum scopes a direct claim only when corroborated by current
+  // allocation proof or the custody review's own complete exposure checks.
+  const directOnchainCustody =
+    directSerialWrapper &&
+    custody?.custodyModel === "onchain" &&
+    (allocation !== null || !hasUnknownCustody);
   if (custody !== null && !directOnchainCustody) {
     const custodyEvidence = componentResearchEvidence(context, "wrapper-local:custodyEscrow");
-    const hasUnknown =
-      custody.segregation === "unknown" ||
-      custody.bankruptcyRemoteness === "unknown" ||
-      custody.knownUnknownExposureShare === null ||
-      custody.knownUnknownExposureShare > 0;
-    custodyEscrow = hasUnknown
+    custodyEscrow = hasUnknownCustody
       ? unavailableWrapperFact(
           "issuer-undisclosed",
           `wrapper-custody-terms-incomplete:${custody.knownUnknownExposureShare ?? "unknown"}`,
@@ -434,9 +447,26 @@ function buildWrapperStructuralDimensions(
       reviewedFormEvidence,
     );
   } else if (form === "strategy-vault") {
+    // A current, no-reuse allocation over one fully tracked serial claim scopes
+    // custody uncertainty to the parent. Mixed books and stale reviews do not.
+    const directParentAllocation =
+      allocation !== null &&
+      allocation.localLeverage === "no-borrowing-surface" &&
+      allocation.capitalReuse === "none" &&
+      wrapperEdge !== undefined &&
+      wrapperEdge.weight === 1 &&
+      input.dependencies.diagnostics.graphState === "valid" &&
+      input.dependencies.edges.length === 1 &&
+      input.reserveStatus.observationState === "known" &&
+      input.reserveExposures.length > 0 &&
+      input.reserveExposures.every((exposure) =>
+        exposure.status.observationState === "known" &&
+        exposure.trackedAssetId === wrapperEdge.upstreamAssetId,
+      );
     const highComplexity =
       input.reserveExposures.some((exposure) => exposure.assetClass === "private-credit") ||
-      (custody?.knownUnknownExposureShare ?? 0) > 0;
+      (!directParentAllocation && custody?.knownUnknownExposureShare != null &&
+        custody.knownUnknownExposureShare > 0);
     strategyComplexity = reviewedWrapperFact(
       context,
       highComplexity ? "high" : "moderate",
@@ -446,7 +476,11 @@ function buildWrapperStructuralDimensions(
           : "strategy-vault-adds-third-party-allocation-layer",
         `wrapper-strategy-reserve-components:${input.reserveExposures.length}`,
       ],
-      uniqueEvidenceRefIds([...reviewedFormEvidence, ...reserveEvidenceRefIds]),
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...reserveEvidenceRefIds,
+        ...(directParentAllocation ? allocationEvidenceRefIds : []),
+      ]),
     );
   } else {
     strategyComplexity = unavailableWrapperFact(
@@ -576,7 +610,10 @@ function buildWrapperStructuralDimensions(
     input.peg.status.observationState === "known"
   ) {
     const oracleTier = input.economicControlReview.oracle.tier;
-    const weakOracle = oracleTier === "single-source-or-laggy" || oracleTier === "opaque-or-unknown";
+    const weakOracle =
+      oracleTier === "privileged-internal-pricing" ||
+      oracleTier === "single-source-or-laggy" ||
+      oracleTier === "opaque-or-unknown";
     shareAccountingNavOracle = reviewedWrapperFact(
       context,
       weakOracle ? "high" : "moderate",
@@ -654,6 +691,7 @@ function buildWrapperExitDimensions(
       if (
         route.holderAccess === "allowlisted" ||
         route.holderAccess === "institutional-eligible" ||
+        route.holderAccess === "verified-customer-neutral" ||
         route.executionCertainty === "conditional"
       ) {
         return "moderate";
@@ -759,7 +797,7 @@ function buildWrapperLossAbsorptionFact(
     );
   } else {
     const localControls =
-      context.asset.variantKind === "strategy-vault"
+      context.asset.variantKind === "strategy-vault" || context.asset.variantKind === "risk-absorption"
         ? input.controls.filter((control) => control.controlKind !== "bridge")
         : [];
     const reviewableLocalControls = localControls.filter((control) =>
@@ -895,19 +933,13 @@ export function buildWrapperLocalFacts(
         : [`wrapper-operator:${context.asset.wrapperOperator}`]),
     ],
     formEvidenceRefIds: reviewedFormEvidence,
-    // D26, reviewed 2026-10-01: Lorenzo's launch describes mixed RWA/CeFi/DeFi
-    // fund shares, and its vault accepts USD1, USDT and USDC. The USD1 brand,
-    // underlying() pointer and settlement asset do not measure a USD1 claim.
-    // https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/
-    // Preserve the serial cap and peg relationship; withhold favorable Backing
-    // inheritance until a separate review establishes the economic claim.
-    ...(context.asset.assetId === "susd1plus-lorenzo" ? {
+    ...(context.asset.parentBackingInheritance === undefined ? {} : {
       parentBackingInheritance: {
-        state: "withheld" as const,
-        reason: "mixed-strategy-without-measured-parent-claim" as const,
-        evidenceRefIds: reserveEvidenceRefIds.length > 0 ? reserveEvidenceRefIds : reviewedFormEvidence,
+        state: context.asset.parentBackingInheritance.state,
+        reason: context.asset.parentBackingInheritance.reason,
+        evidenceRefIds: componentResearchEvidence(context, "wrapper-local:parentBackingInheritance"),
       },
-    } : {}),
+    }),
     facts: {
       contractMutability,
       custodyEscrow,

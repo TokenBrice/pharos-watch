@@ -16,9 +16,9 @@
         "url": "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
       }
     ],
-    "evidence": "Re-reviewed 2026-09-21 for the sole tracked Ethereum deployment 0x0655977feb2f289a4ab78af67bab0d17aab84367. Etherscan identifies the live proxy and implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; the exact-match Yearn V3 vault implementation has no owner-controlled holder blacklist, freeze, seizure, or privileged transfer hook. scrvUSD remains an ERC-4626 wrapper whose asset is crvUSD. Its direct transfer posture is permissionless, while freeze exposure is honestly inherited from the named crvUSD upstream failure domain. This exact chain/address is the complete authored deployment scope.",
-    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
-    "reviewedAt": "2026-09-21"
+    "evidence": "Re-reviewed on 2026-10-01 at Ethereum block 26098749 for the authored canonical vault 0x0655977feb2f289a4ab78af67bab0d17aab84367. Runtime bytecode is an EIP-1167 clone fixed to implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; its exact-match Yearn V3 source implements balance/allowance-based share transfers without holder blacklist, freeze, seizure, or privileged transfer hooks. asset() identifies crvUSD, totalDebt() is zero, and totalIdle() equals totalAssets(). Canonical share transfers have no local holder restriction, while upstream collateral restrictions remain inherited: the crvUSD cbBTC controller has positive debt, and cbBTC's current implementation exposes blacklist and pause with nonzero blacklister and pauser addresses. Those upstream controls are not a direct blacklist on scrvUSD or canonical crvUSD transfers. Curve also documents six bridged scrvUSD representations; this review does not establish their controls or transfer materiality and is limited to the authored Ethereum deployment.",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WCurve)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "standard-external",

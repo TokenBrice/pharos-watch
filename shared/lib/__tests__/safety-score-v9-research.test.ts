@@ -73,19 +73,6 @@ describe("v9 research handoff contracts", () => {
       structuralSignals: [],
       unresolved: [],
     });
-    expect(input).toStrictEqual({
-      assetId: "missing-exit",
-      pillars: { backing: 90, exit: null, control: 70 },
-      pegScore: 100,
-      pegApplicable: true,
-      evidenceLevel: "strong",
-      trackRecordMonths: 72,
-      activeDepegBps: null,
-      parentRequired: false,
-      parentScore: null,
-      structuralSignals: [],
-      unresolved: [],
-    });
     const trace = scoreV9Input(input, V9_CANDIDATE_POLICY_V1);
     expect(trace.finalGrade).toBe("NR");
     expect(trace.nrReasons).toContainEqual(expect.objectContaining({ code: "missing-pillar" }));

@@ -253,16 +253,20 @@
         "label": "satUSD Base UUPS owner and ward administrator",
         "role": "proxy-admin",
         "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 48861445,
-        "evidence": "owner() on the Base satUSD UUPS proxy 0x70654aad8b7734dc319d0c3608ec7b32e03fa162 returns this address (read 2026-07-20, eth_getCode empty). It is the same River owner EOA recorded as the Ethereum proxy admin; on Base it can _authorizeUpgrade() and rely() new mint wards, so it is the cap-raise authority for the Base SatoshiXApp cap-limited minter.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041928,
+        "evidence": "At Base block 52041928, owner() on satUSD 0x70654aad8b7734dc319d0c3608ec7b32e03fa162 returns this address, eth_getCode on it is empty and wards(address) returns true. Implementation slot remains 0x256bd26fddc17a1d1a9b974bcd268f89bfe15789. Its verified DebtTokenWithLz source permits an authorized ward to mint arbitrary amounts without a token-level collateral check or numeric cap. The owner can also rely()/deny() wards and authorize UUPS upgrades directly, with no timelock in those functions. This is verified unbounded native issuance, not a missing-evidence inference. Operational key custody and whole-claim reserve reconciliation remain unverified.",
         "sources": [
           {
             "label": "satUSD Base proxy",
             "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+          },
+          {
+            "label": "Verified Base DebtTokenWithLz implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x256bd26fddc17a1d1a9b974bcd268f89bfe15789"
           }
         ]
       },

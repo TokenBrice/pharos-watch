@@ -74,12 +74,24 @@
         ],
         "canRaiseCap": "unknown",
         "observedAt": "2026-10-01",
-        "observedBlock": 452213018,
-        "evidence": "At finalized Solana slot 452213018, two RPC endpoints returned mintAuthority equal to the mint address, no freezeAuthority, 6 decimals, and metadataPointer/tokenMetadata extensions. The account is non-executable, but a non-null authority is not a revocation. Token-2022 validates the authority signature rather than requiring an executable or system-owned authority account; the controlling signer and whether its key remains usable are unresolved.",
+        "observedBlock": 452346328,
+        "evidence": "At finalized Solana slot 452346328, an atomic getMultipleAccounts read returned the exact USDu mint with self-referential mintAuthority, no freezeAuthority, 6 decimals, and metadataPointer/tokenMetadata extensions. The issuer-listed USDu Program USDuuELLS5piwJ7vmMoKByqxaguyZov7CxKQHYRBvo5 is executable and upgradeable: ProgramData CdPKgzLeuqFXaa16jchGUmK9ZaVqq8j6GfYwVLH5q9PX records upgrade authority 3UWMx8oCchy53x48aSb25SeSobqLfqF8U6eiCyUSdeVB. The issuer-listed USDu Config is owned by that program. This identifies the deployed program and its upgrade key; it does not prove the mint's signer derivation or current program-to-mint authorization. The two published Solana audits reference historical commits, and their source repository currently returns 404. Signer custody and audited-source equivalence to the deployed program remain unresolved.",
         "sources": [
           {
             "label": "USDU Solana mint",
             "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+          },
+          {
+            "label": "Unitas exact Solana program, mint and configuration roster",
+            "url": "https://docs.unitas.so/mainnet-program-and-address-index.md"
+          },
+          {
+            "label": "Finalized atomic program and ProgramData observation, slot 452346328",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Oak Security Solana audit with reviewed commits",
+            "url": "https://raw.githubusercontent.com/UnipayFI/Audit/main/SVM/2025-04-04%20Audit%20Report%20-%20Unipay.pdf"
           }
         ]
       },
@@ -178,9 +190,9 @@
       "scopedQuestions": [
         {
           "controlRef": "solana:9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
-          "question": "Who controls the non-null self-referential mint authority, and can its key or program signer still authorize minting?",
+          "question": "Does the issuer-listed upgradeable USDu Program control the mint through a PDA signer, and what current source/binary verification and authority account establish that path? At finalized slot 452346328 its upgrade authority is 3UWMx8oCchy53x48aSb25SeSobqLfqF8U6eiCyUSdeVB; operator identity and key custody remain unverified.",
           "reviewedAt": "2026-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WStrategy)",
           "sources": [
             {
               "label": "Token-2022 mint-authority signature validation",

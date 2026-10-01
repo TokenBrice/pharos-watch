@@ -1,11 +1,11 @@
 {
   "id": "yzusd-yuzu",
   "mintAuthority": {
-    "mintPath": "permissioned-minter",
+    "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "At Plasma block 33896709, yzUSD has 101 active MINTER_ROLE holders: 97 accounts without bytecode and four contract accounts. Upgrades remain behind a 172800-second timelock proposed by a 4-of-5 Safe; limit/restriction parameters remain behind a 43200-second timelock associated with a 3-of-5 Safe. Both timelocks now restrict execution to their respective Safe and account 0x16ce19e4ee0165c481641c8bce0398c506dfa3ae rather than granting execution to the zero address. Collateral operations use Fordefi MPC infrastructure.",
-    "economicCapSemantics": "unbounded",
+    "summary": "yzUSD issuance requires USDT0 transfers from the caller before calculated shares are minted. MINTER_ROLE is receiver eligibility, not an arbitrary token-mint privilege: the earlier block 33896709 census of 101 eligible accounts (97 no-code, four contracts) does not establish 101 independent unbacked issuance paths. The current V3 implementation and collateral-funded path were reverified at Plasma block 33932322. Upgrades remain behind the reviewed 48-hour timelock and limit/restriction parameters behind the reviewed 12-hour timelock; stored NAV remains privileged internal pricing. Fordefi manages protocol collateral operations, not investor eligibility keys.",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "continuous",
     "supervision": "attestation-only",
     "upgradeability": {
@@ -54,53 +54,35 @@
     },
     "controls": [
       {
-        "label": "Yuzu issuer / eligible-investor primary mint",
+        "label": "yzUSD collateral-funded issuance contract",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "authorityType": "contract",
+        "directMintAbility": "none",
         "chain": "plasma",
+        "address": "0x6695c0f8706c5ace3bdf8995073179cca47926dc",
         "deploymentRefs": [
           "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
         ],
-        "canRaiseCap": "unknown",
-        "sources": [
-          {
-            "label": "Yuzu Stablecoin (yzUSD) docs",
-            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
-          }
-        ],
-        "evidence": "Yuzu docs state only Eligible Investors (KYC/AML/KYB screened) may mint/redeem yzUSD 1:1 with USDT0 through the protocol; once issued, yzUSD trades freely on secondary markets. The backend-to-token authorization path is not inferred from that product description."
-      },
-      {
-        "chain": "plasma",
-        "deploymentRefs": [
-          "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
-        ],
-        "label": "yzUSD MINTER_ROLE holder set (101 accounts)",
-        "role": "direct-minter",
-        "authorityType": "unknown",
-        "directMintAbility": "direct",
-        "modulesOrGuardsStatus": "unknown",
-        "failureDomainKeys": [
-          "role:plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc:minter-role"
-        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "YuzuUSDV3 mint/deposit enforce the supply cap and call YuzuIssuer._deposit, which transfers the required USDT0 from the caller before __yuzu_mint. MINTER_ROLE only qualifies the receiver. LIMIT_MANAGER_ROLE can raise the supply ceiling separately; the 12-hour restriction manager can change receiver eligibility but cannot bypass the collateral transfer.",
         "observedAt": "2026-10-01",
-        "observedBlock": 33896709,
+        "observedBlock": 33932322,
         "sources": [
           {
-            "label": "yzUSD on Plasmascan",
-            "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+            "label": "Routescan verified YuzuUSDV3 and inherited YuzuIssuer/YuzuProto source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
           },
           {
-            "label": "Yuzu Money docs",
-            "url": "https://docs.yuzu.money/"
+            "label": "Yuzu eligible-investor collateral-funded mint documentation",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
           },
           {
-            "label": "Routescan from-deployment MINTER_ROLE grant census (offset 1000)",
-            "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=logs&action=getLogs&fromBlock=0&toBlock=33896709&address=0x6695c0f8706c5ace3bdf8995073179cca47926dc&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d&topic1=0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6&topic0_1_opr=and&page=1&offset=1000"
+            "label": "Plasma pinned RPC reads and unpaid-mint simulation",
+            "url": "https://rpc.plasma.to"
           }
         ],
-        "evidence": "At pinned Plasma block 33896709, all 104 unique MINTER_ROLE grant recipients in the from-deployment Routescan census were checked with hasRole. Exactly 101 remain active, including all 40 previously recorded July holders. eth_getCode found 97 active accounts without bytecode and four contract accounts: 0x08c6f91e2b681faf5e17227f2a44c307b3c1364c, 0xb4dca8c97228befd0ce6bffd6cb8ad15a78439db, 0xf0bb20865277abd641a307ece5ee04e79073416c, 0xd8841457f2cacb395e092ef3b08bdf7860eb5016. The historical July census had 40 EOA minters; the current aggregate no longer claims EOA-only authority or reviewed contract guards."
+        "evidence": "At Plasma block 33932322 the EIP-1967 implementation remains verified YuzuUSDV3 0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5, asset() is USDT0 0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb, and isMintRestricted() is true. YuzuProto._canMint checks MINTER_ROLE on the receiver; YuzuUSDV3.mint/deposit call YuzuIssuer._deposit, which uses safeTransferFrom before __yuzu_mint. A pinned eth_call mint of one yzUSD from active eligible receiver 0xc72f80402c060d6fb89359f319d1daa20166f282 reverted with ERC20: transfer amount exceeds allowance. The prior 101-account census remains historical eligibility evidence, not a durable privileged-mint authority inventory."
       },
       {
         "label": "yzUSD upgrade timelock (48 hours)",
@@ -197,8 +179,8 @@
       }
     ],
     "review": {
-      "evidence": "At pinned Plasma block 33896709, the transparent proxy retains implementation 0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5 and ProxyAdmin 0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa, whose owner is the 172800-second timelock. Upgrade and parameter proposer Safes remain 4-of-5 and 3-of-5 with the same five owners; the parameter timelock remains 43200 seconds. Both timelocks now restrict execution to their Safe and 0x16ce19e4ee0165c481641c8bce0398c506dfa3ae. The current MINTER_ROLE census has 101 active accounts, including four contracts, replacing the historical 40-EOA-only description. The current YuzuUSDV3 implementation delegates NAV changes to a role-gated facet; that pricing surface is reviewed in oracleRisk. Fordefi is separately documented custody infrastructure, not inferred to be a native minter.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA58ONyc)",
+      "evidence": "The round-1 Plasma block 33896709 review established a 48-hour upgrade timelock, 4-of-5 upgrade proposer Safe, 12-hour parameter timelock, 3-of-5 parameter proposer Safe, and restricted executors. Its complete grant census found 101 active MINTER_ROLE accounts (97 without bytecode and four contracts), replacing the July 40-account census. Round 2 at Plasma block 33932322 retains the same verified V3 implementation and resolves the economic meaning of that role: it is receiver eligibility; every ordinary mint/deposit transfers USDT0 from the caller before minting calculated shares. An eligible receiver's unpaid mint reverted on collateral allowance. The unsupported backend-direct-minter and mixed-holder arbitrary-mint descriptions are replaced by one collateral-funded contract control, while live upgrade, cap, restriction, treasury and NAV administration remain. The raiseable supply cap is not claimed immutable or collateral-gated under the 24-hour methodology threshold; stored NAV remains in oracleRisk. Fordefi MPC infrastructure is not inferred to hold eligible investors' keys.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WYuzu)",
       "reviewedAt": "2026-10-01",
       "sources": [
         {
@@ -231,7 +213,7 @@
         },
         {
           "label": "Plasma RPC fixed-block reads",
-          "url": "https://plasma.drpc.org"
+          "url": "https://rpc.plasma.to"
         }
       ],
       "disposition": "scoreable"

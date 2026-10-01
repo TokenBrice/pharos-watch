@@ -3143,7 +3143,7 @@
     {
       "assetId": "vchf-vnx",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "VNX FRT terms (no holder right, no contractual commitment, and VNX Gold-based reserve formation)",
@@ -3152,9 +3152,17 @@
         {
           "label": "VNX exchange-operations suspension notice",
           "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
+        },
+        {
+          "label": "Apex August 2026 scoped VCHF cash-reserve examination",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+        },
+        {
+          "label": "Current VNX Global legal terms (Stablecoins distinct from legacy FRTs)",
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
         }
       ],
-      "notes": "VNX's FRT terms (re-read in full 2026-07-20) state that for every FRT (VEUR/VCHF/VGBP) in circulation VNX holds an equivalent reserve on behalf of users, but that 'FRT itself does not represent a right', that 'VNX makes no (contractual) commitments to Users in relation to FRT', that users cannot claim exchange into VNX Gold, and that holding FRT only conveys the ability to request a TT exchange service after registering a VNX account; the terms also describe the FRT reserve as initially comprised of VNX Gold rather than franc-denominated deposits. This affirmative denial of a holder claim keeps claimAndSegregation at weak. VNX's notice (read 2026-07-20) confirms platform exchange operations were suspended June 30, 2026 at 18:00 CET with withdrawals to whitelisted wallets/bank accounts only until July 31, 2026; this is an operational wind-down of the redemption venue, not evidence of custodian failure. custodyContinuity is deliberately left bounded: no source located names any bank or securities custodian for VCHF reserves (the terms reference only unnamed 'banking partners'), no multiple-custodian, allocation, no-rehypothecation, or failure-continuity arrangement is documented, and the only third-party reserve document (AREVA's agreed-upon-procedures report as of 2024-12-31, published 2025-02-05) is stale, was retrievable only as a scanned image PDF with no text layer (no OCR tooling available in this environment), and in any case predates the exchange suspension - so no current custody evidence exists to tier this component. NOT established: a current reserve attestation, custodian or banking-partner identity, per-custodian allocation, no-rehypothecation or failure-continuity mechanics, or a holder reserve claim.",
+      "notes": "VNX's FRT terms (re-read in full 2026-07-20) state that for every FRT (VEUR/VCHF/VGBP) in circulation VNX holds an equivalent reserve on behalf of users, but that 'FRT itself does not represent a right', that 'VNX makes no (contractual) commitments to Users in relation to FRT', that users cannot claim exchange into VNX Gold, and that holding FRT only conveys the ability to request a TT exchange service after registering a VNX account; the terms also describe the FRT reserve as initially comprised of VNX Gold rather than franc-denominated deposits. This affirmative denial of a holder claim keeps claimAndSegregation at weak. VNX's notice (read 2026-07-20) confirms platform exchange operations were suspended June 30, 2026 at 18:00 CET with withdrawals to whitelisted wallets/bank accounts only until July 31, 2026; this is an operational wind-down of the redemption venue, not evidence of custodian failure. custodyContinuity is deliberately left bounded: no source located names any bank or securities custodian for VCHF reserves (the terms reference only unnamed 'banking partners'), no multiple-custodian, allocation, no-rehypothecation, or failure-continuity arrangement is documented, and the only third-party reserve document (AREVA's agreed-upon-procedures report as of 2024-12-31, published 2025-02-05) is stale, was retrievable only as a scanned image PDF with no text layer (no OCR tooling available in this environment), and in any case predates the exchange suspension - so no current custody evidence exists to tier this component. NOT established: a current reserve attestation, custodian or banking-partner identity, per-custodian allocation, no-rehypothecation or failure-continuity mechanics, or a holder reserve claim. R2 scope correction: new July/August 2026 Apex reports and Global legal terms were recovered through dynamic transparency-page inspection. Current Global Stablecoins have a restricted personal contractual redemption right and cash reserve at BCB; legacy FRT terms are a distinct regime. No component grade or original review date is refreshed until complete deployment/issuer migration scope is established.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -3162,8 +3170,8 @@
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "Re-verified 2026-07-30: no source names VCHF's reserve banks or securities custodians, per-custodian allocations, no-rehypothecation terms, or custodian-failure/succession mechanics. The AREVA AUP as of 2024-12-31 (latest, 19 months stale, predating the 2026-06-30 exchange-operations suspension) verified the reserve only by inspection of unnamed bank confirmations; the FRT terms reference only unnamed banking partners and expressly allow unilateral service discontinuation. Searched: transparency page live plus Wayback 2026-02/03/04/07, FRT terms, VNX gitbook docs (now VNX-Gold-only), rwa.xyz, Sygnum/partner and press coverage. Missing evidence recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
-          "sourceUrl": "https://vnx-terms.s3.amazonaws.com/VNX-FRT-Terms.pdf"
+          "rationale": "Historical legacy FRT custody continuity remains unavailable. New primary evidence fetched 2026-10-01: August 31 Apex report names Bermuda Commercial Bank and separately maintained VNX Global CHF reserve accounts for Stellar, Ethereum, Solana, ICP, Celo and Base VCHF. No complete legacy-deployment liability join, no-rehypothecation package, insolvency priority or custodian succession terms is established. Named bank is therefore no longer an unknown for the covered reserve; complete continuity remains bounded.",
+          "sourceUrl": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
         }
       }
     },
@@ -5284,19 +5292,19 @@
     {
       "assetId": "idrt-rupiah-token",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-29",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Rupiah Token official site (issuer PT Rupiah Token Indonesia; IDRT issuance and redemption)",
+          "label": "Rupiah Token issuer issuance/redemption disclosure",
           "url": "https://rupiahtoken.com/"
         },
         {
-          "label": "Independent Accountant Report on Applying Agreed-upon Procedures of the Management Report for Rupiah Token Circulation and its Bank Balance for Token Collateral as of January 31, 2026",
-          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf"
+          "label": "Rupiah Token dedicated Indonesian bank-account FAQ",
+          "url": "https://rupiahtoken.com/faq/dimana-cadangan-uang-backing-rupiah-token-disimpan-apa-buktinya"
         },
         {
-          "label": "Independent Accountant July 2026 IDRT circulation and bank-collateral AUP report (as of 2026-07-31; dated 2026-08-21)",
-          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_July_31_2026_2975b84148.pdf"
+          "label": "August 31 2026 independent accountant bank-deposit and whole-circulation AUP, dated September 29",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z"
         }
       ],
       "metrics": {},
@@ -5309,11 +5317,11 @@
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "The reviewed Rupiah Token disclosure surface at https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
-          "sourceUrl": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf"
+          "rationale": "The August 31, 2026 AUP and issuer bank-account FAQ identify dedicated Indonesian bank accounts and time deposits but disclose neither bank identities/allocations nor anti-rehypothecation and failure, replacement or successor-custody arrangements. These researched unknowns are not verified deficiencies.",
+          "sourceUrl": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z"
         }
       },
-      "notes": "Re-reviewed 2026-08-29 against the independent accountant's July 2026 agreed-upon-procedures report, dated 2026-08-21 for the 2026-07-31 reporting point. The report compared IDRT, IDRTB, BSC, and Polygon circulation with the corresponding bank statements and time-deposit certificates, found no differences, and confirmed a 1:1 collateral ratio. Because the engagement expressly gives no audit opinion or other assurance, this dated full-scope reconciliation supports limited assuranceAndReconciliation only. The issuer's holder-claim disclosure remains limited, and the report does not name the active reserve institutions, allocations, or failure and successor-custody mechanics, so custodyContinuity remains unavailable."
+      "notes": "Re-reviewed October 1 using the complete August 31 AUP, dated September 29, current issuer conversion disclosure and dedicated-bank-account FAQ. The AUP matches bank accounts/time deposits to all reported circulation at 1:1 and expressly provides no audit/review opinion or other assurance. Existing limited claimAndSegregation and assuranceAndReconciliation grades are retained, not upgraded. Bank provider allocation, enforceable insolvency segregation and successor-custody arrangements remain undisclosed; custodyContinuity stays unavailable rather than weak. The 2019 whitepaper is historical and does not establish current legal redemption or custody protection."
     },
     {
       "assetId": "qcad-stablecorp",
@@ -6459,7 +6467,7 @@
     {
       "assetId": "fusd-finchain",
       "archetype": "tbill",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "FinChain FUSD introduction and minimum-collateralization policy",
@@ -6484,29 +6492,71 @@
         {
           "label": "FinChain FUSD reserve dashboard",
           "url": "https://fusd.finchain.global/"
+        },
+        {
+          "label": "FUSD token redemption payout and stated timing",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem"
+        },
+        {
+          "label": "FUSD redemption cut-off and business-day processing",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time"
+        },
+        {
+          "label": "Current FUSDLP reserve accounting implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe137edbc766b97f6d0a8c227b4d60c656a3040e"
+        },
+        {
+          "label": "Current reserve bundle aggregator implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbb199ed75d4fdd04833bb4477285eda0bd91abc1"
+        },
+        {
+          "label": "Pinned Ethereum bundle, reserve-token and treasury observations at block 26098753",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
+        {
+          "label": "Dated NAV publication transaction (isPor=false)",
+          "url": "https://eth.blockscout.com/tx/0xa7bf714a8f952f46b0af90ade2b8c8359dd046604c73e526236c7f334701ce8d"
+        },
+        {
+          "label": "Issuer-linked fund report requiring email access",
+          "url": "https://docsend.com/view/q23rapyw9azhzi5m"
+        },
+        {
+          "label": "FUSDLP liability identity disclosure",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token"
+        },
+        {
+          "label": "BMA exact Finchain entity search, no record returned in this scoped lookup",
+          "url": "https://www.bma.bm/regulated-entities"
+        },
+        {
+          "label": "Cayman-parent digital currency purchase and sale agreement, not a Bermuda FUSD holder instrument",
+          "url": "https://www.finchain.global/digital-currency-purchase-and-sale-agreement"
+        },
+        {
+          "label": "Cayman-parent platform terms and limitation of liability, not FUSD recovery protection",
+          "url": "https://www.finchain.global/terms-of-service"
         }
       ],
-      "notes": "Reviewed 2026-08-08 under the strict T-bill evidence standard. FinChain self-describes FUSD as issued by FinChain Bermuda Limited, a segregated-accounts company, with at least 100% backing by tokenized Treasury and money-market funds and a fixed-$1/daily-rebase design. The live issuer API returned 1,126,270.023944 FUSD supply and $1,128,021.550380 of three named fund positions (reserve ratio 1.001555), but its updated_at value is 2026-04-21, nearly four months stale at review. No governing holder/SAC instrument, seniority opinion, public BMA register pin, independent NAV administrator, pinnable Chainlink PoR feed, independent reconciliation, WAM/duration disclosure, redemption-liquidity SLA, or loss waterfall was located. The vendors page names Chainlink, Fosun International Securities, and Finloop for PoR but leaves Financial Auditor blank. Issuer assertions and a stale self-operated API do not meet the minimum corroboration bar for a measured quality grade, so all four required components remain unavailable. No runtime inheritance applies: the coin directly resolves to tbill and variantOf is null.",
+      "notes": "October 1, 2026 review, independently verified by R2VMisc05 at Ethereum block 26098957: current issuer structuring names Finchain Holdings Bermuda Limited as a SAC and claims BMA licensing. Exact BMA form submission for Finchain returned No Record(s) found; this is a scoped lookup, not proof of unlicensed status. Newly retrieved purchase/sale and platform agreements name the Cayman parent and do not establish a Bermuda FUSD holder segregated-account designation or priority. Gateway LP, three reserve tokens and actual treasury holdings are pinned; all tracked quantities match current token balances and issuer itemized API product figures. April 21 updated_at dates reserve configuration, while transaction 0xa7bf714a8f952f46b0af90ade2b8c8359dd046604c73e526236c7f334701ce8d publishes itemized NAV marks at October 1 13:02:19 UTC with isPor=false. Its sender holds PRICE_ROLE. Limited NAV valuation is verified under the issuer-structured-publication plus on-chain-anchor evidence class; no independent NAV reconciliation is claimed. PoR values and report guards are zero; unrelated-sender onReport simulation succeeds and changes PoR rather than the NAV tuple. Redemption specifies USDT, typically one business day and up to three, with liquidity-limited instant service. Underlying maturity and stress-liquidity evidence remains missing. The linked fund report renders an email gate; no report date, scope or recovery commitment is inferred. Solana metadata identifies FUSDLP while both issuer token pages list the same mint; liability identity remains unresolved. navValuation: Independently verified at Ethereum block 26098957: issuer NAV marks are externally anchored by transaction 0xa7bf714a8f952f46b0af90ade2b8c8359dd046604c73e526236c7f334701ce8d publishing the three values at 2026-10-01T13:02:19Z with isPor=false; its sender holds PRICE_ROLE. Mapped reserve feeds consume those marks. Current tracked quantities match treasury balances, and product reserve values exactly match the itemized issuer API. This directly meets the documented limited structured-publication/on-chain-anchor class, not independent NAV administration or reconciliation assurance. PoR is zero and report-authentication guards are unconfigured.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
           "applicability": "unavailable",
-          "rationale": "Issuer pages assert a Bermuda segregated-accounts structure, but no holder agreement, SAC account instrument, seniority opinion, insolvency waterfall, or externally verifiable regulatory-register record is linked. The stale issuer API does not establish a legal claim or priority.",
+          "rationale": "Current issuer structuring claims a licensed Bermuda SAC. The independently submitted BMA exact Finchain entity search returned No Record(s) found, which is a scoped negative rather than proof of unlicensed status. Retrieved purchase/sale and platform agreements name the Cayman parent, not the Bermuda FUSD issuer, and supply no FUSD segregated-account designation, enforceable holder priority or insolvency waterfall. The linked report requires email access. This component remains unresolved.",
           "sourceUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring"
         },
         "navValuation": {
-          "applicability": "unavailable",
-          "rationale": "The issuer API itemizes three fund values but was last updated 2026-04-21; no independent NAV administrator, dated valuation report, or pinnable Chainlink reserve/NAV feed is published. A stale self-operated display is insufficient for a measured grade.",
-          "sourceUrl": "https://api.finchain.global/api/v0/fusd-data"
+          "quality": "limited"
         },
         "durationAndLiquidity": {
           "applicability": "unavailable",
-          "rationale": "The reserves page and stale API name three money-market or tokenized-liquidity funds, but publish no current maturity schedule, weighted-average maturity, liquidity buckets, redemption timing, stress-liquidity test, or externally anchored current inventory.",
-          "sourceUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
+          "rationale": "FUSD holder redemption is disclosed as USDT, typically one and up to three business days, with liquidity-dependent instant redemption. Current reserve-token inventory is pinned, but this does not disclose fund look-through WAM/WAL, current maturity buckets, issuer buffer capacity or stress-liquidity coverage across the three funds. The 2023 Taikang memorandum is not a current three-fund/FUSD portfolio measurement.",
+          "sourceUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem"
         },
         "lossRecoveryDesign": {
           "applicability": "unavailable",
-          "rationale": "The issuer docs, vendors page, dashboard, and API publish no independent assets-and-liabilities report, insurance or first-loss facility, loss-allocation waterfall, recovery procedure, or enforceable recapitalization commitment; the vendors page leaves Financial Auditor blank.",
+          "rationale": "The report linked for two fund products is publicly linked but requires email access in the rendered DocSend viewer, so its date, independent assurance scope and reconciliation are not verified. Current vendor disclosure leaves Financial Auditor blank. No fetched issuer document or audit supplies an enforceable FUSD first-loss facility, loss-allocation waterfall, recovery procedure or recapitalization commitment; smart-contract audits do not supply financial loss protection.",
           "sourceUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/vendors"
         }
       }
@@ -7805,7 +7855,7 @@
     {
       "assetId": "usdm-mega",
       "archetype": "tbill",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "MegaUSD Mint User Agreement (redemption commitment for whitelisted Mint Users; USDm Reserves primarily USDtb in institutional-custodian accounts separate from operating assets)",
@@ -7822,9 +7872,13 @@
         {
           "label": "Ethena USDtb documentation (USDtb issued by Anchorage Digital Bank)",
           "url": "https://docs.ethena.fi/usdtb"
+        },
+        {
+          "label": "MegaUSD dated backing-and-supply API (issuer valuation, not independent USDm NAV assurance)",
+          "url": "https://app.megausd.money/api/transparency/backing-and-supply/current"
         }
       ],
-      "notes": "The USDm Mint User Agreement (MegaUSD (BVI) Ltd, last updated April 2026) commits the issuer to redeem USDm for supported assets at the same notional value, pro rata to the USDm Reserves less fees, for whitelisted KYC'd Mint Users (U.S. persons excluded), and states the USDm Reserves consist primarily of USDtb held with institutional custodians in accounts separate from MegaUSD's own operating assets; the backing language is soft (reserves are 'intended' and 'designed' to match circulation under normal market conditions), custodians are unnamed, service availability is not guaranteed, and holders have no claim against third-party issuers, so fund claim and seniority is limited. MegaUSD's site and the MegaETH launch announcement document the composition policy: reserves of USDC plus USDtb, itself targeted at roughly 90% BlackRock BUIDL via Securitize with liquid stablecoins for redemptions, USDtb issued by Anchorage Digital Bank with 24/7 atomic USDtb-BUIDL swaps; that documented policy mix of tokenized T-bill fund shares and stablecoins supports limited duration and liquidity, because no measured USDm composition, WAM, or redemption-timing SLA is published. NAV valuation remains uncurated: USDm is a 1:1 wrapper with no NAV administrator, independent valuation method, or public reserve attestation. Loss recovery design remains uncurated: no independent reconciliation or attestation of USDm-level reserves was established, and the Anchorage and GENIUS Act claims attach to USDtb rather than to MegaUSD (BVI) Ltd. 2026-07-29 preparation-only candidate: lossRecoveryDesign=unavailable, navValuation=unavailable. Every candidate conclusion remains non-score-bearing pending independent review and later authorization; no existing non-target component or source is removed.",
+      "notes": "Independently re-obtained on 2026-10-01 by R2VMintRecon. The Mint User Agreement identifies MegaUSD (BVI) Ltd, restricts direct redemption to eligible Mint Users and expressly disclaims making holders whole for third-party issuer failures. This documented adverse loss allocation supports weak under the mechanism-overlay evidence standard; it is not a grade assigned merely for missing evidence. At Ethereum block 26099030 and MegaETH block 28079538 the issuer API supply field equals Ethereum supply alone. The API discloses direct USDC/USDtb holdings, not the historical launch target or independent issuer-level NAV assurance. Published app bundles and all linked legal pages disclose no independent USDm NAV administrator or liability-scoped valuation examination; upstream Circle/Anchorage examinations do not cover MegaUSD. Existing limited fund-claim and liquidity qualities are retained; no new protective control is inferred. lossRecoveryDesign: The issuer expressly disclaims any obligation to make holders whole for third-party issuer failures. This weak assessment rests on documented adverse contractual allocation, not solely on absence of a disclosed recovery policy; no funded loss absorber or recapitalization waterfall is established.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -7834,14 +7888,12 @@
           "quality": "limited"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed USDm agreement and reserve disclosures do not publish a loss waterfall or enforceable recapitalization commitment for USDm-level reserve losses.",
-          "sourceUrl": "https://app.megausd.money/mint-agreement"
+          "quality": "weak"
         },
         "navValuation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed USDm agreement and reserve disclosures do not publish an independent USDm NAV administrator, valuation method, or current reserve attestation.",
-          "sourceUrl": "https://app.megausd.money/mint-agreement"
+          "rationale": "A dated issuer holdings API is public, but its supply field is Ethereum-only at the research pins. No independent USDm NAV administrator, documented valuation method or issuer-level reserve examination was found after reopening issuer terms, API and site; upstream-asset examinations do not settle this issuer-scoped fact.",
+          "sourceUrl": "https://app.megausd.money/api/transparency/backing-and-supply/current"
         }
       }
     },
@@ -9644,7 +9696,7 @@
     {
       "assetId": "brz-transfero",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Transfero current BRZ product and reserve disclosure",
@@ -9659,22 +9711,30 @@
           "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf"
         },
         {
-          "label": "Transfero developer documentation searched for reserve and custody terms",
-          "url": "https://docs.transfero.com/"
+          "label": "Transfero BaaSiC documentation archive recovered from April 17, 2026",
+          "url": "https://web.archive.org/web/20260417161808/https://docs.transfero.com/"
+        },
+        {
+          "label": "Transfero user terms (payment-account and merchant-wallet scope)",
+          "url": "https://transfero.app/help-center/terms"
+        },
+        {
+          "label": "CMT historical proof-of-funds memorandum, October 23, 2020",
+          "url": "https://panoramacrypto.com/wp-content/uploads/2020/11/report-pt.pdf"
         }
       ],
-      "notes": "Reviewed 2026-08-08. Transfero's product page reports R$15.2 million of collateral against R$12.3 million circulating and says BRZ is redeemable 1:1 through regulated partners. The only downloadable reserve report is an issuer-produced snapshot dated 2024-03-31, and the whitepaper describes separate reserve managers but supplies no holder trust, segregated-account instrument, or current external anchor for the reserve claim. claimAndSegregation is therefore unavailable under the fiat-cash evidence standard, not stretched to limited. The report names only an unidentified BCB-authorized institution and publishes no continuity terms, so custodyContinuity is unavailable. The product's Parsiq reference concerns blockchain monitoring, not financial reserve assurance. assuranceAndReconciliation is intentionally omitted as of 2026-09-01: a proofOfReserves.latestReport (self-verification, recorded 2026-08-29) now exists on the coin record and auto-resolves the component as known-weak, superseding the earlier unavailable adjudication that predated it.",
+      "notes": "Round-2 evidence re-opened 2026-10-01. Current product page still links the issuer March 31, 2024 reserve report. The report names no bank, account instrument, reserve-manager allocation or performed liability census. The whitepaper describes reserve managers and mint/burn workflows, not an executed holder trust. Recovered payment-account terms segregate merchant wallet balances, which does not establish BRZ-wide backing segregation. A 2025 BRX trade-finance document names Banco Genial/Stark Bank for a debenture/CR workflow, not the current whole BRZ reserve book. The recovered 2020 CMT memorandum explicitly excludes due diligence/audit and is historical. No qualifying current legal/custody-continuity evidence or independent reserve reconciliation was established; the two unavailable dispositions remain bounded, not measured weak. Assurance is omitted so the compiler retains the actual stale report fallback.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "applicability": "unavailable",
-          "rationale": "Searched https://transfero.com/brz-stablecoin, https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf, and https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf. They contain issuer 1:1 and reserve-manager claims but no enforceable holder reserve claim, trust or bankruptcy-remoteness instrument, verified segregation, or qualifying current external anchor.",
+          "rationale": "Reopened current issuer page, March 2024 report, whitepaper and payment-account terms on 2026-10-01. Reserve-manager and merchant-wallet segregation statements do not establish an operative BRZ-wide holder claim or reserve trust. No enforceable whole-token segregation instrument or qualifying current external anchor was established.",
           "sourceUrl": "https://transfero.com/brz-stablecoin"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "Searched https://transfero.com/brz-stablecoin, the March 2024 reserve report at https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf, the whitepaper, and https://docs.transfero.com/. The reserve institution and reserve managers are not identified, and no allocation, anti-rehypothecation, failure, replacement, or successor-custody terms are published.",
-          "sourceUrl": "https://docs.transfero.com/"
+          "rationale": "Reopened issuer report/whitepaper and recovered BaaSiC documentation archive on 2026-10-01. The reserve institution remains unnamed in the current linked report. BRX trade-finance bank names concern a debenture/CR workflow, not current whole-token custody, and no replacement/continuity or anti-reuse terms were established.",
+          "sourceUrl": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf"
         }
       }
     },
@@ -9828,7 +9888,7 @@
     {
       "assetId": "tryb-bilira",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "BiLira TRYB product page",
@@ -9847,11 +9907,15 @@
           "url": "https://www.bilira.co/en/audit-reports"
         },
         {
-          "label": "Corpus independent TRYB reasonable-assurance examination dated 2026-05-21",
-          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a325f5892dd1853f5b372cf_Bilira_Guvence_Raporu_May%C4%B1s_2026_ENG.pdf"
+          "label": "Corpus August 17, 2026 TRYB examination: pages 1-2 opinion, pages 3-5 management disclosures",
+          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf"
+        },
+        {
+          "label": "BiLira withdrawal rules: named payout banks do not establish reserve custody allocations",
+          "url": "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1746693819-how-can-i-withdraw-turkish-lira-what-are-the-rules-for-withdrawing-turkish-lira"
         }
       ],
-      "notes": "Re-reviewed 2026-08-08. BiLira's binding TRYB terms guarantee one Turkish lira per token and the product/framework disclosures describe reserve funds in accounts held in BiLira's name, but they publish no trust, bankruptcy-remoteness filing, or holder-priority instrument; claim and segregation remains limited. Corpus's independent 2026-05-21 reasonable-assurance examination reconciled TRYB 162,677,688 to TRY 175,366,533 with an unqualified opinion and full assets-and-liabilities scope. Under the canonical evidence standard this is adequate assurance, not strong: the examination is quarterly and named, but the segregation narrative is in management-provided notes outside the auditor's opinion and the reserve institutions remain unnamed, so the all-three strong-grade legal/custody pin is absent. No active bank set, provider allocations, anti-rehypothecation terms, or custodian-failure succession plan was established.",
+      "notes": "Re-reviewed 2026-10-01. Binding TRYB terms provide 1:1 TRY redemption, while the framework agreement places platform cash in accounts held in BiLira’s name and directs institution lists to the Platform; no public holder-priority trust or bankruptcy-remoteness instrument was found. The latest linked Corpus examination is August 17, 2026: 61,600,302 TRYB against TRY 66,400,788 with an unqualified reasonable-assurance opinion. The auditor explicitly excludes management-provided notes from its assurance; those notes describe segregated accounts at insured depository institutions without naming institutions or allocations. Named Vakıfbank, Ziraatbank, İşbank and Fibabanka in withdrawal help are payout rails, not proof of reserve custody. Claim/segregation remains limited, examination assurance adequate, custody continuity unavailable; no quality uplift or invented reserve-provider join.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -9859,7 +9923,7 @@
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "Searched the TRYB product page, binding terms, framework agreement, audit archive, and May 2026 examination. They refer to Turkish banks or custody accounts but do not name the active institutions, give provider allocations, state provider-level anti-rehypothecation controls, or document failure, replacement, and successor-custody mechanics.",
+          "rationale": "2026-10-01 public-evidence search of TRYB terms, framework agreement, raw audit-index PDF roster, every page of the latest August 17 examination, community partner page and withdrawal help finds no token-reserve-specific active bank roster, allocations, provider anti-rehypothecation or failure/replacement/successor-custody procedure. Framework institution lists are Platform-scoped; named payout banks do not prove reserve allocations. This remains issuer-undisclosed, not verified weak custody.",
           "sourceUrl": "https://www.bilira.co/en/legal-information/framework-agreement"
         },
         "assuranceAndReconciliation": {
@@ -11821,6 +11885,7 @@
         "measurementBlock": 88937390
       },
       "collateralizationMeasurement": {
+        "measurementId": "lvusd-leverup:monad:88937390",
         "ratio": 0.638707,
         "rationale": "The complete designated-vault census at Monad block 88937390 measured 883918.753795 USD of USDC reserves against 1383919.753795 circulating LVUSD, leaving 500001 USD uncovered; USDC-only composition does not establish full collateralization.",
         "sourceUrl": "https://rpc.monad.xyz"
@@ -16781,7 +16846,7 @@
     {
       "assetId": "said-gaib",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "GAIB sAID docs",
@@ -16810,9 +16875,13 @@
         {
           "label": "GAIB disclaimers and risk disclosures (experimental vaults, no regulated entity, no deposit insurance, and user loss assumption)",
           "url": "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md"
+        },
+        {
+          "label": "Issuer-linked sAID Vault Strategy Memorandum, all eight pages recovered in rendered preview",
+          "url": "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
         }
       ],
-      "notes": "Re-reviewed 2026-08-08. sAID is an ERC-4626 yield vault over AID's AI-infrastructure financing book and is not designed to remain at $1. Issuer product materials support limited credit quality (GPU/robotics financing plus a T-bill/stable buffer without current obligor ratings or loss history), limited monthly valuation cadence, and limited maturity/liquidity because monthly withdrawal cohorts settle on the first day of the third month. The strategy memorandum and terms identify separate technology and strategy operators and operational custody controls, supporting limited custody and recovery mechanics, while the disclosed holder position remains subordinated to strategy costs and losses, supporting weak seniority. Legal enforceability is explicitly unavailable: the general Singapore-law platform terms state that GAIB is unregulated, disclaims fiduciary duties, and separates Spice AI's strategy responsibility, but the public sources do not publish a product-specific issuing vehicle, holder security interest, bankruptcy-remoteness instrument, or enforceable claim against the financed assets. weightedAverageMaturityDays remains unavailable because no current portfolio tenor schedule or WAM is published.",
+      "notes": "Re-reviewed 2026-08-08. sAID is an ERC-4626 yield vault over AID's AI-infrastructure financing book and is not designed to remain at $1. Issuer product materials support limited credit quality (GPU/robotics financing plus a T-bill/stable buffer without current obligor ratings or loss history), limited monthly valuation cadence, and limited maturity/liquidity because monthly withdrawal cohorts settle on the first day of the third month. The strategy memorandum and terms identify separate technology and strategy operators and operational custody controls, supporting limited custody and recovery mechanics, while the disclosed holder position remains subordinated to strategy costs and losses, supporting weak seniority. Legal enforceability is explicitly unavailable: the general Singapore-law platform terms state that GAIB is unregulated, disclaims fiduciary duties, and separates Spice AI's strategy responsibility, but the public sources do not publish a product-specific issuing vehicle, holder security interest, bankruptcy-remoteness instrument, or enforceable claim against the financed assets. weightedAverageMaturityDays remains unavailable because no current portfolio tenor schedule or WAM is published. Round-2 2026-10-01: recovered all eight pages of the issuer-linked memorandum via rendered Drive preview despite owner-disabled download. Pages 3 and 5 identify SpiceFlow AI Corporation, Panama, and Good AI SPC strategy execution; tokens expressly confer no direct redemption of vault contents, voting or equity rights, and redemption rights are not a demand-deposit or repayable debt obligation. Page 7 limits each entity liability to its own assets and disclaims cross-entity obligations; page 8 chooses Panama law. These explicit limitations support weak legalEnforceability rather than unavailability. This does not establish a security interest, bankruptcy remoteness or enforceable financed-asset claim; existing other components/metrics are unchanged.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 30
@@ -16844,9 +16913,7 @@
           "quality": "weak"
         },
         "legalEnforceability": {
-          "applicability": "unavailable",
-          "rationale": "The public sAID memorandum index and GAIB legal terms were searched for a product-specific issuer, holder security interest, bankruptcy-remoteness structure, financed-asset claim, and enforcement instrument. They publish general Singapore-law platform terms and separate operator roles but no sAID-specific enforceable asset claim.",
-          "sourceUrl": "https://docs.gaib.ai/legal/terms-of-use.md"
+          "quality": "weak"
         }
       }
     },
@@ -18271,7 +18338,7 @@
           "url": "https://app.redstone.finance/push-feeds/HLScope_FUNDAMENTAL/ethereumMultiFeed"
         }
       ],
-      "notes": "Reviewed 2026-08-11. Hamilton Lane's current page states monthly valuation by its valuation team with valuation-committee approval and monthly liquidity; the dated April 2026 report shows 99% first-lien senior-secured exposure, 42% weighted company-level LTV, and 100% floating-rate exposure. Those issuer materials support limited credit quality, seniority, valuation cadence, and maturity/liquidity, but do not provide independent portfolio verification or a measured stressed-redemption test. RedStone's 24-hour feed heartbeat is transport cadence, not a fresh underlying appraisal, so valuationCadenceDays remains 30. The December 2025 SCOPE main-fund memorandum names Brown Brothers Harriman (Luxembourg) S.C.A. as AIFMD depositary and administrator; enumerates custody, ownership-verification, cash-monitoring and share-issuance duties; assigns depositary liability; and requires orderly replacement while preserving shareholder interests. This supports limited custody quality because the separate Delaware tokenized feeder's custody of its main-fund interest is not publicly documented. The same memorandum gives each issued share equal participation in its class assets on liquidation, while the SEC Form D/A independently identifies Hamilton Lane SCOPE Securitize Tokenized Feeder, LP as a Delaware limited partnership with Securitize Capital, LLC as general partner and a Section 3(c)(7) offering. Together these establish the fund/feeder legal stack and a holder economic path, supporting limited legal enforceability, but no public feeder LPA, subscription agreement, governing priority waterfall, or enforceability opinion supports a higher grade. No HLSCOPE-specific recovery waterfall is public, so recovery remains unavailable.",
+      "notes": "Reviewed 2026-08-11. Hamilton Lane's current page states monthly valuation by its valuation team with valuation-committee approval and monthly liquidity; the dated April 2026 report shows 99% first-lien senior-secured exposure, 42% weighted company-level LTV, and 100% floating-rate exposure. Those issuer materials support limited credit quality, seniority, valuation cadence, and maturity/liquidity, but do not provide independent portfolio verification or a measured stressed-redemption test. RedStone's 24-hour feed heartbeat is transport cadence, not a fresh underlying appraisal, so valuationCadenceDays remains 30. The December 2025 SCOPE main-fund memorandum names Brown Brothers Harriman (Luxembourg) S.C.A. as AIFMD depositary and administrator; enumerates custody, ownership-verification, cash-monitoring and share-issuance duties; assigns depositary liability; and requires orderly replacement while preserving shareholder interests. This supports limited custody quality because the separate Delaware tokenized feeder's custody of its main-fund interest is not publicly documented. The same memorandum gives each issued share equal participation in its class assets on liquidation, while the SEC Form D/A independently identifies Hamilton Lane SCOPE Securitize Tokenized Feeder, LP as a Delaware limited partnership with Securitize Capital, LLC as general partner and a Section 3(c)(7) offering. Together these establish the fund/feeder legal stack and a holder economic path, supporting limited legal enforceability, but no public feeder LPA, subscription agreement, governing priority waterfall, or enforceability opinion supports a higher grade. No HLSCOPE-specific recovery waterfall is public, so recovery remains unavailable. Round2 legal research recovered exact feeder SEC filings and the MainFund PPM, but no authenticated feeder recovery instrument; the existing unavailable component and original evidence date remain unchanged.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 30
@@ -18304,7 +18371,7 @@
         },
         "recovery": {
           "applicability": "unavailable",
-          "rationale": "The reviewed public strategy page and monthly report describe senior-secured positioning but publish no HLSCOPE-specific default workout process, recovery waterfall, historical recoveries, or binding loss-allocation terms.",
+          "rationale": "Current primary MainFund PPM and issuer feeder disclosures rechecked on2026-10-01. MainFund liquidation, depositary and shareholder rights are documented, but the issuer expressly distinguishes the separate HLSCOPE feeder offering. No authenticated feeder LP agreement/PPM or HLSCOPE holder-specific workout loss allocation was obtained; no recovery-quality grade is inferred from the MainFund terms or from missing disclosure.",
           "sourceUrl": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
         }
       }
@@ -18379,26 +18446,22 @@
     {
       "assetId": "jpysc-sbi-startale",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "SBI Shinsei Trust JPYSC statutory product, redemption, and balance disclosure",
+          "label": "SBI Shinsei Trust current statutory product and June30 balance disclosure, recovered in browser October1",
           "url": "https://www.shinseitrust.com/stablecoin/jpysc.html"
         },
         {
-          "label": "JPYSC governing transaction terms dated 2026-06-24",
-          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260624.pdf"
+          "label": "Current JPYSC governing terms updated June30 2026, sections4,6,13,14",
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260630.pdf"
         },
         {
-          "label": "SBI Group JPYSC launch disclosure",
-          "url": "https://www.sbigroup.co.jp/news/2026/0624_16425.html"
-        },
-        {
-          "label": "Japan FSA Payment Services Act amendment explanatory material",
-          "url": "https://www.fsa.go.jp/common/diet/217/02/setsumei.pdf"
+          "label": "September7 primary JPYSC partial JGB investment and issuance disclosure",
+          "url": "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf"
         }
       ],
-      "notes": "JPYSC is a trust-type Type III electronic payment instrument, so fiat-cash is the correct runtime archetype. The dated governing terms give each holder a direct redemption claim against SBI Shinsei Trust, specify that trust property is separate from the trustee's own estate and ordinarily bankruptcy-remote, and set a standard redemption period of two business days after acceptance. The trustee is named and the trust assets are legally constrained to yen deposits and Japanese government bonds, but underlying deposit banks, provider allocations, successor-trustee procedures, and rehypothecation controls are not fully disclosed; claim and custody therefore remain limited rather than adequate/strong. The statutory page reports at 2026-06-30 19:00 exactly JPY 10,008,294,794 issued against JPY 10,008,304,794 in the trust deposit account. That is a dated issuer/trustee assets-to-liabilities reconciliation under a statutory disclosure regime, but the governing terms explicitly state that issuance operations are not audited and no later independent attestation or current cash/JGB split is published, so assurance is limited.",
+      "notes": "Re-reviewed October1 against the trustee statutory page, its actual current June30 governing terms (26pages), and September7 primary release. Existing limited component grades are retained. The terms document direct holder redemption, trust-property bankruptcy separation, successor appointment by the income beneficiary or court, six-month resignation notice and asset/record handover. Thus successor procedures are not undisclosed. Deposit-bank identities/allocations, JGB custody venue and current full reserve split remain unavailable. Section14 offers trust-property reporting on beneficiary request rather than routine public delivery. The latest public exact deposit/circulation table is June30 (JPY10,008,304,794 deposits against JPY10,008,294,794 issuance); September7 gives only JPY1B short-term JGBs and approximateJPY20.1B issuance, not a full cash/JGB allocation. These are different dates and cannot be combined into current95.02%cash. No independent audit or assurance upgrade is claimed.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {

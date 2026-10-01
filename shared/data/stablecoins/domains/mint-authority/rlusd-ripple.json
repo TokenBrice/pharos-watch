@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "RLUSD Ethereum minting is gated by the historically reviewed custom 2-of-32 MultiSign minter. At Ethereum block 26097127, role-admin and upgrader contracts each have quorum weight 7 over 11 signer addresses, requiring at least 3 signatures rather than 7 people. At XRPL ledger 107358397, quorum weight 25 over 26 signer addresses requires at least 2 signatures; the issuer master key is disabled and no regular key is present. These are minimum cryptographic signer counts, not evidence of independent people or organizations. Weighted rosters remain in the review evidence and independence remains unresolved.",
+    "summary": "RLUSD Ethereum minting is gated by the historically reviewed custom 2-of-32 MultiSign minter. At Ethereum block 26097127, role-admin and upgrader contracts each have quorum weight 7 over 11 signer addresses, requiring at least 3 signatures rather than 7 people. At XRPL ledger 107358397, quorum weight 25 over 26 signer addresses requires at least 2 signatures; the issuer master key is disabled and no regular key is present. These are minimum cryptographic signer counts, not evidence of independent people or organizations. Weighted rosters remain in the review evidence and independence remains unresolved. R2 pinned deployment review resolves Base, Optimism, Ink and Unichain: direct native minters require two cryptographic signatures (Base 32 signers; other three 30), while each deployment has separate weighted-quorum-7 role-admin/upgrader MultiSigns over 11 addresses (minimum three signatures). Native mint amounts remain technically unbounded. Wormhole NTT burn/mint, external validation and issuer gateway controls are separately recorded under Bridge Risk, not recategorized as native issuer minters. The singular upgradeability object remains explicitly Ethereum-scoped; each added deployment upgrade authority and implementation is recorded in its own control evidence.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -155,6 +155,510 @@
           }
         ],
         "evidence": "At Ethereum block 26095802, hasRole(UPGRADER_ROLE, 0x863c8754c298d3efec3863f2a46f1c71a355ce6c) returned true. MultiSign quorum() returned 7 and signers() returned the same 11 addresses as the role-admin contract. signerWeight() returned four weights of 3 and seven weights of 2. The current UUPS implementation is unchanged. Weighted quorum 7 is not a seven-person threshold; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
+      },
+      {
+        "label": "RLUSD base minter MultiSign (weighted quorum 2, 32 signers)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "base",
+        "address": "0x9b8a83e875023c3fefd8354044e011d8bc847a34",
+        "deploymentRefs": [
+          "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 32,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041924,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "base current controller source/state",
+            "url": "https://base.blockscout.com/address/0x9b8a83e875023c3fefd8354044e011d8bc847a34?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "base current RLUSD implementation",
+            "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned base block 52041924: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 32 addresses; complete signerWeight(address) roster: 0x0202e69c6aa94d5b34123d3eae4aa5e104f569d2:1; 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x053dacfbbc80ef8a0d09f2f9931d03554f246257:1; 0x131810c8c6dcd264c999b878555889fb2b13e4cb:1; 0x15b9812edb53d416a53743219b59dfe35593e79e:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x243623fa9e049c1ee0a3be683d93550aa907a226:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2cca7cb3141b08883dbc7a8fbe5cc65a9db7d8a7:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x7458967dbbd70d5fa643f088340bd4326974e955:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x7701cd6e62e9c25b9b4fd41612298f1fac25348f:1; 0x893ae7f682c62df584ef1a22b508d866d871e8c4:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0x9d4a75310f713a580541c0c94e0e1792493a076a:1; 0xa7471bd513fd220ed959a05e80369534261e7fea:1; 0xa7a60679b2b345a93e142cd825b04afa186e6559:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xb44895320536bd35a0e81b4158c9d4b6598d407e:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1; 0xec699bee3c011ba2ec026e4a377c6cd354d91bc6:1. Minimum cryptographic signatures=2; independent people/organizations are not established. Base explorer source is unverified; pinned runtime differs from the verified Optimism MultiSign in exactly its sole 32-byte EIP-712 domain immutable, independently reconciled to chain/address. All remaining runtime and metadata bytes match. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD base role-admin MultiSign (weighted quorum 7, 11 signers)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "chain": "base",
+        "address": "0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+        "deploymentRefs": [
+          "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 11,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041924,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "base current controller source/state",
+            "url": "https://base.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "base current RLUSD implementation",
+            "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned base block 52041924: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD base upgrader MultiSign (weighted quorum 7, 11 signers)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "chain": "base",
+        "address": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "deploymentRefs": [
+          "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 11,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041924,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "base current controller source/state",
+            "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "base current RLUSD implementation",
+            "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned base block 52041924: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "bypassSurfaces": [
+          "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
+        ]
+      },
+      {
+        "label": "RLUSD optimism minter MultiSign (weighted quorum 2, 30 signers)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "optimism",
+        "address": "0x6e36e38910c0145cafaa96516083c160049fe3e6",
+        "deploymentRefs": [
+          "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 30,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 157637209,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "optimism current controller source/state",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "optimism current RLUSD implementation",
+            "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD optimism role-admin MultiSign (weighted quorum 7, 11 signers)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "chain": "optimism",
+        "address": "0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+        "deploymentRefs": [
+          "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 11,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 157637209,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "optimism current controller source/state",
+            "url": "https://explorer.optimism.io/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "optimism current RLUSD implementation",
+            "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD optimism upgrader MultiSign (weighted quorum 7, 11 signers)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "chain": "optimism",
+        "address": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "deploymentRefs": [
+          "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 11,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 157637209,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "optimism current controller source/state",
+            "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "optimism current RLUSD implementation",
+            "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "bypassSurfaces": [
+          "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
+        ]
+      },
+      {
+        "label": "RLUSD ink minter MultiSign (weighted quorum 2, 30 signers)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "ink",
+        "address": "0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
+        "deploymentRefs": [
+          "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 30,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 57374785,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "ink current controller source/state",
+            "url": "https://explorer.inkonchain.com/address/0xa2eea193444b16fe2d18cfe977aceeea6dd9c367?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "ink current RLUSD implementation",
+            "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned ink block 57374785: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD ink role-admin MultiSign (weighted quorum 7, 11 signers)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "chain": "ink",
+        "address": "0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+        "deploymentRefs": [
+          "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 11,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 57374785,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "ink current controller source/state",
+            "url": "https://explorer.inkonchain.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "ink current RLUSD implementation",
+            "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned ink block 57374785: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD ink upgrader MultiSign (weighted quorum 7, 11 signers)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "chain": "ink",
+        "address": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "deploymentRefs": [
+          "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 11,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 57374785,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "ink current controller source/state",
+            "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "ink current RLUSD implementation",
+            "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned ink block 57374785: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "bypassSurfaces": [
+          "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
+        ]
+      },
+      {
+        "label": "RLUSD unichain minter MultiSign (weighted quorum 2, 30 signers)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "unichain",
+        "address": "0x866eb2f5c483fa525137f982c2be220aa096918c",
+        "deploymentRefs": [
+          "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 30,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 60124837,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "unichain current controller source/state",
+            "url": "https://unichain.blockscout.com/address/0x866eb2f5c483fa525137f982c2be220aa096918c?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "unichain current RLUSD implementation",
+            "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD unichain role-admin MultiSign (weighted quorum 7, 11 signers)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "chain": "unichain",
+        "address": "0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+        "deploymentRefs": [
+          "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 11,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 60124837,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "unichain current controller source/state",
+            "url": "https://unichain.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "unichain current RLUSD implementation",
+            "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD unichain upgrader MultiSign (weighted quorum 7, 11 signers)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "chain": "unichain",
+        "address": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "deploymentRefs": [
+          "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 11,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 60124837,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "unichain current controller source/state",
+            "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "unichain current RLUSD implementation",
+            "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "bypassSurfaces": [
+          "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -181,9 +685,21 @@
         {
           "label": "Ethereum: Ripple MultiSign contract (Blockscout verified)",
           "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
+        },
+        {
+          "label": "Ripple RLUSD mainnet token addresses",
+          "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+        },
+        {
+          "label": "Verified Ripple MultiSign source (Optimism)",
+          "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+        },
+        {
+          "label": "Base current native token implementation",
+          "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
         }
       ],
-      "evidence": "Ethereum block 26095802 confirms the unchanged implementation and role assignments, a 2-of-32 equal-weight minter, and separate role-admin/upgrader MultiSign contracts with weighted quorum 7 over 11 signers weighted 2 or 3. XRPL validated ledger 107354222 confirms a disabled master key, no regular key, and weighted signer quorum 25 over 26 entries. Controls are scoped only to their actual native deployment. Weighted-to-person-count mapping is proposed separately rather than overstating a protective threshold. D15 supersedes the held weighted-to-headcount mapping with the independently reproduced minimum signature counts, without granting organizational independence. Current EVM block 26097127 role-admin/upgrader identical address:weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Quorum weight 7 requires minimum three signatures. Current validated XRPL ledger 107358397 (hash 86447D40875CA527FBB3F68150EE3CB5CBA13729DC2D4C06CE4B0E9AD0A049D0) account:weight roster: r4atrYAjm91GTB4qsDARjQQJPTi5svSEm:24; rkRFoAFGRGBsarkzhiA8kGzvyVHnZR1Co:24; rhogmBAzXLHhYvqn6iwZZdukbMwj1m6k36:1; rnw4p9U352SWuMquc9MxgoRD319THHQaWY:1; rnGL7M29kbXv4h2Lbnx87uxrTbD762gXug:24; raVEUzHFjwAy4HHH4ig6JmHB65SHL5nRe2:1; rfwUW9ff6zxcUdeDgY25aYWVHgYqhwCpTP:1; rfExtNyAg5gsmKakzZPQaowS8kPWmX4f1Z:1; r3DucgFuQDSRyJ66hUpFx6W9s6wQnCdiUf:24; r3WdRnCjsnNpHct8Tims5cimLMKVD34fcb:1; r9mGCUy43pxfstc24yd4Mq8hS6eHQS9631:24; rwJ7arqSfCLPqFyv63hk1xDfYyfNQ8S5FA:1; rwFESSqngExPayH5HN9DQ6QKjgsfUujkHv:1; rBpzqzJrNxthrBfLcGfJrkkCNq1tz6XKup:1; rUyCpgTR9HLrTQ4ss2aVspF3rV5vSfSytt:1; rNRkUBZGPKZxF23BcVUhw99UB9445QZFau:1; rGHNvJHHHQAqTxCGJi829E6teKRZrVMx7N:1; rH3GmSoCFgTMk4pMgLmjdA14ti5iY37D22:24; rJpKdQU6D6ZHuNXgQaEwcBDbdTaTpHEwAc:1; rJ2YSzpuNnT9QgBzesPt5KwYbyCNRwd9Zd:24; rKWvpdUUGgoRiFf7b7rQKyngjpXSqsh6RG:1; rMMqCGdLevMMX1rr31AV2zcCn878SzG2k3:1; r48mivRxDNerUcjqs3sdLixL2fEzgrGgxB:1; rPi8fRYg8HyXGBiMsagsQLZoBo91TdAqQE:24; rQNbmpvaaFjPULxWZTNz5hLaPDmJvhtCJS:1; rQLhRtSztTCptVjEyAb4ZSckQDkbhBHJ8v:1. Quorum weight 25 requires minimum two signatures. No independence follows from distinct addresses; confidence remains manual-review.",
+      "evidence": "Ethereum block 26095802 confirms the unchanged implementation and role assignments, a 2-of-32 equal-weight minter, and separate role-admin/upgrader MultiSign contracts with weighted quorum 7 over 11 signers weighted 2 or 3. XRPL validated ledger 107354222 confirms a disabled master key, no regular key, and weighted signer quorum 25 over 26 entries. Controls are scoped only to their actual native deployment. Weighted-to-person-count mapping is proposed separately rather than overstating a protective threshold. D15 supersedes the held weighted-to-headcount mapping with the independently reproduced minimum signature counts, without granting organizational independence. Current EVM block 26097127 role-admin/upgrader identical address:weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Quorum weight 7 requires minimum three signatures. Current validated XRPL ledger 107358397 (hash 86447D40875CA527FBB3F68150EE3CB5CBA13729DC2D4C06CE4B0E9AD0A049D0) account:weight roster: r4atrYAjm91GTB4qsDARjQQJPTi5svSEm:24; rkRFoAFGRGBsarkzhiA8kGzvyVHnZR1Co:24; rhogmBAzXLHhYvqn6iwZZdukbMwj1m6k36:1; rnw4p9U352SWuMquc9MxgoRD319THHQaWY:1; rnGL7M29kbXv4h2Lbnx87uxrTbD762gXug:24; raVEUzHFjwAy4HHH4ig6JmHB65SHL5nRe2:1; rfwUW9ff6zxcUdeDgY25aYWVHgYqhwCpTP:1; rfExtNyAg5gsmKakzZPQaowS8kPWmX4f1Z:1; r3DucgFuQDSRyJ66hUpFx6W9s6wQnCdiUf:24; r3WdRnCjsnNpHct8Tims5cimLMKVD34fcb:1; r9mGCUy43pxfstc24yd4Mq8hS6eHQS9631:24; rwJ7arqSfCLPqFyv63hk1xDfYyfNQ8S5FA:1; rwFESSqngExPayH5HN9DQ6QKjgsfUujkHv:1; rBpzqzJrNxthrBfLcGfJrkkCNq1tz6XKup:1; rUyCpgTR9HLrTQ4ss2aVspF3rV5vSfSytt:1; rNRkUBZGPKZxF23BcVUhw99UB9445QZFau:1; rGHNvJHHHQAqTxCGJi829E6teKRZrVMx7N:1; rH3GmSoCFgTMk4pMgLmjdA14ti5iY37D22:24; rJpKdQU6D6ZHuNXgQaEwcBDbdTaTpHEwAc:1; rJ2YSzpuNnT9QgBzesPt5KwYbyCNRwd9Zd:24; rKWvpdUUGgoRiFf7b7rQKyngjpXSqsh6RG:1; rMMqCGdLevMMX1rr31AV2zcCn878SzG2k3:1; r48mivRxDNerUcjqs3sdLixL2fEzgrGgxB:1; rPi8fRYg8HyXGBiMsagsQLZoBo91TdAqQE:24; rQNbmpvaaFjPULxWZTNz5hLaPDmJvhtCJS:1; rQLhRtSztTCptVjEyAb4ZSckQDkbhBHJ8v:1. Quorum weight 25 requires minimum two signatures. No independence follows from distinct addresses; confidence remains manual-review. R2 current pinned blocks ethereum=26098750, base=52041924, optimism=157637209, ink=57374785, unichain=60124837 establish all four newly catalogued EVM native minters and separate role-admin/upgrader paths; complete weighted rosters are in the new controls. Full deployment-to-pin explorer role history was cross-checked at every reported event block with 500-block RPC windows. Issuer-selected NTT manager is an additional live token MINTER_ROLE/BURNER_ROLE holder on all five EVM deployments, reviewed exclusively under Bridge Risk. Technical unrestricted native mint authority and lack of independently identified human controllers are retained, not cleared.",
       "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)",
       "reviewedAt": "2026-10-01",
       "scopedQuestions": [

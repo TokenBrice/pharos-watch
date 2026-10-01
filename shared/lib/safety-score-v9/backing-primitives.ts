@@ -72,6 +72,7 @@ export interface V9InheritedStablecoinBacking {
    */
   readonly tier: "pure" | "wrapped";
   readonly failureDomains: readonly V9FailureDomainRef[];
+  readonly collateralizationApplications?: readonly V9CollateralizationApplication[];
 }
 
 export interface V9BackingAssetInput {
@@ -90,6 +91,8 @@ export interface V9BackingAssetInput {
   readonly inheritedStablecoinBacking?: V9InheritedStablecoinBacking;
   /** Conservative measured months since launch; absent → no seasoning credit. */
   readonly trackRecordMonths?: number;
+  /** Evaluation clock; absent means a dated collateralization fact cannot be admitted. */
+  readonly asOfSec?: number;
 }
 
 export interface V9CdpLiquidationCapacitySelection {
@@ -153,6 +156,16 @@ export interface V9BackingUnresolvedReason {
   readonly causalKey?: string;
 }
 
+export interface V9CollateralizationApplication {
+  readonly measurementId: string;
+  readonly measuredAt: string;
+  readonly ratio: number;
+  readonly evidenceRefIds: readonly string[];
+  readonly appliedByAssetId: string;
+  /** Immediate parent whose score already includes this application. */
+  readonly inheritedFromAssetId: string | null;
+}
+
 export interface V9BackingResult {
   readonly assetId: string;
   readonly archetype: string;
@@ -166,6 +179,7 @@ export interface V9BackingResult {
   readonly unresolved: readonly V9BackingUnresolvedReason[];
   readonly evidenceRefIds: readonly string[];
   readonly failureDomains: readonly V9FailureDomainRef[];
+  readonly collateralizationApplications?: readonly V9CollateralizationApplication[];
   readonly traceDigest: string;
 }
 

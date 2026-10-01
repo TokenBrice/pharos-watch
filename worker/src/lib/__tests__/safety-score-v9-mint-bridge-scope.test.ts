@@ -300,7 +300,8 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
   });
 
   it.each([
-    { assetId: "usdai-usd-ai", unresolvedChains: ["solana"] },
+    // R2F1, independently confirmed in r2/verify/usdai-usd-ai.json, resolves the Solana OFT route.
+    { assetId: "usdai-usd-ai", unresolvedChains: [] },
     { assetId: "susdai-usd-ai", unresolvedChains: [] },
   ])(
     "$assetId compiles Arbitrum mint controls separately from satellite bridge controls",

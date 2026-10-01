@@ -1719,6 +1719,18 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         addWrapperCustodyEvidence(meta, reviewEvidence);
         admissionPath = "componentEvidence.wrapper-allocation";
         addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence);
+        if (meta.parentBackingInheritance) {
+          admissionPath = "componentEvidence.parent-backing-inheritance";
+          reviewEvidence.add({
+            componentKeys: ["wrapper-local:parentBackingInheritance"],
+            sourceId: "stablecoin-meta.parent-backing-inheritance",
+            reviewedAt: meta.parentBackingInheritance.reviewedAt,
+            publishedBy: "unknown",
+            confidence: "verified",
+            sources: meta.parentBackingInheritance.sources,
+            payload: meta.parentBackingInheritance,
+          });
+        }
         admissionPath = "supplyReview";
         const supplyReview = buildSafetyScoreV9SupplyReview(
           fixedInput,
@@ -1794,6 +1806,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           archetype,
           variantKind: meta.variantKind ?? null,
           ...(meta.wrapperOperator === undefined ? {} : { wrapperOperator: meta.wrapperOperator }),
+          ...(meta.parentBackingInheritance === undefined
+            ? {}
+            : { parentBackingInheritance: meta.parentBackingInheritance }),
           launchedAtSec,
           mechanismRiskReview,
           ...(mechanismReviewGapDisposition ? { mechanismReviewGapDisposition } : {}),

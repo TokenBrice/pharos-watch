@@ -56,6 +56,11 @@
       "chain": "plasma",
       "address": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE",
+      "decimals": 6
     }
   ],
   "collateralQuality": "exotic",

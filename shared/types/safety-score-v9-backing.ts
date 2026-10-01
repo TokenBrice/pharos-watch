@@ -5,6 +5,7 @@ import {
   compareText,
 } from "./safety-score-v9-fact-primitives";
 import { V9MechanismQualitySchema } from "./safety-score-v9-fact-input-primitives";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
 export type V9MechanismQualityLevel = z.infer<typeof V9MechanismQualitySchema>;
 
@@ -53,6 +54,11 @@ const V9CollateralizationMeasurementSchema = z
   .object({
     status: V9FactStatusV2Schema,
     ratio: z.number().finite().nonnegative(),
+    /** Date of the pinned measurement; null is unadmitted, not adverse evidence. */
+    measuredAt: StrictIsoDateSchema.nullable().default(null),
+    /** Identity of the measured subject and immutable pin, shared unchanged by wrappers. */
+    measurementId: z.string().trim().min(1),
+    sourceUrl: z.string().url(),
   })
   .strict()
   .superRefine((measurement, ctx) => {

@@ -33,6 +33,7 @@ import {
 import { ReserveSliceSchema, ReserveIntermediarySchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { CustodyModelSchema, WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
+import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
 import { SafetyScoreV9WrapperAllocationReviewSchema } from "./extension-wrapper-allocation";
 import { canonicalArrayBy } from "@shared/types/safety-score-v9-fact-primitives";
 import {
@@ -452,6 +453,7 @@ const AssetExtensionSchema = z
     // baseline producer emits the reviewed registry projection when available.
     wrapperCustodyReview: WrapperCustodyReviewSchema.nullable().optional(),
     wrapperAllocationReview: SafetyScoreV9WrapperAllocationReviewSchema.nullable().optional(),
+    parentBackingInheritance: ParentBackingInheritanceSchema.optional(),
     researchEvidence: canonicalArrayBy(ResearchEvidenceSchema, (evidence) => evidence.evidenceKey).default([]),
     componentEvidence: canonicalArrayBy(ComponentEvidenceBindingSchema, (binding) => binding.componentKey).default([]),
     admissionQuarantine: AssetAdmissionQuarantineSchema.optional(),

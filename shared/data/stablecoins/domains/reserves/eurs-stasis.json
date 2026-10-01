@@ -47,10 +47,10 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "prohibited",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB20MUSD)",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WMisc05)",
     "confidence": "probable",
     "sources": [
       {
@@ -58,11 +58,11 @@
         "url": "https://stasis.net/transparency"
       },
       {
-        "label": "STASIS Terms of Business, section 8 redemption from a segregated bank account",
+        "label": "STASIS Terms of Business, sections 3 and 8: separate safeguarded accounts, insolvency protection promise and prohibition on lending or other use",
         "url": "https://stasis.net/terms"
       }
     ],
-    "uncertainty": "The live page names NexPay UAB as the route to the Lithuanian Central Bank account. STSS's Terms of Business state that redeemed euros are paid from its segregated bank account. The account agreement, statutory insolvency treatment, bankruptcy remoteness and rehypothecation restrictions are not public; the issuer's segregation statement is not an independent legal opinion.",
+    "uncertainty": "The live page names NexPay UAB as the route to the Lithuanian Central Bank account. STSS's Terms of Business define Safeguarded Accounts as separate from its office accounts, promise protection at an EEA-authorised financial institution if STSS becomes insolvent, prohibit use of customer funds for any other purpose, and state that STSS cannot and will not lend them. These are contractual issuer commitments. The account agreement, statutory insolvency treatment and independent legal opinion remain unavailable, so structured bankruptcy remoteness is not established. The terms exclude deposit-guarantee and investor-compensation coverage.",
     "knownUnknownExposurePct": 0
   }
 }

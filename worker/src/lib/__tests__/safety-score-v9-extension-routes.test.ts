@@ -112,6 +112,27 @@ function dexPegFixture({
 }
 
 describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
+  it("admits physical verified customers without an institutional discount but labels terms capacity as modelled", () => {
+    const id = "paxg-paxos";
+    const clockSec = Date.UTC(2026, 9, 1, 12) / 1000;
+    const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", routeStatus: "open", holderEligibility: "verified-customer" });
+    const fixed = fixedInputStub(row, clockSec);
+    Object.assign(fixed, { aggregateCirculatingById: { [id]: { circulating: { peggedUSD: 20_000_000 } } } });
+    fixed.pegDataById[id] = {
+      pegCurrency: "GOLD",
+      pegReference: { valueUsd: 1000, usdPerTroyOunce: 1000, source: "median", contributorCount: 4, asOf: clockSec },
+    } as ReportCardsFixedInput["pegDataById"][string];
+    const physicalToUsd = structuredClone(getRedemptionBackstopConfig(id)!.physicalToUsd!);
+    physicalToUsd.fees = { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 };
+    physicalToUsd.settlementLegs = [{ leg: "issuer-release", maximumBusinessDays: 1 }];
+    withRedemptionBackstopConfig(id, { physicalToUsd }, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixed, id).find((route) => route.routeId === `physical-to-usd:${id}`))
+        .toMatchObject({ holderAccess: "verified-customer-neutral", coverageClass: "modelled-terms-lower-bound", modelConfidence: "medium" });
+      row.routeStatus = "paused";
+      expect(buildSafetyScoreV9RouteReviews(fixed, id).find((route) => route.routeId === `physical-to-usd:${id}`))
+        .toMatchObject({ coverageClass: "diagnostic", output: null });
+    });
+  });
   it("values reviewed physical outputs without token-price or fiat substitution", () => {
     const id = "dgld-gold-token-sa";
     const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", settlementModel: "days", outputAssetType: "bluechip-collateral" });

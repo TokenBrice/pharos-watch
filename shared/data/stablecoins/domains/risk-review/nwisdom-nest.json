@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "nWISDOM has issuer-native local issuance on Ethereum, Plume, BNB Chain, and Solana; those native deployment rows and their local deposit/mint authorities remain in Mint Authority. Cross-chain share movement is a separate LayerZero OFT/OVault burn/debit-and-mint/credit rail, and Solana settlement additionally uses CCTP through the Plume-side NestVaultComposer. The known composer and route semantics are preserved here, while the exact adapter, peers, DVN/validator set, rate limits, pause/upgrade controls, and administrators remain unresolved; external-lock-mint therefore remains provisional.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
+    "summary": "nWISDOM has reviewed native issuance on Ethereum, Plume, and BNB Chain. Solana is a LayerZero OFT mint/burn representation of Plume-issued shares, not an independent native liability issuer: the issuer's archived guide routes Solana USDC through CCTP to mint on Plume before OFT delivery. The Solana 1-of-2 SPL mint/freeze authority, OFTStore admin, and immediate program upgrade path are preserved here. Complete peers, DVNs, limits, recovery, key custody and runtime materiality remain unresolved; the aggregate tier remains provisional.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WNest); historical EVM/composer observations retained",
     "confidence": "probable",
     "protocols": [
       {
@@ -156,21 +156,21 @@
         "id": "solana:77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT",
         "destinationChain": "solana",
         "contractAddress": "77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT",
-        "protocol": "Nest nWISDOM Solana mint and OFT deployment",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "LayerZero OFT (Nest nWISDOM representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Nest's current integration guide and smart-contract registry identify the Solana nWISDOM mint, OFT store, and Plume composer. The user-facing Solana mint is described as native on Solana, but its settlement uses CCTP to Plume and LayerZero OFT to return shares; those transfer-rail controls are recorded separately below.",
+        "reviewNote": "The issuer guide archived 2026-06-09 explicitly deposits Solana USDC through CCTP, routes to Plume for the nWISDOM mint, and returns shares through LayerZero OFT. At finalized Solana slot 452347392, the exact mint authority remained a 1-of-2 SPL multisig with OFTStore RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq and external signer J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. The store's pinned source layout binds this mint to the LayerZero endpoint in OFT Native mint/burn mode; Native is the OFT mode, not evidence of independent liability issuance. That external signer also controls the store and program upgrade path.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439718375,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452347392,
         "sources": [
           {
-            "label": "Nest nWISDOM integration guide",
-            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+            "label": "Archived issuer nWISDOM integration guide",
+            "url": "https://web.archive.org/web/20260609053410/http://docs.nest.credit/developers/integration-guides/nwisdom/"
           },
           {
             "label": "Nest smart-contract deployments",
@@ -248,7 +248,7 @@
           "caps": "At Solana slot 443401251 and Plume block 90787123 on 2026-09-01, no leg of the rail exposed a mint ceiling. The Solana nWISDOM SPL mint 77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT carries only the standard SPL u64 bound (supply 2,910,340.262008, mintAuthority 9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y), and the LayerZero OFT store RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq decoded to oft_type 0 (native mint/burn) with default_fee_bps 0, paused false, and no cap field. On Plume, cap(), maxSupply(), mintCap(), supplyCap(), and mintingLimit() reverted on both nWISDOM 0x29bf22381a5811dec89dc7b46a5ce57ad02c0240 and NestVaultComposer 0x312a0219e8af66c4e8849a3fef4047415c3b4974, whose EIP-1967 implementation was 0x677d0b6fb441b58de21d91ca22c17d8b0faf8eeb.",
           "pausersAdminsUpgraders": "The composer is identified, but its exact pause, upgrade, role-administrator, and keeper/relayer control graph was not enumerated."
         },
-        "capDescription": "This is the Solana-to-Plume transfer rail for a native Solana route; its cross-chain mint/burn capability is scored here separately from the Solana SPL mint-authority multisig in Mint Authority.",
+        "capDescription": "This is the Solana-to-Plume settlement rail for a Solana bridge representation. The local SPL representation mint-authority and OFT program-admin powers are separately recorded in the Solana OFT control below, solely under Bridge Risk.",
         "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "sources": [
@@ -270,6 +270,52 @@
           }
         ],
         "evidence": "Nest's current integration guide identifies the nWISDOM Solana OFT store RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq and the Plume NestVaultComposer 0x312a0219e8af66c4e8849a3fef4047415c3b4974. The documented mint flow deposits Solana USDC through CCTP, settles the vault action on Plume, and returns nWISDOM through LayerZero OFT; the exact controller and validator graph remains an evidence gap."
+      },
+      {
+        "id": "nwisdom-solana-oft-mint-authority",
+        "label": "nWISDOM Solana OFT mint authority and program-admin path",
+        "routeRefs": [
+          "solana:77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y",
+        "authorityType": "contract",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:solana:9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y",
+          "program:solana:ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th",
+          "account:solana:J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "The OFTStore directly binds this mint to LayerZero endpoint 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6 in Native OFT mint/burn mode; complete peer and DVN configuration remains unreviewed.",
+          "pausersAdminsUpgraders": "The mint/freeze authority is a 1-of-2 SPL Token multisig. OFTStore is one signer, while J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J can independently sign and is also OFTStore admin and immediate program upgrade authority.",
+          "unsupportedReason": "Complete peers, DVNs, route limits, controller key custody and recovery remain unverified."
+        },
+        "observedAt": "2026-10-01",
+        "observedBlock": 452347392,
+        "sources": [
+          {
+            "label": "Archived issuer nWISDOM Solana integration flow",
+            "url": "https://web.archive.org/web/20260609053410/http://docs.nest.credit/developers/integration-guides/nwisdom/"
+          },
+          {
+            "label": "Pinned Nest OFTStore source layout",
+            "url": "https://raw.githubusercontent.com/plumenetwork/nest-protocol/cb190cd212ac9cc62c071efbc73387961b2e5e88/programs/oft/src/state/oft.rs"
+          },
+          {
+            "label": "Finalized Solana account reads",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized slot 452347392, exact mint 77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT retained mint/freeze authority 9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y, a 1-of-2 multisig. OFTStore RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq is owned by program ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th and decodes to that mint, the LayerZero endpoint and admin J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. ProgramData 6e7mQjt2ZjamwTi4X3dFUE3joZdfXdkyzZpWmxuGgbRs identifies the same immediate upgrade authority. The external signer can mint the representation independently; this adverse path is preserved, not replaced with a safety claim."
       }
     ]
   }

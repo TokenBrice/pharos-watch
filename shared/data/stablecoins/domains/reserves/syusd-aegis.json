@@ -52,7 +52,7 @@
     "sources": [
       {
         "label": "Current Ethereum sYUSD verified implementation",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c63bb1667b6e9215aee562af2957739b2676fe"
+        "url": "https://sourcify.dev/server/v2/contract/1/0xb0c63bb1667b6e9215aee562af2957739b2676fe?fields=sources"
       },
       {
         "label": "Ethereum sYUSD contract",
@@ -63,7 +63,7 @@
         "url": "https://bscscan.com/address/0x24db057b19241eefb9b522e8627c293ed8f93af2#code"
       }
     ],
-    "uncertainty": "The onchain custodyModel describes wrapper-local custody of deposited YUSD in the Ethereum and BSC sYUSD vault contracts and the Ethereum cooldown silo. Fresh pinned asset(), totalAssets(), and YUSD balanceOf(vault) reads confirm the vault-held parent asset. Under owner ruling D08, YUSD's underlying strategy custody risk remains on yusd-aegis through the existing parent dependency; this wrapper review does not establish upstream custodians, allocations, segregation, bankruptcy protection, or reuse rights. No provider shares are inferred.",
+    "uncertainty": "The onchain custodyModel describes wrapper-local custody of deposited YUSD in the Ethereum and BSC sYUSD vault contracts and the Ethereum cooldown silo. On 2026-10-01, asset() identified chain-local YUSD at Ethereum block 26098750 and BSC block 125134867; Ethereum totalAssets() exactly matched YUSD balanceOf(vault). The current Ethereum and BSC implementations reject rescueTokens when token == asset(), and ERC-4626 deposit/mint transfers the parent asset into the vault before minting shares. These implementation constraints do not remove the reviewed proxy-upgrade authority. Under owner ruling D08, YUSD's underlying strategy custody risk remains on yusd-aegis through the existing parent dependency; this wrapper review does not establish upstream custodians, allocations, segregation, bankruptcy protection, or reuse rights. No provider shares are inferred.",
     "knownUnknownExposurePct": 100
   }
 }

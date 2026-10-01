@@ -100,6 +100,17 @@ export function evaluatePhysicalToUsdExit(
   const unitUsd = terms.fineTroyOuncesPerToken * reference.usdPerTroyOunce;
   const minimum = selected.lot.minimumTokens;
   if (minimum === null || !Number.isFinite(minimum) || minimum <= 0) return rejected("physical-lot-minimum-missing");
+  const throughput = selected.throughput;
+  if (throughput && (!Number.isFinite(throughput.tokens) || throughput.tokens <= 0 ||
+      !Number.isInteger(throughput.periodSec) || throughput.periodSec <= 0 ||
+      typeof throughput.evidence?.quote !== "string" || !throughput.evidence.quote.trim() ||
+      typeof throughput.evidence.url !== "string" || !throughput.evidence.url)) {
+    return rejected("physical-throughput-invalid-or-unevidenced");
+  }
+  // A terms model is not evidence of unlimited dealer demand or issuer release.
+  // Scale only documented throughput to the selected branch's complete window.
+  const throughputTokens = throughput ? throughput.tokens * maximumSettlementSec / throughput.periodSec : null;
+  if (throughputTokens !== null && !Number.isFinite(throughputTokens)) return rejected("physical-throughput-invalid-or-unevidenced");
   const issuerBps = fee.issuerFeeBps as number;
   const fixedUsd = fee.issuerFixedUsd as number;
   const budgetTokens = Math.max(0, (requestedNotionalUsd - fixedUsd) / unitUsd / (1 + issuerBps / 10000));
@@ -107,26 +118,43 @@ export function evaluatePhysicalToUsdExit(
   let lots = 0;
   if (selected.lot.bars.length > 0) {
     let bestGross = -1;
+    let minimumDepositTokens = Number.POSITIVE_INFINITY;
+    let minimumDeliveredTokens = Number.POSITIVE_INFINITY;
     for (const bar of selected.lot.bars) {
       if (bar.fineTroyOunces === null || !Number.isFinite(bar.fineTroyOunces) || bar.fineTroyOunces <= 0) return rejected("physical-bar-weight-missing");
       const maximum = bar.maximumFineTroyOunces ?? bar.fineTroyOunces;
       if (maximum < bar.fineTroyOunces) return rejected("physical-bar-weight-conflict");
       const depositTokens = Math.max(minimum, maximum / terms.fineTroyOuncesPerToken);
-      const count = Math.floor(budgetTokens / depositTokens + 1e-12);
-      const delivered = count * bar.fineTroyOunces / terms.fineTroyOuncesPerToken;
-      if (delivered > bestGross) { bestGross = delivered; tokens = delivered; lots = count; }
+      const deliveredPerLot = bar.fineTroyOunces / terms.fineTroyOuncesPerToken;
+      const capacityLots = throughputTokens === null ? policy.undocumentedThroughputLotsPerSettlementWindow
+        : Math.floor(throughputTokens / deliveredPerLot + 1e-12);
+      const count = Math.min(Math.floor(budgetTokens / depositTokens + 1e-12), capacityLots);
+      const delivered = count * deliveredPerLot;
+      const prefer = throughputTokens === null
+        ? depositTokens < minimumDepositTokens || (depositTokens === minimumDepositTokens && deliveredPerLot < minimumDeliveredTokens)
+        : delivered > bestGross;
+      if (prefer) {
+        bestGross = delivered;
+        minimumDepositTokens = depositTokens;
+        minimumDeliveredTokens = deliveredPerLot;
+        tokens = delivered;
+        lots = count;
+      }
     }
   } else {
     const increment = selected.lot.incrementTokens;
     if (increment === null || !Number.isFinite(increment) || increment <= 0) return rejected("physical-lot-increment-missing");
-    lots = Math.floor(budgetTokens / increment + 1e-12);
+    const capacityLots = throughputTokens === null
+      ? Math.ceil(minimum / increment) * policy.undocumentedThroughputLotsPerSettlementWindow
+      : Math.floor(throughputTokens / increment + 1e-12);
+    lots = Math.min(Math.floor(budgetTokens / increment + 1e-12), capacityLots);
     tokens = lots * increment;
     if (tokens < minimum) { tokens = 0; lots = 0; }
   }
   const grossUsd = tokens * unitUsd;
   const tier = terms.vaultLocations.every((location) => location === "london" || location === "zurich") ? "primaryVault" : "otherVault";
   const saleSpreads = terms.metal === "XAG" ? policy.silverSaleSpreadBps : policy.saleSpreadBps;
-  const spread = branch === "best-effort-issuer-cash-out" ? 0 : saleSpreads[terms.barClass][tier];
+  const spread = saleSpreads[terms.barClass][tier];
   const bps = issuerBps + (fee.insuranceBps as number) + (fee.taxBps as number) + (fee.conversionBps as number) + spread;
   const netUsd = grossUsd - grossUsd * bps / 10000 - fixedUsd - lots * ((fee.deliveryUsdPerLot as number) + (fee.assayUsdPerLot as number));
   const costBps = grossUsd > 0 ? (grossUsd - netUsd) / grossUsd * 10000 : null;

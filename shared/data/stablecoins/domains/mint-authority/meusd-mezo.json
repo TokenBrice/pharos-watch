@@ -80,10 +80,10 @@
         "threshold": 5,
         "signerCount": 9,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "capDescription": "The Mezo owner Safe administers the canonical token's mintList/burnList allowlists (addToMintList/addToBurnList are onlyOwner in MUSD.sol), so it can authorize arbitrary new Mezo minters; it does not itself call mint(). The same Safe's Ethereum/Base token and NTT-manager ownership is bridge administration reviewed separately under bridgeRouteRisk.",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770834,
+        "observedAt": "2026-10-01",
+        "observedBlock": 12220336,
         "failureDomainKeys": [
           "protocol:mezo",
           "safe:mezo:0x98d8899c3030741925be630c710a98b57f397c7a"
@@ -103,8 +103,9 @@
             "0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
           ],
           "enabledModules": [],
-          "observedBlock": 25770834,
-          "observedAt": "2026-08-16"
+          "guard": null,
+          "observedBlock": 12220336,
+          "observedAt": "2026-10-01"
         },
         "sources": [
           {
@@ -116,16 +117,16 @@
             "url": "https://etherscan.io/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
           }
         ],
-        "evidence": "At Ethereum block 25770834 (2026-08-16), owner() of the MUSD token on Ethereum, Base, and Mezo was 0x98D8899c3030741925BE630C710A98B57F397C7a; its 5-of-9 Safe returned the 9 listed owners. Module pagination returned an empty sentinel list, but getGuard() reverted, so the guard state remains unresolved and is recorded as unknown. On canonical Mezo, onlyOwner addToMintList controls who may mint; Ethereum/Base NTT manager minting and the shared Safe's bridge administration are excluded from native Mint Authority and preserved in bridgeRouteRisk."
+        "evidence": "At canonical Mezo block 12220336 (2026-10-01), MUSD owner() and BorrowerOperations ProxyAdmin owner() both return 0x98d8899c3030741925be630c710a98b57f397c7a. The Safe returns threshold 5 and the same nine recorded owners; getModulesPaginated(0x1,100) returns no modules and the standard guard_manager.guard.address storage slot is zero. This resolves the earlier getGuard() revert without assuming a nonexistent public getter. The MUSD source's onlyOwner addToMintList permits arbitrary additional minters, independently of the collateral-limited CDP route. Ethereum/Base bridge administration remains outside native Mint Authority."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "2026-08-16 on-chain review across Mezo, Ethereum, and Base. The same immutable 6,436-byte MUSD deployment at 0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186 on all three chains gates mint() through an owner-administered mintList. Mezo is the only native issuance chain: at block 11179505, BorrowerOperations and InterestRateManager are the verified mintList entries for the BTC-collateralized CDP and accrued-interest paths. Ethereum (block 25770834) and Base (block 50066278) are Wormhole NTT burning-spoke representations: their NTT managers mint only in response to conserved guardian-attested burn messages, and their bridge controls are authored under bridgeRouteRisk rather than native Mint Authority. The token owner on all three chains is the 5-of-9 Safe 0x98D8899c3030741925BE630C710A98B57F397C7a. The Safe can authorize arbitrary additional canonical Mezo minters through onlyOwner addToMintList, so no supply cap or whole-supply reconciliation constrains every possible native mint path; authorityPosture remains unbounded-or-compromised, economicCapSemantics remains unbounded, reconciliation remains unknown, and supervision remains none. Module pagination was empty but getGuard() reverted, so Safe guard status remains unknown. EIP-1967 implementation, admin, and beacon slots remain zero on the reviewed deployments; MUSD is immutable and has no separate implementation-upgrade path.",
-      "reviewer": "Codex canonical mint-authority boundary correction 2026-08-16",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Canonical Mezo re-review at block 12220336 on 2026-10-01: MUSD and the BorrowerOperations ProxyAdmin are owned by the recorded 5-of-9 protocol Safe. BorrowerOperations is a transparent proxy with implementation 0x501670bbbe2ec8c11449c28c0c9e6677d5ea9b61 and ProxyAdmin 0x778f4ef6cbe4492a6c87abab98821e4242663e58; immutable MUSD token bytecode does not make mint-critical CDP logic immutable. Canonical Safe module pagination is empty and the standard guard storage slot is zero, superseding the 2026-08-16 unresolved getter observation for this chain only. Complete MintListAddressAdded/MintListAddressRemoved log census from genesis through block 12220336, in 10000-block chunks, found three additions and no removals: BorrowerOperations and InterestRateManager at block 178718, and 0x2c5e9afbb670c4a61ac2dcad62c258ee2391389a at block 8550826. All three remain mintList=true. The third address requires separate transfer-rail classification and liability reconciliation; the two CDP paths are not the complete canonical token mint allowlist. Source and docs establish the owner can authorize uncapped additional minters; no dated reconciliation covering every allowlisted mint path was located. EconomicCapSemantics remains unbounded and reconciliation remains unknown. The earlier Ethereum/Base NTT bridge review is preserved under bridgeRouteRisk and is not refreshed by these Mezo-only reads.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc08)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "sources": [
         {

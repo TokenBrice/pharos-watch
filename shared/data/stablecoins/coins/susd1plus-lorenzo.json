@@ -13,6 +13,23 @@
   "pegReferenceId": "usd1-world-liberty-financial",
   "variantOf": "usd1-world-liberty-financial",
   "variantKind": "strategy-vault",
+  "parentBackingInheritance": {
+    "state": "withheld",
+    "reason": "mixed-strategy-without-measured-parent-claim",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Safety Score V10 D26 owner review",
+    "rationale": "sUSD1+ represents a mixed RWA/CeFi/DeFi fund accepting USD1, USDT and USDC. USD1 branding, the underlying pointer and USD1 settlement do not establish a measured single-parent USD1 economic claim; retain the serial cap and peg relationship but withhold favorable parent Backing inheritance until a separate review establishes that claim.",
+    "sources": [
+      {
+        "label": "Lorenzo USD1+ launch: non-rebasing fund shares and mixed RWA/CeFi/DeFi strategies",
+        "url": "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/"
+      },
+      {
+        "label": "Lorenzo vault details: supported deposit assets USD1, USDT and USDC",
+        "url": "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b"
+      }
+    ]
+  },
   "collateral": "Lorenzo USD1+ OTF fund shares over a managed portfolio of RWA, CeFi quantitative, and DeFi strategies; accepts USD1, USDT, and USDC deposits and settles withdrawals in USD1",
   "pegMechanism": "Non-rebasing shares accrue yield through Unit NAV appreciation; withdrawal requests burn sUSD1+ at settlement and pay USD1 based on settlement-day NAV, normally over a 3-6 day cycle that can be extended",
   "mechanismArchetype": "synthetic-delta-neutral",

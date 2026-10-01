@@ -105,7 +105,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethereum is the sole reviewed native USDe issuance route. The canonical Ethereum OFT adapter and all reviewed satellite deployments are representation machinery assessed under Bridge Risk, not native Mint Authority. Because the LayerZero/OFT routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint. Current issuer documentation and pinned Tempo reads identify the USDe TIP-20 token and its separately listed OFT; the route controller and administrative semantics remain unresolved.",
+    "summary": "Ethereum is the sole reviewed native USDe issuance route. The canonical Ethereum OFT adapter and satellite deployments are representation machinery assessed under Bridge Risk. At Tempo block 42130562, the issuer-listed OFT is the TIP-20's sole issuer-role holder, and a 5-of-10 Safe holds the token's default-admin, pause, unpause and blocked-balance-burn roles. The token's 300,000,000 USDe supply cap is immediately admin-raiseable. The route remains external lock/mint; current OFT upgrade-function semantics and messaging quorum are not established by this review.",
     "reviewedAt": "2026-09-04",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); Codex Tempo USDe linkage refresh",
     "confidence": "verified",
@@ -1447,10 +1447,15 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Historical observation (2026-09-04): Refreshed from Tempo mainnet RPC at block 37948550 on 2026-09-04: the EIP-1967 proxy at 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 resolves to implementation 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a with a zero EIP-1967 admin slot. endpoint() returns Tempo's published LayerZero V2 endpoint 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c, token() returns the Tempo TIP-20 0x20c0000000000000000000002f52d5cc21a3207b, and approvalRequired() returns true. The linked TIP-20 currently returns name()='USDe', symbol()='USDe', decimals()=6, paused()=false, transferPolicyId()=1, and totalSupply()=22.256021. This resolves the route's token identity and OFT-style bridge boundary, but the reviewed Ethena and LayerZero materials do not publish this Tempo deployment's controller, delegate/peer configuration, TIP-20 issuer or policy administrator, or route-liability boundary. The route therefore remains reviewed for identity but unresolved for controller semantics; no native issuance authority is inferred. Current issuer key-addresses documentation lists the USDe TIP-20 0x20c0000000000000000000002f52d5cc21a3207b and OFT 0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f. At Tempo block 42066527 on 2026-10-01 the TIP-20 returns symbol USDe and decimals 6; the listed OFT token() points to that TIP-20 and endpoint() returns 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c. owner() reverted for the current OFT, so controller/delegate/peer and policy administration remain unresolved; no native issuance authority or favorable control tier is inferred. Additional pinned reads of the issuer-listed current OFT at the same block resolve its EIP-1967 implementation to 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a and its nonzero admin slot to 0x4371714e061d4b1e800cf93795d0ca3f62a70e36; that admin address owner() returns 0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b, whose getThreshold()/getOwners() return 5 and 10 owners. These establish current administrative identities, not a timelock or complete delegate/peer, policy-role, or liability-boundary review; the unresolved protective-control posture is retained.",
+        "reviewNote": "Historical reads at Tempo blocks 37948550 (2026-09-04) and 42066527 (2026-10-01) established the TIP-20 identity and the issuer-listed replacement OFT, but left role semantics unresolved. At block 42130562 on 2026-10-01, OFT 0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f token() returns this TIP-20 and endpoint() returns 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c. Complete RoleMembershipUpdated replay from token creation block 14579720 through the pinned block, in 100,000-block chunks, resolves the OFT as sole ISSUER_ROLE holder and Safe 0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b as sole DEFAULT_ADMIN_ROLE, PAUSE_ROLE, UNPAUSE_ROLE and BURN_BLOCKED_ROLE holder. Current hasRole(address,bytes32) reads confirm each holder. The Safe has threshold 5, ten owners, no enabled modules and a zero guard slot. TIP-20 supplyCap() returns 300,000,000 USDe, which its default admin can raise; the admin can also grant additional issuer roles under the documented precompile interface. The OFT's EIP-1967 implementation remains 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a; admin slot 0x4371714e061d4b1e800cf93795d0ca3f62a70e36 owner() returns this Safe. OFT DEFAULT_ADMIN_ROLE also resolves to the Safe by complete RoleGranted/RoleRevoked replay over the same interval and current hasRole. Its owner() still reverts. No timelock, verified upgrade-function access semantics, complete messaging quorum, peer configuration or reconciled route-liability partition is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b",
+        "failureDomainKeys": [
+          "tempo:0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b"
+        ],
         "observedAt": "2026-10-01",
-        "observedBlock": 42066527,
+        "observedBlock": 42130562,
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -1485,6 +1490,104 @@
             "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "tempo-usde-oft-issuer",
+        "routeRefs": [
+          "tempo:0x20c0000000000000000000002f52d5cc21a3207b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "tempo",
+        "controllerAddress": "0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f",
+        "label": "Tempo USDe OFT TIP-20 issuer",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "TIP-20 enforces a total supply cap of 300,000,000 USDe at the observed block; the separate token default-admin Safe can raise it immediately.",
+        "canRaiseCap": false,
+        "failureDomainKeys": [
+          "tempo:0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b",
+          "bridge:layerzero"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 42130562,
+        "sources": [
+          {
+            "label": "Ethena current Tempo token and OFT addresses",
+            "url": "https://docs.ethena.fi/technical-design/key-addresses"
+          },
+          {
+            "label": "Tempo TIP-20 mint, burn and role specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo pinned RPC role and supply-cap observation",
+            "url": "https://rpc.tempo.xyz"
+          }
+        ],
+        "evidence": "At Tempo block 42130562, the issuer-listed OFT token() identifies the authored TIP-20 and hasRole(OFT, ISSUER_ROLE) returns true. Complete RoleMembershipUpdated replay from creation block 14579720 resolves it as the sole issuer after the historical 0x5d3a1ff2... issuer was revoked at block 18728183. The published TIP-20 interface requires ISSUER_ROLE for mint and burn, and enforces supplyCap on mint. supplyCap() is 300000000000000 base units at six decimals; the OFT is not a token default admin. No current LayerZero verification quorum or verified OFT implementation behavior is inferred."
+      },
+      {
+        "id": "tempo-usde-token-admin",
+        "routeRefs": [
+          "tempo:0x20c0000000000000000000002f52d5cc21a3207b"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "bridge-burn"
+        ],
+        "controllerChain": "tempo",
+        "controllerAddress": "0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b",
+        "label": "Tempo USDe TIP-20 and OFT default-admin Safe",
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 10,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x66096e581863ec2682e4e317da41b80510a274f6",
+            "0xe5ca87da3a209ad85fdcbb515e1bd92644e9e1a6",
+            "0xe987e14b2e204fdf5827a3cfca7d476e8df6a99e",
+            "0x54d0d64f7326b128959bf37ed7b5f2510656a471",
+            "0x18d32b1ab042b5e9a3430e77fde8b4783a019234",
+            "0x99682f56f4cccf61bd7e449924f2f62d395e1e45",
+            "0xe3f95f2e1adec092337fb5d93c1fe87558658b11",
+            "0x66892c66711b2640360c3123e6c23c0cfa50550f",
+            "0xb93c042c688f1cf038bab03c4f832f2630bb7d8f",
+            "0x980742edea6b0df3566c19ff4945c57e95449a13"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 42130562,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        },
+        "capDescription": "The TIP-20 default admin can immediately raise the 300,000,000 USDe total supply cap and grant or revoke issuer roles; this is not an immutable economic bound.",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "tempo:0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 42130562,
+        "sources": [
+          {
+            "label": "Tempo TIP-20 administrative and role specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo pinned RPC Safe and role census",
+            "url": "https://rpc.tempo.xyz"
+          }
+        ],
+        "evidence": "Complete TIP-20 role replay and current hasRole(address,bytes32) reads at block 42130562 identify this Safe as sole token default admin, pauser, unpauser and blocked-balance burner. Current getRoleAdmin reads return DEFAULT_ADMIN_ROLE for all token roles. The documented TIP-20 interface permits its default admin to setSupplyCap and grant issuer roles immediately. getThreshold is 5, getOwners returns ten owners, getModulesPaginated returns no modules and next=0x1, and the Safe guard slot is zero. The OFT's DEFAULT_ADMIN_ROLE also belongs to this Safe; its EIP-1967 admin-slot address owner() returns the Safe, but verified proxy-upgrade function semantics remain unestablished."
       }
     ]
   }

@@ -68,6 +68,7 @@ export const V9RouteHolderAccessSchema = z.enum([
   "permissionless",
   "retail-open",
   "institutional-eligible",
+  "verified-customer-neutral",
   "allowlisted",
   "issuer-only",
   "unknown",
@@ -82,7 +83,7 @@ export const V9RouteExecutionModelSchema = z.enum([
   "unknown",
 ]);
 export const V9RouteExecutionCertaintySchema = z.enum(["guaranteed", "bounded", "conditional", "discretionary", "unknown"]);
-export const V9RouteCoverageClassSchema = z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]);
+export const V9RouteCoverageClassSchema = z.enum(["exact-complete", "exact-lower-bound", "modelled-terms-lower-bound", "diagnostic"]);
 export const V9RouteSettlementModelSchema = z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]);
 export const V9RouteOutputKindSchema = z.enum(["tracked-stablecoin", "fiat", "collateral", "basket", "physical-commodity-delivery"]);
 export const V9RouteValuationBasisSchema = z.enum(["price", "nav", "fx", "reviewed-par", "commodity-delivery"]);

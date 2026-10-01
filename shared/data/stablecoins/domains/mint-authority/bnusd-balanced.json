@@ -115,9 +115,9 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Fresh ICON RPC reads at block 116683553 confirm the canonical bnUSD SCORE remains active at code hash 0xf4d53569a3e4ba10dd69178004a070b24723cd697b899f5683722d6ea3110d41, is owned by Balanced Governance, and still reports an 8,000,000 bnUSD debt ceiling against approximately 908,680 bnUSD supply. The Loans and Peg Stability SCOREs remain active and owned by Governance; the Governance SCORE is still owned by the single hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368 EOA. The exact deployed archives limit direct mintTo to Loans/PSM while the Governance owner can raise the ceiling or deploy replacement SCORE code, so the economic cap is raiseable. This is a collateralized protocol mint rather than issuer reserve issuance, making reconciliation not applicable and prudential supervision none. Economic-posture fields reviewed 2026-08-15: the single Governance-owner EOA can raise the debt ceiling or replace mint-critical code without an independent timelock, making the cap unbounded; protocol collateral remains on-chain and no prudential supervisor or independent attestor applies.",
-      "reviewer": "OpenAI Codex C09 control review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At ICON block 118968355 on 2026-10-01, the canonical legacy bnUSD SCORE reports a zero debt ceiling and remains active at code hash 0xf4d53569a3e4ba10dd69178004a070b24723cd697b899f5683722d6ea3110d41, owned by Governance SCORE cx44250a12074799e26fdeee75648ae47e2cc84219. Governance remains active at unchanged code hash 0x68eaccb4c5cf73124b6da512d1ef4129ea29e56dc08c9611e47c74d1c16d7d01, owned by hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368. This supersedes the historical 8,000,000 ceiling cited in the August review without removing the previously reviewed owner-authorized cap and upgrade powers. The issuer confirms community governance retired in November 2025. The native administrative path remains unbounded; a zero current ceiling is not an immutable mint restriction. The owner's private-key custody is not established by the SCORE ownership read or retirement disclosure.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc02)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "sources": [

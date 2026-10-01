@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,12 +35,17 @@
       {
         "label": "Spiko SAFO share-class totals API",
         "url": "https://public-api.spiko.io/share-classes/SAFO/totals"
+      },
+      {
+        "label": "AMF GECO: Spiko SICAV semiannual statement at June 30, 2026",
+        "url": "https://geco.amf-france.org/back-office/document/download/429960"
       }
     ],
-    "rationale": "The producer emits one 100% fully collateralized overnight total-return swap identity for the Spiko Amundi Overnight Swap Fund USD share class. Spiko's product page identifies BNP Paribas as the current TRS counterparty paying SOFR + 0.48% daily against a fund-owned equity basket with daily margining, daily dealing, and residual counterparty and market-liquidity risk; this review classifies that exact producer identity without treating the fund's changing securities portfolio as a separately weighted reserve slice. This supersedes the prior blocked review: the counterparty and structure are disclosed on the current product page and in the SICAV legal documents. The contractual rate was rechecked on 2026-10-01 and supersedes the previously recorded SOFR + 0.35%; this rate correction does not refresh the composition or classification evidence date.",
-    "compositionBasis": "Exact spiko-api single-asset identity cross-checked against Spiko's current product page, SICAV prospectus, and share-class totals API",
+    "rationale": "The producer emits one 100% fully collateralized overnight total-return swap identity for the Spiko Amundi Overnight Swap Fund USD share class. Spiko's product page identifies BNP Paribas as the current TRS counterparty paying SOFR + 0.48% daily against a fund-owned equity basket with daily margining, daily dealing, and residual counterparty and market-liquidity risk; this review classifies that exact producer identity without treating the fund's changing securities portfolio as a separately weighted reserve slice. This supersedes the prior blocked review: the counterparty and structure are disclosed on the current product page and in the SICAV legal documents. The contractual rate was rechecked on 2026-10-01 and supersedes the previously recorded SOFR + 0.35%; this rate correction does not refresh the composition or classification evidence date. The AMF-hosted June 30, 2026 semiannual statement identifies the USD share with 135326839.12436 outstanding shares and NAV USD 1.012255, and publishes the sub-fund's itemized securities and BNP swap inventory. The fund-level accounting statement is in EUR and includes derivative assets/liabilities; those gross accounting amounts are not converted into a fabricated 100% net reserve allocation. This dates the verified fund/share identity, not the October portfolio or an independent auditor opinion.",
+    "compositionBasis": "100% native SAFO USD fund/share identity; June 30, 2026 AMF-hosted financial statement and itemized sub-fund inventory, not a current look-through allocation",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "No exposure outside the emitted 100% TRS identity is indicated. The fund's changing equity-basket portfolio and any future change of eligible TRS counterparty are look-through details, not separately reported producer slices.",
+    "knownUnknownExposure": "The June 30, 2026 report itemizes the sub-fund securities and swap inventory, but the producer emits only the aggregate SAFO share identity. Post-June portfolio weights, net derivative allocation and current collateral-reuse amounts are not supplied by the totals API; no current look-through split is authored.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

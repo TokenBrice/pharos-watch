@@ -1,7 +1,4 @@
-/**
- * Safety Score v9 oracle-review adapter. Extracted verbatim from
- * `safety-score-v9-extension.ts`; no behaviour change.
- */
+/** Compiles reviewed oracle inventory without assigning borrower risk to allocations. */
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
@@ -134,7 +131,58 @@ export function adaptOracleReview(
       branches: [],
     };
   }
-  if (profile.branchApplicability?.disposition === "not-applicable") {
+  // Explicit paths take precedence over the aggregate inventory disposition.
+  // A new/unreviewed facilitator cannot inherit another path's exemption.
+  const paths = profile.paths?.map((path) => {
+    const review = path.applicability;
+    const pathEvidenceKeys = review ? evidence.add({
+      componentKeys: ["economic-control:oracle"],
+      sourceId: "stablecoin-meta.oracle-risk",
+      reviewedAt: review.reviewedAt,
+      publishedBy: "unknown",
+      confidence: confidenceForResearch(review.confidence),
+      sources: review.sources,
+      payload: path,
+      maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+    }) : [];
+    const current = review && researchReviewObservationState(review.reviewedAt, clockSec) === "current";
+    const known = current && reviewedObservationState(confidenceForResearch(review.confidence)) === "known";
+    const exempt = review != null && known && review.confidence === "verified" &&
+      review.disposition === "not-applicable" && path.pricingAuthority === "none";
+    const applicable = review != null && known &&
+      (review.disposition === "branches-required" || review.disposition === "top-level-only") &&
+      (path.pricingAuthority === "external-price" || path.pricingAuthority === "internal-price");
+    const status = exempt
+      ? notApplicableStatus("v9.control.oracle-review", review.rationale, pathEvidenceKeys)
+      : requiredStatus(
+          "v9.control.oracle-review",
+          applicable ? "known" : current ? "bounded-unknown" : review ? "stale" : "missing",
+          `oracle:${meta.id}:path:${path.id}`,
+          pathEvidenceKeys,
+        );
+    return {
+      id: path.id,
+      chain: path.chain,
+      address: path.address,
+      branchId: path.branchId ?? null,
+      applicability: status.applicability,
+      observationState: status.observationState,
+    };
+  }).sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
+  if (paths?.every((path) => path.applicability.state === "not-applicable")) {
+    return {
+      status: notApplicableStatus(
+        "v9.control.oracle-review",
+        "Every identified path is reviewed as having no price-sensitive oracle or internal valuation authority.",
+        evidenceKeys,
+      ),
+      tier: null,
+      liquidationBranchesApplicable: false,
+      branches: [],
+      paths,
+    };
+  }
+  if (!paths && profile.branchApplicability?.disposition === "not-applicable") {
     return {
       status: notApplicableStatus("v9.control.oracle-review", profile.branchApplicability.rationale, evidenceKeys),
       tier: null,
@@ -142,21 +190,32 @@ export function adaptOracleReview(
       branches: [],
     };
   }
-  const topState =
-    profile.branchApplicability?.disposition === "branches-required" ||
-    profile.branchApplicability?.disposition === "top-level-only"
+  const unresolvedPaths = paths?.some((path) => path.observationState !== "known");
+  const applicableBranches = paths
+    ? profile.branches?.filter((branch) => paths.some((path) =>
+        path.branchId === branch.id && path.applicability.state === "required" && path.observationState === "known",
+      )) ?? []
+    : profile.branches ?? [];
+  const lendingPaths = profile.paths?.filter((path) => path.applicability?.disposition === "branches-required");
+  const missingPathBranch = lendingPaths?.some((path) =>
+    !path.branchId || !applicableBranches.some((branch) => branch.id === path.branchId),
+  );
+  const topState = unresolvedPaths || missingPathBranch
+    ? "bounded-unknown"
+    : paths || profile.branchApplicability?.disposition === "branches-required" ||
+        profile.branchApplicability?.disposition === "top-level-only"
       ? reviewedObservationState(confidence)
       : "bounded-unknown";
-  const branchesRequired =
-    profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length;
-  const materiality =
-    branchesRequired && topState !== "missing"
-      ? deriveOracleBranchMateriality(profile.branches!, profile.tier)
-      : { tier: profile.tier };
-  const branches =
-    profile.branchApplicability?.disposition === "branches-required" && profile.branches?.length
+  const branchesRequired = paths
+    ? (lendingPaths?.length ?? 0) > 0
+    : profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length;
+  const materiality = branchesRequired && topState !== "missing" &&
+    !profile.paths?.some((path) => path.applicability?.disposition === "top-level-only")
+    ? deriveOracleBranchMateriality(applicableBranches, profile.tier)
+    : { tier: profile.tier };
+  const branches = branchesRequired
       ? ORACLE_BRANCH_ADAPTERS.map(([branchKind, predicate]) => {
-          const complete = profile.branches!.every(predicate);
+          const complete = !missingPathBranch && applicableBranches.every(predicate);
           const state = complete ? reviewedObservationState(confidence) : "missing";
           return {
             branch: branchKind,
@@ -170,7 +229,7 @@ export function adaptOracleReview(
             mechanismKey: complete
               ? `oracle-mechanism:${meta.id}:${branchKind}:${domainDigest("safety-score-v9.oracle-branch.v1", {
                   branchKind,
-                  branches: profile.branches,
+                  branches: applicableBranches,
                 }).slice(0, 16)}`
               : null,
             inheritedFromAssetId: null,
@@ -178,17 +237,28 @@ export function adaptOracleReview(
         })
       : [];
   return {
-    status: requiredStatus(
-      "v9.control.oracle-review",
-      topState,
-      `oracle:${meta.id}`,
-      topState === "known" || topState === "bounded-unknown" ? evidenceKeys : [],
-    ),
+    status: unresolvedPaths
+      ? {
+          ...requiredStatus("v9.control.oracle-review", "bounded-unknown", `oracle:${meta.id}`, evidenceKeys),
+          applicability: {
+            state: "unresolved",
+            policyRuleId: "v9.control.oracle-review",
+            rationale: "At least one identified path lacks current verified pricing applicability.",
+            gapId: `extension-gap:oracle:${meta.id}`,
+          },
+        }
+      : requiredStatus(
+          "v9.control.oracle-review",
+          topState,
+          `oracle:${meta.id}`,
+          topState === "known" || topState === "bounded-unknown" ? evidenceKeys : [],
+        ),
     tier: topState === "missing" ? null : materiality.tier,
-    liquidationBranchesApplicable: profile.branchApplicability?.disposition !== "top-level-only",
+    liquidationBranchesApplicable: paths ? branchesRequired : profile.branchApplicability?.disposition !== "top-level-only",
     ...(materiality.subMaterialWeakBand !== undefined
       ? { subMaterialWeakBand: materiality.subMaterialWeakBand }
       : {}),
     branches,
+    ...(paths ? { paths } : {}),
   };
 }

@@ -72,7 +72,7 @@
     "compositionBasis": "Issuer live backing API observed 2026-09-21, with Curve LP constituents read on Ethereum at block 26024768",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "All material adapter backing is classified; the 5.12e-10 TermMax residual is below display precision and does not create a material unresolved exposure. USDU-denominated vault and LP positions are retained as self-reserve rather than false upstream dependencies.",
+    "knownUnknownExposure": "The dated 2026-09-21 composition covers the disclosed Morpho USDU, Curve LP and TermMax positions. At Ethereum block 26098837 on 2026-10-01, two additional valid SwapBridgeMorphoV1 modules reported 2.470331 USDU-equivalent in a USDC vault and 1.003272 in a USDT vault. The re-fetched issuer backing API exposes total, morpho, curve and termmax aggregates without a module roster or accounting timestamp, so it does not directly establish whether these modules are included. A complete current denominator requires all active-module positions and historical-module residuals with consistently valued LP and vault exposures; this observation does not refresh the dated percentages.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

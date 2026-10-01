@@ -84,12 +84,27 @@
         "label": "Inherited avUSD gateway cap administrator",
         "role": "minter-admin",
         "authorityType": "eoa",
+        "threshold": 3,
+        "signerCount": 4,
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Avant address-specific admin MPC disclosure, December 31, 2025 (archived March 9, 2026)",
+              "url": "https://web.archive.org/web/20260309082850/https://gov.curve.finance/t/proposal-to-add-savusd-usdc-pool-to-gauge-controller/10977"
+            },
+            {
+              "label": "Avant secure asset management",
+              "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+            }
+          ]
+        },
         "capDescription": "DEFAULT_ADMIN_ROLE can set maxMintPerBlock without a fixed upper bound on the inherited avUSD gateway; changing this parent cap does not bypass savUSD deposit-backed share issuance.",
         "observedAt": "2026-10-01",
-        "observedBlock": 96513662,
+        "observedBlock": 96542832,
         "failureDomainKeys": [
           "asset:avusd-avant"
         ],
@@ -99,7 +114,7 @@
             "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xcb43139E90f019624e3B76C56FB05394B162A49c"
           }
         ],
-        "evidence": "At Avalanche block 96513662, gateway owner() returned this address, hasRole(DEFAULT_ADMIN_ROLE, owner) returned true, avantcoin() identified avUSD 0x24de8771bc5ddb3362db529fc3358f2df3a0e346, and eth_getCode for this controller returned 0x. The gateway cap was 25,000,000 avUSD; verified setMaxMintPerBlock is DEFAULT_ADMIN_ROLE-gated and directly assigns the supplied uint256. This records inherited parent cap authority, not a new direct savUSD share minter; address-specific MPC key custody remains unverified."
+        "evidence": "At Avalanche block 96542832, gateway owner() and hasRole(DEFAULT_ADMIN_ROLE, owner) identify this controller; eth_getCode is empty and maxMintPerBlock remains 25,000,000 avUSD. Avant's December 31, 2025 governance disclosure identifies this exact address as a 3-of-4 MPC of core team members, corroborated by current issuer MPC and transaction-policy documentation. Its unrestricted parent cap and token-minter replacement powers remain adverse; MPC does not bypass savUSD deposit-backed share issuance or establish an independent timelock. Custody vendors remain NDA-only."
       }
     ],
     "economicCapSemantics": "bounded",

@@ -15,8 +15,8 @@
   "mechanismArchetypeReview": {
     "disposition": "unresolved",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC09), owner ruling D18",
-    "rationale": "At Celo block 78952821, the tracked CADm token identifies as Mento Canadian Dollar and names the v2 Broker; the Broker's active exchange provider lists the USDm/CADm pair. The pinned issuer configuration explicitly identifies CADm as backed by the diversified shared crypto reserve. Broker source implements stable-asset mint/burn swaps rather than a CAD cash redemption claim or a borrower-specific CDP. The 2026-07-31 owner review mapped pooled reserve inventory to the fiat-cash umbrella; that dated mapping remains history. D18 requires a fit to actual holder rights and current backing, while the cited V3 reserve page covers USDm/EURm and does not establish CADm-specific rights. No replacement archetype or protective grade is inferred pending an exact-product claim and shared-basket methodology mapping.",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
+    "rationale": "CADm remains a legacy Mento V2 shared-reserve token. MGP-18 (August 17, 2026) explicitly lists AUDm and CADm among the FX tokens not yet migrated to CDPs and states that their USDm pools stay live for holder redemption. At Celo block 78972424, the canonical Broker recognizes the BiPoolManager provider and quotes a CADm-to-USDm swap; verified Broker source burns the input stable asset and mints the output stable asset. The issuer backing configuration independently identifies shared diversified crypto reserve backing. This resolves the operational holder exit model but establishes neither a custodial fiat claim nor borrower-specific CDP. Keep D18 unresolved until a uniform owner-approved shared-reserve mechanism mapping exists; no protective grade is inferred.",
     "sources": [
       {
         "label": "Pinned Mento stablecoin backing config",
@@ -33,6 +33,10 @@
       {
         "label": "Mento reserve model documentation",
         "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+      },
+      {
+        "label": "MGP-18: exact legacy FX token redemption and non-CDP status",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
       }
     ]
   },

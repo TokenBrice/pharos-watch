@@ -30,6 +30,7 @@ export type V9ExitOutputQuality = RedemptionOutputAssetType;
 export type V9ExitHolderEligibility =
   | "any-holder"
   | "verified-customer"
+  | "verified-customer-neutral"
   | "whitelisted-primary"
   | "pre-incident-holder"
   | "issuer-discretionary"
@@ -58,7 +59,7 @@ export interface V9ExitEvaluationRoute {
   settlementBoundUnproven: boolean;
   observationState: "known" | "missing" | "stale" | "unsupported" | "bounded-unknown";
   scoreEligible: boolean;
-  coverageClass: "exact-complete" | "exact-lower-bound" | "diagnostic";
+  coverageClass: "exact-complete" | "exact-lower-bound" | "modelled-terms-lower-bound" | "diagnostic";
   evidenceKind: string;
   /** The route's reviewed fee is undisclosed: modeled capacity with an unbounded cost. */
   feeEvidence?: "undisclosed-reviewed" | null;
@@ -674,11 +675,9 @@ function evaluateRoute(
     // realized marginal cost. Bounded-unknown cost scores at the policy
     // midpoint instead of pricing the worst case as if it were observed.
     cost:
-      route.physicalToUsd
-        ? clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, policy.physicalToUsd.maxCostBps)))
-        : capacityPoint.executionCostBps >= request.maxCostBps
-          ? policy.boundedCostScore
-          : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
+      !route.physicalToUsd && capacityPoint.executionCostBps >= request.maxCostBps
+        ? policy.boundedCostScore
+        : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
   };
   let score = composeExitComponentScore(components, policy.componentWeights);
   const capsApplied: string[] = [...constraintMultipliers];
@@ -792,6 +791,8 @@ function mapHolderAccess(route: V9ExitRouteFactV2): {
       return { access: "issuer-api", holderEligibility: "any-holder" };
     case "institutional-eligible":
       return { access: "issuer-api", holderEligibility: "verified-customer" };
+    case "verified-customer-neutral":
+      return { access: "issuer-api", holderEligibility: "verified-customer-neutral" };
     case "allowlisted":
       return { access: "whitelisted-onchain", holderEligibility: "whitelisted-primary" };
     case "issuer-only":

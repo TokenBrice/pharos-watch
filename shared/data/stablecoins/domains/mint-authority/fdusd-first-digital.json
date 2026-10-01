@@ -187,8 +187,8 @@
         "canRaiseCap": true,
         "capDescription": "SafeMint currently permits this EOA to mint at most 2,000,000 FDUSD per call to Safe-whitelisted recipients. The limit is per call, with no cumulative or time-window bound, and the owner Safe can raise or remove it immediately.",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 109812367,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125134993,
         "failureDomainKeys": [
           "issuer:fd121-bvi-limited",
           "eoa:bsc:0x15a07da3f5247109baa9506fa6f85c246ce13fc0"
@@ -208,9 +208,13 @@
           {
             "label": "Last pre-cutoff BSC operator mint",
             "url": "https://bscscan.com/tx/0x7d71b799ce686011cbe95a2a31f2d7114215d4ab311aad7cd6781e4b269c2418"
+          },
+          {
+            "label": "Pinned BSC module and operator observations at block 125134993",
+            "url": "https://bnb-mainnet.g.alchemy.com"
           }
         ],
-        "evidence": "At the cutoff, SafeMint owner and ProxyAdmin owner were the FDUSD Safe, pendingOwner was zero, operator was this code-free EOA, stableToken was FDUSD, mintLimit was 2,000,000 FDUSD, and the module was unpaused. Its last pre-cutoff mint was nonce 48 for 100 FDUSD; that recipient remained whitelisted and eligible."
+        "evidence": "At BSC block 125134993 on 2026-10-01, SafeMint owner() returned the FDUSD Safe, operator() returned this address, stableToken() returned the BSC FDUSD token, mintLimit() returned 2000000000000000000000000 (2,000,000 FDUSD at 18 decimals), paused() returned false, and eth_getCode on the operator returned 0x. These pinned reads corroborate the active code-free operator and current limit; they do not establish HSM or MPC custody. The prior source review records a per-call limit without a cumulative or time-window bound and immediate owner reconfiguration. Its historical pre-cutoff transaction minted 100 FDUSD at nonce 48; that historical recipient whitelist observation is not refreshed here."
       },
       {
         "chain": "arbitrum",

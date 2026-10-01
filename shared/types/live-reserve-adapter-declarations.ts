@@ -1377,6 +1377,8 @@ const evmBranchBalanceBranchSchema = z
     priceToken: priceTokenRefSchema.optional(),
     ...TrackedExposureFields,
     priceUsd: z.number().positive().optional(),
+    /** Own-liability lending claims are observed, never credited as independent backing. */
+    unclassifiedSelfReferential: z.literal(true).optional(),
   })
   .strict();
 
@@ -1384,6 +1386,25 @@ const evmBranchBalancesParamsSchema = z
   .object({
     ...OptionalEvmRpcFields,
     branches: z.array(evmBranchBalanceBranchSchema).min(1),
+    census: z.discriminatedUnion("kind", [
+      z.object({
+        kind: z.literal("reviewed-roster"),
+        reviewedAt: StrictIsoDateSchema,
+        ...RequiredSourceUrlsFields,
+      }).strict(),
+      z.object({
+        kind: z.literal("onchain-registry"),
+        contract: EvmAddressSchema,
+        selector: EvmSelectorSchema,
+        maxAssets: z.number().int().positive().max(128),
+      }).strict(),
+    ]).optional(),
+    /** Token-address price getter, read at the balance observation's pinned block. */
+    priceOracle: z.object({
+      contract: EvmAddressSchema,
+      selector: EvmSelectorSchema,
+      decimals: z.number().int().nonnegative().max(36),
+    }).strict().optional(),
     ...OptionalSourceUrlsFields,
     redemptionRateProbe: redemptionRateProbeSchema.optional(),
     /**

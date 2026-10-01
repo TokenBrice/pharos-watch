@@ -13,11 +13,11 @@
     "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "RLUSD is issued by Ripple on Ethereum and XRPL as issuer-native stablecoin deployments, not as a holder-facing third-party bridge wrapper. Cross-chain route risk is therefore reviewed as issuer-native mint/redeem exposure.",
-    "reviewedAt": "2026-07-16",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "RLUSD remains native Ripple/SCTC issuance on Ethereum, XRPL, Base, Optimism, Ink and Unichain. The five reviewed EVM token deployments additionally authorize a Wormhole NTT manager to burn and mint RLUSD. Each pinned manager is in burning mode, with one Wormhole transceiver, threshold one, Guardian set 7 containing 19 addresses, and issuer-controlled weighted MultiSign administration. Native issuance is not a third-party wrapped reserve claim, but external message validation and issuer upgrade/peer/rate-limit authority are real control risks; neither native status nor small sampled balances removes them. XRPL issued-currency issuance remains separate from the XRPL EVM peer.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WRipple)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Ripple stablecoin page",
@@ -34,6 +34,18 @@
       {
         "label": "Ripple RLUSD mint and redemption lifecycle",
         "url": "https://docs.ripple.com/products/stablecoin/overview/rlusd"
+      },
+      {
+        "label": "Ripple announces native NTT issuance",
+        "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+      },
+      {
+        "label": "Wormhole Guardian quorum",
+        "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+      },
+      {
+        "label": "Base verified NTT manager implementation",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x86c5ae628e2218c5597b3e6dce73048adc53fcc5"
       }
     ],
     "routes": [
@@ -41,25 +53,46 @@
         "id": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
         "destinationChain": "ethereum",
         "contractAddress": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
-        "protocol": "Ripple native RLUSD",
+        "protocol": "Ripple native RLUSD / Wormhole NTT",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-16",
+        "observedAt": "2026-10-01",
         "sources": [
           {
-            "label": "Ripple RLUSD token addresses",
+            "label": "Ripple RLUSD mainnet token addresses",
             "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
           },
           {
-            "label": "Ripple RLUSD mint and redemption lifecycle",
-            "url": "https://docs.ripple.com/products/stablecoin/overview/rlusd"
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "ethereum RLUSD token",
+            "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+          },
+          {
+            "label": "ethereum NTT manager",
+            "url": "https://eth.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
           }
-        ]
+        ],
+        "reviewNote": "Native issuer-controlled issuance and an additional burning-mode NTT mint authority coexist. This is not a wrapped-token collateral claim; the external Wormhole validator and issuer gateway upgrade/peer/rate-limit paths remain explicit control risks.",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
+        ],
+        "observedBlock": 26098750
       },
       {
         "id": "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
@@ -93,105 +126,884 @@
         "id": "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
         "destinationChain": "base",
         "contractAddress": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
-        "protocol": "Ripple RLUSD deployment; issuance and bridge boundary unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Ripple identifies this mainnet deployment; pinned RPC verifies RLUSD identity and 18 decimals. Issuer mint/redeem docs do not resolve this deployment's current native-mint, cross-chain transfer and controller boundaries; no protective classification is inferred.",
+        "protocol": "Ripple native RLUSD / Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native issuer-controlled issuance and an additional burning-mode NTT mint authority coexist. This is not a wrapped-token collateral claim; the external Wormhole validator and issuer gateway upgrade/peer/rate-limit paths remain explicit control risks.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
-        "observedBlock": 52024943,
+        "observedBlock": 52041924,
         "sources": [
           {
-            "label": "Ripple RLUSD token addresses",
+            "label": "Ripple RLUSD mainnet token addresses",
             "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
           },
           {
-            "label": "Ripple RLUSD chains and networks",
-            "url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks"
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "base RLUSD token",
+            "url": "https://base.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "base NTT manager",
+            "url": "https://base.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
           }
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
         ]
       },
       {
         "id": "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
         "destinationChain": "optimism",
         "contractAddress": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
-        "protocol": "Ripple RLUSD deployment; issuance and bridge boundary unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Ripple identifies this mainnet deployment; pinned RPC verifies RLUSD identity and 18 decimals. Issuer mint/redeem docs do not resolve this deployment's current native-mint, cross-chain transfer and controller boundaries; no protective classification is inferred.",
+        "protocol": "Ripple native RLUSD / Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native issuer-controlled issuance and an additional burning-mode NTT mint authority coexist. This is not a wrapped-token collateral claim; the external Wormhole validator and issuer gateway upgrade/peer/rate-limit paths remain explicit control risks.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
-        "observedBlock": 157620228,
+        "observedBlock": 157637209,
         "sources": [
           {
-            "label": "Ripple RLUSD token addresses",
+            "label": "Ripple RLUSD mainnet token addresses",
             "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
           },
           {
-            "label": "Ripple RLUSD chains and networks",
-            "url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks"
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "optimism RLUSD token",
+            "url": "https://explorer.optimism.io/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "optimism NTT manager",
+            "url": "https://explorer.optimism.io/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
           }
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
         ]
       },
       {
         "id": "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
         "destinationChain": "ink",
         "contractAddress": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
-        "protocol": "Ripple RLUSD deployment; issuance and bridge boundary unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Ripple identifies this mainnet deployment; pinned RPC verifies RLUSD identity and 18 decimals. Issuer mint/redeem docs do not resolve this deployment's current native-mint, cross-chain transfer and controller boundaries; no protective classification is inferred.",
+        "protocol": "Ripple native RLUSD / Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native issuer-controlled issuance and an additional burning-mode NTT mint authority coexist. This is not a wrapped-token collateral claim; the external Wormhole validator and issuer gateway upgrade/peer/rate-limit paths remain explicit control risks.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
-        "observedBlock": 57340822,
+        "observedBlock": 57374785,
         "sources": [
           {
-            "label": "Ripple RLUSD token addresses",
+            "label": "Ripple RLUSD mainnet token addresses",
             "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
           },
           {
-            "label": "Ripple RLUSD chains and networks",
-            "url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks"
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "ink RLUSD token",
+            "url": "https://explorer.inkonchain.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "ink NTT manager",
+            "url": "https://explorer.inkonchain.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
           }
+        ],
+        "controllerChain": "ink",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
         ]
       },
       {
         "id": "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
         "destinationChain": "unichain",
         "contractAddress": "0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
-        "protocol": "Ripple RLUSD deployment; issuance and bridge boundary unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Ripple identifies this mainnet deployment; pinned RPC verifies RLUSD identity and 18 decimals. Issuer mint/redeem docs do not resolve this deployment's current native-mint, cross-chain transfer and controller boundaries; no protective classification is inferred.",
+        "protocol": "Ripple native RLUSD / Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native issuer-controlled issuance and an additional burning-mode NTT mint authority coexist. This is not a wrapped-token collateral claim; the external Wormhole validator and issuer gateway upgrade/peer/rate-limit paths remain explicit control risks.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
-        "observedBlock": 60090874,
+        "observedBlock": 60124837,
         "sources": [
           {
-            "label": "Ripple RLUSD token addresses",
+            "label": "Ripple RLUSD mainnet token addresses",
             "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
           },
           {
-            "label": "Ripple RLUSD chains and networks",
-            "url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks"
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "unichain RLUSD token",
+            "url": "https://unichain.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "unichain NTT manager",
+            "url": "https://unichain.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
           }
+        ],
+        "controllerChain": "unichain",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
         ]
+      }
+    ],
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole Native Token Transfers (RLUSD)",
+        "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/",
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
+        "note": "Issuer-selected NTT is live at the pinned EVM blocks: separate native multisig minters and a burning-mode NTT minter coexist. One registered Wormhole transceiver is not one Guardian signature; current core Guardian set 7 has 19 members and standard VAA quorum 13."
+      }
+    ],
+    "controls": [
+      {
+        "id": "rlusd-ethereum-ntt-validator",
+        "routeRefs": [
+          "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "label": "RLUSD ethereum Wormhole NTT Guardian validation mint path",
+        "authorityType": "validator-quorum",
+        "threshold": 13,
+        "signerCount": 19,
+        "canRaiseCap": false,
+        "failureDomainKeys": [
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "base (id 30):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; optimism (id 24):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; ink (id 46):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; unichain (id 44):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0x98f3c9e6e3face36baad05fe09d375ef1464288b current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 15000000 RLUSD; inbound per peer: base:5000000, optimism:1000000, ink:1000000, unichain:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x863c8754c298d3efec3863f2a46f1c71a355ce6c; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098750,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "ethereum RLUSD token",
+            "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+          },
+          {
+            "label": "ethereum NTT manager",
+            "url": "https://eth.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "ethereum NttProxyOwner gateway",
+            "url": "https://eth.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "ethereum issuer gateway owner",
+            "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c"
+          }
+        ],
+        "evidence": "Pinned block 26098750: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x863c8754c298d3efec3863f2a46f1c71a355ce6c. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. A forged accepted transfer can mint the same native liability; native status does not remove the external validator failure domain. No active RLUSD-specific compromise was established by this observation."
+      },
+      {
+        "id": "rlusd-ethereum-ntt-owner",
+        "routeRefs": [
+          "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+        "label": "RLUSD ethereum Wormhole NTT issuer weighted MultiSign gateway administration",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 11,
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "base (id 30):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; optimism (id 24):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; ink (id 46):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; unichain (id 44):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0x98f3c9e6e3face36baad05fe09d375ef1464288b current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 15000000 RLUSD; inbound per peer: base:5000000, optimism:1000000, ink:1000000, unichain:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x863c8754c298d3efec3863f2a46f1c71a355ce6c; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098750,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "ethereum RLUSD token",
+            "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+          },
+          {
+            "label": "ethereum NTT manager",
+            "url": "https://eth.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "ethereum NttProxyOwner gateway",
+            "url": "https://eth.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "ethereum issuer gateway owner",
+            "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c"
+          }
+        ],
+        "evidence": "Pinned block 26098750: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x863c8754c298d3efec3863f2a46f1c71a355ce6c. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. Complete current gateway-owner address/weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Weighted quorum 7 implies at least three signatures, not seven people.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "rlusd-base-ntt-validator",
+        "routeRefs": [
+          "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "label": "RLUSD base Wormhole NTT Guardian validation mint path",
+        "authorityType": "validator-quorum",
+        "threshold": 13,
+        "signerCount": 19,
+        "canRaiseCap": false,
+        "failureDomainKeys": [
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ethereum (id 2):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; optimism (id 24):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; ink (id 46):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; unichain (id 44):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0xbebdb6c8ddc678ffa9f8748f85c815c556dd8ac6 current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 1000000 RLUSD; inbound per peer: ethereum:5000000, optimism:1000000, ink:1000000, unichain:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041924,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "base RLUSD token",
+            "url": "https://base.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "base NTT manager",
+            "url": "https://base.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "base NttProxyOwner gateway",
+            "url": "https://base.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "base issuer gateway owner",
+            "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+          }
+        ],
+        "evidence": "Pinned block 52041924: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x4d664381afc9e6eb9d29572e226c6cb6b9b30395. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. A forged accepted transfer can mint the same native liability; native status does not remove the external validator failure domain. No active RLUSD-specific compromise was established by this observation."
+      },
+      {
+        "id": "rlusd-base-ntt-owner",
+        "routeRefs": [
+          "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "label": "RLUSD base Wormhole NTT issuer weighted MultiSign gateway administration",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 11,
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ethereum (id 2):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; optimism (id 24):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; ink (id 46):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; unichain (id 44):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0xbebdb6c8ddc678ffa9f8748f85c815c556dd8ac6 current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 1000000 RLUSD; inbound per peer: ethereum:5000000, optimism:1000000, ink:1000000, unichain:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041924,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "base RLUSD token",
+            "url": "https://base.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "base NTT manager",
+            "url": "https://base.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "base NttProxyOwner gateway",
+            "url": "https://base.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "base issuer gateway owner",
+            "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+          }
+        ],
+        "evidence": "Pinned block 52041924: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x4d664381afc9e6eb9d29572e226c6cb6b9b30395. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. Complete current gateway-owner address/weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Weighted quorum 7 implies at least three signatures, not seven people.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "rlusd-optimism-ntt-validator",
+        "routeRefs": [
+          "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "label": "RLUSD optimism Wormhole NTT Guardian validation mint path",
+        "authorityType": "validator-quorum",
+        "threshold": 13,
+        "signerCount": 19,
+        "canRaiseCap": false,
+        "failureDomainKeys": [
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ethereum (id 2):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; base (id 30):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; ink (id 46):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; unichain (id 44):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0xee91c335eab126df5fdb3797ea9d6ad93aec9722 current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 1000000 RLUSD; inbound per peer: ethereum:5000000, base:5000000, ink:1000000, unichain:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 157637209,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "optimism RLUSD token",
+            "url": "https://explorer.optimism.io/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "optimism NTT manager",
+            "url": "https://explorer.optimism.io/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "optimism NttProxyOwner gateway",
+            "url": "https://explorer.optimism.io/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "optimism issuer gateway owner",
+            "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+          }
+        ],
+        "evidence": "Pinned block 157637209: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x4d664381afc9e6eb9d29572e226c6cb6b9b30395. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. A forged accepted transfer can mint the same native liability; native status does not remove the external validator failure domain. No active RLUSD-specific compromise was established by this observation."
+      },
+      {
+        "id": "rlusd-optimism-ntt-owner",
+        "routeRefs": [
+          "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "label": "RLUSD optimism Wormhole NTT issuer weighted MultiSign gateway administration",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 11,
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ethereum (id 2):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; base (id 30):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; ink (id 46):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; unichain (id 44):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0xee91c335eab126df5fdb3797ea9d6ad93aec9722 current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 1000000 RLUSD; inbound per peer: ethereum:5000000, base:5000000, ink:1000000, unichain:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 157637209,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "optimism RLUSD token",
+            "url": "https://explorer.optimism.io/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "optimism NTT manager",
+            "url": "https://explorer.optimism.io/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "optimism NttProxyOwner gateway",
+            "url": "https://explorer.optimism.io/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "optimism issuer gateway owner",
+            "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+          }
+        ],
+        "evidence": "Pinned block 157637209: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x4d664381afc9e6eb9d29572e226c6cb6b9b30395. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. Complete current gateway-owner address/weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Weighted quorum 7 implies at least three signatures, not seven people.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "rlusd-ink-ntt-validator",
+        "routeRefs": [
+          "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator"
+        ],
+        "controllerChain": "ink",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "label": "RLUSD ink Wormhole NTT Guardian validation mint path",
+        "authorityType": "validator-quorum",
+        "threshold": 13,
+        "signerCount": 19,
+        "canRaiseCap": false,
+        "failureDomainKeys": [
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ethereum (id 2):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; base (id 30):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; optimism (id 24):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; unichain (id 44):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0xca1d5a146b03f6303baf59e5ad5615ae0b9d146d current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 1000000 RLUSD; inbound per peer: ethereum:5000000, base:5000000, optimism:1000000, unichain:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 57374785,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "ink RLUSD token",
+            "url": "https://explorer.inkonchain.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "ink NTT manager",
+            "url": "https://explorer.inkonchain.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "ink NttProxyOwner gateway",
+            "url": "https://explorer.inkonchain.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "ink issuer gateway owner",
+            "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+          }
+        ],
+        "evidence": "Pinned block 57374785: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x4d664381afc9e6eb9d29572e226c6cb6b9b30395. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. A forged accepted transfer can mint the same native liability; native status does not remove the external validator failure domain. No active RLUSD-specific compromise was established by this observation."
+      },
+      {
+        "id": "rlusd-ink-ntt-owner",
+        "routeRefs": [
+          "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ink",
+        "controllerAddress": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "label": "RLUSD ink Wormhole NTT issuer weighted MultiSign gateway administration",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 11,
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ethereum (id 2):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; base (id 30):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; optimism (id 24):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; unichain (id 44):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0xca1d5a146b03f6303baf59e5ad5615ae0b9d146d current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 1000000 RLUSD; inbound per peer: ethereum:5000000, base:5000000, optimism:1000000, unichain:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 57374785,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "ink RLUSD token",
+            "url": "https://explorer.inkonchain.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "ink NTT manager",
+            "url": "https://explorer.inkonchain.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "ink NttProxyOwner gateway",
+            "url": "https://explorer.inkonchain.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "ink issuer gateway owner",
+            "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+          }
+        ],
+        "evidence": "Pinned block 57374785: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x4d664381afc9e6eb9d29572e226c6cb6b9b30395. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. Complete current gateway-owner address/weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Weighted quorum 7 implies at least three signatures, not seven people.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "rlusd-unichain-ntt-validator",
+        "routeRefs": [
+          "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator"
+        ],
+        "controllerChain": "unichain",
+        "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+        "label": "RLUSD unichain Wormhole NTT Guardian validation mint path",
+        "authorityType": "validator-quorum",
+        "threshold": 13,
+        "signerCount": 19,
+        "canRaiseCap": false,
+        "failureDomainKeys": [
+          "bridge:wormhole-guardians",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ethereum (id 2):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; base (id 30):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; optimism (id 24):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; ink (id 46):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0xca1d5a146b03f6303baf59e5ad5615ae0b9d146d current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 1000000 RLUSD; inbound per peer: ethereum:5000000, base:5000000, optimism:1000000, ink:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 60124837,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "unichain RLUSD token",
+            "url": "https://unichain.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "unichain NTT manager",
+            "url": "https://unichain.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "unichain NttProxyOwner gateway",
+            "url": "https://unichain.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "unichain issuer gateway owner",
+            "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+          }
+        ],
+        "evidence": "Pinned block 60124837: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x4d664381afc9e6eb9d29572e226c6cb6b9b30395. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. A forged accepted transfer can mint the same native liability; native status does not remove the external validator failure domain. No active RLUSD-specific compromise was established by this observation."
+      },
+      {
+        "id": "rlusd-unichain-ntt-owner",
+        "routeRefs": [
+          "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "unichain",
+        "controllerAddress": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "label": "RLUSD unichain Wormhole NTT issuer weighted MultiSign gateway administration",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 11,
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer:ripple-sctc",
+          "bridge:rlusd-ntt"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ethereum (id 2):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; base (id 30):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; optimism (id 24):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; ink (id 46):0x2a71afb11f4633a2681eaa19a01c47990f67e938, token decimals 18; xrpl-evm (id 57):0x3800918c28f43af600a974275daa2df678e7d6cb, token decimals 18",
+          "attestorQuorum": "NTT threshold 1 over a single Wormhole transceiver 0x7b17afd3a51ca042cb70a8a334bc4f171fd74089; Wormhole core 0xca1d5a146b03f6303baf59e5ad5615ae0b9d146d current Guardian set 7 has 19 members; standard VAA quorum is 13.",
+          "signingModel": "Wormhole Guardian-signed VAA, registered remote NTT-manager and remote-transceiver peer checks; issuer owner may reconfigure the validator/peer set.",
+          "rateLimits": "Rolling refill duration 86400 seconds. Current outbound limit 1000000 RLUSD; inbound per peer: ethereum:5000000, base:5000000, optimism:1000000, ink:1000000, xrpl-evm:5000000. These are owner-adjustable operational transfer limits, not immutable issuance caps.",
+          "pausersAdminsUpgraders": "Manager and transceiver owner/pauser 0x395886e76217ae8ac89340a51083667582d68722 is an NttProxyOwner execution gateway, owned by 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395; MultiSign weighted quorum 7 over 11 signers, minimum 3 signatures. No independent-human inference or enforced delay.",
+          "caps": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred."
+        },
+        "capDescription": "Native issuer minting remains unbounded; the owner can change bridge limits/peers/threshold/transceivers and upgrade bridge logic. No loss-isolation or complete global supply partition is inferred.",
+        "bypassSurfaces": [
+          "Issuer gateway owner can change validation/peers/rate limits and upgrade manager/transceiver immediately; NTT transfer limits are not token-level mint caps."
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 60124837,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple native NTT announcement",
+            "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+          },
+          {
+            "label": "unichain RLUSD token",
+            "url": "https://unichain.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+          },
+          {
+            "label": "unichain NTT manager",
+            "url": "https://unichain.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+          },
+          {
+            "label": "Wormhole Guardian quorum",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+          },
+          {
+            "label": "unichain NttProxyOwner gateway",
+            "url": "https://unichain.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+          },
+          {
+            "label": "unichain issuer gateway owner",
+            "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+          }
+        ],
+        "evidence": "Pinned block 60124837: token.hasRole(MINTER_ROLE, NTT)=true and hasRole(BURNER_ROLE, NTT)=true; NTT.token() matches this route, mode()=1, getThreshold()=1, getTransceivers()=[0x7b17afd3a51ca042cb70a8a334bc4f171fd74089], isPaused()=false. Manager/transceiver owner and pauser both equal 0x395886e76217ae8ac89340a51083667582d68722; gateway.owner()=0x4d664381afc9e6eb9d29572e226c6cb6b9b30395. The current transceiver reports type wormhole and consistencyLevel 202; its Wormhole core current Guardian set index 7 returns 19 addresses and expirationTime 0. Exact peers and rate limits are recorded in routeChecks; peer 57 points to the separate XRPL EVM manager, not the XRPL issued-currency issuer. Complete current gateway-owner address/weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Weighted quorum 7 implies at least three signatures, not seven people.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected"
       }
     ]
   }

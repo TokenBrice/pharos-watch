@@ -826,10 +826,10 @@ function buildRedemptionRouteReview(
 function buildPhysicalRouteReview(fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string, observation: ExitRouteObservation): RouteReview {
   const trace = observation.physicalToUsd!;
   return {
-    lane: "redemption", routeId: observation.routeId, holderAccess: "institutional-eligible",
+    lane: "redemption", routeId: observation.routeId, holderAccess: "verified-customer-neutral",
     executionModel: "deterministic", executionCertainty: trace.modelConfidence === "low" ? "discretionary" : "conditional",
     modelConfidence: trace.modelConfidence,
-    coverageClass: trace.rejectionReason === null ? "exact-lower-bound" : "diagnostic",
+    coverageClass: trace.rejectionReason === null ? "modelled-terms-lower-bound" : "diagnostic",
     capacityScoringHorizon: "eventual", settlementModel: "bounded-delay",
     settlementSlaSec: trace.maximumSettlementSec, settlementHorizonSec: observation.settlementHorizonSec,
     queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: trace.minimumUsd,

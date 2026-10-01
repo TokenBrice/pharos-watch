@@ -54,19 +54,19 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "USDtb reserve structure (BlackRock BUIDL via Securitize; Anchorage Digital Bank issuance rails)",
-        "role": "custodian"
+        "name": "USDtb upstream reserve context (BUIDL/Securitize; Anchorage Digital Bank issuance)",
+        "role": "other"
       },
       {
-        "name": "Circle Internet Financial (USDC reserves)",
-        "role": "custodian"
+        "name": "USDC upstream issuer (Circle Internet Financial)",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WMintRecon)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -76,9 +76,17 @@
       {
         "label": "MegaETH USDm announcement (2025-09-08)",
         "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
+      },
+      {
+        "label": "MegaUSD immediate reserve-wallet labels",
+        "url": "https://app.megausd.money/api/transparency/backing-and-supply/current"
+      },
+      {
+        "label": "MegaUSD Mint User Agreement (unnamed custodians; intended separate reserve accounts)",
+        "url": "https://app.megausd.money/mint-agreement"
       }
     ],
-    "uncertainty": "The issuer's dated backing API reports USDC and USDtb held across named custody addresses. Their legal custodians, account segregation, insolvency treatment, and reuse terms are not independently established by those wallet labels. USDtb's underlying BUIDL custody is upstream context, not a separately measured direct MegaUSD holding.",
+    "uncertainty": "These provider rows describe upstream collateral context, not identified immediate MegaUSD reserve custodians. The issuer API labels reserve wallets by address and the Mint User Agreement refers to unnamed institutional custodians with reserves separate from operating accounts. Public material does not independently prove who controls each custody wallet, enforceable segregation, insolvency treatment or reuse restrictions. No favorable protection or lower unknown exposure is inferred.",
     "knownUnknownExposurePct": 100
   }
 }

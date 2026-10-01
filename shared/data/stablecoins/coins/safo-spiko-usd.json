@@ -17,7 +17,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit, statutory auditor (SAFO, the Spiko Amundi Overnight Swap Fund, was authorised by the AMF on 2026-02-23 and its first financial year has not closed, so no PwC certification exists yet; the spiko.io fund pages are unlaunched placeholders with dummy data and the 'four audits annually' claim is template marketing text)",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor appointed in the Spiko SICAV prospectus. The AMF publishes a June 30, 2026 semiannual SICAV financial statement covering SAFO and its USD share; that statement is not an independent audit opinion. A current dated, independently signed SAFO auditor report was not established in this review.",
     "attestorTier": "big4",
     "cadence": "annual",
     "attestorJurisdiction": "France"

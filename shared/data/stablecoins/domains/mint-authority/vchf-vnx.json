@@ -281,15 +281,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 50063130,
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041916,
         "sources": [
           {
             "label": "VCHF Base verified token",
             "url": "https://basescan.org/address/0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8"
           }
         ],
-        "evidence": "At Base block 50063130, owner() returned 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6 and owner-context isAdmin() and isMinter() reads returned true. The verified VNXCToken source gates configureMinter(), setMinterRole(), and mint() through the issuer-controlled authority path, with no timelock or fixed aggregate cap."
+        "evidence": "At Base block 52041916, owner() returned 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6; eth_getCode(owner) returned empty. Calls from that address returned isAdmin() = true and isMinter() = true, with minterRoleId() = 2 and minterAllowance(owner) = 999920128412460000000000000. The verified VNXCToken source permits this admin to replenish allowances through configureMinter(); the allowance is therefore a mutable issuance budget, not an immutable aggregate economic cap. The source and RPC establish direct/admin authority but do not identify off-chain MPC/HSM custody."
       },
       {
         "chain": "base",

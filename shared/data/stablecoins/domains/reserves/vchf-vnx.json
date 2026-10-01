@@ -64,14 +64,19 @@
         "name": "VNX Commodities AG",
         "role": "other",
         "jurisdiction": "Liechtenstein"
+      },
+      {
+        "name": "Bermuda Commercial Bank (VNX Global Ltd. covered VCHF reserve)",
+        "role": "bank",
+        "jurisdiction": "Bermuda"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WMisc13)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "AREVA VNX reserve report as of December 31, 2024",
@@ -80,9 +85,13 @@
       {
         "label": "VNX current transparency page",
         "url": "https://vnx.li/transparency/"
+      },
+      {
+        "label": "Apex VNX Global reserve attestation for August 2026",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
       }
     ],
-    "uncertainty": "The report confirms bank accounts or securities custody accounts at aggregate CHF value but does not identify the institutions, account segregation, bankruptcy treatment, or rehypothecation terms.",
+    "uncertainty": "The August 31, 2026 Apex report names Bermuda Commercial Bank and VNX Global Ltd. for CHF cash reserves, separately maintained from operating accounts. Its covered VCHF liabilities are Stellar, Ethereum, Solana, ICP, Celo and Base; Tezos, Arbitrum, Avalanche, Polygon, XRPL and Fraxtal are not included in its liability table. The historical undisclosed-bank and VNX Commodities rows are retained for that unjoined legacy scope; no provider share is inferred. Whole-catalog segregation, insolvency priority, rehypothecation and custodian-failure/succession terms remain unknown. This report establishes named custody for its covered liabilities, not complete continuity safeguards or reconciled coverage of all 12 catalog deployments.",
     "knownUnknownExposurePct": 100
   }
 }

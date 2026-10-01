@@ -107,6 +107,8 @@ export function evaluateV9Backing(
   return applyV9MeasuredCollateralization(
     evaluateReviewedBacking(asset, review, policy),
     review.collateralizationMeasurement,
+    policy,
+    asset.asOfSec,
   );
 }
 

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USTBL has seven independently native issuance deployments on Ethereum, Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar. Mint and burn remain permission-gated on each native deployment: EVM PermissionManager controls, the Starknet 3-of-5 Argent multisig, and the Stellar single-key owner/admin are native issuance controls. Announced CCIP interoperability is reviewed separately in Bridge Risk and is not included in this canonical mint inventory.",
+    "summary": "USTBL has eight independently native issuance deployments on Ethereum, Arbitrum, Polygon, Base, Etherlink, Starknet, Stellar, and Solana. Mint and burn remain permission-gated on each native deployment: EVM PermissionManager controls, the Starknet 3-of-5 Argent multisig, and the Stellar single-key owner/admin are native issuance controls. Announced CCIP interoperability is reviewed separately in Bridge Risk and is not included in this canonical mint inventory. Solana finalized slot 452345677 resolves the minter admin vault to a 1-of-1 Squads path with zero timelock; the sole member also retains the BPF program upgrade authority. The reviewed source and independent program audit confirm that pending-mint approval bypasses the daily operational limit.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -437,70 +437,161 @@
       },
       {
         "chain": "solana",
+        "deploymentRefs": [
+          "solana:3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452345677,
+        "sources": [
+          {
+            "label": "Spiko Solana mainnet minter and authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko Solana minter audit, June 12, 2026",
+            "url": "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf"
+          },
+          {
+            "label": "Finalized Solana account observation",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "USTBL Solana MinterConfig native mint authority",
         "address": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
-        "deploymentRefs": ["solana:3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn"],
-        "label": "USTBL Solana issuer MinterConfig mint-authority PDA",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The issuer's custom Anchor minter program controls the Token-2022 mint authority. Public source describes initiate/approve mint operations and per-mint daily limits; no current daily-limit value, immutable monetary ceiling, Squads quorum or program upgrade authority is asserted here.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 452232837,
-        "sources": [
-          {
-            "label": "Spiko Solana program architecture and mainnet authorities",
-            "url": "https://github.com/spiko-tech/solana-contracts"
-          },
-          {
-            "label": "Spiko MinterConfig account layout",
-            "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/main/programs/minter/src/state.rs"
-          },
-          {
-            "label": "Solana finalized mint and authority account reads",
-            "url": "https://solana-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "A fresh getMultipleAccounts observation at finalized context slot 452232837 names BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ as the Token-2022 mint authority and identifies its owner as the issuer-published minter program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. Its 106-byte data matches the Anchor MinterConfig discriminator and public layout: admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, mint_initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd, bump 255. Both addresses match the issuer's published mainnet Squads admin vault and operational initiator; no inferred multisig threshold is applied. This is a new current observation, not a replay of the earlier slots."
+        "capDescription": "The issuer minter has per-mint daily operational limits. Above-limit requests are pending; admin approve_mint executes without the daily-limit check. No immutable monetary cap is established.",
+        "evidence": "Finalized slot 452345677: the token mintAuthority is BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ, owned by issuer minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. Decoded MinterConfig admin is 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd, bump 255. The source and audit identify native issuance and the above-limit approval path."
       },
       {
         "chain": "solana",
-        "address": "2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9",
         "deploymentRefs": [
           "solana:3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn"
         ],
-        "label": "USTBL Solana issuer-published Squads admin vault (quorum not mapped)",
-        "role": "minter-admin",
-        "authorityType": "contract",
-        "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
         "observedAt": "2026-10-01",
-        "observedBlock": 452232837,
+        "observedBlock": 452345677,
         "sources": [
           {
-            "label": "Spiko mainnet program authorities",
+            "label": "Spiko Solana mainnet minter and authorities",
             "url": "https://github.com/spiko-tech/solana-contracts"
           },
           {
-            "label": "Spiko MinterConfig layout",
-            "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/main/programs/minter/src/state.rs"
+            "label": "Spiko Solana minter audit, June 12, 2026",
+            "url": "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf"
           },
           {
-            "label": "Spiko admin-signature mint approval",
-            "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/main/programs/minter/src/instructions/approve_mint.rs"
-          },
-          {
-            "label": "Solana finalized configuration account",
+            "label": "Finalized Solana account observation",
             "url": "https://solana-rpc.publicnode.com"
           }
         ],
-        "evidence": "At finalized context slot 452232837, a fresh getMultipleAccounts read confirms the USTBL mint authority BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ and its issuer-program-owned MinterConfig admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9. This matches the issuer's mainnet Squads admin vault; public approve_mint source requires that admin's signature. Parent account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A is owned by Squads v4. No quorum, member permissions, timelock, program upgrade controller or immutable cap is asserted, and this entry supplies no protective governance grade. This replaces the earlier observation rather than claiming a historical replay."
+        "label": "USTBL Solana MinterConfig admin Squads vault",
+        "address": "2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "solana:key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"
+        ],
+        "evidence": "Finalized slot 452345677: issuer-published parent Squads v4 account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A has threshold 1, one member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h with permission mask 7 (initiate, vote, execute), zero time_lock and zero config_authority. This is a one-signature governance path, not an independent quorum. The configured vault can approve pending mints without a daily-limit check, change limits and nominate admin/initiator authority."
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452345677,
+        "sources": [
+          {
+            "label": "Spiko Solana mainnet minter and authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko Solana minter audit, June 12, 2026",
+            "url": "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf"
+          },
+          {
+            "label": "Finalized Solana account observation",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "USTBL Solana operational mint initiator",
+        "address": "5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Can initiate native mints within the configured daily limit; above-limit requests require the separately authorized admin approval. A current numerical daily limit is not asserted.",
+        "evidence": "Finalized slot 452345677: this exact operational key is the decoded MinterConfig mint_initiator and matches the issuer mainnet address table. initiate_mint requires its signature. Off-chain MPC/HSM custody for this address is not documented in the fetched issuer source or audit."
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:3E2qphMMBQtH3HZH2ZSg7CkbF8gSLePuoy7yVpkDxHGn"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452345677,
+        "sources": [
+          {
+            "label": "Spiko Solana mainnet minter and authorities",
+            "url": "https://github.com/spiko-tech/solana-contracts"
+          },
+          {
+            "label": "Spiko Solana minter audit, June 12, 2026",
+            "url": "https://raw.githubusercontent.com/AdevarLabs/audit-reports/main/reports/2026-06-12_Spiko_Solana_Minter_audit_report.pdf"
+          },
+          {
+            "label": "Finalized Solana account observation",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "USTBL Solana minter program upgrade authority",
+        "address": "GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "solana:key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"
+        ],
+        "evidence": "Finalized slot 452345677: BPF upgradeable-loader program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw points to ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; parsed ProgramData authority is this key, last deployed at slot 443429864. It can replace the native mint program and is also the sole admin-Squads member. The audit confirms that program replacement can override all on-chain mint rules. No protective custody claim is inferred."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
+      "scopedQuestions": [
+        {
+          "controlRef": "stellar:GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
+          "question": "Does the exact Soroban token-owner/PermissionManager-admin account use Dfns, and is its signing key secured by MPC, HSM, hardware wallet or another model? Published relayer-provider statements do not identify this admin key. Provide the wallet/address mapping and effective signing-policy approval boundary; no protective custody model is inferred.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+          "sources": [
+            {
+              "label": "Spiko multi-chain transaction-signing infrastructure",
+              "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+            },
+            {
+              "label": "Dfns Spiko wallet-infrastructure case study",
+              "url": "https://www.dfns.co/article/announcing-spiko"
+            },
+            {
+              "label": "Dfns available key-security models",
+              "url": "https://dfns.co/key-management"
+            }
+          ]
+        }
+      ],
       "sources": [
         {
           "label": "Spiko USTBL product page",

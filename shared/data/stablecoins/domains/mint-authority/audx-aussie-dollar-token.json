@@ -95,7 +95,7 @@
         ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "Historical role grants remain recorded in the prior review. Pinned 2026-10-01 reads at Ethereum 26095997, Polygon 94756557, and XDC 107873731 confirm this address holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on those deployments, but none of those three roles on Conflux at block 158033031. Ethereum and Polygon eth_getCode return EIP-7702 delegation designator 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b rather than empty bytecode; XDC returns 0x. The delegated implementation and key-custody protections have not been established, and no protective-control upgrade is inferred.",
+        "evidence": "Historical role grants remain recorded in the prior review. Pinned 2026-10-01 reads at Ethereum 26095997, Polygon 94756557, and XDC 107873731 confirm this address holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on those deployments, but none of those three roles on Conflux at block 158033031. Fresh MINTER_ROLE reads at Ethereum 26098746, Polygon 94778655, and XDC 107888005 remain true. Ethereum and Polygon runtime code is EIP-7702 delegation designator 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b; XDC returns 0x. The delegate is Fireblocks UniversalGaslessDelegate: verified source authorizes execution by the EOA itself or one ECDSA signature recovering that EOA, not an on-chain multisig. This identifies the delegate implementation without proving the issuer's off-chain MPC, HSM, quorum, or key-custody policy. No protective-control upgrade is inferred.",
         "sources": [
           {
             "label": "Ethereum Blockscout AUDX contract",
@@ -104,6 +104,10 @@
           {
             "label": "Polygon Blockscout AUDX contract",
             "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          },
+          {
+            "label": "Verified Fireblocks UniversalGaslessDelegate source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000fb7702036ff9f76044a501ac1aa74cbab16b"
           }
         ]
       },

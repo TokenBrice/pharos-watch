@@ -23,6 +23,7 @@ import {
   FuzzyDateSchema,
   LaunchMilestoneSchema,
   MechanismArchetypeReviewSchema,
+  ParentBackingInheritanceSchema,
   ProofOfReservesSchema,
   ReserveReviewSchema,
   StablecoinFlagsSchema,
@@ -178,6 +179,7 @@ const StablecoinMetaAssetSchemaShape = {
   variantOf: z.string().optional(),
   variantKind: StablecoinMetaEnumSchemas.variantKind.optional(),
   wrapperOperator: StablecoinMetaEnumSchemas.wrapperOperator.optional(),
+  parentBackingInheritance: ParentBackingInheritanceSchema.optional(),
   archetypeOverride: z
     .boolean()
     .describe("When true, mechanismArchetype is an intentional departure from the parent's archetype.")

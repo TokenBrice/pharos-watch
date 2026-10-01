@@ -111,7 +111,7 @@
     "compositionBasis": "Issuer-disclosed facility principal allocations plus exact multichain liquid token balances observed 2026-09-30; not a fair-value attestation",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "Facility principal allocations are issuer disclosure rather than independently verified current NAV. Binance-Peg USDT canonical escrow coverage remains unverified.",
+    "knownUnknownExposure": "Historical mixed-protocol facility allocation does not establish current AID-only reserve composition. The current issuer app attributes GPU financing and the sAID reserve to staked AID, and uses redeemer plus minter liquid balances for circulating AID. Treasury/stable-asset split and full AID liabilities reconciliation remain unverified. Binance-Peg USDT canonical escrow coverage remains unverified.",
     "knownUnknownExposurePct": 0.00002927,
     "nonLinkDispositions": [
       {"reserveIndex": 1, "reserveName": "USDT held by the BNB Chain AID minter contract", "pct": 0.00002927, "disposition": "insufficient-evidence", "rationale": "BSC block 124854510 confirms Binance-Peg USDT holdings, but canonical Tether escrow coverage was not verified. Symbol and local balance alone do not establish the issuer edge."},

@@ -133,6 +133,44 @@ export const OracleRiskBranchSchema = z
   });
 
 export type OracleRiskBranch = z.infer<typeof OracleRiskBranchSchema>;
+// An allocation facilitator is not a borrower market. Identity and the
+// reviewed pricing authority keep that exception local to the exact path.
+const OracleRiskPathSchema = z
+  .object({
+    id: z.string().min(1),
+    chain: z.string().min(1),
+    address: z.string().min(1),
+    pricingAuthority: z.enum(["external-price", "internal-price", "none", "unknown"]),
+    branchId: z.string().min(1).optional(),
+    applicability: z
+      .object({
+        disposition: z.enum(ORACLE_RISK_BRANCH_APPLICABILITY_VALUES),
+        reviewedAt: ReviewDateSchema,
+        reviewer: z.string().min(1),
+        confidence: z.enum(ORACLE_RISK_CONFIDENCE_VALUES),
+        rationale: z.string().min(12),
+        sources: z.array(StablecoinLinkSchema).min(1),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
+  .superRefine((path, ctx) => {
+    const disposition = path.applicability?.disposition;
+    if (disposition === "not-applicable" && (path.pricingAuthority !== "none" || path.branchId != null)) {
+      ctx.addIssue({ code: "custom", message: "Not-applicable paths cannot have pricing authority or borrower branches" });
+    }
+    if (
+      (disposition === "branches-required" || disposition === "top-level-only") &&
+      path.pricingAuthority !== "external-price" && path.pricingAuthority !== "internal-price"
+    ) {
+      ctx.addIssue({ code: "custom", message: "Applicable paths require external or internal pricing authority" });
+    }
+    if (disposition === "top-level-only" && path.branchId != null) {
+      ctx.addIssue({ code: "custom", message: "Top-level pricing paths cannot declare borrower branches" });
+    }
+  });
+
 
 export const OracleRiskProfileSchema = z
   .object({
@@ -155,9 +193,29 @@ export const OracleRiskProfileSchema = z
     confidence: z.enum(ORACLE_RISK_CONFIDENCE_VALUES).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     branches: z.array(OracleRiskBranchSchema).min(1).optional(),
+    paths: z.array(OracleRiskPathSchema).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
+    if (profile.paths) {
+      const pathIds = new Set<string>();
+      const identities = new Set<string>();
+      const referencedBranches = new Set<string>();
+      for (const [index, path] of profile.paths.entries()) {
+        const identity = `${path.chain}:${path.address.toLowerCase()}`;
+        if (pathIds.has(path.id) || identities.has(identity)) {
+          ctx.addIssue({ code: "custom", path: ["paths", index], message: "Oracle paths require unique ids and deployment identities" });
+        }
+        pathIds.add(path.id);
+        identities.add(identity);
+        if (path.branchId) referencedBranches.add(path.branchId);
+      }
+      for (const [index, branch] of (profile.branches ?? []).entries()) {
+        if (!referencedBranches.has(branch.id)) {
+          ctx.addIssue({ code: "custom", path: ["branches", index], message: "Every oracle branch requires an explicit path identity" });
+        }
+      }
+    }
     if (profile.branchModel === "multi-branch" && !profile.branches?.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

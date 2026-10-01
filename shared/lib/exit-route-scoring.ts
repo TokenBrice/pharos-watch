@@ -43,6 +43,8 @@ export type ExitOutputAssetType =
 export type ExitHolderEligibility =
   | "any-holder"
   | "verified-customer"
+  // Physical-to-USD routes only: owner ruling grants verified customers no institutional discount.
+  | "verified-customer-neutral"
   | "whitelisted-primary"
   | "pre-incident-holder"
   | "issuer-discretionary"
@@ -231,6 +233,7 @@ export const EXIT_ROUTE_SCORING_TABLES = {
   holderEligibilityMultipliers: {
     "any-holder": 1,
     "verified-customer": 0.9,
+    "verified-customer-neutral": 1,
     "whitelisted-primary": 0.85,
     "pre-incident-holder": 0.85,
     "issuer-discretionary": 0.6,

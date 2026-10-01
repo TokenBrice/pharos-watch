@@ -501,18 +501,34 @@
         ],
         "label": "IDRX MINTER_ROLE address with no deployed code (BSC)",
         "role": "direct-minter",
-        "authorityType": "eoa",
+        "authorityType": "safe",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "Resolved 2026-07-30 from the complete BSC role history: MINTER_ROLE granted 2023-11-29 and current at block 113086546; independently re-verified at latest block on 2026-07-30 (hasRole = true). eth_getCode = 0x on BSC: the 2-of-3 Safe deployed at this address on other chains was never deployed on BSC, so the assignment is currently inert unless a matching Safe is later deployed there.",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "owners": [
+            "0xe51b67864a38f42126231d30ed8f3e72ec7f32f4",
+            "0xb4fca8725a9e65b4cd1ef27d71e7c7537148061b",
+            "0x0f9f4cbbec64524deb0d743f9caf34be81bd1576"
+          ],
+          "threshold": 2,
+          "source": "manual"
+        },
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Resolved 2026-07-30 from the complete BSC role history: MINTER_ROLE granted 2023-11-29 and current at block 113086546; independently re-verified at latest block on 2026-07-30 (hasRole = true). R2 re-verified at BSC block 125135204 on 2026-10-01: MINTER_ROLE remains true, DEFAULT_ADMIN_ROLE false, eth_getCode = 0x and transaction nonce = 0. This is an undeployed counterfactual 2-of-3 Safe, not a demonstrated single-key EOA. Replaying the exact createProxyWithNonce calldata from Base creation transaction 0x4eede2f05b5fa1fad852b42cd9ea516d103d74e9883135738055cc984887ffe7 against the BSC Safe factory 0xa6b71e26c5e0845f74c812102ca7114b6a896ab2 at the same pinned block returns this exact address. The initialization fixes threshold 2 and three owners: 0xe51b67864a38f42126231d30ed8f3e72ec7f32f4, 0xb4fca8725a9e65b4cd1ef27d71e7c7537148061b, 0x0f9f4cbbec64524deb0d743f9caf34be81bd1576. The mint role is dormant until deployment; direct-mint exposure is retained as a latent Safe-controlled path, with no claim that a Safe currently exists on BSC. Separate DEFAULT_ADMIN EOA authority remains unchanged.",
         "sources": [
           {
             "label": "BSC IDRX proxy",
             "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          },
+          {
+            "label": "Exact Base counterfactual Safe creation calldata replayed on BSC at block 125135204",
+            "url": "https://base.blockscout.com/tx/0x4eede2f05b5fa1fad852b42cd9ea516d103d74e9883135738055cc984887ffe7"
           }
         ],
-        "observedAt": "2026-07-30",
-        "observedBlock": 113086546
+        "observedAt": "2026-10-01",
+        "observedBlock": 125135204
       },
       {
         "chain": "bsc",

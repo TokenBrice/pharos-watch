@@ -13,11 +13,11 @@
     "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Canonical Ethereum issuer mint verified. Anchorage documentation resolves Celo's deployment identity, but address-specific transfer rails, issuance boundaries and controller configuration remain unresolved; no asset-wide bridge safety is inferred.",
+    "tier": "external-validated-network",
+    "summary": "Ethereum and Celo are issuer-native USAT deployments in the reserve report. Their transfer rail is a LayerZero V2 lock/mint path: the Ethereum OFTAdapter escrows Ethereum USAT, and the Celo OFT calls the token's authorized crosschain mint/burn functions. Independent owner-only mint and immediate token/OFT upgrades remain issuer-controlled bypasses; three required DVNs do not constrain those powers. Runtime per-chain materiality remains separately unresolved.",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (ValA21USDGO)",
-    "confidence": "manual-review",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WTether)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "USAT August reserve report",
@@ -63,28 +63,116 @@
       },
       {
         "id": "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771",
+        "sourceChain": "ethereum",
         "destinationChain": "celo",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd2ab3c9a02dbbab236bfec45d1d755df4267f771",
-        "protocol": "Issuer-listed deployment; transfer rail unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Anchorage documentation explicitly lists this Celo address and pinned reads confirm USAT identity and six decimals. The reserve report discloses bridge-locked Ethereum inventory; exact Celo native-versus-representation issuance, transfer contracts and controller configuration remain unresolved.",
+        "protocol": "Anchorage issuer-native USAT with LayerZero V2 OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The reserve report calls Celo tokens natively minted, and verified CeloOFTExtension exposes independent owner-only mint as well as OFT-authorized crosschainMint/crosschainBurn. Ethereum adapter 0x18171f318a49051301c3422b6042fca2d8be43df locks/releases native Ethereum USAT; reciprocal peers connect it to Celo OFT 0xc8f467e1ba04ffdeca1cd1878ca3416d84045d0e. This native issuer liability must not be misclassified as an immutable wrapped token.",
+        "controllerChain": "celo",
+        "controllerAddress": "0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
+        "failureDomainKeys": ["usat-issuer-signers", "layerzero-v2-usat"],
         "observedAt": "2026-10-01",
-        "observedBlock": 78938475,
+        "observedBlock": 78972418,
         "sources": [
           {
-            "label": "USAT August reserve report",
+            "label": "USAT August reserve report: Ethereum and Celo natively minted tokens",
             "url": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
           },
           {
-            "label": "Anchorage official stablecoin contract addresses",
-            "url": "https://docs.anchorage.com/knowledge-base/platform/users/stablecoins"
+            "label": "Verified Celo USAT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/42220/0x49912f84f43d2675d99941b7f21a5d9ed2eab71e?fields=sources"
+          },
+          {
+            "label": "Verified Celo OFT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/42220/0x338d020881b6c1fca8bb07b659f28f0c3efbdfce?fields=sources"
+          },
+          {
+            "label": "Verified Ethereum OFTAdapter implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xd5d5a960dc2ba87349fd7977af0cd15a2b699355?fields=sources"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usat-celo-oft-owner",
+        "label": "USAT Celo token and OFT owner (3-of-5)",
+        "routeRefs": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+        "capabilities": ["bridge-mint", "bridge-burn", "upgrade", "admin", "peer-config"],
+        "controllerChain": "celo",
+        "controllerAddress": "0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": ["usat-issuer-signers", "layerzero-v2-usat"],
+        "bypassSurfaces": ["Token owner can mint directly and replace oftContract; token and OFT ProxyAdmins are owned by the same immediate 3-of-5 wallet."],
+        "routeChecks": {
+          "lockboxOrEscrow": "Ethereum OFTAdapter 0x18171f318a49051301c3422b6042fca2d8be43df locks and releases Ethereum USAT.",
+          "trustedPeerOrRemote": "Celo peers(30101) returns the Ethereum adapter; Ethereum peers(30125) returns Celo OFT 0xc8f467e1ba04ffdeca1cd1878ca3416d84045d0e.",
+          "attestorQuorum": "Celo send/receive ULN configurations require all three DVNs: 0x18f76f0d8ccd176bbe59b3870fa486d1fff87026, 0x75b073994560a5c03cd970414d9170be0c6e5c36, 0xb1ac0ca12bf2bfe90881fd3bec87dedea3b55378. No optional DVNs. Send confirmations 2500; receive confirmations 96.",
+          "pausersAdminsUpgraders": "Token and OFT owners, endpoint delegate, token ProxyAdmin owner, and OFT ProxyAdmin owner are this wallet."
+        },
+        "observedAt": "2026-10-01",
+        "observedBlock": 78972418,
+        "sources": [
+          {
+            "label": "USAT Celo legacy multisig verified source",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cad90b6d336930881cd43657c9e0f28fccbe1bc"
+          },
+          {
+            "label": "USAT Celo verified token implementation",
+            "url": "https://sourcify.dev/server/v2/contract/42220/0x49912f84f43d2675d99941b7f21a5d9ed2eab71e?fields=sources"
+          },
+          {
+            "label": "USAT Celo verified OFT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/42220/0x338d020881b6c1fca8bb07b659f28f0c3efbdfce?fields=sources"
+          }
+        ],
+        "evidence": "Pinned Celo block 78972418: required()=3, getOwners()=five signers; token owner(), OFT owner(), endpoint delegates(OFT), token ProxyAdmin 0x407cea8bc0b1c42a72a1f38e3c8e60a3929f7422 owner(), and OFT ProxyAdmin 0xbfd99c067ceb2e048bf627e039d388e4d22d8b80 owner() all resolve to this wallet. Token oftContract() identifies the reviewed OFT. The five signers match the Ethereum owner's signer set; source has no mandatory execution delay."
+      },
+      {
+        "id": "usat-ethereum-oft-owner",
+        "label": "USAT Ethereum escrow adapter owner (3-of-5)",
+        "routeRefs": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+        "capabilities": ["escrow", "upgrade", "admin", "peer-config"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": ["usat-issuer-signers", "layerzero-v2-usat"],
+        "bypassSurfaces": ["Immediate adapter upgrade can replace escrow accounting; owner can change trusted peers and endpoint validation configuration."],
+        "routeChecks": {
+          "lockboxOrEscrow": "Verified OFTAdapter _debit uses transferFrom into the adapter; _credit transfers escrowed Ethereum USAT out.",
+          "trustedPeerOrRemote": "Adapter peers(30125) is Celo OFT 0xc8f467e1ba04ffdeca1cd1878ca3416d84045d0e.",
+          "attestorQuorum": "Ethereum send/receive ULN configurations require all three DVNs: 0x231a5c32e8792c327f4ecdc15aa3b6e82bc7f105, 0x3b0531eb02ab4ad72e7a531180beef9493a00dd2, 0x589dedbd617e0cbcb916a9223f4d1300c294236b. No optional DVNs. Send confirmations 96; receive confirmations 2500."
+        },
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098749,
+        "sources": [
+          {
+            "label": "Verified Ethereum OFTAdapter implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xd5d5a960dc2ba87349fd7977af0cd15a2b699355?fields=sources"
+          },
+          {
+            "label": "USAT Ethereum owner multisig",
+            "url": "https://etherscan.io/address/0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb"
+          }
+        ],
+        "evidence": "Pinned Ethereum block 26098749: adapter owner(), endpoint delegates(adapter), and adapter ProxyAdmin 0xd122aa3b1ffb2aebf61180ec1387efc99850b35f owner() resolve to the token's 3-of-5 owner; required()=3 and getOwners()=five. The adapter reports token() as canonical Ethereum USAT and approvalRequired()=true. Proxy implementation is 0xd5d5a960dc2ba87349fd7977af0cd15a2b699355."
       }
     ]
   }

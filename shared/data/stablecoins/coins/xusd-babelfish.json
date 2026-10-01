@@ -59,6 +59,14 @@
     },
     "params": {
       "rpcUrl": "https://public-node.rsk.co",
+      "debtContract": "0xb5999795be0ebb5bab23144aa5fd6a02d080299f",
+      "debtSelector": "0x18160ddd",
+      "debtDecimals": 18,
+      "census": {
+        "kind": "reviewed-roster",
+        "reviewedAt": "2026-10-01",
+        "sourceUrls": ["https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md"]
+      },
       "branches": [
         {
           "name": "Sovryn Dollar DLLR",
@@ -87,12 +95,12 @@
           "priceUsd": 1
         },
         {
-          "name": "Stargate Bridged USDC.e",
+          "name": "BNB bridge USDCbs",
           "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
           "token": {
             "chain": "rootstock",
-            "address": "0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67",
-            "decimals": 6
+            "address": "0x91edcee9567cd5612c9dedeaae24d5e574820af1",
+            "decimals": 18
           },
           "risk": "low",
           "coinId": "usdc-circle",
@@ -100,11 +108,11 @@
           "priceUsd": 1
         },
         {
-          "name": "DAI Rootstock bridge variants",
+          "name": "BNB bridge DAIbs",
           "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
           "token": {
             "chain": "rootstock",
-            "address": "0x6b1a73d547f4009a26b8485b63d7015d248ad406",
+            "address": "0x6a42ff12215a90f50866a5ce43a9c9c870116e76",
             "decimals": 18
           },
           "risk": "low",
@@ -123,6 +131,69 @@
           "risk": "medium",
           "coinId": "doc-money-on-chain",
           "depType": "collateral"
+        },
+        {
+          "name": "Legacy RIF Dollar RDOC",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
+          "token": {
+            "chain": "rootstock",
+            "address": "0x2d919f19d4892381d58edebeca66d5642cef1a1f",
+            "decimals": 18
+          },
+          "risk": "high",
+          "priceUsd": 1
+        },
+        {
+          "name": "BNB bridge USDTbs",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
+          "token": {
+            "chain": "rootstock",
+            "address": "0xff4299bca0313c20a61dc5ed597739743bef3f6d",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "collateral",
+          "priceUsd": 1
+        },
+        {
+          "name": "Ethereum bridge USDTes",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
+          "token": {
+            "chain": "rootstock",
+            "address": "0xd9665ea8f5ff70cf97e1b1cd1b4cd0317b0976e8",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "collateral",
+          "priceUsd": 1
+        },
+        {
+          "name": "Ethereum bridge DAIes",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
+          "token": {
+            "chain": "rootstock",
+            "address": "0x1a37c482465e78e6dabe1ec77b9a24d4236d2a11",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "dai-makerdao",
+          "depType": "collateral",
+          "priceUsd": 1
+        },
+        {
+          "name": "Ethereum bridge USDCes",
+          "holder": "0x1440d19436bEEaf8517896bffB957A88ec95a00F",
+          "token": {
+            "chain": "rootstock",
+            "address": "0x8d1f7cbc6391d95e2774380e80a666febf655d6b",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral",
+          "priceUsd": 1
         }
       ]
     }

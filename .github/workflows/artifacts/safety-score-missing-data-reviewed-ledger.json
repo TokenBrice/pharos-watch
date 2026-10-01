@@ -43369,6 +43369,3357 @@
       ],
       "nextReviewTrigger": "Re-review at the next weekly sweep on 2026-10-08, or earlier after an owner ruling admitting the physical-output family or a fresh exact USD-payout/DEX route is captured; only a fresh production replay removing the named sentinel can close the fact.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:acrdx-anemoy-apollo",
+      "taskIds": [
+        "V9G-fcf2ed4ba8aec4ab"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc01)",
+      "evidence": [
+        "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+        "Solana finalized mint account slot 452346446 at api.mainnet-beta.solana.com"
+      ],
+      "rationale": "EVM-only bridge documentation and exact Solana Token-2022 mint reconfirmed. These do not prove exact Solana messaging or validator route and do not remove historical adverse controls.",
+      "changeRefs": [],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "acrdx-anemoy-apollo:gap:economic-control:bridge",
+        "doneWhenScoreReasonAbsent": null
+      },
+      "nextReviewTrigger": "Centrifuge publishes exact Solana transfer-manager/validator deployment mapping or changes bridge-share-token guide; revisit 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:aid-gaib",
+      "taskIds": [
+        "V9G-2490e6da5c30998a",
+        "V9G-c5bb5bc109940980"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WGaib)",
+      "evidence": [
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid.md",
+        "https://docs.gaib.ai/support/faq.md",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view",
+        "https://aid.gaib.ai/assets/Transparency-THDQWk7j.js"
+      ],
+      "rationale": "Exhausted issuer documents, complete corpus, current bundle, public audit, GitHub, pinned authority RPC and archive recovery. Token-specific enforceable claim/custody or current complete AID-only reserve reconciliation remains undisclosed; no protective grade or composition confidence bump.",
+      "changeRefs": [],
+      "sentinels": [
+        "aid-gaib:gap:mechanism-review:claimAndSegregation",
+        "aid-gaib:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Coordinator overlay merge and fresh replay for sAID legal finding; otherwise issuer product-specific disclosure or 2026-11-01, whichever comes first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:aid-gaib",
+      "taskIds": [
+        "V9G-2003772d52ddf679"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WGaib)",
+      "evidence": [
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid.md",
+        "https://docs.gaib.ai/support/faq.md",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view",
+        "https://aid.gaib.ai/assets/Transparency-THDQWk7j.js"
+      ],
+      "rationale": "Exhausted issuer documents, complete corpus, current bundle, public audit, GitHub, pinned authority RPC and archive recovery. Token-specific enforceable claim/custody or current complete AID-only reserve reconciliation remains undisclosed; no protective grade or composition confidence bump.",
+      "changeRefs": [],
+      "sentinels": [
+        "aid-gaib:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Coordinator overlay merge and fresh replay for sAID legal finding; otherwise issuer product-specific disclosure or 2026-11-01, whichever comes first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:audm-mento",
+      "taskIds": [
+        "V9G-3e24586a02b11dea",
+        "V9G-fc53f687516c340c"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "reject",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
+      "evidence": [
+        "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts",
+        "Celo pinned block 78972424: exact native source and operational Broker pool verified"
+      ],
+      "rationale": "Inherited-access rows describe a reviewed structural exposure, not a removable unknown. Preserve upstream exposure and native no-blacklist distinction.",
+      "changeRefs": [],
+      "sentinels": [
+        "audm-mento:gap:access:freeze",
+        "audm-mento:gap:access:freeze:blacklist:audm-mento"
+      ],
+      "nextReviewTrigger": "Re-review on reserve composition or canonical token implementation change; next review 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ARCHETYPE_CLASSIFICATION:audm-mento",
+      "taskIds": [
+        "V9G-c7bc725ac052174d"
+      ],
+      "workType": "ARCHETYPE_CLASSIFICATION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
+      "evidence": [
+        "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts",
+        "Celo pinned block 78972424: exact native source and operational Broker pool verified"
+      ],
+      "rationale": "Mechanism facts resolved; prerequisite is uniform owner-approved shared-reserve capability, not missing research.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/audm-mento.json"
+      ],
+      "sentinels": [
+        "audm-mento:gap:mechanism-risk-review"
+      ],
+      "nextReviewTrigger": "Owner ratifies uniform shared-reserve family treatment or exact token migrates to a newly evidenced CDP; review by 2026-10-15.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:audx-aussie-dollar-token",
+      "taskIds": [
+        "V9G-8f6392c7cc95de5c"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc01)",
+      "evidence": [
+        "https://www.audxtoken.com/terms-and-conditions",
+        "https://www.audxtoken.com/_files/ugd/539754_a67b17ada9b3459ca3d94fcc8736803d.pdf",
+        "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf"
+      ],
+      "rationale": "Reopened full PDS, binding terms, August report and archive. Bank balances and segregation verified; named allocations and successor-custody mechanics undisclosed. No absence-derived adverse fact added.",
+      "changeRefs": [],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "audx-aussie-dollar-token:gap:mechanism-review:custodyContinuity",
+        "doneWhenScoreReasonAbsent": null
+      },
+      "nextReviewTrigger": "New PDS or bank/provider/recovery disclosure; next report review 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:avusd-avant",
+      "taskIds": [
+        "V9G-f26a02cc7e3e07a4"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WAvant)",
+      "evidence": [
+        "https://app.avantprotocol.com/api/metrics/avusd (September 29 assets/financing debts/NAV; token/receipt/wallet joins absent)",
+        "https://docs.avantprotocol.com/yield-strategies-and-revenue/strategy-addresses.md (wallet roster only)",
+        "https://docs.avantprotocol.com/legal-and-risk/terms-of-use.md (Foundation beneficial ownership; no position debt-netting schedule)",
+        "https://www.pennyworks.com/articles/defi-accounting/nav-vs-proof-of-reserves-vs-attestation/ (provider does not attest)"
+      ],
+      "rationale": "Fresh primary research verifies structured portfolio disclosures but cannot establish D24 whole-token holder denominator, exact held claims or enforceable debt netting. Normalizing gross longs or inventing per-position reserve percentages is inadmissible; no evidence-based complete reserve patch is available. Owner: Avant/PennyWorks disclosure of reconciled position export and all outstanding token liabilities.",
+      "changeRefs": [],
+      "sentinels": [
+        "avusd-avant:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-10-15 or earlier upon issuer/PennyWorks publication of a position-level token/receipt/wallet export, legal debt-netting schedule and canonical-plus-spoke avUSD liability reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:bnusd-balanced",
+      "taskIds": [
+        "V9G-c936c7e3c8d7fa28"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc02)",
+      "evidence": [
+        "https://docs.balanced.network/migrate-assets",
+        "https://docs.balanced.network/"
+      ],
+      "rationale": "Primary disclosures and pinned observations substantially narrow the unknown, but final liability-bound valuation/waterfall or independently corroborated recovery grading remains unresolved; exact evidence and technique outcomes are recorded in unknownResolution.",
+      "changeRefs": [],
+      "sentinels": [
+        "bnusd-balanced:gap:mechanism-review:shutdownAndBadDebt"
+      ],
+      "nextReviewTrigger": "2026-10-08 or earlier issuer key/deficit/allocation disclosure, independent legal filing, or producer legacy reserve/exit implementation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:bnusd-balanced",
+      "taskIds": [
+        "V9G-40010d53f9df2753"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc02)",
+      "evidence": [
+        "https://docs.balanced.network/migrate-assets",
+        "https://docs.balanced.network/"
+      ],
+      "rationale": "Primary disclosures and pinned observations substantially narrow the unknown, but final liability-bound valuation/waterfall or independently corroborated recovery grading remains unresolved; exact evidence and technique outcomes are recorded in unknownResolution.",
+      "changeRefs": [],
+      "sentinels": [
+        "bnusd-balanced:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-10-08 or earlier issuer key/deficit/allocation disclosure, independent legal filing, or producer legacy reserve/exit implementation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:brlv-crown",
+      "taskIds": [
+        "V9G-48994dcaae5d4eb5"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc02)",
+      "evidence": [
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_8_2026_1ea3d5e0be.pdf"
+      ],
+      "rationale": "Primary disclosures and pinned observations substantially narrow the unknown, but final liability-bound valuation/waterfall or independently corroborated recovery grading remains unresolved; exact evidence and technique outcomes are recorded in unknownResolution.",
+      "changeRefs": [],
+      "sentinels": [
+        "brlv-crown:gap:mechanism-review:lossRecoveryDesign"
+      ],
+      "nextReviewTrigger": "2026-10-08 or earlier issuer key/deficit/allocation disclosure, independent legal filing, or producer legacy reserve/exit implementation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:brz-transfero",
+      "taskIds": [
+        "V9G-df3920150a0ea81f",
+        "V9G-2e70a273d45f8b8c",
+        "V9G-a2f3129086bb6942"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc03)",
+      "evidence": [
+        "https://transfero.com/brz-stablecoin",
+        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+        "https://web.archive.org/web/20260417161808/https://docs.transfero.com/",
+        "https://panoramacrypto.com/wp-content/uploads/2020/11/report-pt.pdf"
+      ],
+      "rationale": "Expanded fresh research recovered archive/legal evidence but no current reserve split, qualifying independent reconciliation or operative BRZ-wide protection. Issuer disclosure is prerequisite; old reports and unrelated investment workflows cannot be redated or extrapolated.",
+      "changeRefs": [],
+      "sentinels": [
+        "brz-transfero:gap:mechanism-review:assuranceAndReconciliation",
+        "brz-transfero:gap:mechanism-review:claimAndSegregation",
+        "brz-transfero:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "New BRZ dated reserve report, executed holder/reserve instrument or bank/custody-continuity disclosure; otherwise re-review 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:brz-transfero",
+      "taskIds": [
+        "V9G-17af0a1089680f62"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc03)",
+      "evidence": [
+        "https://transfero.com/brz-stablecoin",
+        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+        "https://web.archive.org/web/20260417161808/https://docs.transfero.com/",
+        "https://panoramacrypto.com/wp-content/uploads/2020/11/report-pt.pdf"
+      ],
+      "rationale": "Expanded fresh research recovered archive/legal evidence but no current reserve split, qualifying independent reconciliation or operative BRZ-wide protection. Issuer disclosure is prerequisite; old reports and unrelated investment workflows cannot be redated or extrapolated.",
+      "changeRefs": [],
+      "sentinels": [
+        "brz-transfero:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "New BRZ dated reserve report, executed holder/reserve instrument or bank/custody-continuity disclosure; otherwise re-review 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:cadm-mento",
+      "taskIds": [
+        "V9G-d7f356a8df18840b",
+        "V9G-5187e300b10e50aa"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "reject",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
+      "evidence": [
+        "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts",
+        "Celo pinned block 78972424: exact native source and operational Broker pool verified"
+      ],
+      "rationale": "Inherited-access rows describe a reviewed structural exposure, not a removable unknown. Preserve upstream exposure and native no-blacklist distinction.",
+      "changeRefs": [],
+      "sentinels": [
+        "cadm-mento:gap:access:freeze",
+        "cadm-mento:gap:access:freeze:blacklist:cadm-mento"
+      ],
+      "nextReviewTrigger": "Re-review on reserve composition or canonical token implementation change; next review 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ARCHETYPE_CLASSIFICATION:cadm-mento",
+      "taskIds": [
+        "V9G-1f7dfe339e892016"
+      ],
+      "workType": "ARCHETYPE_CLASSIFICATION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
+      "evidence": [
+        "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts",
+        "Celo pinned block 78972424: exact native source and operational Broker pool verified"
+      ],
+      "rationale": "Mechanism facts resolved; prerequisite is uniform owner-approved shared-reserve capability, not missing research.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/cadm-mento.json"
+      ],
+      "sentinels": [
+        "cadm-mento:gap:mechanism-risk-review"
+      ],
+      "nextReviewTrigger": "Owner ratifies uniform shared-reserve family treatment or exact token migrates to a newly evidenced CDP; review by 2026-10-15.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:crvusd-curve",
+      "taskIds": [
+        "V9G-af0f1e2a38802b3d",
+        "V9G-65043cf68cafa872"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "reject",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WCurve)",
+      "evidence": [
+        "https://prices.curve.finance/v1/crvusd/markets/ethereum",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7458bfdc30034eb860b265e6068121d18fa5aa72",
+        "Ethereum block 26098749: cbBTC legacy implementation 0x7458bfdc30034eb860b265e6068121d18fa5aa72; nonzero blacklister and pauser; controller total_debt positive."
+      ],
+      "rationale": "Terminal verified structural upstream powers persist. An inherited-untracked-upstream sentinel is not a lack of research, and removing the authored inherited verdict would suppress evidenced collateral exposure. No production closure is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/crvusd-curve.json"
+      ],
+      "sentinels": [
+        "crvusd-curve:gap:access:freeze",
+        "crvusd-curve:gap:access:freeze:blacklist:crvusd-curve"
+      ],
+      "nextReviewTrigger": "Re-review when cbBTC is removed from every debt-bearing collateral market, its implementation/blacklist authority changes, or upstream representation capability is admitted; otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:dusd-alto",
+      "taskIds": [
+        "V9G-0dfe99425008f10b"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc04)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x886bbdc1b5e264b919fb5bbb4b3ebd1243b86027",
+        "Ethereum26098753: all18 minted counters == totalSupply; credit-line principal999000 DUSD"
+      ],
+      "rationale": "Issuance census and omitted majority path resolved. Full economic backing needs LP self-liability elimination and consistently valued complete collateral inventory, owned by reserve producer/methodology coordinator.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/dusd-alto.json"
+      ],
+      "sentinels": [
+        "dusd-alto:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-10-08 or availability of pinned whole-backing producer and self-issued LP methodology.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:dusd-dtrinity",
+      "taskIds": [
+        "V9G-fb721ad1fa04f3fc"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WDtrinity)",
+      "evidence": [
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "Pinned ethereum 0x18e3c3c, sonic 0x4c7c4a8, fraxtal 0x281587c, katana 0x2a16034"
+      ],
+      "rationale": "Issuer and pinned vault research do not establish a complete organic reserve composition/reconciliation; no favorable fact manufactured.",
+      "changeRefs": [],
+      "sentinels": [
+        "dusd-dtrinity:gap:mechanism-review:assuranceAndReconciliation"
+      ],
+      "nextReviewTrigger": "Issuer reserve reconciliation/attestation or deployment-control change; otherwise 2026-11-01",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:dusd-dtrinity",
+      "taskIds": [
+        "V9G-15f795ff0676f36a"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WDtrinity)",
+      "evidence": [
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "Pinned ethereum 0x18e3c3c, sonic 0x4c7c4a8, fraxtal 0x281587c, katana 0x2a16034"
+      ],
+      "rationale": "Issuer and pinned vault research do not establish a complete organic reserve composition/reconciliation; no favorable fact manufactured.",
+      "changeRefs": [],
+      "sentinels": [
+        "dusd-dtrinity:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Issuer reserve reconciliation/attestation or deployment-control change; otherwise 2026-11-01",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:emxn-telcoin",
+      "taskIds": [
+        "V9G-dafbdf1a6bf11609"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB)",
+      "evidence": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "2026-10-01 public report, trust portal and security/risk disclosure searches"
+      ],
+      "rationale": "No dated eMXN allocation or liability-matching report recovered; primary terms establish only an aggregate issuer reserve claim.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "emxn-telcoin:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Re-review on first eMXN-specific reserve examination or category/provider disclosure; otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:euri-banking-circle",
+      "taskIds": [
+        "V9G-25383adc2fee5e86"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc04)",
+      "evidence": [
+        "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html",
+        "https://www.eurite.com/about-us/",
+        "https://www.bankingcircle.com/eurite-learn-more/"
+      ],
+      "rationale": "Primary public sources give cash/cash-equivalents legal envelope but no dated reserve weights. Issuer must supply token-specific reserve schedule.",
+      "changeRefs": [],
+      "sentinels": [
+        "euri-banking-circle:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-10-21 or publication of EURI-specific reserve attestation/holdings schedule.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:europ-schuman",
+      "taskIds": [
+        "V9G-8efc650ae7ab2b1b",
+        "V9G-b84a1746bb260fcb"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc04)",
+      "evidence": [
+        "XRPL ledger107363471 weighted quorum3 weights1,1,1,3,1,1",
+        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf"
+      ],
+      "rationale": "Authority fully observed but weighted-quorum schema missing; current whole-chain reconciliation report is external prerequisite. Retain exact known single-signer power and historical report scope.",
+      "changeRefs": [],
+      "sentinels": [
+        "europ-schuman:gap:deployment-control:mint-meta:europ-schuman:5881237bac5f060268e8",
+        "europ-schuman:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "2026-10-08 or weighted-quorum fact/compiler capability; separately publication of current whole-roster attestation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:europ-schuman",
+      "taskIds": [
+        "V9S-c93338b8a60a4598"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc04)",
+      "evidence": [
+        "XRPL ledger107363471 weighted quorum3 weights1,1,1,3,1,1",
+        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf"
+      ],
+      "rationale": "Authority fully observed but weighted-quorum schema missing; current whole-chain reconciliation report is external prerequisite. Retain exact known single-signer power and historical report scope.",
+      "changeRefs": [],
+      "sentinels": [
+        "{'reasonCode': 'unresolved-mint-authority', 'path': 'control:control:mint-meta:europ-schuman:5881237bac5f060268e8:cause:europ-schuman%3Agap%3Adeployment-control%3Amint-meta%3Aeurop-schuman%3A5881237bac5f060268e8'}"
+      ],
+      "nextReviewTrigger": "2026-10-08 or weighted-quorum fact/compiler capability; separately publication of current whole-roster attestation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:eursafo-spiko",
+      "taskIds": [
+        "V9G-c8774d17fc56d8ff"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+      "evidence": [
+        "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4",
+        "https://reference-data-directory.vercel.app/feeds-mainnet.json",
+        "Ethereum block26098764: EURSAFO NAV proxy0x799fdc55150583b5baa0b47065e1c901862c95d5; description/decimals/aggregator/latestRoundData; exact Morpho immutable BASE_FEED_1 and working price()"
+      ],
+      "rationale": "Verified exact-product external delivery of official CACEIS NAV through Chainlink; owned oracleRisk now records standard-external single-path evidence and top-level-only fund-share applicability. No second-source valuation, failover or stale-data enforcement asserted.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eursafo-spiko.json"
+      ],
+      "sentinels": [
+        "eursafo-spiko:gap:economic-control:oracle expected absent after fresh replay",
+        "missing-oracle-profile expected absent for eursafo-spiko after fresh replay"
+      ],
+      "nextReviewTrigger": "Re-review when the NAV provider, Chainlink proxy/aggregator, heartbeat, feed administration or consuming oracle changes; otherwise on the next scheduled active-event review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:fusd-finchain",
+      "taskIds": [
+        "V9G-3af076692b824484"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc05)",
+      "evidence": [
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/reserve-assets",
+        "https://api.finchain.global/api/v0/fusd-data",
+        "Ethereum block 26098753: FUSDGateway.lp and LP configured reserve tokens; all three tracked amounts match actual treasury token balances.",
+        "PRICE_ROLE NAV publication 0xa7bf714a8f952f46b0af90ade2b8c8359dd046604c73e526236c7f334701ce8d dated 2026-10-01T13:02:19Z, isPor=false; no independent financial assurance inferred."
+      ],
+      "rationale": "Owned reserve sidecar now records a freshly pinned coarse 100% fund-share inventory, not a stale API/page-caption refresh. Unknown look-through exposure remains 100%; sentinel closure must be checked in a fresh production replay.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/fusd-finchain.json"
+      ],
+      "sentinels": [
+        "fusd-finchain:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Coordinator: confirm fresh composition admission and exact sentinel absence after production replay. Re-review on reserve-token/configuration changes or 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:fusd-finchain",
+      "taskIds": [
+        "V9G-e2438727e55edb8d",
+        "V9G-a4dd3585d1cdd7e2",
+        "V9G-9e29b12eb64131a7",
+        "V9G-bffff76e04ab32ea"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc05)",
+      "evidence": [
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/vendors",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbb199ed75d4fdd04833bb4477285eda0bd91abc1",
+        "Pinned Ethereum block 26098753: genuine dated NAV publication found; current PoR zero and source-report guards unset.",
+        "Real Chromium DocSend viewer: FinChain requests email to continue; no email or access request submitted.",
+        "BMA register fetched HTTP 200, no exact FinChain literal; this is not an exhaustive license-denial finding."
+      ],
+      "rationale": "Complete overlay replacement proposes limited NAV using itemized primary data plus immutable on-chain anchor. Legal holder priority, current underlying maturity/stress liquidity and financial recovery remain genuinely unresolved. Medium grading proposal is not yet an applied shared overlay and does not close any task.",
+      "changeRefs": [],
+      "sentinels": [
+        "fusd-finchain:gap:mechanism-review:durationAndLiquidity",
+        "fusd-finchain:gap:mechanism-review:fundClaimAndSeniority",
+        "fusd-finchain:gap:mechanism-review:lossRecoveryDesign",
+        "fusd-finchain:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Coordinator adjudicates limited NAV proposal and elapsed-UTC-day admission. Re-review legal/liquidity/recovery on a public or authorized report, holder SAC instrument, or portfolio disclosure; otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:gho-aave",
+      "taskIds": [
+        "V9G-aa6a02e286fda006",
+        "V9G-e00094fe7806cbd4"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WAave)",
+      "evidence": [
+        "Ethereum block 26098749: current facilitator roster, role-gated source, POOL/provider/oracle/config reads.",
+        "https://aave.com/docs/ecosystem/gho",
+        "https://eth.blockscout.com/api/v2/addresses/0xe9ac5231faecb633da0fe85fcb2785b8363427d2/logs"
+      ],
+      "rationale": "Inherited access exposure is retained; old threshold-support narrative cannot be reinstated from unknown direct allocations. Current direct-mint role evidence does not establish current issuer-specific collateral weights. Parent-local reserve attribution and access threshold adjudication remain required; no adverse fact is deleted.",
+      "changeRefs": [],
+      "sentinels": [
+        "gho-aave:gap:access:freeze",
+        "gho-aave:gap:access:freeze:blacklist:gho-aave"
+      ],
+      "nextReviewTrigger": "Owner accepts mixed-path applicability and Horizon NAV-tier review, or publishes reconciled remote/mainnet holdings; coordinator then runs the next complete replay. Review no later than 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_BRANCH:gho-aave",
+      "taskIds": [
+        "V9G-dc8781569e7f1cd3",
+        "V9G-1a06cb85f0bc6f38",
+        "V9G-8372ba43a910dce4",
+        "V9G-b337bd3fcf4057d7",
+        "V9G-73fdd45e30c088eb"
+      ],
+      "workType": "ORACLE_BRANCH",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WAave)",
+      "evidence": [
+        "Ethereum block 26098749: current facilitator roster, role-gated source, POOL/provider/oracle/config reads.",
+        "https://aave.com/docs/ecosystem/gho",
+        "https://eth.blockscout.com/api/v2/addresses/0xe9ac5231faecb633da0fe85fcb2785b8363427d2/logs"
+      ],
+      "rationale": "Pinned on-chain roles/source and complete recovered role-event history identify direct allocation paths, while the exact Lido branch is now authored. The exact Horizon branch is proposed pending tier mapping; mixed root applicability needs an owner-approved intake. No source absence is converted to an adverse measured fact.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gho-aave.json"
+      ],
+      "sentinels": [
+        "gho-aave:gap:economic-control:oracle:backstop",
+        "gho-aave:gap:economic-control:oracle:collateral-parameter",
+        "gho-aave:gap:economic-control:oracle:feed",
+        "gho-aave:gap:economic-control:oracle:liquidation",
+        "gho-aave:gap:economic-control:oracle:shutdown-bad-debt"
+      ],
+      "nextReviewTrigger": "Owner accepts mixed-path applicability and Horizon NAV-tier review, or publishes reconciled remote/mainnet holdings; coordinator then runs the next complete replay. Review no later than 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:gho-aave",
+      "taskIds": [
+        "V9G-d8b98c1a71aa3354"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WAave)",
+      "evidence": [
+        "Ethereum block 26098749: current facilitator roster, role-gated source, POOL/provider/oracle/config reads.",
+        "https://aave.com/docs/ecosystem/gho",
+        "https://eth.blockscout.com/api/v2/addresses/0xe9ac5231faecb633da0fe85fcb2785b8363427d2/logs"
+      ],
+      "rationale": "Pinned on-chain roles/source and complete recovered role-event history identify direct allocation paths, while the exact Lido branch is now authored. The exact Horizon branch is proposed pending tier mapping; mixed root applicability needs an owner-approved intake. No source absence is converted to an adverse measured fact.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gho-aave.json"
+      ],
+      "sentinels": [
+        "gho-aave:gap:economic-control:oracle"
+      ],
+      "nextReviewTrigger": "Owner accepts mixed-path applicability and Horizon NAV-tier review, or publishes reconciled remote/mainnet holdings; coordinator then runs the next complete replay. Review no later than 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:gtusdc-gauntlet",
+      "taskIds": [
+        "V9G-9ae37e5f22f4869e",
+        "V9G-c50cd82c579ad487"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "reject",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WCircle)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xdd0f28e19c1780eb6396170735d45153d261490d",
+        "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf",
+        "https://www.circle.com/legal/usdc-terms",
+        "ethereum block26098754"
+      ],
+      "rationale": "Exact immutable local ERC20 share transfers are freshly reviewed. Parent USDC freeze authority is primary-evidenced inherited structural exposure, so the inherited-access diagnostic must not be erased as if a curation gap were closed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gtusdc-gauntlet.json"
+      ],
+      "sentinels": [
+        "gtusdc-gauntlet:gap:access:freeze",
+        "gtusdc-gauntlet:gap:access:freeze:blacklist:gtusdc-gauntlet"
+      ],
+      "nextReviewTrigger": "Parent USDC freeze policy or exact local deployed transfer code changes; review2026-11-01 if new evidence appears.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:gtusdcp-gauntlet",
+      "taskIds": [
+        "V9G-2d8be765a17e6934",
+        "V9G-4af948bf3d42e397",
+        "V9G-7252dc3cff35a409"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WCircle)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xdf62f57ea333a842db200d4892c90f98204fa22f",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e",
+        "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "https://www.circle.com/legal/usdc-terms",
+        "ethereum block26098754",
+        "base block52041959",
+        "arbitrum block510719674"
+      ],
+      "rationale": "Local native share permissions and corrected canonical overlay are verified and ready, but shared-file coordinator merge and fresh runtime replay are prerequisites. The same group includes inherited USDC freeze, a retained structural adverse fact rather than a missing local blacklist review.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gtusdcp-gauntlet.json",
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "gtusdcp-gauntlet:gap:access:freeze",
+        "gtusdcp-gauntlet:gap:access:freeze:blacklist:gtusdcp-gauntlet",
+        "gtusdcp-gauntlet:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Coordinator merges the exact shared transfer patch and produces a fresh replay; recheck2026-11-01 if still open.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:hbusdt-hyperbeat",
+      "taskIds": [
+        "V9G-74d506a14232b0ae"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc06)",
+      "evidence": [
+        "https://api.hyperbeat.org/api/v1/vault-allocations",
+        "Exact vault 0x5e105266db42f78FA814322Bce7f388B4C2e61eb scanned 2026-10-01T00:11:40.606170"
+      ],
+      "rationale": "Issuer allocation disclosure recovered; medium proposal ready. Reconcile optimizer synthetic addresses, masterUSD look-through and issuer portfolio/claims denominator before promotion.",
+      "changeRefs": [],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "hbusdt-hyperbeat:gap:reserve-composition",
+        "doneWhenScoreReasonAbsent": null
+      },
+      "nextReviewTrigger": "Recheck upon independent API/onchain denominator and optimizer reconciliation, or 2026-10-08, whichever first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:hlscope-hamilton-lane",
+      "taskIds": [
+        "V9G-22b7a5417a3cb06e"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSecuritize)",
+      "evidence": [
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US",
+        "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
+      ],
+      "rationale": "Fresh issuer offering, legal-document recovery, SEC filings and archive searches are recorded in round2 findings. Recovery remains bounded because governing current token-holder instruments are not authenticated; missing disclosure is not an adverse quality grade.",
+      "changeRefs": [],
+      "sentinels": [
+        "hlscope-hamilton-lane:gap:mechanism-review:recovery"
+      ],
+      "nextReviewTrigger": "When issuer supplies current authenticated fund/feeder PPM, LP agreement and loss-allocation/custody instruments; re-review2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:hlscope-hamilton-lane",
+      "taskIds": [
+        "V9G-13a23c2a9ead181c"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSecuritize)",
+      "evidence": [
+        "https://securitize.io/primary-market/hl-scope",
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        "worker/src/lib/safety-score-v9/extension-reserves.ts449-471:38-day composition age and report-period lockstep."
+      ],
+      "rationale": "Actual reserve structure is authored and primary-reconfirmed; it is not missing issuer asset identity. Current holdings admission rejects July31 dates and cannot consume a separately refreshed conservative standing-structure review. Needs the named methodology/schema capability; do not fake a report date.",
+      "changeRefs": [],
+      "sentinels": [
+        "hlscope-hamilton-lane:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "When standing-structure admission capability lands or a new issuer-dated composition/report within38days is authenticated; re-review2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:idrt-rupiah-token",
+      "taskIds": [
+        "V9G-161661464b2cae33"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc07)",
+      "evidence": [
+        "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z"
+      ],
+      "rationale": "Latest primary AUP supports the authored complete bank-deposit category; verified confidence repaired admission without invented bank weights.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/idrt-rupiah-token.json"
+      ],
+      "sentinels": [
+        "idrt-rupiah-token:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Next post-review-day production replay; verify reserve-composition sentinel absent; re-review upon September report publication or material reserve-category change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:idrt-rupiah-token",
+      "taskIds": [
+        "V9G-36b451111244e648"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc07)",
+      "evidence": [
+        "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+        "https://rupiahtoken.com/faq/dimana-cadangan-uang-backing-rupiah-token-disimpan-apa-buktinya",
+        "https://rupiahtoken.com/legal/terms"
+      ],
+      "rationale": "Latest AUP and dedicated-account FAQ do not disclose bank/provider set or failure/successor arrangements. No favorable or adverse grade is inferred from absence.",
+      "changeRefs": [],
+      "sentinels": [
+        "idrt-rupiah-token:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Issuer disclosure of bank allocations/custody agreement and failure/successor mechanics, or 2026-11-01 review if no new disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:jpysc-sbi-startale",
+      "taskIds": [
+        "V9G-a8361d1714fbc20a"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc07)",
+      "evidence": [
+        "https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260630.pdf",
+        "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf"
+      ],
+      "rationale": "Current numerical composition is not public: June30 exact deposit balance precedes September7 JGB investment; September7 publication provides only one partial reserve amount and approximate issuance. Termssection14 supplies a concrete issuer-held report prerequisite.",
+      "changeRefs": [],
+      "sentinels": [
+        "jpysc-sbi-startale:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Obtain current trust-property report under governing termssection14 or public full reserve allocation; re-review2026-11-01 if neither published.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:jpyt-dephaser",
+      "taskIds": [
+        "V9G-344631910b2eb5bc"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "reject",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc08)",
+      "evidence": [
+        "https://raw.githubusercontent.com/0xDephaser/contracts/main/src/UsdtDepositManager.sol",
+        "https://docs.dephaser.com/how-it-works/security.md",
+        "https://docs.dephaser.com/how-it-works/money-flow.md"
+      ],
+      "rationale": "Round-2 primary-source recheck preserves the concrete adverse exposure and unresolved issuer-disclosure boundary; current transfer overlay already labels both deployments permissionless. No fact is claimed closed.",
+      "changeRefs": [],
+      "sentinels": [
+        "jpyt-dephaser:gap:mechanism-review:backstop"
+      ],
+      "nextReviewTrigger": "2026-11-01 or primary funded-backstop/key-control/transfer disclosure, whichever occurs first",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:jpyt-dephaser",
+      "taskIds": [
+        "V9G-b4798721927efd6f",
+        "V9G-62184a14bf516d3e",
+        "V9G-0c8223cece2e4190"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc08)",
+      "evidence": [
+        "https://raw.githubusercontent.com/0xDephaser/contracts/main/src/UsdtDepositManager.sol",
+        "https://docs.dephaser.com/how-it-works/security.md",
+        "https://docs.dephaser.com/how-it-works/money-flow.md"
+      ],
+      "rationale": "Round-2 primary-source recheck preserves the concrete adverse exposure and unresolved issuer-disclosure boundary; current transfer overlay already labels both deployments permissionless. No fact is claimed closed.",
+      "changeRefs": [],
+      "sentinels": [
+        "jpyt-dephaser:gap:access:freeze",
+        "jpyt-dephaser:gap:access:freeze:blacklist:jpyt-dephaser",
+        "jpyt-dephaser:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "2026-11-01 or primary funded-backstop/key-control/transfer disclosure, whichever occurs first",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:kau-kinesis",
+      "taskIds": [
+        "V9G-b842ec2181fb0021"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WCommodity)",
+      "evidence": [
+        "https://kau-mainnet.kinesisgroup.io/accounts/GAJ6XIVDKRHVMYF5ZUDDJCX755F25JXGIAWX4JO2OUHC4B2XHVTA6ERC",
+        "https://kmslabs.money/"
+      ],
+      "rationale": "Static research confirms identity and documented controls; exact runtime materiality join remains absent.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/kau-kinesis.json"
+      ],
+      "sentinels": [
+        "kau-kinesis:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Fresh exact production capture with chain/contract supply join, or 2026-10-08 review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:lvusd-leverup",
+      "taskIds": [
+        "V9G-f17e2dc14089ccca"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WCommodity)",
+      "evidence": [
+        "rpc monad rpc.monad.xyz block 109659213 complete designated-vault census",
+        "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin",
+        "https://raw.githubusercontent.com/leverup-xyz/DefiLlama-Adapters/main/projects/leverup/index.js"
+      ],
+      "rationale": "Complete designated USDC reserve identity is verified today, but same-day date-only review and no captured live-adapter row prevent runtime admission. This is method/production work, not issuer nondisclosure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/lvusd-leverup.json"
+      ],
+      "sentinels": [
+        "lvusd-leverup:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "First fresh exact capture containing leverup-lvusd adapter observation or timestamp-admission owner ruling; re-review by 2026-10-08.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:mai-qidao",
+      "taskIds": [
+        "V9G-67b22442ec9a7a15"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc08)",
+      "evidence": [
+        "https://app.mai.finance/transparency-dashboard",
+        "https://docs.mai.finance/docs/risks/chain-risk",
+        "Optimism pinned block 157637186: owner Safe is also listed as an unbacked-MAI handler"
+      ],
+      "rationale": "Round-2 reopened and rendered the issuer dashboard. Partial chain books, treasury, DAO debt and handlers are published, but these are different accounting universes; a complete reserve denominator remains unreconciled. Current sidecar contains an opaque selected-slices basket, unlike fixed packet absence.",
+      "changeRefs": [],
+      "sentinels": [
+        "mai-qidao:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-11-01 or issuer global collateral/treasury/DAO-debt/circulating-liability reconciliation, whichever occurs first",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:mglobal-midas-fasanara",
+      "taskIds": [
+        "V9G-54c631f48c17fec2"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc09)",
+      "evidence": [
+        "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
+        "https://www.qiro.fi/blogs/inside-mglobal-tokenized-exposure-to-fasanaras-gdaf"
+      ],
+      "rationale": "Recovered primary strategy/market identity; complete dated priced whole-claim allocation is not yet admitted. See scoped discoveries and owner capability proposal; no weights inferred.",
+      "changeRefs": [],
+      "sentinels": [
+        "mglobal-midas-fasanara:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier on issuer complete dated holdings / producer priced reserve and inherited-access reconciliation",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:myrc-blox",
+      "taskIds": [
+        "V9G-23bf065582d4baf5",
+        "V9G-b00a349b113f2481"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB)",
+      "evidence": [
+        "Solana finalized getMultipleAccounts slot452347437: mint authority vault PDA, threshold2/voters4, zero config authority, immutable Squads program",
+        "https://raw.githubusercontent.com/Squads-Protocol/v4/main/programs/squads_multisig_program/src/state/multisig.rs",
+        "https://raw.githubusercontent.com/Squads-Protocol/v4/main/programs/squads_multisig_program/src/instructions/spending_limit_use.rs"
+      ],
+      "rationale": "Current onchain Squads configuration resolves prior historical-only controller uncertainty, with native mint/freeze path and bypass state pinned together.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/myrc-blox.json",
+        "shared/data/stablecoins/domains/risk-review/myrc-blox.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "myrc-blox:gap:deployment-control:mint-meta:myrc-blox:abce1f3fabfced90fc4b",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "myrc-blox:gap:deployment-controls",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Recheck on Solana mint/freeze authority change, Squads member/threshold/configuration change, or 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:myrc-blox",
+      "taskIds": [
+        "V9S-1b5691549a7ced25"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB)",
+      "evidence": [
+        "Solana finalized slot452347437 exact authority and 2-of-4 voting control"
+      ],
+      "rationale": "Adjudicated current authority as multisig rather than unknown or issuer keypair; retain unbounded reconciled economic posture.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/myrc-blox.json",
+        "shared/data/stablecoins/domains/risk-review/myrc-blox.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": null,
+          "doneWhenScoreReasonAbsent": {
+            "reasonCode": "unresolved-mint-authority",
+            "path": "control:control:mint-meta:myrc-blox:abce1f3fabfced90fc4b:cause:myrc-blox%3Agap%3Adeployment-control%3Amint-meta%3Amyrc-blox%3Aabce1f3fabfced90fc4b"
+          }
+        }
+      ],
+      "nextReviewTrigger": "First post-merge replay; then authority or threshold change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:myrc-blox",
+      "taskIds": [
+        "V9G-b81179acf51189a3"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB)",
+      "evidence": [
+        "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf",
+        "August31 report: 66.68% cash /33.32% Halogen, signed September29"
+      ],
+      "rationale": "Primary report re-fetched confirms already-applied exact current reserve composition; no repeat edit or date-bump.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/myrc-blox.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "myrc-blox:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "First next monthly report or reserve category change; report freshness stays based on August31 holdings.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:nopal-nest",
+      "taskIds": [
+        "V9G-de45636a52c81962"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNest)",
+      "evidence": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
+      ],
+      "rationale": "Current primary issuer sources retried; available facts and exact permissions recorded, but token-specific disclosure or complete producer/source-equivalence prerequisite remains. Unknown is not measured adverse; factsClosed stays zero until production replay.",
+      "changeRefs": [],
+      "sentinels": [
+        "nopal-nest:gap:mechanism-review:recovery"
+      ],
+      "nextReviewTrigger": "2026-10-21 or earlier on issuer holder-specific recovery/NAV disclosure, accessible Cicada report, new permission deployment, or accepted complete bridge materiality replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:nopal-nest",
+      "taskIds": [
+        "V9G-df5a4d89407b7567",
+        "V9G-91be321b64306395"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNest)",
+      "evidence": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
+      ],
+      "rationale": "Current primary issuer sources retried; available facts and exact permissions recorded, but token-specific disclosure or complete producer/source-equivalence prerequisite remains. Unknown is not measured adverse; factsClosed stays zero until production replay.",
+      "changeRefs": [],
+      "sentinels": [
+        "nopal-nest:gap:deployment-control:bridge-meta:nopal-nest:cc4fbb536d7377a45a24",
+        "nopal-nest:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "2026-10-21 or earlier on issuer holder-specific recovery/NAV disclosure, accessible Cicada report, new permission deployment, or accepted complete bridge materiality replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:nopal-nest",
+      "taskIds": [
+        "V9G-6b95692622acb1e4"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNest)",
+      "evidence": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
+      ],
+      "rationale": "Current primary issuer sources retried; available facts and exact permissions recorded, but token-specific disclosure or complete producer/source-equivalence prerequisite remains. Unknown is not measured adverse; factsClosed stays zero until production replay.",
+      "changeRefs": [],
+      "sentinels": [
+        "nopal-nest:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "2026-10-21 or earlier on issuer holder-specific recovery/NAV disclosure, accessible Cicada report, new permission deployment, or accepted complete bridge materiality replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:nusd-neutrl",
+      "taskIds": [
+        "V9G-7733ff452b1fd74d"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WStrategy)",
+      "evidence": [
+        "https://docs.neutrl.finance/protocol-design/transparency",
+        "https://docs.neutrl.finance/protocol-design/portfolio-allocation",
+        "https://web.archive.org/web/20260623153514id_/https://accountable.neutrl.finance/",
+        "https://cache.accountable.capital/dashboard/neutrl"
+      ],
+      "rationale": "Existing August 13 composition is retained as historical. New primary constituent disclosure was not recovered; failed live retrieval is not evidence of absent reserves or absent procedures.",
+      "changeRefs": [],
+      "sentinels": [
+        "nusd-neutrl:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "A dated issuer/Accountable current full composition and complete constituent identification, or actual independent reserve audit report.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:nusd-nexus",
+      "taskIds": [
+        "V9G-9b90176b4eba7e5b",
+        "V9G-ce3628d661e8c56d"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc09)",
+      "evidence": [
+        "ethereum block 26098746 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 0x82b866000000000000000000000000000000000000000000000000000000000000000000",
+        "ethereum block 26098746 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 0x91ceb3eb0000000000000000000000000000000000000000000000000000000000000000",
+        "ethereum block 26098746 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 0x82b866000000000000000000000000000000000000000000000000000000000000000001",
+        "ethereum block 26098746 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 0x91ceb3eb0000000000000000000000000000000000000000000000000000000000000001",
+        "ethereum block 26098746 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 0x82b866000000000000000000000000000000000000000000000000000000000000000002",
+        "ethereum block 26098746 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 0x91ceb3eb0000000000000000000000000000000000000000000000000000000000000002",
+        "ethereum block 26098746 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 0x82b866000000000000000000000000000000000000000000000000000000000000000003",
+        "ethereum block 26098746 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 0x91ceb3eb0000000000000000000000000000000000000000000000000000000000000003",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      ],
+      "rationale": "Native controls and inherited assets identified; needs exact-input inherited access propagation and priced materiality. No adverse upstream evidence deleted.",
+      "changeRefs": [],
+      "sentinels": [
+        "nusd-nexus:gap:access:freeze",
+        "nusd-nexus:gap:access:freeze:blacklist:nusd-nexus"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier on issuer complete dated holdings / producer priced reserve and inherited-access reconciliation",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:nwisdom-nest",
+      "taskIds": [
+        "V9G-78f4a2a8488d06cd",
+        "V9G-781ae727b051425b"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNest)",
+      "evidence": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
+      ],
+      "rationale": "Current primary issuer sources retried; available facts and exact permissions recorded, but token-specific disclosure or complete producer/source-equivalence prerequisite remains. Unknown is not measured adverse; factsClosed stays zero until production replay.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/nwisdom-nest.json",
+        "shared/data/stablecoins/domains/risk-review/nwisdom-nest.json"
+      ],
+      "sentinels": [
+        "nwisdom-nest:gap:mechanism-review:recovery",
+        "nwisdom-nest:gap:mechanism-review:seniority"
+      ],
+      "nextReviewTrigger": "2026-10-21 or earlier on issuer holder-specific recovery/NAV disclosure, accessible Cicada report, new permission deployment, or accepted complete bridge materiality replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:nwisdom-nest",
+      "taskIds": [
+        "V9G-ebdfe784364f100c"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNest)",
+      "evidence": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
+      ],
+      "rationale": "Current primary issuer sources retried; available facts and exact permissions recorded, but token-specific disclosure or complete producer/source-equivalence prerequisite remains. Unknown is not measured adverse; factsClosed stays zero until production replay.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/nwisdom-nest.json",
+        "shared/data/stablecoins/domains/risk-review/nwisdom-nest.json"
+      ],
+      "sentinels": [
+        "nwisdom-nest:gap:reserve:reserve:d2823727a6e9fff44db24935"
+      ],
+      "nextReviewTrigger": "2026-10-21 or earlier on issuer holder-specific recovery/NAV disclosure, accessible Cicada report, new permission deployment, or accepted complete bridge materiality replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:nxusd-nereus",
+      "taskIds": [
+        "V9G-228dfe27aad603a2"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc09)",
+      "evidence": [
+        "avalanche block 96542834 0x51A8FF60fBAF277Df02eeADc011f5C26DbaE1991 0x8285ef40",
+        "avalanche block 96542834 0x51A8FF60fBAF277Df02eeADc011f5C26DbaE1991 0x473e3ce7",
+        "avalanche block 96542834 0x51A8FF60fBAF277Df02eeADc011f5C26DbaE1991 0xd8dfeb45",
+        "avalanche block 96542834 0x51A8FF60fBAF277Df02eeADc011f5C26DbaE1991 0x6b2ace87",
+        "avalanche block 96542834 0x2ecbcB8757f43676b5d280e706b1a2C0d1975B6a 0x8285ef40",
+        "avalanche block 96542834 0x2ecbcB8757f43676b5d280e706b1a2C0d1975B6a 0x473e3ce7",
+        "avalanche block 96542834 0x2ecbcB8757f43676b5d280e706b1a2C0d1975B6a 0xd8dfeb45",
+        "avalanche block 96542834 0x2ecbcB8757f43676b5d280e706b1a2C0d1975B6a 0x6b2ace87",
+        "avalanche block 96542834 0x2d2005feEabAf7DC54EBD9B33115A2FB6e2A80DA 0x8285ef40",
+        "avalanche block 96542834 0x2d2005feEabAf7DC54EBD9B33115A2FB6e2A80DA 0x473e3ce7",
+        "avalanche block 96542834 0x2d2005feEabAf7DC54EBD9B33115A2FB6e2A80DA 0xd8dfeb45",
+        "avalanche block 96542834 0x2d2005feEabAf7DC54EBD9B33115A2FB6e2A80DA 0x6b2ace87",
+        "avalanche block 96542834 0x9fb5A0BBEe451643504524ddBFce8a1E09783D5b 0x8285ef40",
+        "avalanche block 96542834 0x9fb5A0BBEe451643504524ddBFce8a1E09783D5b 0x473e3ce7",
+        "avalanche block 96542834 0x9fb5A0BBEe451643504524ddBFce8a1E09783D5b 0xd8dfeb45",
+        "avalanche block 96542834 0x9fb5A0BBEe451643504524ddBFce8a1E09783D5b 0x6b2ace87",
+        "avalanche block 96542834 0x6d0CC0E3E2C63f84b55d86B4A1312805C3b99a2C 0x8285ef40",
+        "avalanche block 96542834 0x6d0CC0E3E2C63f84b55d86B4A1312805C3b99a2C 0x473e3ce7",
+        "avalanche block 96542834 0x6d0CC0E3E2C63f84b55d86B4A1312805C3b99a2C 0xd8dfeb45",
+        "avalanche block 96542834 0x6d0CC0E3E2C63f84b55d86B4A1312805C3b99a2C 0x6b2ace87",
+        "https://nxusd.nereus.finance/"
+      ],
+      "rationale": "Recovered primary strategy/market identity; complete dated priced whole-claim allocation is not yet admitted. See scoped discoveries and owner capability proposal; no weights inferred.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/nxusd-nereus.json"
+      ],
+      "sentinels": [
+        "nxusd-nereus:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier on issuer complete dated holdings / producer priced reserve and inherited-access reconciliation",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:nxusd-nereus",
+      "taskIds": [
+        "V9G-e037a80409c3cb93",
+        "V9G-ac050f5546115d85"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc09)",
+      "evidence": [
+        "avalanche block 96542834 0xdd3de3b819edd3a014fda93868d7dfc873341467 0xa0e67e2b",
+        "avalanche block 96542834 0xdd3de3b819edd3a014fda93868d7dfc873341467 0xcc2f845200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000064",
+        "avalanche block 96542834 0xdd3de3b819edd3a014fda93868d7dfc873341467 0xe75235b8",
+        "polygon block 94778655 0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8 0xe75235b8",
+        "polygon block 94778655 0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8 0xcc2f845200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000064",
+        "polygon block 94778655 0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8 0xa0e67e2b",
+        "polygon block 94778655 0xf955a6694c6f5629f5ecd514094b3bd450b59000 0x8da5cb5b",
+        "avalanche block 96542834 0xf14f4ce569cb3679e99d5059909e23b07bd2f387 0x8da5cb5b",
+        "https://raw.githubusercontent.com/nereusfinance/nereus-stablecoin-core/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/NXUSD.sol",
+        "avalanche block 96542834 0x51A8FF60fBAF277Df02eeADc011f5C26DbaE1991 0x8285ef40",
+        "avalanche block 96542834 0x51A8FF60fBAF277Df02eeADc011f5C26DbaE1991 0x473e3ce7",
+        "avalanche block 96542834 0x51A8FF60fBAF277Df02eeADc011f5C26DbaE1991 0xd8dfeb45",
+        "avalanche block 96542834 0x51A8FF60fBAF277Df02eeADc011f5C26DbaE1991 0x6b2ace87",
+        "avalanche block 96542834 0x2ecbcB8757f43676b5d280e706b1a2C0d1975B6a 0x8285ef40",
+        "avalanche block 96542834 0x2ecbcB8757f43676b5d280e706b1a2C0d1975B6a 0x473e3ce7",
+        "avalanche block 96542834 0x2ecbcB8757f43676b5d280e706b1a2C0d1975B6a 0xd8dfeb45",
+        "avalanche block 96542834 0x2ecbcB8757f43676b5d280e706b1a2C0d1975B6a 0x6b2ace87",
+        "avalanche block 96542834 0x2d2005feEabAf7DC54EBD9B33115A2FB6e2A80DA 0x8285ef40",
+        "avalanche block 96542834 0x2d2005feEabAf7DC54EBD9B33115A2FB6e2A80DA 0x473e3ce7",
+        "avalanche block 96542834 0x2d2005feEabAf7DC54EBD9B33115A2FB6e2A80DA 0xd8dfeb45",
+        "avalanche block 96542834 0x2d2005feEabAf7DC54EBD9B33115A2FB6e2A80DA 0x6b2ace87",
+        "avalanche block 96542834 0x9fb5A0BBEe451643504524ddBFce8a1E09783D5b 0x8285ef40",
+        "avalanche block 96542834 0x9fb5A0BBEe451643504524ddBFce8a1E09783D5b 0x473e3ce7",
+        "avalanche block 96542834 0x9fb5A0BBEe451643504524ddBFce8a1E09783D5b 0xd8dfeb45",
+        "avalanche block 96542834 0x9fb5A0BBEe451643504524ddBFce8a1E09783D5b 0x6b2ace87",
+        "avalanche block 96542834 0x6d0CC0E3E2C63f84b55d86B4A1312805C3b99a2C 0x8285ef40",
+        "avalanche block 96542834 0x6d0CC0E3E2C63f84b55d86B4A1312805C3b99a2C 0x473e3ce7",
+        "avalanche block 96542834 0x6d0CC0E3E2C63f84b55d86B4A1312805C3b99a2C 0xd8dfeb45",
+        "avalanche block 96542834 0x6d0CC0E3E2C63f84b55d86B4A1312805C3b99a2C 0x6b2ace87"
+      ],
+      "rationale": "Native controls and inherited assets identified; needs exact-input inherited access propagation and priced materiality. No adverse upstream evidence deleted.",
+      "changeRefs": [],
+      "sentinels": [
+        "nxusd-nereus:gap:access:freeze",
+        "nxusd-nereus:gap:access:freeze:blacklist:nxusd-nereus"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier on issuer complete dated holdings / producer priced reserve and inherited-access reconciliation",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:qcad-stablecorp",
+      "taskIds": [
+        "V9G-9c8665d4293e041e"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB)",
+      "evidence": [
+        "https://web.archive.org/web/20260927045524id_/https://www.sedarplus.ca/csa-party/records/document.html?id=cdb08e008e109f2cfd9f81ad62011f100ac1bd0d95a48ed4861aaaaaba974b5c",
+        "May report signed July15,2026; exact independent examination and trust-scope reconciliation recovered"
+      ],
+      "rationale": "The matching report now has an admissible signed-date stand-in under owner D21; no replacement of May composition. Assurance remains auto-known, subject to production replay.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/qcad-stablecorp.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "qcad-stablecorp:gap:mechanism-review:assuranceAndReconciliation",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Recheck first production replay after this merge; next monthly report or trust-scope liability change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:qcad-stablecorp",
+      "taskIds": [
+        "V9G-e7bc70109b9bd261"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB)",
+      "evidence": [
+        "https://stablecorp.ca/",
+        "https://web.archive.org/web/20260927045524id_/https://www.sedarplus.ca/csa-party/records/document.html?id=cdb08e008e109f2cfd9f81ad62011f100ac1bd0d95a48ed4861aaaaaba974b5c",
+        "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
+      ],
+      "rationale": "Exact trust split is recovered, but a complete deployment-to-product and separate legacy reserve denominator is not public. Date admission is improved; no full-catalog cash-only extrapolation.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/qcad-stablecorp.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "qcad-stablecorp:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "On issuer publication of exact trust-versus-legacy deployment balances and separate reserve class/provider splits; otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:reusd-re-protocol",
+      "taskIds": [
+        "V9G-9cfc490f3ffe6e25",
+        "V9G-54ee2ad37ddf192e",
+        "V9G-aa09a81a8ca07ed3",
+        "V9G-c8640882c6dff806",
+        "V9G-ce3f5bdc100bf9e2",
+        "V9G-81379e59d40207a2",
+        "V9G-27e14619632f16d8"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WReReservoir)",
+      "evidence": [
+        "https://app.re.xyz/metrics",
+        "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/how-to-read-the-dashboard.md",
+        "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md"
+      ],
+      "rationale": "Static source-key classifications already exist; fresh live evidence still has aggregate offchain attribution and a separate source-native integration gap. Preserve the quantity boundary and defer until producer repair plus attributable cell disclosure. No rows silently closed.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "reusd-re-protocol:gap:reserve:reserve:4dfb91e8806b59cd54dfd4fa",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "reusd-re-protocol:gap:reserve:reserve:25ac3de40794b8f960162813",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "reusd-re-protocol:gap:reserve:reserve:0774aaeefc190000211d7495",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "reusd-re-protocol:gap:reserve:reserve:63ce97b2070791cdc45c299c",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "reusd-re-protocol:gap:reserve:reserve:293e6fb5a3d695cc58b1816f",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "reusd-re-protocol:gap:reserve:reserve:2a7d07ff65d3aeab8b86a2b2",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "reusd-re-protocol:gap:reserve:reserve:77842bd1031ad80acc344f44",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "A source-key integration deployment or issuer token-cell reserve/allocation report changes the live classification/attribution inputs; then fresh replay removes every listed sentinel.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:reusd-re-protocol",
+      "taskIds": [
+        "V9G-906d3ab6ce692c79"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WReReservoir)",
+      "evidence": [
+        "Tempo42130411:293 successful creation-to-tip RoleMembershipUpdated ranges; actual ISSUER_ROLE holders2ba8aa andbb631b; recorded258feb pool Unauthorized."
+      ],
+      "rationale": "The full legacy Tempo issuer-role population is now pinned to two contracts, and the former pool is unauthorized. Current callable minter reach and legacy/replacement token relation remain unresolved; a complete role list alone is not route conservation.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/reusd-re-protocol.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "reusd-re-protocol:gap:deployment-control:bridge-meta:reusd-re-protocol:4612365b8149605c98c5",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Verified actual minter source/control reach or issuer migration mapping is published; re-read both token roles and executable mint path, then replay deployment-controls sentinel.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:rlusd-ripple",
+      "taskIds": [
+        "V9G-ebcc377a379c701c",
+        "V9G-e2e44fa7db8dc6cc",
+        "V9G-44fc99322177a3c1",
+        "V9G-2d7bf07c1eaa47e1",
+        "V9G-6aacc40da948fa4c"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WRipple)",
+      "evidence": [
+        "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks",
+        "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x86c5ae628e2218c5597b3e6dce73048adc53fcc5",
+        "https://wormhole.com/docs/protocol/infrastructure/guardians/",
+        "ethereum pinned block 26098750 verified native/NTT control observations",
+        "base pinned block 52041924 verified native/NTT control observations",
+        "optimism pinned block 157637209 verified native/NTT control observations",
+        "ink pinned block 57374785 verified native/NTT control observations",
+        "unichain pinned block 60124837 verified native/NTT control observations"
+      ],
+      "rationale": "Exact native/NTT route and control evidence is applied. Publication/admission and any remaining complete-supply/materiality prerequisite await coordinator/producer verification; known adverse validation/upgrade paths must not be hidden to clear a sentinel.",
+      "changeRefs": [
+        "rlusd-ripple#R2F1",
+        "rlusd-ripple#R2F2",
+        "shared/data/stablecoins/domains/risk-review/rlusd-ripple.json",
+        "shared/data/stablecoins/domains/mint-authority/rlusd-ripple.json"
+      ],
+      "sentinels": [
+        "rlusd-ripple:gap:deployment-control:bridge-meta:rlusd-ripple:28f439d96d229249da1f",
+        "rlusd-ripple:gap:deployment-control:bridge-meta:rlusd-ripple:5086fd26576ac07e1d67",
+        "rlusd-ripple:gap:deployment-control:bridge-meta:rlusd-ripple:6d1eb6bf49c4a21ea970",
+        "rlusd-ripple:gap:deployment-control:bridge-meta:rlusd-ripple:a2eb11410e84232ba757",
+        "rlusd-ripple:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Coordinator exact post-R2 replay and first accepted producer/publication after integration; producer must reconcile any required complete circulating-USD partition. Reopen on RoleGranted/RoleRevoked/Upgraded, NTT peer/threshold/transceiver/limit changes, or issuer deployment changes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:rlusd-ripple",
+      "taskIds": [
+        "V9G-746bf49aea3c6206"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WRipple)",
+      "evidence": [
+        "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks",
+        "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/",
+        "https://base.blockscout.com/api/v2/smart-contracts/0x86c5ae628e2218c5597b3e6dce73048adc53fcc5",
+        "https://wormhole.com/docs/protocol/infrastructure/guardians/",
+        "ethereum pinned block 26098750 verified native/NTT control observations",
+        "base pinned block 52041924 verified native/NTT control observations",
+        "optimism pinned block 157637209 verified native/NTT control observations",
+        "ink pinned block 57374785 verified native/NTT control observations",
+        "unichain pinned block 60124837 verified native/NTT control observations"
+      ],
+      "rationale": "Exact native/NTT route and control evidence is applied. Publication/admission and any remaining complete-supply/materiality prerequisite await coordinator/producer verification; known adverse validation/upgrade paths must not be hidden to clear a sentinel.",
+      "changeRefs": [
+        "rlusd-ripple#R2F1",
+        "rlusd-ripple#R2F2",
+        "shared/data/stablecoins/domains/risk-review/rlusd-ripple.json",
+        "shared/data/stablecoins/domains/mint-authority/rlusd-ripple.json"
+      ],
+      "sentinels": [
+        "rlusd-ripple:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Coordinator exact post-R2 replay and first accepted producer/publication after integration; producer must reconcile any required complete circulating-USD partition. Reopen on RoleGranted/RoleRevoked/Upgraded, NTT peer/threshold/transceiver/limit changes, or issuer deployment changes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:safo-spiko-usd",
+      "taskIds": [
+        "V9G-4ac064637df0c9a0",
+        "V9G-5fd0193c40896449"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+      "evidence": [
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://github.com/spiko-tech/solana-contracts",
+        "https://solana-rpc.publicnode.com",
+        "Finalized slot452345677: exact native mint/config; Squads threshold1, membercount1, timelock0; ProgramData upgrade authority same sole member."
+      ],
+      "rationale": "Native Solana mint/config/admin/initiator/upgrade identities are now in owned records and bridge ambiguity is cleared. Entire deployment-control group remains deferred pending production replay and exact deployed-source equivalence for the five legacy group2 Ethereum pool candidates; factsClosed is not inferred from research.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/safo-spiko-usd.json",
+        "shared/data/stablecoins/domains/mint-authority/safo-spiko-usd.json"
+      ],
+      "sentinels": [
+        "safo-spiko-usd:gap:deployment-control:bridge-meta:safo-spiko-usd:646d7ef2d5760ab84af6",
+        "safo-spiko-usd:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Next full coordinator replay after these owned-file facts are integrated; otherwise issuer key/security disclosure or deployed pool verification, with a follow-up evidence review by2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:safo-spiko-usd",
+      "taskIds": [
+        "V9G-a1eaa6f3e03395a5"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoUsd)",
+      "evidence": [
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://github.com/spiko-tech/solana-contracts",
+        "https://solana-rpc.publicnode.com",
+        "Finalized slot452345677: exact native mint/config; Squads threshold1, membercount1, timelock0; ProgramData upgrade authority same sole member."
+      ],
+      "rationale": "The exact Solana USD deployment is a selectable native SICAV shareholder register under issuer-native minter control, not an unverified cross-chain representation. All eight routes are reviewed native registers; adverse native issuance powers remain in Mint Authority. Promotion records evidence landed, not sentinel closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/safo-spiko-usd.json",
+        "shared/data/stablecoins/domains/mint-authority/safo-spiko-usd.json"
+      ],
+      "sentinels": [
+        "safo-spiko-usd:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Next full coordinator replay after these owned-file facts are integrated; otherwise issuer key/security disclosure or deployed pool verification, with a follow-up evidence review by2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:said-gaib",
+      "taskIds": [
+        "V9G-dc505443f5dea8ba"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WGaib)",
+      "evidence": [
+        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
+      ],
+      "rationale": "Full memorandum recovered; direct holder-right limitations now primary-evidenced. Complete high-confidence shared overlay replacement proposed, pending coordinator merge and replay.",
+      "changeRefs": [
+        "agents/2026-10-01-curation-pass/r2/results/said-gaib.json#/overlayProposals",
+        "shared/data/stablecoins/domains/reserves/said-gaib.json"
+      ],
+      "sentinels": [
+        "said-gaib:gap:mechanism-review:legalEnforceability"
+      ],
+      "nextReviewTrigger": "Coordinator overlay merge and fresh replay for sAID legal finding; otherwise issuer product-specific disclosure or 2026-11-01, whichever comes first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:satusd-river",
+      "taskIds": [
+        "V9G-2a7414bf999c2998"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMintRecon)",
+      "evidence": [
+        "https://docs.riverai.inc/products/smart-vault.md",
+        "https://docs.riverai.inc/products/smart-vault.md",
+        "https://api.riverai.inc/protocol-info",
+        "https://app.riverai.inc/prime-vault",
+        "https://app.riverai.inc/smart-vault"
+      ],
+      "rationale": "Retried current product/API/contract/audit sources. Full liabilities, internal product issuance and current collateral allocation remain undisclosed; gross vault deposits cannot close the exact reserve-composition gap.",
+      "changeRefs": [
+        "satusd-river#R2F2"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Issuer publishes dated per-product assets and liabilities plus internal staking-factor issuance and cross-chain/in-flight offsets.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:scrvusd-curve",
+      "taskIds": [
+        "V9G-efdac75c5e204089",
+        "V9G-233cd46e892f38e7"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WCurve)",
+      "evidence": [
+        "https://docs.curve.finance/developer/scrvusd/overview/",
+        "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d?fields=sources,abi",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7458bfdc30034eb860b265e6068121d18fa5aa72",
+        "Ethereum block 26098749: asset is crvUSD, fixed clone, no local blacklist; upstream debt-bearing cbBTC issuer powers confirmed."
+      ],
+      "rationale": "Canonical wrapper-local holder transfers are verified; inherited parent freeze exposure is verified adverse. The six issuer-listed satellites remain outside the authored Ethereum scope and no fresh registry/input-bound transfer-materiality partition is supplied. This is a named capability/inventory prerequisite, not an inferred adverse satellite finding.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/scrvusd-curve.json"
+      ],
+      "sentinels": [
+        "scrvusd-curve:gap:access:freeze",
+        "scrvusd-curve:gap:access:freeze:blacklist:scrvusd-curve"
+      ],
+      "nextReviewTrigger": "Re-review by 2026-10-21 or on complete satellite deployment/control review plus producer-issued registry/input-bound transfer materiality; owner is bridge/materiality producer.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:sdola-inverse-finance",
+      "taskIds": [
+        "V9G-57977c1e1fbafa92",
+        "V9G-18299bbf7eb1c374",
+        "V9G-7c982590e3098971"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WInverse)",
+      "evidence": [
+        "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+        "Pinned Ethereum block26098749; BSC125135317; Base52041917; Optimism157637202; Arbitrum510719353; Berachain26929232"
+      ],
+      "rationale": "Inherited parent controls are now verified adverse; missing Berachain local transfer review is ready as coordinator-only shared patch. Await shared patch merge and fresh producer.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/sdola-inverse-finance.json"
+      ],
+      "sentinels": [
+        "sdola-inverse-finance:gap:access:freeze",
+        "sdola-inverse-finance:gap:access:freeze:blacklist:sdola-inverse-finance",
+        "sdola-inverse-finance:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Coordinator merges shared transfer patch and refreshes production replay; otherwise re-review 2026-10-08, or immediately on new CCIP lane/governance deployment.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:sdola-inverse-finance",
+      "taskIds": [
+        "V9G-5e9d1e178447fe55"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WInverse)",
+      "evidence": [
+        "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+        "Pinned Ethereum block26098749; BSC125135317; Base52041917; Optimism157637202; Arbitrum510719353; Berachain26929232"
+      ],
+      "rationale": "Current bridge shutdown/revoked pool mint and retained governance owner powers verified; await disabled-route capability and caller/minter census, not favorable zero-risk inference.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/sdola-inverse-finance.json"
+      ],
+      "sentinels": [
+        "sdola-inverse-finance:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Coordinator merges shared transfer patch and refreshes production replay; otherwise re-review 2026-10-08, or immediately on new CCIP lane/governance deployment.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:sdola-inverse-finance",
+      "taskIds": [
+        "V9G-941221cddf032417"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WInverse)",
+      "evidence": [
+        "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+        "Pinned Ethereum block26098749; BSC125135317; Base52041917; Optimism157637202; Arbitrum510719353; Berachain26929232"
+      ],
+      "rationale": "Existing classified DOLA metadata is source-ready; await keyed producer refresh.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/sdola-inverse-finance.json"
+      ],
+      "sentinels": [
+        "sdola-inverse-finance:gap:reserve:reserve:af504d270170e356a30ef5b9"
+      ],
+      "nextReviewTrigger": "Coordinator merges shared transfer patch and refreshes production replay; otherwise re-review 2026-10-08, or immediately on new CCIP lane/governance deployment.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:sdusd-dtrinity",
+      "taskIds": [
+        "V9G-426ce24afc93c6f7"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WDtrinity)",
+      "evidence": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "Pinned ethereum 0x18e3c3c, sonic 0x4c7c4a8, fraxtal 0x281587c, katana 0x2a16034"
+      ],
+      "rationale": "Authored classification corroborated; current captured live row did not consume it. Requires producer/replay join repair.",
+      "changeRefs": [],
+      "sentinels": [
+        "sdusd-dtrinity:gap:reserve:reserve:4de57642127ec5384ce3e34a"
+      ],
+      "nextReviewTrigger": "Fresh producer/capture containing the authored classification; otherwise 2026-11-01",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:sdusd-dtrinity",
+      "taskIds": [
+        "V9G-f29612c9dcc6cee7",
+        "V9G-4c205e8f21583ac2",
+        "V9G-789d80173c86eed4"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "reject",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WDtrinity)",
+      "evidence": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "Pinned ethereum 0x18e3c3c, sonic 0x4c7c4a8, fraxtal 0x281587c, katana 0x2a16034"
+      ],
+      "rationale": "Inherited reviewed upstream access is a structural exposure, not a fact eligible for favorable closure.",
+      "changeRefs": [],
+      "sentinels": [
+        "sdusd-dtrinity:gap:access:freeze",
+        "sdusd-dtrinity:gap:access:freeze:blacklist:sdusd-dtrinity",
+        "sdusd-dtrinity:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Issuer reserve reconciliation/attestation or deployment-control change; otherwise 2026-11-01",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:susd1plus-lorenzo",
+      "taskIds": [
+        "V9G-9b05a412c09ceb0a",
+        "V9G-5410fc0b6d178deb",
+        "V9G-2c17295efc7021d6"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc10)",
+      "evidence": [
+        "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/",
+        "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b",
+        "https://otf.lorenzo-protocol.xyz/lorenzo/v1/invest/strategy/0x4F2760B32720F013E900DC92F65480137391199b/56",
+        "https://lorenzo-api.lorenzo-protocol.xyz/v1/graphql/otf",
+        "https://lorenzo-protocol.gitbook.io/docs/financial-abstraction-layer/technical-design/security.md",
+        "https://app.lorenzo-protocol.xyz/launchPad/otf/sUSD1Plus-BNB"
+      ],
+      "rationale": "Current primary disclosure re-opened through docs, live structured API, report/source recovery and pinned authorities. Partial evidence recovered, but no full quantitative disclosure that closes this group; unknown is not represented as measured weakness.",
+      "changeRefs": [],
+      "sentinels": [
+        "susd1plus-lorenzo:gap:mechanism-review:fundingBasisStress",
+        "susd1plus-lorenzo:gap:mechanism-review:lossAbsorption",
+        "susd1plus-lorenzo:gap:mechanism-review:marginAndLiquidation"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier issuer publication of a full dated reserve/risk inventory covering the missing quantitative facts.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:susd1plus-lorenzo",
+      "taskIds": [
+        "V9G-cc0ae30fedcc4614"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc10)",
+      "evidence": [
+        "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/",
+        "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b",
+        "https://otf.lorenzo-protocol.xyz/lorenzo/v1/invest/strategy/0x4F2760B32720F013E900DC92F65480137391199b/56",
+        "https://lorenzo-api.lorenzo-protocol.xyz/v1/graphql/otf"
+      ],
+      "rationale": "Current primary disclosure re-opened through docs, live structured API, report/source recovery and pinned authorities. Partial evidence recovered, but no full quantitative disclosure that closes this group; unknown is not represented as measured weakness.",
+      "changeRefs": [],
+      "sentinels": [
+        "susd1plus-lorenzo:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier issuer publication of a full dated reserve/risk inventory covering the missing quantitative facts.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:susdai-usd-ai",
+      "taskIds": [
+        "V9G-9026bb03c71da6d2"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WUsdAi)",
+      "evidence": [
+        "https://docs.usd.ai/technical-overview/contract-addresses.md",
+        "Solana finalized slot 452346084: exact mint, 1-of-2 mint multisig, OFTStore BurnMint state, Arbitrum peer and BPF upgrade authority.",
+        "Arbitrum pinned block 510720428: reciprocal Solana peers; LayerZero send ULN confirms 20 confirmations and three required DVNs; receive ULN confirms 32 confirmations and three required DVNs.",
+        "Solana finalized slot 452350705: mint/upgrade multisig 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj and freeze/default-admin multisig CrzPtmcfAGwkCsDfnoEbGHSRsWPiVEiPmryXShy9sfsz, each autonomous 3-of-3 without timelock. Pause multisig Aht5ivj7NnZvAJVKshuMaoaC9hq2FiBiST4fccYaNAn5 separately observed at slot 452350848 as 2-of-3 without timelock.",
+        "Official Squads vault PDA seeds independently match all three authority PDAs; successful VaultTransactionExecute trace matches mint/upgrade vault."
+      ],
+      "rationale": "Static Solana route and control identities are resolved with primary and pinned onchain evidence, including nested autonomous Squads 3-of-3 voting, zero timelock, direct mint independent of LayerZero messaging, and program-upgrade authority. This is the curation milestone; exact production route-supply materiality and a new replay remain prerequisites, so no sentinel closure or numerical score restoration is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/susdai-usd-ai.json",
+        "shared/data/stablecoins/coins/susdai-usd-ai.json"
+      ],
+      "sentinels": [
+        "susdai-usd-ai:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Next production capture with exact chain+contract circulating-USD supply rows and source-generation joins after this static review; otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:susds-sky",
+      "taskIds": [
+        "V9G-c48251c01a447b8b",
+        "V9G-3c126c3067c59b18",
+        "V9G-2d099cdcf98c40e1"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSky)",
+      "evidence": [
+        "https://raw.githubusercontent.com/sky-ecosystem/sdai/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol",
+        "Solana finalized slot 452346482: active USDS freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt"
+      ],
+      "rationale": "Inherited freeze is re-confirmed by the exact parent mint observation; all wrapper implementations and active wards retain local upgrade-driven restrictability. Shared transfer review refresh is proposed. Runtime supply/materiality attribution still requires its producer owner; no unrestricted posture or production closure is asserted.",
+      "changeRefs": [],
+      "sentinels": [
+        "susds-sky:gap:access:freeze",
+        "susds-sky:gap:access:freeze:blacklist:susds-sky",
+        "susds-sky:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Producer owner supplies generation-bound exact-deployment transfer/materiality inputs and a fresh replay; review by 2026-10-08 or immediately upon implementation/ward/freeze-authority change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:susds-sky",
+      "taskIds": [
+        "V9G-3deaa781e8fd201d"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSky)",
+      "evidence": [
+        "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/",
+        "Ethereum 26098752 / Base 52041934 / Optimism 157637219 / Arbitrum 510719484: route implementations and wards unchanged"
+      ],
+      "rationale": "All curated route identities and controls are complete and current. The row is blocked by aggregate-only runtime supply rather than missing issuer route disclosure. Current totalSupply evidence is supplied only as research, not a circulating-USD override.",
+      "changeRefs": [],
+      "sentinels": [
+        "susds-sky:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Bridge-materiality producer admits generation-bound per-deployment circulating-USD roster and runs replay; review by 2026-10-08 or after bridge mapping/ward/implementation changes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:syusd-aegis",
+      "taskIds": [
+        "V9G-fb389e5fdbbaefb6"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WAegis)",
+      "evidence": [
+        "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "https://web.archive.org/web/20250806030354/https://docs.aegis.im/overview/profit-generation-mechanism",
+        "Current Accountable snapshot ts 1790872495924"
+      ],
+      "rationale": "Fresh source recovery did not supply the required quantified hedge risk data.",
+      "changeRefs": [],
+      "sentinels": [
+        "syusd-aegis:gap:mechanism-review:marginAndLiquidation"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier issuer publication of measured venue margin/liquidation and unwind data or token-level deployment-wallet reserve inventory.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:syzusd-yuzu",
+      "taskIds": [
+        "V9G-6f5155efd3e43b24"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WYuzu)",
+      "evidence": [
+        "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/chainlink-ccip-transporter-bridge",
+        "https://api.coingecko.com/api/v3/coins/staked-yuzu-usd?localization=false&tickers=false&community_data=false&developer_data=false",
+        "plasma block 33932322 0x31672de4726227feb22f2dfbcfa985c71bea86b2 0x21df0da7",
+        "plasma block 33932322 0x31672de4726227feb22f2dfbcfa985c71bea86b2 0x8da5cb5b",
+        "plasma block 33932322 0x31672de4726227feb22f2dfbcfa985c71bea86b2 0x6d3d1a58",
+        "plasma block 33932322 0x31672de4726227feb22f2dfbcfa985c71bea86b2 0xc4bffe2b",
+        "plasma block 33932322 0x31672de4726227feb22f2dfbcfa985c71bea86b2 0x181f5a77"
+      ],
+      "rationale": "Curated route inventory exists, but known current bridge control requires a complete production materiality roster. Curated source/control changes cannot manufacture circulating USD.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "syzusd-yuzu:gap:economic-control:bridge"
+        }
+      ],
+      "nextReviewTrigger": "Production per-deployment supply roster is admitted, or 2026-10-15 review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:syzusd-yuzu",
+      "taskIds": [
+        "V9G-85b6349d0d4aa46c",
+        "V9G-a8f5730c79229c4b",
+        "V9G-1ff064315e7f9fac"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WYuzu)",
+      "evidence": [
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 eth_getStorageAt EIP1967 implementation",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0x38d52e0f",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0x01e1d114",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0x18160ddd",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0xd2adf402",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0x58e7fed2",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0x8da5cb5b",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x70a08231000000000000000000000000c8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0xa1915fe6",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0x81904676",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0xdec5ce36",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0x75b17350",
+        "plasma block 33932322 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 0x70a0823100000000000000000000000031672de4726227feb22f2dfbcfa985c71bea86b2"
+      ],
+      "rationale": "Canonical transfer path is reviewed; shared transfer inventory and material scope do not yet cover all eight deployments. Inherited parent access exposure remains genuine.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "syzusd-yuzu:gap:access:freeze"
+        },
+        {
+          "doneWhenGapIdAbsent": "syzusd-yuzu:gap:access:freeze:blacklist:syzusd-yuzu"
+        },
+        {
+          "doneWhenGapIdAbsent": "syzusd-yuzu:gap:access:transfer"
+        }
+      ],
+      "nextReviewTrigger": "Transfer reviewer supplies exact new-deployment coverage plus admitted runtime scope, or 2026-10-15 review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:tgbp-tokenised",
+      "taskIds": [
+        "V9G-199bfdf101b625ff"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2VMisc10)",
+      "evidence": [
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/terms",
+        "https://api.tgbp.io/api/v1/public/data/tgbp",
+        "https://www.tokenisedgbp.com/transparency"
+      ],
+      "rationale": "Verifier visually recovered the August report page 2 reserve table and authored all three measured allocation weights; 22.440424% unidentified bonds and unknown horizons remain explicit. Production replay must decide sentinel closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/tgbp-tokenised.json"
+      ],
+      "sentinels": [
+        "tgbp-tokenised:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Next monthly report or issuer disclosure identifying bond issuers/maturities, MMF holdings and reserve providers.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:thbill-theo",
+      "taskIds": [
+        "V9G-9ed8f82b1396ee3f"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc11)",
+      "evidence": [
+        "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "Ethereum block26098775: selected wrapper positions only"
+      ],
+      "rationale": "The strategy and historical FILQ transaction are primary-confirmed, but complete current allocation and matching liabilities are not. D24 full-composition conditions are not met; no date or weight invented.",
+      "changeRefs": [],
+      "sentinels": [
+        "thbill-theo:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-10-21 or earlier dated complete thBILL holdings/cash/in-flight balances and reserve-to-liability report publication.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:tryb-bilira",
+      "taskIds": [
+        "V9G-1cf3b4d2f3dfddb4"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WTether)",
+      "evidence": [
+        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+        "tryb-bilira#R2F1"
+      ],
+      "rationale": "The whole Polygon control group has an exact reciprocal Ethereum root mapping, escrow, sole depositor and ultimate current5-of-9 upgrade controls. No runtime closure is claimed.",
+      "changeRefs": [
+        "tryb-bilira#R2F1"
+      ],
+      "sentinels": [
+        "tryb-bilira:gap:deployment-control:bridge-meta:tryb-bilira:38e90e884aeb797f9959"
+      ],
+      "nextReviewTrigger": "Fresh replay must remove the exact deployment-control gap without an adverse replacement; re-review on mapping, owner, implementation or timelock delay change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:tryb-bilira",
+      "taskIds": [
+        "V9G-04422468dc333c99"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WTether)",
+      "evidence": [
+        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+        "tryb-bilira#R2F3"
+      ],
+      "rationale": "Renewed public search still leaves active reserve providers/allocations and continuity mechanics undisclosed; payout partners are not reserve evidence.",
+      "changeRefs": [
+        "tryb-bilira#R2F3"
+      ],
+      "sentinels": [
+        "tryb-bilira:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Issuer token-reserve roster/allocations and failure/replacement/successor-custody disclosures, or2026-11-01 scheduled re-review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:tryb-bilira",
+      "taskIds": [
+        "V9G-19eea483780493bd"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WTether)",
+      "evidence": [
+        "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a8569b8840c2c64559e3c4a_TRYB_Guvence_Raporu_082026_ENG.pdf",
+        "tryb-bilira#R2F2",
+        "tryb-bilira#R2F4"
+      ],
+      "rationale": "August17 is still latest linked composition; signed-date admission is already repaired but cannot refresh aged assets.",
+      "changeRefs": [
+        "tryb-bilira#R2F2",
+        "tryb-bilira#R2F4"
+      ],
+      "sentinels": [
+        "tryb-bilira:gap:reserve:reserve:f3e432036a0ef2478d7e04cf:stale"
+      ],
+      "nextReviewTrigger": "A later dated primary examination or2026-11-01 archive re-review; no composition date bump before new evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usat-tether",
+      "taskIds": [
+        "V9G-b5300b2306f2b043",
+        "V9G-97cb7e6363eb265d"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WTether)",
+      "evidence": [
+        "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "usat-tether#R2F1",
+        "usat-tether#R2F2"
+      ],
+      "rationale": "Whole group includes Celo controller identity and aggregate materiality. On-chain and native liability controls now known; missing current Celo supply coverage remains a producer prerequisite, not issuer failure.",
+      "changeRefs": [
+        "usat-tether#R2F1",
+        "usat-tether#R2F2"
+      ],
+      "sentinels": [
+        "usat-tether:gap:deployment-control:bridge-meta:usat-tether:9281c7adf484d8a2cbc0",
+        "usat-tether:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Fresh canonical Celo+Ethereum score-eligible supply and production replay, or2026-11-01 re-review if pending.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:usat-tether",
+      "taskIds": [
+        "V9G-45de064949ecbe2e"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WTether)",
+      "evidence": [
+        "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "usat-tether#R2F1"
+      ],
+      "rationale": "Exact native Celo liability and LayerZero rail/configuration reviewed, but current route materiality is not proven by the dated reserve report.",
+      "changeRefs": [
+        "usat-tether#R2F1"
+      ],
+      "sentinels": [
+        "usat-tether:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Fresh canonical supply roster and bridge-materiality production observation including Celo; re-review2026-11-01 if absent.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usda-alpha-partner",
+      "taskIds": [
+        "V9G-91eb7cead5bec311"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc11)",
+      "evidence": [
+        "https://ap-organization-1.gitbook.io/alpha-partners/llms.txt",
+        "https://ap-organization-1.gitbook.io/alpha-partners/rules-and-trust.md",
+        "https://web.archive.org/web/20250809182209id_/https://alphapartner.vip/"
+      ],
+      "rationale": "Full current issuer corpus and recovered archive fail exact USDA identity and provide no measured composition. Await exact-token disclosure; no invented percentages or date bump.",
+      "changeRefs": [],
+      "sentinels": [
+        "usda-alpha-partner:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-10-21 or earlier USDA-specific legal issuer and dated assets/liabilities reserve report publication.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdai-usd-ai",
+      "taskIds": [
+        "V9G-b45653bc85b46741",
+        "V9G-b0b714e79a192ba3"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WUsdAi)",
+      "evidence": [
+        "https://docs.usd.ai/technical-overview/contract-addresses.md",
+        "Solana finalized slot 452346084: exact mint, 1-of-2 mint multisig, OFTStore BurnMint state, Arbitrum peer and BPF upgrade authority.",
+        "Arbitrum pinned block 510720428: reciprocal Solana peers; LayerZero send ULN confirms 20 confirmations and three required DVNs; receive ULN confirms 32 confirmations and three required DVNs.",
+        "Solana finalized slot 452350705: mint/upgrade multisig 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj and freeze/default-admin multisig CrzPtmcfAGwkCsDfnoEbGHSRsWPiVEiPmryXShy9sfsz, each autonomous 3-of-3 without timelock. Pause multisig Aht5ivj7NnZvAJVKshuMaoaC9hq2FiBiST4fccYaNAn5 separately observed at slot 452350848 as 2-of-3 without timelock.",
+        "Official Squads vault PDA seeds independently match all three authority PDAs; successful VaultTransactionExecute trace matches mint/upgrade vault."
+      ],
+      "rationale": "Static Solana route and control identities are resolved with primary and pinned onchain evidence, including nested autonomous Squads 3-of-3 voting, zero timelock, direct mint independent of LayerZero messaging, and program-upgrade authority. This is the curation milestone; exact production route-supply materiality and a new replay remain prerequisites, so no sentinel closure or numerical score restoration is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdai-usd-ai.json"
+      ],
+      "sentinels": [
+        "usdai-usd-ai:gap:deployment-control:bridge-meta:usdai-usd-ai:46fd20704d4801acbbf9",
+        "usdai-usd-ai:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Next production capture with exact chain+contract circulating-USD supply rows and source-generation joins after this static review; otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:usdai-usd-ai",
+      "taskIds": [
+        "V9G-7784dc4b5c1c54ac"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WUsdAi)",
+      "evidence": [
+        "https://docs.usd.ai/technical-overview/contract-addresses.md",
+        "Solana finalized slot 452346084: exact mint, 1-of-2 mint multisig, OFTStore BurnMint state, Arbitrum peer and BPF upgrade authority.",
+        "Arbitrum pinned block 510720428: reciprocal Solana peers; LayerZero send ULN confirms 20 confirmations and three required DVNs; receive ULN confirms 32 confirmations and three required DVNs.",
+        "Solana finalized slot 452350705: mint/upgrade multisig 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj and freeze/default-admin multisig CrzPtmcfAGwkCsDfnoEbGHSRsWPiVEiPmryXShy9sfsz, each autonomous 3-of-3 without timelock. Pause multisig Aht5ivj7NnZvAJVKshuMaoaC9hq2FiBiST4fccYaNAn5 separately observed at slot 452350848 as 2-of-3 without timelock.",
+        "Official Squads vault PDA seeds independently match all three authority PDAs; successful VaultTransactionExecute trace matches mint/upgrade vault."
+      ],
+      "rationale": "Static Solana route and control identities are resolved with primary and pinned onchain evidence, including nested autonomous Squads 3-of-3 voting, zero timelock, direct mint independent of LayerZero messaging, and program-upgrade authority. This is the curation milestone; exact production route-supply materiality and a new replay remain prerequisites, so no sentinel closure or numerical score restoration is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdai-usd-ai.json"
+      ],
+      "sentinels": [
+        "usdai-usd-ai:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Next production capture with exact chain+contract circulating-USD supply rows and source-generation joins after this static review; otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:usdb-blast",
+      "taskIds": [
+        "V9G-8e8e0c079bed0700"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatA)",
+      "evidence": [
+        "https://docs.blast.io/about-blast",
+        "https://raw.githubusercontent.com/blast-io/blast/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/USDB.sol",
+        "https://raw.githubusercontent.com/blast-io/blast/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/Shares.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xecddf748a60e23609c07af6ca3856744b139b911"
+      ],
+      "rationale": "Exact authenticated internal-rate profile applied; closure requires new replay.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdb-blast.json"
+      ],
+      "sentinels": [
+        "usdb-blast:gap:economic-control:oracle"
+      ],
+      "nextReviewTrigger": "Fresh coordinator production replay after source integration; re-review if Blast changes reporter/provider/admin.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdc-circle",
+      "taskIds": [
+        "V9G-cfd1b29d8b5bf5d5"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WCircle)",
+      "evidence": [
+        "https://docs.usecorn.com/docs/developers/Network/Deployed_Contracts/Know_Assets",
+        "https://docs.usecorn.com/docs/developers/Network/Infrastructure/Bridges",
+        "https://docs.usecorn.com/docs/developers/Network/Run_a_Node",
+        "https://api.routescan.io/v2/network/mainnet/evm/21000000/etherscan/api?module=contract&action=getsourcecode&address=0xdf0b24095e15044538866576754f3c964e902ee6"
+      ],
+      "rationale": "Corn representation/canonical identity is now verified and applied. Live authority/quorum/limits remain blocked by invalid RPC endpoints and unsupported explorer proxy state APIs; stale incomplete logs cannot establish current role holders.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdc-circle.json"
+      ],
+      "sentinels": [
+        "usdc-circle:gap:deployment-control:bridge-meta:usdc-circle:a0e8ef792b5045c3fb88"
+      ],
+      "nextReviewTrigger": "Working authenticated Corn RPC with a current pinned head or new official controller/deployment manifest; recheck2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usde-ethena",
+      "taskIds": [
+        "V9G-7f94676728f69ed7"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WEthena)",
+      "evidence": [
+        "https://tempo.xyz/developers/docs/protocol/tip20/spec",
+        "https://docs.ethena.fi/technical-design/key-addresses",
+        "Tempo block42130562: complete role replay from14579720; current sole issuer OFT, sole token admin Safe5/10; supplyCap300m immediate admin-raiseable."
+      ],
+      "rationale": "Authored current addressed controls and economic semantics; proxy upgrade-function/current all-direction DVN review remains unclaimed. Promotion is scoped to the unresolved control identity, not immutable cap/protective quorum assumptions.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usde-ethena.json"
+      ],
+      "sentinels": {
+        "doneWhenGapIdAbsent": "usde-ethena:gap:deployment-control:bridge-meta:usde-ethena:1c6f5e534708d941117b",
+        "doneWhenScoreReasonAbsent": null
+      },
+      "nextReviewTrigger": "Next production replay: confirm whether exact gap sentinel disappears; re-review on Tempo role/admin/cap/implementation changes or verified implementation disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usdm-mega",
+      "taskIds": [
+        "V9G-d7e2baf26247e40d",
+        "V9G-45b33e762f227f22"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMintRecon)",
+      "evidence": [
+        "https://app.megausd.money/mint-agreement",
+        "https://app.megausd.money/api/transparency/backing-and-supply/current",
+        "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf",
+        "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+      ],
+      "rationale": "Explicit third-party-loss allocation was found and a medium weak-quality overlay is proposed. A funded issuer recovery/waterfall and independent USDm NAV/valuation evidence remain unestablished. Do not close the claims or make a favorable score admission from issuer balances or upstream reports.",
+      "changeRefs": [
+        "usdm-mega#R2F4"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Owner decides weak mapping for explicit loss allocation, or issuer publishes enforceable loss-waterfall/recapitalization and independent USDm valuation/assurance.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usdq-quantoz",
+      "taskIds": [
+        "V9G-3137f82b74f59a13",
+        "V9G-f09dd4050faa23d7"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc12)",
+      "evidence": [
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf"
+      ],
+      "rationale": "Issuer disclosure and current onchain/source review narrow the question but do not provide independent all-chain reserve reconciliation, exact production key custody, or named custody-continuity terms. Internal ledger or controls assurance is not a financial balance reconciliation.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdq-quantoz:gap:mechanism-review:assuranceAndReconciliation",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "usdq-quantoz:gap:mechanism-review:custodyContinuity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "By 2026-11-01 or earlier on publication of the requested token-specific financial attestation, custody agreement or native-minter signer policy; mint methodology review also triggers re-review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:usdq-quantoz",
+      "taskIds": [
+        "V9S-858a2a774b9b2f17"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc12)",
+      "evidence": [
+        "https://www.quantoz.com/transparency",
+        "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf"
+      ],
+      "rationale": "Issuer disclosure and current onchain/source review narrow the question but do not provide independent all-chain reserve reconciliation, exact production key custody, or named custody-continuity terms. Internal ledger or controls assurance is not a financial balance reconciliation.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/usdq-quantoz.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": null,
+          "doneWhenScoreReasonAbsent": {
+            "reasonCode": "mint-control-question",
+            "path": "control:mint:reconciliation"
+          }
+        }
+      ],
+      "nextReviewTrigger": "By 2026-11-01 or earlier on publication of the requested token-specific financial attestation, custody agreement or native-minter signer policy; mint methodology review also triggers re-review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdr-ring",
+      "taskIds": [
+        "V9G-4f93a199a7626336"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatA)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+        "https://docs.ring.exchange/llms.txt",
+        "https://docs.ring.exchange/concepts/ring-protocol",
+        "https://web.archive.org/web/20231130080321id_/https://docs.ring.exchange/protocol-core/contract-addresses",
+        "https://raw.githubusercontent.com/RingProtocol/audits/main/RingLaunchpad%20-%20SlowMist%20Audit%20Report.pdf"
+      ],
+      "rationale": "Expanded current issuer, exact code/roles, audit, archive and repository review found no exact-token dated inventory; no reserve weights fabricated.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdr-ring:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "New dated issuer allocation/PCV/holder-right disclosure bound to current USDR/Core, otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:usdu-usdu-finance",
+      "taskIds": [
+        "V9G-81e1b9943ab97310"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatA)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/addresses/0xdde3ec717f220fc6a29d6a4be73f91da5b718e55/logs?topic=0x970e69884fc7a611c49fbc464f324ccf6be60b3c21d527a09f3e78cab0952229",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6b6893d82edbc8d6769ba3c407102d33da2b623f",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd9141f634ef9e871a5fe4f64195747db77a13f3e",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
+        "https://usdu.finance/transparency/",
+        "https://usdu.finance/transparency/",
+        "https://usdu.finance/wp-json/usdu-transparency/v1/backing-snapshot"
+      ],
+      "rationale": "Exact rate facts researched; interpretation of tier needs independent validator before applying the proposed oracle patch.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdu-usdu-finance:gap:economic-control:oracle"
+      ],
+      "nextReviewTrigger": "Validator adjudication of R2 oracle patch, or new endogenous-accounting methodology capability; otherwise 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usdx-hex-trust",
+      "taskIds": [
+        "V9G-2a228c80d78ae5e2"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc12)",
+      "evidence": [
+        "https://www.htdigitalassets.com/",
+        "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+      ],
+      "rationale": "Issuer disclosure and current onchain/source review narrow the question but do not provide independent all-chain reserve reconciliation, exact production key custody, or named custody-continuity terms. Internal ledger or controls assurance is not a financial balance reconciliation.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdx-hex-trust:gap:mechanism-review:assuranceAndReconciliation",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "By 2026-11-01 or earlier on publication of the requested token-specific financial attestation, custody agreement or native-minter signer policy; mint methodology review also triggers re-review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdx-hex-trust",
+      "taskIds": [
+        "V9G-e432c14da4fa168d"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc12)",
+      "evidence": [
+        "https://www.htdigitalassets.com/",
+        "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+      ],
+      "rationale": "Primary issuer disclosure retains an opaque reserve basket without a dated category split; exact-input admission discrepancy requires owner inspection.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usdx-hex-trust:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "By 2026-11-01 or earlier on publication of the requested token-specific financial attestation, custody agreement or native-minter signer policy; mint methodology review also triggers re-review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usdz-anzen",
+      "taskIds": [
+        "V9G-7ab44e745932b33a",
+        "V9G-6987562b368ec986",
+        "V9G-22063c2df11531a3"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc13)",
+      "evidence": [
+        "https://docs.anzen.finance/usdz-101/backing-assets-collateral.md",
+        "https://docs.anzen.finance/usdz-101/backing-assets-collateral/eligibility-critera.md",
+        "https://docs.anzen.finance/welcome-to-anzen/rwa-partner.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+      ],
+      "rationale": "Fresh research completed; see unknownResolution. Product-specific quantitative financial input remains unavailable; operational/source observations do not supply missing reserve or mechanism metrics.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdz-anzen:gap:mechanism-review:recovery",
+        "usdz-anzen:gap:mechanism-review:seniority",
+        "usdz-anzen:gap:mechanism-review:valuationCadence"
+      ],
+      "nextReviewTrigger": "Re-review by 2026-11-01 or on a dated issuer financial report, address-bound custody attestation, product-specific loss/margin/recovery terms, or complete legacy-deployment liability reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usp-pikudao",
+      "taskIds": [
+        "V9G-674a78aa3c1c642f",
+        "V9G-836f1309e783a470"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc13)",
+      "evidence": [
+        "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/reserve-backing.md",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/usp-backing-wallets.md",
+        "https://docs.piku.co/piku/terms-of-use.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e40b6be5affc984f36cf118c778f0a83be20370"
+      ],
+      "rationale": "Fresh research completed; see unknownResolution. Product-specific quantitative financial input remains unavailable; operational/source observations do not supply missing reserve or mechanism metrics.",
+      "changeRefs": [],
+      "sentinels": [
+        "usp-pikudao:gap:mechanism-review:lossAbsorption",
+        "usp-pikudao:gap:mechanism-review:marginAndLiquidation"
+      ],
+      "nextReviewTrigger": "Re-review by 2026-11-01 or on a dated issuer financial report, address-bound custody attestation, product-specific loss/margin/recovery terms, or complete legacy-deployment liability reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usp-pikudao",
+      "taskIds": [
+        "V9G-90ca9706c01d8d04"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc13)",
+      "evidence": [
+        "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/reserve-backing.md",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/usp-backing-wallets.md",
+        "https://docs.piku.co/piku/terms-of-use.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9e40b6be5affc984f36cf118c778f0a83be20370"
+      ],
+      "rationale": "Fresh research completed; see unknownResolution. Product-specific quantitative financial input remains unavailable; operational/source observations do not supply missing reserve or mechanism metrics.",
+      "changeRefs": [],
+      "sentinels": [
+        "usp-pikudao:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Re-review by 2026-11-01 or on a dated issuer financial report, address-bound custody attestation, product-specific loss/margin/recovery terms, or complete legacy-deployment liability reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:vbill-vaneck",
+      "taskIds": [
+        "V9G-61c2fbbf9de9e31e"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSecuritize)",
+      "evidence": [
+        "https://securitize.io/primary-market/vaneck-vbill",
+        "https://www.scribd.com/document/909996441/Trust-Formation-Certification-Documents"
+      ],
+      "rationale": "Fresh issuer offering, legal-document recovery, SEC filings and archive searches are recorded in round2 findings. Recovery remains bounded because governing current token-holder instruments are not authenticated; missing disclosure is not an adverse quality grade.",
+      "changeRefs": [],
+      "sentinels": [
+        "vbill-vaneck:gap:mechanism-review:lossRecoveryDesign"
+      ],
+      "nextReviewTrigger": "When issuer supplies current authenticated fund/feeder PPM, LP agreement and loss-allocation/custody instruments; re-review2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:vchf-vnx",
+      "taskIds": [
+        "V9G-6a09d15687f602b5",
+        "V9G-2469d380bb6a8149"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc13)",
+      "evidence": [
+        "https://base.blockscout.com/api/v2/smart-contracts/0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+      ],
+      "rationale": "Fresh research completed; see unknownResolution. New scoped Apex cash-reserve report recovered, but six legacy catalog deployments remain unjoined. Named covered custodian added; no whole-book refresh applied.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/vchf-vnx.json"
+      ],
+      "sentinels": [
+        "vchf-vnx:gap:mechanism-review:assuranceAndReconciliation",
+        "vchf-vnx:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Re-review by 2026-11-01 or on a dated issuer financial report, address-bound custody attestation, product-specific loss/margin/recovery terms, or complete legacy-deployment liability reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:vchf-vnx",
+      "taskIds": [
+        "V9G-be08cf3e69b47376"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc13)",
+      "evidence": [
+        "https://base.blockscout.com/api/v2/smart-contracts/0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+      ],
+      "rationale": "Fresh research completed; see unknownResolution. New scoped Apex cash-reserve report recovered, but six legacy catalog deployments remain unjoined. Named covered custodian added; no whole-book refresh applied.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/vchf-vnx.json"
+      ],
+      "sentinels": [
+        "vchf-vnx:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Re-review by 2026-11-01 or on a dated issuer financial report, address-bound custody attestation, product-specific loss/margin/recovery terms, or complete legacy-deployment liability reconciliation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:wsrusd-reservoir",
+      "taskIds": [
+        "V9G-aefe0894da485da2"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WReReservoir)",
+      "evidence": [
+        "Tempo42130411:changeTransferPolicyId(0) fromb757 succeeds; savings managerSafe Unauthorized.",
+        "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+      ],
+      "rationale": "Pinned Tempo always-reject policy reach is adverse and ready for a shared overlay append. Remaining deployment-specific transfer review coverage is still incomplete, and one new row does not clear the whole21-chain review.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "wsrusd-reservoir:gap:access:transfer",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "The exact Tempo row is merged and a full current deployment census/per-deployment dated review lands; replay the access-transfer sentinel.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:wsrusd-reservoir",
+      "taskIds": [
+        "V9G-f76885d40ad40e4f"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WReReservoir)",
+      "evidence": [
+        "Ethereum26098752:20remote peers/libraries;38successfulULNconfigs;Solana blockedlibrary;XDC singleDVN;Berachain correctEID30362.",
+        "https://metadata.layerzero-api.com/v1/metadata"
+      ],
+      "rationale": "Complete Ethereum source-side census and independent EOA delegate are now verified. Current destination endpoint/custody/options controls remain unsupported; stronger selected source DVNs do not establish all-chain favorable control equivalence.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/wsrusd-reservoir.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "wsrusd-reservoir:gap:economic-control:bridge",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Destination endpoint/configuration and key-custody evidence becomes available or changes; perform current end-to-end review and replay bridge-route sentinel.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:xdai-gnosis",
+      "taskIds": [
+        "V9G-cf97b2e8d0c1706e"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSky)",
+      "evidence": [
+        "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
+        "https://raw.githubusercontent.com/gnosischain/tokenbridge-contracts/52afd25b05f1afa3347f2f18595748b2149df6aa/USDSMigration.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x257bdd093cab1bd39ebf837dcb60f33d031d7d49",
+        "https://gnosis.blockscout.com/api/v2/smart-contracts/0xe6998b0c03d3cb9ee8c04f266e573c7fa8782846",
+        "https://raw.githubusercontent.com/OmegaAudits/audits/main/202510-Gnosis-Bridge-USDS-Upgrade.pdf",
+        "Ethereum 26098752 and Gnosis 48536255: three-second-aligned partial reserve/native-mint ledger"
+      ],
+      "rationale": "Current source and pinned reserves/native mint-burn counters provide partial technical reconciliation. No current independent engagement or source publication date was located in reviewed surfaces. Limited-grade interpretation is a medium overlay proposal; pending owner evidence-class/capability ruling, not promoted. Missing-date conservatism must not be relabeled measured weak.",
+      "changeRefs": [],
+      "sentinels": [
+        "xdai-gnosis:gap:mechanism-review:assuranceAndReconciliation"
+      ],
+      "nextReviewTrigger": "Owner adjudicates partial onchain evidence admission or Gnosis publishes dated full reserves/liabilities reconciliation; re-review by 2026-10-08.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:xdai-gnosis",
+      "taskIds": [
+        "V9G-8ee3ef0541be52bb",
+        "V9G-72bdfc853ab29a28",
+        "V9G-204fcf2f8b89dd8c"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSky)",
+      "evidence": [
+        "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
+        "https://gnosis.blockscout.com/api/v2/smart-contracts/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+        "Gnosis 48536255: WXDAI EIP-1967 implementation/admin/beacon zero; verified immutable WETH-style source"
+      ],
+      "rationale": "Immutable WXDAI local transfer remains permissionless and collateral-dependent access remains adverse. Proposed shared review refresh cannot certify a generation-bound total native/WXDAI supply partition; retain the complete claim-group deferral with exact scopes.",
+      "changeRefs": [],
+      "sentinels": [
+        "xdai-gnosis:gap:access:freeze",
+        "xdai-gnosis:gap:access:freeze:blacklist:xdai-gnosis",
+        "xdai-gnosis:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Transfer producer emits a reconciled native/WXDAI circulating-supply scope and fresh input-generation-bound materiality packet; review by 2026-10-08 or immediately after collateral access/control changes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:xusd-babelfish",
+      "taskIds": [
+        "V9G-27ea12f1a6cf1685"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc14)",
+      "evidence": [
+        "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md",
+        "https://babelfish.gitbook.io/the-babelfish-gitbook/tutorials-and-guides/xusd-statistics.md"
+      ],
+      "rationale": "Current and original adverse-block ten-bAsset balance census both reconcile over 99.99988% of XUSD supply. Earlier 53.4% premise is an incomplete roster. Qualitative limited custody-continuity/reconciliation mapping is proposed medium for verifier; no independent assurance or legal custody safeguards inferred.",
+      "changeRefs": [],
+      "sentinels": [
+        "xusd-babelfish:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Verifier adjudicates corrected ten-bAsset census; or issuer publishes dated custody continuity controls; re-review by 2026-11-01",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:yusd-aegis",
+      "taskIds": [
+        "V9G-ad83c4b1d931af4a",
+        "V9G-d5ae7949719896f2"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WAegis)",
+      "evidence": [
+        "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "https://web.archive.org/web/20250806030354/https://docs.aegis.im/overview/profit-generation-mechanism",
+        "Current Accountable snapshot ts 1790872495924"
+      ],
+      "rationale": "Fresh source recovery did not supply the required quantified hedge risk data.",
+      "changeRefs": [],
+      "sentinels": [
+        "yusd-aegis:gap:mechanism-review:marginAndLiquidation",
+        "yusd-aegis:gap:mechanism-review:unwindCapacity"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier issuer publication of measured venue margin/liquidation and unwind data or token-level deployment-wallet reserve inventory.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:yusd-aegis",
+      "taskIds": [
+        "V9G-fae35cff28f64b10"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WAegis)",
+      "evidence": [
+        "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "https://web.archive.org/web/20250806030354/https://docs.aegis.im/overview/profit-generation-mechanism",
+        "Current Accountable snapshot ts 1790872495924"
+      ],
+      "rationale": "Ethereum Chain is a deployment-location aggregate; no token/address roster establishes asset class or dependency. No favorable classification is inferred.",
+      "changeRefs": [],
+      "sentinels": [
+        "yusd-aegis:gap:reserve:reserve:7db3ad2aae359f182f0e3928"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier issuer publication of measured venue margin/liquidation and unwind data or token-level deployment-wallet reserve inventory.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:yusd-yieldfi",
+      "taskIds": [
+        "V9G-335a089627c0a273"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc14)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xccaa27e3db44e06bd9001958de5b41301fd28002",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5bf44d32260aee6b807c490e92ef0481d15ab493",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x5d83b88f8770de1788e89cc1ec5b2cda8287212c",
+        "https://sourcify.dev/server/v2/contract/56/0x52cb1a9a9154f0e0a3c7ce08f95caee6062dbca9?fields=sources",
+        "https://docs.yield.fi/legal-documents/token-terms/yusd.md",
+        "https://docs.yield.fi/prime-analytics/transparency-and-analytics.md",
+        "https://v2.yield.fi/transparency",
+        "https://docs.yield.fi/due-diligence-questionaire/operational-control.md",
+        "https://docs.yield.fi/legal-documents/terms-and-conditions/series-segregation-and-bankruptcy-remote-structure-disclosure.md"
+      ],
+      "rationale": "No dated yUSD-specific funding/basis stress measurement found in issuer terms, live transparency, operating model, APIs or audit scope; issuer output prerequisite remains.",
+      "changeRefs": [],
+      "sentinels": [
+        "yusd-yieldfi:gap:mechanism-review:fundingBasisStress"
+      ],
+      "nextReviewTrigger": "Issuer publishes dated vault-specific funding/basis stress output; re-review by 2026-11-01",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:yusd-yieldfi",
+      "taskIds": [
+        "V9G-4a9a9eebaa358e86"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc14)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xccaa27e3db44e06bd9001958de5b41301fd28002",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5bf44d32260aee6b807c490e92ef0481d15ab493",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x5d83b88f8770de1788e89cc1ec5b2cda8287212c",
+        "https://sourcify.dev/server/v2/contract/56/0x52cb1a9a9154f0e0a3c7ce08f95caee6062dbca9?fields=sources",
+        "https://docs.yield.fi/legal-documents/token-terms/yusd.md",
+        "https://docs.yield.fi/prime-analytics/transparency-and-analytics.md",
+        "https://v2.yield.fi/transparency",
+        "https://docs.yield.fi/due-diligence-questionaire/operational-control.md",
+        "https://docs.yield.fi/legal-documents/terms-and-conditions/series-segregation-and-bankruptcy-remote-structure-disclosure.md"
+      ],
+      "rationale": "All ten native deployments have primary verified restrictable transfer code with pinned implementations; exact shared transfer replacement ready for coordinator.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/transfer-review-overlays-v1.json"
+      ],
+      "sentinels": [
+        "yusd-yieldfi:gap:access:transfer"
+      ],
+      "nextReviewTrigger": "Coordinator shared transfer patch and fresh production replay",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:yzusd-yuzu",
+      "taskIds": [
+        "V9G-ee4517d44b8a7a27",
+        "V9G-ef5e437ba40a0a4a"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WYuzu)",
+      "evidence": [
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc eth_getStorageAt EIP1967 implementation",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x38d52e0f",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x355274ea",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0xc1590cd7",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0xb6c0f40d",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x187b8cc0",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x61d027b3",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x3215c243",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x91d148549f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6000000000000000000000000c72f80402c060d6fb89359f319d1daa20166f282",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc {\"method\": \"eth_call\", \"from\": \"0xc72f80402c060d6fb89359f319d1daa20166f282\", \"data\": \"0x94bf804d0000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000c72f80402c060d6fb89359f319d1daa20166f282\"}",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x70a08231000000000000000000000000c8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x248a9ca3a49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x91d14854a49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c217750000000000000000000000005f3d29ef17700f8658c566dac7fbd76e0d86b78c",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x248a9ca39d4608ca7098f32b4a58db3fe321284edffb95a174c82d9968f09dc583f7abba",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x91d148549d4608ca7098f32b4a58db3fe321284edffb95a174c82d9968f09dc583f7abba0000000000000000000000005f3d29ef17700f8658c566dac7fbd76e0d86b78c",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x248a9ca33703acdb9ce769bac8149460bf280d380407b7c677f54b5580b22e90b4d96f9d",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x91d148543703acdb9ce769bac8149460bf280d380407b7c677f54b5580b22e90b4d96f9d0000000000000000000000005f3d29ef17700f8658c566dac7fbd76e0d86b78c"
+      ],
+      "rationale": "Role semantics resolved as collateral-funded eligibility; removed unsupported mixed-holder arbitrary-mint path.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/yzusd-yuzu.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "yzusd-yuzu:gap:deployment-control:mint-meta:yzusd-yuzu:6f0e52deae1208ca9dd3"
+        },
+        {
+          "doneWhenGapIdAbsent": "yzusd-yuzu:gap:deployment-controls"
+        }
+      ],
+      "nextReviewTrigger": "Fresh coordinator replay removes unresolved deployment-control sentinels; re-review on implementation/facet upgrade or change to collateral mint execution.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:yzusd-yuzu",
+      "taskIds": [
+        "V9S-6d28ad899d0c6309"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WYuzu)",
+      "evidence": [
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+        "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc eth_getStorageAt EIP1967 implementation",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x38d52e0f",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x355274ea",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0xc1590cd7",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0xb6c0f40d",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x187b8cc0",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x61d027b3",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x3215c243",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x91d148549f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6000000000000000000000000c72f80402c060d6fb89359f319d1daa20166f282",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc {\"method\": \"eth_call\", \"from\": \"0xc72f80402c060d6fb89359f319d1daa20166f282\", \"data\": \"0x94bf804d0000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000c72f80402c060d6fb89359f319d1daa20166f282\"}",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x70a08231000000000000000000000000c8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x248a9ca3a49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x91d14854a49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c217750000000000000000000000005f3d29ef17700f8658c566dac7fbd76e0d86b78c",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x248a9ca39d4608ca7098f32b4a58db3fe321284edffb95a174c82d9968f09dc583f7abba",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x91d148549d4608ca7098f32b4a58db3fe321284edffb95a174c82d9968f09dc583f7abba0000000000000000000000005f3d29ef17700f8658c566dac7fbd76e0d86b78c",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x248a9ca33703acdb9ce769bac8149460bf280d380407b7c677f54b5580b22e90b4d96f9d",
+        "plasma block 33932322 0x6695c0f8706c5ace3bdf8995073179cca47926dc 0x91d148543703acdb9ce769bac8149460bf280d380407b7c677f54b5580b22e90b4d96f9d0000000000000000000000005f3d29ef17700f8658c566dac7fbd76e0d86b78c"
+      ],
+      "rationale": "Same issuance fact resolves the unresolved-mint-authority projection, without weakening actual upgrade/parameter paths.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/yzusd-yuzu.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenScoreReasonAbsent": {
+            "reasonCode": "unresolved-mint-authority",
+            "path": "control:control:mint-meta:yzusd-yuzu:6f0e52deae1208ca9dd3:cause:yzusd-yuzu%3Agap%3Adeployment-control%3Amint-meta%3Ayzusd-yuzu%3A6f0e52deae1208ca9dd3"
+          }
+        }
+      ],
+      "nextReviewTrigger": "Fresh replay; re-review on mint-path implementation upgrade.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:yzusd-yuzu",
+      "taskIds": [
+        "V9G-21721e6157f7e275",
+        "V9G-b4b24835d6479da1",
+        "V9G-607c4a1abb0080fd"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WYuzu)",
+      "evidence": [
+        "https://cache.accountable.capital/dashboard/yuzu",
+        "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies"
+      ],
+      "rationale": "Need exact held token/receipt identity, chain, PT expiry/redemption asset and loop debt/netting, owned by Yuzu/Accountable. Current label mapping candidate is medium only.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "yzusd-yuzu:gap:reserve:reserve:fc29833eb3536f9e37edfa9a"
+        },
+        {
+          "doneWhenGapIdAbsent": "yzusd-yuzu:gap:reserve:reserve:06c021dbc03328a7483feb49"
+        },
+        {
+          "doneWhenGapIdAbsent": "yzusd-yuzu:gap:reserve:reserve:35a7c8d6741ece8337de642e"
+        }
+      ],
+      "nextReviewTrigger": "Yuzu/Accountable publish position-level roster or 2026-10-15 review.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ACCESS_REVIEW:yzusd-yuzu",
+      "taskIds": [
+        "V9G-f0eeb83e8c09efb3",
+        "V9G-9c812175cd6b5967"
+      ],
+      "workType": "ACCESS_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WYuzu)",
+      "evidence": [
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions",
+        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions"
+      ],
+      "rationale": "Platform account blocking is documented; complete holder-token reach across operational and legal controls remains unestablished.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "yzusd-yuzu:gap:access:freeze"
+        },
+        {
+          "doneWhenGapIdAbsent": "yzusd-yuzu:gap:access:freeze:blacklist:yzusd-yuzu"
+        }
+      ],
+      "nextReviewTrigger": "Issuer publishes token-scoped blocking execution policy or implementation changes; review 2026-10-15.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:zeusd-zoth",
+      "taskIds": [
+        "V9G-1185e5062ff17784",
+        "V9G-3dabd8664c230ad4"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc15)",
+      "evidence": [
+        "https://web.archive.org/web/20260519034706id_/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd",
+        "https://web.archive.org/web/20260519041844id_/https://docs.zoth.io/zoth/tech-center/contract-deployments",
+        "https://dune.com/zoth/zoth",
+        "https://www.prnewswire.com/news-releases/zoths-next-chapter-advancing-secure-scalable-rwa-infrastructure-302450470.html",
+        "Ethereum block 26098747: V1 router paused; CollateralVault has eight configured records, not measured holding weights."
+      ],
+      "rationale": "Completed fresh primary, archive, source-code, audit, issuer-dashboard and pinned-state research. Recovery program announcement is not an enforceable funded backstop, waterfall, completed-payout ledger or current reserve-to-liability reconciliation. Current USDZe/zVault materials cannot be substituted for V1.",
+      "changeRefs": [],
+      "sentinels": [
+        "zeusd-zoth:gap:mechanism-review:backstop",
+        "zeusd-zoth:gap:mechanism-review:shutdownAndBadDebt"
+      ],
+      "nextReviewTrigger": "2026-11-01, or earlier publication of V1-specific dated collateral/liability reconciliation, funded backstop/legal loss-waterfall terms, completed compensation ledger, or recovered Atlas transparency access.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:zeusd-zoth",
+      "taskIds": [
+        "V9G-d4ca3db3cd719e3a"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc15)",
+      "evidence": [
+        "https://web.archive.org/web/20260519034706id_/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd",
+        "https://web.archive.org/web/20260519041844id_/https://docs.zoth.io/zoth/tech-center/contract-deployments",
+        "https://dune.com/zoth/zoth",
+        "https://www.prnewswire.com/news-releases/zoths-next-chapter-advancing-secure-scalable-rwa-infrastructure-302450470.html",
+        "Ethereum block 26098747: V1 router paused; CollateralVault has eight configured records, not measured holding weights."
+      ],
+      "rationale": "Completed fresh primary, archive, source-code, audit, issuer-dashboard and pinned-state research. Recovery program announcement is not an enforceable funded backstop, waterfall, completed-payout ledger or current reserve-to-liability reconciliation. Current USDZe/zVault materials cannot be substituted for V1.",
+      "changeRefs": [],
+      "sentinels": [
+        "zeusd-zoth:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-11-01, or earlier publication of V1-specific dated collateral/liability reconciliation, funded backstop/legal loss-waterfall terms, completed compensation ledger, or recovered Atlas transparency access.",
+      "factsClosed": 0
     }
   ]
 }

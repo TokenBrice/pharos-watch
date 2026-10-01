@@ -63,6 +63,8 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
     analogousMetrics: z.record(z.string(), z.number().finite()).optional(),
     collateralizationMeasurement: z
       .object({
+        /** Identity of the measured subject and immutable pin, shared unchanged by wrappers. */
+        measurementId: z.string().trim().min(1),
         ratio: z.number().finite().nonnegative(),
         rationale: z.string().trim().min(1),
         sourceUrl: z.string().url(),

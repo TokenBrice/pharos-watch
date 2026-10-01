@@ -51,7 +51,7 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
-        "observedBlock": 26095809,
+        "observedBlock": 26098747,
         "sources": [
           {
             "label": "ZeUSD router implementation",
@@ -73,7 +73,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
-        "observedBlock": 26095809,
+        "observedBlock": 26098747,
         "sources": [
           {
             "label": "ZeUSD AccessController implementation (verified source)",
@@ -99,7 +99,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
-        "observedBlock": 26095809,
+        "observedBlock": 26098747,
         "sources": [
           {
             "label": "ZeUSD token role logs",
@@ -130,7 +130,7 @@
       "canChangeMintLogic": true,
       "controlRef": "ZeUSD token owner/admin EOA",
       "observedAt": "2026-10-01",
-      "observedBlock": 26095809,
+      "observedBlock": 26098747,
       "sources": [
         {
           "label": "ZeUSD implementation (verified source; _authorizeUpgrade is onlyRole(DEFAULT_ADMIN_ROLE))",

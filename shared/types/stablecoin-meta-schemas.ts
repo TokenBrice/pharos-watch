@@ -139,6 +139,19 @@ export const MechanismArchetypeReviewSchema = z
   })
   .strict();
 
+export const ParentBackingInheritanceSchema = z
+  .object({
+    state: z.literal("withheld"),
+    reason: z.literal("mixed-strategy-without-measured-parent-claim"),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().trim().min(1),
+    rationale: z.string().trim().min(1),
+    sources: z.array(StablecoinLinkSchema).min(1),
+  })
+  .strict();
+
+export type ParentBackingInheritance = z.output<typeof ParentBackingInheritanceSchema>;
+
 export const ProofOfReservesSchema = z
   .object({
     type: z.enum(PROOF_OF_RESERVES_TYPE_VALUES),

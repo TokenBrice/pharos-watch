@@ -17,6 +17,16 @@ const USDC = "0x754704bc059f8c67012fed69bc8a327a5aafb603";
 const RPC_URL = "https://rpc.monad.xyz";
 const BRANCH_PARAMS = {
   rpcUrl: RPC_URL,
+  // Independently reviewed 2026-10-01; the same-run vault/asset checks below
+  // refuse any registry change before this complete roster reaches accounting.
+  census: {
+    kind: "reviewed-roster",
+    reviewedAt: "2026-10-01",
+    sourceUrls: [
+      "https://raw.githubusercontent.com/leverup-xyz/DefiLlama-Adapters/main/projects/leverup/index.js",
+      "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin",
+    ],
+  },
   branches: [{
     name: "USDC liquidity-layer collateral",
     holder: VAULT,
