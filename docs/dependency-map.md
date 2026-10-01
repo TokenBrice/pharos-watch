@@ -228,7 +228,7 @@ Auto-fit and **Fit** never magnify above base scale. The fitted viewBox is at le
 - lazy-loads the graph with `next/dynamic` (`ssr: false`) behind a loading placeholder;
 - passes `focusCoinId`, `minimalChrome`, and a 500-node cap, which drops the header controls and renders only the focus coin's own neighborhood, ringed around it;
 - scales nodes up and shows ticker labels when the neighborhood is small: 1.5x at ≤10 visible nodes, 2x at ≤5. `MAX_RASTER_LOGO_RADIUS = 46` in `contagion-graph-svg.tsx` caps the drawn raster image radius; `.svg` logos are exempt. Logos come from static `logosById`, with no minimum raster-source resolution guarantee;
-- takes the wider column (`3fr`) when it shares the row with the variant-relationship card or collateral-usage list (`2fr`), and returns `null` only when there is no focus card, no graph, no supplemental context, and no source error.
+- takes the wider column (`3fr`) when it shares the row with the variant-relationship card or collateral-usage list (`2fr`), and returns `null` when no context disclosure has a row, there is no graph, no supplemental context, and no source error.
 
 The **Used by** list comes from the same published neighborhood edges, selecting `edge.from === stablecoinId` and listing each dependent at `edge.to`; authored reserve names alone never add an entry. Relationship labels use published `dependencyType`. For v5 edges without it, basket means collateral; serial means wrapper only when the dependent's tracked variant parent matches the upstream, otherwise serial claim. Basket shares show `share unknown` for null, `n/a` for zero, `<1%` for positive sub-1% shares, and a percentage otherwise; serial entries omit shares.
 
@@ -239,6 +239,6 @@ The four context disclosures use published data:
 - **Scored role dependencies (not drawn)** lists `card.dependencies.roles`, including upstream, role, weight, and role score or unavailable status.
 - **Known, not in the scored graph** lists `card.dependencyCoverage`, including share, reason, identity verification, and source date. These rows never enter the graph or exposure totals.
 
-Absent role or coverage lists mean not published for this generation, including older retained payloads; empty lists mean no corresponding rows were published. The section can therefore render its disclosures even without a drawn neighborhood.
+Absent role or coverage lists mean not published for this generation, including older retained payloads; empty lists mean no corresponding rows were published. The disclosures render, even without a drawn neighborhood, only when at least one has a row: a direct dependent, an upstream link, a scored role, or a coverage row. Absent and empty lists alone never keep the section visible; a variant card or collateral-usage list still renders without the empty disclosures.
 
 The section links to `/dependency-map/?focus=<coinId>`. Its market-cap map also retains nulls. On either query error it shows a shared retry notice and can retain published neighborhood data; unlike the map-route client, it does not discard cached market caps on a market-cap query error.
