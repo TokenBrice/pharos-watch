@@ -150,6 +150,45 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
       dashed: true,
     },
   },
+  "ucits-trs-fund": {
+    accentColor: "var(--mechanism-tbill)",
+    stressFootnote: "stress: incomplete hedge / counterparty collateral loss / fund gate",
+    ariaLabel: (symbol) =>
+      `${symbol} mechanism: investors hold proportional fund shares backed by physical securities and total-return swaps, redeemable at NAV under fund terms.`,
+    description: (symbol) =>
+      `Eligible investors subscribe to an exact fund share class; physical securities, signed total-return swaps and any unswapped sleeves determine its economic book; ${symbol} records a proportional fund interest, with NAV reconciliation, collateral and default recovery evaluated separately.`,
+    defaultSteps: (symbol) => [
+      { label: "Fund subscription", subtitle: "exact share class (KYC)" },
+      { label: "Securities + TRS", subtitle: "signed derivative exposure" },
+      { label: `${symbol} fund-share`, subtitle: "proportional NAV claim" },
+    ],
+  },
+  "shared-reserve": {
+    accentColor: "var(--mechanism-cdp)",
+    stressFootnote: "stress: shared liability deficit / encumbrance / exchange liquidity gate",
+    ariaLabel: (symbol) =>
+      `${symbol} mechanism: a live protocol exchange issues a currency liability backed alongside other currencies by one shared reserve.`,
+    description: (symbol) =>
+      `An exact live exchange provider issues or exchanges ${symbol}; a common reserve supports several currency liabilities; the operational token claim does not prove exclusive reserve allocation, complete liability coverage or insolvency priority.`,
+    defaultSteps: (symbol) => [
+      { label: "Protocol exchange", subtitle: "exact live pool / provider" },
+      { label: "Shared reserve", subtitle: "several currency liabilities" },
+      { label: `${symbol} liability`, subtitle: "operational exchange claim" },
+    ],
+  },
+  "protocol-position": {
+    accentColor: "var(--mechanism-cdp)",
+    stressFootnote: "stress: position / withdrawal failure / unreconciled residual liabilities",
+    ariaLabel: (symbol) =>
+      `${symbol} mechanism: bridge or module issuance creates an operational claim on managed protocol positions, with local withdrawal and recovery risk.`,
+    description: (symbol) =>
+      `An exact deployed bridge or module issues ${symbol}; managers hold underlying vault or protocol positions; holders withdraw through the operational path, while local custody, liability conservation, encumbrance and default recovery remain distinct from the underlying stablecoin's reserves.`,
+    defaultSteps: (symbol) => [
+      { label: "Bridge / module", subtitle: "exact deployed issuance" },
+      { label: "Managed positions", subtitle: "receipts counted once" },
+      { label: `${symbol} liability`, subtitle: "protocol withdrawal claim" },
+    ],
+  },
 };
 
 /**

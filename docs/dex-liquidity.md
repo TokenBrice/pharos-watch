@@ -316,6 +316,19 @@ This direct CEX lane is deliberately diagnostic for now:
 
 The lane exists to compare direct venue depth against CoinGecko depth-informed orderbook rows before any future scoring integration.
 
+### Exact-request execution certificates (local V10)
+
+Safety Score methodology 10.0 adds a separate exact-request admission path, not another liquidity-score formula. `worker/src/lib/exit-execution/orderbooks.ts` reads Kraken's exact market metadata and sell-side bids, brackets the snapshot with venue time, rejects crossed/inverted/malformed books, and walks integer input/output units with minimum quantity/cost, lot rounding and conservative applicable taker fees. A partial final level is allowed; fees are charged once. Quote-currency USD value must come from the captured output reference, not a token symbol or presumed peg. Empty applicable-fee arrays do not mean zero fees: an exact reviewed fee-schedule content digest and applicable upper bound must be supplied and revalidated, otherwise the producer reports `kraken-applicable-fee-unavailable`.
+
+REST depth is an **observed prefix**, never an exhaustive market. Its response digest identifies the bracketed snapshot but is not an exchange order-book sequence. A valid empty prefix is observed zero; a failed or invalid response is unavailable. Public depth does not prove an eligible account, deposits, withdrawals or a maximum bank-settlement time. Those required gates need same-run evidence; without them the route cannot score. Shared account/venue inventory and settlement failure domains cannot earn independent-backup credit.
+
+The structural registry `shared/data/safety-score-v9/exit-execution-model-reviews-v1.json` starts empty. Existing routes, including USDC's scored routes, are not replaced or reclassified. When a reviewed record exists, `computeStablecoinScores` runs its observer serially before the existing payload bounds, increases actual route observation counts, and leaves retained pool counts, unsupported pool remainders, chain census, TVL and circulating supply unchanged. Bodies are fully consumed through the bounded body reader before another request starts; the existing abort signal is forwarded. No new trigger is introduced. Bitstamp/Kinesis and uncovered AMM families remain research-only: a discovered ticker, rate-bearing pool or target-resolution change alone cannot grant execution eligibility.
+
+The strict wire schema and sole policy authority live in `shared/types/exit-route.ts` and `semantic.exit.executionModels`; admission is shared with the compiler/evaluator in `shared/lib/safety-score-v9/exit-execution.ts`. Each new model must contain the defining policy stress-grid request, exact input units, every actual output leg and its source clock, gates, reviewed deployment/code identity, settlement endpoint, source generation and resolved freshness budgets. No smaller-quote interpolation or legacy documented-capacity fallback is used for a certificate-backed route. The public breakdown removes private holder prerequisites, evidence identifiers and producer configuration while retaining request amounts and gate decisions.
+
+For a read-only live diagnostic, run `node --import tsx agents/2026-10-01-curation-pass/r2/build/BuildExit-live.mts`; it records the actual observation clock and response hashes in an injectable diagnostic packet. It does not author canonical coin/review data or mutate an old capture. See [redemption execution certificates](./redemption-backstops.md#exact-request-execution-certificates-local-v10) for permissioned paths and settlement boundaries.
+
+
 ### Pool Stress Index (0-100)
 
 Per-pool stress metric: `35x(1-balanceRatio) + 25x(1-organicFraction) + 20xImmaturityPenalty + 20x(1-pairQuality)`. TVL-weighted average stored as `avg_pool_stress`.

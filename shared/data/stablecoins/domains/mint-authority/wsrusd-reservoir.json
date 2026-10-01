@@ -9,8 +9,11 @@
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-14",
-      "observedBlock": 25531314,
+      "deploymentRefs": [
+        "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+      ],
+      "observedAt": "2026-10-01",
+      "observedBlock": 26099924,
       "sources": [
         {
           "label": "Reservoir wsrUSD product docs",
@@ -19,6 +22,10 @@
         {
           "label": "Blockscout verified wsrUSD Savingcoin source",
           "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+        },
+        {
+          "label": "Fully verified Savingcoin source and exact runtime matched at Ethereum block 26099924",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
         },
         {
           "label": "Ethereum PublicNode RPC",

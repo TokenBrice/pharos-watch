@@ -83,7 +83,10 @@
     {
       "chain": "xrpl",
       "address": "4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL",
-      "decimals": 0
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     },
     {
       "chain": "stellar",

@@ -266,6 +266,7 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       expiresAt: "2026-09-23",
       reviewer: "test-fixture",
       custody: "fully-onchain-no-offchain-custodian",
+      scopeKind: "whole-allocation",
       localLeverage: "no-borrowing-surface",
       capitalReuse: "none",
       rationale: "Fixture allocation would resolve an unavailable fact to none.",

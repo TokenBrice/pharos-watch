@@ -28,6 +28,29 @@ const transferFixture = { schemaVersion: 1, note: "Fixture", reviews: [transferO
 const operationalFixture = { schemaVersion: 1, note: "Fixture", overlays: [operationalResilienceOverlays.overlays[0]] };
 
 describe("shared Safety Score V9 overlay boundaries", () => {
+  it.each(["ucits-trs-fund", "shared-reserve", "protocol-position"] as const)(
+    "requires charged unknowns rather than applicability or synthetic-metric relief for %s",
+    (archetype) => {
+      const sourceUrl = "https://example.com/current-disclosure";
+      const row = {
+        assetId: "fixture-family", archetype, reviewedAt: "2026-10-01",
+        sources: [{ label: "Current exact-token disclosures", url: sourceUrl }],
+        notes: "Exact current identity; complete recovery information not published.", metrics: {},
+        components: { defaultRecovery: { applicability: "unavailable", rationale: "Default priority and funded recovery not disclosed in searched terms.", sourceUrl } },
+      };
+      const fixture = { schemaVersion: 1, note: "Native-family boundary fixture", overlays: [row] };
+      expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse(fixture).success).toBe(true);
+      for (const invalid of [
+        { ...row, components: { defaultRecovery: { ...row.components.defaultRecovery, applicability: "not-applicable" } } },
+        { ...row, metrics: { exogenousBackingShare: 1 } },
+        { ...row, analogousMetrics: { reserveSurplusPct: 100 } },
+        { ...row, components: { defaultRecovery: { ...row.components.defaultRecovery, sourceUrl: "https://example.com/unlisted" } } },
+      ]) {
+        expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({ ...fixture, overlays: [invalid] }).success).toBe(false);
+      }
+    },
+  );
+
   it("validates every checked-in overlay asset through the shared schemas", () => {
     expect(() => SafetyScoreV9MechanismReviewOverlayFileSchema.parse(mechanismOverlays)).not.toThrow();
     expect(() => SafetyScoreV9ReviewedTransferFileSchema.parse(transferOverlays)).not.toThrow();

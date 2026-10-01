@@ -1,6 +1,6 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9AssetFactsBase, V9ExitRouteFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
-import type { ExitRouteObservationHistory, PhysicalToUsdTrace } from "../../types/exit-route";
+import type { ExitExecutionCertificate, ExitRouteObservationHistory, PhysicalToUsdTrace } from "../../types/exit-route";
 import type {
   RedemptionAccessModel,
   RedemptionExecutionModel,
@@ -19,7 +19,8 @@ import {
 } from "../exit-route-scoring";
 import { clampScore, roundTo } from "../math";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
-import { compareText, uniqueSorted } from "./primitives";
+import { compareText, domainDigest, uniqueSorted } from "./primitives";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, resolveExitExecutionRequestPoint } from "./exit-execution";
 
 export type V9ExitAccess = RedemptionAccessModel;
 export type V9ExitSettlement = RedemptionSettlementModel;
@@ -80,6 +81,8 @@ export interface V9ExitEvaluationRoute {
   outputValueRetention: number;
   unboundedDeliveryCap?: number;
   physicalToUsd?: PhysicalToUsdTrace;
+  executionModelId?: string;
+  executionCertificate?: ExitExecutionCertificate;
   capacityCurve: readonly V9ExitCapacityPoint[];
   routeScoreCap: "queue-redeem" | "offchain-issuer" | null;
   failureDomains: readonly string[];
@@ -93,6 +96,7 @@ export interface V9ExitRouteTrace {
   modelConfidence: V9ExitEvaluationRoute["modelConfidence"];
   observationHistory: ExitRouteObservationHistory | null;
   physicalToUsd?: PhysicalToUsdTrace;
+  executionCertificate?: ExitExecutionCertificate;
   horizon: V9ExitHorizon;
   capacityScoringHorizon: V9ExitCapacityScoringHorizon;
   settlementDelaySec: number;
@@ -200,6 +204,7 @@ export function resolveV9ExitCapacityAtRequest(
   points: readonly V9ExitCapacityPoint[],
   request: V9ExitStressRequest,
 ): V9ExitCapacityPoint | null {
+  // Legacy curves retain interpolation; certified models use exact request points before reaching this boundary.
   if (points.length === 0 || curveIssue(points)) return null;
   const eligibleCosts = uniqueSorted(
     points.filter((point) => point.maxCostBps <= request.maxCostBps).map((point) => String(point.maxCostBps)),
@@ -389,6 +394,9 @@ function isCreditableNonAtomicRedemption(
 function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
   if (route.applicability === "not-applicable") return null;
   if (route.applicability === "unresolved") return "missing-same-notional-route";
+  if (route.executionModelId && (!route.executionCertificate || !route.scoreEligible || route.observationState !== "known")) {
+    return "unsupported-same-notional-route";
+  }
   if (route.physicalToUsd?.rejectionReason != null) return "missing-same-notional-route";
   if (route.settlementBoundUnproven) return "unproven-settlement-bound";
   if (route.outputResolved === false) return "unresolved-exit-output";
@@ -444,9 +452,16 @@ function resolveIncludedRouteCapacity(
   if (exclusionReason !== null || route.applicability === "not-applicable") {
     return { state: "excluded", exclusionReason };
   }
-  const capacityPoint = resolveV9ExitCapacityAtRequest(route.capacityCurve, route.physicalToUsd
-    ? { ...request, maxCostBps: envelope.policy.semantic.exit.physicalToUsd.maxCostBps }
-    : request);
+  const proof = route.executionCertificate ? resolveExitExecutionRequestPoint(route.executionCertificate, request) : null;
+  const capacityPoint = route.executionModelId
+    ? proof && proof.certification !== "diagnostic"
+      ? route.capacityCurve.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd &&
+          point.maxCostBps === request.maxCostBps && point.executableUsd === proof.executableUsd &&
+          point.executionCostBps === proof.executionCostBps) ?? null
+      : null
+    : resolveV9ExitCapacityAtRequest(route.capacityCurve, route.physicalToUsd
+      ? { ...request, maxCostBps: envelope.policy.semantic.exit.physicalToUsd.maxCostBps }
+      : request);
   if (capacityPoint === null) return { state: "incomparable" };
   if (
     !Number.isFinite(route.outputValueRetention) ||
@@ -550,6 +565,7 @@ function evaluateRoute(
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
     ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
+    ...(route.executionCertificate ? { executionCertificate: route.executionCertificate } : {}),
     horizon,
     capacityScoringHorizon: route.capacityScoringHorizon,
     settlementDelaySec: route.settlementDelaySec,
@@ -864,6 +880,8 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
     ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
+    ...(route.executionModelId ? { executionModelId: route.executionModelId } : {}),
+    ...(route.executionCertificate ? { executionCertificate: route.executionCertificate } : {}),
     ...access,
     capacityScoringHorizon: route.capacityScoringHorizon ?? "unknown",
     settlement: mapSettlement(route),
@@ -918,9 +936,11 @@ export function evaluateV9ExitAssetFacts(
   asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes">,
   envelope: V9ValidatedPolicyEnvelope,
   preExitDangerHeld = false,
+  executionContext?: { assetId: string; clockSec: number },
 ): V9ExitEvaluationResult {
   return evaluateV9Exit(
     {
+      ...executionContext,
       circulatingUsd: selectV9ExitCirculatingUsd(asset.supply),
       portfolioStatus:
         asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
@@ -948,6 +968,8 @@ function routesAreIndependent(left: V9ExitEvaluationRoute, right: V9ExitEvaluati
 export function evaluateV9Exit(
   args: {
     circulatingUsd: number | null;
+    assetId?: string;
+    clockSec?: number;
     portfolioStatus?: "reviewed-complete" | "incomplete";
     routes: readonly V9ExitEvaluationRoute[];
     /** The asset is held down by a pre-exit adverse fact; undisclosed-fee routes earn no credit. */
@@ -978,7 +1000,19 @@ export function evaluateV9Exit(
       routes: [],
     };
   }
-  const routes = [...args.routes].sort((left, right) => compareText(left.routeKey, right.routeKey));
+  const routes = args.routes.map((route) => {
+    if (!route.executionModelId) return route;
+    const certificate = route.executionCertificate;
+    const admission = certificate && args.assetId !== undefined && args.clockSec !== undefined
+      ? admitExitExecutionCertificate({
+          certificate, envelope, assetId: args.assetId, clockSec: args.clockSec,
+          inputGenerationId: exitExecutionInputGenerationId(args.assetId, args.circulatingUsd, certificate.inputReference),
+          observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
+          request: stressRequest,
+        })
+      : null;
+    return admission && admission.state !== "unavailable" ? route : { ...route, scoreEligible: false };
+  }).sort((left, right) => compareText(left.routeKey, right.routeKey));
   const traces = routes.map((route) =>
     evaluateRoute(
       route,

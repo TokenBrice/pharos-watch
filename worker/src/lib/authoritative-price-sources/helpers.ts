@@ -4,6 +4,7 @@ import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { binarySearchNearest } from "../binary-search";
@@ -64,7 +65,7 @@ export function defineRegistryErc4626NavVault(input: {
   const assetDeployment = TRACKED_META_BY_ID.get(input.parentId)?.contracts?.find(
     (deployment) => deployment.chain === input.chain,
   );
-  if (!vaultDeployment || !assetDeployment) {
+  if (!vaultDeployment || !assetDeployment || !isFixedDecimalDeployment(vaultDeployment) || !isFixedDecimalDeployment(assetDeployment)) {
     throw new Error(
       `[authoritative-price-sources] ${input.id}: missing ${input.chain} vault or parent deployment in the stablecoin registry`,
     );
@@ -664,7 +665,7 @@ export function getUsdcQuotedRedeemConfig(stablecoinId: string): {
 
   const contract = meta.contracts?.find((entry) => entry.chain === ETHEREUM_CHAIN);
   const quoteContract = quoteMeta.contracts?.find((entry) => entry.chain === ETHEREUM_CHAIN);
-  if (!contract || !quoteContract) return null;
+  if (!contract || !quoteContract || !isFixedDecimalDeployment(contract) || !isFixedDecimalDeployment(quoteContract)) return null;
 
   if (quoteContract.decimals !== 6) {
     logWorkerEventArgs("lib", "warn",

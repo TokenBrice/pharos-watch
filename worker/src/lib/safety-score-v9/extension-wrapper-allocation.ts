@@ -1,104 +1,28 @@
 import wrapperAllocationReviewsAsset from "@shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json";
+import { SafetyScoreV9WrapperAllocationReviewSchema, type SafetyScoreV9WrapperAllocationReview } from "@shared/types/safety-score-v9-allocation";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { z } from "zod";
 
-const WrapperAllocationObservationSchema = z
-  .object({
-    chain: z.string().trim().min(1),
-    address: z.string().trim().min(1),
-    function: z.string().trim().min(1),
-    value: z.string().trim().min(1),
-    block: z.number().int().nonnegative(),
-  })
-  .strict();
-
-export const SafetyScoreV9WrapperAllocationReviewSchema = z
-  .object({
-    assetId: z.string().trim().min(1),
-    reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    reviewer: z.string().trim().min(1),
-    custody: z.literal("fully-onchain-no-offchain-custodian"),
-    localLeverage: z.enum([
-      "no-borrowing-surface",
-      "bounded-up-to-1.1x",
-      "bounded-up-to-1.5x",
-      "bounded-up-to-2x",
-      "unbounded-or-above-2x",
-    ]),
-    capitalReuse: z.enum([
-      "none",
-      "bluechip-overcollateralized-lending",
-      "mixed-overcollateralized-lending",
-      "long-tail-overcollateralized-lending",
-      "multi-strategy-reuse",
-      "liquidation-loss-absorption",
-      "single-borrower-risk-capital",
-    ]),
-    rationale: z.string().trim().min(1),
-    observations: z.array(WrapperAllocationObservationSchema).min(1),
-    sources: z
-      .array(
-        z
-          .object({
-            label: z.string().trim().min(1),
-            url: z.string().url(),
-          })
-          .strict(),
-      )
-      .min(1),
-  })
-  .strict()
-  .superRefine((review, ctx) => {
-    if (Date.parse(`${review.expiresAt}T00:00:00.000Z`) <= Date.parse(`${review.reviewedAt}T00:00:00.000Z`)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["expiresAt"],
-        message: "Wrapper allocation review must expire after its review date",
-      });
-    }
-  });
-
-const SafetyScoreV9WrapperAllocationReviewFileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    reviews: z.array(SafetyScoreV9WrapperAllocationReviewSchema),
-  })
-  .strict()
-  .superRefine((file, ctx) => {
-    const seen = new Set<string>();
-    file.reviews.forEach((review, index) => {
-      if (seen.has(review.assetId)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reviews", index, "assetId"],
-          message: `Duplicate wrapper allocation review for ${review.assetId}`,
-        });
-      }
-      seen.add(review.assetId);
-    });
-  });
-
-export type SafetyScoreV9WrapperAllocationReview = z.output<
-  typeof SafetyScoreV9WrapperAllocationReviewSchema
->;
-
-const WRAPPER_ALLOCATION_REVIEW_FILE = SafetyScoreV9WrapperAllocationReviewFileSchema.parse(
-  wrapperAllocationReviewsAsset,
+export const SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST = domainDigest(
+  "safety-score-v9.wrapper-allocation-reviews.v1", wrapperAllocationReviewsAsset,
 );
 
-const WRAPPER_ALLOCATION_REVIEWS = new Map(
-  WRAPPER_ALLOCATION_REVIEW_FILE.reviews.map((review) => [review.assetId, review]),
-);
+// Only malformed global envelopes/identities invalidate the cohort. Parse claim
+// bytes lazily inside the caller's asset quarantine boundary.
+const envelope = z.object({ schemaVersion: z.literal(1), reviews: z.array(z.object({ assetId: z.string().trim().min(1) }).passthrough()) }).strict().parse(wrapperAllocationReviewsAsset);
+const reviewsByAsset = new Map<string, unknown[]>();
+for (const row of envelope.reviews) {
+  const rows = reviewsByAsset.get(row.assetId) ?? [];
+  rows.push(row);
+  reviewsByAsset.set(row.assetId, rows);
+}
 
-export function getSafetyScoreV9WrapperAllocationReview(
-  assetId: string,
-  clockSec: number,
-): SafetyScoreV9WrapperAllocationReview | null {
-  const review = WRAPPER_ALLOCATION_REVIEWS.get(assetId);
-  if (!review) return null;
+export function getSafetyScoreV9WrapperAllocationReview(assetId: string, clockSec: number): SafetyScoreV9WrapperAllocationReview | null {
+  const rows = reviewsByAsset.get(assetId);
+  if (!rows) return null;
+  if (rows.length !== 1) throw new Error(`Duplicate wrapper allocation review for ${assetId}`);
+  const review = SafetyScoreV9WrapperAllocationReviewSchema.parse(rows[0]);
+  if (review.scopeKind === "per-dimension") return review;
   const clockMs = clockSec * 1_000;
-  return Date.parse(`${review.reviewedAt}T00:00:00.000Z`) <= clockMs &&
-    clockMs < Date.parse(`${review.expiresAt}T00:00:00.000Z`)
-    ? review
-    : null;
+  return Date.parse(`${review.reviewedAt}T00:00:00.000Z`) <= clockMs && clockMs < Date.parse(`${review.expiresAt}T00:00:00.000Z`) ? review : null;
 }

@@ -46,6 +46,24 @@
       "slug": "commodity-claim",
       "title": "Gold and Commodity Tokens, Explained",
       "svgSha256": "6d34367410825654d5eaf7722b6bba216f3ef284b7f318e819117ec741091da9"
+    },
+    {
+      "file": "og-learn-ucits-trs-fund.png",
+      "slug": "ucits-trs-fund",
+      "title": "UCITS Physical Securities and TRS Funds, Explained",
+      "svgSha256": "e38bec030b0ae73a1a26919a892c60fae4e3239127ee7a05cfd8803da07dc398"
+    },
+    {
+      "file": "og-learn-shared-reserve.png",
+      "slug": "shared-reserve",
+      "title": "Shared Reserve Stablecoins, Explained",
+      "svgSha256": "8d46edb6f3e53cb3f0bfc16886f3a64a8751b241d5669bbebea1f76979029be3"
+    },
+    {
+      "file": "og-learn-protocol-position.png",
+      "slug": "protocol-position",
+      "title": "Protocol Position Stablecoins, Explained",
+      "svgSha256": "8159d38e0dfe1ab1ae1b9459185e5641fff72defed5fbb8bbf81a2ccd85383fa"
     }
   ]
 }

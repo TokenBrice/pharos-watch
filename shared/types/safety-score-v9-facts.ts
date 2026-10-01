@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { V9ControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
 import { ReserveIntermediarySchema } from "./reserves";
 import {
   DependencyTypeSchema,
@@ -7,6 +8,7 @@ import {
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
 import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";
 import { V9OperationalResilienceFactSchema } from "./safety-score-v9-operational-resilience";
+import { V9AllocationScopeFactSchema } from "./safety-score-v9-allocation";
 import {
   V9WrapperLocalFactsSchema,
   type V9ApplicableWrapperLocalFacts,
@@ -17,6 +19,7 @@ import {
   ExitRouteFamilySchema,
   ExitRouteObservationHistorySchema,
   PhysicalToUsdTraceSchema,
+  ExitExecutionCertificateSchema,
 } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
 import { ReserveAssetClassSchema } from "./reserves";
@@ -577,6 +580,8 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
     observationConfidence: ExitRouteConfidenceSchema,
     observationHistory: ExitRouteObservationHistorySchema.nullable().optional(),
     physicalToUsd: PhysicalToUsdTraceSchema.optional(),
+    executionModelId: CanonicalTextSchema.optional(),
+    executionCertificate: ExitExecutionCertificateSchema.optional(),
     evidenceKind: ExitRouteEvidenceKindSchema,
     /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
     feeEvidence: z.literal("undisclosed-reviewed").optional(),
@@ -595,6 +600,20 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
   })
   .strict()
   .superRefine((route, ctx) => {
+    if (route.executionModelId && route.scoreEligible && !route.executionCertificate) {
+      ctx.addIssue({ code: "custom", message: "Execution model lacks certificate" });
+    }
+    if (route.executionCertificate && route.scoreEligible) {
+      const certificate = route.executionCertificate;
+      if (certificate.modelId !== route.executionModelId ||
+          certificate.settlement.maximumCompletionSec !== route.settlementSlaSec ||
+          certificate.identity.outputAssetKeys.some((key) => !route.output.assetKeys.includes(key)) ||
+          route.capacityCurve.some((point) => !certificate.points.some((proof) =>
+            proof.requestedNotionalUsd === point.requestedNotionalUsd && proof.maxCostBps === point.maxCostBps &&
+            proof.executableUsd === point.executableUsd && proof.executionCostBps === point.executionCostBps))) {
+        ctx.addIssue({ code: "custom", message: "Compiled execution facts conflict with certificate" });
+      }
+    }
     const expectedKey = `${route.lane}:${route.sourceGenerationId}:${route.routeId}`;
     if (route.routeKey !== expectedKey) {
       ctx.addIssue({ code: "custom", path: ["routeKey"], message: `Canonical route key must be ${expectedKey}` });
@@ -687,8 +706,14 @@ const V9ControlAuthoritySchema = z
       .object({ required: z.number().int().positive(), total: z.number().int().positive() })
       .strict()
       .nullable(),
+    weightedQuorum: V9WeightedQuorumSchema.optional(),
   })
   .strict()
+  .superRefine((authority, ctx) => {
+    if (authority.weightedQuorum && (authority.model !== "multisig" || authority.threshold !== null || authority.authorityKey !== authority.weightedQuorum.deployment)) {
+      ctx.addIssue({ code: "custom", message: "Weighted authority conflicts with uniform quorum or exact deployment" });
+    }
+  })
   .nullable();
 
 /** Reviewed key-custody attestation for the authority holding this control. An
@@ -733,6 +758,11 @@ export const V9DeploymentControlFactBaseSchema = z
     scopedQuestionFresh: z.boolean().optional(),
     keyCustody: V9KeyCustodySchema,
     modulesOrGuards: V9ModulesOrGuardsSchema,
+    executionScope: V9ControlExecutionScopeSchema.optional(),
+    executionScopeContributors: z.array(z.object({ authorityKey: CanonicalTextSchema, scope: V9ControlExecutionScopeSchema.optional() }).strict()).min(1).optional(),
+    executionScopeComplete: z.boolean().optional(),
+    scopeDiagnostics: CanonicalStringArraySchema.optional(),
+    moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element.optional(),
     incidentState: V9IncidentStateSchema,
     failureDomains: CanonicalFailureDomainsSchema,
   })
@@ -746,7 +776,7 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   .strict()
   .superRefine((control, ctx) => {
     if (control.authority?.model === "multisig") {
-      if (!control.authority.threshold || control.authority.threshold.required > control.authority.threshold.total) {
+      if (!control.authority.weightedQuorum && (!control.authority.threshold || control.authority.threshold.required > control.authority.threshold.total)) {
         ctx.addIssue({ code: "custom", path: ["authority", "threshold"], message: "Multisig threshold is invalid" });
       }
     } else if (control.authority?.threshold !== null && control.authority !== null) {
@@ -1377,6 +1407,7 @@ const V9AssetFactsBaseFields = {
     (fact) => fact.factKey,
   ).optional(),
   cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
+  allocationScopeFacts: canonicalArrayBy(V9AllocationScopeFactSchema, (fact) => fact.claimKey).optional(),
   // Retained V2 facts carry only serial/basket dependency roles. V3 overrides
   // this field with the role-aware edge contract below.
   dependencies: V9EffectiveDependenciesV2Schema,
@@ -1454,6 +1485,14 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
         path: ["economicControlReview"],
         message: `${label} review references unknown control ${controlKey}`,
       });
+    }
+  }
+  for (const [index, fact] of (asset.allocationScopeFacts ?? []).entries()) {
+    const target = fact.target;
+    if (fact.admitted && fact.disposition === "inherited-parent" &&
+      (target?.kind !== "parent-claim" || !asset.dependencies.edges.some((edge) =>
+        edge.edgeKey === target.edgeKey && edge.upstreamAssetId === target.upstreamAssetId))) {
+      ctx.addIssue({ code: "custom", path: ["allocationScopeFacts", index, "target"], message: "Parent scope must match a real economic dependency" });
     }
   }
   // exitRoutes is deliberately absent: a reviewed-complete empty exit
@@ -1714,6 +1753,19 @@ function validateAssetReferences(
   }
   for (const fact of asset.mechanismExitFacts ?? []) {
     captureRefs(`mechanism-exit:${fact.factKey}`, fact.evidenceRefIds, []);
+  }
+  for (const fact of asset.allocationScopeFacts ?? []) {
+    captureRefs(`allocation-scope:${fact.claimKey}`, fact.evidenceRefIds, []);
+    if (!fact.admitted) continue;
+    for (const evidenceId of fact.evidenceRefIds) {
+      const reference = evidenceById.get(evidenceId);
+      if (reference && (reference.sourceId !== "safety-score-v9.scoped-allocation-review" ||
+        reference.sourceGenerationId !== fact.sourceGenerationId || reference.observedAtSec !== fact.observedAtSec ||
+        !fact.sources.some((source) => source.url === reference.url))) {
+        addIssue(ctx, ["assets", assetIndex, "allocationScopeFacts", fact.claimKey, "evidenceRefIds"],
+          `Allocation scope evidence ${evidenceId} does not match its source/clock/generation`);
+      }
+    }
   }
   const wrapperLocalFacts = asset.wrapperLocalFacts;
   if (wrapperLocalFacts?.applicability === "not-wrapper") {

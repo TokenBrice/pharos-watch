@@ -40,6 +40,36 @@
       "chain": "ethereum",
       "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
       "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x289f635106d5b822a505b39ac237a0ae9189335b",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x646a737b9b6024e49f5908762b3ff73e65b5160c",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0x5191946500e75f0A74476F146dF7d386e52961d9",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x0094Ad026643994c8fB2136ec912D508B15fe0E5",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64",
+      "decimals": 18
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",

@@ -14,6 +14,7 @@ import { isRedemptionSettlementFaster } from "@shared/lib/redemption-backstop-co
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
+import { exitRawUsd, exitUsdBoundary } from "@shared/lib/safety-score-v9/exit-execution-units";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   getDexMeasuredExecutionFreshnessMaxSec,
@@ -252,6 +253,33 @@ function buildOutputReview(
   assetId: string,
 ): RouteOutputReview | null {
   const output = observation.output;
+  if (observation.executionCertificate) {
+    const certificate = observation.executionCertificate;
+    const point = certificate.points.find((entry) => entry.requestedNotionalUsd === observation.requestedNotionalUsd &&
+      entry.maxCostBps === observation.maxCostBps);
+    if (!point || point.outputs.length === 0 || point.certification === "diagnostic") return null;
+    const expectedValues = point.outputs.map((leg) => point.executableUsd === 0 && point.outputs.length === 1
+      ? leg.expectedUnitValueUsd : exitUsdBoundary(exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.expectedUnitValueUsd)));
+    const expectedUsd = expectedValues.reduce((sum, value) => sum + value, 0);
+    const actualUsd = point.executableUsd === 0 && point.outputs.length === 1 ? point.outputs[0]!.unitValueUsd :
+      exitUsdBoundary(point.outputs.reduce((sum, leg) => sum + exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.unitValueUsd), 0n));
+    if (!Number.isFinite(expectedUsd) || !Number.isFinite(actualUsd) || expectedUsd <= 0 || actualUsd <= 0) return null;
+    const assetKeys = [...new Set(point.outputs.map((leg) => leg.assetKey))].sort(compareText);
+    return {
+      kind: output.kind === "fiat" ? "fiat" : assetKeys.length > 1 ? "basket" : "tracked-stablecoin",
+      assetKeys,
+      basketWeights: assetKeys.length > 1 ? assetKeys.map((assetKey) => ({
+        assetKey, weight: point.outputs.reduce((sum, leg, index) => sum + (leg.assetKey === assetKey ? expectedValues[index]! : 0), 0) / expectedUsd,
+      })) : [],
+      valuation: {
+        basis: "price", referenceAssetKey: assetKeys.join("+"),
+        unitValueUsd: actualUsd / expectedUsd, expectedUnitValueUsd: 1,
+        confidence: "medium", observedAtSec: Math.min(...point.outputs.map((leg) => leg.observedAtSec)),
+        sourceId: "exit-execution-output-legs", sourceGenerationId: certificate.observationGenerationId,
+        maxAgeSec: certificate.priceMaxAgeSec, url: null, contentSha256: null,
+      },
+    };
+  }
   if (observation.physicalToUsd) {
     const trace = observation.physicalToUsd;
     if (trace.rejectionReason !== null) return null;
@@ -500,12 +528,34 @@ function dexCoverageClass(fixedInput: Readonly<SafetyScoreV9CompilerInput>, asse
   return "exact-lower-bound";
 }
 
+function buildCertifiedRouteReview(fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string, observation: ExitRouteObservation): RouteReview {
+  const certificate = observation.executionCertificate!;
+  const point = certificate.points.find((entry) => entry.requestedNotionalUsd === observation.requestedNotionalUsd && entry.maxCostBps === observation.maxCostBps);
+  const maximumSec = certificate.settlement.maximumCompletionSec;
+  return {
+    lane: observation.routeFamily === "dex-orderbook" || observation.routeFamily === "dex-amm" ? "dex" : "redemption",
+    routeId: observation.routeId,
+    holderAccess: certificate.holder === "any-holder" ? "permissionless" : certificate.holder === "verified-customer" ? "institutional-eligible" : "allowlisted",
+    executionModel: certificate.capacityBasis.endsWith("book-walk") ? "market-depth" : "deterministic",
+    executionCertainty: "conditional", modelConfidence: "medium",
+    coverageClass: point?.certification ?? "diagnostic",
+    capacityScoringHorizon: maximumSec === null ? "unknown" : maximumSec <= observation.settlementHorizonSec ? "immediate" : "queued",
+    settlementModel: maximumSec === 0 ? "atomic" : maximumSec === null ? "unknown" : "bounded-delay",
+    settlementSlaSec: maximumSec, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
+    physicalResourceKeys: [...certificate.resourceKeys].sort(compareText),
+    failureDomains: certificate.failureDomainKeys.map((key) => ({ kind: "redemption-rail" as const, key })).sort((a, b) => compareText(a.key, b.key)),
+    executionCosts: canonicalExecutionCosts(observation, () => null),
+    output: buildOutputReview(fixedInput, observation, certificate.observationGenerationId, assetId),
+  };
+}
+
 function buildDexRouteReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   observation: ExitRouteObservation,
   composedExit?: ComposedDexExit,
 ): RouteReview {
+  if (observation.executionCertificate) return buildCertifiedRouteReview(fixedInput, assetId, observation);
   const observationHistory = observation.observationHistory;
   const matureMeasuredHistory =
     observation.evidenceKind === "measured-executable-depth" &&
@@ -770,6 +820,7 @@ function buildRedemptionRouteReview(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
 ): RouteReview {
+  if (observation.executionCertificate) return buildCertifiedRouteReview(fixedInput, entry.stablecoinId, observation);
   const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
   const unresolvedOutputDispositionReviewedAtSec = staticConfig?.reviewedAt
     ? Date.parse(`${staticConfig.reviewedAt}T00:00:00.000Z`) / 1_000

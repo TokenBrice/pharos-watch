@@ -50,7 +50,7 @@
     "archivedDataAvailable": "True when Pharos preserves a frozen detail page with archived data for this entry.",
     "contracts": "Known historical token contracts when available.",
     "pharosUrl": "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor.",
-    "mechanismArchetype": "Pharos mechanism archetype: how the stablecoin was designed to hold its peg (fiat-cash, tbill, cdp, synthetic-delta-neutral, algorithmic, rwa-credit-fund, commodity-claim). Independent of causeOfDeath; null when not yet classified.",
+    "mechanismArchetype": "Pharos mechanism archetype: how the stablecoin was designed to hold its peg (fiat-cash, tbill, cdp, synthetic-delta-neutral, algorithmic, rwa-credit-fund, commodity-claim, ucits-trs-fund, shared-reserve, protocol-position). Independent of causeOfDeath; null when not yet classified.",
     "recordedAt": "UTC date (YYYY-MM-DD) on which the record entered Pharos; for tracked-archive rows, the date the coin was frozen. Distinct from deathDate; null when not recorded."
   },
   "rows": [

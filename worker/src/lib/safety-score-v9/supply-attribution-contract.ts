@@ -5,9 +5,16 @@ import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-sco
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import reviewedEconomicSupplyPlans from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
+import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
+import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { normalizeDeploymentId } from "@shared/lib/deployment-id";
 
-const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = 1_800;
-const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = 120;
+const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
+const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
 
 const EVM_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
 const EVM_BLOCK_HASH_RE = /^0x[0-9a-f]{64}$/;
@@ -325,13 +332,14 @@ export function buildReviewedDeploymentRouteInventory(
   const routes = meta?.bridgeRouteRisk?.routes ?? [];
   const contracts = meta?.contracts ?? [];
   if (routes.length === 0 || routes.length !== contracts.length) return null;
+  if (contracts.some(contract => !isFixedDecimalDeployment(contract))) return null;
 
   const remainingContracts = contracts.map((contract) => {
     const chainId = resolveChainId(contract.chain) ?? contract.chain.toLowerCase();
     return {
       chainId,
       contractAddress: normalizeAddress(chainId, contract.address),
-      decimals: contract.decimals,
+      decimals: isFixedDecimalDeployment(contract) ? contract.decimals : null,
       matched: false,
     };
   });
@@ -348,7 +356,7 @@ export function buildReviewedDeploymentRouteInventory(
         candidate.chainId === chainId &&
         candidate.contractAddress === contractAddress,
     );
-    if (!contract || !Number.isInteger(contract.decimals) || contract.decimals < 0 || contract.decimals > 36) {
+    if (!contract || contract.decimals === null || !Number.isInteger(contract.decimals) || contract.decimals < 0 || contract.decimals > 36) {
       return null;
     }
     contract.matched = true;
@@ -728,7 +736,8 @@ export function reviewedDeploymentAttributionValidationError(input: {
 
   const expectedRows = allocateAggregateSupply(input.aggregateSupplyUsd, deployments);
   if (!expectedRows) return `reviewed deployment allocation is invalid for ${assetId}`;
-  const toleranceUsd = Math.max(0.000001, input.aggregateSupplyUsd * 1e-12);
+  const toleranceUsd = Math.max(V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.conservationAbsoluteToleranceUsd,
+    input.aggregateSupplyUsd * V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.conservationRelativeTolerance);
   for (let index = 0; index < deployments.length; index += 1) {
     if (
       !Number.isFinite(deployments[index]!.currentSupplyUsd) ||
@@ -808,4 +817,270 @@ export function expectedCentrifugeDeploymentIdentity(
   routeId: string,
 ): CentrifugeDeploymentIdentity | undefined {
   return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
+}
+
+export const REVIEWED_ECONOMIC_SUPPLY_PLANS: ReadonlyMap<string, ReviewedEconomicSupplyPlan> = new Map(
+  ReviewedEconomicSupplyPlanFileSchema.parse(reviewedEconomicSupplyPlans).reviews.map(plan => [plan.assetId, plan]),
+);
+
+/** A native liability can still expose bridge message acceptance or escrow control. */
+export function reviewedSupplyRouteKind(route: NonNullable<BridgeRouteRiskProfile["routes"]>[number], profile?: Pick<BridgeRouteRiskProfile, "controls">): "native" | "controlled" {
+  const controlled = (profile?.controls ?? []).some(control =>
+    control.routeRefs.some(ref => normalizeDeploymentId(ref) === normalizeDeploymentId(route.id)) &&
+    control.capabilities.some(capability => capability === "bridge-mint" || capability === "bridge-burn" ||
+      capability === "validator" || capability === "escrow" || capability === "peer-config" ||
+      capability === "upgrade" || capability === "admin"));
+  return !controlled && route.routeClass === "native" && route.semantics === "native-mint" ? "native" : "controlled";
+}
+
+export function buildReviewedEconomicDeploymentInventory(
+  assetId: string,
+  plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId),
+  meta: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk"> | undefined = ACTIVE_META_BY_ID.get(assetId),
+): { plan: ReviewedEconomicSupplyPlan; planDigest: string; digest: string } | null {
+  if (!plan || !meta || plan.assetId !== assetId || !ReviewedEconomicSupplyPlanSchema.safeParse(plan).success) return null;
+  const keys = new Set(plan.deployments.map(row => row.deploymentKey));
+  const excluded = new Set(plan.excludedRegistryDeploymentKeys);
+  if ([...excluded].some(key => keys.has(key))) return null;
+  if ((meta.bridgeRouteRisk?.routes ?? []).some(route => route.semantics === "burn-mint") &&
+    plan.escrows.length === 0 && plan.liabilityInFlightSource === null) return null;
+  const registeredKeys = new Set<string>();
+  for (const contract of meta.contracts ?? []) {
+    const chain = resolveChainId(contract.chain);
+    if (!chain) return null;
+    const key = `${chain}:${normalizeAddress(chain, contract.address)}`;
+    registeredKeys.add(key);
+    if (!keys.has(key) && !excluded.has(key)) return null;
+    const row = plan.deployments.find(row => row.deploymentKey === key);
+    if (row && ((isFixedDecimalDeployment(contract) && row.decimals !== contract.decimals) ||
+      (!isFixedDecimalDeployment(contract) && row.decimals !== null))) return null;
+  }
+  if ([...excluded].some(key => !registeredKeys.has(key))) return null;
+  for (const row of plan.deployments) {
+    if (row.holdingKind !== "native-gas" && !registeredKeys.has(row.deploymentKey)) return null;
+    if (row.routeId !== null && !(meta.bridgeRouteRisk?.routes ?? []).some(route =>
+      route.id === row.routeId && resolveChainId(route.destinationChain) === row.chainId &&
+      normalizeAddress(row.chainId, route.contractAddress) === row.address)) return null;
+  }
+  const canonicalPlan = { ...plan,
+    deployments: [...plan.deployments].sort((a, b) => compareText(a.deploymentKey, b.deploymentKey)),
+    excludedRegistryDeploymentKeys: [...plan.excludedRegistryDeploymentKeys].sort(compareText),
+    exclusions: [...plan.exclusions].sort((a, b) => compareText(a.id, b.id)),
+    escrows: plan.escrows.map(row => ({ ...row, receiptDeploymentKeys: [...row.receiptDeploymentKeys].sort(compareText) })).sort((a, b) => compareText(a.id, b.id)),
+  };
+  const planDigest = sha256Hex(stableJsonStringifyV1(canonicalPlan));
+  return { plan, planDigest, digest: sha256Hex(stableJsonStringifyV1({
+    domain: "safety-score-v9.economic-deployment-census.v1", planDigest,
+    contracts: [...(meta.contracts ?? [])].sort((a, b) => compareText(`${a.chain}:${a.address}`, `${b.chain}:${b.address}`)),
+    routes: [...(meta.bridgeRouteRisk?.routes ?? [])].sort((a, b) => compareText(a.id, b.id)),
+  })) };
+}
+
+interface EconomicFraction { n: bigint; d: bigint }
+function economicDecimal(value: string, decimals: number | null = null): EconomicFraction {
+  if (decimals !== null) return { n: BigInt(value), d: 10n ** BigInt(decimals) };
+  const [whole, fraction = ""] = value.split(".");
+  return { n: BigInt(whole + fraction), d: 10n ** BigInt(fraction.length) };
+}
+function addEconomicUnits(a: EconomicFraction, b: EconomicFraction, subtract = false): EconomicFraction {
+  let x = a.d, y = b.d;
+  while (y !== 0n) { const remainder = x % y; x = y; y = remainder; }
+  const leftScale = b.d / x, rightScale = a.d / x;
+  return { n: a.n * leftScale + (subtract ? -b.n : b.n) * rightScale, d: a.d * leftScale };
+}
+
+/** Recomputes every USD row; a conserved caller-supplied array alone is never proof. */
+export function deriveReviewedEconomicDeploymentPartition(input: {
+  plan: ReviewedEconomicSupplyPlan; meta?: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk">;
+  baseInputGenerationId: string; sourceGeneration: string; registryFingerprint: string; clockSec: number;
+  aggregate: ReviewedEconomicDeploymentPartition["aggregate"];
+  referencePrice: EconomicSupplyReference; conversions: EconomicSupplyReference[];
+  observations: EconomicSupplyObservation[]; inFlight: EconomicSupplyObservation[];
+}): ReviewedEconomicDeploymentPartition | null {
+  const inventory = buildReviewedEconomicDeploymentInventory(input.plan.assetId, input.plan, input.meta);
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  const current = (clock: number, budget: number) => Number.isInteger(clock) && clock <= input.clockSec && input.clockSec - clock <= budget;
+  if (!inventory || input.clockSec < input.plan.reviewedAtSec || input.clockSec >= input.plan.expiresAtSec ||
+    !current(input.aggregate.observedAtSec, policy.observationMaxAgeSec) ||
+    input.aggregate.sourceGeneration !== input.sourceGeneration ||
+    !current(input.referencePrice.observedAtSec, policy.referencePriceMaxAgeSec) ||
+    input.referencePrice.sourceId !== input.plan.sourceId ||
+    input.conversions.some(row => !current(row.observedAtSec, policy.referencePriceMaxAgeSec))) return null;
+  if (new Set(input.conversions.map(row => row.sourceId)).size !== input.conversions.length ||
+    input.conversions.length !== input.plan.conversionSources.length ||
+    input.conversions.some(row => !input.plan.conversionSources.some(source => source.sourceId === row.sourceId))) return null;
+  const all = [...input.observations, ...input.inFlight];
+  if (all.length === 0 || new Set(all.map(row => row.id)).size !== all.length) return null;
+  const observations = new Map(all.map(row => [row.id, row]));
+  const units = new Map<string, EconomicFraction>();
+  const rawBasis = input.plan.deployments.every(row => row.amountBasis === "circulating-usd");
+  if (!rawBasis && input.plan.deployments.some(row => row.amountBasis === "circulating-usd")) return null;
+  const convert = (key: string, observation: EconomicSupplyObservation): EconomicFraction | null => {
+    const row = input.plan.deployments.find(row => row.deploymentKey === key);
+    if (!row || observation.deploymentKey !== key || !current(observation.observedAtSec, policy.observationMaxAgeSec)) return null;
+    if (!observation.id.startsWith("in-flight:") && !observation.id.startsWith("receipt:")) {
+      if ((row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance") &&
+        (!/^(0|[1-9][0-9]*)$/.test(observation.anchor) || !EVM_BLOCK_HASH_RE.test(observation.anchorHash))) return null;
+      if (row.read.kind === "solana-mint" && !SOLANA_BLOCK_HASH_RE.test(observation.anchorHash)) return null;
+      if (row.read.kind === "xrpl-issued-currency" && !SHA256_RE.test(observation.anchorHash)) return null;
+    }
+    if (row.decimals !== null && !RAW_SUPPLY_RE.test(observation.amount)) return null;
+    let value = economicDecimal(observation.amount, row.decimals);
+    if (row.claimUnit !== input.plan.commonClaimUnit) {
+      const rates = input.conversions.filter(rate => rate.sourceId === row.conversionSourceId);
+      if (rates.length !== 1) return null;
+      const rate = economicDecimal(rates[0]!.value);
+      value = { n: value.n * rate.n, d: value.d * rate.d };
+    }
+    return value;
+  };
+  try {
+    for (const row of input.plan.deployments) {
+      const observation = observations.get(row.deploymentKey);
+      if (!observation) return null;
+      const value = convert(row.deploymentKey, observation);
+      if (!value) return null;
+      units.set(row.deploymentKey, value);
+    }
+    for (const rule of input.plan.exclusions) {
+      const observation = observations.get(rule.id);
+      const deduction = observation && convert(rule.deploymentKey, observation);
+      if (!deduction) return null;
+      const free = addEconomicUnits(units.get(rule.deploymentKey)!, deduction, true);
+      if (free.n < 0n) return null;
+      units.set(rule.deploymentKey, free);
+    }
+    let remainder: EconomicFraction = { n: 0n, d: 1n };
+    for (const escrow of input.plan.escrows) {
+      const observation = observations.get(escrow.id);
+      const backing = observation && convert(escrow.canonicalDeploymentKey, observation);
+      const pendingObservation = observations.get(`in-flight:${escrow.id}`);
+      const pending: EconomicFraction | null | undefined = escrow.inFlightSource === null && input.plan.inFlightTreatment === "atomic-native-wrapper"
+        ? { n: 0n, d: 1n } : pendingObservation && convert(escrow.canonicalDeploymentKey, pendingObservation);
+      if (!backing || !pending) return null;
+      let represented: EconomicFraction = pending;
+      for (const key of escrow.receiptDeploymentKeys) {
+        const subset = escrow.receiptClaimSources.find(source => source.deploymentKey === key);
+        const claimObservation = subset && observations.get(`receipt:${escrow.id}:${key}`);
+        const claim = subset ? claimObservation && convert(key, claimObservation) : units.get(key);
+        const holding = units.get(key)!;
+        if (!claim || claim.n * holding.d > holding.n * claim.d) return null;
+        represented = addEconomicUnits(represented, claim);
+      }
+      if (represented.n * backing.d !== backing.n * represented.d) return null;
+      const free = addEconomicUnits(units.get(escrow.canonicalDeploymentKey)!, backing, true);
+      if (free.n < 0n) return null;
+      units.set(escrow.canonicalDeploymentKey, free);
+      remainder = addEconomicUnits(remainder, pending);
+    }
+    if (input.plan.liabilityInFlightSource !== null) {
+      const pendingObservation = observations.get("in-flight:liability");
+      const pending = pendingObservation && convert(input.plan.deployments[0]!.deploymentKey, pendingObservation);
+      if (!pending) return null;
+      remainder = addEconomicUnits(remainder, pending);
+    }
+    if (input.inFlight.length !== input.plan.escrows.filter(escrow => escrow.inFlightSource !== null).length + (input.plan.liabilityInFlightSource === null ? 0 : 1)) return null;
+    const expectedIds = new Set([...input.plan.deployments.map(row => row.deploymentKey), ...input.plan.exclusions.map(row => row.id), ...input.plan.escrows.map(row => row.id), ...input.plan.escrows.filter(escrow => escrow.inFlightSource !== null).map(row => `in-flight:${row.id}`), ...input.plan.escrows.flatMap(escrow => escrow.receiptClaimSources.map(source => `receipt:${escrow.id}:${source.deploymentKey}`)), ...(input.plan.liabilityInFlightSource === null ? [] : ["in-flight:liability"])]);
+    if (all.length !== expectedIds.size || all.some(row => !expectedIds.has(row.id))) return null;
+    const times = all.map(row => row.observedAtSec);
+    const started = Math.min(...times), ended = Math.max(...times);
+    if (ended - started > policy.observationMaxSkewSec) return null;
+    let total = remainder;
+    for (const value of units.values()) total = addEconomicUnits(total, value);
+    if (!rawBasis && total.n === 0n && input.aggregate.supplyUsd > 0) return null;
+    const tolerance = Math.max(policy.conservationAbsoluteToleranceUsd, input.aggregate.supplyUsd * policy.conservationRelativeTolerance);
+    const quantity = (value: EconomicFraction) => Number(value.n) / Number(value.d);
+    const amount = (value: EconomicFraction) => rawBasis ? quantity(value) :
+      total.n === 0n ? 0 : input.aggregate.supplyUsd * (Number(value.n * total.d) / Number(value.d * total.n));
+    const measuredTotal = quantity(total);
+    if (rawBasis && (measuredTotal > input.aggregate.supplyUsd + tolerance)) return null;
+    const deployments = input.plan.deployments.map(row => ({ deploymentKey: row.deploymentKey, chainId: row.chainId, routeId: row.routeId, holdingKind: row.holdingKind, currentSupplyUsd: amount(units.get(row.deploymentKey)!) }));
+    if (deployments.some((row, index) => !Number.isFinite(row.currentSupplyUsd) || row.currentSupplyUsd < 0 || (units.get(input.plan.deployments[index]!.deploymentKey)!.n > 0n && input.aggregate.supplyUsd > 0 && row.currentSupplyUsd === 0))) return null;
+    const unattributedSupplyUsd = rawBasis ? Math.max(0, input.aggregate.supplyUsd - deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0)) : amount(remainder);
+    const allocated = deployments.reduce((sum, row) => sum + row.currentSupplyUsd, unattributedSupplyUsd);
+    if (!Number.isFinite(allocated) || Math.abs(allocated - input.aggregate.supplyUsd) > tolerance) return null;
+    return ReviewedEconomicDeploymentPartitionSchema.parse({
+      model: "reviewed-economic-deployment-partition-v1", assetId: input.plan.assetId,
+      baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration, registryFingerprint: input.registryFingerprint,
+      scoringClockSec: input.clockSec, observedAtSec: started, captureStartedAtSec: started, captureEndedAtSec: ended,
+      planDigest: inventory.planDigest, routeInventoryDigest: inventory.digest, aggregate: input.aggregate,
+      referencePrice: input.referencePrice, conversions: input.conversions, observations: input.observations, inFlight: input.inFlight,
+      deployments, unattributedSupplyUsd, quantitativeCompleteness: true,
+    });
+  } catch { return null; }
+}
+
+export function normalizeReviewedEconomicDeploymentAttribution(packet: ReviewedEconomicDeploymentPartition): ReviewedEconomicDeploymentPartition {
+  return { ...packet, deployments: [...packet.deployments].sort((a, b) => compareText(a.deploymentKey, b.deploymentKey)),
+    observations: [...packet.observations].sort((a, b) => compareText(a.id, b.id)), inFlight: [...packet.inFlight].sort((a, b) => compareText(a.id, b.id)),
+    conversions: [...packet.conversions].sort((a, b) => compareText(a.sourceId, b.sourceId)) };
+}
+
+export function reviewedEconomicDeploymentAttributionValidationError(input: {
+  assetId: string; attribution: ReviewedEconomicDeploymentPartition; aggregateSupplyUsd: number;
+  registryFingerprint: string; clockSec: number; baseInputGenerationId?: string; sourceGeneration?: string;
+  aggregateObservedAtSec?: number | null; referencePrice?: { priceUsd: number; sourceId: string; observedAtSec: number } | null;
+  chainRows?: Record<string, { current: number }>;
+}): string | null {
+  const packet = input.attribution;
+  const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(input.assetId);
+  if (!plan || packet.assetId !== input.assetId || packet.registryFingerprint !== input.registryFingerprint ||
+    packet.scoringClockSec !== input.clockSec || packet.aggregate.supplyUsd !== input.aggregateSupplyUsd ||
+    (input.baseInputGenerationId !== undefined && packet.baseInputGenerationId !== input.baseInputGenerationId) ||
+    (input.sourceGeneration !== undefined && packet.sourceGeneration !== input.sourceGeneration) ||
+    (input.aggregateObservedAtSec !== undefined && packet.aggregate.observedAtSec !== input.aggregateObservedAtSec) ||
+    (plan.referencePriceSource === null && input.referencePrice !== undefined && (!input.referencePrice || packet.referencePrice.sourceId !== input.referencePrice.sourceId ||
+      Number(packet.referencePrice.value) !== input.referencePrice.priceUsd || packet.referencePrice.observedAtSec !== input.referencePrice.observedAtSec))) return "Economic supply attribution identity/source binding mismatch";
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  const tolerance = Math.max(policy.conservationAbsoluteToleranceUsd, input.aggregateSupplyUsd * policy.conservationRelativeTolerance);
+  for (const [chain, provider] of Object.entries(input.chainRows ?? {})) {
+    const chainId = resolveChainId(chain) ?? chain;
+    const rows = packet.deployments.filter(row => row.chainId === chainId);
+    if (rows.length === 0 || Math.abs(rows.reduce((sum, row) => sum + row.currentSupplyUsd, 0) - provider.current) > tolerance) return "Economic supply attribution contradicts eligible provider chain";
+  }
+  const recomputed = deriveReviewedEconomicDeploymentPartition({ plan, baseInputGenerationId: packet.baseInputGenerationId,
+    sourceGeneration: packet.sourceGeneration, registryFingerprint: packet.registryFingerprint, clockSec: input.clockSec,
+    aggregate: packet.aggregate, referencePrice: packet.referencePrice, conversions: packet.conversions,
+    observations: packet.observations, inFlight: packet.inFlight });
+  return recomputed && stableJsonStringifyV1(normalizeReviewedEconomicDeploymentAttribution(recomputed)) ===
+    stableJsonStringifyV1(normalizeReviewedEconomicDeploymentAttribution(packet)) ? null : "Economic supply attribution accounting/census invalid";
+}
+
+/** Full census coverage, not a positive subtotal, permits provider preference. */
+export function hasCompleteEligibleProviderSupply(input: {
+  clockSec: number; aggregateCirculatingById: Record<string, { circulating: Record<string, number>; observedAtSec: number | null }>;
+  chainCirculatingById: Record<string, Record<string, { current: number }>>;
+}, assetId: string, meta: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk"> | undefined = ACTIVE_META_BY_ID.get(assetId)): boolean {
+  const aggregate = input.aggregateCirculatingById[assetId];
+  const amount = getCirculatingRawOrNull(aggregate ?? {});
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  if (!meta || amount === null || amount <= 0 || aggregate?.observedAtSec == null ||
+    aggregate.observedAtSec > input.clockSec || input.clockSec - aggregate.observedAtSec > policy.observationMaxAgeSec) return false;
+  const rows = new Map<string, number>();
+  for (const [chain, row] of Object.entries(input.chainCirculatingById[assetId] ?? {})) {
+    if (!Number.isFinite(row.current) || row.current < 0) return false;
+    const key = resolveChainId(chain) ?? chain;
+    rows.set(key, (rows.get(key) ?? 0) + row.current);
+  }
+  const routes = meta.bridgeRouteRisk?.routes ?? [];
+  if (routes.length === 0) return false;
+  const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId);
+  if (plan && (!buildReviewedEconomicDeploymentInventory(assetId, plan, meta) ||
+    plan.deployments.some(row => !rows.has(row.chainId) ||
+      plan.deployments.filter(other => other.chainId === row.chainId).length !== 1))) return false;
+  const routesPerChain = new Map<string, number>();
+  for (const route of routes) {
+    const chain = resolveChainId(route.destinationChain);
+    if (!chain || !rows.has(chain)) return false;
+    routesPerChain.set(chain, (routesPerChain.get(chain) ?? 0) + 1);
+  }
+  if ([...routesPerChain.values()].some(count => count !== 1)) return false;
+  for (const contract of meta.contracts ?? []) {
+    const chain = resolveChainId(contract.chain);
+    if (!chain || !rows.has(chain) || !routes.some(route => resolveChainId(route.destinationChain) === chain &&
+      normalizeAddress(chain, route.contractAddress) === normalizeAddress(chain, contract.address))) return false;
+  }
+  const total = [...rows.values()].reduce((sum, value) => sum + value, 0);
+  const tolerance = Math.max(policy.conservationAbsoluteToleranceUsd, amount * policy.conservationRelativeTolerance);
+  return Math.abs(total - amount) <= tolerance;
 }

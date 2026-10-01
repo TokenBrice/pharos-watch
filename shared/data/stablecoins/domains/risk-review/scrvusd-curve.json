@@ -54,5 +54,213 @@
         "url": "https://github.com/curvefi/scrvusd"
       }
     ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "The canonical Ethereum savings vault and six issuer-documented satellites are inventoried. Satellite bridge, upgrade and transfer reach remains partially reviewed; no circulating-supply partition or local-loss exclusion is asserted.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (DataCurve)",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Curve scrvUSD deployment inventory",
+        "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+        "protocol": "Curve scrvUSD ERC-4626 vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical savings shares are deposited and redeemed against crvUSD. Durable underlying issuance remains inherited from crvUSD; this row does not classify satellite controls.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26099935,
+        "sources": [
+          {
+            "label": "Curve scrvUSD canonical vault and satellites",
+            "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+          },
+          {
+            "label": "Exact-match canonical Yearn implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d?fields=sources,abi"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x289f635106d5b822a505b39ac237a0ae9189335b",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x289f635106d5b822a505b39ac237a0ae9189335b",
+        "protocol": "Curve documented scrvUSD satellite",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Pinned token reads identify the canonical Ethereum vault as remoteToken and 0x4200000000000000000000000000000000000010 as bridge. Exact-match OptimismMintableERC20 source gates mint/burn to that bridge; bridge implementation, messaging, administrator and escrow closure remain unreviewed. Positive raw shares are not circulating attribution.",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "observedAt": "2026-10-01",
+        "observedBlock": 157644259,
+        "sources": [
+          {
+            "label": "Curve satellite inventory",
+            "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+          },
+          {
+            "label": "Exact-match Optimism satellite source",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x289f635106d5b822a505b39ac237a0ae9189335b?fields=sources,abi"
+          }
+        ]
+      },
+      {
+        "id": "base:0x646a737b9b6024e49f5908762b3ff73e65b5160c",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x646a737b9b6024e49f5908762b3ff73e65b5160c",
+        "protocol": "Curve documented scrvUSD satellite",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Pinned token reads identify the canonical Ethereum vault as remoteToken and 0x4200000000000000000000000000000000000010 as bridge. Exact-match OptimismMintableERC20 source gates mint/burn to that bridge; bridge implementation, messaging, administrator and escrow closure remain unreviewed. Positive raw shares are not circulating attribution.",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52048974,
+        "sources": [
+          {
+            "label": "Curve satellite inventory",
+            "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+          },
+          {
+            "label": "Exact-match Base satellite source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x646a737b9b6024e49f5908762b3ff73e65b5160c?fields=sources,abi"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0xab94c721040b33aa8b0b4d159da9878e2a836ed0",
+        "sourceChain": "ethereum",
+        "destinationChain": "fraxtal",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0",
+        "protocol": "Curve documented scrvUSD satellite",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Pinned remoteToken and bridge getters identify the canonical Ethereum vault and 0x4200000000000000000000000000000000000010. Explorer identifies OptimismMintablePermitERC20; complete deployed source, bridge implementation, messaging, administrator and escrow closure remain unreviewed. Positive raw shares are not circulating attribution.",
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "observedAt": "2026-10-01",
+        "observedBlock": 42038292,
+        "sources": [
+          {
+            "label": "Curve satellite inventory",
+            "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+          },
+          {
+            "label": "Fraxtal satellite explorer",
+            "url": "https://fraxscan.com/address/0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0#code"
+          }
+        ]
+      },
+      {
+        "id": "fantom:0x5191946500e75f0a74476f146df7d386e52961d9",
+        "destinationChain": "fantom",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x5191946500e75f0A74476F146dF7d386e52961d9",
+        "protocol": "Curve documented scrvUSD satellite",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Pinned minter() identifies 0xf830b9e88f994bbb069ac884d40fa2e09d050bb8. Raw totalSupply is successfully observed zero; this is not a disabled-lane, liability exclusion or revoked-mint claim. Source recovery and full minter/bridge/upgrade/transfer reach remain unresolved.",
+        "controllerChain": "fantom",
+        "controllerAddress": "0xf830b9e88f994bbb069ac884d40fa2e09d050bb8",
+        "observedAt": "2026-10-01",
+        "observedBlock": 123513542,
+        "sources": [
+          {
+            "label": "Curve satellite inventory",
+            "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x0094ad026643994c8fb2136ec912d508b15fe0e5",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0094Ad026643994c8fB2136ec912D508B15fe0E5",
+        "protocol": "Curve documented scrvUSD satellite",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Pinned minter() identifies 0x4c62ac3f6088e882c9b2a315056bc298d22128bd. Exact-match Token.vy gates mint and set_minter to the current minter. Raw totalSupply is successfully observed zero, not a revoked authority or economic exclusion. Full acting-minter/bridge/upgrade reach remains unreviewed.",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4c62ac3f6088e882c9b2a315056bc298d22128bd",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125166303,
+        "sources": [
+          {
+            "label": "Curve satellite inventory",
+            "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+          },
+          {
+            "label": "Exact-match BSC satellite source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x0094Ad026643994c8fB2136ec912D508B15fe0E5?fields=sources,abi"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0xa3ea433509f7941df3e33857d9c9f212ad4a4e64",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64",
+        "protocol": "Curve documented scrvUSD satellite",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Pinned minter() identifies 0x47ca04ee05f167583122833abfb0f14ac5677ee4. Explorer identifies a verified Vyper Token. Raw totalSupply is successfully observed zero, not a revoked authority, disabled lane or economic exclusion. Full minter/bridge/upgrade/transfer reach remains unreviewed.",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x47ca04ee05f167583122833abfb0f14ac5677ee4",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96554383,
+        "sources": [
+          {
+            "label": "Curve satellite inventory",
+            "url": "https://docs.curve.finance/developer/scrvusd/overview/"
+          },
+          {
+            "label": "Avalanche satellite explorer",
+            "url": "https://snowscan.xyz/address/0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64#code"
+          }
+        ]
+      }
+    ]
   }
 }

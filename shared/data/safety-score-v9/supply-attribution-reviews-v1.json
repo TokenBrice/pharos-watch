@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "note": "Reviewed exhaustive economic-deployment accounting plans only. No static supply numbers or incomplete plans; per-asset authoring follows verified current circulation, escrow and in-flight research.",
+  "reviews": [],
+  "independentLiabilityAssetIds": ["sfrxusd-frax", "wsrusd-reservoir"],
+  "nativeSingleRouteReviews": [
+    {
+      "assetId": "xdai-gnosis",
+      "routeId": "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+      "reviewer": "TokenBrice",
+      "reviewedAt": "2026-08-18",
+      "rationale": "xDAI is Gnosis Chain's native gas token: 100% of the published aggregate supply is native xDAI on Gnosis, minted and burned solely through the canonical xDAI bridge that the single reviewed route represents. The route's WXDAI deployment row (gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d) is a same-chain wrapper and strict subset of the native supply, so no per-chain contract observation can equal the aggregate upstream. Attributing the published aggregate to this one reviewed route restates the reviewed bridge profile without asserting any new supply number."
+    }
+  ]
+}

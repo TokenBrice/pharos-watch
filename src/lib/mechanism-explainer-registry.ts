@@ -9,6 +9,9 @@ export const MECHANISM_EXPLAINER_TITLES: Readonly<Record<MechanismArchetype, str
   algorithmic: "Algorithmic Stablecoins, Explained",
   "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
   "commodity-claim": "Gold and Commodity Tokens, Explained",
+  "ucits-trs-fund": "UCITS Physical Securities and TRS Funds, Explained",
+  "shared-reserve": "Shared Reserve Stablecoins, Explained",
+  "protocol-position": "Protocol Position Stablecoins, Explained",
 };
 
 interface MechanismExplainerEntry {

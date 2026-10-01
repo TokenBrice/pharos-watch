@@ -1,5 +1,6 @@
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import { isKnownRequired, type V9ControlPolicy } from "./control-primitives";
+import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 
 /**
  * A control row whose authority identity is fully reviewed: it is required-known,
@@ -45,6 +46,12 @@ function mintQualityLadder(controlPolicy: V9ControlPolicy): readonly number[] {
  */
 function multisigQuorumRawAdjustment(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy): number {
   const knobs = controlPolicy.mintMergedSignals.multisigQuorumAdjustment;
+  if (control.authority?.weightedQuorum) {
+    const required = effectiveAuthoritySignatureRequirement(control.authority);
+    if (required === null) return knobs.unknownTopology;
+    const penalty = required <= 1 ? knobs.singleSigner : required === 2 ? knobs.twoSigner : knobs.thresholdThreePlus;
+    return Math.max(knobs.minAdjustment, penalty + (control.executionScopeComplete === true && control.delaySec !== null && control.delaySec > 0 ? knobs.timelockCredit : 0));
+  }
   const quorum = control.authority?.threshold ?? null;
   if (quorum === null) return knobs.unknownTopology;
   let adjustment =
@@ -68,7 +75,7 @@ function multisigQuorumRawAdjustment(control: V9DeploymentControlFactV2, control
 function modulesOrGuardsAdjustment(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy): number {
   const knobs = controlPolicy.mintMergedSignals.modulesOrGuardsAdjustment;
   if (control.modulesOrGuards === "none-detected") return knobs.noneDetectedCredit;
-  if (control.modulesOrGuards === "present") return -knobs.presentPenalty;
+  if (control.modulesOrGuards === "present") return control.moduleImpact === "verified-noninterfering" && control.executionScopeComplete === true && (control.executionScope || control.executionScopeContributors) ? 0 : -knobs.presentPenalty;
   return 0;
 }
 

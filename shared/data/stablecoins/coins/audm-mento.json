@@ -12,27 +12,24 @@
   },
   "collateral": "Shared Mento Reserve: current issuer configuration classifies this currency as reserve-backed, not USDm locked in a borrower-specific CDP.",
   "pegMechanism": "AUDm is issued and retired through Mento V2's oracle-priced USDm/AUDm Broker/BiPoolManager pool. USDm-to-AUDm swaps burn incoming USDm and mint the FX token; reverse swaps burn the FX token and mint USDm, subject to the configured oracle, spread, trading limits, and breaker checks.",
+  "mechanismArchetype": "shared-reserve",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
+    "disposition": "resolved",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
-    "rationale": "AUDm remains a legacy Mento V2 shared-reserve token. MGP-18 (August 17, 2026) explicitly lists AUDm and CADm among the FX tokens not yet migrated to CDPs and states that their USDm pools stay live for holder redemption. At Celo block 78972424, the canonical Broker recognizes the BiPoolManager provider and quotes a AUDm-to-USDm swap; verified Broker source burns the input stable asset and mints the output stable asset. The issuer backing configuration independently identifies shared diversified crypto reserve backing. This resolves the operational holder exit model but establishes neither a custodial fiat claim nor borrower-specific CDP. Keep D18 unresolved until a uniform owner-approved shared-reserve mechanism mapping exists; no protective grade is inferred.",
+    "reviewer": "Sol V10 data curation 2026-10-01 (DataMento)",
+    "rationale": "At Celo block 78986505, AUDm token 0x7175504c455076f15c04a2f90a8e352281f492f9 is bound to the Broker's USDm/AUDm pool. Its nonzero reverse quote, reserve stable-asset membership and deployed mint/burn code establish a limited operational shared-reserve claim, subject to oracle and trading-limit checks. The pinned explicit backing configuration and MGP-18 confirm reserve backing rather than CDP ownership. Fiat legal priority, whole-pool reconciliation and default recovery remain unestablished.",
     "sources": [
       {
-        "label": "Mento issuer configuration: AUDm reserve backing",
-        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+        "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
       },
       {
-        "label": "Mento shared reserve itemized API",
-        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
-      },
-      {
-        "label": "Mento counsel workshop: crypto reserve and issuer-scope position, November 18, 2024",
-        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
-      },
-      {
-        "label": "MGP-18: exact legacy FX token redemption and non-CDP status",
+        "label": "MGP-18: exact legacy FX pool and holder exit",
         "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+      },
+      {
+        "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
       }
     ]
   },

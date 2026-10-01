@@ -21,6 +21,7 @@ import { expectedWorkerRuntimeCoin } from "./worker-runtime-registry.test-suppor
 
 describe("Worker runtime stablecoin registry", () => {
   it("preserves the canonical contract identity projection", () => {
+    // r2/data/results/rlusd-ripple.json requires null decimals plus the XRPL amountEncoding identity.
     expect(WORKER_TRACKED_STABLECOINS).toEqual(TRACKED_STABLECOINS.map(expectedWorkerRuntimeCoin));
   });
 

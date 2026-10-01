@@ -80,7 +80,10 @@
     {
       "chain": "xrpl",
       "address": "4F55534700000000000000000000000000000000.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p",
-      "decimals": 6
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     }
   ],
   "collateralQuality": "rwa",

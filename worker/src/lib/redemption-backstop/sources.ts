@@ -1,4 +1,5 @@
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import {
   deriveModelConfidenceWithDetails,
   deriveModelConfidence,
@@ -401,6 +402,15 @@ export async function buildRedemptionBackstopEntry(
     if (derived) {
       finalizedEntry = { ...entry, capacityProfile: { ...entry.capacityProfile, exitRouteObservations: [derived] } };
     }
+  }
+  const executionRoutes = await observeReviewedExitExecutionRoutes({
+    assetId: stablecoinId, circulatingUsd: supplyUsd, clockSec: now, lane: "redemption", db, signal: options.signal,
+  });
+  if (executionRoutes.observations.length > 0 && finalizedEntry.capacityProfile) {
+    finalizedEntry = { ...finalizedEntry, capacityProfile: {
+      ...finalizedEntry.capacityProfile,
+      exitRouteObservations: [...(finalizedEntry.capacityProfile.exitRouteObservations ?? []), ...executionRoutes.observations],
+    } };
   }
   registerOutputDependencyResolution(finalizedEntry, config, now);
   return finalizedEntry;

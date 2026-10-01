@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, type MockRoute } from "@shared/test-utils/mock-fetch";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import type { StablecoinMeta } from "@shared/types";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 import {
   defaultSyncRoutes,
@@ -45,7 +46,16 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   ];
   const trackedMetaById = new Map<string, StablecoinMeta>(stablecoins.map((coin) => [coin.id, { ...coin, cmcSlug: undefined }]));
   trackedMetaById.set("ggbr-goldfish-gold", makeStablecoinMeta({ id: "ggbr-goldfish-gold", name: "Goldfish Gold", symbol: "GGBR", geckoId: "goldfish-gold", commodityOunces: 0.001, flags: { ...fiat, navToken: false } }));
-  return mockRegistry({ stablecoins: stablecoins.map((coin) => ({ ...coin })), trackedMetaById });
+  return mockRegistry({
+    stablecoins: stablecoins.map((coin) => ({
+      ...coin,
+      contracts: coin.contracts?.map((contract) => {
+        if (!isFixedDecimalDeployment(contract)) throw new Error("Sync fixture requires fixed-decimal contracts");
+        return { ...contract, decimals: contract.decimals };
+      }),
+    })),
+    trackedMetaById,
+  });
 });
 
 vi.mock("@shared/lib/stablecoins/frozen-snapshots", () => ({ FROZEN_SNAPSHOTS: [], FROZEN_SNAPSHOTS_BY_ID: new Map() }));

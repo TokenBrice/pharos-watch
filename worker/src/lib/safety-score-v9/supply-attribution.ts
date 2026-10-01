@@ -14,6 +14,9 @@ import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   buildReviewedDeploymentRouteInventory,
 } from "./supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, buildReviewedEconomicDeploymentInventory, hasCompleteEligibleProviderSupply } from "./supply-attribution-contract";
+import { observeReviewedEconomicDeploymentPartitionAttempt } from "./economic-supply-observer";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
 } from "./centrifuge-supply-observer";
@@ -69,9 +72,9 @@ function hasUpstreamChainSupply(
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   assetId: string,
 ): boolean {
-  return Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).some(
-    (row) => row.current > 0,
-  );
+  return REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId)
+    ? hasCompleteEligibleProviderSupply(fixedInput, assetId)
+    : Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).some(row => row.current > 0);
 }
 
 export function safetyScoreV9SupplyAttributionExpectedAssetIds(
@@ -157,6 +160,7 @@ interface SupplyAttributionAssetDescriptor {
   sourceOriginClass: SupplyAttributionJournalV1["sourceOriginClass"];
   routeInventoryDigest: () => string | null;
   observe: (input: {
+    fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
     aggregateSupplyUsd: number;
     registryFingerprint: string;
     scoringClockSec: number;
@@ -173,6 +177,9 @@ export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET: Readonly<
   Record<string, SupplyAttributionJournalV1["sourceId"]>
 > = {
   [XAUT_ASSET_ID]: "xaut.canonical-lock-mint-group-partition.v2",
+  ...Object.fromEntries([...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys()].map(assetId => [
+    assetId, V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
+  ])),
   "wm-m0": "wm.reviewed-deployment-unit-partition.v1",
   ...Object.fromEntries(
     CENTRIFUGE_BURN_MINT_ASSET_IDS.map(
@@ -219,6 +226,12 @@ function supplyAttributionAssetDescriptors():
           }),
       }),
     ),
+    ...[...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys()].map((assetId): SupplyAttributionAssetDescriptor => ({
+      assetId, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
+      sourceOriginClass: "issuer-disclosure-plus-onchain",
+      routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
+      observe: ({ fixedInput, chainRpcs, signal }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, chainRpcs, signal }),
+    })),
   ];
 }
 
@@ -293,6 +306,7 @@ async function runSupplyAttributionAssetCapture(input: {
     outcome =
       input.chainRpcs && input.chainRpcs.size > 0
         ? await input.descriptor.observe({
+            fixedInput: input.fixedInput,
             aggregateSupplyUsd: aggregateSupplyUsd(
               input.fixedInput,
               input.descriptor.assetId,
@@ -438,6 +452,14 @@ export function safetyScoreV9ChainRows(
       },
     };
   }
+  if (attribution?.model === "reviewed-economic-deployment-partition-v1") {
+    const rows: V9CurrentChainRows = {};
+    for (const deployment of attribution.deployments) {
+      rows[deployment.chainId] = { current: (rows[deployment.chainId]?.current ?? 0) + deployment.currentSupplyUsd };
+    }
+    if (attribution.unattributedSupplyUsd > 0) rows[`unmatched-economic:${assetId}`] = { current: attribution.unattributedSupplyUsd };
+    return rows;
+  }
   if (attribution?.model === "reviewed-deployment-unit-partition-v1") {
     const rows: V9CurrentChainRows = {};
     for (const deployment of attribution.deployments) {
@@ -478,6 +500,9 @@ export function safetyScoreV9ChainSupplyMaxAgeSec(
   // Preserve that same bound when the accepted packet becomes fact evidence;
   // otherwise the generic chain-supply window would immediately contradict
   // the per-asset admission contract.
+  if (attribution?.model === "reviewed-economic-deployment-partition-v1") {
+    return V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
+  }
   return assetId === XAUT_ASSET_ID &&
     attribution?.model === "canonical-lock-mint-group-partition-v2"
     ? XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC

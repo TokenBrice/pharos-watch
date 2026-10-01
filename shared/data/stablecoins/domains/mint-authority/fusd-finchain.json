@@ -48,6 +48,98 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
         "observedBlock": 452345452,
+        "executionScope": {
+          "controllerDeployment": "solana:Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc04)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Independently verified finalized mint and SPL multisig context 452354762",
+              "url": "https://api.mainnet-beta.solana.com"
+            },
+            {
+              "label": "SPL Token instruction authority semantics",
+              "url": "https://raw.githubusercontent.com/solana-program/token/main/interface/src/instruction.rs"
+            },
+            {
+              "label": "FinChain FUSD token deployments",
+              "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+            },
+            {
+              "label": "FinChain FUSDLP token deployments",
+              "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token"
+            }
+          ],
+          "pin": {
+            "position": "452354762",
+            "hash": null,
+            "runtimeIdentity": "Initialized SPL multisig account owned by TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA; deployed program binary correspondence not reviewed",
+            "signerIdentity": "1-of-3: DeSV2k6LkxEWTL4U4FFrd5na8LJWqAMEEy48KMqkkf3j,E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C,GmFB41nws8Egtb9mQAqR1i82XPcEJXAzBPZW2t3hsKVr"
+          },
+          "observedState": {
+            "position": "452354762",
+            "hash": null,
+            "runtimeIdentity": "Initialized SPL multisig account owned by TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA; deployed program binary correspondence not reviewed",
+            "signerIdentity": "1-of-3: DeSV2k6LkxEWTL4U4FFrd5na8LJWqAMEEy48KMqkkf3j,E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C,GmFB41nws8Egtb9mQAqR1i82XPcEJXAzBPZW2t3hsKVr"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "solana-mint-authority",
+              "targetDeployment": "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": ["MintTo", "MintToChecked"],
+              "callMode": "native",
+              "capabilities": ["mint"],
+              "capSemantics": {"kind": "unbounded", "bound": null},
+              "claimImpairment": "unbounded",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [],
+              "affectedDeployments": ["solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q"],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": ["solana-change-mint-authority"],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "solana-change-mint-authority",
+              "targetDeployment": "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": ["SetAuthority(MintTokens)"],
+              "callMode": "native",
+              "capabilities": ["parameter-change"],
+              "capSemantics": {"kind": "unbounded", "bound": null},
+              "claimImpairment": "unbounded",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [],
+              "affectedDeployments": ["solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q"],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "sources": [
           {
             "label": "FinChain FUSD token deployments",

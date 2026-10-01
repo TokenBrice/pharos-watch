@@ -23,23 +23,11 @@
  *   4. the published aggregate supply is a finite positive USD number.
  * When any gate fails, behavior is exactly the pre-existing null-share posture.
  */
-export interface CuratedNativeSingleRouteSupplyAttribution {
-  readonly assetId: string;
-  readonly routeId: string;
-  readonly reviewer: string;
-  readonly reviewedAt: string;
-  readonly rationale: string;
-}
+import supplyAttributionReviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
+import { ReviewedEconomicSupplyPlanFileSchema, type CuratedNativeSingleRouteSupplyAttribution } from "@shared/types/safety-score-v9-supply-attribution";
 
-export const CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION: Readonly<
-  Record<string, CuratedNativeSingleRouteSupplyAttribution>
-> = Object.freeze({
-  "xdai-gnosis": Object.freeze({
-    assetId: "xdai-gnosis",
-    routeId: "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
-    reviewer: "TokenBrice",
-    reviewedAt: "2026-08-18",
-    rationale:
-      "xDAI is Gnosis Chain's native gas token: 100% of the published aggregate supply is native xDAI on Gnosis, minted and burned solely through the canonical xDAI bridge that the single reviewed route represents. The route's WXDAI deployment row (gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d) is a same-chain wrapper and strict subset of the native supply, so no per-chain contract observation can equal the aggregate upstream. Attributing the published aggregate to this one reviewed route restates the reviewed bridge profile without asserting any new supply number.",
-  }),
-});
+export const CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION: Readonly<Record<string, CuratedNativeSingleRouteSupplyAttribution>> = Object.freeze(
+  Object.fromEntries(ReviewedEconomicSupplyPlanFileSchema.parse(supplyAttributionReviews).nativeSingleRouteReviews.map(review => [
+    review.assetId, Object.freeze(review),
+  ])),
+);

@@ -10,19 +10,20 @@
   },
   "collateral": "DAI held through Blast's MakerDAO DSR yield manager; USDC, USDT, and DAI are supported bridge deposit inputs, while USDB withdrawals redeem to DAI.",
   "pegMechanism": "Automatic rebasing with yield from underlying centralized stablecoin strategies",
+  "mechanismArchetype": "protocol-position",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
+    "disposition": "resolved",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC02)",
-    "rationale": "D18 requires the tracked holder claim and current backing mechanism to determine the archetype. USDB holders receive an auto-rebasing Blast token redeemable to DAI through the Ethereum bridge; at Ethereum block 26097122 the yield manager TOKEN() was DAI and getProviderInfoAt(0) identified its DSR provider. This establishes a bridged protocol-position claim, not direct BRL/USD cash reserves, a Treasury fund share, or borrower CDP issuance by USDB holders. No existing family has a fully evidenced exact-product mapping, so the previous fiat-cash resolution is withdrawn rather than replacing it with the parent's CDP or a marketed T-Bill category. DAI backing and dependency evidence remain intact; approved bridge inputs do not establish FRAX/frxUSD backing. Re-review when Blast publishes enforceable holder-claim terms and a complete current strategy inventory, or when the methodology owner admits an evidenced bridge/yield-claim family.",
+    "reviewer": "Sol curation pass 2026-10-01 (DataMisc11)",
+    "rationale": "USDB at Blast 0x4300000000000000000000000000000000000003 is an auto-rebasing protocol-position liability with an operational bridge withdrawal claim to Ethereum DAI, rather than a fiat cash claim, direct fund share or holder-created CDP. Re-fetched issuer documentation explicitly identifies DAI redemption. At Ethereum block 26099927, USDYieldManager 0xa230285d5683c74935ad14c446e137c8c8828438 retained implementation 0xecddf748a60e23609c07af6ca3856744b139b911, TOKEN()=DAI and one DSR provider 0x0733f618118bf420b6b604c969498ecf143681a8; provider index 1 reverted out-of-bounds. At Blast block 41038766, USDB bridge() and REPORTER() retained the exact L2BlastBridge and Ethereum manager. This establishes the current operational claim and model only; whole-liability reconciliation, complete position custody/continuity, encumbrance/allocation and funded default priority remain unresolved.",
     "sources": [
       {
         "label": "Blast USDB rebasing and DAI redemption documentation",
         "url": "https://docs.blast.io/about-blast"
       },
       {
-        "label": "Blast official site",
-        "url": "https://blast.io/"
+        "label": "Pinned USDYieldManager implementation source (Ethereum block 26099927)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xecddf748a60e23609c07af6ca3856744b139b911"
       }
     ]
   },

@@ -1,7 +1,9 @@
 import { z } from "zod";
-import { ExitRouteFamilySchema, PhysicalToUsdTraceSchema } from "./exit-route";
+import { ExitExecutionPublicCertificateSchema, ExitRouteFamilySchema, PhysicalToUsdTraceSchema } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
+import { V9DeploymentControlFactBaseSchema } from "./safety-score-v9-facts";
+import { V9ControlExecutionScopeSchema, V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
 import {
   EXIT_SCORE_TOLERANCE,
   isUniqueSorted,
@@ -215,6 +217,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
         routeFamily: ExitRouteFamilySchema,
         score: ScoreSchema,
         physicalToUsd: PhysicalToUsdTraceSchema.optional(),
+        executionCertificate: ExitExecutionPublicCertificateSchema.optional(),
         components: z.array(
           z
             .object({
@@ -268,6 +271,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
           included: z.boolean(),
           exclusionReason: V9ReasonCodeSchema.nullable(),
           physicalToUsd: PhysicalToUsdTraceSchema.optional(),
+          executionCertificate: ExitExecutionPublicCertificateSchema.optional(),
           confidenceFactor: z.number().finite().min(0).max(1).nullable().optional(),
           capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
           settlementDelaySec: z.number().finite().nonnegative().optional(),
@@ -377,6 +381,18 @@ const SafetyScoreV9ControlBreakdownSchema = z
           score: ScoreSchema,
           binding: z.boolean(),
           posture: z.string().min(1).max(120),
+          controlDetails: z.array(z.object({
+            controlKey: z.string().min(1),
+            authority: V9DeploymentControlFactBaseSchema.shape.authority,
+            minimumCryptographicSignatures: z.number().int().positive().nullable(),
+            executionScopeComplete: z.boolean().nullable(),
+            moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element,
+            diagnostics: z.array(z.string()),
+            executionPaths: z.array(V9ControlExecutionScopeSchema.shape.paths.element.pick({
+              id: true, targetDeployment: true, entrypointKind: true, entrypoints: true,
+              activation: true, reach: true, capabilities: true,
+            })),
+          }).strict()).optional(),
         })
         .strict(),
     ),

@@ -29,6 +29,7 @@ import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shar
 
 describe("client registry field contract", () => {
   it("projects the exact narrow Worker identity and lifecycle contract", () => {
+    // r2/data/results/rlusd-ripple.json requires null decimals plus the XRPL amountEncoding identity.
     const { runtimeCoins } = buildWorkerRuntimeRegistryOutput();
     const expected = TRACKED_STABLECOINS.map(expectedWorkerRuntimeCoin);
 

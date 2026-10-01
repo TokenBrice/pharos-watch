@@ -28,6 +28,8 @@ import {
   fallbackResearchEvidence,
   type AssetBuildContext,
 } from "./fact-set-context";
+import type { V9AllocationScopeFact, V9AllocationScoredDimension } from "@shared/types/safety-score-v9-allocation";
+import { resolveAllocationDimensionCoverage } from "./fact-set-allocation";
 
 interface WrapperLocalFactBuildInputs {
   implementation: V9AssetFactsV2["implementation"];
@@ -41,6 +43,7 @@ interface WrapperLocalFactBuildInputs {
   economicControlReview: V9EconomicControlReviewV2;
   peg: V9AssetFactsV2["peg"];
   supply: V9AssetFactsV2["supply"];
+  allocationScopeFacts?: readonly V9AllocationScopeFact[];
 }
 
 export function resolveWrapperForm(
@@ -146,41 +149,31 @@ function isDirectSerialWrapper(
   );
 }
 
-type WrapperAllocationReview = NonNullable<AssetBuildContext["asset"]["wrapperAllocationReview"]>;
-
-function wrapperAllocationLeverageAssessment(
-  leverage: WrapperAllocationReview["localLeverage"],
-): V9WrapperRiskAssessment {
-  switch (leverage) {
-    case "no-borrowing-surface":
-      return "none";
-    case "bounded-up-to-1.1x":
-      return "low";
-    case "bounded-up-to-1.5x":
-      return "moderate";
-    case "bounded-up-to-2x":
-      return "high";
-    case "unbounded-or-above-2x":
-      return "critical";
+function resolveWrapperFactFromScope(
+  existing: V9WrapperLocalDimensionFact,
+  facts: readonly V9AllocationScopeFact[],
+  dimension: V9AllocationScoredDimension,
+): V9WrapperLocalDimensionFact {
+  const scope = resolveAllocationDimensionCoverage(facts, dimension);
+  if (scope.signals.length === 0) return existing;
+  const evidenceRefIds = uniqueEvidenceRefIds([...existing.evidenceRefIds, ...scope.evidenceRefIds]);
+  const signals = [...existing.signals, ...scope.signals];
+  // Partial favorable evidence is diagnostic, never a whole-book verdict.
+  // Existing reviewed adverse facts are not replaced by a better local scope.
+  if (scope.assessment !== null && existing.disposition === "reviewed" && existing.assessment !== null) {
+    return { ...existing, assessment: worstWrapperRisk([existing.assessment, scope.assessment]), signals, evidenceRefIds };
   }
-}
-
-function wrapperAllocationReuseAssessment(
-  capitalReuse: WrapperAllocationReview["capitalReuse"],
-): V9WrapperRiskAssessment {
-  switch (capitalReuse) {
-    case "none":
-      return "none";
-    case "bluechip-overcollateralized-lending":
-      return "low";
-    case "mixed-overcollateralized-lending":
-      return "moderate";
-    case "long-tail-overcollateralized-lending":
-    case "multi-strategy-reuse":
-    case "liquidation-loss-absorption":
-    case "single-borrower-risk-capital":
-      return "high";
+  if (scope.complete && scope.assessment !== null && scope.assessment !== "none" && existing.disposition === "not-applicable") {
+    // Complete positive adverse evidence supersedes a structural absence
+    // assumption; a savings/pure label cannot hide proved local borrowing.
+    return { disposition: "reviewed", assessment: scope.assessment,
+      signals: [...scope.signals, "allocation-scope-overrides-structural-absence"], evidenceRefIds };
   }
+  if (scope.complete && scope.assessment !== null && allocationCanResolveWrapperFact(existing)) {
+    return { disposition: "reviewed", assessment: scope.assessment,
+      signals: [...scope.signals, `allocation-scope-complete:${dimension}`], evidenceRefIds };
+  }
+  return { ...existing, signals, evidenceRefIds };
 }
 
 function allocationCanResolveWrapperFact(fact: V9WrapperLocalDimensionFact): boolean {
@@ -307,6 +300,7 @@ function buildWrapperStructuralDimensions(
   // retained extensions cannot turn expired or future allocation proof into relief.
   const allocation =
     authoredAllocation !== null &&
+    authoredAllocation.scopeKind === "whole-allocation" &&
     Date.parse(`${authoredAllocation.reviewedAt}T00:00:00.000Z`) <= context.fixedInput.clockSec * 1_000 &&
     context.fixedInput.clockSec * 1_000 < Date.parse(`${authoredAllocation.expiresAt}T00:00:00.000Z`) &&
     authoredAllocation.custody === "fully-onchain-no-offchain-custodian"
@@ -526,7 +520,7 @@ function buildWrapperStructuralDimensions(
       leverage,
       reviewedWrapperFact(
         context,
-        wrapperAllocationLeverageAssessment(allocation.localLeverage),
+        V9_CANDIDATE_POLICY_V1.policy.semantic.formula.wrapperAllocationScope.leverageAssessments[allocation.localLeverage],
         [
           `wrapper-allocation-local-leverage:${allocation.localLeverage}`,
           `wrapper-allocation-observation-count:${allocation.observations.length}`,
@@ -584,7 +578,7 @@ function buildWrapperStructuralDimensions(
       rehypothecationCorrelation,
       reviewedWrapperFact(
         context,
-        wrapperAllocationReuseAssessment(allocation.capitalReuse),
+        V9_CANDIDATE_POLICY_V1.policy.semantic.formula.wrapperAllocationScope.reuseAssessments[allocation.capitalReuse],
         [
           `wrapper-allocation-capital-reuse:${allocation.capitalReuse}`,
           `wrapper-allocation-observation-count:${allocation.observations.length}`,
@@ -639,6 +633,9 @@ function buildWrapperStructuralDimensions(
       [...input.peg.status.evidenceRefIds, ...input.economicControlReview.mint.status.evidenceRefIds],
     );
   }
+  custodyEscrow = resolveWrapperFactFromScope(custodyEscrow, input.allocationScopeFacts ?? [], "custodyEscrow");
+  leverage = resolveWrapperFactFromScope(leverage, input.allocationScopeFacts ?? [], "leverage");
+  rehypothecationCorrelation = resolveWrapperFactFromScope(rehypothecationCorrelation, input.allocationScopeFacts ?? [], "rehypothecationCorrelation");
   return {
     contractMutability,
     custodyEscrow,
@@ -725,6 +722,8 @@ function buildWrapperExitDimensions(
               exitRoutes: [...input.exitRoutes],
             },
             V9_CANDIDATE_POLICY_V1,
+            false,
+            { assetId: context.asset.assetId, clockSec: context.fixedInput.clockSec },
           ).routes.flatMap((route) => (route.included ? [route.routeKey] : [])),
         );
   const observedUnwindRoutes = input.exitRoutes.filter(
@@ -875,9 +874,13 @@ export function buildWrapperLocalFacts(
     ...(wrapperEdge?.evidenceRefIds ?? []),
   ]);
   const allocationEvidenceRefIds =
-    context.asset.wrapperAllocationReview === null || context.asset.wrapperAllocationReview === undefined
+    context.asset.wrapperAllocationReview?.scopeKind !== "whole-allocation"
       ? []
-      : componentResearchEvidence(context, "wrapper-local:leverage");
+      : uniqueEvidenceRefIds([
+          ...componentResearchEvidence(context, "wrapper-local:custodyEscrow"),
+          ...componentResearchEvidence(context, "wrapper-local:leverage"),
+          ...componentResearchEvidence(context, "wrapper-local:rehypothecationCorrelation"),
+        ]);
   const routeEvidenceRefIds = uniqueEvidenceRefIds([
     ...input.exitStatus.evidenceRefIds,
     ...input.exitRoutes.flatMap((route) => [

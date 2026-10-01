@@ -84,7 +84,10 @@
     {
       "chain": "xrpl",
       "address": "EUROP.rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
-      "decimals": 6
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     },
     {
       "chain": "plasma",

@@ -4,6 +4,10 @@ import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
 import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
 import { ScoreSchema } from "./safety-schema-primitives";
+import { V9SupplyAttributionPolicySchema } from "./safety-score-v9-supply-attribution";
+import { ExitExecutionModelPolicySchema } from "./exit-route";
+import { V9WrapperAllocationScopePolicySchema } from "./safety-score-v9-allocation";
+import { V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
 import {
   RedemptionAccessModelSchema,
   RedemptionExecutionModelSchema,
@@ -569,6 +573,7 @@ export type V9AssetPremiumPolicy = z.infer<typeof V9AssetPremiumPolicySchema>;
 
 const V9FormulaPolicySchema = z
   .object({
+    wrapperAllocationScope: V9WrapperAllocationScopePolicySchema,
     pillarWeights: z
       .object({
         backing: z.number().finite().min(0).max(1),
@@ -700,6 +705,7 @@ const V9BackingSignalRuleSchema = z
 const V9BackingArchetypePolicySchema = z
   .object({
     reserveWeight: z.number().finite().min(0).max(1),
+    allowCompleteLiveParentMechanismBypass: z.boolean(),
     componentWeights: z.record(z.string().min(1), z.number().finite().min(0).max(1)),
     serialComponentKeys: z.array(z.string().min(1)),
     structuralComponents: z.record(z.string().min(1), V9BackingSignalRuleSchema),
@@ -874,6 +880,9 @@ const V9BackingPolicySchema = z
         "synthetic-delta-neutral": V9BackingArchetypePolicySchema,
         algorithmic: V9BackingArchetypePolicySchema,
         "rwa-credit-fund": V9BackingArchetypePolicySchema,
+        "ucits-trs-fund": V9BackingArchetypePolicySchema,
+        "shared-reserve": V9BackingArchetypePolicySchema,
+        "protocol-position": V9BackingArchetypePolicySchema,
       })
       .strict(),
   })
@@ -881,6 +890,7 @@ const V9BackingPolicySchema = z
 
 const V9ControlPolicySchema = z
   .object({
+    exactScope: V9ExactControlPolicySchema,
     mintPostureQuality: z
       .object({
         "none-resolved": ScoreSchema,
@@ -992,6 +1002,7 @@ const V9ControlPolicySchema = z
 
 const V9ExitPolicySchema = z
   .object({
+    executionModels: z.record(z.string().min(1), ExitExecutionModelPolicySchema),
     stressRequest: z
       .object({
         notionalGridUsd: z.array(z.number().finite().positive()).min(1),
@@ -1280,6 +1291,7 @@ const V9MethodologySemanticSchema = z
     formula: V9FormulaPolicySchema,
     evidence: V9EvidencePolicySchema,
     materiality: V9MaterialityPolicySchema,
+    supplyAttribution: V9SupplyAttributionPolicySchema,
     backing: V9BackingPolicySchema,
     exit: V9ExitPolicySchema,
     control: V9ControlPolicySchema,

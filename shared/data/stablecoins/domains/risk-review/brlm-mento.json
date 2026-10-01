@@ -54,48 +54,85 @@
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",
-    "summary": "BRLm's live Celo USDm/BRLm Broker exchange uses one Mento SortedOracles BRL/USD reporter with a 360-second freshness/reset window. MedianDeltaBreaker and MarketHoursBreaker gate trading; no alternate provider or fallback path is configured.",
+    "summary": "At Celo block 78986505, BRLm's Broker/BiPoolManager USDm/BRLm ConstantSum exchange 0xd11d52b973ddbb983cc2087aabcafd915fc3140cf9996aacc61db9710d1bde05 uses BRL/USD feed 0x9db83be97c82912cb342407dd7b880983052b9c1, one ChainlinkRelayerV1 reporter 0x6322a90b468c14d1091cc91bc42fad5584312220, and one configured Chainlink aggregator 0xe8ecaf727080968ed5f6dbb595b91e50eeb9f8b3. getRates and medianRate agree on 191603910000000000000000/1e24; medianTimestamp is 1790887214. Effective report expiry and bucket reset are 360 seconds, minimumReports is 1, and spread is 0.3%. MedianDeltaBreaker is enabled at 4% with a 900-second reset cooldown; ValueDeltaBreaker is disabled. The sorted-list median of one relayer is not independent medianization or failover. Stale reports invalidate ConstantSum quotes; BreakerBox suspends execution rather than substituting a second source. This evidenced single-live-source topology retains the existing Mento single-source-or-laggy convention; it does not assert the pinned report was stale.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
-      "rationale": "At Celo block 72138428 (2026-07-14T14:26:26Z), BRLm used the Mento v2 Broker/BiPoolManager USDm/BRLm mint/burn exchange with minimumReports 1 and a 360-second reset/expiry window. The pinned deployment registry (2026-06-17) has no BRLm CDP contracts, Mento's backing config classifies BRLm as reserve-backed, and the reviewed reserve API listed active troves only for GBPm, JPYm, and CHFm. BRLm therefore has no borrower-specific liquidation branch, but its price-sensitive Broker conversion rate is a top-level mint/redemption authority that must be scored.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol V10 MentoOracle primary-evidence review",
+      "rationale": "BRLm is explicitly reserve-backed in the pinned issuer configuration, not one of the GBPm/CHFm/JPYm CDP assets. The enumerated pinned Broker mint/burn exchange has external price authority but no borrower-specific liquidation engine. Score this authority as coin-price-feed/top-level-only; branch rows and liquidationDelaySec are not applicable. A 900-second breaker reset cooldown or 360-second report expiry is not a liquidation delay. This review covers canonical Celo exchange pricing and does not classify separate bridge control or remote-chain liquidity.",
       "sources": [
         {
-          "label": "Celo block 72138428 (2026-07-14T14:26:26Z)",
-          "url": "https://celo.blockscout.com/block/72138428"
+          "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+          "url": "https://celo.blockscout.com/block/78986505"
         },
         {
-          "label": "Pinned Mento Celo deployment registry (commit dated 2026-06-17)",
-          "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+          "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
         },
         {
-          "label": "Pinned Mento stablecoin backing config",
-          "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
-        },
-        {
-          "label": "Mento reserve analytics API",
-          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+          "label": "Mento explicit reserve/CDP backing configuration",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol V10 MentoOracle primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Pinned Mento BiPoolManager source",
-        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
+        "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+        "url": "https://celo.blockscout.com/block/78986505"
       },
       {
-        "label": "Pinned Mento Broker source",
-        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+        "label": "Verified SortedOracles implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x93da60dcdda3229246769cce307076c181f41f72"
       },
       {
-        "label": "BRLm on Celo Blockscout",
-        "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+        "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+      },
+      {
+        "label": "Mento explicit reserve/CDP backing configuration",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Verified BRL/USD ChainlinkRelayerV1; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x6322a90b468c14d1091cc91bc42fad5584312220"
+      },
+      {
+        "label": "Verified MedianDeltaBreaker; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x49349f92d2b17d491e42c8fdb02d19f072f9b5d9"
+      }
+    ],
+    "paths": [
+      {
+        "id": "celo-mento-broker",
+        "chain": "celo",
+        "address": "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad lists BiPoolManager 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901 as its exchange provider and exposes 1 reviewed ConstantSum mint/burn conversion path(s) involving BRLm. These paths use external SortedOracles rates and reserve inventory, not borrower collateral positions or borrower liquidation. The pinned issuer configuration explicitly classifies this asset as reserve-backed. This exact local Broker pricing path is therefore top-level-only; no collateral-liquidation branch or liquidationDelaySec applies.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
       }
     ]
   },

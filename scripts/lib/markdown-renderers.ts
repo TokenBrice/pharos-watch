@@ -113,7 +113,7 @@ export function renderStablecoinDetail(
         "| Chain | Address | Decimals |",
         "| --- | --- | --- |",
         ...coin.contracts.map((contract) =>
-          `| ${contract.chain} | \`${contract.address}\` | ${contract.decimals} |`
+          `| ${contract.chain} | \`${contract.address}\` | ${contract.amountEncoding?.kind === "xrpl-issued-currency" ? "XRPL issued-currency decimal string" : contract.decimals} |`
         ),
       ].join("\n"),
     );

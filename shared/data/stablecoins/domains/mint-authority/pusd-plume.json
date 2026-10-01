@@ -85,6 +85,80 @@
           "observedBlock": 26096009,
           "source": "onchain"
         },
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "pUSD BoringVault on Etherscan",
+              "url": "https://etherscan.io/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+            },
+            {
+              "label": "pUSD Safe on Etherscan",
+              "url": "https://etherscan.io/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
+            }
+          ],
+          "pin": {
+            "position": "26096009",
+            "hash": null,
+            "runtimeIdentity": "GnosisSafeL2 singleton ethereum:0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+            "signerIdentity": "threshold=3;owners=0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f,0x98be74d3d5604904d0686eef9b4267f681f9520a,0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6,0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572,0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9,0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+          },
+          "observedState": {
+            "position": "26096009",
+            "hash": null,
+            "runtimeIdentity": "GnosisSafeL2 singleton ethereum:0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+            "signerIdentity": "threshold=3;owners=0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f,0x98be74d3d5604904d0686eef9b4267f681f9520a,0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6,0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572,0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9,0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ethereum-owner-arbitrary-enter",
+              "targetDeployment": "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x39d6ba32"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "pusd-plume"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "Reverified by CurM16cNGN on 2026-10-01 at pinned Ethereum block 26096009 and Plume block 96626677: BoringVault and RolesAuthority owners remain Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Both Safes are 3-of-6 with the listed signer set, no enabled modules, zero guard storage, fallback handler 0x017062a1de2fe6b99be3d9d37841fed19f573804 and masterCopy 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The previous signer 0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a is absent; current signer 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9 is present. The vault implementation, admin and beacon EIP-1967 slots remain zero and authority() remains 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 on both chains. No signer key-custody or fallback-handler safety claim is made.",
         "sources": [
           {
@@ -115,6 +189,76 @@
         "failureDomainKeys": [
           "contract:plume:0x16424edf021697e34b800e1d98857536b0f2287b"
         ],
+        "executionScope": {
+          "controllerDeployment": "plume:0x16424edf021697e34b800e1d98857536b0f2287b",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Plume collateral-deposit Teller",
+              "url": "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+            }
+          ],
+          "pin": {
+            "position": "96703539",
+            "hash": null,
+            "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
+            "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
+          },
+          "observedState": {
+            "position": "96703539",
+            "hash": null,
+            "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
+            "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "plume-teller-native-deposit",
+              "targetDeployment": "plume:0x16424edf021697e34b800e1d98857536b0f2287b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x0efe6a8b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "collateral-gated",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "pusd-plume"
+              ],
+              "affectedDeployments": [
+                "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Plume block 96703539, vault() returns pUSD 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f and RolesAuthority.canCall(Teller,vault,enter) is true. The deployment-to-pin UserRoleUpdated census identifies this Teller and NestVaultOFT as the two current non-owner enter callers. canCall(predicate,Teller,deposit) is true; deposit is not public. Verified source binds native shares to transferred collateral and the accountant rate.",
         "sources": [
           {
@@ -141,6 +285,76 @@
         "failureDomainKeys": [
           "contract:ethereum:0x16424edf021697e34b800e1d98857536b0f2287b"
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x16424edf021697e34b800e1d98857536b0f2287b",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Ethereum collateral-deposit Teller",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+            }
+          ],
+          "pin": {
+            "position": "26098751",
+            "hash": null,
+            "runtimeIdentity": "ethereum:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
+            "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
+          },
+          "observedState": {
+            "position": "26098751",
+            "hash": null,
+            "runtimeIdentity": "ethereum:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
+            "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ethereum-teller-native-deposit",
+              "targetDeployment": "ethereum:0x16424edf021697e34b800e1d98857536b0f2287b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x0efe6a8b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "collateral-gated",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "pusd-plume"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26098751, vault() returns the Ethereum pUSD BoringVault and canCall(Teller,vault,enter) is true. The deployment-to-pin UserRoleUpdated census identifies this Teller and NestVaultOFT as the two current non-owner enter callers. canCall(predicate,Teller,deposit) is true; deposit is not public. Verified Ethereum source enforces collateral transfer and rate-derived native minting.",
         "sources": [
           {
@@ -167,6 +381,76 @@
         "failureDomainKeys": [
           "contract:plume:0xf6aada00bc2a206f06bce86ddd8348b70daa1059"
         ],
+        "executionScope": {
+          "controllerDeployment": "plume:0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Plume NestVaultOFT",
+              "url": "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
+            }
+          ],
+          "pin": {
+            "position": "96703539",
+            "hash": null,
+            "runtimeIdentity": "plume:0x5766a40abfb8802303235a2f5f12a71ed84d4700 (verified NestVaultOFT implementation)",
+            "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
+          },
+          "observedState": {
+            "position": "96703539",
+            "hash": null,
+            "runtimeIdentity": "plume:0x5766a40abfb8802303235a2f5f12a71ed84d4700 (verified NestVaultOFT implementation)",
+            "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "plume-nest-native-deposit",
+              "targetDeployment": "plume:0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x6e553f65"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "collateral-gated",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "pusd-plume"
+              ],
+              "affectedDeployments": [
+                "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Plume block 96703539, share() returns the pUSD BoringVault, asset() returns native USDC 0x222365ef19f7947e5484218551b56bb3965aa7af and canCall(NestVaultOFT,vault,enter) is true. Implementation is verified NestVaultOFT 0x5766a40abfb8802303235a2f5f12a71ed84d4700; ProxyAdmin and Nest owner are controlled by Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982.",
         "sources": [
           {
@@ -193,6 +477,76 @@
         "failureDomainKeys": [
           "contract:ethereum:0xf6aada00bc2a206f06bce86ddd8348b70daa1059"
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Ethereum NestVaultOFT",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2"
+            }
+          ],
+          "pin": {
+            "position": "26098751",
+            "hash": null,
+            "runtimeIdentity": "ethereum:0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2 (verified NestVaultOFT implementation)",
+            "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
+          },
+          "observedState": {
+            "position": "26098751",
+            "hash": null,
+            "runtimeIdentity": "ethereum:0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2 (verified NestVaultOFT implementation)",
+            "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ethereum-nest-native-deposit",
+              "targetDeployment": "ethereum:0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x6e553f65"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "collateral-gated",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "pusd-plume"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26098751, share() returns the pUSD BoringVault, asset() returns USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and canCall(NestVaultOFT,vault,enter) is true. Implementation is verified NestVaultOFT 0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2; ProxyAdmin and Nest owner are controlled by Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982.",
         "sources": [
           {

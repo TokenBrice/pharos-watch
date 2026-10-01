@@ -2,6 +2,7 @@ import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
+import { observeReviewedExitExecutionRoutes } from "../../lib/exit-execution/runtime";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { LiquidityFallbackCounters, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
@@ -396,15 +397,21 @@ export async function computeStablecoinScores(
       [...retainedPools, ...(p4OnlyRetainedPools.get(id) ?? [])],
       retainedMeasuredRoutePools.get(id) ?? [],
     );
-    const routeObservationResult = applyDexRouteObservationBounds(
-      id,
-      buildP4DexExitRouteObservations({
-        stablecoinId: id,
-        retainedPools: routeObservationPoolSelection.pools,
-        observedAt: routeObservedAt,
-      }),
-      routeSelectionDiagnostics,
-    );
+    const executionRoutes = await observeReviewedExitExecutionRoutes({
+      assetId: id, circulatingUsd: mcapById?.get(id) ?? null, clockSec: routeObservedAt,
+      lane: "dex", db, signal,
+    });
+    const baseRouteResult = buildP4DexExitRouteObservations({
+      stablecoinId: id, retainedPools: routeObservationPoolSelection.pools, observedAt: routeObservedAt,
+    });
+    // Venue depth is a route lower bound, never evidence of chain/pool census completion.
+    for (const observation of executionRoutes.observations) {
+      baseRouteResult.observations.push(observation);
+      baseRouteResult.coverage.observationCount += 1;
+      if (observation.scoreEligible) baseRouteResult.coverage.scoreEligibleObservationCount += 1;
+      baseRouteResult.coverage.evidenceCounts[observation.evidenceKind] = (baseRouteResult.coverage.evidenceCounts[observation.evidenceKind] ?? 0) + 1;
+    }
+    const routeObservationResult = applyDexRouteObservationBounds(id, baseRouteResult, routeSelectionDiagnostics);
     stripDexMeasuredExecutionInternalFields(retainedPools);
     // Persistence and price publication are read-only consumers of the same
     // sanitized pool graph. Sharing it avoids cloning thousands of rich pool

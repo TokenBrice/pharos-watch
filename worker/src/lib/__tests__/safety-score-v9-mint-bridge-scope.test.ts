@@ -329,7 +329,8 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       );
       const satelliteAuthorityKeys = satelliteRoutes.map((route) =>
         route.controllerAddress
-          ? `${route.controllerChain}:${route.controllerAddress.toLowerCase()}`
+          // r2/data/results/{usdai-usd-ai,susdai-usd-ai}.json pins case-sensitive Solana execution identities.
+          ? `${route.controllerChain}:${route.controllerChain === "solana" ? route.controllerAddress : route.controllerAddress.toLowerCase()}`
           : `bridge-route:${route.id}`,
       );
 
@@ -406,6 +407,32 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(result.structuralFailures).toContainEqual(expect.objectContaining({
       kind: "centralized-mint", binding: true, materialSharePct: null,
     }));
+  });
+
+  it("retains distinct same-controller permissions without hiding an unbounded mint path", () => {
+    const metadata = meta("fixture-shared-controller-permissions", {
+      mintAuthority: mintProfile({
+        controls: [
+          mintControl({ label: "Capped issuance permission", directMintAbility: "cap-limited", canRaiseCap: true }),
+          mintControl({ label: "Unbounded issuance permission" }),
+        ],
+        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
+      }),
+      bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE)]),
+    });
+    for (const reverse of [false, true]) {
+      const input = structuredClone(metadata);
+      if (reverse) input.mintAuthority!.controls!.reverse();
+      const asset = compileFixture(input).compiled.assets[0]!;
+      expect(asset.controls.filter((control) => control.capabilities.includes("mint")).map((control) => control.capSemantics.kind).sort())
+        .toEqual(["raiseable", "unbounded"]);
+      const result = evaluateV9EconomicControlAssetFacts(
+        asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+      );
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        binding: true, posture: "unbounded-or-compromised", score: 25,
+      });
+    }
   });
 
   it("prices the worst same-address native Safe rather than its first deployment", () => {

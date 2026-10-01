@@ -1,6 +1,7 @@
 import workerRuntimeAsset from "../../data/stablecoins/coins.worker-runtime.generated.json";
 import type { PegCurrency } from "../../types/core";
 import type { StablecoinStatus } from "../../types/stablecoin-taxonomy";
+import type { DeploymentAmountEncoding } from "../../types/deployment-amounts";
 import { buildStablecoinRegistryIndexes } from "./registry-indexes";
 import {
   isActiveStablecoinMeta,
@@ -14,7 +15,8 @@ import {
 export interface WorkerRuntimeContractDeployment {
   chain: string;
   address: string;
-  decimals: number;
+  decimals: number | null;
+  amountEncoding?: DeploymentAmountEncoding;
 }
 
 export interface WorkerRuntimeStablecoinMeta {

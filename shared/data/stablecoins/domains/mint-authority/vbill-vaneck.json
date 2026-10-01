@@ -209,6 +209,80 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-11-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSecuritize)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "VBILL verified current DSToken implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xaf88485377cca5e690e7dcb1ba81370f0b575156"
+            },
+            {
+              "label": "Ethereum pinned RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "eth_getCode:0x",
+            "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
+          },
+          "observedState": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "eth_getCode:0x",
+            "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "vbill-ethereum-owner-uups-upgrade",
+              "targetDeployment": "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "observedAt": "2026-10-01",
         "observedBlock": 26095800,
         "sources": [
@@ -236,6 +310,80 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "executionScope": {
+          "controllerDeployment": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-11-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSecuritize)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Finalized Solana account and ProgramData read",
+              "url": "https://solana-rpc.publicnode.com"
+            },
+            {
+              "label": "Solana program authority and upgrade semantics",
+              "url": "https://solana.com/docs/programs/deploying"
+            }
+          ],
+          "pin": {
+            "position": "452398136",
+            "hash": "HxqdN1bh9HdtjQnSD81udSrH7S1Pnk7KfpvwPsSqBtts",
+            "runtimeIdentity": "system-owned:zero-data:non-executable",
+            "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
+          },
+          "observedState": {
+            "position": "452398136",
+            "hash": "HxqdN1bh9HdtjQnSD81udSrH7S1Pnk7KfpvwPsSqBtts",
+            "runtimeIdentity": "system-owned:zero-data:non-executable",
+            "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "vbill-solana-controller-upgrade",
+              "targetDeployment": "solana:7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "BPFLoaderUpgradeab1e11111111111111111111111:Upgrade"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "observedAt": "2026-10-01",
         "observedBlock": 452212936,
         "sources": [

@@ -13,6 +13,9 @@
         "label": "scrvUSD ERC-4626 wrapper",
         "role": "wrapper",
         "authorityType": "contract",
+        "deploymentRefs": [
+          "ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367"
+        ],
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",

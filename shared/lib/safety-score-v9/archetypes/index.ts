@@ -33,7 +33,9 @@ export interface V9UnknownMechanismRiskReview {
  */
 const SUPPORTED_MECHANISM_ARCHETYPES: ReadonlySet<string> = new Set(MECHANISM_ARCHETYPE_VALUES);
 
-type V9SimpleArchetype = "fiat-cash" | "commodity-claim" | "tbill";
+type V9SimpleArchetype =
+  | "fiat-cash" | "commodity-claim" | "tbill"
+  | "ucits-trs-fund" | "shared-reserve" | "protocol-position";
 type V9SimpleReview = Extract<V9MechanismRiskReview, { archetype: V9SimpleArchetype }>;
 type V9MechanismFactKey<T> = {
   [K in keyof T]-?: T[K] extends V9MechanismFactV1 ? K : never;
@@ -62,6 +64,28 @@ const V9_SIMPLE_ARCHETYPE_DESCRIPTORS: {
     ["nav-valuation", "navValuation"],
     ["duration-and-liquidity", "durationAndLiquidity"],
     ["loss-recovery-design", "lossRecoveryDesign"],
+  ],
+  "ucits-trs-fund": [
+    ["fund-claim-and-segregation", "fundClaimAndSegregation"],
+    ["nav-and-reconciliation", "navAndReconciliation"],
+    ["portfolio-hedge", "portfolioHedge"],
+    ["counterparty-and-collateral", "counterpartyAndCollateral"],
+    ["custody-continuity", "custodyContinuity"],
+    ["default-recovery", "defaultRecovery"],
+  ],
+  "shared-reserve": [
+    ["holder-claim", "holderClaim"],
+    ["liability-conservation", "liabilityConservation"],
+    ["reserve-custody", "reserveCustody"],
+    ["encumbrance-and-allocation", "encumbranceAndAllocation"],
+    ["default-recovery", "defaultRecovery"],
+  ],
+  "protocol-position": [
+    ["holder-claim", "holderClaim"],
+    ["liability-conservation", "liabilityConservation"],
+    ["position-custody", "positionCustody"],
+    ["encumbrance-and-allocation", "encumbranceAndAllocation"],
+    ["default-recovery", "defaultRecovery"],
   ],
 };
 
@@ -121,6 +145,9 @@ function evaluateReviewedBacking(
     case "fiat-cash":
     case "commodity-claim":
     case "tbill":
+    case "ucits-trs-fund":
+    case "shared-reserve":
+    case "protocol-position":
       return evaluateV9SimpleArchetypeBacking(asset, review, policy);
     case "cdp":
       return evaluateV9CdpBacking(asset, review, policy);

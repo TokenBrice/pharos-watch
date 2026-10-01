@@ -64,6 +64,77 @@
       {
         "chain": "base",
         "address": "0x239d4a24efa36a8987b86184c080ace26b3a8968",
+        "executionScope": {
+          "controllerDeployment": "base:0x239d4a24efa36a8987b86184c080ace26b3a8968",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "DataMisc02",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned native role reads and verified implementation source",
+              "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
+            }
+          ],
+          "pin": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0x",
+            "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968"
+          },
+          "observedState": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0x",
+            "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "role-management",
+              "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2f2ff15d",
+                "0xd547741f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "brlv-crown"
+              ],
+              "affectedDeployments": [
+                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "deploymentRefs": [
           "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
         ],
@@ -91,6 +162,76 @@
       {
         "chain": "base",
         "address": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
+        "executionScope": {
+          "controllerDeployment": "base:0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "DataMisc02",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned native role reads and verified implementation source",
+              "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
+            }
+          ],
+          "pin": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b",
+            "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea"
+          },
+          "observedState": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b",
+            "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-mint",
+              "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "brlv-crown"
+              ],
+              "affectedDeployments": [
+                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "deploymentRefs": [
           "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
         ],
@@ -138,6 +279,77 @@
       {
         "chain": "base",
         "address": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
+        "executionScope": {
+          "controllerDeployment": "base:0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "DataMisc02",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned native role reads and verified implementation source",
+              "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
+            }
+          ],
+          "pin": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0x",
+            "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a"
+          },
+          "observedState": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0x",
+            "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "implementation-upgrade",
+              "targetDeployment": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x3659cfe6",
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "brlv-crown"
+              ],
+              "affectedDeployments": [
+                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "deploymentRefs": [
           "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
         ],
@@ -164,6 +376,77 @@
       {
         "chain": "base",
         "address": "0x548634f237eae194f5e20982c9819d917fe17f04",
+        "executionScope": {
+          "controllerDeployment": "base:0x548634f237eae194f5e20982c9819d917fe17f04",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "DataMisc02",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned native role reads and verified implementation source",
+              "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
+            }
+          ],
+          "pin": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0x",
+            "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04"
+          },
+          "observedState": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0x",
+            "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "implementation-upgrade",
+              "targetDeployment": "base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x3659cfe6",
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "brlv-crown"
+              ],
+              "affectedDeployments": [
+                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "deploymentRefs": [
           "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
         ],
@@ -190,6 +473,77 @@
       {
         "chain": "base",
         "address": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
+        "executionScope": {
+          "controllerDeployment": "base:0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "DataMisc02",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned native role reads and verified implementation source",
+              "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
+            }
+          ],
+          "pin": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0x",
+            "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f"
+          },
+          "observedState": {
+            "position": "0x31a345c",
+            "hash": null,
+            "runtimeIdentity": "0x",
+            "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "role-management",
+              "targetDeployment": "base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2f2ff15d",
+                "0xd547741f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "brlv-crown"
+              ],
+              "affectedDeployments": [
+                "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "deploymentRefs": [
           "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
         ],

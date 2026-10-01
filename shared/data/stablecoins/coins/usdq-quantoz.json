@@ -79,7 +79,10 @@
     {
       "chain": "xrpl",
       "address": "USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
-      "decimals": 0
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     },
     {
       "chain": "algorand",

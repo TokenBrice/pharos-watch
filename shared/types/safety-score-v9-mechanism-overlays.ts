@@ -87,6 +87,28 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
   })
   .strict()
   .superRefine((overlay, ctx) => {
+    if (
+      overlay.archetype === "ucits-trs-fund" ||
+      overlay.archetype === "shared-reserve" ||
+      overlay.archetype === "protocol-position"
+    ) {
+      if (
+        Object.keys(overlay.metrics).length > 0 ||
+        Object.keys(overlay.metricApplicability ?? {}).length > 0 ||
+        Object.keys(overlay.analogousMetrics ?? {}).length > 0 ||
+        overlay.venueShares !== undefined
+      ) {
+        ctx.addIssue({ code: "custom", path: ["metrics"], message: "Native families do not admit position metrics" });
+      }
+      for (const [key, component] of Object.entries(overlay.components)) {
+        if ("applicability" in component && component.applicability === "not-applicable") {
+          ctx.addIssue({
+            code: "custom", path: ["components", key],
+            message: "Native family components remain applicable; unavailable facts must be bounded",
+          });
+        }
+      }
+    }
     if (overlay.profileReview !== undefined) {
       const expectedArchetype = safetyScoreV9MechanismProfileArchetype(overlay.profileReview.profile);
       if (expectedArchetype !== overlay.archetype) {

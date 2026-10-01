@@ -275,6 +275,45 @@
             "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
           }
         ]
+      },
+      {
+        "id": "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7",
+        "destinationChain": "solana",
+        "contractAddress": "6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7",
+        "protocol": "Spiko native issuance (Solana Minter)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Finalized slot 452397907 verifies the exact issuer-listed EURSAFO Token-2022 mint, five decimals, nonzero raw supply and native MinterConfig authority BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ. The issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e identifies this exact deployment, and the prospectus describes Solana as a selectable native share register. Issuer admin and program-upgrade powers belong in Mint Authority; this classification neither excludes a transfer rail nor establishes complete economic supply attribution.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "controllerChain": "solana",
+        "controllerAddress": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "failureDomainKeys": [
+          "contract:solana:8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452397907,
+        "sources": [
+          {
+            "label": "Exact EURSAFO issuer share-class register roster",
+            "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+          },
+          {
+            "label": "Immutable exact EURSAFO Solana deployment manifest",
+            "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/eurSAFO-mainnet-beta.json"
+          },
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Finalized native mint/configuration observation",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ]
       }
     ]
   }

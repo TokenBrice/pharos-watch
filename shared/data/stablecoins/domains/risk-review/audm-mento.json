@@ -62,48 +62,85 @@
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",
-    "summary": "AUDm's live Celo USDm/AUDm Broker exchange uses one SortedOracles reporter with a 360-second report-expiry window and minimumReports set to one; BreakerBox gates the swap but no second feed or failover path is configured.",
+    "summary": "At Celo block 78986505, AUDm's Broker/BiPoolManager USDm/AUDm ConstantSum exchange 0xd580d237231109e6a96d67d82450611c610a805a26660c90281bdc0cd04a95c7 uses AUD/USD feed 0x646bd504c3864ea5b8a6b6d25743721f61864a07, one ChainlinkRelayerV1 reporter 0xa8869bb55d1082d12c8f993a56ce8d050551a3d9, and one configured Chainlink aggregator 0xf2bd4faa89f5a360cdf118bccd183307fdbcb6f5. getRates and medianRate agree on 693160000000000000000000/1e24; medianTimestamp is 1790887224. Effective report expiry and bucket reset are 360 seconds, minimumReports is 1, and spread is 0.15%. MedianDeltaBreaker is enabled at 4% with a 900-second reset cooldown; ValueDeltaBreaker is disabled. The sorted-list median of one relayer is not independent medianization or failover. Stale reports invalidate ConstantSum quotes; BreakerBox suspends execution rather than substituting a second source. This evidenced single-live-source topology retains the existing Mento single-source-or-laggy convention; it does not assert the pinned report was stale.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
-      "rationale": "At Celo block 72127154 (2026-07-14T11:18:32Z), AUDm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/AUDm mint/burn exchange using rate feed 0x646bD504C3864Ea5b8A6B6D25743721f61864A07, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The reviewed deployment and reserve evidence identified no live AUDm borrower-specific CDP or liquidation branch, so the price-sensitive Broker conversion rate is scored as a top-level mint/redemption authority without branch rows.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol V10 MentoOracle primary-evidence review",
+      "rationale": "AUDm is explicitly reserve-backed in the pinned issuer configuration, not one of the GBPm/CHFm/JPYm CDP assets. The enumerated pinned Broker mint/burn exchange has external price authority but no borrower-specific liquidation engine. Score this authority as coin-price-feed/top-level-only; branch rows and liquidationDelaySec are not applicable. A 900-second breaker reset cooldown or 360-second report expiry is not a liquidation delay. This review covers canonical Celo exchange pricing and does not classify separate bridge control or remote-chain liquidity.",
       "sources": [
         {
-          "label": "Celo block 72127154 (2026-07-14T11:18:32Z)",
-          "url": "https://celo.blockscout.com/block/72127154"
+          "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+          "url": "https://celo.blockscout.com/block/78986505"
         },
         {
-          "label": "Mento BiPoolManager source",
-          "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
+          "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
         },
         {
-          "label": "Mento deployment addresses",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-        },
-        {
-          "label": "Mento reserve analytics API",
-          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+          "label": "Mento explicit reserve/CDP backing configuration",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol V10 MentoOracle primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento BiPoolManager source",
-        "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
+        "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+        "url": "https://celo.blockscout.com/block/78986505"
       },
       {
-        "label": "AUDm on Celo Blockscout",
-        "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
+        "label": "Verified SortedOracles implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x93da60dcdda3229246769cce307076c181f41f72"
       },
       {
-        "label": "AUD/USD rate feed on Celo Blockscout",
-        "url": "https://celo.blockscout.com/address/0x646bD504C3864Ea5b8A6B6D25743721f61864A07"
+        "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+      },
+      {
+        "label": "Mento explicit reserve/CDP backing configuration",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Verified AUD/USD ChainlinkRelayerV1; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xa8869bb55d1082d12c8f993a56ce8d050551a3d9"
+      },
+      {
+        "label": "Verified MedianDeltaBreaker; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x49349f92d2b17d491e42c8fdb02d19f072f9b5d9"
+      }
+    ],
+    "paths": [
+      {
+        "id": "celo-mento-broker",
+        "chain": "celo",
+        "address": "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad lists BiPoolManager 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901 as its exchange provider and exposes 1 reviewed ConstantSum mint/burn conversion path(s) involving AUDm. These paths use external SortedOracles rates and reserve inventory, not borrower collateral positions or borrower liquidation. The pinned issuer configuration explicitly classifies this asset as reserve-backed. This exact local Broker pricing path is therefore top-level-only; no collateral-liquidation branch or liquidationDelaySec applies.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
       }
     ]
   },

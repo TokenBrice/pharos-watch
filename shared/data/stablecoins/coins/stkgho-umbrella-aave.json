@@ -14,7 +14,7 @@
   "wrapperOperator": "parent-protocol",
   "pegReferenceId": "gho-aave",
   "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
-  "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
+  "pegMechanism": "ERC-4626 staking receipt redeeming into canonical GHO; current Umbrella settings require a 20-day holder cooldown followed by a 2-day withdrawal window. Only the holder's cooldown-snapshotted shares are eligible, withdrawals are blocked while paused, and automated deficit slashing can reduce GHO proceeds. Receipt conversion does not prove immediate withdrawal capacity or onward GHO-to-cash realization",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "links": [

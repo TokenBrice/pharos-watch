@@ -34,6 +34,80 @@
         "address": "0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
         "observedAt": "2026-10-01",
         "observedBlock": 26098754,
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Exact verified module source; deployed runtime matched at Ethereum 26099926",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb46481a9819e068af0eb64a2c2824fcecaaaa45"
+            },
+            {
+              "label": "Pinned current module validity and runtime",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "sha256:8ef25a6aef3e9ae6c045078f25c8e4c90a79519bc175abda6308bfa041d94709",
+            "signerIdentity": "onlyCurator; verified curator at block 26098837: 0x9fe66037c44236c87d9ac8345f489b4413fdff06; upstream DAO authorization not closed"
+          },
+          "observedState": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "sha256:8ef25a6aef3e9ae6c045078f25c8e4c90a79519bc175abda6308bfa041d94709",
+            "signerIdentity": "onlyCurator; verified curator at block 26098837: 0x9fe66037c44236c87d9ac8345f489b4413fdff06; upstream DAO authorization not closed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-issuance",
+              "targetDeployment": "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb6b55f25"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usdu-usdu-finance"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xdde3ec717f220fc6a29d6a4be73f91da5b718e55"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "failureDomainKeys": [
           "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
           "ethereum:0x8f36bbee57acb4857cb97898020b529969fdf221",
@@ -65,6 +139,82 @@
         "capDescription": "Immutable 100000-USDU mintCap bounds principal swap issuance; fee and surplus-reconciliation minting are not a hard total-liability cap. Permissionless swapIn accepts USDC and deposits into ERC-4626 vault 0xbeef088055857739c12cd3765f20b7679def0f51; swapOut burns USDU and withdraws USDC. Both fees are 1000 ppm.",
         "observedAt": "2026-10-01",
         "observedBlock": 26098754,
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x6b6893d82edbc8d6769ba3c407102d33da2b623f",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Exact verified module source; deployed runtime matched at Ethereum 26099926",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b6893d82edbc8d6769ba3c407102d33da2b623f"
+            },
+            {
+              "label": "Pinned current module validity and runtime",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "sha256:d12c65880824d929cb2e9a82a472a88c0a1631c7fd31a03caf0fd998d73806cb",
+            "signerIdentity": "permissionless swapIn/swapInTo; reconcile(bool) onlyCurator; stable.checkValidModule true at pin; upstream vault and token permissions not closed"
+          },
+          "observedState": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "sha256:d12c65880824d929cb2e9a82a472a88c0a1631c7fd31a03caf0fd998d73806cb",
+            "signerIdentity": "permissionless swapIn/swapInTo; reconcile(bool) onlyCurator; stable.checkValidModule true at pin; upstream vault and token permissions not closed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-issuance",
+              "targetDeployment": "ethereum:0x6b6893d82edbc8d6769ba3c407102d33da2b623f",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x759c7265",
+                "0xf6bc3a00",
+                "0xdf03605e"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usdu-usdu-finance"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xdde3ec717f220fc6a29d6a4be73f91da5b718e55"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "failureDomainKeys": [
           "ethereum:0x6b6893d82edbc8d6769ba3c407102d33da2b623f",
           "ethereum:0xbeef088055857739c12cd3765f20b7679def0f51"
@@ -88,6 +238,82 @@
         "capDescription": "Immutable 100000-USDU mintCap bounds principal swap issuance; fee and surplus-reconciliation minting are not a hard total-liability cap. Permissionless swapIn accepts USDT and deposits into ERC-4626 vault 0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9; swapOut burns USDU and withdraws USDT. Both fees are 1000 ppm.",
         "observedAt": "2026-10-01",
         "observedBlock": 26098754,
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xd9141f634ef9e871a5fe4f64195747db77a13f3e",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Exact verified module source; deployed runtime matched at Ethereum 26099926",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9141f634ef9e871a5fe4f64195747db77a13f3e"
+            },
+            {
+              "label": "Pinned current module validity and runtime",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "sha256:aaf06a7cc4393e9efe1ec1c9819ba9690c44bd79c824962c08dc8f611638f93a",
+            "signerIdentity": "permissionless swapIn/swapInTo; reconcile(bool) onlyCurator; stable.checkValidModule true at pin; upstream vault and token permissions not closed"
+          },
+          "observedState": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "sha256:aaf06a7cc4393e9efe1ec1c9819ba9690c44bd79c824962c08dc8f611638f93a",
+            "signerIdentity": "permissionless swapIn/swapInTo; reconcile(bool) onlyCurator; stable.checkValidModule true at pin; upstream vault and token permissions not closed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-issuance",
+              "targetDeployment": "ethereum:0xd9141f634ef9e871a5fe4f64195747db77a13f3e",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x759c7265",
+                "0xf6bc3a00",
+                "0xdf03605e"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usdu-usdu-finance"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xdde3ec717f220fc6a29d6a4be73f91da5b718e55"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "failureDomainKeys": [
           "ethereum:0xd9141f634ef9e871a5fe4f64195747db77a13f3e",
           "ethereum:0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9"

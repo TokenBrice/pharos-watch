@@ -77,6 +77,144 @@
         ]
       },
       {
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26095799",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "PM group 2; token mint requirement mask 0x5; initiate mask 0x401; approve mask 0x201"
+          },
+          "observedState": {
+            "position": "26095799",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "PM group 2; token mint requirement mask 0x5; initiate mask 0x401; approve mask 0x201"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "initiate",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7fa62fcc"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "approve-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x442dbf77"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "mint",
+              "targetDeployment": "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "chain": "ethereum",
         "address": "0x5ed5a75eeed1934ea060186e35187eaa73331366",
         "deploymentRefs": ["ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"],
@@ -109,6 +247,112 @@
         ]
       },
       {
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26095799",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x4eaa52b6280593a8820c45ce38f974290ae52cea; PermissionManager ADMIN group 0; 3-of-6"
+          },
+          "observedState": {
+            "position": "26095799",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x4eaa52b6280593a8820c45ce38f974290ae52cea; PermissionManager ADMIN group 0; 3-of-6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-mint",
+              "targetDeployment": "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "token-upgrade",
+              "targetDeployment": "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "label": "Spiko super-admin Safe (3-of-6, UUPS upgrade + permission admin)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -152,6 +396,1835 @@
         ],
         "observedAt": "2026-10-01",
         "observedBlock": 26095799
+      },
+      {
+        "label": "EURSAFO native Minter initiator \u2014 group 10 0x7a493c05479f6132cb895c72c49439139b595eb4",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "initiateMint authorizes minting within the shared 500000000000 raw-share daily limit (5000000 EURSAFO shares at decimals 5); excess requests become pending for at most 86400 seconds. This caller is not an ADMIN or group-9 approver, but separate ADMIN/group-9 callers can approve pending requests.",
+        "chain": "ethereum",
+        "address": "0x7a493c05479f6132cb895c72c49439139b595eb4",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0x7a493c05479f6132cb895c72c49439139b595eb4"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098764,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x7a493c05479f6132cb895c72c49439139b595eb4",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x7a493c05479f6132cb895c72c49439139b595eb4; group 10; requirement mask 0x401"
+          },
+          "observedState": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x7a493c05479f6132cb895c72c49439139b595eb4; group 10; requirement mask 0x401"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "initiate",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7fa62fcc"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "label": "EURSAFO native Minter initiator \u2014 group 10 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "initiateMint authorizes minting within the shared 500000000000 raw-share daily limit (5000000 EURSAFO shares at decimals 5); excess requests become pending for at most 86400 seconds. This caller is not an ADMIN or group-9 approver, but separate ADMIN/group-9 callers can approve pending requests.",
+        "chain": "ethereum",
+        "address": "0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0xe582cddcb3d2374adbb34c9afe76683d019c8a2b"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098764,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xe582cddcb3d2374adbb34c9afe76683d019c8a2b; group 10; requirement mask 0x401"
+          },
+          "observedState": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xe582cddcb3d2374adbb34c9afe76683d019c8a2b; group 10; requirement mask 0x401"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "initiate",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7fa62fcc"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098764,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949; group 9; requirement mask 0x201; single EOA"
+          },
+          "observedState": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949; group 9; requirement mask 0x201; single EOA"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "approve-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x442dbf77"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0x4d1d9c5b5d9ca448194313d799de374f362bd460"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098764,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x4d1d9c5b5d9ca448194313d799de374f362bd460; group 9; requirement mask 0x201; single EOA"
+          },
+          "observedState": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x4d1d9c5b5d9ca448194313d799de374f362bd460; group 9; requirement mask 0x201; single EOA"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "approve-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x442dbf77"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098764,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a; group 9; requirement mask 0x201; single EOA"
+          },
+          "observedState": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a; group 9; requirement mask 0x201; single EOA"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "approve-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x442dbf77"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7",
+        "role": "backend-signer",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "safe:ethereum:0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "threshold": 1,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 1,
+          "owners": [
+            "0x0f8c7805a572159755ac1d0a4c1ffa8cee3dea3b",
+            "0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460"
+          ],
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 26095796,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26095796",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7; group 9; requirement mask 0x201; 1-of-4"
+          },
+          "observedState": {
+            "position": "26095796",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7; group 9; requirement mask 0x201; 1-of-4"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "approve-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x442dbf77"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0xda47bd72438f11bef7cc54f18cd02426dd86a5a2"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098764,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2; group 9; requirement mask 0x201; single EOA"
+          },
+          "observedState": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2; group 9; requirement mask 0x201; single EOA"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "approve-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x442dbf77"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0xe67d2cbeae3090be017c66e7a6943961619a5d35"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098764,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xe67d2cbeae3090be017c66e7a6943961619a5d35; group 9; requirement mask 0x201; single EOA"
+          },
+          "observedState": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xe67d2cbeae3090be017c66e7a6943961619a5d35; group 9; requirement mask 0x201; single EOA"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "approve-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x442dbf77"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "approveMint can execute an existing pending mint without the initiateMint daily-limit check. This caller is not an ADMIN or group-10 initiator; the pending request must first be created by an authorized initiator.",
+        "chain": "ethereum",
+        "address": "0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
+        "deploymentRefs": [
+          "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        ],
+        "failureDomainKeys": [
+          "eoa:ethereum:0xf949ca7be175a5fcbd3febb9a0235de608ca7898"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098764,
+        "evidence": "The block-26095799 implementation and limit review established Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366, ordinary dailyLimit(EURSAFO) = 500000000000 raw, maxDelay = 86400 and discretionary over-limit approval. At block 26098764, the same limit and expiry were re-read. getRequirements(Minter, initiateMint selector 0x7fa62fcc) = 0x401, so group 10 or admin can initiate; approveMint selector 0x442dbf77 = 0x201, so group 9 or admin can approve. This corrects the previously reversed group labels. Complete indexed GroupAdded/GroupRemoved history plus current getGroups reads identify group-10 initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b, both with empty eth_getCode. Group-9 approvers are 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a, 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35 and 0xf949ca7be175a5fcbd3febb9a0235de608ca7898. All approvers except 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7 have empty code; that address has contract code. The sole group-0 principal is the previously reviewed 3-of-6 Safe. The cap remains bypassable by approval and raiseable by admin; this roster does not establish an immutable economic ceiling or the custody of any individual signing key.",
+        "sources": [
+          {
+            "label": "Verified Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Verified PermissionManager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Minter implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+            },
+            {
+              "label": "Verified PermissionManager implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+            }
+          ],
+          "pin": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xf949ca7be175a5fcbd3febb9a0235de608ca7898; group 9; requirement mask 0x201; single EOA"
+          },
+          "observedState": {
+            "position": "26098764",
+            "hash": null,
+            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
+            "signerIdentity": "0xf949ca7be175a5fcbd3febb9a0235de608ca7898; group 9; requirement mask 0x201; single EOA"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "approve-pending",
+              "targetDeployment": "ethereum:0x5ed5a75eeed1934ea060186e35187eaa73331366",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x442dbf77"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "deploymentRefs": [
+          "arbitrum:0x1412632f2b89e87bfa20c1318a43ced25f1d7b76"
+        ],
+        "label": "EURSAFO arbitrum native ADMIN Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0xd01046472371168721e45dc357296683f026d6b8",
+            "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-10-01",
+          "observedBlock": 510775539,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510775539,
+        "sources": [
+          {
+            "label": "Exact EURSAFO issuer deployment identity",
+            "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+          }
+        ],
+        "evidence": "Verified R2F6 pinned getRequirements(token,mint) mask 0x5, ADMIN group membership and getOwners/getThreshold establish this exact 3-of-6 native controller. Extensions, other privileged selectors, key custody and complete liability reach remain unreviewed.",
+        "executionScope": {
+          "controllerDeployment": "arbitrum:0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Exact EURSAFO issuer deployment identity",
+              "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+            }
+          ],
+          "pin": {
+            "position": "510775539",
+            "hash": null,
+            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
+            "signerIdentity": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; ADMIN group 0; 3-of-6 Safe"
+          },
+          "observedState": {
+            "position": "510775539",
+            "hash": null,
+            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
+            "signerIdentity": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; ADMIN group 0; 3-of-6 Safe"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-mint",
+              "targetDeployment": "arbitrum:0x1412632f2b89e87bfa20c1318a43ced25f1d7b76",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "arbitrum:0x1412632f2b89e87bfa20c1318a43ced25f1d7b76"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "base",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": [
+          "base:0xd879846cbe20751bde8a9342a3cca00a3e56ca47"
+        ],
+        "label": "EURSAFO base native ADMIN Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0xd01046472371168721e45dc357296683f026d6b8",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-10-01",
+          "observedBlock": 52042428,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52042428,
+        "sources": [
+          {
+            "label": "Exact EURSAFO issuer deployment identity",
+            "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+          }
+        ],
+        "evidence": "Verified R2F6 pinned getRequirements(token,mint) mask 0x5, ADMIN group membership and getOwners/getThreshold establish this exact 3-of-6 native controller. Extensions, other privileged selectors, key custody and complete liability reach remain unreviewed.",
+        "executionScope": {
+          "controllerDeployment": "base:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Exact EURSAFO issuer deployment identity",
+              "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+            }
+          ],
+          "pin": {
+            "position": "52042428",
+            "hash": null,
+            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
+            "signerIdentity": "0x4eaa52b6280593a8820c45ce38f974290ae52cea; ADMIN group 0; 3-of-6 Safe"
+          },
+          "observedState": {
+            "position": "52042428",
+            "hash": null,
+            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
+            "signerIdentity": "0x4eaa52b6280593a8820c45ce38f974290ae52cea; ADMIN group 0; 3-of-6 Safe"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-mint",
+              "targetDeployment": "base:0xd879846cbe20751bde8a9342a3cca00a3e56ca47",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "base:0xd879846cbe20751bde8a9342a3cca00a3e56ca47"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "polygon",
+        "address": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "deploymentRefs": [
+          "polygon:0x272ea767712cc4839f4a27ee35eb73116158c8a2"
+        ],
+        "label": "EURSAFO polygon native ADMIN Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0xd01046472371168721e45dc357296683f026d6b8",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-10-01",
+          "observedBlock": 94788467,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94788467,
+        "sources": [
+          {
+            "label": "Exact EURSAFO issuer deployment identity",
+            "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+          }
+        ],
+        "evidence": "Verified R2F6 pinned getRequirements(token,mint) mask 0x5, ADMIN group membership and getOwners/getThreshold establish this exact 3-of-6 native controller. Extensions, other privileged selectors, key custody and complete liability reach remain unreviewed.",
+        "executionScope": {
+          "controllerDeployment": "polygon:0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Exact EURSAFO issuer deployment identity",
+              "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+            }
+          ],
+          "pin": {
+            "position": "94788467",
+            "hash": null,
+            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
+            "signerIdentity": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9; ADMIN group 0; 3-of-6 Safe"
+          },
+          "observedState": {
+            "position": "94788467",
+            "hash": null,
+            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
+            "signerIdentity": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9; ADMIN group 0; 3-of-6 Safe"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-mint",
+              "targetDeployment": "polygon:0x272ea767712cc4839f4a27ee35eb73116158c8a2",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "polygon:0x272ea767712cc4839f4a27ee35eb73116158c8a2"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+        "deploymentRefs": [
+          "etherlink:0x35dfec1813c43d82e6b87c682f560bbb8ea0c121"
+        ],
+        "label": "EURSAFO etherlink native ADMIN Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0xd01046472371168721e45dc357296683f026d6b8",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-10-01",
+          "observedBlock": 54683983,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 54683983,
+        "sources": [
+          {
+            "label": "Exact EURSAFO issuer deployment identity",
+            "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+          }
+        ],
+        "evidence": "Verified R2F6 pinned getRequirements(token,mint) mask 0x5, ADMIN group membership and getOwners/getThreshold establish this exact 3-of-6 native controller. Extensions, other privileged selectors, key custody and complete liability reach remain unreviewed.",
+        "executionScope": {
+          "controllerDeployment": "etherlink:0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Exact EURSAFO issuer deployment identity",
+              "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+            }
+          ],
+          "pin": {
+            "position": "54683983",
+            "hash": null,
+            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
+            "signerIdentity": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538; ADMIN group 0; 3-of-6 Safe"
+          },
+          "observedState": {
+            "position": "54683983",
+            "hash": null,
+            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
+            "signerIdentity": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538; ADMIN group 0; 3-of-6 Safe"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-mint",
+              "targetDeployment": "etherlink:0x35dfec1813c43d82e6b87c682f560bbb8ea0c121",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "etherlink:0x35dfec1813c43d82e6b87c682f560bbb8ea0c121"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452397907,
+        "sources": [
+          {
+            "label": "Immutable Spiko native minter source afdab14fb1a59bf3abe2f263870023349a560e2e",
+            "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+          },
+          {
+            "label": "Finalized native register and configuration RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "EURSAFO Solana MinterConfig native mint authority",
+        "address": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The issuer minter has per-mint daily operational limits. Above-limit requests are pending; admin approve_mint executes without the daily-limit check. No immutable monetary cap is established.",
+        "evidence": "Finalized slot 452397907: the token mintAuthority is BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ, owned by issuer minter 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. Decoded MinterConfig admin is 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd, bump 255. The source and audit identify native issuance and the above-limit approval path.",
+        "executionScope": {
+          "controllerDeployment": "solana:BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Immutable Spiko native minter source afdab14fb1a59bf3abe2f263870023349a560e2e",
+              "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+            },
+            {
+              "label": "Finalized native register and configuration RPC",
+              "url": "https://solana-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "452397907",
+            "hash": null,
+            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "signerIdentity": "MinterConfig BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ; admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9; initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd"
+          },
+          "observedState": {
+            "position": "452397907",
+            "hash": null,
+            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "signerIdentity": "MinterConfig BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ; admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9; initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-mint",
+              "targetDeployment": "solana:8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "initiate_mint",
+                "approve_mint"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452398012,
+        "sources": [
+          {
+            "label": "Immutable Spiko native minter source afdab14fb1a59bf3abe2f263870023349a560e2e",
+            "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+          },
+          {
+            "label": "Finalized native register and configuration RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "EURSAFO Solana MinterConfig admin Squads vault",
+        "address": "2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "solana:key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"
+        ],
+        "evidence": "Finalized slot 452398012: issuer-published parent Squads v4 account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A has threshold 1, one member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h with permission mask 7 (initiate, vote, execute), zero time_lock and zero config_authority. This is a one-signature governance path, not an independent quorum. The configured vault can approve pending mints without a daily-limit check, change limits and nominate admin/initiator authority.",
+        "executionScope": {
+          "controllerDeployment": "solana:2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Immutable Spiko native minter source afdab14fb1a59bf3abe2f263870023349a560e2e",
+              "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+            },
+            {
+              "label": "Finalized native register and configuration RPC",
+              "url": "https://solana-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "452398012",
+            "hash": null,
+            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "signerIdentity": "Squads CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A; threshold 1; sole member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h; permission mask 7; time_lock 0"
+          },
+          "observedState": {
+            "position": "452398012",
+            "hash": null,
+            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "signerIdentity": "Squads CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A; threshold 1; sole member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h; permission mask 7; time_lock 0"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "approve",
+              "targetDeployment": "solana:8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "approve_mint"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "configure",
+              "targetDeployment": "solana:8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "set_daily_limit",
+                "set_mint_initiator",
+                "nominate_admin"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452397907,
+        "sources": [
+          {
+            "label": "Immutable Spiko native minter source afdab14fb1a59bf3abe2f263870023349a560e2e",
+            "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+          },
+          {
+            "label": "Finalized native register and configuration RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "EURSAFO Solana operational mint initiator",
+        "address": "5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Can initiate native mints within the configured daily limit; above-limit requests require the separately authorized admin approval. A current numerical daily limit is not asserted.",
+        "evidence": "Finalized slot 452397907: this exact operational key is the decoded MinterConfig mint_initiator and matches the issuer mainnet address table. initiate_mint requires its signature. Off-chain MPC/HSM custody for this address is not documented in the fetched issuer source or audit.",
+        "executionScope": {
+          "controllerDeployment": "solana:5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Immutable Spiko native minter source afdab14fb1a59bf3abe2f263870023349a560e2e",
+              "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+            },
+            {
+              "label": "Finalized native register and configuration RPC",
+              "url": "https://solana-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "452397907",
+            "hash": null,
+            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "signerIdentity": "5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd; configured initiator signature"
+          },
+          "observedState": {
+            "position": "452397907",
+            "hash": null,
+            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "signerIdentity": "5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd; configured initiator signature"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "initiate",
+              "targetDeployment": "solana:8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "initiate_mint"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
+      },
+      {
+        "chain": "solana",
+        "deploymentRefs": [
+          "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452398012,
+        "sources": [
+          {
+            "label": "Immutable Spiko native minter source afdab14fb1a59bf3abe2f263870023349a560e2e",
+            "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+          },
+          {
+            "label": "Finalized native register and configuration RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "label": "EURSAFO Solana minter program upgrade authority",
+        "address": "GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "solana:key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"
+        ],
+        "evidence": "Finalized slot 452398012: BPF upgradeable-loader program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw points to ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; parsed ProgramData authority is this key, last deployed at slot 443429864. It can replace the native mint program and is also the sole admin-Squads member. The audit confirms that program replacement can override all on-chain mint rules. No protective custody claim is inferred.",
+        "executionScope": {
+          "controllerDeployment": "solana:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Immutable Spiko native minter source afdab14fb1a59bf3abe2f263870023349a560e2e",
+              "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+            },
+            {
+              "label": "Finalized native register and configuration RPC",
+              "url": "https://solana-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "452398012",
+            "hash": null,
+            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "signerIdentity": "GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h; sole upgrade authority"
+          },
+          "observedState": {
+            "position": "452398012",
+            "hash": null,
+            "runtimeIdentity": "Spiko native minter ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; deployment slot 443429864; source correspondence incomplete",
+            "signerIdentity": "GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h; sole upgrade authority"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "program-upgrade",
+              "targetDeployment": "solana:Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "Upgrade"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "eursafo-spiko"
+              ],
+              "affectedDeployments": [
+                "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
       }
     ],
     "economicCapSemantics": "unbounded",

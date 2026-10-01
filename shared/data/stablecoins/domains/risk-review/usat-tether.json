@@ -122,6 +122,115 @@
           "attestorQuorum": "Celo send/receive ULN configurations require all three DVNs: 0x18f76f0d8ccd176bbe59b3870fa486d1fff87026, 0x75b073994560a5c03cd970414d9170be0c6e5c36, 0xb1ac0ca12bf2bfe90881fd3bec87dedea3b55378. No optional DVNs. Send confirmations 2500; receive confirmations 96.",
           "pausersAdminsUpgraders": "Token and OFT owners, endpoint delegate, token ProxyAdmin owner, and OFT ProxyAdmin owner are this wallet."
         },
+        "executionScope": {
+          "controllerDeployment": "celo:0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc11)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Celo USAT authorized crosschain mint/burn and mutable OFT source",
+              "url": "https://sourcify.dev/server/v2/contract/42220/0x49912f84f43d2675d99941b7f21a5d9ed2eab71e?fields=sources,abi"
+            },
+            {
+              "label": "Celo OFT owner-only peer configuration source",
+              "url": "https://sourcify.dev/server/v2/contract/42220/0x338d020881b6c1fca8bb07b659f28f0c3efbdfce?fields=sources,abi"
+            },
+            {
+              "label": "Celo OFT ProxyAdmin immediate upgrade source",
+              "url": "https://sourcify.dev/server/v2/contract/42220/0xbfd99c067ceb2e048bf627e039d388e4d22d8b80?fields=sources,abi"
+            }
+          ],
+          "pin": {
+            "position": "78986590",
+            "hash": "0xbe463549638c28e53f5397d1968483f545e6844264051646981d575c0c49e6d7",
+            "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+            "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
+          },
+          "observedState": {
+            "position": "78986590",
+            "hash": "0xbe463549638c28e53f5397d1968483f545e6844264051646981d575c0c49e6d7",
+            "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+            "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "usat-celo-change-authorized-oft",
+              "targetDeployment": "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x8040a2c7"],
+              "callMode": "call",
+              "capabilities": ["parameter-change", "bridge-mint"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["usat-tether"],
+              "affectedDeployments": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "usat-celo-oft-peer-config",
+              "targetDeployment": "celo:0xc8f467e1ba04ffdeca1cd1878ca3416d84045d0e",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x3400288b"],
+              "callMode": "call",
+              "capabilities": ["parameter-change"],
+              "capSemantics": { "kind": "unknown", "bound": null },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["usat-tether"],
+              "affectedDeployments": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": ["usat-celo-oft-upgrade"],
+              "bypassRefs": ["usat-celo-change-authorized-oft"]
+            },
+            {
+              "id": "usat-celo-oft-upgrade",
+              "targetDeployment": "celo:0xbfd99c067ceb2e048bf627e039d388e4d22d8b80",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x99a88ec4", "0x9623609d"],
+              "callMode": "call",
+              "capabilities": ["upgrade", "bridge-mint"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["usat-tether"],
+              "affectedDeployments": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": ["usat-celo-change-authorized-oft"]
+            }
+          ]
+        },
         "observedAt": "2026-10-01",
         "observedBlock": 78972418,
         "sources": [
@@ -159,6 +268,90 @@
           "lockboxOrEscrow": "Verified OFTAdapter _debit uses transferFrom into the adapter; _credit transfers escrowed Ethereum USAT out.",
           "trustedPeerOrRemote": "Adapter peers(30125) is Celo OFT 0xc8f467e1ba04ffdeca1cd1878ca3416d84045d0e.",
           "attestorQuorum": "Ethereum send/receive ULN configurations require all three DVNs: 0x231a5c32e8792c327f4ecdc15aa3b6e82bc7f105, 0x3b0531eb02ab4ad72e7a531180beef9493a00dd2, 0x589dedbd617e0cbcb916a9223f4d1300c294236b. No optional DVNs. Send confirmations 96; receive confirmations 2500."
+        },
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc11)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ethereum USAT lock/release adapter and owner-only peer source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xd5d5a960dc2ba87349fd7977af0cd15a2b699355?fields=sources,abi"
+            },
+            {
+              "label": "Ethereum adapter ProxyAdmin immediate upgrade source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xd122aa3b1ffb2aebf61180ec1387efc99850b35f?fields=sources,abi"
+            }
+          ],
+          "pin": {
+            "position": "26099927",
+            "hash": "0x8bb51bdecfe7482e5f2b0037b3eab2171fa97576f35f3f05ad80278c61dd111e",
+            "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+            "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
+          },
+          "observedState": {
+            "position": "26099927",
+            "hash": "0x8bb51bdecfe7482e5f2b0037b3eab2171fa97576f35f3f05ad80278c61dd111e",
+            "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+            "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "usat-ethereum-adapter-peer-config",
+              "targetDeployment": "ethereum:0x18171f318a49051301c3422b6042fca2d8be43df",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x3400288b"],
+              "callMode": "call",
+              "capabilities": ["parameter-change"],
+              "capSemantics": { "kind": "unknown", "bound": null },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["usat-tether"],
+              "affectedDeployments": ["ethereum:0x07041776f5007aca2a54844f50503a18a72a8b68", "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": ["usat-ethereum-adapter-upgrade"],
+              "bypassRefs": []
+            },
+            {
+              "id": "usat-ethereum-adapter-upgrade",
+              "targetDeployment": "ethereum:0xd122aa3b1ffb2aebf61180ec1387efc99850b35f",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x99a88ec4", "0x9623609d"],
+              "callMode": "call",
+              "capabilities": ["upgrade", "custody-transfer"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["usat-tether"],
+              "affectedDeployments": ["ethereum:0x07041776f5007aca2a54844f50503a18a72a8b68", "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
         },
         "observedAt": "2026-10-01",
         "observedBlock": 26098749,

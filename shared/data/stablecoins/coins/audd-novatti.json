@@ -96,7 +96,10 @@
     {
       "chain": "xrpl",
       "address": "4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok",
-      "decimals": 8
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     },
     {
       "chain": "solana",

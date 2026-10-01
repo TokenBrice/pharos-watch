@@ -1,6 +1,7 @@
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
 import { resolveChainId } from "@shared/lib/chains";
 import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
@@ -8,6 +9,7 @@ import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { compileReviewedControlScope, partialControlScopeSemantics, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -44,6 +46,7 @@ import {
   getSafetyScoreV9MechanismOverlayEvidence,
   getSafetyScoreV9MechanismReviewGapDisposition,
   getSafetyScoreV9MechanismReviewedUnavailableComponents,
+  hasAdmittedSafetyScoreV9NativeFamily,
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
 } from "./extension-mechanism";
 import {
@@ -57,7 +60,8 @@ import {
   routeSafetyScoreV9OperationalIncidents,
   SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
 } from "./extension-incidents";
-import { getSafetyScoreV9WrapperAllocationReview } from "./extension-wrapper-allocation";
+import { getSafetyScoreV9WrapperAllocationReview, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST } from "./extension-wrapper-allocation";
+import { allocationReviewClockSec, type V9AllocationScopeIdentityReview, type SafetyScoreV9WrapperAllocationReview } from "@shared/types/safety-score-v9-allocation";
 import {
   computeSafetyScoreV9ReviewedTransferFactsDigest,
   resolveSafetyScoreV9ReviewedTransferFact,
@@ -70,8 +74,10 @@ import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/red
 import {
   transferMaterialScopeFromOnchainGeneration,
   transferMaterialScopeFromSingleDeploymentAttribution,
+  transferMaterialScopeFromEconomicDeploymentPartition,
   type SafetyScoreV9TransferMaterialityGeneration,
 } from "./transfer-materiality";
+import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import {
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
@@ -103,7 +109,7 @@ import { collateralExposureMappingIssues } from "./fact-set-context";
 import {
   ReviewEvidenceBuilder,
   accessEvidenceObservationState,
-  authorityModelForType,
+  projectControlAuthority,
   boundedObservedAt,
   confidenceForResearch,
   conservativeDateEndSec,
@@ -289,16 +295,7 @@ function issuerAuthorityKey(assetId: string, control: MintAuthorityControl): str
 }
 
 function canonicalAuthorityType(assetId: string, control: MintAuthorityControl): ControlOverlay["authority"] {
-  const authorityKey = control.address
-    ? `${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`
-    : (control.failureDomainKeys?.[0] ?? issuerAuthorityKey(assetId, control));
-  if (authorityKey === null) return null;
-  const model = authorityModelForType(control.authorityType);
-  const threshold =
-    model === "multisig" && control.threshold != null && control.signerCount != null
-      ? { required: control.threshold, total: control.signerCount }
-      : null;
-  return { authorityKey, model, threshold };
+  return projectControlAuthority({ ...control, fallbackKey: control.failureDomainKeys?.[0] ?? issuerAuthorityKey(assetId, control) });
 }
 
 function mintControlKind(control: MintAuthorityControl): ControlOverlay["controlKind"] {
@@ -326,7 +323,9 @@ function controlFailureDomains(
   const exactKeys = control.failureDomainKeys?.length
     ? control.failureDomainKeys
     : control.address
-      ? [`${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`]
+      ? [control.executionScope || control.weightedQuorum
+        ? normalizeDeploymentId(`${control.chain ?? "chain-unresolved"}:${control.address}`)
+        : `${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`]
       : issuerKey
         ? [issuerKey]
         : [];
@@ -395,9 +394,14 @@ function adaptMintControl(
   reviewedEconomicCapSemantics: MintAuthorityEconomicCapSemantics | undefined,
   scopedQuestionFresh: boolean,
   supplyReview: ExtensionAsset["supplyReview"],
+  clockSec: number,
 ): ControlOverlay[] {
   const controlKind = mintControlKind(control);
-  const capabilities = mintCapabilities(control, upgradeCapable);
+  const projection = compileReviewedControlScope(control.executionScope, `${control.chain ?? "chain-unresolved"}:${control.address ?? ""}`, assetId, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC);
+  const coarseCapabilities = mintCapabilities(control, upgradeCapable);
+  const capabilities = control.executionScope && projection.complete
+    ? [...new Set(projection.paths.flatMap((path) => path.capabilities))].sort(compareText)
+    : [...new Set([...coarseCapabilities, ...(projection.reviewed ? projection.paths.flatMap((path) => path.capabilities) : [])])].sort(compareText);
   const hasMint = capabilities.includes("mint");
   const capped = control.directMintAbility === "cap-limited" || control.canRaiseCap === true;
   // A reviewed economic cap supersedes the contract-encoding cap for a
@@ -447,6 +451,9 @@ function adaptMintControl(
     if (capabilities.includes("parameter-change")) return "bounded";
     return "none";
   })();
+  const economicSemantics = projection.reviewed && !projection.complete
+    ? partialControlScopeSemantics({ capSemantics, claimImpairment }, projection.paths)
+    : { capSemantics, claimImpairment };
   const deploymentScopes = resolveMintControlDeploymentScopes(control, supplyReview, reviewComplete, hasMint);
   const incidentState: ControlOverlay["incidentState"] = incidents?.some((incident) => incident.status === "active")
     ? "active"
@@ -473,18 +480,51 @@ function adaptMintControl(
     controlKind,
     scope: "global",
     capabilities,
-    capSemantics,
-    claimImpairment,
-    economicLossScope: claimImpairment === "none" ? "access-only" : "global-claim",
+    ...economicSemantics,
+    economicLossScope: economicSemantics.claimImpairment === "none" ? "access-only" : "global-claim",
     authority: canonicalAuthorityType(assetId, control),
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
     keyCustody: control.keyCustodyAttestation?.kind ?? "unknown",
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
+    ...(control.executionScope ? {
+      executionScope: control.executionScope,
+      executionScopeComplete: projection.complete,
+      scopeDiagnostics: projection.diagnostics.sort(compareText),
+      moduleImpact: projection.moduleImpact,
+    } : {}),
     incidentState,
     failureDomains: controlFailureDomains(assetId, control, controlKind),
+    ...(control.weightedQuorum && !weightedReviewIsCurrent(control.weightedQuorum, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
+      ? { authority: { ...canonicalAuthorityType(assetId, control)!, weightedQuorum: { ...control.weightedQuorum, status: "unknown" as const } } }
+      : {}),
   };
+  if (control.executionScope && projection.complete) {
+    if (projection.paths.length === 0) return [{ ...globalControl, capabilities: [], capSemantics: { kind: "not-applicable", bound: null }, claimImpairment: "none", economicLossScope: "access-only" }];
+    return projection.paths.flatMap((path) => {
+      const localScopes = path.reach === "deployment" && path.economicLossScope === "deployment"
+        ? resolveMintControlDeploymentScopes({ ...control, deploymentRefs: path.affectedDeployments }, supplyReview, true, path.capabilities.includes("mint"))
+        : null;
+      const row: ControlOverlay = {
+        ...globalControl,
+        controlKey: `${controlKey}:path:${path.id}`,
+        capabilities: [...new Set(path.capabilities)].sort(compareText),
+        capSemantics: path.capSemantics,
+        claimImpairment: path.claimImpairment,
+        economicLossScope: path.claimImpairment === "none" ? "access-only" : "global-claim",
+        delaySec: path.unavoidableDelaySec,
+      };
+      if (localScopes === null) return [row];
+      return localScopes.map((deployment) => ({
+        ...row,
+        controlKey: `${row.controlKey}:deployment:${deployment.deploymentKey}`,
+        deploymentKey: deployment.deploymentKey, scope: "deployment" as const,
+        economicLossScope: path.claimImpairment === "none" ? "access-only" as const : "deployment" as const,
+        materialSupplyShare: deployment.materialSupplyShare,
+      }));
+    });
+  }
   if (deploymentScopes === null) return [globalControl];
   return deploymentScopes.map((deployment, index) => ({
     ...globalControl,
@@ -497,7 +537,7 @@ function adaptMintControl(
           ).slice(0, 12)}`,
     deploymentKey: deployment.deploymentKey,
     scope: "deployment",
-    economicLossScope: claimImpairment === "none" ? "access-only" : "deployment",
+    economicLossScope: economicSemantics.claimImpairment === "none" ? "access-only" : "deployment",
     materialSupplyShare: deployment.materialSupplyShare,
   }));
 }
@@ -776,10 +816,32 @@ function addWrapperCustodyEvidence(meta: V9ExtensionRegistryMeta, evidence: Revi
 }
 
 function addWrapperAllocationEvidence(
-  review: ReturnType<typeof getSafetyScoreV9WrapperAllocationReview>,
+  review: SafetyScoreV9WrapperAllocationReview | null,
   evidence: ReviewEvidenceBuilder,
+  clockSec: number,
 ): void {
   if (!review) return;
+  if (review.scopeKind === "per-dimension") {
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+    for (const claim of review.claims) {
+      if (allocationReviewClockSec(claim.reviewedAt) > clockSec || claim.observedAtSec > clockSec ||
+        clockSec >= claim.expiresAtSec || clockSec - claim.observedAtSec > maxAgeSec) continue;
+      const keys: string[] = [];
+      for (const source of claim.sources) {
+        const contentSha256 = domainDigest("safety-score-v9.scoped-allocation-claim.v1", { claim, source });
+        const evidenceKey = `allocation-scope:${claim.claimKey}:${contentSha256.slice(0, 16)}`;
+        evidence.evidence.set(evidenceKey, {
+          evidenceKey, sourceId: "safety-score-v9.scoped-allocation-review",
+          observedAtSec: claim.observedAtSec, publishedAtSec: null, publishedBy: "unknown",
+          url: source.url, contentSha256, confidence: "verified",
+          maxAgeSec: Math.min(maxAgeSec, claim.expiresAtSec - claim.observedAtSec),
+        });
+        keys.push(evidenceKey);
+      }
+      evidence.bindings.set(`allocation-scope:${claim.claimKey}`, new Set(keys));
+    }
+    return;
+  }
   evidence.add({
     componentKeys: [
       "wrapper-local:custodyEscrow",
@@ -798,6 +860,36 @@ function addWrapperAllocationEvidence(
   });
 }
 
+function buildAllocationScopeIdentityReview(meta: V9ExtensionRegistryMeta): V9AllocationScopeIdentityReview {
+  const deployments: V9AllocationScopeIdentityReview["deployments"] = [];
+  const registeredDeploymentKeys = (meta.contracts ?? []).flatMap((contract) => {
+    const chain = resolveChainId(contract.chain);
+    return chain === null ? [] : [canonicalExitRouteScopedKey(chain, contract.address)];
+  }).sort(compareText);
+  const upgrade = meta.mintAuthority?.upgradeability;
+  if (!upgrade?.observedAt || upgrade.observedBlock === undefined || upgrade.sources.length === 0) return { assetId: meta.id, registeredDeploymentKeys, deployments };
+  const observedAtSec = allocationReviewClockSec(upgrade.observedAt);
+  const sourceUrl = upgrade.sources[0]!.url;
+  for (const contract of meta.contracts ?? []) {
+    const chain = resolveChainId(contract.chain);
+    if (chain === null) continue;
+    const address = canonicalExitRouteScopedId(chain, contract.address);
+    const deploymentKey = `${chain}:${address}`;
+    // Unscoped addresses never identify a deployment across multiple chains.
+    const scoped = upgrade.deploymentRefs?.some((ref) => normalizeDeploymentId(ref) === deploymentKey) ||
+      (meta.contracts?.length === 1);
+    if (!scoped) continue;
+    if (upgrade.model === "immutable") {
+      deployments.push({ codeKind: "immutable", chain, address, observedAtSec, block: upgrade.observedBlock, sourceUrl });
+    } else if (upgrade.proxyAddresses?.some((proxy) => canonicalExitRouteScopedId(chain, proxy) === address) &&
+      upgrade.implementationAddresses?.length === 1) {
+      deployments.push({ codeKind: "proxy", chain, address, implementation: canonicalExitRouteScopedId(chain, upgrade.implementationAddresses[0]!),
+        observedAtSec, block: upgrade.observedBlock, sourceUrl });
+    }
+  }
+  return { assetId: meta.id, registeredDeploymentKeys, deployments };
+}
+
 
 function transferMaterialScope(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
@@ -807,7 +899,10 @@ function transferMaterialScope(
   review: SafetyScoreV9ReviewedTransferFact | undefined,
 ): SafetyScoreV9TransferMaterialScope {
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
-  const totalSupplyUsd = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
+  const totalSupplyUsd = !REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) ||
+    fixedInput.safetyScoreV9SupplyAttributionById?.[assetId] ||
+    hasCompleteEligibleProviderSupply(fixedInput, assetId, { contracts: meta.contracts, bridgeRouteRisk: meta.bridgeRouteRisk })
+    ? Object.values(rows).reduce((sum, row) => sum + row.current, 0) : 0;
   const authoritativeDeployments = (meta.contracts ?? []).flatMap((deployment) => {
     const chainId = resolveChainId(deployment.chain);
     return chainId === null ? [] : [{ chainId, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) }];
@@ -819,6 +914,14 @@ function transferMaterialScope(
   const unresolvedDeclaredDeploymentKeys = (meta.contracts ?? [])
     .filter((deployment) => resolveChainId(deployment.chain) === null)
     .map((deployment) => safetyScoreV9TransferDeploymentKey(deployment.chain.trim().toLowerCase(), deployment.address));
+  if (fixedInput.safetyScoreV9SupplyAttributionById?.[assetId]?.model === "reviewed-economic-deployment-partition-v1" ||
+    (REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) &&
+      !hasCompleteEligibleProviderSupply(fixedInput, assetId, { contracts: meta.contracts, bridgeRouteRisk: meta.bridgeRouteRisk }))) {
+    return transferMaterialScopeFromEconomicDeploymentPartition({ assetId, fixedInput, baseScope: {
+      authoritativeDeploymentKeys, materialDeploymentKeys: [], materialDeploymentScopeComplete: false,
+      deploymentModel: "contract-addressable",
+    } });
+  }
   if (totalSupplyUsd <= 0) {
     const baseScope: SafetyScoreV9TransferMaterialScope = {
       authoritativeDeploymentKeys,
@@ -1266,20 +1369,8 @@ function adaptMintReview(
     payload: profile,
     maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
   });
-  if (reviewStale) {
-    return {
-      review: {
-        status: requiredStatus("v9.control.mint-review", "stale", `mint:${meta.id}`, evidenceKeys),
-        controlKey: null,
-        reconciliation: "unknown",
-        supervision: "unknown",
-        latestResolvedIncidentAtSec: null,
-        upgrade: { state: "unknown", controlKey: null },
-      },
-      controls: [],
-    };
-  }
   const reviewComplete =
+    !reviewStale &&
     profile.review.disposition !== "unresolved" &&
     (profile.review.unresolvedQuestions?.length ?? 0) === 0 &&
     reviewedObservationState(confidence) === "known";
@@ -1316,6 +1407,7 @@ function adaptMintReview(
         freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
         freshScopedQuestionRefs.has(control.label.toLowerCase()),
       supplyReview,
+      clockSec,
     ),
   );
   const directMintControl =
@@ -1335,29 +1427,39 @@ function adaptMintReview(
           (domain) => domain.kind === "mint-control" && domain.key === `asset:${inheritedFrom}`,
         ),
     );
-  const inheritedShareControlIndex = hasExactInheritedWrapperDependency
-    ? (profile.controls ?? []).findIndex(
+  const inheritedShareAuthority = hasExactInheritedWrapperDependency
+    ? (profile.controls ?? []).find(
         (control) =>
           control.role === "wrapper" &&
           control.directMintAbility === "none" &&
           control.canRaiseCap === false,
       )
-    : -1;
+    : undefined;
   // An exact serial wrapper does not create durable parent supply. Its reviewed
   // share-accounting control therefore represents the local mint component when
   // no explicit durable-mint control exists. The parent mint domain remains on
   // the serial dependency, while every local upgrade control stays in this
   // asset's control inventory and continues to constrain the wrapper layer.
   const inheritedShareControl =
-    directMintControl === null && inheritedShareControlIndex >= 0
-      ? (controls[inheritedShareControlIndex] ?? null)
+    directMintControl === null && inheritedShareAuthority
+      ? (controls.find(
+          (control) =>
+            control.authority?.authorityKey === canonicalAuthorityType(meta.id, inheritedShareAuthority)?.authorityKey &&
+            !control.capabilities.includes("mint"),
+        ) ?? null)
       : null;
   const mintControl = directMintControl ?? inheritedShareControl;
-  const referencedUpgradeIndex =
+  const referencedUpgradeAuthority =
     upgradeability?.controlRef == null
-      ? -1
-      : (profile.controls ?? []).findIndex((control) => control.label === upgradeability.controlRef);
-  const referencedUpgrade = referencedUpgradeIndex >= 0 ? (controls[referencedUpgradeIndex] ?? null) : null;
+      ? undefined
+      : (profile.controls ?? []).find((control) => control.label === upgradeability.controlRef);
+  const referencedUpgrade = referencedUpgradeAuthority
+    ? (controls.find(
+        (control) =>
+          control.authority?.authorityKey === canonicalAuthorityType(meta.id, referencedUpgradeAuthority)?.authorityKey &&
+          control.capabilities.includes("upgrade"),
+      ) ?? null)
+    : null;
   const reviewedUpgradeControl =
     referencedUpgrade?.capabilities.includes("upgrade") === true
       ? referencedUpgrade
@@ -1407,6 +1509,7 @@ function adaptMintReview(
   // the section required so no reviewed upgrade authority is dropped from the grade.
   const reviewedNoLocalIssuance =
     controls.length === 0 &&
+    !reviewStale &&
     hasReviewedNoLocalIssuanceException(meta) &&
     (profile.review.noLocalIssuance?.kind === "external-only-representation" ||
       hasExactInheritedWrapperDependency);
@@ -1429,7 +1532,9 @@ function adaptMintReview(
       controls,
     };
   }
-  const state = !reviewComplete
+  const state = reviewStale
+    ? "stale"
+    : !reviewComplete
     ? profile.review.disposition === "unresolved" && evidenceKeys.length > 0
       ? "bounded-unknown"
       : reviewedObservationState(confidence) === "missing"
@@ -1444,13 +1549,13 @@ function adaptMintReview(
         "v9.control.mint-review",
         state,
         `mint:${meta.id}`,
-        state === "known" || state === "bounded-unknown" ? evidenceKeys : [],
+        state === "known" || state === "bounded-unknown" || state === "stale" ? evidenceKeys : [],
       ),
       controlKey: mintControl?.controlKey ?? null,
-      reconciliation,
+      reconciliation: reviewStale ? "unknown" : reconciliation,
       // A reviewed prudential-supervision fact graduates the reconciled mint
       // rung; absent or "unknown" stays fail-closed at "unknown".
-      supervision: profile.supervision && profile.supervision !== "unknown" ? profile.supervision : "unknown",
+      supervision: !reviewStale && profile.supervision && profile.supervision !== "unknown" ? profile.supervision : "unknown",
       latestResolvedIncidentAtSec: latestResolvedMintIncidentAtSec(profile.mintIncidents, clockSec),
       upgrade,
     },
@@ -1546,6 +1651,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     incidentReviewsDigest: SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
     operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
+    wrapperAllocationReviewsDigest: SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST,
     reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(reviewedTransferFacts.values()),
   });
   const sources = {
@@ -1621,7 +1727,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
         admitted.assetIssuerKey = assetIssuerKey;
         admissionPath = "archetype";
-        const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
+        const resolvedArchetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
+        const archetype = hasAdmittedSafetyScoreV9NativeFamily(meta, resolvedArchetype, clockSec)
+          ? resolvedArchetype
+          : "unresolved";
         admitted.archetype = archetype;
         admissionPath = "pegReference";
         const pegReference = buildPegReference(meta, metaById);
@@ -1672,6 +1781,21 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             payload: mechanismOverlayEvidence.payload,
             maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
           });
+        } else if (
+          mechanismRiskReview &&
+          (archetype === "ucits-trs-fund" || archetype === "shared-reserve" || archetype === "protocol-position") &&
+          meta.mechanismArchetypeReview
+        ) {
+          reviewEvidence.add({
+            componentKeys: ["mechanism-risk-review"],
+            sourceId: "stablecoin.mechanismArchetypeReview",
+            reviewedAt: meta.mechanismArchetypeReview.reviewedAt,
+            publishedBy: "unknown",
+            confidence: "manual-review",
+            sources: meta.mechanismArchetypeReview.sources,
+            payload: meta.mechanismArchetypeReview,
+            maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec,
+          });
         }
         const assuranceReport = meta.proofOfReserves?.latestReport;
         const assuranceComponent =
@@ -1718,7 +1842,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         admissionPath = "componentEvidence.wrapper-custody";
         addWrapperCustodyEvidence(meta, reviewEvidence);
         admissionPath = "componentEvidence.wrapper-allocation";
-        addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence);
+        addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence, clockSec);
         if (meta.parentBackingInheritance) {
           admissionPath = "componentEvidence.parent-backing-inheritance";
           reviewEvidence.add({
@@ -1844,6 +1968,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           supplyReview,
           operationalResilience,
           wrapperAllocationReview,
+          allocationScopeIdentityReview: buildAllocationScopeIdentityReview(meta),
           wrapperCustodyReview:
             (meta.variantKind === "savings-passthrough" ||
               meta.variantKind === "risk-absorption" ||

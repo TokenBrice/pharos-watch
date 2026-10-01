@@ -563,197 +563,371 @@
     },
     {
       "assetId": "cadm-mento",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "shared-reserve",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento CADm reserve-backed token disclosure and live reserve composition",
-          "url": "https://reserve.mento.org/"
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
-          "label": "Mento V3 risk overview (shared diversified overcollateralized Reserve and FPMM redemption design)",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview"
+          "label": "MGP-18: exact legacy FX pool and holder exit",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         },
         {
-          "label": "Mento current deployment addresses (Reserve, Broker, stable tokens, breakers, governance and timelock)",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
         },
         {
-          "label": "CADm verified token contract on Celo Blockscout",
-          "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325?tab=contract"
+          "label": "Reserve API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
+        },
+        {
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        {
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "CADm is protocol-reserve-backed inventory, not an off-chain fiat claim: the verified stable-token/Broker path burns the input Mento stable and mints the output against oracle-priced pools, while the shared Reserve contract holds a diversified on-chain basket. The distinct verified Reserve and token contracts plus the issuer's itemized live reserve dashboard support limited claim/segregation, custody continuity, and reconciliation under the owner-approved broad fiat-cash umbrella. The grades remain limited because there is no legal holder claim on reserve assets, no independent reserve-to-CADm-liability attestation, no asset-specific reserve partition, and governance/timelock can alter the shared contracts and collateral. This replacement removes the stale CDP overlay and now matches the coin's 2026-07-31 owner-ruling classification and runtime resolver. Classification note: fiat-cash is economically broader than ordinary custodial fiat cash.",
+      "notes": "Exact CADm Celo deployment 0xff4ab19391af240c311c54200a492233052b6325; observation block 78986505. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, provider 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901, exchange 0x517ccc3bcab9f35e2e24143a0c1809068efc649f740846cfb6a1c5703735c1ee. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "holderClaim": {
           "quality": "limited"
         },
-        "custodyContinuity": {
-          "quality": "limited"
+        "liabilityConservation": {
+          "applicability": "unavailable",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "assuranceAndReconciliation": {
-          "quality": "limited"
+        "reserveCustody": {
+          "applicability": "unavailable",
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
     {
       "assetId": "copm-mento",
-      "archetype": "fiat-cash",
+      "archetype": "shared-reserve",
       "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento COPm-specific reserve-backed issuer configuration",
-          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
-          "label": "MGP-18 legacy COPm FX pool disclosure",
+          "label": "MGP-18: exact legacy FX pool and holder exit",
           "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         },
         {
-          "label": "Mento reserve issuer API, fetched 2026-10-01",
+          "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+        },
+        {
+          "label": "Reserve API inspected; no accounting timestamp in served response",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {
-          "label": "Mento Reserve documentation",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
         },
         {
-          "label": "Mento issuer audit index: security engagements",
-          "url": "https://www.mento.org/audits"
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        {
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "COPm-specific issuer registry and Celo block 78939187 bind this asset to the legacy USDm/COPm reserve-backed Broker pool. The previous CDP overlay is identity-incompatible with the current fiat-cash base archetype. Independently reviewed issuer reserve API, Reserve dashboard/docs, MGP-18 and issuer audit index on 2026-10-01: they identify reserve assets, wallets, swap mechanics and security audits but do not supply a COPm-specific enforceable legal segregation claim, independently reconciled reserve-to-liability assurance report, or documented continuity guarantee. No quality grade or numeric CDP metric is carried forward. Negative-search scope is these reviewed public primary locations, not a claim that no document exists anywhere.",
+      "notes": "Exact COPm Celo deployment 0x8a567e2ae79ca692bd748ab832081c45de4041ea; observation block 78986505. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, provider 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901, exchange 0x1c9378bd0973ff313a599d3effc654ba759f8ccca655ab6d6ce5bd39a212943b. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
-          "applicability": "unavailable",
-          "rationale": "COPm-specific registry states reserve backing but the reviewed issuer docs do not document an enforceable holder claim and legal asset segregation for COPm.",
-          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+        "holderClaim": {
+          "quality": "limited"
         },
-        "custodyContinuity": {
+        "liabilityConservation": {
           "applicability": "unavailable",
-          "rationale": "Issuer API identifies reserve Safes, liquidity reserves and operational positions but supplies no COPm-specific continuity or legal custody safeguards.",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
           "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "assuranceAndReconciliation": {
+        "reserveCustody": {
           "applicability": "unavailable",
-          "rationale": "Reviewed dashboard/API are issuer self-reported real-time observations, not a dated independent COPm reserve-to-liability reconciliation engagement. No structured latest independent report exists in this asset metadata.",
-          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
     {
       "assetId": "ghsm-mento",
-      "archetype": "fiat-cash",
+      "archetype": "shared-reserve",
       "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento current reserve assets and custody legs",
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "MGP-18: exact legacy FX pool and holder exit",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+        },
+        {
+          "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+        },
+        {
+          "label": "Reserve API inspected; no accounting timestamp in served response",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {
-          "label": "Official backing config: GHSm reserve-backed on Celo",
-          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
         },
         {
-          "label": "MGP-18: GHSm V2 FX pools retained rather than immediate CDP migration",
-          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        {
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "Scoped review 2026-10-01 of the current official reserve API, backing configuration and V2 deprecation governance disclosure. GHSm remains a reserve-backed V2 FX-pool asset; the old CDP overlay is not the matching mechanism. The fetched issuer-controlled allocation disclosures do not supply independent liability reconciliation, enforceable holder claim/segregation, or contractual custody continuity. Current reserve custody identities were updated in the owned sidecar. Unavailable components are intentional unresolved evidence, not not-applicable findings or favorable quality estimates. No report date or independent assurance level is invented.",
+      "notes": "Exact GHSm Celo deployment 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313; observation block 78986505. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, provider 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901, exchange 0x3562f9d29eba092b857480a82b03375839c752346b9ebe93a57ab82410328187. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "assuranceAndReconciliation": {
+        "holderClaim": {
+          "quality": "limited"
+        },
+        "liabilityConservation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed reserve API is issuer-controlled. It does not provide an independently assured reconciliation of the asset-wide reserve portfolio and GHSm liabilities.",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
           "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "claimAndSegregation": {
+        "reserveCustody": {
           "applicability": "unavailable",
-          "rationale": "The reviewed current reserve and governance disclosures do not establish an enforceable GHSm holder claim, trust/segregation arrangement or insolvency priority over reserve assets.",
-          "sourceUrl": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
         },
-        "custodyContinuity": {
+        "encumbranceAndAllocation": {
           "applicability": "unavailable",
-          "rationale": "The current reserve API identifies multiple Safes, liquidity reserves, operational accounts and DeFi position legs but does not establish contractual continuity or access guarantees across custody failures.",
-          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
     {
       "assetId": "kesm-mento",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "shared-reserve",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento KESm reserve-backed token disclosure and live reserve composition",
-          "url": "https://reserve.mento.org/"
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
-          "label": "Mento V3 risk overview (shared diversified overcollateralized Reserve and FPMM redemption design)",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview"
+          "label": "MGP-18: exact legacy FX pool and holder exit",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         },
         {
-          "label": "Mento current deployment addresses (Reserve, Broker, stable tokens, breakers, governance and timelock)",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
         },
         {
-          "label": "KESm verified token contract on Celo Blockscout",
-          "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0?tab=contract"
+          "label": "Reserve API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
+        },
+        {
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        {
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "KESm is protocol-reserve-backed inventory, not an off-chain fiat claim: the verified stable-token/Broker path burns the input Mento stable and mints the output against oracle-priced pools, while the shared Reserve contract holds a diversified on-chain basket. The distinct verified Reserve and token contracts plus the issuer's itemized live reserve dashboard support limited claim/segregation, custody continuity, and reconciliation under the owner-approved broad fiat-cash umbrella. The grades remain limited because there is no legal holder claim on reserve assets, no independent reserve-to-KESm-liability attestation, no asset-specific reserve partition, and governance/timelock can alter the shared contracts and collateral. Classification note: fiat-cash is an owner ruling for shared protocol-reserve inventory and is economically broader than ordinary custodial fiat cash. This replaces the stale CDP overlay so the overlay archetype now matches the coin's 2026-07-31 owner-ruling classification and runtime resolver.",
+      "notes": "Exact KESm Celo deployment 0x456a3d042c0dbd3db53d5489e98dfb038553b0d0; observation block 78986505. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, provider 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901, exchange 0x89de88b8eb790de26f4649f543cb6893d93635c728ac857f0926e842fb0d298b. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "holderClaim": {
           "quality": "limited"
         },
-        "custodyContinuity": {
-          "quality": "limited"
+        "liabilityConservation": {
+          "applicability": "unavailable",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "assuranceAndReconciliation": {
-          "quality": "limited"
+        "reserveCustody": {
+          "applicability": "unavailable",
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
     {
       "assetId": "zarm-mento",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-09-05",
+      "archetype": "shared-reserve",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento itemized reserve assets, custody wallets and positions (fetched 2026-09-05)",
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "MGP-18: exact legacy FX pool and holder exit",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+        },
+        {
+          "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+        },
+        {
+          "label": "Reserve API inspected; no accounting timestamp in served response",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {
-          "label": "Mento protocol-wide reserve, liquidity and governance risk disclosure",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview.md"
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
         },
         {
-          "label": "Mento shared V2/V3 Reserve and StableTokenZAR deployment inventory",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md"
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
         },
         {
-          "label": "Sourcify verified ZARm proxy source on Celo",
-          "url": "https://sourcify.dev/server/v2/contract/42220/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6?fields=abi,metadata,sources"
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
         },
         {
-          "label": "Celo finalized block 76721442 (ZARm and Reserve code; ZARm totalSupply reads)",
-          "url": "https://celoscan.io/block/76721442"
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "Reviewed 2026-09-05: replaces the stale CDP overlay to match the existing fiat-cash classification for shared protocol-reserve inventory. The official deployment inventory identifies StableTokenZAR at 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 and the shared Reserve at 0x9380fa34fd9e4fd14c06305fd7b6199089ed4eb9. The itemized reserve API disclosed $19,959,907.699599963 of collateral across named hot, cold and operational wallets and deployed positions; its CDP rows contain no ZARm debt. At finalized Celo block 76721442, both deployment addresses had contract code and ZARm totalSupply was 10925.176443780387 tokens. These primary disclosures and on-chain anchors support limited claim/segregation, custody continuity, and assurance/reconciliation under the same shared-reserve framing as CADm, KESm and BRLm. Claim/segregation is limited to observable protocol reserve inventory, not a direct legal holder claim or a ZARm-specific partition. Custody continuity is limited because the disclosed reserve wallets and protocol governance remain shared failure domains. Assurance is limited to itemized self-reported assets corroborated by contract and token-supply reads, not an independently attested reserve-to-liability reconciliation or a complete cross-chain balance audit. No independent auditor, enforceable holder seniority, bankruptcy-remoteness, or dedicated ZARm recovery commitment is established. The broad fiat-cash classification is economically broader than ordinary custodial fiat cash. Raw primary responses and block reads are retained in agents/2026-09-05-safety-score-gap-campaign/evidence/zarm-*. No current CDP ratio, liquidation capacity or historical virtual conversion inventory is carried into the fiat-cash overlay.",
+      "notes": "Exact ZARm Celo deployment 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6; observation block 78986505. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, provider 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901, exchange 0x4206e101b13bf29e40b2bfed4cf167271c41677720f2ee786ac1bf5efac101cb. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "holderClaim": {
           "quality": "limited"
         },
-        "custodyContinuity": {
-          "quality": "limited"
+        "liabilityConservation": {
+          "applicability": "unavailable",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "assuranceAndReconciliation": {
-          "quality": "limited"
+        "reserveCustody": {
+          "applicability": "unavailable",
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
@@ -3653,40 +3827,62 @@
     },
     {
       "assetId": "eursafo-spiko",
-      "archetype": "tbill",
-      "reviewedAt": "2026-07-20",
+      "archetype": "ucits-trs-fund",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Spiko SICAV prospectus (SAFO sub-fund terms, TRS structure, redemption gate, CACEIS depositary and administrator, PwC auditor)",
+          "label": "SAFO prospectus published 1 September 2026, exact strategy and shareholder rights",
           "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         },
         {
-          "label": "Spiko Amundi Overnight Swap Fund EUR share KID (AMF-authorized UCITS, CACEIS depositary, capital-not-guaranteed loss allocation)",
+          "label": "Exact EUR KID, share class FR0014015LD3",
           "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
         },
         {
-          "label": "Spiko smart-contract and NAV publication disclosure (tokens are UCITS fund shares; CACEIS daily NAV submitted to AMF)",
-          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          "label": "Dated SAFO physical, cash and signed derivative inventory, 1 October 2026",
+          "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
         },
         {
-          "label": "Spiko SAFO launch disclosure (fully collateralized TRS with tier-1 bank counterparties, CACEIS depositary and fund admin)",
-          "url": "https://www.spiko.io/blog/spiko-amundi-safo"
+          "label": "AMF-hosted June 2026 semiannual financial disclosure, not an audit opinion",
+          "url": "https://geco.amf-france.org/back-office/document/download/429960"
+        },
+        {
+          "label": "Exact EURSAFO native registers and share-class identity",
+          "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+        },
+        {
+          "label": "Exact current EURSAFO share total and own NAV",
+          "url": "https://public-api.spiko.io/share-classes/eurSAFO/totals"
         }
       ],
-      "notes": "Merged full entry: preserves the two existing components (both upgraded one tier on new evidence) and adds durationAndLiquidity and lossRecoveryDesign. EUR SAFO is the EUR share class (ISIN FR0014015LD3) of the SPIKO AMUNDI OVERNIGHT SWAP FUND sub-fund of Spiko SICAV, an AMF-authorized French UCITS; the KID (published 2026-03-20) confirms AMF authorization, management company TWENTY FIRST CAPITAL (AMF authorization GP 11000029), and CACEIS Bank as depositary. Fund claim and seniority upgraded limited -> adequate on new evidence: the KID (a statutory PRIIPS document, not previously in this overlay) states subscriptions and redemptions relate to shares registered in the holder's name on the DLT registers offered, and the prospectus lists the token contracts themselves as the public addresses of the sub-fund's share registers, so the token is the direct registered fund share of a regulator-authorized UCITS; the tech blog independently confirms the token contracts represent shares in open-ended UCITS funds. NAV valuation upgraded limited -> adequate: the prospectus documents daily NAV calculation, and the tech blog documents that the NAV is calculated daily by CACEIS Fund Administration as the fund's official valuator, submitted to the AMF, published via Bloomberg/Morningstar, and published on-chain (with Chainlink receiving the NAV directly from CACEIS) — an independently struck daily NAV by a named third-party administrator, documented in binding and issuer technical disclosures. NEW durationAndLiquidity is adequate: the prospectus and KID bind the sub-fund to an overnight-rate profile — TRS contracts on the entire securities portfolio with no unhedged exposure to instruments with a maturity of more than one month — with daily NAV calculation, daily subscription/redemption centralization (12:25 Paris cut-off) settling D+1, and a documented redemption gate capped at 25% of net assets for at most 20 valuation days over 3 months; the SAFO launch disclosure adds fully collateralized TRS with tier-1 bank counterparties (starting with BNP Paribas). NEW lossRecoveryDesign is adequate: the KID and prospectus state capital is not guaranteed and investors must be able to bear losses equal to their investment (losses pass through to NAV pro-rata), and the prospectus documents the counterparty-default mechanism — TRS counterparty risk may not be offset by financial guarantees received, mitigated by collateral receipt with discounts/haircuts, reuse limits on cash collateral (10% of net assets), prohibition on selling/reinvesting/pledging securities collateral, and Amundi Credit Risk Committee counterparty selection. NOT established: a current WAM or itemized maturity table of the fund's securities portfolio (the binding one-month unhedged cap is evidenced instead), an itemized independent fund-reserve attestation, and the current TRS counterparty list (referenced to Spiko's website, not re-verified here); the AMF GECO registry page could not be fetched this session (JavaScript-rendered).",
+      "notes": "Exact EURSAFO EUR share class FR0014015LD3, fund 59c2c924-ebf8-492d-a4b0-72d72ebf61e6; Ethereum 0x0990b149e915cb08e2143a5c6f669c907eddc8b0 and the issuer eight-register roster, independently verified Solana mint at finalized slot 452397907. Limited fund claim rests on exact prospectus/KID rights plus current token/deployment corroboration. Limited portfolio hedge rests on filed portfolio-wide TRS strategy and identity-bound 1 October physical equity, signed derivative and cash inventory, externally anchored by the confirmed AMF report. Signed swap legs are retained as distinct economic concepts, never absolute reserve weights. No complete hedge/NAV assurance, collateral netting/reuse, custody continuity or funded stressed-recovery grade is asserted. The four unavailable components retain issuer-undisclosed charges; reserves and unknown exposure percentages remain unchanged. October 1 evidence is eligible only after its reviewed UTC day, never in an earlier capture.",
       "metrics": {},
       "components": {
-        "fundClaimAndSeniority": {
-          "quality": "adequate"
+        "fundClaimAndSegregation": {
+          "quality": "limited"
         },
-        "navValuation": {
-          "quality": "adequate"
+        "portfolioHedge": {
+          "quality": "limited"
         },
-        "durationAndLiquidity": {
-          "quality": "adequate"
+        "navAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "Searched exact share-class totals/NAV APIs, current itemized SAFO holdings, prospectus and verified June semiannual assets/liabilities report. No current complete assets-to-matching-liabilities reconciliation across every share class and eight native registers, with circulation exclusions and independently reconciled valuation residuals, was recovered. Aggregate share totals and a non-audited June filing do not close current reconciliation.",
+          "sourceUrl": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
         },
-        "lossRecoveryDesign": {
-          "quality": "adequate"
+        "counterpartyAndCollateral": {
+          "applicability": "unavailable",
+          "rationale": "Searched exact EUR KID, SAFO-specific prospectus and dated physical/signed-swap inventory. The strategy, collateral policy and counterparty risks are documented, but dated complete posted/received collateral exposures, actual reuse, enforceable netting and independently verified current allocation are not disclosed by those sources.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Searched exact EUR KID and prospectus depositary/custodian provisions. CACEIS and legal separation are documented; the complete current itemized immediate custody/subcustody locations, allocations and continuity/replacement protections for the whole physical/derivative/collateral book remain unverified.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Searched exact EUR KID default sections and SAFO prospectus risk/redemption/collateral terms. Legal separation and counterparty-default market/currency risk are documented; the exact funded stressed-recovery resources and priority for every swap/collateral/portfolio residual were not established. Ordinary redemption and daily unwind are not funded default-recovery proof.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
         }
       }
     },
@@ -5491,35 +5687,57 @@
     },
     {
       "assetId": "usdb-blast",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "protocol-position",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Blast documentation (USDB auto-rebasing stablecoin; bridged stablecoins receive USDB; yield from MakerDAO's on-chain T-Bill protocol; USDB redeemable for DAI when bridging back to Ethereum)",
-          "url": "https://docs.blast.io/"
+          "label": "Blast USDB rebasing and DAI withdrawal documentation",
+          "url": "https://docs.blast.io/about-blast"
         },
         {
-          "label": "Blast mainnet bridge documentation (supported USDC/USDT/DAI deposits and approximately seven-day L2 withdrawal flow)",
+          "label": "USDYieldManager verified implementation, source response SHA-256 e43c03ced4c1cd6f4c4e5aea32d3c5905333eed88000c9b98325e1877639a266",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xecddf748a60e23609c07af6ca3856744b139b911"
+        },
+        {
+          "label": "Blast multi-step withdrawal documentation",
           "url": "https://docs.blast.io/building/bridges/mainnet"
+        },
+        {
+          "label": "L1BlastBridge verified implementation, source response SHA-256 2169ec657c3b2bbaa1f34e79c151296d428778623213acb126e0c6e852238df0",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7a2075519dd9598b62075fd397af0dd34b14619a"
+        },
+        {
+          "label": "Blast mainnet exact manager/provider/bridge roster",
+          "url": "https://docs.blast.io/building/contracts"
         }
       ],
+      "notes": "Exact USDB Blast deployment 0x4300000000000000000000000000000000000003 at block 41038766, Ethereum USDYieldManager 0xa230285d5683c74935ad14c446e137c8c8828438 at block 26099927. Manager implementation 0xecddf748a60e23609c07af6ca3856744b139b911, TOKEN=DAI 0x6b175474e89094c44da98b954eedeac495271d0f, sole indexed DSR provider 0x0733f618118bf420b6b604c969498ecf143681a8 (index 1 reverts). Issuer claim and current callable bridge-to-queue-to-DAI mechanism support limited operational holderClaim only. No fiat claim, fund ownership, complete assets/liabilities ratio, custody protection, unencumbered allocation or funded default priority is established. Current totalValue and raw USDB supply exclude unresolved in-flight/full claim-scope reconciliation; pending queue counts do not constitute whole-liability accounting. Review applies only after the October 1 UTC evidence day.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "holderClaim": {
           "quality": "limited"
         },
-        "assuranceAndReconciliation": {
+        "liabilityConservation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed Blast documentation does not publish an independent reconciliation of USDB supply to the bridge-held assets backing it.",
-          "sourceUrl": "https://docs.blast.io/"
+          "rationale": "Reviewed exact manager/provider accounting code and Blast about/bridge/contract disclosures identify DAI position values and L2 liability mechanics, but do not reconcile the complete L2 rebasing claim, cross-domain in-flight liabilities, pending withdrawals, exclusions and claim valuation at a common economic timestamp. No whole-claim assets/liabilities ratio is inferred from totalValue or raw totalSupply.",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xecddf748a60e23609c07af6ca3856744b139b911"
         },
-        "custodyContinuity": {
+        "positionCustody": {
           "applicability": "unavailable",
-          "rationale": "The reviewed USDB Blast disclosure surface at https://docs.blast.io/ does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
-          "sourceUrl": "https://docs.blast.io/"
+          "rationale": "Official mainnet roster and verified manager source identify the current DSR provider but do not establish complete itemized position custody, every reachable mutable controller/provider custody path and recovery continuity for the whole holder claim. One indexed provider is not a whole-component protection proof.",
+          "sourceUrl": "https://docs.blast.io/building/contracts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "Reviewed manager/withdrawal accounting source and public Blast bridge disclosures do not establish complete collateral encumbrance, other-creditor scope, allocation/reuse rights or an independently reconciled residual exposure envelope. No zero residual or absence of outside claims is assumed.",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xecddf748a60e23609c07af6ca3856744b139b911"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Public withdrawal documentation gives approximately seven days, while deployed manager code has admin finalization and recipient-only funded claims with negative-yield adjustment. Neither the code nor reviewed public disclosures establishes enforceable whole-claim default priority or a funded recovery waterfall and continuity proof.",
+          "sourceUrl": "https://docs.blast.io/building/bridges/mainnet"
         }
-      },
-      "notes": "Re-reviewed 2026-08-08. Blast documents that supported USDC, USDT, and DAI bridge deposits receive auto-rebasing USDB, that yield derives from MakerDAO's onchain T-bill protocol, and that bridge withdrawals redeem USDB for DAI after an approximately seven-day L2 withdrawal flow. Claim and segregation remains limited: the documented bridge-mint/redemption path creates a functional pro-rata protocol claim, but no legal trust, holder-designated segregated account, or bankruptcy-remoteness instrument is published. The current disclosure surface still does not publish the L1 reserve composition and venue allocation, signer/custody failure and replacement terms, or an independent reconciliation of USDB supply to bridge-held assets, so custody continuity and assurance/reconciliation remain unavailable rather than inferred weak."
+      }
     },
     {
       "assetId": "usdcx-movement",
@@ -5559,45 +5777,75 @@
     },
     {
       "assetId": "ceur-celo",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "shared-reserve",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento V3 Reserve documentation for USDm and EURm",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
-          "label": "Mento live reserve dashboard",
-          "url": "https://reserve.mento.org/"
+          "label": "FPMM operational claim at documentation commit 41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/build/smart-contracts/fpmm.md"
         },
         {
-          "label": "Mento live reserve API read 2026-08-08",
+          "label": "Deployed FPMM swap source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+        },
+        {
+          "label": "Reserve API inspected; no accounting timestamp in served response",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
         {
-          "label": "Pinned Mento stablecoin-backing analytics configuration",
-          "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
         },
         {
-          "label": "Pinned Mento Reserve custody documentation",
-          "url": "https://github.com/mento-protocol/docs/blob/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
         },
         {
-          "label": "Pinned Mento rebalancing and strategy documentation",
-          "url": "https://github.com/mento-protocol/docs/blob/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/fpmm/rebalancing-and-strategies.md"
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "Re-reviewed 2026-08-08 under the canonical fiat evidence standard. Mento V3 expressly classifies EURm as Reserve-backed rather than CDP-backed: the shared protocol reserve holds onchain collateral and an allowlisted reserve strategy mints, burns, and moves collateral through FPMM rebalancing. Claim and segregation remains limited because the permissionless onchain mechanism and dedicated reserve contracts are documented and externally verifiable, but no legal holder claim, trust, or bankruptcy-remote segregation exists. The live API publishes itemized addresses, tokens, balances, USD values, reserve-held supply, LP positions, operational accounts, and strategy positions, with the production mapping pinned in GitHub. This meets limited assurance and custody evidence through issuer structured data plus public-chain anchors. The prior adequate assurance grade is reduced because no independent dated financial attestation or independently operated full reserve-to-liability oracle covers the shared reserve. Custody continuity is newly graded limited: reserve safes, protocol contracts, liquidity contracts, operational accounts, and approved strategies are identifiable, but allocations are mutable and no legal insolvency, signer-failure, provider-replacement, or general non-reuse covenant is published.",
+      "notes": "Exact EURm Celo deployment 0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73; observation block 78986505. Current V3 FPMM 0x1aD2EA06502919F935D9c09028dF73a462979e29 with implementation 0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "holderClaim": {
           "quality": "limited"
         },
-        "custodyContinuity": {
-          "quality": "limited"
+        "liabilityConservation": {
+          "applicability": "unavailable",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "assuranceAndReconciliation": {
-          "quality": "limited"
+        "reserveCustody": {
+          "applicability": "unavailable",
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
@@ -5647,33 +5895,53 @@
     },
     {
       "assetId": "usdu-usdu-finance",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "protocol-position",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "USDU Finance documentation (protocol-minted stablecoin fully backed by on-chain yield-generating collateral; verifiable backing)",
-          "url": "https://usdu.gitbook.io/docs/"
+          "label": "USDU issuer backing and holder-position disclosure",
+          "url": "https://usdu.finance/transparency/"
+        },
+        {
+          "label": "Exact verified USDC SwapBridgeMorphoV1 source; runtime matched at Ethereum block 26099926",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b6893d82edbc8d6769ba3c407102d33da2b623f"
+        },
+        {
+          "label": "Exact verified USDT SwapBridgeMorphoV1 source; runtime matched at Ethereum block 26099926",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9141f634ef9e871a5fe4f64195747db77a13f3e"
+        },
+        {
+          "label": "Exact MorphoAdapterV1_2 source; runtime matched at Ethereum block 26099926",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb46481a9819e068af0eb64a2c2824fcecaaaa45"
         }
       ],
+      "notes": "Exact Ethereum USDU token 0xdde3ec717f220fc6a29d6a4be73f91da5b718e55. Verified module census at 26098837 and current three valid modules/source-runtime correspondence at 26099926. Holder claim is limited: adapters own LP/vault positions while holders have USDU and operational, conditional swapOut paths to USDC/USDT, not fiat ownership or borrower collateral. No supply, reserve allocation, oracle tier or collateralization ratio inferred. Whole-component residuals: historical-module assets and burn powers, API roster/time/denominator, endogenous USDU value, external asset valuation, complete custody/continuity, reuse/encumbrance and funded default priority.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed USDU documentation claims protocol-held on-chain backing but publishes no holder legal claim, trust, bankruptcy-remoteness instrument, or pinned current adapter-balance evidence sufficient for a quality grade.",
-          "sourceUrl": "https://usdu.gitbook.io/docs/"
+        "holderClaim": {
+          "quality": "limited"
         },
-        "custodyContinuity": {
+        "liabilityConservation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed USDU documentation names strategy families but does not publish a current itemized adapter/venue inventory, exposure shares, upgrade controls, failure isolation, or replacement mechanics.",
-          "sourceUrl": "https://usdu.gitbook.io/docs/"
+          "rationale": "The issuer transparency page and four-field backing API do not disclose a current complete historical/residual module inventory, accounting timestamp or matching noncircular externally valued assets and liabilities. Current module observations do not establish inclusion or exclusion in that API.",
+          "sourceUrl": "https://usdu.finance/transparency/"
         },
-        "assuranceAndReconciliation": {
+        "positionCustody": {
           "applicability": "unavailable",
-          "rationale": "The reviewed USDU documentation does not publish a current itemized supply-to-backing reconciliation or an independent reserve report.",
-          "sourceUrl": "https://usdu.gitbook.io/docs/"
+          "rationale": "The issuer transparency page names adapters and vaults, but current complete residual holders, all vault/manager permissions and continuity/replacement paths are not established. Three currently valid minters are not the complete custody inventory.",
+          "sourceUrl": "https://usdu.finance/transparency/"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "The issuer transparency page and source establish adapter-held positions but not complete current receipt/underlying allocation, lending collateral and creditor reuse, historic module residuals or nonoverlapping liability attribution.",
+          "sourceUrl": "https://usdu.finance/transparency/"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "The issuer page mentions TermMax-specific RWA recovery and swap module source has ordinary vault withdrawals; neither proves complete current funded stressed/default resources, liquidation priority and recovery for all USDU liabilities.",
+          "sourceUrl": "https://usdu.finance/transparency/"
         }
-      },
-      "notes": "USDU is economically a protocol-adapter reserve over Curve LP, Morpho vault, and TermMax positions rather than ordinary fiat cash, so the fiat-cash classification should be reopened. Under the canonical evidence standard, the issuer's generic fully-backed statement is insufficient: no pinned current adapter balances, supply reconciliation, holder legal claim, venue shares, or independent report were published. All three components are therefore explicitly unavailable; no quality grade is inferred from missing evidence."
+      }
     },
     {
       "assetId": "mxne-real-mxn",
@@ -6055,30 +6323,75 @@
     },
     {
       "assetId": "cusd-celo",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "archetype": "shared-reserve",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento V3 Reserve documentation (Reserve-backed model for USDm, 1:1 backing by fiat-backed collateral, rebalancing, governance-set composition)",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
-          "label": "Mento reserve overview API read 2026-07-20 (reserve backing collateral, debt, and collateralization ratio)",
-          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/overview"
+          "label": "FPMM operational claim at documentation commit 41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/build/smart-contracts/fpmm.md"
         },
         {
-          "label": "Mento reserve asset ledger API read 2026-07-20 (per-asset balances and custodian wallets)",
+          "label": "Deployed FPMM swap source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+        },
+        {
+          "label": "Reserve API inspected; no accounting timestamp in served response",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
+        },
+        {
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        {
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "Mento V3 protocol documentation states that USDm is Reserve-backed: the Reserve holds fiat-backed collateral (USDC, USDT, USDS and others) backing USDm 1:1, rebalances through allowlisted FPMM pools at the oracle rate, operates transparently on-chain, and has its composition set by MENTO governance. Live verification on 2026-07-20 at 05:46:01 UTC via the Mento analytics API (timestamp field 2026-07-20T05:46:01.314Z): reserve-backing collateral of USD 19,093,519.64 against reserve-backed stablecoin debt of USD 16,194,035.37, a collateralization ratio of 1.179046; the asset ledger enumerates custody on-chain by wallet - cold USD 11,110,276.26 (Reserve Safes 0xd0697f70E79476195B742d5aFAb14BE50f98CC1E on Ethereum and 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1 on Celo), hot USD 3,326,308.62 (Mento V2 Liquidity Reserve 0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9), and ops USD 4,663,182.27 (Ops Safe 0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1 including an Aave position, and Rebalancer Bot 0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976) - led by sUSDS (24.5%), AUSD (23.0%), and CELO (17.6%). The claim and segregation structure is documented in protocol docs and verified on-chain: reserve assets sit in publicly enumerable protocol wallets structurally separate from any Mento Labs corporate estate, and USDm mints/redeems through the documented Mento rails, so claimAndSegregation is adequate. Custody continuity is only limited: custody is fully on-chain and enumerable, but the wallets are Mento Safe signers and a hot rebalancer bot under single-entity governance (the USDm token owner is a 4-of-6 Safe with no timelock), there is no independent attestation of any of it, and the upstream issuer custody of the fiat-backed reserve stablecoins is inherited and unresolved. NOT established: any independent/third-party assurance or legal segregation opinion (the reserve dashboard and API are self-published), custodian-failure or key-compromise recovery arrangements, and the bridging/custody path of the NEAR (a11bd.near EOA), Allbridge, Optics, and Moss representations.",
+      "notes": "Exact USDm Celo deployment 0x765de816845861e75a25fca122bb6898b8b1282a; observation block 78986505. Current V3 FPMM 0x462fe04b4fd719cbd04c0310365d421d02aaa19e with implementation 0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
-          "quality": "adequate"
-        },
-        "custodyContinuity": {
+        "holderClaim": {
           "quality": "limited"
+        },
+        "liabilityConservation": {
+          "applicability": "unavailable",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        "reserveCustody": {
+          "applicability": "unavailable",
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
@@ -8604,37 +8917,75 @@
     },
     {
       "assetId": "xofm-mento",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "shared-reserve",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento XOFm reserve-backed token disclosure and live reserve composition",
-          "url": "https://reserve.mento.org/"
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
-          "label": "Mento V3 risk overview (shared diversified overcollateralized Reserve and FPMM redemption design)",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview"
+          "label": "MGP-18: exact legacy FX pool and holder exit",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         },
         {
-          "label": "Mento current deployment addresses (Reserve, Broker, stable tokens, breakers, governance and timelock)",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
         },
         {
-          "label": "XOFm verified token contract on Celo Blockscout",
-          "url": "https://celo.blockscout.com/address/0x73f93dcc49cb8a239e2032663e9475dd5ef29a08?tab=contract"
+          "label": "Reserve API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
+        },
+        {
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        {
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "XOFm is protocol-reserve-backed inventory, not an off-chain fiat claim: the verified stable-token/Broker path burns the input Mento stable and mints the output against oracle-priced pools, while the shared Reserve contract holds a diversified on-chain basket. The distinct verified Reserve and token contracts plus the issuer's itemized live reserve dashboard support limited claim/segregation, custody continuity, and reconciliation under the owner-approved broad fiat-cash umbrella. The grades remain limited because there is no legal holder claim on reserve assets, no independent reserve-to-XOFm-liability attestation, no asset-specific reserve partition, and governance/timelock can alter the shared contracts and collateral. This replacement removes the stale CDP overlay and now matches the coin's 2026-07-31 owner-ruling classification and runtime resolver. Classification note: fiat-cash is economically broader than ordinary custodial fiat cash.",
+      "notes": "Exact XOFm Celo deployment 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08; observation block 78986505. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, provider 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901, exchange 0xc9664df358594c5eaf2f410ab371e2deb8b532ca26162d2bc36d99b8d174567b. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "holderClaim": {
           "quality": "limited"
         },
-        "custodyContinuity": {
-          "quality": "limited"
+        "liabilityConservation": {
+          "applicability": "unavailable",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "assuranceAndReconciliation": {
-          "quality": "limited"
+        "reserveCustody": {
+          "applicability": "unavailable",
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
@@ -18477,37 +18828,75 @@
     },
     {
       "assetId": "brlm-mento",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "shared-reserve",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "Mento BRLm reserve-backed token disclosure and live reserve composition",
-          "url": "https://reserve.mento.org/"
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
-          "label": "Mento V3 risk overview (shared diversified overcollateralized Reserve and FPMM redemption design)",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview"
+          "label": "MGP-18: exact legacy FX pool and holder exit",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         },
         {
-          "label": "Mento current deployment addresses (Reserve, Broker, stable tokens, breakers, governance and timelock)",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
         },
         {
-          "label": "BRLm verified token contract on Celo Blockscout",
-          "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787?tab=contract"
+          "label": "Reserve API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
+        },
+        {
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        {
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       ],
-      "notes": "BRLm is protocol-reserve-backed inventory, not an off-chain fiat claim: the verified stable-token/Broker path burns the input Mento stable and mints the output against oracle-priced pools, while the shared Reserve contract holds a diversified on-chain basket. The distinct verified Reserve and token contracts plus the issuer's itemized live reserve dashboard support limited claim/segregation, custody continuity, and reconciliation under the owner-approved broad fiat-cash umbrella. The grades remain limited because there is no legal holder claim on reserve assets, no independent reserve-to-BRLm-liability attestation, no asset-specific reserve partition, and governance/timelock can alter the shared contracts and collateral. Classification note: fiat-cash is an owner ruling for shared protocol-reserve inventory and is economically broader than ordinary custodial fiat cash.",
+      "notes": "Exact BRLm Celo deployment 0xe8537a3d056da446677b9e9d6c5db704eaab4787; observation block 78986505. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, provider 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901, exchange 0xd11d52b973ddbb983cc2087aabcafd915fc3140cf9996aacc61db9710d1bde05. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "holderClaim": {
           "quality": "limited"
         },
-        "custodyContinuity": {
-          "quality": "limited"
+        "liabilityConservation": {
+          "applicability": "unavailable",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         },
-        "assuranceAndReconciliation": {
-          "quality": "limited"
+        "reserveCustody": {
+          "applicability": "unavailable",
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     },
@@ -18956,6 +19345,80 @@
           "applicability": "unavailable",
           "rationale": "The selected USDC/USDG account inventory and token supply can be read atomically, with a small unreconciled nominal-unit gap. Published audit scopes concern programs and controls, not an independent complete reserve/liability examination.",
           "sourceUrl": "https://docs.solomonlabs.org/usdv/audits-and-security"
+        }
+      }
+    },
+    {
+      "assetId": "audm-mento",
+      "archetype": "shared-reserve",
+      "reviewedAt": "2026-10-01",
+      "sources": [
+        {
+          "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "MGP-18: exact legacy FX pool and holder exit",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+        },
+        {
+          "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+        },
+        {
+          "label": "Reserve API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Stablecoin API inspected; no accounting timestamp in served response",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
+        },
+        {
+          "label": "Pinned immediate reserve address roster including Monad",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        {
+          "label": "Pinned reserve model documentation",
+          "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+        },
+        {
+          "label": "MGP-10 yield/allocation framework",
+          "url": "https://forum.mento.org/t/mgp-10-restructuring-the-mento-reserve-yield-on-mento-reserve-mento-funding/93"
+        },
+        {
+          "label": "MGP-15 reserve funding authorization",
+          "url": "https://forum.mento.org/t/mgp-15-mento-protocol-foundation-funding-request/104"
+        },
+        {
+          "label": "MGP-19 proposed stewardship and discretionary backstop",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        }
+      ],
+      "notes": "Exact AUDm Celo deployment 0x7175504c455076f15c04a2f90a8e352281f492f9; observation block 78986505. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, provider 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901, exchange 0xd580d237231109e6a96d67d82450611c610a805a26660c90281bdc0cd04a95c7. Limited operational claim only; quotes are not executed exits or legal priority. All five shared-reserve components remain applicable. Common scope includes twelve explicitly reserve-backed currencies, including noncatalog PHPm/NGNm, and Celo/Ethereum/Monad custody. Liabilities, custody completeness, allocation/reuse and default recovery retain bounded unknowns; issuer nondisclosure charges, all reserves/percentages/exposure amounts, controls, oracles and supplies are unchanged. First eligible after 2026-10-01 UTC; no backdating.",
+      "metrics": {},
+      "components": {
+        "holderClaim": {
+          "quality": "limited"
+        },
+        "liabilityConservation": {
+          "applicability": "unavailable",
+          "rationale": "The inspected reserve and stablecoins APIs contain itemized positions and supply decomposition but no served accounting/as-of metadata. Complete matching current liabilities across all deployments, including PHPm/NGNm, reserve-held exclusions and receipt/underlying conservation are not reconciled to one dated external anchor. No collateralization ratio is admitted.",
+          "sourceUrl": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        "reserveCustody": {
+          "applicability": "unavailable",
+          "rationale": "The pinned address roster and API disclose wallets and protocol positions on Celo, Ethereum and Monad, including Monad Reserve Safe 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1. A dated complete immediate-holder/custodian inventory anchored across all wallets, Aave, UniV3, FPMM, stability pools and CDP positions is not established by these untimestamped API responses. No whole-component custody grade or segregation protection is inferred.",
+          "sourceUrl": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/reserve-addresses.config.ts"
+        },
+        "encumbranceAndAllocation": {
+          "applicability": "unavailable",
+          "rationale": "MGP-10, MGP-15 and MGP-19 describe yield strategies, funding authorizations and proposed reserve stewardship. They do not establish a current complete asset/liability inventory with exact other-creditor, allocation, lien and reuse rights for all twelve reserve-backed currencies. Proposed principal restrictions are not proof of current unencumbered holder allocation.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+        },
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Current Broker/FPMM code establishes ordinary operational swaps. Risk disclosures and MGP-19 do not establish an exact current loss/default procedure with scoped holder priority and externally anchored funded recovery; the proposed Community Fund backstop is discretionary and expressly not reserve collateral.",
+          "sourceUrl": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
         }
       }
     }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DeploymentAmountEncodingSchema } from "./deployment-amounts";
 import {
   ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
@@ -228,9 +229,19 @@ export const ContractDeploymentSchema = z
   .object({
     chain: z.string(),
     address: z.string(),
-    decimals: ContractDecimalsSchema,
+    decimals: ContractDecimalsSchema.nullable(),
+    amountEncoding: DeploymentAmountEncodingSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((deployment, ctx) => {
+    const issued = deployment.amountEncoding?.kind === "xrpl-issued-currency";
+    if (issued ? deployment.chain !== "xrpl" || deployment.decimals !== null : deployment.decimals === null) {
+      ctx.addIssue({ code: "custom", message: "Only explicit native XRPL issued amounts use null decimals" });
+    }
+    if (deployment.chain === "xrpl" && deployment.amountEncoding?.kind === "fixed-decimal") {
+      ctx.addIssue({ code: "custom", message: "XRPL issued deployments cannot claim fixed decimals" });
+    }
+  });
 
 export const DependencyWeightSchema = z
   .object({

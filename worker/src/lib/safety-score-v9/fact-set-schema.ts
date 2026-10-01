@@ -34,7 +34,7 @@ import { ReserveSliceSchema, ReserveIntermediarySchema } from "@shared/types/res
 import type { ReserveSlice } from "@shared/types/reserves";
 import { CustodyModelSchema, WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
 import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
-import { SafetyScoreV9WrapperAllocationReviewSchema } from "./extension-wrapper-allocation";
+import { SafetyScoreV9WrapperAllocationReviewSchema, V9AllocationScopeIdentityReviewSchema } from "@shared/types/safety-score-v9-allocation";
 import { canonicalArrayBy } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   CanonicalFailureDomainsSchema,
@@ -453,6 +453,7 @@ const AssetExtensionSchema = z
     // baseline producer emits the reviewed registry projection when available.
     wrapperCustodyReview: WrapperCustodyReviewSchema.nullable().optional(),
     wrapperAllocationReview: SafetyScoreV9WrapperAllocationReviewSchema.nullable().optional(),
+    allocationScopeIdentityReview: V9AllocationScopeIdentityReviewSchema.optional(),
     parentBackingInheritance: ParentBackingInheritanceSchema.optional(),
     researchEvidence: canonicalArrayBy(ResearchEvidenceSchema, (evidence) => evidence.evidenceKey).default([]),
     componentEvidence: canonicalArrayBy(ComponentEvidenceBindingSchema, (binding) => binding.componentKey).default([]),
@@ -460,6 +461,14 @@ const AssetExtensionSchema = z
   })
   .strict()
   .superRefine((asset, ctx) => {
+    for (const [field, review] of [
+      ["wrapperAllocationReview", asset.wrapperAllocationReview],
+      ["allocationScopeIdentityReview", asset.allocationScopeIdentityReview],
+    ] as const) {
+      if (review != null && review.assetId !== asset.assetId) {
+        ctx.addIssue({ code: "custom", path: [field, "assetId"], message: "Allocation review must match extension asset" });
+      }
+    }
     if (
       asset.operationalResilience !== undefined &&
       asset.operationalResilience !== null &&

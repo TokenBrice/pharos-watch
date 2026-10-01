@@ -127,6 +127,76 @@
       {
         "chain": "solana",
         "address": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
+        "executionScope": {
+          "controllerDeployment": "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "DataMisc02",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Independently verified finalized atomic mint/program/ProgramData/controller read",
+              "url": "https://api.mainnet-beta.solana.com"
+            }
+          ],
+          "pin": {
+            "position": "452348179",
+            "hash": null,
+            "runtimeIdentity": "11111111111111111111111111111111:system-account:space=0:executable=false",
+            "signerIdentity": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
+          },
+          "observedState": {
+            "position": "452348179",
+            "hash": null,
+            "runtimeIdentity": "11111111111111111111111111111111:system-account:space=0:executable=false",
+            "signerIdentity": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "bridge-program-upgrade",
+              "targetDeployment": "solana:BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "BPFLoaderUpgradeable::Upgrade"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "cash-phantom"
+              ],
+              "affectedDeployments": [
+                "solana:CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "label": "CASH Bridge program single-key upgrade authority",
         "role": "proxy-admin",
         "authorityType": "eoa",

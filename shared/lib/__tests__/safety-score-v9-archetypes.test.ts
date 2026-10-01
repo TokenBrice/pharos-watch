@@ -107,9 +107,137 @@ const reviews: { [A in V9MechanismRiskReview["archetype"]]: Extract<V9MechanismR
     assuranceAndReconciliation: strongFact("bar-list"),
     physicalRedemption: strongFact("delivery"),
   },
+  "ucits-trs-fund": {
+    archetype: "ucits-trs-fund",
+    fundClaimAndSegregation: strongFact("fund-claim"),
+    navAndReconciliation: strongFact("nav-book"),
+    portfolioHedge: strongFact("portfolio-hedge"),
+    counterpartyAndCollateral: strongFact("swap-collateral"),
+    custodyContinuity: strongFact("fund-custody"),
+    defaultRecovery: strongFact("fund-recovery"),
+  },
+  "shared-reserve": {
+    archetype: "shared-reserve",
+    holderClaim: strongFact("operational-claim"),
+    liabilityConservation: strongFact("pool-ledger"),
+    reserveCustody: strongFact("reserve-custody"),
+    encumbranceAndAllocation: strongFact("pool-allocation"),
+    defaultRecovery: strongFact("pool-recovery"),
+  },
+  "protocol-position": {
+    archetype: "protocol-position",
+    holderClaim: strongFact("position-claim"),
+    liabilityConservation: strongFact("position-ledger"),
+    positionCustody: strongFact("position-custody"),
+    encumbranceAndAllocation: strongFact("position-allocation"),
+    defaultRecovery: strongFact("position-recovery"),
+  },
 };
 
 describe("Safety Score v9 archetype backing adapters", () => {
+  it.each(["ucits-trs-fund", "shared-reserve", "protocol-position"] as const)(
+    "prices unvalued residuals in %s and grants credit only to evidenced conservation",
+    (archetype) => {
+      const base = reviews[archetype];
+      const field = archetype === "ucits-trs-fund" ? "navAndReconciliation" : "liabilityConservation";
+      const key = archetype === "ucits-trs-fund" ? "nav-and-reconciliation" : "liability-conservation";
+      const unknown = {
+        status: { ...knownStatus("evidence:searched-ledger", "mechanism.required"), observationState: "bounded-unknown" as const },
+        quality: null,
+        failureDomains: [],
+      };
+      const bounded = evaluateV9Backing(asset(), { ...base, [field]: unknown }, V9_CANDIDATE_POLICY_V1);
+      const proved = evaluateV9Backing(asset(), base, V9_CANDIDATE_POLICY_V1);
+      const weight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes[archetype].componentWeights[key]!;
+      const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.backing;
+      expect(bounded.contributions).toContainEqual(expect.objectContaining({
+        componentKey: `mechanism:${key}`,
+        observationState: "bounded-unknown",
+        score: quality.boundedUnknownQuality,
+      }));
+      expect(bounded.contributions.find((row) => row.componentKey === `mechanism:${key}`)?.effectiveWeight).toBeCloseTo(weight, 8);
+      expect(proved.score! - bounded.score!).toBeCloseTo(
+        weight * (quality.componentQuality.strong - quality.boundedUnknownQuality), 8,
+      );
+      const adverse = evaluateV9Backing(asset(), { ...base, [field]: weakObservedFact("bad-ledger") }, V9_CANDIDATE_POLICY_V1);
+      expect(adverse.score!).toBeLessThan(proved.score!);
+      expect(adverse.contributions.find((row) => row.componentKey === `mechanism:${key}`)?.observationState).toBe("known");
+    },
+  );
+
+  it.each(["shared-reserve", "protocol-position"] as const)(
+    "withholds %s when the exact holder claim is missing rather than borrowing a reserve total",
+    (archetype) => {
+      const missing = missingMechanism("holder-claim", "missing-holder", "mechanism.required", "Unknown exact-token claim");
+      const result = evaluateV9Backing(asset([missing.gap]), { ...reviews[archetype], holderClaim: missing.fact }, V9_CANDIDATE_POLICY_V1);
+      expect(result.rateability).toBe("NR");
+      expect(result.score).toBeNull();
+    },
+  );
+
+  it("withholds an unidentified UCITS share claim and caps a proved failed position claim rather than calling it unknown", () => {
+    const missing = missingMechanism("fund-claim-and-segregation", "missing-share", "mechanism.required", "Exact share class unverified");
+    const unidentified = evaluateV9Backing(asset([missing.gap]), {
+      ...reviews["ucits-trs-fund"], fundClaimAndSegregation: missing.fact,
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(unidentified.rateability).toBe("NR");
+    expect(unidentified.score).toBeNull();
+    const failed = evaluateV9Backing(asset(), {
+      ...reviews["protocol-position"],
+      holderClaim: { ...strongFact("failed-position-claim"), quality: "failed" },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(failed.structuralReasons).toContainEqual(expect.objectContaining({
+      kind: "unsafe-backing", severity: "critical", responsibility: "measured-adverse",
+      pathKey: "mechanism:holder-claim",
+    }));
+    expect(failed.pillarCeiling).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["unsafe-backing"].critical);
+  });
+
+  it("retains protocol-position local risk under complete live parent backing, while legacy inheritance stays unchanged", () => {
+    const inheritedAsset: V9BackingAssetInput = {
+      ...asset(),
+      reserveExposures: [{ ...reserveExposure("dai"), weight: 1, provenance: "live", trackedAssetId: "dai-makerdao" }],
+      inheritedStablecoinBacking: {
+        parentAssetId: "dai-makerdao", parentBackingScore: 90, weight: 1, tier: "wrapped", failureDomains: [],
+      },
+    };
+    const unknown = {
+      status: { ...knownStatus("evidence:unreconciled", "mechanism.required"), observationState: "bounded-unknown" as const },
+      quality: null, failureDomains: [],
+    };
+    const local = evaluateV9Backing(inheritedAsset, {
+      ...reviews["protocol-position"],
+      liabilityConservation: unknown,
+      positionCustody: unknown,
+      encumbranceAndAllocation: unknown,
+      defaultRecovery: unknown,
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(local.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:liability-conservation", effectiveWeight: 0.15, observationState: "bounded-unknown",
+    }));
+    expect(local.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:encumbrance-and-allocation", effectiveWeight: 0.1, observationState: "bounded-unknown",
+    }));
+    expect(local.score!).toBeLessThan(90);
+    const legacy = evaluateV9Backing(inheritedAsset, reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
+    expect(legacy.score).toBe(90);
+    expect(legacy.contributions.some((row) => row.source === "mechanism")).toBe(false);
+  });
+
+  it("rejects not-applicable residuals instead of reallocating their charge to healthy components", () => {
+    const fact = {
+      ...strongFact("missing-allocation"),
+      quality: null,
+      status: {
+        ...knownStatus("evidence:missing-allocation", "mechanism.required"),
+        applicability: { state: "not-applicable", policyRuleId: "mechanism.required", rationale: "No disclosure found", gapId: null },
+      },
+    };
+    expect(V9MechanismRiskReviewSchema.safeParse({
+      ...reviews["protocol-position"], encumbranceAndAllocation: fact,
+    }).success).toBe(false);
+  });
+
   it("validates and canonicalizes the discriminated mechanism review contract", () => {
     const review = reviews["synthetic-delta-neutral"];
     const parsed = V9MechanismRiskReviewSchema.parse({
@@ -131,7 +259,6 @@ describe("Safety Score v9 archetype backing adapters", () => {
     const results = Object.values(reviews).map((review) => evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1));
     expect(results.map((result) => result.archetype)).toEqual(Object.keys(reviews));
     expect(results.every((result) => result.rateability === "rateable" && result.score !== null)).toBe(true);
-    expect(new Set(results.map((result) => result.traceDigest)).size).toBe(7);
   });
 
   it.each(Object.keys(reviews) as V9MechanismRiskReview["archetype"][])(

@@ -1,5 +1,5 @@
 import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deployment-catalog.test-support";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { evaluateV9ExitAssetFacts } from "@shared/lib/safety-score-v9/exit";
@@ -13,6 +13,7 @@ import {
 } from "../safety-score-v9/fact-set";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
@@ -36,6 +37,8 @@ import {
   xautFactSetFixedInput,
   xautFactSetMeta,
 } from "./safety-score-v9-fact-set.test-support";
+
+afterEach(() => vi.restoreAllMocks());
 
 function nullSupplyReviewExtension(options: {
   bridge?: "not-applicable" | "missing" | "required";
@@ -363,6 +366,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       liveReserveMap: alphaInput.liveReserveMap,
       liveReserveProvenanceMap: alphaInput.liveReserveProvenanceMap,
       chainCirculatingById: { ...xautInput.chainCirculatingById, ...alphaInput.chainCirculatingById },
+      aggregateCirculatingById: { ...xautInput.aggregateCirculatingById, ...alphaInput.aggregateCirculatingById },
     });
     // Accepted under XAUT's one-hour window but older than the generic chain-supply window.
     fixed.safetyScoreV9SupplyAttributionById = {
@@ -392,7 +396,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
 
     expect(baseline.sources.chainSupply.maxAgeSec).toBeLessThan(2_800);
     expect(chainSupply("alpha")).toMatchObject({
-      state: "known",
       evidence: { observedAtSec: clockSec, freshness: { state: "current" } },
     });
     expect(chainSupply("xaut-tether")).toMatchObject({
@@ -712,21 +715,29 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
   });
 
-  it("keeps supply missing when neither per-chain rows nor a positive aggregate bucket exist", () => {
+  it("keeps supply missing when no aggregate was observed instead of inferring zero", () => {
     const absent = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ chainSupplyByChain: {} }), extension())
       .assets[0]!.supply;
     expect(absent.status.observationState).not.toBe("known");
     expect(absent.circulatingUsd).toBeNull();
     expect(absent.sourceKind).toBe("usd-denominated-circulating");
     expect(absent.chainDistribution).toBeNull();
+  });
 
-    const zero = compileSafetyScoreV9FactSetFromFixedInput(
+  it("preserves an explicitly observed zero aggregate without granting route-materiality relief", () => {
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(
       exactFixedInput({ chainSupplyByChain: {}, aggregateCirculating: { peggedUSD: 0 } }),
       extension(),
-    ).assets[0]!.supply;
-    expect(zero.status.observationState).not.toBe("known");
-    expect(zero.circulatingUsd).toBeNull();
-    expect(zero.sourceKind).toBe("usd-denominated-circulating");
+    );
+    const zero = compiled.assets[0]!.supply;
+    expect(zero.status.observationState).toBe("known");
+    expect(zero.circulatingUsd).toBe(0);
+    expect(zero.sourceKind).toBe("aggregate-circulating");
+    expect(zero.chainDistribution).toBeNull();
+    expect(zero.selectedRouteSupplyShare).toBeNull();
+    expect(zero.unknownRouteSupplyShare).toBeNull();
+    expect(zero.unreviewedRouteSupplyShare).toBeNull();
+    expect(evaluateV9ExitAssetFacts(compiled.assets[0]!, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
   });
 
   it("ages aggregate supply against the supplemental carry-forward ceiling, not the chain-supply cron window", () => {
@@ -784,23 +795,59 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(evaluateV9ExitAssetFacts(asset, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.exit.stressRequest).toBeNull();
   });
+  it.each<Record<string, number>>([{}, { peggedUSD: 20 }, { peggedUSD: 120 }])(
+    "preserves captured chain quantities without a reviewed economic plan (%j)",
+    aggregateCirculating => {
+      const template = exactFixedInput().chainCirculatingById.alpha!.ethereum!;
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(
+        exactFixedInput({
+          aggregateCirculating,
+          chainSupplyByChain: { ethereum: { ...template, current: 100 } },
+        }),
+        nullSupplyReviewExtension({ bridge: "not-applicable" }),
+      );
+      expect(compiled.assets[0]!.supply.circulatingUsd).toBe(100);
+      expect(compiled.assets[0]!.supply.chainDistribution).toEqual({
+        chains: [{ chainId: "ethereum", supplyUsd: 100, supplyShare: 1 }],
+        unattributedSupplyUsd: 0,
+        unattributedSupplyShare: 0,
+      });
+    },
+  );
 
-  it("leaves chain-attributed supply untouched when per-chain rows are present", () => {
-    const withoutAggregate = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), extension()).assets[0]!
-      .supply;
-    const withAggregate = compileSafetyScoreV9FactSetFromFixedInput(
-      exactFixedInput({ aggregateCirculating: { peggedUSD: 999_000_000 } }),
-      extension(),
-    ).assets[0]!.supply;
 
-    expect(withoutAggregate.sourceKind).toBe("usd-denominated-circulating");
-    expect(withoutAggregate.circulatingUsd).toBe(10_000_000);
-    expect(withoutAggregate.chainDistribution).toEqual({
-      chains: [{ chainId: "ethereum", supplyUsd: 10_000_000, supplyShare: 1 }],
-      unattributedSupplyUsd: 0,
-      unattributedSupplyShare: 0,
+  it("retains the admitted aggregate rather than replacing it with a partial provider subtotal", () => {
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "has").mockImplementation(assetId => assetId === "alpha");
+    const template = exactFixedInput().chainCirculatingById.alpha!.ethereum!;
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({
+        aggregateCirculating: { peggedUSD: 100 },
+        chainSupplyByChain: { ethereum: { ...template, current: 20 } },
+      }),
+      nullSupplyReviewExtension({ bridge: "required" }),
+    );
+    const supply = compiled.assets[0]!.supply;
+    expect(supply.circulatingUsd).toBe(100);
+    expect(supply.chainDistribution).toEqual({
+      chains: [{ chainId: "ethereum", supplyUsd: 20, supplyShare: 0.2 }],
+      unattributedSupplyUsd: 80, unattributedSupplyShare: 0.8,
     });
-    expect(withAggregate).toEqual(withoutAggregate);
+    expect(supply.selectedRouteSupplyShare).toBeNull();
+  });
+
+  it("rejects an over-accounted provider partition without discarding the admitted aggregate", () => {
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "has").mockImplementation(assetId => assetId === "alpha");
+    const template = exactFixedInput().chainCirculatingById.alpha!.ethereum!;
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({
+        aggregateCirculating: { peggedUSD: 100 },
+        chainSupplyByChain: { ethereum: { ...template, current: 101 } },
+      }),
+      nullSupplyReviewExtension({ bridge: "required" }),
+    );
+    expect(compiled.assets[0]!.supply.circulatingUsd).toBe(100);
+    expect(compiled.assets[0]!.supply.chainDistribution).toBeNull();
+    expect(compiled.assets[0]!.supply.selectedRouteSupplyShare).toBeNull();
   });
 
 });

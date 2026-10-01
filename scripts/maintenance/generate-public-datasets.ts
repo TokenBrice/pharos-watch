@@ -38,7 +38,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import type { DepegEvent } from "@shared/types/market";
-import { getMechanismArchetypeLabel } from "@shared/lib/classification/mechanism-archetypes";
+import { getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { formatUtcDateOnly } from "@shared/lib/format";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";

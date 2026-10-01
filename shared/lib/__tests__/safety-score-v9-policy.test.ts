@@ -55,7 +55,7 @@ describe("Safety Score v9 methodology policy", () => {
     // Rotate only with reviewed semantic changes; release history lives in
     // shared/data/methodology-changelogs/safety-score/.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "bfbf3e30d2d7ce3ad62a128b5a67f4254e815e7d0b442675da2346f2d7738097",
+      "579dc90df823d1ec4f0b8d6baa27fd1ec97621c4845dfb0620b8a8a620eb0a8e",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,
@@ -155,6 +155,9 @@ describe("Safety Score v9 methodology policy", () => {
     ["unknown reconciliation", (policy) => { policy.semantic.control.mintPostureQuality["unbounded-reconciliation-unknown"] = 36; }],
     ["collateral gated", (policy) => { policy.semantic.control.mintPostureQuality["collateral-gated"] = 51; }],
     ["seasoned credit ceiling", (policy) => { policy.semantic.control.mintPostureGrading.adverseSeasonedCreditCeiling = 40; }],
+    ["allocation required scope", (policy) => { policy.semantic.formula.wrapperAllocationScope.requiredScopes.privateCredit.leverage.push("immediate-custodian"); }],
+    ["allocation leverage assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.leverageAssessments["bounded-up-to-1.5x"] = "high"; }],
+    ["allocation custody assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.custodyAssessments["unsegregated"] = "critical"; }],
   ];
   const evidenceExpiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
   for (const field of Object.keys(evidenceExpiry) as (keyof typeof evidenceExpiry)[]) {
@@ -351,6 +354,20 @@ describe("Safety Score v9 methodology policy", () => {
     backingReweighted.semantic.backing.archetypes["fiat-cash"].componentWeights["claim-and-segregation"] = 0.17;
     backingReweighted.semantic.backing.archetypes["fiat-cash"].componentWeights["custody-continuity"] = 0.13;
     expect(loadV9MethodologyPolicy(backingReweighted).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+  });
+
+  it("includes the parent-mechanism bypass decision in the semantic digest and rejects unbalanced native-family weights", () => {
+    const changed = candidateClone();
+    changed.semantic.backing.archetypes["protocol-position"].allowCompleteLiveParentMechanismBypass = true;
+    expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    const unbalanced = candidateClone();
+    unbalanced.semantic.backing.archetypes["shared-reserve"].componentWeights["liability-conservation"] = 0;
+    expect(() => loadV9MethodologyPolicy(unbalanced)).toThrow();
+    const missing = candidateClone();
+    delete (missing.semantic.backing.archetypes["ucits-trs-fund"] as Partial<
+      typeof missing.semantic.backing.archetypes["ucits-trs-fund"]
+    >).allowCompleteLiveParentMechanismBypass;
+    expect(() => loadV9MethodologyPolicy(missing)).toThrow();
   });
 
   it("rejects malformed weights, bands, grades, and policy bypass fields", () => {

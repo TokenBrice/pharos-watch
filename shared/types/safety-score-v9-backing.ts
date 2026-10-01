@@ -128,6 +128,53 @@ const V9TbillMechanismRiskReviewSchema = z
   .strict();
 export type V9TbillMechanismRiskReview = z.infer<typeof V9TbillMechanismRiskReviewSchema>;
 
+// These families have no launch-time applicability exemptions: unknown
+// conservation, collateral reuse and recovery must retain a priced component.
+const V9RequiredFamilyMechanismFactSchema = V9MechanismFactV1Schema.refine(
+  (fact) => fact.status.applicability.state !== "not-applicable",
+  { message: "Native family mechanism components cannot be not-applicable" },
+);
+
+export const V9UcitsTrsFundMechanismRiskReviewSchema = z
+  .object({
+    archetype: z.literal("ucits-trs-fund"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
+    fundClaimAndSegregation: V9RequiredFamilyMechanismFactSchema,
+    navAndReconciliation: V9RequiredFamilyMechanismFactSchema,
+    portfolioHedge: V9RequiredFamilyMechanismFactSchema,
+    counterpartyAndCollateral: V9RequiredFamilyMechanismFactSchema,
+    custodyContinuity: V9RequiredFamilyMechanismFactSchema,
+    defaultRecovery: V9RequiredFamilyMechanismFactSchema,
+  })
+  .strict();
+export type V9UcitsTrsFundMechanismRiskReview = z.infer<typeof V9UcitsTrsFundMechanismRiskReviewSchema>;
+
+export const V9SharedReserveMechanismRiskReviewSchema = z
+  .object({
+    archetype: z.literal("shared-reserve"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
+    holderClaim: V9RequiredFamilyMechanismFactSchema,
+    liabilityConservation: V9RequiredFamilyMechanismFactSchema,
+    reserveCustody: V9RequiredFamilyMechanismFactSchema,
+    encumbranceAndAllocation: V9RequiredFamilyMechanismFactSchema,
+    defaultRecovery: V9RequiredFamilyMechanismFactSchema,
+  })
+  .strict();
+export type V9SharedReserveMechanismRiskReview = z.infer<typeof V9SharedReserveMechanismRiskReviewSchema>;
+
+export const V9ProtocolPositionMechanismRiskReviewSchema = z
+  .object({
+    archetype: z.literal("protocol-position"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
+    holderClaim: V9RequiredFamilyMechanismFactSchema,
+    liabilityConservation: V9RequiredFamilyMechanismFactSchema,
+    positionCustody: V9RequiredFamilyMechanismFactSchema,
+    encumbranceAndAllocation: V9RequiredFamilyMechanismFactSchema,
+    defaultRecovery: V9RequiredFamilyMechanismFactSchema,
+  })
+  .strict();
+export type V9ProtocolPositionMechanismRiskReview = z.infer<typeof V9ProtocolPositionMechanismRiskReviewSchema>;
+
 const V9CdpMetricApplicabilitySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("measured") }).strict(),
   z
@@ -484,5 +531,8 @@ export const V9MechanismRiskReviewSchema = z.discriminatedUnion("archetype", [
   V9SyntheticDeltaNeutralMechanismRiskReviewSchema,
   V9AlgorithmicMechanismRiskReviewSchema,
   V9RwaCreditFundMechanismRiskReviewSchema,
+  V9UcitsTrsFundMechanismRiskReviewSchema,
+  V9SharedReserveMechanismRiskReviewSchema,
+  V9ProtocolPositionMechanismRiskReviewSchema,
 ]);
 export type V9MechanismRiskReview = z.infer<typeof V9MechanismRiskReviewSchema>;

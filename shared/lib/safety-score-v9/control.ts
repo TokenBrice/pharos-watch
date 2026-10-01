@@ -939,6 +939,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     state: score === null ? "not-rated" : "rated",
     oracleApplicability: oracle.status.applicability.state,
     components: normalizedComponents,
+    controlFacts: controls,
     reasons: normalizedReasons,
     structuralFailures: normalizedStructuralFailures,
     failureDomains,

@@ -39,13 +39,14 @@ export const SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS: ReadonlyMap<string, Safety
  * share of supply — the shape of a chain-native asset (a Zano confidential
  * asset, a Zephyr protocol asset) that can never have `contracts[]` rows.
  */
-export type SafetyScoreV9TransferDeploymentModel = "contract-addressable" | "non-contract-native";
+export type SafetyScoreV9TransferDeploymentModel = "contract-addressable" | "non-contract-native" | "mixed-economic";
 
 export interface SafetyScoreV9TransferMaterialScope {
   authoritativeDeploymentKeys: readonly string[];
   materialDeploymentKeys: readonly string[];
   materialDeploymentScopeComplete: boolean;
   deploymentModel: SafetyScoreV9TransferDeploymentModel;
+  reviewedNativeDeploymentKeys?: readonly string[];
   unresolvedMaterialChainIds?: readonly string[];
   unresolvedDeclaredDeploymentKeys?: readonly string[];
   scopeBasis?: "attributed";
@@ -119,6 +120,11 @@ export function resolveSafetyScoreV9ReviewedTransferFact(
     return { observationState: "stale", posture: null };
   }
 
+  if (review.deployments.some(deployment => deployment.contractOrTokenId.startsWith("native:") &&
+    (materialScope.deploymentModel !== "mixed-economic" ||
+      !materialScope.reviewedNativeDeploymentKeys?.includes(safetyScoreV9TransferDeploymentKey(deployment.chainId, deployment.contractOrTokenId))))) {
+    return { observationState: "bounded-unknown", posture: null };
+  }
   const authoritativeDeploymentKeys = new Set(materialScope.authoritativeDeploymentKeys);
   const reviewedDeploymentKeys = new Set(
     review.deployments

@@ -135,11 +135,123 @@
             "0x630c1763d38abe76301f58909fa174e7b84a7ecd"
           ],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "unknown",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
           "version": "1.4.1",
-          "observedBlock": 26098752,
+          "observedBlock": 26099921,
           "source": "onchain",
           "observedAt": "2026-10-01"
+        },
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "DataMisc07",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified AutoWithdrawalModule source and immutable Vault/Safe identities",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5"
+            },
+            {
+              "label": "Safe 1.4.1 module execution and pagination semantics",
+              "url": "https://raw.githubusercontent.com/safe-global/safe-smart-account/v1.4.1/contracts/base/ModuleManager.sol"
+            }
+          ],
+          "pin": {
+            "position": "26099921",
+            "hash": "0x6a7be0a36f0c3df35c9c12347c7b3a509803e0e2fb6f9384fbeb10c3194c355d",
+            "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26099921"
+          },
+          "observedState": {
+            "position": "26099921",
+            "hash": "0x6a7be0a36f0c3df35c9c12347c7b3a509803e0e2fb6f9384fbeb10c3194c355d",
+            "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26099921"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "auto-withdrawal-vault-call",
+              "targetDeployment": "ethereum:0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0xae69f3cb"],
+              "callMode": "call",
+              "capabilities": ["custody-transfer"],
+              "capSemantics": {"kind": "unknown", "bound": null},
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": ["ousd-origin-protocol"],
+              "affectedDeployments": [],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ],
+          "extensions": {
+            "exhaustive": false,
+            "paginationEnd": "0x0000000000000000000000000000000000000001",
+            "sourceRuntimeCorrespondence": false,
+            "entries": [
+              {
+                "deployment": "ethereum:0x6241f5e4ad5af39ef3ae54801e0ae431e0b70369",
+                "runtimeIdentity": "sha256-rpc-code-text:40ba9718a511f0be03d9058af4ce582581644140c119c2eeecf3e8516e388801",
+                "kind": "module",
+                "pathRefs": [],
+                "mutableReachClosed": false
+              },
+              {
+                "deployment": "ethereum:0x6320db7a3c1b95fd5684dc725c2cda9b82fa20fa",
+                "runtimeIdentity": "sha256-rpc-code-text:591f9ab3a535aa1353dcf96bd6bf29b3ef4a65321d3050eb6ad3447a6b5f8fef",
+                "kind": "module",
+                "pathRefs": [],
+                "mutableReachClosed": false
+              },
+              {
+                "deployment": "ethereum:0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5",
+                "runtimeIdentity": "sha256-rpc-code-text:6381c80da8cd56d5ffb0a84731e828ce11ea5153b353a8126565338dc40c8e5a",
+                "kind": "module",
+                "pathRefs": ["auto-withdrawal-vault-call"],
+                "mutableReachClosed": false
+              },
+              {
+                "deployment": "ethereum:0x1b84e64279d63f48ddd88b9b2a7871e817152a44",
+                "runtimeIdentity": "sha256-rpc-code-text:86e7c9bdc578ccb8b5c60113256f0f3c57a8cf515ba82bd3b6797b95c60236f5",
+                "kind": "module",
+                "pathRefs": [],
+                "mutableReachClosed": false
+              },
+              {
+                "deployment": "ethereum:0x630c1763d38abe76301f58909fa174e7b84a7ecd",
+                "runtimeIdentity": "sha256-rpc-code-text:1fa1544fe4b5264a43f0cc873619e6414e21a757de9331f842bce5ed87d65a7e",
+                "kind": "module",
+                "pathRefs": [],
+                "mutableReachClosed": false
+              },
+              {
+                "deployment": "ethereum:0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+                "runtimeIdentity": "sha256-rpc-code-text:6105046c7a8234bffa997ec93b850c736106bafb33bd01f2ea765e76f9cbaf16",
+                "kind": "fallback-handler",
+                "pathRefs": [],
+                "mutableReachClosed": false
+              }
+            ]
+          }
         },
         "sources": [
           {

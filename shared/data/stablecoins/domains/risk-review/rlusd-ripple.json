@@ -328,6 +328,103 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
         "label": "RLUSD ethereum Wormhole NTT Guardian validation mint path",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "ethereum RLUSD token",
+              "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+            },
+            {
+              "label": "ethereum NTT manager",
+              "url": "https://eth.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "ethereum NttProxyOwner gateway",
+              "url": "https://eth.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "ethereum issuer gateway owner",
+              "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c"
+            }
+          ],
+          "pin": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x80c4b7dffd8294ab32932fbb0df8bef1f7cafa8d sha256:ec5e5b2e4fef2c99d3fdf34b70f8147a9423f6a8442e3660c8b8d79f450a9723",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "observedState": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x80c4b7dffd8294ab32932fbb0df8bef1f7cafa8d sha256:ec5e5b2e4fef2c99d3fdf34b70f8147a9423f6a8442e3660c8b8d79f450a9723",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ntt-message-and-burn",
+              "targetDeployment": "ethereum:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xda4856a1",
+                "0x9d782454",
+                "0x961b94d0"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "bridge-mint",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "validator-quorum",
         "threshold": 13,
         "signerCount": 19,
@@ -397,9 +494,179 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
         "label": "RLUSD ethereum Wormhole NTT issuer weighted MultiSign gateway administration",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "ethereum RLUSD token",
+              "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+            },
+            {
+              "label": "ethereum NTT manager",
+              "url": "https://eth.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "ethereum NttProxyOwner gateway",
+              "url": "https://eth.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "ethereum issuer gateway owner",
+              "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c"
+            }
+          ],
+          "pin": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "gateway-execution",
+              "targetDeployment": "ethereum:0x395886e76217ae8ac89340a51083667582d68722",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1cff79cd",
+                "0x1e22e065"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change",
+                "freeze"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "multisig",
-        "threshold": 3,
-        "signerCount": 11,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ethereum: RLUSD proxy creation transaction",
+              "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+            },
+            {
+              "label": "Ethereum: Ripple upgrader MultiSign",
+              "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c?tab=contract"
+            },
+            {
+              "label": "Ethereum PublicNode RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
         "canRaiseCap": true,
         "failureDomainKeys": [
           "issuer:ripple-sctc",
@@ -466,6 +733,103 @@
         "controllerChain": "base",
         "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
         "label": "RLUSD base Wormhole NTT Guardian validation mint path",
+        "executionScope": {
+          "controllerDeployment": "base:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "base RLUSD token",
+              "url": "https://base.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+            },
+            {
+              "label": "base NTT manager",
+              "url": "https://base.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "base NttProxyOwner gateway",
+              "url": "https://base.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "base issuer gateway owner",
+              "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            }
+          ],
+          "pin": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x86c5ae628e2218c5597b3e6dce73048adc53fcc5 sha256:b7baf6b1b32dcd764ab32009bb67190b728b47dbb8d42eab8178bb0aa2c02f19",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "observedState": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x86c5ae628e2218c5597b3e6dce73048adc53fcc5 sha256:b7baf6b1b32dcd764ab32009bb67190b728b47dbb8d42eab8178bb0aa2c02f19",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ntt-message-and-burn",
+              "targetDeployment": "base:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xda4856a1",
+                "0x9d782454",
+                "0x961b94d0"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "bridge-mint",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "validator-quorum",
         "threshold": 13,
         "signerCount": 19,
@@ -535,9 +899,183 @@
         "controllerChain": "base",
         "controllerAddress": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
         "label": "RLUSD base Wormhole NTT issuer weighted MultiSign gateway administration",
+        "executionScope": {
+          "controllerDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "base RLUSD token",
+              "url": "https://base.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+            },
+            {
+              "label": "base NTT manager",
+              "url": "https://base.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "base NttProxyOwner gateway",
+              "url": "https://base.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "base issuer gateway owner",
+              "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            }
+          ],
+          "pin": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "gateway-execution",
+              "targetDeployment": "base:0x395886e76217ae8ac89340a51083667582d68722",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1cff79cd",
+                "0x1e22e065"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change",
+                "freeze"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "multisig",
-        "threshold": 3,
-        "signerCount": 11,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "base current controller source/state",
+              "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "base current RLUSD implementation",
+              "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
         "canRaiseCap": true,
         "failureDomainKeys": [
           "issuer:ripple-sctc",
@@ -604,6 +1142,103 @@
         "controllerChain": "optimism",
         "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
         "label": "RLUSD optimism Wormhole NTT Guardian validation mint path",
+        "executionScope": {
+          "controllerDeployment": "optimism:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "optimism RLUSD token",
+              "url": "https://explorer.optimism.io/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+            },
+            {
+              "label": "optimism NTT manager",
+              "url": "https://explorer.optimism.io/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "optimism NttProxyOwner gateway",
+              "url": "https://explorer.optimism.io/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "optimism issuer gateway owner",
+              "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            }
+          ],
+          "pin": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x6c67ef3b8a44b5e575c5ef16629779e0b4c39409 sha256:c63c7372875ae657f4dc55fd9b16b7599ca4876d46badec35857e0e4f2b3206b",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "observedState": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x6c67ef3b8a44b5e575c5ef16629779e0b4c39409 sha256:c63c7372875ae657f4dc55fd9b16b7599ca4876d46badec35857e0e4f2b3206b",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ntt-message-and-burn",
+              "targetDeployment": "optimism:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xda4856a1",
+                "0x9d782454",
+                "0x961b94d0"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "bridge-mint",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "validator-quorum",
         "threshold": 13,
         "signerCount": 19,
@@ -673,9 +1308,183 @@
         "controllerChain": "optimism",
         "controllerAddress": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
         "label": "RLUSD optimism Wormhole NTT issuer weighted MultiSign gateway administration",
+        "executionScope": {
+          "controllerDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "optimism RLUSD token",
+              "url": "https://explorer.optimism.io/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+            },
+            {
+              "label": "optimism NTT manager",
+              "url": "https://explorer.optimism.io/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "optimism NttProxyOwner gateway",
+              "url": "https://explorer.optimism.io/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "optimism issuer gateway owner",
+              "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            }
+          ],
+          "pin": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "gateway-execution",
+              "targetDeployment": "optimism:0x395886e76217ae8ac89340a51083667582d68722",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1cff79cd",
+                "0x1e22e065"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change",
+                "freeze"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "multisig",
-        "threshold": 3,
-        "signerCount": 11,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "optimism current controller source/state",
+              "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "optimism current RLUSD implementation",
+              "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
         "canRaiseCap": true,
         "failureDomainKeys": [
           "issuer:ripple-sctc",
@@ -742,6 +1551,103 @@
         "controllerChain": "ink",
         "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
         "label": "RLUSD ink Wormhole NTT Guardian validation mint path",
+        "executionScope": {
+          "controllerDeployment": "ink:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "ink RLUSD token",
+              "url": "https://explorer.inkonchain.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+            },
+            {
+              "label": "ink NTT manager",
+              "url": "https://explorer.inkonchain.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "ink NttProxyOwner gateway",
+              "url": "https://explorer.inkonchain.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "ink issuer gateway owner",
+              "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            }
+          ],
+          "pin": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0xf0ace03adbb64eda1005e00d6292ac79bccb0c47 sha256:70e78e463f67f7af1f85d08bf58c5987f6c255de37ff957339130c37401e23c2",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "observedState": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0xf0ace03adbb64eda1005e00d6292ac79bccb0c47 sha256:70e78e463f67f7af1f85d08bf58c5987f6c255de37ff957339130c37401e23c2",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ntt-message-and-burn",
+              "targetDeployment": "ink:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xda4856a1",
+                "0x9d782454",
+                "0x961b94d0"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "bridge-mint",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "validator-quorum",
         "threshold": 13,
         "signerCount": 19,
@@ -811,9 +1717,183 @@
         "controllerChain": "ink",
         "controllerAddress": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
         "label": "RLUSD ink Wormhole NTT issuer weighted MultiSign gateway administration",
+        "executionScope": {
+          "controllerDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "ink RLUSD token",
+              "url": "https://explorer.inkonchain.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+            },
+            {
+              "label": "ink NTT manager",
+              "url": "https://explorer.inkonchain.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "ink NttProxyOwner gateway",
+              "url": "https://explorer.inkonchain.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "ink issuer gateway owner",
+              "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            }
+          ],
+          "pin": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "gateway-execution",
+              "targetDeployment": "ink:0x395886e76217ae8ac89340a51083667582d68722",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1cff79cd",
+                "0x1e22e065"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change",
+                "freeze"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "multisig",
-        "threshold": 3,
-        "signerCount": 11,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "ink current controller source/state",
+              "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "ink current RLUSD implementation",
+              "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
         "canRaiseCap": true,
         "failureDomainKeys": [
           "issuer:ripple-sctc",
@@ -880,6 +1960,103 @@
         "controllerChain": "unichain",
         "controllerAddress": "0x2a71afb11f4633a2681eaa19a01c47990f67e938",
         "label": "RLUSD unichain Wormhole NTT Guardian validation mint path",
+        "executionScope": {
+          "controllerDeployment": "unichain:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "unichain RLUSD token",
+              "url": "https://unichain.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+            },
+            {
+              "label": "unichain NTT manager",
+              "url": "https://unichain.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "unichain NttProxyOwner gateway",
+              "url": "https://unichain.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "unichain issuer gateway owner",
+              "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            }
+          ],
+          "pin": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x3129cba6dbe5a70c7c6db6df0a52c2c8c2d79423 sha256:2609d538d4fd8c04e101108c193cf7d6355cc12b7a3022dd38a3d5f0c48899a7",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "observedState": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x3129cba6dbe5a70c7c6db6df0a52c2c8c2d79423 sha256:2609d538d4fd8c04e101108c193cf7d6355cc12b7a3022dd38a3d5f0c48899a7",
+            "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ntt-message-and-burn",
+              "targetDeployment": "unichain:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xda4856a1",
+                "0x9d782454",
+                "0x961b94d0"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "bridge-mint",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "validator-quorum",
         "threshold": 13,
         "signerCount": 19,
@@ -949,9 +2126,183 @@
         "controllerChain": "unichain",
         "controllerAddress": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
         "label": "RLUSD unichain Wormhole NTT issuer weighted MultiSign gateway administration",
+        "executionScope": {
+          "controllerDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "Ripple native NTT announcement",
+              "url": "https://ripple.com/insights/ripple-usd-rlusd-expands-to-l2s-with-wormhole-ntt-standard/"
+            },
+            {
+              "label": "unichain RLUSD token",
+              "url": "https://unichain.blockscout.com/address/0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+            },
+            {
+              "label": "unichain NTT manager",
+              "url": "https://unichain.blockscout.com/address/0x2a71afb11f4633a2681eaa19a01c47990f67e938"
+            },
+            {
+              "label": "Wormhole Guardian quorum",
+              "url": "https://wormhole.com/docs/protocol/infrastructure/guardians/"
+            },
+            {
+              "label": "unichain NttProxyOwner gateway",
+              "url": "https://unichain.blockscout.com/address/0x395886e76217ae8ac89340a51083667582d68722"
+            },
+            {
+              "label": "unichain issuer gateway owner",
+              "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            }
+          ],
+          "pin": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "gateway-execution",
+              "targetDeployment": "unichain:0x395886e76217ae8ac89340a51083667582d68722",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1cff79cd",
+                "0x1e22e065"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change",
+                "freeze"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "authorityType": "multisig",
-        "threshold": 3,
-        "signerCount": 11,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "unichain current controller source/state",
+              "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "unichain current RLUSD implementation",
+              "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
         "canRaiseCap": true,
         "failureDomainKeys": [
           "issuer:ripple-sctc",

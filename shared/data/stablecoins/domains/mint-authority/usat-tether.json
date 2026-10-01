@@ -81,6 +81,90 @@
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": true,
         "failureDomainKeys": ["usat-issuer-signers"],
+        "executionScope": {
+          "controllerDeployment": "celo:0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc11)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Celo USAT native issuance source, re-fetched 2026-10-01",
+              "url": "https://sourcify.dev/server/v2/contract/42220/0x49912f84f43d2675d99941b7f21a5d9ed2eab71e?fields=sources,abi"
+            },
+            {
+              "label": "Celo token ProxyAdmin owner-only upgrade source",
+              "url": "https://sourcify.dev/server/v2/contract/42220/0x407cea8bc0b1c42a72a1f38e3c8e60a3929f7422?fields=sources,abi"
+            }
+          ],
+          "pin": {
+            "position": "78986590",
+            "hash": "0xbe463549638c28e53f5397d1968483f545e6844264051646981d575c0c49e6d7",
+            "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+            "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
+          },
+          "observedState": {
+            "position": "78986590",
+            "hash": "0xbe463549638c28e53f5397d1968483f545e6844264051646981d575c0c49e6d7",
+            "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+            "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "usat-celo-owner-mint",
+              "targetDeployment": "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x40c10f19"],
+              "callMode": "call",
+              "capabilities": ["mint"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["usat-tether"],
+              "affectedDeployments": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": ["usat-celo-token-upgrade"],
+              "bypassRefs": []
+            },
+            {
+              "id": "usat-celo-token-upgrade",
+              "targetDeployment": "celo:0x407cea8bc0b1c42a72a1f38e3c8e60a3929f7422",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x99a88ec4", "0x9623609d"],
+              "callMode": "call",
+              "capabilities": ["upgrade", "mint"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["usat-tether"],
+              "affectedDeployments": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": ["usat-celo-owner-mint"]
+            }
+          ]
+        },
         "observedAt": "2026-10-01",
         "observedBlock": 78972418,
         "sources": [

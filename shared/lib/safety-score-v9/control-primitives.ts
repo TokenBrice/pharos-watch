@@ -150,6 +150,8 @@ export interface V9EconomicControlResult {
   state: "rated" | "not-rated";
   oracleApplicability: V9FactStatusV2["applicability"]["state"];
   components: readonly V9ControlComponent[];
+  /** Compiler facts used only for truthful public authority diagnostics. */
+  controlFacts?: readonly V9DeploymentControlFactV2[];
   reasons: readonly V9CompactControlReason[];
   structuralFailures: readonly V9ControlStructuralFailure[];
   failureDomains: readonly V9FailureDomainRef[];

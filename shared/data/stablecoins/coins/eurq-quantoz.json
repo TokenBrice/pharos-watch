@@ -92,7 +92,10 @@
     {
       "chain": "xrpl",
       "address": "EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
-      "decimals": 6
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     },
     {
       "chain": "algorand",

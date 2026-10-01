@@ -7,8 +7,8 @@ import { memo, useMemo, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
   GOVERNANCE_LABELS_SHORT,
+  MECHANISM_ARCHETYPE_SHORT_LABELS,
 } from "@shared/lib/classification";
-import { MECHANISM_ARCHETYPE_SHORT_LABELS } from "@shared/lib/classification/mechanism-archetypes";
 import {
   formatCurrency,
   formatBps,

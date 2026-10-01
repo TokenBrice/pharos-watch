@@ -1,4 +1,4 @@
-# Mechanism-overlay evidence standard (fiat-cash, tbill, commodity-claim, and partial metrics)
+# Mechanism-overlay evidence standard
 
 Status: canonical. Ratified by the owner on 2026-07-27 (wave-7 decision D3); extended to the
 `commodity-claim` archetype by methodology v9.14. This is the owner-approved evidence standard
@@ -29,6 +29,10 @@ are now admissible only under the rules below.
   corresponding metric-applicability states on cdp (two-state: `measured` /
   `not-applicable`), synthetic-delta-neutral, and rwa-credit-fund overlays; wave-7
   decision D2 ratified the three-state sdn / rwa schema.
+- Native `ucits-trs-fund`, `shared-reserve`, and `protocol-position` reviews in unreleased
+  methodology 10.0 use the [native-family contract](#native-family-admission-and-grading)
+  below. Every component remains applicable; no generic PoR or audit metadata auto-grades
+  these families.
 
 ## Evidence classes
 
@@ -142,3 +146,127 @@ receives a new identity.
 - Fabricating, extrapolating, or averaging a metric to satisfy schema completeness is
   prohibited; the `unavailable` state exists precisely so honesty and schema validity never
   conflict.
+
+## Native-family admission and grading
+
+`MECHANISM_ARCHETYPE_VALUES` owns family vocabulary; strict review schemas in
+`shared/types/safety-score-v9-backing.ts` own the component contract. A native family requires
+an exact-token `mechanismArchetype` and a resolved, sourced `mechanismArchetypeReview` naming
+the current holder claim, deployment and model. The compiler admits that review only after
+its UTC day and before the existing mechanism-overlay expiry boundary. A label, a similarly
+named token, an issuer fallback configuration, or a retired deployment never establishes
+identity: a missing, unresolved, mismatched or noncurrent claim remains `missing-archetype`/NR.
+After identity is established, absent protection or unreconciled quantitative detail is
+bounded, not a new unsupported-family blocker.
+
+| Family | Required component fields |
+|---|---|
+| `ucits-trs-fund` | `fundClaimAndSegregation`, `navAndReconciliation`, `portfolioHedge`, `counterpartyAndCollateral`, `custodyContinuity`, `defaultRecovery` |
+| `shared-reserve` | `holderClaim`, `liabilityConservation`, `reserveCustody`, `encumbranceAndAllocation`, `defaultRecovery` |
+| `protocol-position` | `holderClaim`, `liabilityConservation`, `positionCustody`, `encumbranceAndAllocation`, `defaultRecovery` |
+
+The claim component is serial: a missing or unsupported exact claim cannot earn a rating.
+A documented operational claim can be limited while enforceable legal priority is unknown;
+it is not a statutory fiat claim or proof of segregation. Every unproved component remains
+a required fact with null quality priced at `semantic.backing.boundedUnknownQuality`.
+Unvalued circular positions, residual modules, contingent derivatives and unknown liabilities
+are charged in conservation/NAV and allocation/collateral components; absence never becomes
+zero economic exposure. Issuer nondisclosure keeps `issuer-undisclosed` attribution and its
+charge. Explicit `unavailable` rows name the missing fact and source searched; `not-applicable`
+and position metrics are rejected for these families.
+
+Grade the lowest fully established rung for the **whole named component**, using the evidence
+classes above:
+
+- **Claim:** limited needs the current exact-token operational claim in primary code/terms
+  plus deployment or external corroboration. Adequate additionally needs enforceable fund,
+  holder-right and segregation terms for the protections claimed. Strong needs complete
+  independent reconciliation and enforceable legal prerequisites, not merely UCITS status.
+- **Conservation/NAV:** limited needs dated itemized assets and matching liabilities/share
+  classes, a reproducible valuation basis and an external anchor. Adequate requires independent
+  component-scoped reconciliation at quarterly-or-better cadence; strong requires monthly
+  signed complete reconciliation and enforceable protections. Unknown residual scope,
+  exclusions, liability denominator or accounting timestamp keeps the component bounded.
+- **UCITS hedge:** limited needs current identity-bound physical and signed derivative
+  inventory plus the filed portfolio-wide TRS strategy. Adequate additionally reconciles
+  every covered and uncovered sleeve with independently verified valuation; strong meets
+  complete monthly independent/legal prerequisites. Gross holdings, notional, signed MTM
+  and cash are different concepts: never normalize absolute swap marks into reserve weights.
+- **UCITS counterparty/collateral:** limited needs dated exact counterparties and posted/
+  received collateral exposure with an external anchor. Adequate adds independently verified
+  current netting, collateral and reuse scope; strong adds complete independent reconciliation
+  and enforceable protections. A rating or daily-unwind promise alone is insufficient.
+- **Custody:** limited needs itemized current immediate holders/custodians with chain or filing
+  anchors. Adequate adds evidenced segregation and continuity/replacement protections;
+  strong meets complete independent/legal prerequisites. A Safe identifies location, not
+  signer independence or insolvency priority. Protocol positions price receipt/vault/manager
+  continuity locally; underlying stablecoin reserve quality remains upstream.
+- **Allocation/encumbrance:** limited needs current complete inventory, liabilities and
+  documented allocation/encumbrance rights. Adequate/strong add independent reconciliation
+  and enforceable protections at their respective cadences. Unknown pool membership, other
+  creditors, residual modules, reuse or external recovery stays bounded.
+- **Recovery:** limited needs the exact current loss/withdrawal/default procedure and scoped
+  priority from primary code/terms plus an external anchor. Adequate adds enforceable priority,
+  funded resources and independent verification; strong meets monthly complete independent/
+  legal prerequisites. Happy-path quotes, bridge withdrawals, ERC-4626 conversion and daily
+  swap unwind alone do not establish stressed recovery.
+- **Weak/failed:** require demonstrated deficiency, never unsuccessful research. Existing
+  structural machinery prices proven failure; unknowns retain unresolved ownership.
+
+The numeric authority is only `semantic.backing.archetypes` in the methodology policy JSON,
+including component weights, serial and structural keys. Its required
+`allowCompleteLiveParentMechanismBypass` is false for these families and true for existing
+families: complete live parent quality can price the reserve group but cannot erase the
+native family's local mechanism components. Serial adverse parent limits, current measured
+collateralization shortfalls, withholding, supply and controls remain unchanged.
+
+Mento reserve-backed currencies all use one shared-reserve rubric, including USDm/EURm with
+their current V3 FPMM claim rather than deprecated V2 pools. CDP-backed GBPm/CHFm/JPYm remain
+CDPs. Shared pool liabilities include noncatalog PHPm/NGNm where applicable; reserve assets
+are not counted once per liability. EURSAFO's exact SAFO EUR share-class fund interest is
+not Treasury backing; a zero-unmapped fund-share feed does not close hedge or recovery gaps.
+USDB/USDU operational position claims do not prove fiat ownership; external swaps do not
+value endogenous modules or grant favorable oracle tiers. USDR remains unresolved absent
+current exact-token claim evidence.
+
+This capability uses existing reserve envelopes and curated dated overlays (`metrics: {}`).
+It introduces no position producer, circular netting, look-through allocation feed, reserve
+percentage/supply override or oracle-tier change. Future position packets would need exact
+identity, observation clocks/blocks, complete census, valuation provenance, nullable assets/
+liabilities/encumbrances with explicit reasons and separate signed derivative legs; no such
+packet or producer is admitted here. Later data authoring must be a uniform Mento cohort
+cutover, not an AUDm/CADm-only restoration; token-specific grades may differ under one rule.
+
+## Mixed allocation and legal-layer scope
+
+`shared/types/safety-score-v9-allocation.ts` owns the strict `scopeKind` union:
+`whole-allocation` retains legacy whole-book date semantics; `per-dimension` carries exact
+scoped claims and cannot satisfy the whole-book branch merely by omitting an uncertain field.
+Each claim records `claimKey`, `dimension`, `layer`, exact `target`, `coverage`, `disposition`,
+dimension-specific `statement`, rationale, `reviewedAt`, `observedAtSec`, `expiresAtSec`,
+sources and source-bound observations. Scoped reviews use exact UTC ISO timestamps or
+conservative date-only end-of-day admission and never admit future observations.
+
+Contract targets name chain/address, immutable code or exact proxy implementation, block,
+observation time/source and the complete reachable target set. Legal reserve-leg targets name
+nullable `sourceKey`/`providerOrEntity`, conditional or whole-book applicability and conditions.
+Conditional coverage keeps `shareFraction: null` absent a measurement. Whole-dimension proof
+requires the accepted-reserve-envelope denominator, complete nonoverlapping `reserveSourceKeys`
+and `shareFraction: 1`; identifying a legal provider alone does not establish full-book coverage.
+Compiler-owned `allocationScopeIdentityReview.registeredDeploymentKeys` comes from the supplied
+registry contract roster; implementation observations must bind those registered deployments.
+An idle-custody N/A additionally requires source-bound `idleCustodyProof` naming the
+`burn-parent-mint-parent` mechanism, `upstreamAssetId`, `parentTokenAddress`, `burnSourceUrl`
+and `mintSourceUrl`, matched to the actual serial dependency and its parent's exact same-chain
+registered token.
+
+The compiler emits private `allocationScopeFacts` for wrappers and nonwrappers and derives
+required contract/entity/holder layers from verified reserve/custody facts. Partial, expired,
+mismatched or incomplete scopes retain fallback risk; reviewed adverse facts remain adverse.
+Synthesized omitted required scopes are `integration-missing` diagnostics, not invented issuer
+nondisclosure findings; authored exhaustive `issuer-undisclosed` findings retain their original
+aggregate charge.
+Burn-parent/mint-parent idle-token custody absence is a contract-only N/A, not legal segregation
+or bankruptcy protection. Parent claims must match a real dependency edge and remain adverse-only
+diagnostics: they never grant supervision, holder rights, favorable parent Backing, cap relief
+or supply changes. Per-coin facts are deferred to the later authoring wave.

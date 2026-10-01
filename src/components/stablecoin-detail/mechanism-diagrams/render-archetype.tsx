@@ -36,7 +36,10 @@ export function renderArchetype(
     archetype === "cdp" ||
     archetype === "algorithmic" ||
     archetype === "rwa-credit-fund" ||
-    archetype === "commodity-claim"
+    archetype === "commodity-claim" ||
+    archetype === "ucits-trs-fund" ||
+    archetype === "shared-reserve" ||
+    archetype === "protocol-position"
   ) {
     return (
       <ThreeStepArchetypeDiagram

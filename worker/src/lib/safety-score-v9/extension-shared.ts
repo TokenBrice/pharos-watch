@@ -13,6 +13,8 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import type { V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
 import type { MintAuthorityControl, StablecoinLink, StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
@@ -27,6 +29,7 @@ export type V9ExtensionRegistryMeta = Pick<
   | "parentBackingInheritance"
   | "archetypeOverride"
   | "mechanismArchetype"
+  | "mechanismArchetypeReview"
   | "implementationLaunchDate"
   | "launchDate"
   | "reserves"
@@ -62,6 +65,30 @@ export function authorityModelForType(
   if (authorityType === "validator-quorum") return "validator-quorum";
   if (authorityType === "contract" || authorityType === "timelock" || authorityType === "bridge") return "contract";
   return authorityType === "none" ? "none" : "unknown";
+}
+
+export function projectControlAuthority(args: {
+  authorityType: MintAuthorityControl["authorityType"];
+  chain?: string;
+  address?: string;
+  fallbackKey: string | null;
+  threshold?: number;
+  signerCount?: number;
+  weightedQuorum?: V9WeightedQuorum;
+  executionScope?: MintAuthorityControl["executionScope"];
+}): ControlOverlay["authority"] {
+  const authorityKey = args.address
+    ? args.executionScope || args.weightedQuorum
+      ? normalizeDeploymentId(`${args.chain ?? "chain-unresolved"}:${args.address}`)
+      : `${args.chain ?? "chain-unresolved"}:${args.address.toLowerCase()}`
+    : args.fallbackKey;
+  if (!authorityKey) return null;
+  const model = authorityModelForType(args.authorityType);
+  return {
+    authorityKey, model,
+    threshold: !args.weightedQuorum && model === "multisig" && args.threshold != null && args.signerCount != null ? { required: args.threshold, total: args.signerCount } : null,
+    ...(args.weightedQuorum ? { weightedQuorum: args.weightedQuorum } : {}),
+  };
 }
 
 export const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =

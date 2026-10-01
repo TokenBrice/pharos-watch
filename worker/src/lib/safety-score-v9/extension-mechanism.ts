@@ -23,10 +23,15 @@ import {
   SafetyScoreV9MechanismReviewOverlaySchema,
   type SafetyScoreV9MechanismReviewOverlay,
 } from "@shared/types/safety-score-v9-mechanism-overlays";
+import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-schemas";
 import { isoDateStartSec } from "./extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 
-type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
+type MechanismMeta = Pick<
+  StablecoinMeta,
+  "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves"
+  | "mechanismArchetype" | "mechanismArchetypeReview"
+>;
 
 const MECHANISM_POLICY_RULE_ID = "v9.backing.mechanism-review";
 
@@ -251,6 +256,16 @@ const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], 
     "assuranceAndReconciliation",
     "physicalRedemption",
   ],
+  "ucits-trs-fund": [
+    "fundClaimAndSegregation", "navAndReconciliation", "portfolioHedge",
+    "counterpartyAndCollateral", "custodyContinuity", "defaultRecovery",
+  ],
+  "shared-reserve": [
+    "holderClaim", "liabilityConservation", "reserveCustody", "encumbranceAndAllocation", "defaultRecovery",
+  ],
+  "protocol-position": [
+    "holderClaim", "liabilityConservation", "positionCustody", "encumbranceAndAllocation", "defaultRecovery",
+  ],
 };
 
 const OVERLAY_ARCHETYPE_METRICS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
@@ -261,6 +276,9 @@ const OVERLAY_ARCHETYPE_METRICS: Record<MechanismReviewOverlay["archetype"], rea
   "fiat-cash": [],
   tbill: [],
   "commodity-claim": [],
+  "ucits-trs-fund": [],
+  "shared-reserve": [],
+  "protocol-position": [],
 };
 
 function kebabCase(value: string): string {
@@ -418,6 +436,40 @@ function isMechanismOverlayCurrent(overlay: MechanismReviewOverlay, clockSec: nu
   const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00.000Z`) / 1_000;
   if (!Number.isFinite(reviewedAtSec)) return false;
   return reviewedAtSec + DAY_SEC <= clockSec && reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
+}
+
+/** A family label, inherited ticker, or reserve total cannot establish a holder claim. */
+export function hasAdmittedSafetyScoreV9NativeFamily(
+  meta: MechanismMeta,
+  archetype: string,
+  clockSec: number,
+): boolean {
+  if (archetype !== "ucits-trs-fund" && archetype !== "shared-reserve" && archetype !== "protocol-position") {
+    return true;
+  }
+  const parsed = MechanismArchetypeReviewSchema.safeParse(meta.mechanismArchetypeReview);
+  if (!parsed.success || parsed.data.disposition !== "resolved" || meta.mechanismArchetype !== archetype) {
+    return false;
+  }
+  const reviewedAtSec = Date.parse(`${parsed.data.reviewedAt}T00:00:00.000Z`) / 1_000;
+  return reviewedAtSec + DAY_SEC <= clockSec && reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
+}
+
+function buildBoundedFamilyReview(
+  meta: MechanismMeta,
+  archetype: string,
+  clockSec: number,
+): V9MechanismRiskReview | null {
+  if (archetype !== "ucits-trs-fund" && archetype !== "shared-reserve" && archetype !== "protocol-position") {
+    return null;
+  }
+  if (!hasAdmittedSafetyScoreV9NativeFamily(meta, archetype, clockSec)) return null;
+  return V9MechanismRiskReviewSchema.parse({
+    archetype,
+    ...Object.fromEntries(
+      OVERLAY_ARCHETYPE_COMPONENTS[archetype].map((field) => [field, boundedFact(kebabCase(field), true)]),
+    ),
+  });
 }
 
 function currentMechanismOverlay(assetId: string, archetype: string, clockSec: number): MechanismReviewOverlay | null {
@@ -592,6 +644,7 @@ export function buildSafetyScoreV9MechanismReview(
   meta: MechanismMeta,
   archetype: string,
 ): V9MechanismRiskReview | null {
+  if (!hasAdmittedSafetyScoreV9NativeFamily(meta, archetype, fixedInput.clockSec)) return null;
   const overlay = currentMechanismOverlay(meta.id, archetype, fixedInput.clockSec);
   if (overlay) {
     const fallbackReview =
@@ -601,11 +654,11 @@ export function buildSafetyScoreV9MechanismReview(
           ? buildTbillReview(fixedInput, meta)
           : archetype === "commodity-claim"
             ? buildCommodityClaimReview(fixedInput, meta)
-            : null;
+            : buildBoundedFamilyReview(meta, archetype, fixedInput.clockSec);
     return expandOverlayReview(overlay, fallbackReview);
   }
   if (archetype === "fiat-cash") return buildFiatCashReview(fixedInput, meta);
   if (archetype === "tbill") return buildTbillReview(fixedInput, meta);
   if (archetype === "commodity-claim") return buildCommodityClaimReview(fixedInput, meta);
-  return null;
+  return buildBoundedFamilyReview(meta, archetype, fixedInput.clockSec);
 }

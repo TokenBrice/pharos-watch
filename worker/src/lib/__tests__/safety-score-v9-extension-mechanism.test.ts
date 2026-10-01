@@ -59,6 +59,70 @@ const ATTESTED_META = {
 } satisfies MechanismMeta;
 
 describe("buildSafetyScoreV9MechanismReview", () => {
+  it.each(["ucits-trs-fund", "shared-reserve", "protocol-position"] as const)(
+    "keeps every %s residual bounded despite generic assurance and reserve totals",
+    (archetype) => {
+      const meta = {
+        ...ATTESTED_META,
+        mechanismArchetype: archetype,
+        mechanismArchetypeReview: {
+          disposition: "resolved" as const, reviewedAt: "2026-07-19", reviewer: "Fixture reviewer",
+          rationale: "Exact deployed token holder claim established by pinned primary evidence.",
+          sources: [{ label: "Exact token claim", url: "https://example.com/exact-token" }],
+        },
+      };
+      const review = buildSafetyScoreV9MechanismReview(fixedInputStub({ alpha: [{ pct: 100 }] }), meta, archetype);
+      expect(review).not.toBeNull();
+      for (const [key, fact] of Object.entries(review!)) {
+        if (key === "archetype") continue;
+        expect(fact).toMatchObject({ quality: null, status: { observationState: "bounded-unknown", applicability: { state: "required" } } });
+      }
+      const result = evaluateV9Backing(
+        backingAsset([exposure({ key: "reserve", weight: 1, policyRuleId: "mechanism.required" })]),
+        review!, V9_CANDIDATE_POLICY_V1,
+      );
+      expect(result.contributions.filter((row) => row.source === "mechanism").every(
+        (row) => row.score === V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality && row.effectiveWeight > 0,
+      )).toBe(true);
+    },
+  );
+
+  it("rejects label-only, wrong-family and unresolved native claims even with a dashboard total", () => {
+    const input = fixedInputStub({ alpha: [{ pct: 100 }] });
+    expect(buildSafetyScoreV9MechanismReview(input, ATTESTED_META, "protocol-position")).toBeNull();
+    const unresolved = {
+      ...ATTESTED_META,
+      mechanismArchetype: "shared-reserve" as const,
+      mechanismArchetypeReview: {
+        disposition: "unresolved" as const, reviewedAt: "2026-07-19", reviewer: "Fixture reviewer",
+        rationale: "Current exact-token holder claim is not established.",
+        sources: [{ label: "Claim search", url: "https://example.com/search" }],
+      },
+    };
+    expect(buildSafetyScoreV9MechanismReview(input, unresolved, "shared-reserve")).toBeNull();
+    expect(buildSafetyScoreV9MechanismReview(input, { ...unresolved, mechanismArchetypeReview: { ...unresolved.mechanismArchetypeReview, disposition: "resolved" } }, "protocol-position")).toBeNull();
+  });
+
+  it("rejects unavailable-as-not-applicable and dormant legacy component grades for a native family", () => {
+    const overlay = {
+      assetId: "fixture-position", archetype: "protocol-position" as const, reviewedAt: "2026-07-19",
+      sources: [{ label: "Position disclosures", url: "https://example.com/position" }],
+      notes: "Identity-bound module claim; full liability book unavailable.",
+      metrics: {}, components: { holderClaim: { quality: "limited" as const } },
+    };
+    const review = expandOverlayReview(overlay);
+    expect(review.archetype).toBe("protocol-position");
+    if (review.archetype !== "protocol-position") throw new Error("unexpected family");
+    expect(review.holderClaim.quality).toBe("limited");
+    expect(review.liabilityConservation.quality).toBeNull();
+    expect(() => expandOverlayReview({ ...overlay, components: { claimAndSegregation: { quality: "strong" } } })).toThrow();
+    expect(MechanismReviewOverlaySchema.safeParse({
+      ...overlay,
+      components: { encumbranceAndAllocation: { applicability: "not-applicable", rationale: "Inventory not disclosed", sourceUrl: overlay.sources[0]!.url } },
+    }).success).toBe(false);
+    expect(() => expandOverlayReview({ ...overlay, metrics: { exogenousBackingShare: 1 } })).toThrow();
+  });
+
   it("returns no review without any reserve, custody, or assurance evidence", () => {
     expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), BARE_META, "fiat-cash")).toBeNull();
     expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), BARE_META, "tbill")).toBeNull();

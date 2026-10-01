@@ -319,6 +319,85 @@
             "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "solana:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataUsdAi)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Finalized Solana account and block reads",
+              "url": "https://solana-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Verified nested authority and vault derivation",
+              "url": "https://raw.githubusercontent.com/Squads-Protocol/v4/main/programs/squads_multisig_program/src/state/multisig.rs"
+            },
+            {
+              "label": "Official Console OFT deployment source",
+              "url": "https://github.com/usdai-foundation/solana-oft-deployment/tree/7b3e659e224d06dac703b363df47dbe9f840eb42"
+            }
+          ],
+          "pin": {
+            "position": "452398241",
+            "hash": "EcGTF4EWWoKj9QZzJB1i4uF9g1GMocZqaGwUJzQybCX3",
+            "runtimeIdentity": "solana-program:BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm:sha256:eb5c37bb52c48e0a08371d6f308167dc6002a9f04efbdebb79cac9632aeee1f4",
+            "signerIdentity": "squads-account:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj:sha256:6d1f4ae18831f7a5f4c0580b170d49ff08db9d369673c0070dc4372366131e66"
+          },
+          "observedState": {
+            "position": "452398241",
+            "hash": "EcGTF4EWWoKj9QZzJB1i4uF9g1GMocZqaGwUJzQybCX3",
+            "runtimeIdentity": "solana-program:BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm:sha256:eb5c37bb52c48e0a08371d6f308167dc6002a9f04efbdebb79cac9632aeee1f4",
+            "signerIdentity": "squads-account:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj:sha256:6d1f4ae18831f7a5f4c0580b170d49ff08db9d369673c0070dc4372366131e66"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "direct-token2022-mint",
+              "targetDeployment": "solana:sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "Token2022.MintTo",
+                "Token2022.MintToChecked"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susdai-usd-ai"
+              ],
+              "affectedDeployments": [
+                "solana:sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "Finalized mint snapshot at slot 452346084 gives outer SPL m=1/n=2. Derived Squads vault 0 Gknz from multisig 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj; governance state at slot 452350705 gives threshold=3, three members with permissions=7, time_lock=0 and config_authority=11111111111111111111111111111111. A successful VaultTransactionExecute invocation in transaction 63awK9FLbrXBDfwcoPbhShXC7c2WrfyJ5wjjpyjDyAwvtsjSoYod3bnTAtPi1u6g6pctffjv2DZJzTCHtLFAuXrA identifies the same governing multisig and vault. System-owned vault PDA is not an EOA. Offchain member-key custody remains unknown."
       },
       {
@@ -352,6 +431,86 @@
             "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "solana:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataUsdAi)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Finalized Solana account and block reads",
+              "url": "https://solana-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Verified nested authority and vault derivation",
+              "url": "https://raw.githubusercontent.com/Squads-Protocol/v4/main/programs/squads_multisig_program/src/state/multisig.rs"
+            },
+            {
+              "label": "Official Console OFT deployment source",
+              "url": "https://github.com/usdai-foundation/solana-oft-deployment/tree/7b3e659e224d06dac703b363df47dbe9f840eb42"
+            }
+          ],
+          "pin": {
+            "position": "452398241",
+            "hash": "EcGTF4EWWoKj9QZzJB1i4uF9g1GMocZqaGwUJzQybCX3",
+            "runtimeIdentity": "solana-program:BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm:sha256:eb5c37bb52c48e0a08371d6f308167dc6002a9f04efbdebb79cac9632aeee1f4",
+            "signerIdentity": "squads-account:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj:sha256:6d1f4ae18831f7a5f4c0580b170d49ff08db9d369673c0070dc4372366131e66"
+          },
+          "observedState": {
+            "position": "452398241",
+            "hash": "EcGTF4EWWoKj9QZzJB1i4uF9g1GMocZqaGwUJzQybCX3",
+            "runtimeIdentity": "solana-program:BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm:sha256:eb5c37bb52c48e0a08371d6f308167dc6002a9f04efbdebb79cac9632aeee1f4",
+            "signerIdentity": "squads-account:4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj:sha256:6d1f4ae18831f7a5f4c0580b170d49ff08db9d369673c0070dc4372366131e66"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "console-oft-program-upgrade",
+              "targetDeployment": "solana:BQ7nDFGKN4cYqmBkMXFCEzk3zPJhR6bNK9Maf8sQXrQm",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "BPFUpgradeableLoader.Upgrade"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usdai-usd-ai",
+                "susdai-usd-ai"
+              ],
+              "affectedDeployments": [
+                "solana:USDai5XCUzNebYzUk6EuRiFCvnyoyEdj7VSyijYcz2A",
+                "solana:sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At finalized slot 452346084, ProgramData BSmpVMLvu8r7nA1Dz4Sb3c8PEEqZagi9qtmYsrmXtbC7 gives deployment slot 438647697 and upgrade authority GknzTiXk2Yq5PQb4zGzkfruYQiuCyrbzCjXsNgNyX3xi. This off-curve authority derives exactly as Squads vault 0 of 4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj. Governance at slot 452350705 is autonomous 3-of-3 with zero timelock; successful transaction 63awK9FLbrXBDfwcoPbhShXC7c2WrfyJ5wjjpyjDyAwvtsjSoYod3bnTAtPi1u6g6pctffjv2DZJzTCHtLFAuXrA invoked Squads VaultTransactionExecute using that vault and program metadata.",
         "threshold": 3,
         "signerCount": 3

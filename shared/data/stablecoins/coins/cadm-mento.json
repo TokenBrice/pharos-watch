@@ -12,31 +12,24 @@
   },
   "collateral": "Shared Mento Reserve: Mento's pinned analytics configuration classifies CADm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a CADm-specific borrower trove.",
   "pegMechanism": "CADm is issued through Mento v2's USDm/CADm Broker and BiPoolManager exchange. A USDm-to-CADm swap burns incoming USDm and mints outgoing CADm; the reverse burns CADm and mints USDm. The virtual pool prices swaps from the CAD/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",
+  "mechanismArchetype": "shared-reserve",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
+    "disposition": "resolved",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
-    "rationale": "CADm remains a legacy Mento V2 shared-reserve token. MGP-18 (August 17, 2026) explicitly lists AUDm and CADm among the FX tokens not yet migrated to CDPs and states that their USDm pools stay live for holder redemption. At Celo block 78972424, the canonical Broker recognizes the BiPoolManager provider and quotes a CADm-to-USDm swap; verified Broker source burns the input stable asset and mints the output stable asset. The issuer backing configuration independently identifies shared diversified crypto reserve backing. This resolves the operational holder exit model but establishes neither a custodial fiat claim nor borrower-specific CDP. Keep D18 unresolved until a uniform owner-approved shared-reserve mechanism mapping exists; no protective grade is inferred.",
+    "reviewer": "Sol V10 data curation 2026-10-01 (DataMento)",
+    "rationale": "At Celo block 78986505, CADm token 0xff4ab19391af240c311c54200a492233052b6325 is bound to the Broker's USDm/CADm pool. Its nonzero reverse quote, reserve stable-asset membership and deployed mint/burn code establish a limited operational shared-reserve claim, subject to oracle and trading-limit checks. The pinned explicit backing configuration and MGP-18 confirm reserve backing rather than CDP ownership. Fiat legal priority, whole-pool reconciliation and default recovery remain unestablished.",
     "sources": [
       {
-        "label": "Pinned Mento stablecoin backing config",
-        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+        "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
       },
       {
-        "label": "Pinned Mento Broker source",
-        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
-      },
-      {
-        "label": "Mento V3 stable token docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
-      },
-      {
-        "label": "Mento reserve model documentation",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
-      },
-      {
-        "label": "MGP-18: exact legacy FX token redemption and non-CDP status",
+        "label": "MGP-18: exact legacy FX pool and holder exit",
         "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+      },
+      {
+        "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
       }
     ]
   },

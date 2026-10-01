@@ -16,6 +16,7 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
+import { projectExitExecutionCertificate } from "./exit-execution";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
 import { round4 } from "../math";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
@@ -28,6 +29,7 @@ import { structuralSignalNeedsHardCap } from "./formula";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
 import { computeV9ResultDigest } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
+import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -56,7 +58,7 @@ export interface V9PublicCardProjectionInput {
     | "diversificationBonus"
     | "routes"
   >;
-  control?: Pick<V9EconomicControlResult, "score" | "components" | "unresolvedDeploymentAdjustment">;
+  control?: Pick<V9EconomicControlResult, "score" | "components" | "controlFacts" | "unresolvedDeploymentAdjustment">;
   display?: {
     labels?: Readonly<Record<string, string>>;
     exitHolderEligibility?: Readonly<Record<string, V9ExitHolderEligibility>>;
@@ -332,6 +334,7 @@ function projectExitBreakdown(
       capacityScoringHorizon: route.capacityScoringHorizon,
       settlementDelaySec: route.settlementDelaySec,
       ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
+      ...(route.executionCertificate ? { executionCertificate: projectExitExecutionCertificate(route.executionCertificate) } : {}),
     }));
   const publishedScore = input.scoreInput.pillars.exit.score!;
   return {
@@ -355,6 +358,7 @@ function projectExitBreakdown(
             routeFamily: completePrimary.routeFamily,
             score: completePrimary.score!,
             ...(completePrimary.physicalToUsd ? { physicalToUsd: completePrimary.physicalToUsd } : {}),
+            ...(completePrimary.executionCertificate ? { executionCertificate: projectExitExecutionCertificate(completePrimary.executionCertificate) } : {}),
             components,
             confidenceFactor: completePrimary.confidenceFactor!,
             eligibilityMultiplier: policy.holderEligibilityMultipliers[holderEligibility!],
@@ -417,6 +421,18 @@ function projectControlBreakdown(
         score: component.score,
         binding: component.binding,
         posture: component.posture,
+        ...(control.controlFacts ? { controlDetails: control.controlFacts
+          .filter((fact) => component.controlKeys.includes(fact.controlKey))
+          .map((fact) => ({
+            controlKey: fact.controlKey,
+            authority: fact.authority,
+            minimumCryptographicSignatures: effectiveAuthoritySignatureRequirement(fact.authority),
+            executionScopeComplete: fact.executionScopeComplete ?? null,
+            moduleImpact: fact.moduleImpact ?? "unresolved",
+            diagnostics: fact.scopeDiagnostics ?? [],
+            executionPaths: [ ...(fact.executionScope?.paths ?? []), ...(fact.executionScopeContributors ?? []).flatMap((entry) => entry.scope?.paths ?? []) ]
+              .map((path) => ({ id: path.id, targetDeployment: path.targetDeployment, entrypointKind: path.entrypointKind, entrypoints: path.entrypoints, activation: path.activation, reach: path.reach, capabilities: path.capabilities })),
+          })) } : {}),
       })),
     adjustments: projectPillarAdjustments(input, "control", control.score),
   };

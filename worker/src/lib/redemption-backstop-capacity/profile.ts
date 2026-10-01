@@ -41,6 +41,7 @@ export interface CapacityResolution {
 }
 
 export interface RedemptionBackstopBuildOptions {
+  signal?: AbortSignal;
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
   redemptionLiveMetadata?: RedemptionBackstopLiveMetadata;
   routeAvailability?: RedemptionRouteAvailability | null;

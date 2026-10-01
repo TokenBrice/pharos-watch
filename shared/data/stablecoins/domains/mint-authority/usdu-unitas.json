@@ -108,6 +108,80 @@
         "canRaiseCap": false,
         "observedAt": "2026-10-01",
         "observedBlock": 125057055,
+        "executionScope": {
+          "controllerDeployment": "bsc:0xbb984ce670100aa855f6152f88b26ee57f4ea82a",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified UnitasMintingV2 source and ABI",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=sources,abi"
+            },
+            {
+              "label": "Pinned authorized minter and runtime BSC 125166733",
+              "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "125166733",
+            "hash": "0x83fb74412192e34695640b6a9a185e8c86f33e76aaeaf9b21831b9064aaa07cc",
+            "runtimeIdentity": "sha256:684d35568e31c5c6cd4c1574ca46a86ad2bb09d0e43fd7487e96764455849fc9",
+            "signerIdentity": "MINTER_ROLE plus signed order and deduplicated benefactor nonce; role-holder/quorum and mutable admin alternatives not closed"
+          },
+          "observedState": {
+            "position": "125166733",
+            "hash": "0x83fb74412192e34695640b6a9a185e8c86f33e76aaeaf9b21831b9064aaa07cc",
+            "runtimeIdentity": "sha256:684d35568e31c5c6cd4c1574ca46a86ad2bb09d0e43fd7487e96764455849fc9",
+            "signerIdentity": "MINTER_ROLE plus signed order and deduplicated benefactor nonce; role-holder/quorum and mutable admin alternatives not closed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-order-mint",
+              "targetDeployment": "bsc:0xbb984ce670100aa855f6152f88b26ee57f4ea82a",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x252ed2f1"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usdu-unitas"
+              ],
+              "affectedDeployments": [
+                "bsc:0xea953ea6634d55dac6697c436b1e81a679db5882"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "capDescription": "Verified mint() requires MINTER_ROLE, a signed and deduplicated order, a valid route, a collateral-asset per-block limit, and a global per-block limit. These are rate limits, not a fixed outstanding-liability ceiling; the contract admin can alter them.",
         "evidence": "At BSC block 125056986, USDu.minter() returned this address. At block 125057055, owner() returned 0x0a6db8e8f0b79ba5b9f5ac7f5728843b830bb1c8 and globalConfig() returned nonzero global mint/redeem limits. Sourcify's verified UnitasMintingV2 source directly records MINTER_ROLE, order-signature, route and per-block checks.",
         "sources": [

@@ -547,6 +547,111 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
+        "executionScope": {
+          "controllerDeployment": "plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "Sol curation pass 2026-10-01 (DataYuzu)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified LockReleaseTokenPool source and ABI",
+              "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x31672de4726227feb22f2dfbcfa985c71bea86b2"
+            },
+            {
+              "label": "Pinned Plasma public RPC",
+              "url": "https://rpc.plasma.to"
+            }
+          ],
+          "pin": {
+            "position": "33946301",
+            "hash": "0xade3b086fdb1f54a292e93a8c2e4b356475e4eb5b738ed5f9632b02ee14136b9",
+            "runtimeIdentity": "sha256-rpc-code-text:80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c",
+            "signerIdentity": "owner=rateLimitAdmin=plasma:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae;eth_getCode=0x"
+          },
+          "observedState": {
+            "position": "33946301",
+            "hash": "0xade3b086fdb1f54a292e93a8c2e4b356475e4eb5b738ed5f9632b02ee14136b9",
+            "runtimeIdentity": "sha256-rpc-code-text:80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c",
+            "signerIdentity": "owner=rateLimitAdmin=plasma:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae;eth_getCode=0x"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "plasma-ccip-rate-limit-configuration",
+              "targetDeployment": "plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0xcf7401f3", "0x962d4020"],
+              "callMode": "call",
+              "capabilities": ["parameter-change"],
+              "capSemantics": {"kind": "raiseable", "bound": null},
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": ["syzusd-yuzu"],
+              "affectedDeployments": [],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": ["plasma-ccip-rate-admin-change"],
+              "upgradeRefs": [],
+              "bypassRefs": ["plasma-ccip-chain-configuration"]
+            },
+            {
+              "id": "plasma-ccip-rate-admin-change",
+              "targetDeployment": "plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x7d54534e"],
+              "callMode": "call",
+              "capabilities": ["parameter-change"],
+              "capSemantics": {"kind": "not-applicable", "bound": null},
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": ["syzusd-yuzu"],
+              "affectedDeployments": [],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "plasma-ccip-chain-configuration",
+              "targetDeployment": "plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0xe8a1da17"],
+              "callMode": "call",
+              "capabilities": ["parameter-change"],
+              "capSemantics": {"kind": "raiseable", "bound": null},
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": ["syzusd-yuzu"],
+              "affectedDeployments": [],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "routeChecks": {
           "lockboxOrEscrow": "At Plasma block 30024507, this Chainlink CCIP LockReleaseTokenPool 1.6.1 returned getToken() = syzUSD and getRebalancer() = zero; it escrows canonical syzUSD for cross-chain release and is not an independent native issuance controller.",
           "trustedPeerOrRemote": "The pool's supported-chain configuration includes the Ethereum and Monad selectors with remote pools 0xd915adf1b64854dd312550f6831afa151e7b2590 and 0x012247950ee154dc26d4514b84b3b60336c55ea5, both mapping back to their syzUSD representations and the canonical Plasma token.",

@@ -323,17 +323,18 @@ export function makeV9FixedInput(options: V9FixedInputOptions = {}) {
         },
       },
     },
-    ...(options.aggregateCirculating
-      ? {
-          aggregateCirculatingById: {
-            [assetId]: {
-              circulating: options.aggregateCirculating,
-              observedAtSec:
-                options.supplyObservedAtSec === undefined ? observedAtSec : options.supplyObservedAtSec,
-            },
-          },
-        }
-      : {}),
+    aggregateCirculatingById: {
+      [assetId]: {
+        circulating: options.aggregateCirculating ??
+          (options.chainSupplyByChain === undefined
+            ? { peggedUSD: 10_000_000 }
+            : Object.keys(options.chainSupplyByChain).length > 0
+              ? { peggedUSD: Object.values(options.chainSupplyByChain).reduce((sum, row) => sum + row.current, 0) }
+              : {}),
+        observedAtSec:
+          options.supplyObservedAtSec === undefined ? observedAtSec : options.supplyObservedAtSec,
+      },
+    },
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],

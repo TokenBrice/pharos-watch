@@ -2,7 +2,7 @@
   "id": "said-gaib",
   "name": "GAIB sAID",
   "symbol": "sAID",
-  "oneLiner": "sAID is GAIB's ERC-4626 AI-financing NAV vault funded by AID; monthly withdrawals settle on the first day of the second month after the request month.",
+  "oneLiner": "sAID is GAIB's ERC-4626 AI-financing NAV vault funded by AID; current on-chain unstaking uses a 30-day cooldown and a liquidity-dependent FIFO queue.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -14,7 +14,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "aid-gaib",
   "collateral": "AID staked into GAIB's ERC-4626 sAID vault; vault capital is deployed into AI infrastructure financings (GPUs, robotics, and related compute) plus a stable reserve buffer of T-bills and stablecoins for liquidity",
-  "pegMechanism": "sAID is minted by staking AID at the staking NAV (which ignores unrealized losses, keeping the mint price stable) rather than pegged to $1. Redemptions follow a monthly withdrawal-cohort cycle: requests submitted within a calendar month are aggregated, liquidity is sourced the following month, and funds settle on the first day of the third month at the unstaking NAV (which subtracts unrealized losses). Selling sAID on a supported DEX is the immediate-liquidity alternative.",
+  "pegMechanism": "sAID is minted by staking AID at the staking NAV rather than pegged to $1. At Ethereum block 26099923 on 2026-10-01, the current implementation burns shares through unstake(uint256), records a loss-adjusted AID claim, and pays AID through processUnstakeQueue(uint256) in FIFO order after a 30-day cooldown, subject to operator-managed available liquidity; partial fills are possible and cooldown expiry is not a maximum completion guarantee. Instant ERC-4626 withdrawals are disabled while cooldown is positive. Issuer documentation describes monthly cohorts, but the reviewed callable implementation uses a request-relative cooldown. AID onward redemption is a separate liquidity- and limit-dependent path; DEX sales depend on market liquidity.",
   "mechanismArchetype": "rwa-credit-fund",
   "archetypeOverride": true,
   "detailProvider": "coingecko",

@@ -1144,6 +1144,79 @@
             "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataReservoir)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified adapter and included OAppCore source matched to pinned runtime",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbb431abd156b960e5b77cc45c75f107e3991258a"
+            },
+            {
+              "label": "Ethereum PublicNode reads and permission simulations at block 26099924",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "26099924",
+            "hash": "0xb6d2f61f51a2741fb1dff4acfafa1a3726b42875ba6e5617bce1a08cca701488",
+            "runtimeIdentity": "adapter ethereum:0xbb431abd156b960e5b77cc45c75f107e3991258a eth_getCode-text SHA256 3276abd4a85bcb70eee7e36eda2a6f72907b6cab33919f15fb9adef604ab5965; exact verified-source runtime",
+            "signerIdentity": "owner() = 0xb7570e32ded63b25163369d5eb4d8e89e70e5602; controller eth_getCode = 0x; operator/key custody undisclosed"
+          },
+          "observedState": {
+            "position": "26099924",
+            "hash": "0xb6d2f61f51a2741fb1dff4acfafa1a3726b42875ba6e5617bce1a08cca701488",
+            "runtimeIdentity": "adapter ethereum:0xbb431abd156b960e5b77cc45c75f107e3991258a eth_getCode-text SHA256 3276abd4a85bcb70eee7e36eda2a6f72907b6cab33919f15fb9adef604ab5965; exact verified-source runtime",
+            "signerIdentity": "owner() = 0xb7570e32ded63b25163369d5eb4d8e89e70e5602; controller eth_getCode = 0x; operator/key custody undisclosed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ethereum-adapter-owner-peer-and-delegate",
+              "targetDeployment": "ethereum:0xbb431abd156b960e5b77cc45c75f107e3991258a",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x3400288b",
+                "0xca5eb5e1"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "wsrusd-reservoir"
+              ],
+              "affectedDeployments": [],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At the reviewed Ethereum block 25771270 and current destination heads on 2026-08-16, owner reads identify Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 as the common controller of the Ethereum MyOFTAdapter and the EVM wsrUSD OFTs. Its peer/delegate/OApp configuration powers remain Bridge Risk; the route contract identities remain separate failure domains, and no native wrapper upgrade or privileged net-claim mint authority is attributed to this EOA through the wsrUSD bridge profile."
       },
       {
@@ -1232,6 +1305,110 @@
           }
         ],
         "evidence": "Observed 2026-09-21 at Tempo block 40536062: the official Reservoir-listed adapter 0x31d1a36a59a38c3a72e8d8567f5a98d5c777c98f returned token() = 0x20c000000000000000000000aeed2ec36a54d0e5; that TIP-20 token returned ISSUER_ROLE = 0x114e74f6ea3bd819998f78687bfcb11b140da08e9b7d222fa9c1f1ba1f2aa122 and hasRole(adapter, ISSUER_ROLE) = true. paused() was false and supplyCap() was 340282366920938463463374607431768211455. This identifies the contract authority and its effectively unbounded route-local bridge-mint semantics; undisclosed adapter administration remains conservatively uncredited."
+      },
+      {
+        "id": "wsrusd-ethereum-layerzero-delegate",
+        "label": "wsrUSD Ethereum EndpointV2 configuration delegate EOA",
+        "routeRefs": [
+          "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "eoa:ethereum:0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26099924,
+        "sources": [
+          {
+            "label": "Verified EndpointV2 and included MessageLibManager source matched to pinned runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1a44076050125825900e736c501f859c50fe728c"
+          },
+          {
+            "label": "Ethereum PublicNode delegate read and setSendLibrary simulation at block 26099924",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 26099924 (2026-10-01T20:41:47Z), EndpointV2 delegates(0xbb431abd156b960e5b77cc45c75f107e3991258a) returned 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0 and eth_getCode(delegate) returned 0x. Verified EndpointV2 authorizes the OApp or its delegate, not its owner EOA directly. setSendLibrary(adapter,30106,address(0)) simulated successfully from the delegate, while the owner EOA call reverted. This is an active independent single-key bridge-configuration path, not native issuance. No transaction was broadcast; key custody, destination reach, other endpoint powers, bypasses and economic materiality remain unresolved.",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataReservoir)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified EndpointV2 and MessageLibManager source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1a44076050125825900e736c501f859c50fe728c"
+            },
+            {
+              "label": "Ethereum PublicNode pinned permission simulation",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "26099924",
+            "hash": "0xb6d2f61f51a2741fb1dff4acfafa1a3726b42875ba6e5617bce1a08cca701488",
+            "runtimeIdentity": "endpoint ethereum:0x1a44076050125825900e736c501f859c50fe728c eth_getCode-text SHA256 a84ad07a40daf6a6ecb9b141fd6f7a1b78784886dfa9f2497268ff000b756f38; exact verified-source runtime",
+            "signerIdentity": "delegates(adapter) = 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; controller eth_getCode = 0x; operator/key custody undisclosed"
+          },
+          "observedState": {
+            "position": "26099924",
+            "hash": "0xb6d2f61f51a2741fb1dff4acfafa1a3726b42875ba6e5617bce1a08cca701488",
+            "runtimeIdentity": "endpoint ethereum:0x1a44076050125825900e736c501f859c50fe728c eth_getCode-text SHA256 a84ad07a40daf6a6ecb9b141fd6f7a1b78784886dfa9f2497268ff000b756f38; exact verified-source runtime",
+            "signerIdentity": "delegates(adapter) = 0xadc0e55b2ec02f020cb07d905b9fc51f0c923cc0; controller eth_getCode = 0x; operator/key custody undisclosed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "ethereum-endpoint-delegate-send-library",
+              "targetDeployment": "ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9535ff30"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "wsrusd-reservoir"
+              ],
+              "affectedDeployments": [],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
       }
     ]
   }

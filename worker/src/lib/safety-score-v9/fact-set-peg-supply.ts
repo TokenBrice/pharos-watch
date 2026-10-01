@@ -10,7 +10,7 @@ import {
   requiredV9Applicability,
 } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "../../cron/sync-stablecoins/shared";
 import type {
   V9AssetFactsV2,
@@ -28,6 +28,7 @@ import {
   safetyScoreV9ChainSupplyMaxAgeSec,
   safetyScoreV9ChainSupplyObservedAtSec,
 } from "./supply-attribution";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import {
   diagnoseSafetyScoreV9NullSupplyReviewOutcome,
   type SafetyScoreV9NullSupplyReviewOutcome,
@@ -418,8 +419,8 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
   const aggregate = context.fixedInput.aggregateCirculatingById[context.asset.assetId];
   // DefiLlama list circulating values are already USD-denominated across all peg
   // types, so this is a plain sum — never a price multiplication.
-  const circulatingUsd = aggregate ? getCirculatingRaw(aggregate) : 0;
-  if (circulatingUsd <= 0) {
+  const circulatingUsd = aggregate ? getCirculatingRawOrNull(aggregate) : null;
+  if (circulatingUsd === null) {
     return {
       status: missingLocalFact(context, {
         componentKey: "chain-supply",
@@ -475,7 +476,10 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
   if (review !== null) {
     assertSupplyReviewSharesReconcile(context.asset.assetId, circulatingUsd, review);
     const routeSupplyUsd = review.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyUsd, 0);
-    const toleranceUsd = Math.max(0.000001, circulatingUsd * 1e-12);
+    const toleranceUsd = context.fixedInput.safetyScoreV9SupplyAttributionById[context.asset.assetId]?.model === "reviewed-economic-deployment-partition-v1"
+      ? Math.max(V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.conservationAbsoluteToleranceUsd,
+          circulatingUsd * V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.conservationRelativeTolerance)
+      : Math.max(0.000001, circulatingUsd * 1e-12);
     if (Math.abs(routeSupplyUsd - circulatingUsd) > toleranceUsd) {
       throw new Error(
         `Aggregate bridge supply rows do not conserve for ${context.asset.assetId}: ` +
@@ -604,13 +608,19 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
     context.fixedInput.safetyScoreV9SupplyAttributionById[context.asset.assetId];
   const chainRows = safetyScoreV9ChainRows(context.fixedInput, context.asset.assetId);
   const chains = Object.keys(chainRows).sort(compareText);
-  const circulatingUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
-  // A per-chain map that is present but sums to zero carries no more supply
-  // information than an absent one, and the aggregate bucket may still hold a
-  // real figure. Both cases route to the aggregate fallback; a zero-summing map
-  // would otherwise produce a zero-denominator distribution and leave assets
-  // like a7a5-old-vector unobserved despite a published circulating supply.
-  if (chains.length === 0 || circulatingUsd <= 0) {
+  const chainSubtotalUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
+  const hasEconomicSupplyPlan = REVIEWED_ECONOMIC_SUPPLY_PLANS.has(context.asset.assetId) ||
+    v9Attribution?.model === "reviewed-economic-deployment-partition-v1";
+  const circulatingUsd = hasEconomicSupplyPlan
+    ? getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById[context.asset.assetId] ?? {})
+    : chainSubtotalUsd;
+  const supplyPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  const toleranceUsd = Math.max(supplyPolicy.conservationAbsoluteToleranceUsd,
+    (circulatingUsd ?? 0) * supplyPolicy.conservationRelativeTolerance);
+  // New reviewed partitions must conserve the aggregate. Legacy chain inputs
+  // keep their captured denominator until a reviewed economic plan exists.
+  if (chains.length === 0 || circulatingUsd === null || circulatingUsd <= 0 ||
+    (hasEconomicSupplyPlan && chainSubtotalUsd > circulatingUsd + toleranceUsd)) {
     return buildAggregateSupply(context);
   }
   const evidenceId = addEvidence(
@@ -621,11 +631,12 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
         sourceId:
           v9Attribution === undefined
             ? "report-cards-chain-circulating"
-            : v9Attribution.model === "canonical-lock-mint-partition-v1" ||
-                v9Attribution.model ===
-                  "canonical-lock-mint-group-partition-v2"
-              ? "safety-score-v9-lock-mint-attribution"
-              : "safety-score-v9-reviewed-deployment-attribution",
+            : v9Attribution.model === "reviewed-economic-deployment-partition-v1"
+              ? V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId
+              : v9Attribution.model === "canonical-lock-mint-partition-v1" ||
+                  v9Attribution.model === "canonical-lock-mint-group-partition-v2"
+                ? "safety-score-v9-lock-mint-attribution"
+                : "safety-score-v9-reviewed-deployment-attribution",
         sourceGenerationId: source.generationId,
         disposition: "observed",
         observedAtSec: safetyScoreV9ChainSupplyObservedAtSec(
@@ -633,7 +644,8 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
           context.asset.assetId,
           source.observedAtSec,
         ),
-        contentSha256: domainDigest("safety-score-v9.chain-supply.v1", chainRows),
+        contentSha256: domainDigest("safety-score-v9.chain-supply.v1",
+          v9Attribution?.model === "reviewed-economic-deployment-partition-v1" ? v9Attribution : chainRows),
         maxAgeSec: safetyScoreV9ChainSupplyMaxAgeSec(
           context.fixedInput,
           context.asset.assetId,
@@ -643,6 +655,17 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
       context.fixedInput.clockSec,
     ),
   );
+  const referenceEvidenceIds: string[] = [];
+  if (v9Attribution?.model === "reviewed-economic-deployment-partition-v1") {
+    for (const [index, reference] of [v9Attribution.referencePrice, ...v9Attribution.conversions].entries()) {
+      referenceEvidenceIds.push(addEvidence(context, createV9EvidenceReference({
+        evidenceId: `${context.asset.assetId}:economic-supply-reference:${index}`,
+        sourceId: reference.sourceId, sourceGenerationId: reference.sourceGeneration, disposition: "observed",
+        observedAtSec: reference.observedAtSec, contentSha256: reference.responseSha256,
+        maxAgeSec: supplyPolicy.referencePriceMaxAgeSec,
+      }, context.fixedInput.clockSec)));
+    }
+  }
   const evidence = context.evidence.get(evidenceId)!;
   const review = context.asset.supplyReview;
   const supplyReviewOutcome = review === null
@@ -652,7 +675,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
     ? null
     : addNullSupplyReviewOutcomeEvidence(context, supplyReviewOutcome);
   const supplyByChainId = new Map<string, number>();
-  let unattributedSupplyUsd = 0;
+  let unattributedSupplyUsd = Math.max(0, circulatingUsd - chainSubtotalUsd);
   for (const chain of chains) {
     const supplyUsd = chainRows[chain]!.current;
     const chainId = resolveChainId(chain);
@@ -702,7 +725,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.supply.current"),
       observationState: "known",
-      evidenceRefIds: [evidenceId],
+      evidenceRefIds: [evidenceId, ...referenceEvidenceIds],
     });
   } else {
     status = createV9FactStatus({

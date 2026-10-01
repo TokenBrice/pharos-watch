@@ -13,15 +13,28 @@
   },
   "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
   "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+  "mechanismArchetype": "ucits-trs-fund",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
+    "disposition": "resolved",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol owner-ruling review 2026-10-01 (RuleC05)",
-    "rationale": "The EURSAFO share gives proportional ownership of a UCITS securities portfolio. The 1 September 2026 prospectus invests in bonds, equities and money market instruments and transfers portfolio performance through total-return swaps, with a possible unswapped money-market UCITS sleeve. This exact-product holder claim and mixed physical-securities/swap mechanism do not establish direct short-duration Treasury-bill backing. The former tbill assignment is withdrawn under D18; no replacement family or grade is asserted without an exact-product methodology review.",
+    "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+    "rationale": "EURSAFO is the exact EUR share class FR0014015LD3 of Spiko Amundi Overnight Swap Fund, fund UUID 59c2c924-ebf8-492d-a4b0-72d72ebf61e6. The issuer share-class API identifies its current native registers, including Ethereum 0x0990b149e915cb08e2143a5c6f669c907eddc8b0 and Solana 6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7. The September 2026 prospectus and exact EUR KID establish proportional UCITS portfolio ownership, legally separate fund assets and portfolio-wide total-return swaps with a possible unswapped money-market UCITS sleeve. Current dated physical securities and signed swap inventory corroborate the ucits-trs-fund family; this is not direct Treasury-bill backing, complete NAV reconciliation or funded default-recovery proof.",
     "sources": [
       {
         "label": "Spiko SICAV prospectus published 1 September 2026, SAFO strategy and shareholder rights",
         "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact EUR share-class KID, FR0014015LD3",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
+      },
+      {
+        "label": "Exact EURSAFO issuer share-class identity and eight native registers",
+        "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+      },
+      {
+        "label": "Dated SAFO physical and signed derivative inventory, 1 October 2026",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
       }
     ]
   },
@@ -114,6 +127,11 @@
     {
       "chain": "stellar",
       "address": "CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP",
+      "decimals": 5
+    },
+    {
+      "chain": "solana",
+      "address": "6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7",
       "decimals": 5
     }
   ],

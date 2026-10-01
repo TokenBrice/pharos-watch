@@ -59,7 +59,7 @@ export const metadata: Metadata = buildPageMetadata({
 
 // Non-frost sequence tones for the archetype segments (frost stays the
 // headline beam). CHART_PALETTE[0] is frost, so start at index 1.
-const MECHANISM_SEGMENT_COLORS = CHART_PALETTE.slice(1, 1 + MECHANISM_ARCHETYPE_VALUES.length);
+const MECHANISM_SEGMENT_COLORS = CHART_PALETTE.slice(1);
 
 // Restrained decomposition of the hero's One-Beam total: how the active coins
 // split across the tracked designs. Reuses the flat proportional-bar idiom
@@ -68,7 +68,7 @@ function MechanismDistribution({ counts }: { counts: Record<MechanismArchetype, 
   const segments = MECHANISM_ARCHETYPE_VALUES.map((archetype, index) => ({
     archetype,
     count: counts[archetype],
-    color: MECHANISM_SEGMENT_COLORS[index],
+    color: MECHANISM_SEGMENT_COLORS[index % MECHANISM_SEGMENT_COLORS.length],
     label: MECHANISM_ARCHETYPE_SHORT_LABELS[archetype],
   }));
   const legend = segments.map((segment) => `${segment.count} ${segment.label}`).join(", ");

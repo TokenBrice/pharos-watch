@@ -38,7 +38,8 @@ export interface MintAuthorityProviderCapabilities {
 export interface MintAuthorityCandidateContract {
   chain: string;
   address: string;
-  decimals: number;
+  decimals: ContractDeployment["decimals"];
+  amountEncoding?: ContractDeployment["amountEncoding"];
   evmAddress: boolean;
   scannerStatus: "queued-not-scanned" | "unsupported-address";
   notes: string[];
@@ -183,6 +184,7 @@ function contractCandidate(contract: ContractDeployment): MintAuthorityCandidate
     chain: contract.chain,
     address,
     decimals: contract.decimals,
+    amountEncoding: contract.amountEncoding,
     evmAddress,
     scannerStatus: evmAddress ? "queued-not-scanned" : "unsupported-address",
     notes: evmAddress

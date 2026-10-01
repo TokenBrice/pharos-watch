@@ -65,6 +65,85 @@
             "url": "https://chainlog.skyeco.com/"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-12-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+            },
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
+            },
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+            }
+          ],
+          "pin": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:acb4a6031845e7fa8848b0eaf97fe68b0e87e05395a7f3db4d2ce0e1b3f783a9;implementation:0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0;sha256:2b0bb429f9846f24dedf2e04cea6bd75c3149caa0dea4859acbb8b4e0c1278ba",
+            "signerIdentity": "drip public;Vat.wards(0xa3931d71877c0e7a3148cb7eb4463524fec27fbd)=1;USDS.wards(USDS_JOIN)=1;upstream SSR and upgrade closure unresolved"
+          },
+          "observedState": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:acb4a6031845e7fa8848b0eaf97fe68b0e87e05395a7f3db4d2ce0e1b3f783a9;implementation:0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0;sha256:2b0bb429f9846f24dedf2e04cea6bd75c3149caa0dea4859acbb8b4e0c1278ba",
+            "signerIdentity": "drip public;Vat.wards(0xa3931d71877c0e7a3148cb7eb4463524fec27fbd)=1;USDS.wards(USDS_JOIN)=1;upstream SSR and upgrade closure unresolved"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-savings-accrual",
+              "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9f678cca"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky",
+                "usds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095796, asset() returned USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f, the EIP-1967 implementation slot returned 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, and the correct EIP-1967 admin slot was zero. wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returned 1. The current verified SUsds implementation gates _authorizeUpgrade by auth, share issuance transfers deposited USDS, and drip funds SSR accrual through Vat.suck and USDS_JOIN.exit."
       },
       {
@@ -92,6 +171,82 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-12-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
+            },
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+            }
+          ],
+          "pin": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:7c4855a3669b6e1093704c90f6fe6ac45437a3e54930c5da03cbf7fa6d9d2b02",
+            "signerIdentity": "exit public against Vat.dai caller balance;USDS.wards(0x3c0f895007ca717aa01c8693e59df1e8c3777feb)=1;Vat.suck funding closure unresolved"
+          },
+          "observedState": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:7c4855a3669b6e1093704c90f6fe6ac45437a3e54930c5da03cbf7fa6d9d2b02",
+            "signerIdentity": "exit public against Vat.dai caller balance;USDS.wards(0x3c0f895007ca717aa01c8693e59df1e8c3777feb)=1;Vat.suck funding closure unresolved"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "inherited-usds-exit",
+              "targetDeployment": "ethereum:0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xef693bed"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky",
+                "usds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095796, the sUSDS vault's usdsJoin() returned 0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB and the USDS token returned wards(adapter) = 1. Verified UsdsJoin.exit first calls vat.move(msg.sender, address(this), RAY * wad), then usds.mint(usr, wad); no adapter-specific debt ceiling is present."
       },
       {
@@ -120,6 +275,141 @@
             "url": "https://docs.sky.money/"
           }
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-12-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+            }
+          ],
+          "pin": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
+            "signerIdentity": "sUSDS.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1;Pause.delay=172800;upstream executor and alternative wards closure unresolved"
+          },
+          "observedState": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
+            "signerIdentity": "sUSDS.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1;Pause.delay=172800;upstream executor and alternative wards closure unresolved"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-governance-upgrade",
+              "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "native-governance-ssr",
+              "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x29ae8114"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "native-governance-permissions",
+              "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x65fae35e",
+                "0x9c52a7f1"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "evidence": "At Ethereum block 26095796, wards(Pause Proxy) on sUSDS returned 1 and MCD_PAUSE.delay() returned 172800 seconds. The current verified SUsds implementation permits authorized wards to change SSR and authorize UUPS upgrades. USDS_JOIN itself has no configurable debt ceiling; the executor's broader accounting and base-token authority remains inherited from usds-sky."
       }
     ],

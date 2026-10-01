@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
+import { normalizeDeploymentId } from "../lib/deployment-id";
 import {
   BRIDGE_ROUTE_CLASS_VALUES,
   BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES,
@@ -508,6 +510,8 @@ const AuthorityControlFields = {
   authorityType: z.enum(MINT_AUTHORITY_TYPE_VALUES),
   threshold: PositiveIntegerSchema.optional(),
   signerCount: PositiveIntegerSchema.optional(),
+  weightedQuorum: V9WeightedQuorumSchema.optional(),
+  executionScope: V9ControlExecutionScopeSchema.optional(),
   timelockDelaySec: z.number().finite().int().min(0).optional(),
   safe: MintAuthoritySafeStateSchema.optional(),
   modulesOrGuardsStatus: z.enum(MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES).optional(),
@@ -522,6 +526,35 @@ const AuthorityControlFields = {
   sources: z.array(StablecoinLinkSchema).min(1).optional(),
   evidence: z.string().min(12).optional(),
 };
+
+function validateExactAuthority(control: z.output<z.ZodObject<typeof AuthorityControlFields>>, chain: string | undefined, address: string | undefined, ctx: z.RefinementCtx): void {
+  const deployment = chain && address ? normalizeDeploymentId(`${chain}:${address}`) : null;
+  if (control.weightedQuorum && (control.threshold != null || control.signerCount != null || control.authorityType !== "multisig")) {
+    ctx.addIssue({ code: "custom", message: "Weighted multisig excludes uniform threshold and signerCount", path: ["weightedQuorum"] });
+  }
+  if (control.weightedQuorum && deployment !== control.weightedQuorum.deployment) {
+    ctx.addIssue({ code: "custom", message: "Weighted quorum must match exact controller deployment", path: ["weightedQuorum"] });
+  }
+  if (control.executionScope && deployment !== control.executionScope.controllerDeployment) {
+    ctx.addIssue({ code: "custom", message: "Execution scope must match exact controller deployment", path: ["executionScope"] });
+  }
+  if (control.executionScope && control.safe?.observedBlock != null && String(control.safe.observedBlock) !== control.executionScope.pin.position) {
+    ctx.addIssue({ code: "custom", message: "Safe and execution scope must share observation pin", path: ["executionScope"] });
+  }
+  for (const path of control.executionScope?.paths ?? []) {
+    if (path.activation === "counterfactual" && path.counterfactual &&
+        (control.authorityType !== "safe" && control.authorityType !== "multisig" ||
+          control.weightedQuorum != null || control.threshold !== path.counterfactual.threshold ||
+          control.signerCount !== path.counterfactual.owners.length)) {
+      ctx.addIssue({ code: "custom", message: "Counterfactual initialized quorum must match the exact uniform authority", path: ["executionScope"] });
+    }
+  }
+  if (control.weightedQuorum && control.executionScope &&
+      (control.weightedQuorum.pin.runtimeIdentity !== control.executionScope.pin.runtimeIdentity ||
+        control.weightedQuorum.pin.signerIdentity !== control.executionScope.pin.signerIdentity)) {
+    ctx.addIssue({ code: "custom", message: "Weighted signing and execution certificates must bind the same identities", path: ["executionScope"] });
+  }
+}
 
 const BridgeRouteControlSchema = z
   .object({
@@ -545,7 +578,10 @@ const BridgeRouteControlSchema = z
     controllerAddress: z.string().min(1).optional(),
     ...AuthorityControlFields,
   })
-  .strict();
+  .strict()
+  .superRefine((control, ctx) => {
+    validateExactAuthority(control, control.controllerChain, control.controllerAddress, ctx);
+  });
 
 const ControlScopedQuestionSchema = z
   .object({
@@ -569,6 +605,7 @@ const MintAuthorityControlSchema = z
   })
   .strict()
   .superRefine((control, ctx) => {
+    validateExactAuthority(control, control.chain, control.address, ctx);
     if (control.threshold != null && control.signerCount != null && control.threshold > control.signerCount) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

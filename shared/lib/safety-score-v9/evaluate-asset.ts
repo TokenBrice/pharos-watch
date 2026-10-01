@@ -1425,6 +1425,8 @@ export function evaluateV9Asset({
   const projectedExitRoutes = asset.exitRoutes.map(projectV9ExitEvaluationRoute);
   const exit = evaluateV9Exit(
     {
+      assetId: asset.assetId,
+      clockSec: identity.asOfSec,
       circulatingUsd: exitCirculatingUsd,
       portfolioStatus: exitPortfolioStatus,
       routes: projectedExitRoutes,

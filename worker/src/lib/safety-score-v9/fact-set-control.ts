@@ -20,6 +20,8 @@ import {
   normalizeReviewedFactStatus,
   type AssetBuildContext,
 } from "./fact-set-context";
+import { compileReviewedControlScope, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { DEPLOYMENT_MATERIAL_SHARE_THRESHOLD } from "./extension-shared";
 
 type ExtensionControlOverlay = Extract<
@@ -57,15 +59,32 @@ export function buildControls(context: AssetBuildContext): {
       controls: [],
     };
   }
-  // An inventory demoted only by reviewer-scoped open questions keeps the
-  // scoped reason so the whole-asset cause matches the per-control gaps; any
+  // Each authority's own certificate is checked; a friendly sibling's proof
+  // cannot close an unreviewed contributor on the same deployment.
+  review.controls = review.controls.map((control) => {
+    if (!control.executionScope && !control.executionScopeContributors && !control.authority?.weightedQuorum) return control;
+    const projections = control.executionScopeContributors
+      ? control.executionScopeContributors.map((entry) => compileReviewedControlScope(entry.scope, entry.authorityKey, context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC))
+      : [compileReviewedControlScope(control.executionScope, control.authority?.authorityKey ?? "", context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)];
+    return {
+      ...control,
+      ...(control.executionScope || control.executionScopeContributors ? {
+        executionScopeComplete: projections.every((projection) => projection.complete),
+        moduleImpact: projections.some((projection) => projection.moduleImpact === "relevant") ? "relevant" as const
+          : projections.every((projection) => projection.moduleImpact === "verified-noninterfering" || projection.moduleImpact === "not-applicable") ? "verified-noninterfering" as const : "unresolved" as const,
+        scopeDiagnostics: [...new Set(projections.flatMap((projection) => projection.diagnostics))].sort(),
+      } : {}),
+      ...(control.authority?.weightedQuorum && !weightedReviewIsCurrent(control.authority.weightedQuorum, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
+        ? { authority: { ...control.authority, weightedQuorum: { ...control.authority.weightedQuorum, status: "unknown" as const } } } : {}),
+    };
+  });
   // unresolved control without one keeps the hard reason.
   const unresolvedControls = review.controls.filter((control) => !controlCanCarryKnownStatus(control));
   const allUnresolvedScoped =
     unresolvedControls.length > 0 &&
     unresolvedControls.every((control) => control.scopedQuestionFresh === true);
   const status =
-    review.state === "reviewed-controls"
+    review.state === "reviewed-controls" && unresolvedControls.length === 0
       ? createV9FactStatus({
           applicability: requiredV9Applicability("v9.control.review"),
           observationState: "known",
@@ -77,7 +96,7 @@ export function buildControls(context: AssetBuildContext): {
           ownerDomain: "control",
           responsibility: "issuer-undisclosed",
           policyRuleId: "v9.control.review",
-          message: review.rationale,
+          message: review.state === "partially-reviewed-controls" ? review.rationale : "One or more independently identified authorities remain unreviewed.",
           observationState: "bounded-unknown",
           evidenceRefIds: evidenceIds,
         }).status;
@@ -89,13 +108,10 @@ export function buildControls(context: AssetBuildContext): {
     controlStatus: status,
     controls: review.controls.map((control) => {
       // Materiality bounds the charge, not our knowledge of the authority.
-      const controlStatus = control.economicLossScope === "access-only" || controlSemanticsAreKnown(control)
+      const controlStatus = (!controlHasExactAuthorityReview(control) && control.economicLossScope === "access-only") || controlSemanticsAreKnown(control)
         ? createV9FactStatus({
-            applicability: controlNeedsNonApplicableStatus(control)
-              ? notApplicableV9Fact(
-                  "v9.control.review",
-                  "This resolved control does not bind the control pillar.",
-                )
+            applicability: !controlHasExactAuthorityReview(control) && controlNeedsNonApplicableStatus(control)
+              ? notApplicableV9Fact("v9.control.review", "This resolved control does not bind the control pillar.")
               : requiredV9Applicability("v9.control.review"),
             observationState: "known",
             evidenceRefIds: evidenceIds,
@@ -110,24 +126,22 @@ export function buildControls(context: AssetBuildContext): {
   };
 }
 
+function controlHasExactAuthorityReview(control: ExtensionControlOverlay): boolean {
+  return control.executionScopeComplete === true;
+}
+
 function controlIsNonBinding(control: ExtensionControlOverlay): boolean {
-  return (
-    control.economicLossScope === "access-only" ||
-    (control.economicLossScope === "deployment" &&
-      control.materialSupplyShare !== null &&
-      control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
-  );
+  return control.economicLossScope === "access-only" ||
+    (control.economicLossScope === "deployment" && control.materialSupplyShare !== null &&
+      control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD);
 }
 
 function controlNeedsNonApplicableStatus(control: ExtensionControlOverlay): boolean {
-  return (
-    controlIsNonBinding(control) &&
-    (control.capSemantics.kind === "unknown" ||
-      control.claimImpairment === "unknown" ||
-      control.authority === null ||
-      control.failureDomains.length === 0)
-  );
+  return controlIsNonBinding(control) &&
+    (control.capSemantics.kind === "unknown" || control.claimImpairment === "unknown" ||
+      control.authority === null || control.failureDomains.length === 0);
 }
+
 
 function controlSemanticsAreKnown(control: ExtensionControlOverlay): boolean {
   return (
@@ -141,7 +155,7 @@ function controlSemanticsAreKnown(control: ExtensionControlOverlay): boolean {
 }
 
 export function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
-  return controlIsNonBinding(control) || controlSemanticsAreKnown(control);
+  return (!controlHasExactAuthorityReview(control) && controlIsNonBinding(control)) || controlSemanticsAreKnown(control);
 }
 
 function boundedControlSemanticsStatus(

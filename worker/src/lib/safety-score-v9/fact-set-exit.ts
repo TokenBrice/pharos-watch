@@ -15,6 +15,11 @@ import {
 } from "@shared/lib/safety-score-v9/reasons";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
+import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
+import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import type {
   V9EvidenceResponsibility,
@@ -72,20 +77,18 @@ function routeEvidence(
   rejection: z.infer<typeof RejectionSchema> | null,
   retained: boolean,
 ): string {
-  const generationId = lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId;
+  const generationId = observation.executionCertificate?.observationGenerationId ??
+    (lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId);
   // Documented-terms evidence lives on the review cadence the policy states
   // (semantic.exit.documentedTermsMaxAgeSec), not the producer cron cadence.
-  const maxAgeSec =
+  const maxAgeSec = observation.executionCertificate?.sourceMaxAgeSec ?? (
     lane === "dex"
       ? observation.evidenceKind === "measured-executable-depth"
-        ? Math.max(
-            context.extension.routeFreshness.dexMaxAgeSec,
-            getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? ""),
-          )
+        ? Math.max(context.extension.routeFreshness.dexMaxAgeSec, getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? ""))
         : context.extension.routeFreshness.dexMaxAgeSec
       : observation.evidenceKind === "documented-terms"
         ? context.extension.routeFreshness.documentedTermsMaxAgeSec
-        : context.extension.routeFreshness.redemptionMaxAgeSec;
+        : context.extension.routeFreshness.redemptionMaxAgeSec);
   return addEvidence(
     context,
     createV9EvidenceReference(
@@ -201,6 +204,20 @@ function buildRoute(
   );
   const evidence = context.evidence.get(evidenceId)!;
   const baseDomains = scopeFailureDomains(args.observation, args.lane);
+  const certificate = args.observation.executionCertificate;
+  const supplyUsd = getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById?.[context.asset.assetId] ?? {});
+  const executionPolicy = args.observation.executionModelId ? loadV9CandidateMethodologyPolicy(context.fixedInput.clockSec) : null;
+  const executionRequest = executionPolicy ? selectV9ExitStressRequest(supplyUsd, executionPolicy) : null;
+  const executionAdmission = args.observation.executionModelId
+    ? certificate && executionPolicy && executionRequest
+      ? admitExitExecutionCertificate({
+          certificate, envelope: executionPolicy, assetId: context.asset.assetId, clockSec: context.fixedInput.clockSec,
+          inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, supplyUsd, certificate.inputReference),
+          observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
+          request: executionRequest,
+        })
+      : { state: "unavailable" as const, reason: "execution-certificate-missing", responsibility: "method-unsupported" as const }
+    : null;
 
   if (!args.review) {
     const gapId = routeGap(
@@ -280,6 +297,7 @@ function buildRoute(
   let routeState: V9FactStatusV2["observationState"] = "known";
   if (args.disposition === "rejected") routeState = "unsupported";
   else if (evidence.freshness.state === "stale") routeState = "stale";
+  if (executionAdmission?.state === "unavailable") routeState = "unsupported";
   const routeGapId =
     routeState === "known"
       ? null
@@ -289,8 +307,8 @@ function buildRoute(
           routeState === "stale" ? "stale" : "rejected",
           routeState,
           routeState === "stale" ? "missing-runtime-route-evidence" : "unsupported-same-notional-route",
-          routeState === "stale" ? "producer-failed" : "method-unsupported",
-          routeState === "stale"
+          executionAdmission?.state === "unavailable" ? executionAdmission.responsibility : routeState === "stale" ? "producer-failed" : "method-unsupported",
+          executionAdmission?.state === "unavailable" ? executionAdmission.reason : routeState === "stale"
             ? "The retained route observation is older than the lane freshness bound."
             : "The retained route observation was rejected by its producer or review process.",
           [evidenceId],
@@ -395,7 +413,7 @@ function buildRoute(
   // atomic producer route can become an unbounded queue), so re-apply the
   // score-bearing contract after the review has been materialized.
   const scoreEligible = isDexExitRouteScoreEligible({
-    producerScoreEligible: args.observation.scoreEligible,
+    producerScoreEligible: args.observation.scoreEligible && executionAdmission?.state !== "unavailable",
     routeState,
     outputState: output.status.observationState,
     coverageClass: args.review.coverageClass,
@@ -406,6 +424,8 @@ function buildRoute(
     settlementModel: args.review.settlementModel,
     settlementSlaSec: args.review.settlementSlaSec,
     physicalResourceKeys: args.review.physicalResourceKeys,
+    executionModelId: args.observation.executionModelId,
+    executionAdmission,
   });
   return {
     routeKey,
@@ -422,7 +442,9 @@ function buildRoute(
     evidenceKind: args.observation.evidenceKind,
     ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
     ...(args.observation.physicalToUsd ? { physicalToUsd: args.observation.physicalToUsd } : {}),
-    coverageClass: args.review.coverageClass,
+    ...(args.observation.executionModelId ? { executionModelId: args.observation.executionModelId } : {}),
+    ...(certificate ? { executionCertificate: certificate } : {}),
+    coverageClass: executionAdmission?.state === "unavailable" ? "diagnostic" : args.review.coverageClass,
     capacityScoringHorizon: args.review.capacityScoringHorizon ?? "unknown",
     settlementModel: args.review.settlementModel,
     settlementSlaSec: args.review.settlementSlaSec,
@@ -769,6 +791,23 @@ export function buildRoutes(context: AssetBuildContext): {
     coverage.status === "populated" &&
     (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageWithinRouteBudget(coverage));
   const portfolioGapIds = [...gapIds];
+  if (reviewedExecutionModels.reviews.length > 0) {
+    const executionPolicy = loadV9CandidateMethodologyPolicy();
+    for (const review of validateExitExecutionModelReviews(reviewedExecutionModels, executionPolicy)) {
+      if (review.identity.assetId !== context.asset.assetId || Date.parse(review.reviewedAt) > context.fixedInput.clockSec * 1000 ||
+          Date.parse(review.expiresAt) < context.fixedInput.clockSec * 1000 ||
+          routes.some((route) => route.routeId === `execution:${exitExecutionReviewDigest(review)}`)) continue;
+      portfolioGapIds.push(addGap(context, createV9FactGapV3({
+        gapId: `${context.asset.assetId}:gap:exit-execution:${exitExecutionReviewDigest(review)}`,
+        reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit", policyRuleId: "v9.exit.same-notional-route",
+        observationState: "missing",
+        responsibility: executionPolicy.policy.semantic.exit.executionModels[review.modelId]!.admission === "enabled" ? "producer-failed" : "method-unsupported",
+        path: { kind: "local-component", componentKey: `exit-execution:${exitExecutionReviewDigest(review)}` },
+        message: "A reviewed execution rail has no runtime certificate; capacity is unavailable, not observed zero.",
+        evidenceRefIds: [],
+      })));
+    }
+  }
   if (!dexSurfaceComplete) {
     // R1-A / R1-B (owner ruling 2026-07-29). The legacy single message asserted
     // that reviewed execution-capability pools exist but are unobserved, which

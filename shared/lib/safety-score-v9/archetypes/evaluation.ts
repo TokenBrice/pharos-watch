@@ -210,6 +210,7 @@ function evaluateV9ArchetypeBackingInternal(
       ? undefined
       : verifiedLiveInheritedExposure(input.asset, input.asset.inheritedStablecoinBacking);
   if (
+    archetypePolicy.allowCompleteLiveParentMechanismBypass &&
     verifiedLiveInheritance !== undefined &&
     reserve.contributions.some(
       (contribution) =>

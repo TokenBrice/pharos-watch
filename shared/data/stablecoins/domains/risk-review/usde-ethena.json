@@ -105,7 +105,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethereum is the sole reviewed native USDe issuance route. The canonical Ethereum OFT adapter and satellite deployments are representation machinery assessed under Bridge Risk. At Tempo block 42130562, the issuer-listed OFT is the TIP-20's sole issuer-role holder, and a 5-of-10 Safe holds the token's default-admin, pause, unpause and blocked-balance-burn roles. The token's 300,000,000 USDe supply cap is immediately admin-raiseable. The route remains external lock/mint; current OFT upgrade-function semantics and messaging quorum are not established by this review.",
+    "summary": "Ethereum is the sole reviewed native USDe issuance route. The canonical Ethereum OFT adapter and satellite deployments are representation machinery assessed under Bridge Risk. Tempo's issuer-listed OFT holds the TIP-20 issuer role, while a 5-of-10 Safe controls token administration and an immediately raiseable 300,000,000 USDe supply cap. At Tempo block 42155679, a read-only upgradeAndCall simulation from that Safe through the current ProxyAdmin succeeded; the same request from an unauthorized account reverted. Exact partial execution scopes retain unclosed messaging, destination, implementation-source and economic-liability boundaries; no all-destination protection or local economic-loss bound is inferred.",
     "reviewedAt": "2026-09-04",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); Codex Tempo USDe linkage refresh",
     "confidence": "verified",
@@ -1447,7 +1447,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Historical reads at Tempo blocks 37948550 (2026-09-04) and 42066527 (2026-10-01) established the TIP-20 identity and the issuer-listed replacement OFT, but left role semantics unresolved. At block 42130562 on 2026-10-01, OFT 0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f token() returns this TIP-20 and endpoint() returns 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c. Complete RoleMembershipUpdated replay from token creation block 14579720 through the pinned block, in 100,000-block chunks, resolves the OFT as sole ISSUER_ROLE holder and Safe 0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b as sole DEFAULT_ADMIN_ROLE, PAUSE_ROLE, UNPAUSE_ROLE and BURN_BLOCKED_ROLE holder. Current hasRole(address,bytes32) reads confirm each holder. The Safe has threshold 5, ten owners, no enabled modules and a zero guard slot. TIP-20 supplyCap() returns 300,000,000 USDe, which its default admin can raise; the admin can also grant additional issuer roles under the documented precompile interface. The OFT's EIP-1967 implementation remains 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a; admin slot 0x4371714e061d4b1e800cf93795d0ca3f62a70e36 owner() returns this Safe. OFT DEFAULT_ADMIN_ROLE also resolves to the Safe by complete RoleGranted/RoleRevoked replay over the same interval and current hasRole. Its owner() still reverts. No timelock, verified upgrade-function access semantics, complete messaging quorum, peer configuration or reconciled route-liability partition is inferred.",
+        "reviewNote": "Historical reads at Tempo blocks 37948550 (2026-09-04) and 42066527 (2026-10-01) established the TIP-20 identity and the issuer-listed replacement OFT, but left role semantics unresolved. At block 42130562 on 2026-10-01, OFT 0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f token() returns this TIP-20 and endpoint() returns 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c. Complete RoleMembershipUpdated replay from token creation block 14579720 through the pinned block, in 100,000-block chunks, resolves the OFT as sole ISSUER_ROLE holder and Safe 0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b as sole DEFAULT_ADMIN_ROLE, PAUSE_ROLE, UNPAUSE_ROLE and BURN_BLOCKED_ROLE holder. Current hasRole(address,bytes32) reads confirm each holder. The Safe has threshold 5, ten owners, no enabled modules and a zero guard slot. TIP-20 supplyCap() returns 300,000,000 USDe, which its default admin can raise; the admin can also grant additional issuer roles under the documented precompile interface. The OFT's EIP-1967 implementation remains 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a; admin slot 0x4371714e061d4b1e800cf93795d0ca3f62a70e36 owner() returns this Safe. OFT DEFAULT_ADMIN_ROLE also resolves to the Safe by complete RoleGranted/RoleRevoked replay over the same interval and current hasRole. Its owner() still reverts. A later read-only simulation at block 42155679 establishes a callable upgradeAndCall entrypoint through that ProxyAdmin from the Safe, while the unauthorized control request reverts. Exact partial certificates describe current token-role and upgrade targets without closing implementation-source correspondence, alternate execution, all-direction messaging or economic-liability scope. No complete messaging quorum or reconciled route-liability partition is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "tempo",
         "controllerAddress": "0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b",
@@ -1529,7 +1529,89 @@
             "url": "https://rpc.tempo.xyz"
           }
         ],
-        "evidence": "At Tempo block 42130562, the issuer-listed OFT token() identifies the authored TIP-20 and hasRole(OFT, ISSUER_ROLE) returns true. Complete RoleMembershipUpdated replay from creation block 14579720 resolves it as the sole issuer after the historical 0x5d3a1ff2... issuer was revoked at block 18728183. The published TIP-20 interface requires ISSUER_ROLE for mint and burn, and enforces supplyCap on mint. supplyCap() is 300000000000000 base units at six decimals; the OFT is not a token default admin. No current LayerZero verification quorum or verified OFT implementation behavior is inferred."
+        "evidence": "At Tempo block 42130562, the issuer-listed OFT token() identifies the authored TIP-20 and hasRole(OFT, ISSUER_ROLE) returns true. Complete RoleMembershipUpdated replay from creation block 14579720 resolves it as the sole issuer after the historical 0x5d3a1ff2... issuer was revoked at block 18728183. The published TIP-20 interface requires ISSUER_ROLE for mint and burn, and enforces supplyCap on mint. supplyCap() is 300000000000000 base units at six decimals; the OFT is not a token default admin. Block 42155679 independently re-confirms the token/endpoint, issuer role, supply cap and implementation identity. The scope names the TIP-20 selectors callable by this role, not a complete source-proven OFT ingress graph. No current LayerZero verification quorum or verified OFT implementation behavior is inferred.",
+        "executionScope": {
+          "controllerDeployment": "tempo:0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-12-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataEthena)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ethena exact Tempo token and OFT identities",
+              "url": "https://docs.ethena.fi/technical-design/key-addresses"
+            },
+            {
+              "label": "TIP-20 issuer-only mint and burn interface",
+              "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+            },
+            {
+              "label": "Tempo pinned controller, role and runtime reads",
+              "url": "https://rpc.tempo.xyz"
+            }
+          ],
+          "pin": {
+            "position": "42155679",
+            "hash": "0xee1b244a07695f7dfab2e192962716a039dede5a1f985e715bfc2af197265b23",
+            "runtimeIdentity": "proxy-keccak256:0x9583e6c883b928697ac41b237d1749b9c9211da72e2646ec65f84b99a8c1100e;implementation:0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a;implementation-keccak256:0x34533f49675a000a0c460ab602e7a7eb1935353271602ed1b78d4918259fab62",
+            "signerIdentity": "TIP20:0x20c0000000000000000000002f52d5cc21a3207b;ISSUER_ROLE:0x114e74f6ea3bd819998f78687bfcb11b140da08e9b7d222fa9c1f1ba1f2aa122;holder:0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f"
+          },
+          "observedState": {
+            "position": "42155679",
+            "hash": "0xee1b244a07695f7dfab2e192962716a039dede5a1f985e715bfc2af197265b23",
+            "runtimeIdentity": "proxy-keccak256:0x9583e6c883b928697ac41b237d1749b9c9211da72e2646ec65f84b99a8c1100e;implementation:0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a;implementation-keccak256:0x34533f49675a000a0c460ab602e7a7eb1935353271602ed1b78d4918259fab62",
+            "signerIdentity": "TIP20:0x20c0000000000000000000002f52d5cc21a3207b;ISSUER_ROLE:0x114e74f6ea3bd819998f78687bfcb11b140da08e9b7d222fa9c1f1ba1f2aa122;holder:0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "tempo-tip20-issuer-mint-burn",
+              "targetDeployment": "tempo:0x20c0000000000000000000002f52d5cc21a3207b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19",
+                "0xe44f0b12",
+                "0x42966c68",
+                "0x38f23b0b"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "bridge-mint",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usde-ethena"
+              ],
+              "affectedDeployments": [
+                "tempo:0x20c0000000000000000000002f52d5cc21a3207b"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
       },
       {
         "id": "tempo-usde-token-admin",
@@ -1538,6 +1620,7 @@
         ],
         "capabilities": [
           "admin",
+          "upgrade",
           "pause",
           "bridge-burn"
         ],
@@ -1566,7 +1649,7 @@
           "enabledModules": [],
           "guard": null,
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "observedBlock": 42130562,
+          "observedBlock": 42155679,
           "observedAt": "2026-10-01",
           "source": "onchain"
         },
@@ -1576,7 +1659,7 @@
           "tempo:0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b"
         ],
         "observedAt": "2026-10-01",
-        "observedBlock": 42130562,
+        "observedBlock": 42155679,
         "sources": [
           {
             "label": "Tempo TIP-20 administrative and role specification",
@@ -1587,7 +1670,157 @@
             "url": "https://rpc.tempo.xyz"
           }
         ],
-        "evidence": "Complete TIP-20 role replay and current hasRole(address,bytes32) reads at block 42130562 identify this Safe as sole token default admin, pauser, unpauser and blocked-balance burner. Current getRoleAdmin reads return DEFAULT_ADMIN_ROLE for all token roles. The documented TIP-20 interface permits its default admin to setSupplyCap and grant issuer roles immediately. getThreshold is 5, getOwners returns ten owners, getModulesPaginated returns no modules and next=0x1, and the Safe guard slot is zero. The OFT's DEFAULT_ADMIN_ROLE also belongs to this Safe; its EIP-1967 admin-slot address owner() returns the Safe, but verified proxy-upgrade function semantics remain unestablished."
+        "evidence": "Complete TIP-20 role replay and current hasRole(address,bytes32) reads at block 42130562 identify this Safe as sole token default admin, pauser, unpauser and blocked-balance burner. Current getRoleAdmin reads return DEFAULT_ADMIN_ROLE for all token roles. The documented TIP-20 interface permits its default admin to setSupplyCap and grant issuer roles immediately. getThreshold is 5, getOwners returns ten owners, getModulesPaginated returns no modules and next=0x1, and the Safe guard slot is zero. The OFT's DEFAULT_ADMIN_ROLE also belongs to this Safe. Fresh block 42155679 re-confirms token roles, threshold/ten owners, empty module page, implementation/admin slots and ProxyAdmin owner. Read-only eth_call from this Safe to ProxyAdmin 0x4371714e061d4b1e800cf93795d0ca3f62a70e36 with upgradeAndCall(current OFT,current implementation,empty bytes) succeeds; the identical unauthorized-account request reverts with OwnableUnauthorizedAccount. UPGRADE_INTERFACE_VERSION returns 5.0.0. Safe-origin setSupplyCap(300000001000000) and grantRole(ISSUER_ROLE,0x0000000000000000000000000000000000000002) simulations also succeed. No transaction was broadcast. Source correspondence, alternate upgrade/bypass paths, Safe fallback noninterference, all-destination messaging and economic-loss scope remain unclosed.",
+        "executionScope": {
+          "controllerDeployment": "tempo:0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-12-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataEthena)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "TIP-20 administrative, role and pause interfaces",
+              "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+            },
+            {
+              "label": "Tempo pinned roles, signing identity and read-only upgrade simulations",
+              "url": "https://rpc.tempo.xyz"
+            }
+          ],
+          "pin": {
+            "position": "42155679",
+            "hash": "0xee1b244a07695f7dfab2e192962716a039dede5a1f985e715bfc2af197265b23",
+            "runtimeIdentity": "safe-proxy-keccak256:0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c;proxyadmin:0x4371714e061d4b1e800cf93795d0ca3f62a70e36;proxyadmin-keccak256:0x245ef4e936127f651e6babd91f0a1c6f2075bb8402a13e5a4621315f37be3a43",
+            "signerIdentity": "owners-abi-plus-threshold=5;sha256:6532836629fec331a3339300bdcd06cc20a03a52e1173db19a2bea68f9d80d47"
+          },
+          "observedState": {
+            "position": "42155679",
+            "hash": "0xee1b244a07695f7dfab2e192962716a039dede5a1f985e715bfc2af197265b23",
+            "runtimeIdentity": "safe-proxy-keccak256:0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c;proxyadmin:0x4371714e061d4b1e800cf93795d0ca3f62a70e36;proxyadmin-keccak256:0x245ef4e936127f651e6babd91f0a1c6f2075bb8402a13e5a4621315f37be3a43",
+            "signerIdentity": "owners-abi-plus-threshold=5;sha256:6532836629fec331a3339300bdcd06cc20a03a52e1173db19a2bea68f9d80d47"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "tempo-tip20-admin-cap-roles",
+              "targetDeployment": "tempo:0x20c0000000000000000000002f52d5cc21a3207b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xb6a3f59a",
+                "0x2f2ff15d",
+                "0xd547741f",
+                "0x1e4e0091"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change",
+                "bridge-mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usde-ethena"
+              ],
+              "affectedDeployments": [
+                "tempo:0x20c0000000000000000000002f52d5cc21a3207b"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [
+                "tempo-oft-proxy-upgrade"
+              ],
+              "bypassRefs": []
+            },
+            {
+              "id": "tempo-tip20-pause-blocked-burn",
+              "targetDeployment": "tempo:0x20c0000000000000000000002f52d5cc21a3207b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x8456cb59",
+                "0x3f4ba83a",
+                "0xec0cf3dc"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "freeze",
+                "burn"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "deployment",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usde-ethena"
+              ],
+              "affectedDeployments": [
+                "tempo:0x20c0000000000000000000002f52d5cc21a3207b"
+              ],
+              "reach": "deployment",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "tempo-tip20-admin-cap-roles"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "tempo-oft-proxy-upgrade",
+              "targetDeployment": "tempo:0x4371714e061d4b1e800cf93795d0ca3f62a70e36",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9623609d"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usde-ethena"
+              ],
+              "affectedDeployments": [
+                "tempo:0x20c0000000000000000000002f52d5cc21a3207b",
+                "tempo:0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        }
       }
     ]
   }

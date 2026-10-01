@@ -10,10 +10,14 @@ import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
 import type { V9ExtensionRegistryMeta } from "./extension-shared";
 import type { SafetyScoreV9TransferMaterialScope } from "./extension-transfer";
 import { reviewedDeploymentObservationTimingIssue } from "./supply-attribution-contract";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
+import type { SafetyScoreV9CompilerInput } from "./native-input";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY =
   "safety-score-v9:transfer-materiality-generation:v1";
-const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC = 1_800;
+const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
   "aa-falconx-mev-capital", "asusdf-astherus", "bbqusdc-steakhouse", "bd-basedollar", "dusd-dialectic",
@@ -25,6 +29,7 @@ export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
   "susdd-tron-dao-reserve", "susds-sky", "susn-noon", "syzusd-yuzu", "usdcx-movement",
   "vcred-vcred", "vusd-virtue", "wsrusd-reservoir", "xdai-gnosis", "ybold-yearn",
   "yusd-yieldfi", "zsd-zephyr-protocol", "zys-zephyr-protocol",
+  ...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys(),
 ].sort(compareText));
 
 const TRANSFER_MATERIALITY_ASSET_ID_SET = new Set(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS);
@@ -124,7 +129,7 @@ export function exactInputBoundTransferMaterialityPacket(input: {
   if (observations.some((row) => {
     const deployment = deploymentByKey.get(row.deploymentKey);
     return row.status !== "accepted" || row.rawTokenUnits === null || row.decimals === null ||
-      row.blockNumber === null || row.observedAtSec === null || !deployment ||
+      row.blockNumber === null || row.observedAtSec === null || !deployment || !isFixedDecimalDeployment(deployment) ||
       row.decimals !== deployment.decimals || row.observedAtSec > input.clockSec ||
       input.clockSec - row.observedAtSec > SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC;
   })) return null;
@@ -214,5 +219,31 @@ export function transferMaterialScopeFromSingleDeploymentAttribution(input: {
     deploymentModel: "contract-addressable",
     scopeBasis: "attributed",
     scopeAttestation: attestation,
+  };
+}
+
+/** Economic percentages only after the exhaustive, source-bound packet is admitted. */
+export function transferMaterialScopeFromEconomicDeploymentPartition(input: {
+  assetId: string; fixedInput: Readonly<SafetyScoreV9CompilerInput>; baseScope: SafetyScoreV9TransferMaterialScope;
+}): SafetyScoreV9TransferMaterialScope {
+  const packet = input.fixedInput.safetyScoreV9SupplyAttributionById?.[input.assetId];
+  if (packet?.model !== "reviewed-economic-deployment-partition-v1") return input.baseScope;
+  const rejected = { ...input.baseScope, materialDeploymentScopeComplete: false };
+  const aggregate = input.fixedInput.aggregateCirculatingById[input.assetId];
+  if (!packet.quantitativeCompleteness || packet.aggregate.supplyUsd <= 0 ||
+    packet.unattributedSupplyUsd > 0 || reviewedEconomicDeploymentAttributionValidationError({
+      assetId: input.assetId, attribution: packet, aggregateSupplyUsd: getCirculatingRaw(aggregate ?? {}),
+      clockSec: input.fixedInput.clockSec, registryFingerprint: input.fixedInput.registryFingerprint,
+      baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration,
+      aggregateObservedAtSec: aggregate?.observedAtSec ?? null, referencePrice: input.fixedInput.navPriceById?.[input.assetId] ?? null,
+      chainRows: input.fixedInput.chainCirculatingById[input.assetId],
+    }) !== null) return rejected;
+  const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+  const nativeKeys = packet.deployments.filter(row => row.holdingKind === "native-gas").map(row => row.deploymentKey);
+  return {
+    authoritativeDeploymentKeys: packet.deployments.map(row => row.deploymentKey).sort(compareText),
+    materialDeploymentKeys: packet.deployments.filter(row => row.currentSupplyUsd / packet.aggregate.supplyUsd >= threshold).map(row => row.deploymentKey).sort(compareText),
+    materialDeploymentScopeComplete: true, deploymentModel: nativeKeys.length > 0 ? "mixed-economic" : "contract-addressable",
+    reviewedNativeDeploymentKeys: nativeKeys, scopeBasis: "attributed",
   };
 }

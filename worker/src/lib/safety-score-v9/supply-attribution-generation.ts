@@ -19,6 +19,7 @@ import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   deriveReviewedDeploymentUnitPartition,
 } from "./supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, deriveReviewedEconomicDeploymentPartition, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_ASSET_ID,
@@ -278,6 +279,7 @@ function expectedJournalSourceId(
       assetId === "wm-m0" ? "wm-m0" : CENTRIFUGE_BURN_MINT_ASSET_IDS[0],
     );
   }
+  if (attribution.model === "reviewed-economic-deployment-partition-v1") return expectedJournalSourceIdForAsset(assetId);
   return null;
 }
 
@@ -346,6 +348,17 @@ function assertCaptureBindings(input: {
     }
     if (!attribution) continue;
 
+    if (attribution.model === "reviewed-economic-deployment-partition-v1") {
+      const error = reviewedEconomicDeploymentAttributionValidationError({
+        assetId, attribution, aggregateSupplyUsd: aggregateSupplyUsd(input.fixedInput, assetId),
+        registryFingerprint: input.fixedInput.registryFingerprint, clockSec: input.fixedInput.clockSec,
+        baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration,
+        aggregateObservedAtSec: input.fixedInput.aggregateCirculatingById[assetId]?.observedAtSec ?? null,
+        referencePrice: input.fixedInput.navPriceById?.[assetId] ?? null,
+        chainRows: input.fixedInput.chainCirculatingById[assetId],
+      });
+      if (error) throw new Error(error);
+    }
     const expectedSourceId = expectedJournalSourceId(assetId, attribution);
     if (
       expectedSourceId === null ||
@@ -609,7 +622,20 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
               scoringClockSec: fixedInput.clockSec,
               observation: stored.observation,
             })
-          : null;
+          : stored.model === "reviewed-economic-deployment-partition-v1" &&
+            REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) &&
+            stored.baseInputGenerationId === fixedInput.baseInputGenerationId &&
+            stored.sourceGeneration === fixedInput.sourceGeneration &&
+            stored.aggregate.supplyUsd === aggregate &&
+            stored.aggregate.observedAtSec === fixedInput.aggregateCirculatingById[assetId]?.observedAtSec
+            ? deriveReviewedEconomicDeploymentPartition({
+                plan: REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId)!,
+                baseInputGenerationId: fixedInput.baseInputGenerationId, sourceGeneration: fixedInput.sourceGeneration,
+                registryFingerprint: fixedInput.registryFingerprint, clockSec: fixedInput.clockSec,
+                aggregate: stored.aggregate, referencePrice: stored.referencePrice, conversions: stored.conversions,
+                observations: stored.observations, inFlight: stored.inFlight,
+              })
+            : null;
     // Each accepted asset carries its own observation contract, so a re-derivation
     // failure (typically an observation that aged past that asset's own window
     // while the generation itself is still fresh) drops only that asset's row.

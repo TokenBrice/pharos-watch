@@ -19,6 +19,7 @@ interface WrapperFixture {
 
 function wrapperFixture(variantKind: "strategy-vault" | "risk-absorption" | "savings-passthrough"): WrapperFixture {
   const draft = makeV9TwoAssetFixedInput({ clockSec: Date.parse("2026-10-02T00:00:00Z") / 1_000 });
+  draft.aggregateCirculatingById.beta = structuredClone(draft.aggregateCirculatingById.alpha!);
   draft.liveReserveMap.alpha = [{
     name: "Direct parent receipt",
     pct: 100,
@@ -64,6 +65,7 @@ function directAllocationFixture() {
     expiresAt: "2026-11-01",
     reviewer: "fixture",
     custody: "fully-onchain-no-offchain-custodian",
+    scopeKind: "whole-allocation",
     localLeverage: "no-borrowing-surface",
     capitalReuse: "none",
     rationale: "The wrapper holds only its tracked parent token; custody uncertainty belongs upstream.",
@@ -165,10 +167,12 @@ describe("wrapper-local loss absorption and custody scope", () => {
     "keeps local complexity high with %s direct-parent scope proof",
     (scenario) => {
       const fixture = directAllocationFixture();
+      const allocationReview = fixture.wrapper.wrapperAllocationReview;
+      if (allocationReview?.scopeKind !== "whole-allocation") throw new Error("Expected whole-allocation review");
       if (scenario === "absent") fixture.wrapper.wrapperAllocationReview = null;
-      else if (scenario === "expired") fixture.wrapper.wrapperAllocationReview!.expiresAt = "2026-10-02";
-      else if (scenario === "future") fixture.wrapper.wrapperAllocationReview!.reviewedAt = "2026-10-03";
-      else if (scenario === "local-reuse") fixture.wrapper.wrapperAllocationReview!.capitalReuse = "multi-strategy-reuse";
+      else if (scenario === "expired") allocationReview.expiresAt = "2026-10-02";
+      else if (scenario === "future") allocationReview.reviewedAt = "2026-10-03";
+      else if (scenario === "local-reuse") allocationReview.capitalReuse = "multi-strategy-reuse";
       else {
         fixture.fixed.liveReserveMap.alpha![0]!.coinId = undefined;
         fixture.fixed.liveReserveMap.alpha![0]!.assetClass = scenario === "local-private-credit" ? "private-credit" : "cash";
@@ -243,10 +247,12 @@ describe("wrapper-local loss absorption and custody scope", () => {
     "keeps direct onchain custody conservative with %s corroboration",
     (scenario) => {
       const fixture = directAllocationFixture();
+      const allocationReview = fixture.wrapper.wrapperAllocationReview;
+      if (allocationReview?.scopeKind !== "whole-allocation") throw new Error("Expected whole-allocation review");
       fixture.wrapper.variantKind = "savings-passthrough";
       fixture.wrapper.wrapperCustodyReview!.custodyModel = "onchain";
-      if (scenario === "expired-allocation") fixture.wrapper.wrapperAllocationReview!.expiresAt = "2026-10-02";
-      else if (scenario === "future-allocation") fixture.wrapper.wrapperAllocationReview!.reviewedAt = "2026-10-03";
+      if (scenario === "expired-allocation") allocationReview.expiresAt = "2026-10-02";
+      else if (scenario === "future-allocation") allocationReview.reviewedAt = "2026-10-03";
       else {
         fixture.wrapper.wrapperAllocationReview = null;
         if (scenario !== "absent-allocation") {

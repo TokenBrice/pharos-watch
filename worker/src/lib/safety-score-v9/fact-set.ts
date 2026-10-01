@@ -61,6 +61,7 @@ import {
   buildSupply,
 } from "./fact-set-peg-supply";
 import { buildWrapperLocalFacts, resolveWrapperForm } from "./fact-set-wrapper";
+import { buildAllocationScopeFacts } from "./fact-set-allocation";
 
 export {
   SafetyScoreV9FactSetExtensionV2Schema,
@@ -125,6 +126,9 @@ function buildAssetFacts(
   const peg = buildPeg(context);
   const supply = buildSupply(context);
   const operationalResilience = buildOperationalResilienceFact(context);
+  const allocationScopeFacts = buildAllocationScopeFacts(context, {
+    dependencies, reserveStatus: reserves.reserveStatus, reserveExposures: reserves.reserveExposures,
+  });
   const wrapperLocalFacts = applySafetyScoreV9WrapperIncidentRoutes(
     context,
     buildWrapperLocalFacts(context, {
@@ -139,6 +143,7 @@ function buildAssetFacts(
       economicControlReview,
       peg,
       supply,
+      allocationScopeFacts,
     }),
   );
   const compiledAsset: V9AssetFactsV3 = {
@@ -164,6 +169,7 @@ function buildAssetFacts(
     supply,
     operationalResilience,
     wrapperLocalFacts,
+    allocationScopeFacts,
   };
   // Normalize once at the producer boundary so every score-bearing pillar,
   // including nested mechanism reviews, shares the same chain identity.
@@ -374,6 +380,7 @@ function buildQuarantinedAssetFacts(
       failureDomains: [],
     },
     operationalResilience: null,
+    allocationScopeFacts: [],
     wrapperLocalFacts: quarantinedWrapperLocalFacts(
       context.asset,
       dependencies,

@@ -8,6 +8,7 @@ import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { isV9CreditableNonAtomicRedemption, isV9ExitRouteOutputResolved } from "./exit";
 import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "./policy";
 import { compareText, uniqueSorted } from "./primitives";
+import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 
 export type V9TransferPosture = "permissionless" | "restrictable" | "permissioned" | "unknown";
 export type V9FreezeExposure = "none-known" | "upstream" | "direct" | "possible" | "unknown";
@@ -258,6 +259,7 @@ function deriveGovernance(
     const posture: Exclude<V9GovernancePosture, "unknown"> = (() => {
       if (control.authority.model === "none") return "immutable";
       if (control.authority.model === "governance") return "distributed";
+      if (control.authority.weightedQuorum && effectiveAuthoritySignatureRequirement(control.authority) === 1) return "single-entity";
       if (control.authority.model === "eoa" || control.authority.model === "issuer-backend") {
         return "single-entity";
       }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
@@ -223,12 +224,17 @@ describe("fetchOnChainMcap", () => {
     });
   });
 
-  it("skips the supply probe when contract decimals are missing", async () => {
+  it.each([
+    { chain: "ethereum", decimals: null },
+    { chain: "xrpl", decimals: null, amountEncoding: { kind: "xrpl-issued-currency" as const } },
+    { chain: "xrpl", decimals: 6 },
+    { chain: "ethereum", decimals: 6, amountEncoding: { kind: "xrpl-issued-currency" as const } },
+  ])("skips deployments without fixed-decimal amounts: %j", async (deployment) => {
     const source = makeSingleContractMeta();
     const meta = {
       ...source,
-      contracts: [{ chain: "ethereum", address: source.contracts?.[0]?.address ?? "0x0" }],
-    } as unknown as StablecoinMeta;
+      contracts: [{ ...source.contracts![0], ...deployment }],
+    };
 
     await expect(fetchOnChainMcap(meta, 1)).resolves.toBeNull();
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
@@ -530,9 +536,14 @@ describe("curation-expanded complete supply rosters", () => {
   });
 
   function installSupplyReads(meta: StablecoinMeta, supplies: Record<string, number>, unreadable?: string) {
-    const raw = (chain: string) => chain === unreadable
-      ? null
-      : BigInt(supplies[chain] * 10 ** meta.contracts!.find((contract) => contract.chain === chain)!.decimals);
+    const raw = (chain: string) => {
+      if (chain === unreadable) return null;
+      const contract = meta.contracts?.find((contract) => contract.chain === chain);
+      if (!contract || !isFixedDecimalDeployment(contract)) {
+        throw new Error(`Supply fixture requires fixed decimals for ${chain}`);
+      }
+      return BigInt(supplies[chain] * 10 ** contract.decimals);
+    };
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
       raw(input.kind === "onchain-solana" ? "solana" : input.chain),
     );

@@ -192,7 +192,8 @@
             "note": "Each has reserve LTV 0%, liquidation threshold 0.1%, and liquidation bonus 7.5%. Sources remain configured for existing collateral; these parameters do not establish new borrowing eligibility."
           }
         ],
-        "liquidationMechanism": "The deployed Pool uses Aave LiquidationLogic: collateral/debt valuation and health factor determine liquidation eligibility, priced collateral is exchanged for debt repayment, and close factors depend on health factor and position size. Reserve pause and liquidation-grace settings remain applicable.",
+        "liquidationMechanism": "The deployed Pool uses Aave LiquidationLogic: collateral/debt valuation and health factor determine liquidation eligibility, priced collateral is exchanged for debt repayment, and close factors depend on health factor and position size. At Ethereum block 26100093 (timestamp 1790889335), getLiquidationGracePeriod returned 0 for wstETH, WETH, ezETH, sUSDe, rsETH, tETH and GHO debt; no grace was active. The pinned Pool implementation's LiquidationLogic and ValidationLogic impose no other time delay. Reserve pause checks remain applicable.",
+        "liquidationDelaySec": 0,
         "backstop": "The Lido PoolAddressesProvider UMBRELLA registry entry is address(0) at the pinned block. Ethereum Core's stkGHO backstop is not a backstop for the Lido market.",
         "shutdownOrBadDebtBehavior": "The deployed LiquidationLogic burns residual borrower debt when no collateral remains and records reserve deficit. No market-local Umbrella is registered; this observation does not establish any automatic deficit coverage or global GHO shutdown.",
         "failureDomainKeys": [
@@ -331,7 +332,8 @@
           { "asset": "0x17418038ecf73ba4026c4f428547bf099706f27b", "maximumLtvPct": 66, "note": "Reserve liquidation threshold 76%, liquidation bonus 9%; eMode/category settings may override the reserve baseline." },
           { "asset": "0x7433806912eae67919e66aea853d46fa0aef98a8", "maximumLtvPct": 0.05, "note": "Reserve liquidation threshold 0.1%, liquidation bonus 6%; eMode/category settings may override the reserve baseline." }
         ],
-        "liquidationMechanism": "Aave liquidationCall repays debt and releases priced RWA collateral when health-factor and reserve checks permit. Liquidators must meet RWA issuer transfer/investor requirements; this is not unrestricted liquidation or guaranteed atomic redemption.",
+        "liquidationMechanism": "Aave liquidationCall repays debt and releases priced RWA collateral when health-factor and reserve checks permit. Liquidators must meet RWA issuer transfer/investor requirements; this is not unrestricted liquidation or guaranteed atomic redemption. At Ethereum block 26100093 (timestamp 1790889335), getLiquidationGracePeriod returned 0 for all eight listed RWA collateral assets and GHO debt; no grace was active. The pinned Pool implementation's LiquidationLogic and ValidationLogic impose no other time delay; the provider's priceOracleSentinel was address(0). Reserve pause and issuer eligibility checks remain applicable, not a fixed delay.",
+        "liquidationDelaySec": 0,
         "backstop": "The Horizon provider UMBRELLA entry is address(0) at block 26098749; Core stkGHO covers only the Core Pool and supplies no automatic Horizon deficit backstop.",
         "shutdownOrBadDebtBehavior": "Deployed LiquidationLogic burns residual debt after collateral exhaustion and records reserve deficit. No local automatic Umbrella is registered. Issuer-token permissions and reserve pause/grace settings can constrain liquidation; no global GHO shutdown is established.",
         "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "aave-horizon-configuration", "issuer-liquidator-allowlists", "ethereum"],

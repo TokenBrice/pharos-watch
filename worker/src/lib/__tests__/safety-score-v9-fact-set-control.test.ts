@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { reviewedScope, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, computeSafetyScoreV9ReserveExposureKey, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
@@ -33,6 +34,76 @@ const controlsOf = (asset: { controlReview: unknown }) => {
 };
 
 describe("Safety Score v9 exact base fact-set adapter — control and wrapper dimensions", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it("keeps each authority's scope admission independent on one deployment", () => {
+    const fixed = exactFixedInput();
+    const reviewed = reviewedUpgradeExtension();
+    const date = new Date((fixed.clockSec - 86400) * 1000).toISOString().slice(0, 10);
+    const scope = reviewedScope({ reviewedAt: date, observedAt: date });
+    const known = localControl({ controlKey: "mint:friendly", controlKind: "mint", capabilities: ["mint"], authority: { authorityKey: SCOPE_CONTROLLER, model: "contract", threshold: null }, executionScope: scope, executionScopeComplete: true });
+    const unresolved = localControl({ controlKey: "mint:unreviewed", controlKind: "mint", capabilities: ["mint"], authority: null, capSemantics: { kind: "unknown", bound: null }, claimImpairment: "unknown", economicLossScope: "unknown" });
+    reviewed.assets[0]!.controlReview = { state: "partially-reviewed-controls", rationale: "A friendly certificate leaves an independent issuer authority unresolved.", controls: [known, unresolved] };
+    reviewed.assets[0]!.economicControlReview!.mint.controlKey = known.controlKey;
+    reviewed.assets[0]!.economicControlReview!.mint.upgrade = { state: "unknown", controlKey: null };
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+    expect(asset.controls.find((control) => control.controlKey === known.controlKey)?.status.observationState).toBe("known");
+    expect(asset.controls.find((control) => control.controlKey === unresolved.controlKey)?.status.observationState).toBe("bounded-unknown");
+    expect(asset.gaps).toContainEqual(expect.objectContaining({ responsibility: "issuer-undisclosed", path: expect.objectContaining({ componentKey: `control:${unresolved.controlKey}` }) }));
+  });
+
+  it("rejects a merged bridge's favorable certificate when another contributor was not reviewed", () => {
+    const fixed = exactFixedInput();
+    const reviewed = reviewedUpgradeExtension();
+    const date = new Date((fixed.clockSec - 86400) * 1000).toISOString().slice(0, 10);
+    const scope = reviewedScope({ reviewedAt: date, observedAt: date });
+    reviewed.assets[0]!.controlReview = { state: "partially-reviewed-controls", rationale: "One route contributor remains unreviewed.", controls: [localControl({ controlKey: "bridge:merged", controlKind: "bridge", capabilities: ["bridge-mint"], authority: null, capSemantics: { kind: "unknown", bound: null }, claimImpairment: "unknown", executionScopeContributors: [{ authorityKey: SCOPE_CONTROLLER, scope }, { authorityKey: "ethereum:0x2222222222222222222222222222222222222222" }], executionScopeComplete: true, moduleImpact: "verified-noninterfering", modulesOrGuards: "present" })] };
+    reviewed.assets[0]!.economicControlReview!.mint.controlKey = null;
+    reviewed.assets[0]!.economicControlReview!.mint.upgrade = { state: "unknown", controlKey: null };
+    const control = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!.controls[0]!;
+    expect(control).toMatchObject({ executionScopeComplete: false, moduleImpact: "unresolved", status: { observationState: "bounded-unknown" } });
+    expect(control.scopeDiagnostics).toContain("execution-scope-unreviewed");
+  });
+
+  it("does not charge a legacy-known authority for an incomplete execution census", () => {
+    const fixed = exactFixedInput();
+    const legacy = reviewedUpgradeExtension();
+    const withScope = structuredClone(legacy);
+    const review = withScope.assets[0]!.controlReview!;
+    if (review.state === "no-privileged-controls") throw new Error("Expected control inventory");
+    const control = review.controls.find((row) => row.controlKey === "upgrade:reviewed")!;
+    const date = new Date((fixed.clockSec - 86400) * 1000).toISOString().slice(0, 10);
+    control.executionScope = reviewedScope({ controllerDeployment: control.authority!.authorityKey, reviewedAt: date, observedAt: date, inventory: "partial", confidence: "partial" });
+    const before = evaluateV9FactSet(compileSafetyScoreV9FactSetFromFixedInput(fixed, legacy), V9_CANDIDATE_POLICY_V1).assets[0]!;
+    const after = evaluateV9FactSet(compileSafetyScoreV9FactSetFromFixedInput(fixed, withScope), V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(after.control.score).toBe(before.control.score);
+    expect(after.control.reasons).toEqual(before.control.reasons);
+    expect(after.trace.finalScore).toBe(before.trace.finalScore);
+  });
+
+  it.each(["native", "bridge"] as const)("preserves partial %s facts and prices a verified adverse path without granting absence", (kind) => {
+    const fixed = exactFixedInput();
+    const date = new Date((fixed.clockSec - 86400) * 1000).toISOString().slice(0, 10);
+    const scope = reviewedScope({ reviewedAt: date, observedAt: date, inventory: "partial", confidence: "partial" });
+    const route = reviewedLockMintRoute(SCOPE_CONTROLLER);
+    const meta = kind === "native" ? cappedMinterMeta() : bridgeMeta([route], {
+      controls: [{ id: "bridge-admin", label: "Bridge administrator", controllerChain: "ethereum", controllerAddress: SCOPE_CONTROLLER.split(":")[1]!, authorityType: "multisig", threshold: 2, signerCount: 6, routeRefs: [route.id], capabilities: ["bridge-mint"], canRaiseCap: true, sources: [{ label: "Pinned bridge", url: "https://example.com/bridge" }] }],
+    });
+    const source = kind === "native" ? meta.mintAuthority!.controls![0]! : meta.bridgeRouteRisk!.controls![0]!;
+    scope.paths[0]!.capabilities = kind === "native" ? ["mint"] : ["bridge-mint"];
+    scope.paths[0]!.capSemantics = { kind: "raiseable", bound: null };
+    const legacy = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) })).assets[0]!;
+    source.executionScope = scope;
+    const partial = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) })).assets[0]!;
+    expect(partial.controls.map((row) => [row.capSemantics, row.claimImpairment, row.status.observationState, row.status.applicability.state])).toEqual(legacy.controls.map((row) => [row.capSemantics, row.claimImpairment, row.status.observationState, row.status.applicability.state]));
+    scope.paths[0]!.capSemantics = { kind: "unbounded", bound: null };
+    scope.paths[0]!.claimImpairment = "unbounded";
+    const adverse = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) })).assets[0]!;
+    expect(adverse.controls[0]).toMatchObject({ capSemantics: { kind: "unbounded" }, claimImpairment: "unbounded" });
+    scope.paths[0]!.activation = "disabled-final";
+    scope.inventory = "complete"; scope.confidence = "verified";
+    const closed = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) })).assets[0]!;
+    expect(closed.controls[0]).toMatchObject({ capabilities: [], claimImpairment: "none" });
+  });
+
   it("maps explicit oracle branches and remains NR without a mechanism review", () => {
     const fixed = exactFixedInput();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(reviewedOracleMeta()) });

@@ -3,6 +3,7 @@ import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { CHAIN_META } from "@shared/lib/chains";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
@@ -106,7 +107,7 @@ function buildProbeInput(chain: string): LiveReserveInput {
  */
 async function readContractSupplyRaw(input: {
   meta: StablecoinMeta;
-  supplyContract: NonNullable<StablecoinMeta["contracts"]>[number];
+  supplyContract: NonNullable<StablecoinMeta["contracts"]>[number] & { decimals: number };
   family: OnchainSupplyProbeFamily;
   allowZeroSupply: boolean;
   signal: AbortSignal;
@@ -197,10 +198,6 @@ async function readContractSupplyRaw(input: {
   );
 }
 
-function contractDecimals(contract: NonNullable<StablecoinMeta["contracts"]>[number]): number | null {
-  return contract.decimals ?? null;
-}
-
 function contractChainLabel(contract: NonNullable<StablecoinMeta["contracts"]>[number]): string {
   return CHAIN_META[contract.chain]?.name ?? contract.chain;
 }
@@ -270,15 +267,16 @@ async function fetchOnChainSupplyForContract(input: {
   chain: string;
   chainLabel: string;
 } | null> {
-  const family = onchainSupplyProbeFamily(input.supplyContract);
-  if (family === null) return null;
-  const decimals = contractDecimals(input.supplyContract);
-  if (decimals == null) {
+  const supplyContract = input.supplyContract;
+  if (!isFixedDecimalDeployment(supplyContract)) {
     logWorkerEventArgs("handler", "warn",
-      `[fiat-cg] ${contractChainLabel(input.supplyContract)} supply probe skipped for ${input.meta.symbol}: contract decimals are missing`,
+      `[fiat-cg] ${contractChainLabel(supplyContract)} supply probe skipped for ${input.meta.symbol}: contract has no fixed-decimal amount encoding`,
     );
     return null;
   }
+  const family = onchainSupplyProbeFamily(supplyContract);
+  if (family === null) return null;
+  const decimals = supplyContract.decimals;
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
   const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
   const allowZeroSupply = input.curated?.allowZeroSupply === true;
@@ -289,7 +287,7 @@ async function fetchOnChainSupplyForContract(input: {
     const fallbackRpcUrl = input.curated?.fallbackRpcUrl ?? registryRpcUrls(chainRpc)[1];
     const raw = await readContractSupplyRaw({
       meta: input.meta,
-      supplyContract: input.supplyContract,
+      supplyContract,
       family,
       allowZeroSupply,
       signal: supplySignal,
@@ -364,13 +362,13 @@ async function fetchEscrowHeldMcap(input: {
   curated?: { rpcUrl?: string; fallbackRpcUrl?: string };
 }): Promise<number | null> {
   const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
-  const decimals = contractDecimals(input.supplyContract);
-  if (decimals == null) {
+  if (!isFixedDecimalDeployment(input.supplyContract)) {
     logWorkerEventArgs("handler", "warn",
-      `[fiat-cg] ${contractChainLabel(input.supplyContract)} escrow balance probe skipped for ${input.meta.symbol}: contract decimals are missing`,
+      `[fiat-cg] ${contractChainLabel(input.supplyContract)} escrow balance probe skipped for ${input.meta.symbol}: contract has no fixed-decimal amount encoding`,
     );
     return null;
   }
+  const decimals = input.supplyContract.decimals;
 
   try {
     const balance = await fetchOnchainUint256({

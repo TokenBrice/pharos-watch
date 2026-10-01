@@ -47,11 +47,12 @@
     }
   ],
   "launchDate": "2025-07-04",
+  "mechanismArchetype": "protocol-position",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
+    "disposition": "resolved",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC06)",
-    "rationale": "USDU holders own the protocol ERC-20; adapters own Curve LP tokens and lending-vault shares. The issuer expressly states there is no off-chain backing or unsecured IOU and values backing in USDU equivalents. This mixed on-chain liquidity/lending mechanism does not establish a fiat-cash holder claim. No existing family is assigned pending exact-product claim and current-backing review under D18.",
+    "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+    "rationale": "USDU Finance's exact Ethereum ERC-20 0xdde3ec717f220fc6a29d6a4be73f91da5b718e55 is a protocol-position liability, not a direct fiat or borrower-CDP claim. Issuer disclosure identifies adapter-owned Curve LP and lending-vault shares; independently verified Ethereum block 26098837 establishes three valid modules, including user-callable USDC/USDT SwapBridgeMorphoV1 exits. Fresh block 26099926 confirms those three remain valid and their deployed runtime matches verified source. Holder rights are operational and conditional on module/vault resources; complete external asset valuation, matching liabilities, residual module allocation, custody and funded recovery remain unresolved.",
     "sources": [
       {
         "label": "USDU docs",
@@ -62,8 +63,16 @@
         "url": "https://usdu.finance/transparency/"
       },
       {
-        "label": "USDU stablecoin issuance source",
-        "url": "https://raw.githubusercontent.com/usdu-finance/usdu-core/main/contracts/stablecoin/Stablecoin.sol"
+        "label": "Exact verified USDC SwapBridgeMorphoV1 source; runtime matched at Ethereum block 26099926",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b6893d82edbc8d6769ba3c407102d33da2b623f"
+      },
+      {
+        "label": "Exact verified USDT SwapBridgeMorphoV1 source; runtime matched at Ethereum block 26099926",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9141f634ef9e871a5fe4f64195747db77a13f3e"
+      },
+      {
+        "label": "Exact MorphoAdapterV1_2 source; runtime matched at Ethereum block 26099926",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb46481a9819e068af0eb64a2c2824fcecaaaa45"
       }
     ]
   }

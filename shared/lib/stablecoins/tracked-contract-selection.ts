@@ -1,3 +1,5 @@
+import type { DeploymentAmountEncoding } from "../../types/deployment-amounts";
+
 interface FindTrackedContractOptions {
   source?: "primary" | "traded" | "any";
 }
@@ -11,7 +13,8 @@ export interface ResolveTrackedContractConfigOptions extends FindTrackedContract
 export interface TrackedContractDeploymentLike {
   chain: string;
   address: string;
-  decimals: number;
+  decimals: number | null;
+  amountEncoding?: DeploymentAmountEncoding;
 }
 
 export interface TrackedStablecoinDeploymentsLike<TDeployment extends TrackedContractDeploymentLike> {
@@ -50,6 +53,10 @@ export function resolveTrackedContractConfigCore<TDeployment extends TrackedCont
   chainId: string,
   options?: ResolveTrackedContractConfigOptions,
 ): { contractAddress: string; decimals: number } | null {
+  const deployment = findTrackedContract(stablecoin, chainId, { source: options?.source ?? "primary" });
+  // This selector interprets fixed raw event units, never native XRPL issued values.
+  // Overrides cannot turn an issued-currency amount into a fixed-decimal amount.
+  if (chainId === "xrpl" || deployment?.amountEncoding?.kind === "xrpl-issued-currency" || deployment?.decimals === null) return null;
   const resolvedContract = options?.addressOverride
     ? {
         address: options.addressOverride,
@@ -64,6 +71,7 @@ export function resolveTrackedContractConfigCore<TDeployment extends TrackedCont
       });
 
   if (!resolvedContract) return null;
+  if (resolvedContract.decimals === null) return null;
 
   return {
     contractAddress: resolvedContract.address,

@@ -107,6 +107,13 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
         matureChains: uniqueSorted(policy.semantic.materiality.matureChains),
         matureVenues: uniqueSorted(policy.semantic.materiality.matureVenues),
       },
+      supplyAttribution: {
+        ...policy.semantic.supplyAttribution,
+        amountBases: uniqueSorted(policy.semantic.supplyAttribution.amountBases),
+        accountingFamilies: uniqueSorted(policy.semantic.supplyAttribution.accountingFamilies),
+        holdingKinds: uniqueSorted(policy.semantic.supplyAttribution.holdingKinds),
+        inFlightTreatments: uniqueSorted(policy.semantic.supplyAttribution.inFlightTreatments),
+      },
       backing: {
         ...policy.semantic.backing,
         reserve: {
@@ -143,7 +150,18 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
         primaryExit: uniqueSorted(policy.semantic.accessPostureVocabulary.primaryExit),
         governance: uniqueSorted(policy.semantic.accessPostureVocabulary.governance),
       },
-      control: controlSemantics,
+      control: {
+        ...controlSemantics,
+        exactScope: {
+          ...controlSemantics.exactScope,
+          activationStates: uniqueSorted(controlSemantics.exactScope.activationStates),
+          entrypointKinds: uniqueSorted(controlSemantics.exactScope.entrypointKinds),
+          callModes: uniqueSorted(controlSemantics.exactScope.callModes),
+          reachStates: uniqueSorted(controlSemantics.exactScope.reachStates),
+          moduleImpactStates: uniqueSorted(controlSemantics.exactScope.moduleImpactStates),
+          weightedSchemes: uniqueSorted(controlSemantics.exactScope.weightedSchemes),
+        },
+      },
     },
     reasonRegistry: [...policy.reasonRegistry]
       .map((entry) => ({

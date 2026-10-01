@@ -8,7 +8,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "BTC, ETH, BNB, and liquid staking tokens through Omni-CDP; Prime Vault custodian-held BTC and Smart Vault deposits including USDT/USDC support internally minted satUSD",
-  "pegMechanism": "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
+  "pegMechanism": "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and destination satUSD uses LayerZero messaging. Holder collateral redemption selects least-collateralized positions. The reviewed Base WBTC trove requires TCR at least 110% and a 14-day deployment bootstrap; its fee uses dynamic base rate plus a current 0.5% floor capped at 5%, and actual proceeds are WBTC rather than native BTC or cash. Prime and Smart Vault maturity withdrawals are distinct deposit-holder paths: their internally minted satUSD never enters user wallets. Other collateral/deployment phases require separate execution reviews",
   "mechanismArchetype": "cdp",
   "llamaId": "218",
   "detailProvider": "defillama",

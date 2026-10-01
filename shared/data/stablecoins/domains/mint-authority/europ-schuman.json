@@ -307,11 +307,70 @@
         ],
         "label": "EUROP XRPL issuer account",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
+        "weightedQuorum": {
+          "scheme": "xrpl",
+          "deployment": "xrpl:rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
+          "signers": [
+            {
+              "account": "r4QhSH9FxnHFsaDsobbWABvQeNcrpKF3C1",
+              "weight": 1
+            },
+            {
+              "account": "r4Y6BYpT48Jq318363wA37N3q87ovtuJQ8",
+              "weight": 1
+            },
+            {
+              "account": "r9QH6FpiV1SZpNrueSZNmuU7pKieUgr5es",
+              "weight": 1
+            },
+            {
+              "account": "riyP43AsZqAoVEr9hNnZVXMWBJjCttHmn",
+              "weight": 1
+            },
+            {
+              "account": "rMRvXUPc8cWPPYCBP2dWAWtAwSq3rjTSpi",
+              "weight": 3
+            },
+            {
+              "account": "rpFem93bCPKHBSk3Mo7tGAvzRnPBjpScgP",
+              "weight": 1
+            }
+          ],
+          "quorum": 3,
+          "masterKey": "disabled",
+          "regularKey": {
+            "state": "absent"
+          },
+          "pin": {
+            "position": "107367076",
+            "hash": "8B4EC40E70B8C609CC954472238EDB2656F4E111CF14819EF57DEDE111A176F0",
+            "runtimeIdentity": "xrpl-native-multisigning:SignerList",
+            "signerIdentity": "sha256:c6e29e73001fbe3fbef574ca9841e8553dacd04f55b82042ff2ac22cee7a66f8"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc03)",
+          "sources": [
+            {
+              "label": "Schuman EUROP official issuer roster",
+              "url": "https://schuman.io/smart-contracts/"
+            },
+            {
+              "label": "Validated XRPL account_info at ledger 107367076",
+              "url": "https://s1.ripple.com:51234/"
+            },
+            {
+              "label": "XRPL native multi-signing and weighted quorum semantics",
+              "url": "https://xrpl.org/docs/concepts/accounts/multi-signing"
+            }
+          ]
+        },
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "observedAt": "2026-10-01",
-        "observedBlock": 107354681,
+        "observedBlock": 107367076,
         "sources": [
           {
             "label": "Schuman EUROP smart-contract addresses",
@@ -322,7 +381,7 @@
             "url": "https://livenet.xrpl.org/accounts/rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK"
           }
         ],
-        "evidence": "At validated XRPL ledger 107354681 (hash 2CD18AA223A82309ABC561A08814CF8652875980F961491A0A14FF3FE8959E15), account_info reports the master key disabled, no RegularKey, and a signer list with weighted quorum 3 across six signers (weights 1,1,1,3,1,1). One weight-3 signer can satisfy the quorum alone; this is not a 3-of-6 independent-signature requirement. Schuman's official deployment page binds this account to EUROP issuance. The weighted policy cannot be represented faithfully by the current fixed required-of-total multisig schema, so authorityType is unknown and no numeric signature threshold is asserted."
+        "evidence": "At validated XRPL ledger 107367076 (hash 8B4EC40E70B8C609CC954472238EDB2656F4E111CF14819EF57DEDE111A176F0), account_info reports the master key disabled, no RegularKey, and a signer list with weighted quorum 3 across six signers (weights 1,1,1,3,1,1). Signer rMRvXUPc8cWPPYCBP2dWAWtAwSq3rjTSpi alone has weight 3 and satisfies the quorum; this is not a 3-of-6 signature requirement. Schuman's official deployment page binds this account to EUROP issuance. weightedQuorum represents the native SignerList exactly without uniform threshold/signerCount or human-independence/key-custody credit. The signing identity is SHA-256 of JSON.stringify({issuer,quorum,signers,masterKey,regularKey}) with signers sorted by account.localeCompare. No complete execution-scope or off-chain operational-security certificate is asserted."
       }
     ],
     "economicCapSemantics": "unbounded",
