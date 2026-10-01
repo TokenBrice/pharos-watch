@@ -91,7 +91,9 @@ jobs:
       # shock-targets.ts with per-endpoint failover. No RPC credential is required.
       # Any target unmeasurable on all endpoints fails before anything is committed.
       - name: Measure shock coverage for ${{ matrix.asset }}
-        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset "${{ matrix.asset }}"
+        env:
+          ASSET_ID: ${{ matrix.asset }}
+        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset "$ASSET_ID"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

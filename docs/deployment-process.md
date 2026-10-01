@@ -255,6 +255,8 @@ Current explicitly deferred major cohort:
 
 The root `fflate` override pins Satori’s transitive dependency to patched `0.7.5` for [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). Keep it until Satori releases a compatible dependency update; the Worker OG renderer uses Satori for font decoding and rendering.
 
+The root `miniflare` → `undici` override pins Wrangler’s Miniflare, which declares an exact `undici` version, to patched `7.29.1` for [GHSA-w293-vg96-wgc3](https://github.com/advisories/GHSA-w293-vg96-wgc3) and the five lower-severity `undici` advisories fixed in the same release. It is scoped to Miniflare so jsdom keeps resolving its declared `undici` 8 range instead of being forced onto the 7.x line. Remove it when the pinned Wrangler moves to 4.145.0 or later, whose Miniflare already depends on `undici` 7.29.1 (`npm ls undici` then shows no `overridden` marker).
+
 Risk-accepted transitive advisories are machine-readable in `scripts/ci/dependency-audit-exceptions.json`; the verifier rejects malformed, expired, or widened entries. The registry is the weekly workflow's authority, while this section records the review rationale. There are currently no active exceptions.
 
 The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Root manifest or lockfile PRs run it through `check:pr:static`. The `audit` job in `weekly-validation.yml` runs the broader full-lockfile audit through `scripts/ci/verify-dependency-audit.ts`; it passes only when every high/critical finding is the exact, unexpired reviewed exception.
