@@ -173,6 +173,13 @@ const V9ApplicableWrapperLocalFactsSchema = z
     formDisposition: V9WrapperFactDispositionSchema,
     formSignals: canonicalTextArray(1, "value"),
     formEvidenceRefIds: canonicalTextArray(0, "value"),
+    // A reviewed withholding is an override, not positive evidence of a parent
+    // claim. Absence retains the evaluator's existing measured-exposure gates.
+    parentBackingInheritance: z.object({
+      state: z.literal("withheld"),
+      reason: z.literal("mixed-strategy-without-measured-parent-claim"),
+      evidenceRefIds: canonicalTextArray(1, "value"),
+    }).strict().optional(),
     facts: V9WrapperLocalDimensionsSchema,
     riskTransfer: V9WrapperRiskTransferFactSchema,
   })

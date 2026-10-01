@@ -2,6 +2,7 @@ import type { DependencyRejectionReason } from "@shared/lib/dependency-derivatio
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { hasIndependentLiveCompositionDates } from "@shared/lib/report-card-policy";
 import {
   RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
   validateReserveCompositionTotal,
@@ -446,6 +447,9 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
   const review = meta.reserveReview;
   const reviewedAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
   const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
+  const reportPeriodEnd = meta.proofOfReserves?.latestReport?.periodEnd;
+  const hasDateMismatch = reportPeriodEnd != null && review?.compositionAsOf != null &&
+    reportPeriodEnd !== review.compositionAsOf;
   if (
     rows.length === 0 ||
     review?.scope !== "full-composition" ||
@@ -458,6 +462,11 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     reviewedAtSec === null ||
     compositionAtSec === null ||
     reviewedAtSec < compositionAtSec ||
+    (hasDateMismatch && (
+      !hasIndependentLiveCompositionDates(meta) ||
+      conservativeDateEndSec(reportPeriodEnd, clockSec) === null ||
+      conservativeDateEndSec(meta.proofOfReserves?.latestReport?.publishedAt, clockSec) === null
+    )) ||
     clockSec - compositionAtSec > REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC ||
     !validateReserveCompositionTotal(rows, "full")
   ) {

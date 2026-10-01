@@ -130,6 +130,13 @@ export function SafetyScoresOverview() {
         are not production freshness evidence or score forecasts.
       </p>
       <p>
+        Since methodology v9.99, a current known circulating USD amount can size the Exit stress request even when
+        its chain or bridge distribution is bounded-unknown. This changes only the request notional: bridge
+        materiality, transfer scope, Economic Control, and their evidence gaps and ceilings remain unresolved.
+        Unknown, stale, or unavailable circulating amounts still receive no request, and sizing does not establish
+        executable capacity or waive route valuation, cost, access, or settlement evidence.
+      </p>
+      <p>
         Reviewed curated compositions require verified, complete evidence. An unresolved reserve disposition or known
         unknown exposure withholds the whole curated reserve envelope, not just the disputed link. That can change
         backing scores and downstream parent limits even when the unresolved share is tiny.

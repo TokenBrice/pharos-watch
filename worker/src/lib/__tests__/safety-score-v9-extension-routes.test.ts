@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
+import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   getRedemptionBackstopConfig,
   resolveReviewedRedemptionSettlement,
@@ -11,6 +13,9 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
+import { makeV9FixedInput, makeV9Extension } from "../../test-helpers/v9-fixed-input";
+import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RetainedRoutes,
@@ -534,31 +539,39 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
-  it.each([
-    { routeStatus: "unknown", routeStatusSource: "static-config" },
-    { routeStatus: "open", routeStatusSource: "static-config" },
-    { routeStatus: "paused", routeStatusSource: "onchain" },
-    { routeStatus: "unknown", routeStatusSource: "protocol-api" },
-  ] as const)(
-    "withholds discounted credit from non-score-eligible $routeStatus/$routeStatusSource live-direct routes",
-    ({ routeStatus, routeStatusSource }) => {
-      const row = liveDirectRow(routeStatusSource);
-      row.routeStatus = routeStatus;
-      row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
-
-      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
-        coverageClass: "diagnostic",
-      });
-    },
-  );
-
-  it("preserves discounted credit for an unscored live-direct route with current-open evidence", () => {
-    const row = liveDirectRow("onchain");
+  it("does not turn positive unscored redemption capacity into measured exit failure when open status is unknown", () => {
+    const row = liveDirectRow("static-config");
+    row.routeStatus = "unknown";
     row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
+    row.capacityProfile!.exitRouteObservations![0]!.observedAt = NOW;
+    row.capacityProfile!.exitRouteObservations![0]!.freshnessSeconds = 0;
+    const fixed = makeV9FixedInput({ assetId: row.stablecoinId, clockSec: NOW });
+    fixed.redemptionBackstopMap = { [row.stablecoinId]: row };
+    fixed.redemptionGenerationId = "redemption:unscored-positive-capacity";
+    fixed.redemptionStale = false;
+    fixed.inputFreshness.redemptionBackstops = { updatedAt: NOW, ageSeconds: 0, stale: false };
+    const coverage = fixed.dexLiqMap[row.stablecoinId]!.exitRouteObservationCoverage!;
+    fixed.dexLiqMap[row.stablecoinId]!.exitRouteObservations = [];
+    coverage.retainedPoolCount = 0;
+    coverage.observationCount = 0;
+    coverage.scoreEligibleObservationCount = 0;
+    coverage.scoreEligiblePoolCount = 0;
+    coverage.scoreEligibleCapabilityPoolCount = 0;
+    const rebuilt = rebuildFixed(fixed);
+    const reviewed = makeV9Extension({ assetId: row.stablecoinId, clockSec: NOW, registryFingerprint: rebuilt.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(rebuilt, row.stablecoinId);
+    reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(rebuilt, row.stablecoinId);
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed).assets[0]!;
+    const result = evaluateV9Exit({
+      circulatingUsd: compiled.supply.circulatingUsd,
+      portfolioStatus: "reviewed-complete",
+      routes: compiled.exitRoutes.map(projectV9ExitEvaluationRoute),
+    }, V9_CANDIDATE_POLICY_V1);
 
-    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
-      coverageClass: "exact-lower-bound",
-    });
+    expect(compiled.exitRoutes[0]!.scoreEligible).toBe(false);
+    expect(result.routes[0]).toMatchObject({ included: true, exclusionReason: null });
+    expect(result.score).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.reasons).not.toContain("no-viable-exit-path");
   });
 
   it.each([

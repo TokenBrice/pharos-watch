@@ -144,7 +144,7 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "tether-transparency",

@@ -7,7 +7,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.98`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.99`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `9c304f5c6d96238e37baded4a5e7029bb68921accebe3ec16a58daf8dc019c63` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
@@ -168,6 +168,14 @@ The public premium is intentionally not inherited. `applyV9AssetPremium` does no
 
 ## Dependency Coverage
 
+Reviewed `wrapperLocalFacts.parentBackingInheritance` withholding blocks favorable parent Backing even without a reserve envelope, until a separate review establishes the economic claim. `susd1plus-lorenzo` withholds USD1 inheritance because its disclosed mixed RWA/CeFi/DeFi book does not establish a measured whole-portfolio USD1 claim. The relationship, serial adverse cap, price, supply, peg and lifecycle semantics remain; other wrappers retain the single-parent evidence gates.
+
+An explicitly authored `custodyModel: "onchain"` keeps direct serial wrappers' local custody/escrow and rehypothecation/correlation not-applicable despite a custody profile. Omitted models are unknown; CEX, institutional, mixed and unknown models retain profile treatment. This grants no legal segregation, bankruptcy remoteness or parent inheritance.
+
+### Whole-book custody coverage
+
+[Registry editing rules](./stablecoin-data.md#editing-rules) own whole-book custody labels and independently dated adapter composition. Labels grant no numeric V9 credit; Backing uses scoped custody and reserve facts. [Security-history authoring](./stablecoin-data.md#mint-authority-review) owns informational remediated vulnerabilities, separate from scored incidents.
+
 Keyed zero-percent categories retain their captured provenance and consume matching reviewed classifications, but emit neither dependency edges nor positive-weight backing exposure facts. A zero balance cannot quarantine the asset solely by violating the compiled exposure-weight bound.
 
 Reserve-derived basket exposure can coexist with an independently reviewed non-default role to the same upstream. A subset role review must explicitly name a non-default role and match an exact authored identity, type, and weight anchor in the sourced derivation. Reserve weights remain basket exposures; the role uses its own authored anchor. An unanchored subset remains a dependency-review mismatch. Relationships merge by identity, type, and role, so a reviewed default replaces rather than duplicates the same edge.
@@ -206,9 +214,13 @@ Pre-field v5 payloads still parse without fabricated defaults or rewritten graph
 
 ## Exit Route Evidence
 
+A current established circulating USD amount sizes Exit's same-notional request when supply is `bounded-unknown` solely under `v9.supply.bridge-materiality`, including missing bridge profiles, ambiguous joins, and missing or rejected attribution packets. Unknown, stale, unsupported or unavailable amounts cannot size it. Supply status, bridge/control/transfer/distribution facts, gaps and ceilings stay unchanged, as do stress fraction, grid, cost bound and horizon. Sizing grants no route credit or substitute for executable capacity and terms.
+
 Methodology **9.96** makes two score-semantic changes. Issuer routes honor reviewed explicit stablecoin payouts ahead of the legacy fiat projection: pathUSD, USYC Teller, pUSD and USDO pay USDC; thBILL, MXNB's conversion rail and StandX DUSD pay USDC/USDT; HLUSD's existing basket is honored. Unreviewed issuers keep the legacy default without variant-parent inference, and USDN is unchanged because current sources do not confirm USDC. Tracked outputs require captured price evidence: a single payout at par keeps quality 100, while multi-output routes keep conservative stable-basket quality 80 and weakest-priced-component semantics, a 3-point raw route difference at par; missing prices remain unresolved. Uniswap V4 retained exact PoolIds are fetched without the subgraph TVL floor and bypass the indexed-TVL 2% affinity guard, which remains only for token/fee fallback. Positive retained TVL, PoolKey/currency identity, zero hooks, active liquidity and existing quote/capacity gates still apply. Trigger: thUSD/USDC's indexed TVL was -$222,031.94; seven pool assets are affected (thUSD, USDD, USDT, USDS, USP, AUDM and sUSDD). Measured is not deep: at Ethereum block 26088713, a $1,000 thUSD sell returned $966.94. As curation context, not a third semantic change, thUSD moves to an executed stablecoin-redeem rail consistent with USDe, with measured Cash Wallet capacity from `theo-thusd-redemption` and no fallback. On the frozen replay of generation `report-cards:9.94:1790752511` at clock `1790752628`, only `thusd-theo` moves, 38/F to 43/D from its configuration, with no quarantines; the capture still has its old issuer-api observation and lacks its live-reserve fallback observation. Output and V4 effects require the first production redemption and DEX cycles and are not shown by that replay. The reviewed payout assets and seven V4 pool assets are expected movement candidates, not guaranteed score or grade improvements; standalone Liquidity Score arithmetic is unchanged.
 
 ## Canonical Publication
+
+Bridge-materiality diagnosis requires the accepted publication identity and matching retained base/enrichment pair ([replay contract](./process/safety-score-equivalence-harness.md#why-the-replay-is-a-fair-test)). Prepare-time `report-cards:fixed-input:exact` omits compute-time supply attribution and transfer materiality; base-only replay can falsely report an unavailable fact. Even complete route metadata cannot partition aggregate USD: a sole representation or a parent's chain distribution proves no liability route share. Same-chain multi-contract rows need admitted deployment attribution; rejected raw-unit observations must never become zero supply.
 
 Publication follows rule R8 (ADR-35 in [architecture.md](./architecture.md#architectural-decision-records)): one unusable asset is quarantined by id and field path, not allowed to hold the cohort. `compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension` is the reference implementation of that rule for the whole repository.
 

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import type { V9AssetFactsBase } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9Exit,
   isV9CreditableNonAtomicRedemption,
   projectV9ExitEvaluationRoute,
+  selectV9ExitCirculatingUsd,
   selectV9ExitStressRequest,
   type V9ExitEvaluationRoute,
 } from "../safety-score-v9/exit";
@@ -28,6 +30,51 @@ describe("selectV9ExitStressRequest", () => {
   it("fails closed without valid circulating supply", () => {
     expect(selectV9ExitStressRequest(null, V9_CANDIDATE_POLICY_V1)).toBeNull();
     expect(selectV9ExitStressRequest(0, V9_CANDIDATE_POLICY_V1)).toBeNull();
+  });
+});
+
+describe("Exit circulating amount admission", () => {
+  const supply: V9AssetFactsBase["supply"] = {
+    status: {
+      applicability: { state: "required", policyRuleId: "v9.supply.bridge-materiality", rationale: null, gapId: null },
+      observationState: "bounded-unknown",
+      evidenceRefIds: ["aggregate-supply"],
+      gapIds: ["bridge-materiality"],
+    },
+    sourceGenerationId: "fixture-supply",
+    sourceKind: "aggregate-circulating",
+    circulatingUnits: null,
+    referencePriceUsd: null,
+    circulatingUsd: 100_000_000,
+    chainDistribution: null,
+    selectedBridgeRoutes: [],
+    selectedRouteSupplyShare: null,
+    unknownRouteSupplyShare: null,
+    unreviewedRouteSupplyShare: null,
+    failureDomains: [],
+  };
+
+  it("uses the known amount without claiming that the distribution is known", () => {
+    expect(selectV9ExitStressRequest(selectV9ExitCirculatingUsd(supply), V9_CANDIDATE_POLICY_V1))
+      .toMatchObject({ rawSupplyRequestUsd: 5_000_000, requestedNotionalUsd: 10_000_000 });
+  });
+
+  it.each(["missing", "stale", "unsupported"] as const)("refuses a numeric amount whose observation is %s", (observationState) => {
+    expect(selectV9ExitCirculatingUsd({
+      ...supply,
+      status: { ...supply.status, observationState },
+    })).toBeNull();
+  });
+
+  it("refuses an unknown amount even when distribution is the attributed gap", () => {
+    expect(selectV9ExitCirculatingUsd({ ...supply, circulatingUsd: null })).toBeNull();
+    expect(selectV9ExitCirculatingUsd({
+      ...supply,
+      status: {
+        ...supply.status,
+        applicability: { state: "required", policyRuleId: "v9.supply.current", rationale: null, gapId: null },
+      },
+    })).toBeNull();
   });
 });
 

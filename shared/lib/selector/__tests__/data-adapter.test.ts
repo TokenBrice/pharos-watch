@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildSelectorRows, type BuildSelectorRowsArgs } from "../data-adapter";
-import { hasRequiredSignals } from "../exclusions";
+import { applyInputDrivenExclusions, hasRequiredSignals } from "../exclusions";
 import { selectYieldSource } from "../yield-source";
 import { makeInput } from "./fixture";
 import type * as ClientRegistry from "../../stablecoins/client-registry";
@@ -16,7 +16,12 @@ vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
   const base = actual.CLIENT_ACTIVE_META_BY_ID.get("usdc-circle")!;
   const reviewed = { ...base, custodyModel: "cex" as const };
   const unreviewed = { ...base, id: "unreviewed", custodyModel: undefined };
-  const coins = [reviewed, unreviewed];
+  const structural = {
+    ...unreviewed,
+    id: "structural",
+    flags: { ...base.flags, backing: "crypto-backed" as const, governance: "decentralized" as const },
+  };
+  const coins = [reviewed, unreviewed, structural];
   return {
     ...actual,
     CLIENT_TRACKED_STABLECOINS: coins,
@@ -49,6 +54,16 @@ function adaptYield(ranking: Record<string, unknown>, response: Record<string, u
 const NOW = 1_700_000_000_000;
 
 describe("buildSelectorRows", () => {
+  it("retains structural onchain eligibility without inferring institutional custody", () => {
+    const rows = [...buildSelectorRows(EMPTY_ARGS).rows.values()];
+    const eligibleIds = (custodyOk: "any" | "onchain-only" | "regulated-only") => rows
+      .filter((row) => applyInputDrivenExclusions(row, makeInput({ custodyOk })) === null)
+      .map((row) => row.id);
+    expect(eligibleIds("onchain-only")).toEqual(["structural"]);
+    expect(eligibleIds("regulated-only")).toEqual([]);
+    expect(eligibleIds("any")).toEqual(["usdc-circle", "unreviewed", "structural"]);
+  });
+
   it.each([
     { label: "missing row", rating: null, expected: null },
     { label: "legacy unknown clock", rating: {}, expected: null },
@@ -219,14 +234,6 @@ describe("buildSelectorRows", () => {
   });
 });
 
-describe("controlled custody-model projection", () => {
-  it("prefers an opposing curated value and still exercises unreviewed inference", () => {
-    const rows = buildSelectorRows(EMPTY_ARGS).rows;
-    expect([...rows.keys()]).toEqual(["usdc-circle", "unreviewed"]);
-    expect(rows.get("usdc-circle")!.custodyModel).toBe("cex");
-    expect(rows.get("unreviewed")!.custodyModel).toBe("institutional-regulated");
-  });
-});
 
 describe("yield ingestion", () => {
   it("marks structured-tranche model substitution ineligible for V9 coverage", () => {

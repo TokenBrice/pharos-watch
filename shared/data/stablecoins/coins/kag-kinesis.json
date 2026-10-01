@@ -3,6 +3,7 @@
   "name": "Kinesis Silver",
   "symbol": "KAG",
   "oneLiner": "Ethereum KAG is KMS Labs' silver-linked token, backed by native Kinesis KAG; physical redemption requires conversion, and reserve income stays with the issuer.",
+  "custodyModel": "unknown",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",

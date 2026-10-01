@@ -18,7 +18,22 @@
     "url": "https://app.ethena.fi/dashboards/transparency",
     "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk (monthly custodian report published 2026-09-03 covers the 2026-08-26 snapshot; real-time dashboard and monthly custodian reporting are separate evidence layers)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-08-26",
+      "publishedAt": "2026-09-03",
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA04USDe)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Ethena August custodian report (2026-08-26 snapshot, published 2026-09-03)",
+          "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3"
+        }
+      ]
+    }
   },
   "links": [
     {

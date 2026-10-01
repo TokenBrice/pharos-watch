@@ -123,15 +123,12 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     const pipeline = buildUsdcCandidate(CURRENT_CLOCK_SEC);
     const card = pipeline.candidate.cards[0]!;
 
-    // The curation pass withdrew the extrapolated bank split's composition
-    // date (usdc-circle#F7; independently confirmed in verify-R). Without a
-    // live reserve producer, that fallback must not buy sufficient evidence
-    // for a rating, even though the mechanism review itself remains current.
-    expect(card.score).toBeNull();
-    expect(card.grade).toBe("NR");
-    expect(card.nrReasons).toContainEqual(
-      expect.objectContaining({ code: "insufficient-evidence", field: "evidenceLevel" }),
-    );
+    // The complete August 31 examination restores a period-matched fallback
+    // with one conservative aggregate bank exposure, so no live producer is
+    // needed to admit the reviewed composition.
+    expect(card.score).toBe(54);
+    expect(card.grade).toBe("C-");
+    expect(card.nrReasons).toEqual([]);
 
     expect(card.scoreTrace.boundedUncertaintyAttribution.items).not.toContainEqual(
       expect.objectContaining({ code: "bounded-mechanism-review" }),

@@ -34,6 +34,7 @@ import {
 import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
+  selectV9ExitCirculatingUsd,
   type V9ExitEvaluationResult,
 } from "./exit";
 import {
@@ -915,6 +916,10 @@ function resolveInheritedStablecoinBacking(
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9InheritedStablecoinBacking | undefined {
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
+  if (
+    asset.wrapperLocalFacts?.applicability === "wrapper" &&
+    asset.wrapperLocalFacts.parentBackingInheritance?.state === "withheld"
+  ) return undefined;
   if (resolved.cycleBlocked) return undefined;
   if (resolved.serial.length + resolved.basket.length !== 1) return undefined;
   const wrapped = resolved.serial.length === 1;
@@ -1353,8 +1358,7 @@ export function evaluateV9Asset({
   // status derived beside them) serves both the exit evaluation and the
   // retained stress state; evaluateV9Exit copies before sorting, so the shared
   // array is never mutated downstream.
-  const exitCirculatingUsd =
-    asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null;
+  const exitCirculatingUsd = selectV9ExitCirculatingUsd(asset.supply);
   const exitPortfolioStatus =
     asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
       ? "reviewed-complete"

@@ -2,6 +2,27 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.99",
+    title: "Known supply sizes Exit; whole-book custody, independent report dates and evidence-scope corrections",
+    date: "2026-10-01",
+    effectiveAt: 1790812800,
+    summary:
+      "Exit may size its same-notional stress request from a current established circulating USD amount when only the chain or bridge distribution is bounded-unknown. Owner rulings from the 2026-10-01 curation pass add whole-book custody labels, independently dated adapter-owned compositions, explicit parent-inheritance withholding, informational security history, wrapper custody scope, and worst-path mint selection. Unknown, stale, or unavailable circulating amounts still refuse a request, and no rule grants credit from missing evidence.",
+    impact: [
+      "The Exit-only supply projection admits a bounded-unknown supply fact only when its required policy rule is v9.supply.bridge-materiality, the producer's marker that the current amount is established but its partition is not. Known supply keeps its existing behavior, and the reviewed stress fraction, grid, cost bound, and settlement horizon are unchanged.",
+      "Missing bridge profiles, ambiguous route joins, and missing or rejected attribution packets no longer suppress Exit sizing when a current circulating amount is established. No bridge shares, chain distribution, transfer materiality, control facts, or evidence gaps are inferred or promoted; their existing gaps and ceilings remain.",
+      "Sizing is not executable-capacity evidence: every route still needs the existing same-notional capacity, output valuation, cost, access, and settlement admission. Exit and downstream scores may change where measured routes can now be compared, without guaranteeing a grade improvement.",
+      "Asset-wide institutional custody labels now require whole-book evidence. Custody gains mixed and unknown values; omitted custody for centralized or RWA-backed classes defaults to unknown instead of an institutional label, while structural on-chain defaults remain. Mixed and unknown never qualify for regulated-only or on-chain-only Selector eligibility and add no numeric Safety Score credit.",
+      "Explicitly adapter-owned reserve compositions keep their own date when a separately evidenced monthly report has a known period end and publication date. Curated-only compositions keep report-period lockstep, audit-grade admission still requires matching periods, and independently dated fallback rows retain only their own static-validated evidence, completeness, and freshness gates.",
+      "A reviewed per-asset field withholds favorable parent Backing inheritance for a branded strategy token with an undisclosed mixed book (sUSD1+ from USD1) while keeping the serial adverse cap, price, supply, peg, and lifecycle relationships.",
+      "Security history gains an informational record for disclosed, remediated, non-realized vulnerabilities (USD3 batch auction, XAUT transferFrom, fxUSD router), dated from primary disclosures, with no realized-exploit, loss, or mint-incident routing.",
+      "Direct serial wrappers whose own authored custody is on-chain stay outside wrapper-local custody and rehypothecation scoring, so upstream custody uncertainty is not charged twice; legal safeguards are never granted and parent inheritance is unchanged.",
+      "Mint-control selection prices the worst applicable durable-mint authority across deployments: native root issuance stays asset-wide, and proved deployment-local controls keep supply-weighted treatment.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.98",
     title: "Fail-closed dependency kinds and measured representation coverage",
     date: "2026-09-30",

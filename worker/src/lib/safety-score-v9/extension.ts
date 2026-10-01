@@ -341,15 +341,15 @@ interface MintControlDeploymentScope {
 }
 
 /**
- * Resolve a reviewed mint/upgrade authority onto the already-compiled bridge
- * materiality partition. The control remains global unless the partition is
- * complete, every authored deployment ref joins exactly once, and at least one
- * other liability deployment sits outside the authority's reach.
+ * Resolve a reviewed deployment-local authority onto a complete liability
+ * partition. Durable native issuance reaches the root claim, not just the
+ * supply currently residing on the minter's chain.
  */
 function resolveMintControlDeploymentScopes(
-  control: Pick<MintAuthorityControl, "deploymentRefs">,
+  control: MintAuthorityControl,
   supplyReview: ExtensionAsset["supplyReview"],
   reviewComplete: boolean,
+  rootIssuance: boolean,
 ): MintControlDeploymentScope[] | null {
   const deploymentRefs = [...new Set((control.deploymentRefs ?? []).map(normalizeDeploymentId))].sort(compareText);
   if (!reviewComplete || deploymentRefs.length === 0 || deploymentRefs.some((ref) => ref.length === 0)) return null;
@@ -374,6 +374,7 @@ function resolveMintControlDeploymentScopes(
   const rowByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
   const matched = deploymentRefs.map((deploymentKey) => rowByDeployment.get(deploymentKey));
   if (matched.some((row) => row === undefined)) return null;
+  if (rootIssuance && matched.some((row) => row?.reviewedRouteKind === "native")) return null;
   // Reaching every reconciled deployment is economically asset-wide even when
   // the review happens to enumerate those deployments one by one.
   if (deploymentRefs.length === rows.length) return null;
@@ -446,7 +447,7 @@ function adaptMintControl(
     if (capabilities.includes("parameter-change")) return "bounded";
     return "none";
   })();
-  const deploymentScopes = resolveMintControlDeploymentScopes(control, supplyReview, reviewComplete);
+  const deploymentScopes = resolveMintControlDeploymentScopes(control, supplyReview, reviewComplete, hasMint);
   const incidentState: ControlOverlay["incidentState"] = incidents?.some((incident) => incident.status === "active")
     ? "active"
     : incidents?.some((incident) => incident.status === "resolved")
@@ -1834,6 +1835,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
               meta.variantKind === "strategy-vault") &&
             meta.custodyProfile
             ? {
+                custodyModel: meta.custodyModel ?? "unknown",
                 providers: meta.custodyProfile.providers.map((provider) => ({
                   providerKey: provider.name,
                   role: provider.role,

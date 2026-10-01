@@ -14,8 +14,12 @@ import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fa
 import {
   buildSafetyScoreV9ReserveClassifications,
   dependencyReserveSlices,
+  buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
+  buildSafetyScoreV9ReviewedStaticReserveRows,
+  addReviewedStaticReserveEvidence,
 } from "../safety-score-v9/extension-reserves";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
+import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 
@@ -199,6 +203,60 @@ describe("reviewed curated reserve admission", () => {
     });
 
     expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec)).toBeNull();
+  });
+
+  it("admits independent adapter dates only as composition evidence, never as audited assurance", () => {
+    const rows = [{ name: "Cash", pct: 100, risk: "very-low" as const }];
+    const meta = reviewedMeta(rows, { compositionSource: "live-adapter" });
+    meta.liveReservesConfig = LIVE_RESERVES_CONFIG;
+    meta.proofOfReserves = {
+      type: "independent-audit",
+      url: "https://example.com/reports",
+      provider: "Independent examiner",
+      attestorTier: "niche",
+      latestReport: {
+        periodEnd: "2026-05-31",
+        publishedAt: "2026-06-10",
+        assuranceMethod: "examination",
+        scope: "assets-and-liabilities",
+        liabilityReconciliation: "full",
+        confidence: "verified",
+        reviewer: "fixture",
+        sources: [{ label: "May report", url: "https://example.com/may" }],
+      },
+    };
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, CLOCK_SEC)).toMatchObject({
+      rows, evidenceClass: "static-validated", provenance: "curated-fallback",
+    });
+    const evidence = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
+    addReviewedStaticReserveEvidence(
+      meta, buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, CLOCK_SEC), evidence, CLOCK_SEC,
+    );
+    expect(evidence.finish().researchEvidence).toMatchObject([{
+      sourceId: "stablecoin-meta.reviewed-curated-fallback-reserves",
+      observedAtSec: Date.UTC(2026, 5, 30) / 1_000,
+      publishedAtSec: null,
+      publishedBy: "unknown",
+      url: "https://example.com/reserves",
+    }]);
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows({
+      ...meta, mintAuthority: { supervision: "prudential" } as V9ExtensionRegistryMeta["mintAuthority"],
+    }, CLOCK_SEC)).toBeNull();
+    for (const candidate of [
+      { ...meta, liveReservesConfig: undefined },
+      { ...meta, reserveReview: { ...meta.reserveReview!, compositionSource: undefined } },
+      { ...meta, proofOfReserves: { ...meta.proofOfReserves, latestReport: { ...meta.proofOfReserves.latestReport!, confidence: "unknown" as const } } },
+      { ...meta, proofOfReserves: { ...meta.proofOfReserves, latestReport: { ...meta.proofOfReserves.latestReport!, publishedAt: undefined } } },
+      { ...meta, proofOfReserves: { ...meta.proofOfReserves, latestReport: { ...meta.proofOfReserves.latestReport!, publishedAt: "2026-07-15" } } },
+    ]) {
+      expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(candidate, CLOCK_SEC)).toBeNull();
+      expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(candidate, CLOCK_SEC)).toBeNull();
+    }
+    const expired = reviewedMeta(rows, { compositionSource: "live-adapter", compositionAsOf: "2026-05-31" });
+    expired.liveReservesConfig = LIVE_RESERVES_CONFIG;
+    expired.proofOfReserves = meta.proofOfReserves;
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(expired, CLOCK_SEC)).toBeNull();
   });
 });
 

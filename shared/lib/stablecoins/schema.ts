@@ -11,6 +11,7 @@ import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullAuthoredReserveCompositionSchema } from "../../types/reserves";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
+import { hasIndependentLiveCompositionDates } from "../report-card-policy";
 import {
   CoinNoticeSchema,
   ContractDeploymentSchema,
@@ -559,29 +560,30 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = Sta
       });
     }
 
-    // PoR / composition lockstep.
-    //
-    // The V9 reserve extension only accepts a curated composition when
-    // `reserveReview.compositionAsOf` equals `proofOfReserves.latestReport.periodEnd`
-    // — the curated rows have to describe the same balance-sheet date the report
-    // attests, or they are not evidence for it. That gate is silent by design:
-    // a mismatch rejects the coin's entire curated composition and emits no
-    // error, which is how xsgd-straitsx lost 23 published points unnoticed. Only
-    // a prose rule in the PoR rubric stood behind it.
-    //
-    // Refreshing one date without the other is the whole defect class, so the
-    // two must move together or not at all.
+    // Curated rows remain tied to the report's period. Adapter-owned rows may
+    // retain their own evidenced date without borrowing the report's assurance.
+    if (meta.reserveReview?.compositionSource === "live-adapter" && meta.liveReservesConfig == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "live-adapter compositionSource requires liveReservesConfig",
+        path: ["reserveReview", "compositionSource"],
+      });
+    }
     const latestReportPeriodEnd = meta.proofOfReserves?.latestReport?.periodEnd;
     const compositionAsOf = meta.reserveReview?.compositionAsOf;
-    if (latestReportPeriodEnd != null && compositionAsOf != null && latestReportPeriodEnd !== compositionAsOf) {
+    if (
+      latestReportPeriodEnd != null &&
+      compositionAsOf != null &&
+      latestReportPeriodEnd !== compositionAsOf &&
+      !hasIndependentLiveCompositionDates(meta)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
           `PoR lockstep: reserveReview.compositionAsOf (${compositionAsOf}) must equal ` +
-          `proofOfReserves.latestReport.periodEnd (${latestReportPeriodEnd}). The curated composition must ` +
-          `describe the same date the attestation covers, or the Safety Score V9 reserve extension silently ` +
-          `discards the whole composition. Re-curate the rows to the report's period end, or advance both ` +
-          `dates together to a newer report.`,
+          `proofOfReserves.latestReport.periodEnd (${latestReportPeriodEnd}) unless compositionSource is ` +
+          `"live-adapter", liveReservesConfig is present, and both dates have separate verified composition ` +
+          `and known report evidence. Curated-only compositions must describe the report's period.`,
         path: ["reserveReview", "compositionAsOf"],
       });
     }

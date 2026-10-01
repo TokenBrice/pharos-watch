@@ -2,7 +2,7 @@
   "id": "syrupusdc-maple",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "sourceKey": "erc4626-single-asset:ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b:pooled-claim",
       "name": "Maple syrupUSDC pooled loans and strategy claim",
       "pct": 100,
       "risk": "medium",

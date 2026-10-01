@@ -1,24 +1,11 @@
 import type {
-  BackingType,
   CustodyModel,
-  GovernanceType,
   ReserveSlice,
   ReserveRisk,
+  StablecoinMeta,
 } from "../types";
 import type { StablecoinClientMeta } from "../types/stablecoin-client-meta";
 import { roundScore } from "./math";
-
-const DEFAULT_CUSTODY_MODELS: Record<`${BackingType}:${GovernanceType}`, CustodyModel> = {
-  "rwa-backed:centralized": "institutional-regulated",
-  "rwa-backed:centralized-dependent": "institutional-regulated",
-  "rwa-backed:decentralized": "onchain",
-  "crypto-backed:centralized": "onchain",
-  "crypto-backed:centralized-dependent": "onchain",
-  "crypto-backed:decentralized": "onchain",
-  "algorithmic:centralized": "onchain",
-  "algorithmic:centralized-dependent": "onchain",
-  "algorithmic:decentralized": "onchain",
-};
 
 const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
   "very-low": 100,
@@ -35,11 +22,31 @@ export function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): 
   return roundScore(weighted / totalPct);
 }
 
-export function inferDefaultCustodyModel(backing: BackingType, governance: GovernanceType): CustodyModel {
-  return DEFAULT_CUSTODY_MODELS[`${backing}:${governance}`];
+/** Authored custody wins; only structural onchain classes retain a default. */
+export function resolveCustodyModel(meta: StablecoinClientMeta): CustodyModel {
+  if (meta.custodyModel != null) return meta.custodyModel;
+  // RWA-backed centralized classes need whole-book institutional evidence.
+  return meta.flags.backing === "rwa-backed" && meta.flags.governance !== "decentralized"
+    ? "unknown"
+    : "onchain";
 }
 
-/** Curated custody review first, with the legacy backing/governance table as fallback. */
-export function resolveCustodyModel(meta: StablecoinClientMeta): CustodyModel {
-  return meta.custodyModel ?? inferDefaultCustodyModel(meta.flags.backing, meta.flags.governance);
+/**
+ * A live adapter's reviewed composition and a separately sourced report keep
+ * independent dates. This does not make the report assurance for those rows.
+ */
+export function hasIndependentLiveCompositionDates(
+  meta: Pick<StablecoinMeta, "liveReservesConfig" | "reserveReview" | "proofOfReserves">,
+): boolean {
+  const review = meta.reserveReview;
+  const report = meta.proofOfReserves?.latestReport;
+  return meta.liveReservesConfig != null &&
+    review?.compositionSource === "live-adapter" &&
+    review.compositionAsOf != null &&
+    review.confidence === "verified" &&
+    review.sources.length > 0 &&
+    report?.periodEnd != null &&
+    report.publishedAt != null &&
+    report.confidence !== "unknown" &&
+    report.sources.length > 0;
 }

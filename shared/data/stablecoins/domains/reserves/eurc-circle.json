@@ -2,26 +2,12 @@
   "id": "eurc-circle",
   "reserves": [
     {
-      "sourceKey": "circle:eurc:other-bank-deposits",
-      "name": "Other Bank Deposits",
-      "pct": 1.21843,
+      "sourceKey": "circle:eurc:bank-deposits",
+      "name": "Cash at Regulated Financial Institutions (net settlement adjustments)",
+      "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Other regulated financial institutions in the EEA",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "sourceKey": "circle:eurc:sifi-deposits",
-      "name": "Deposits at Systemically Important Institutions",
-      "pct": 98.78157,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Systemically important financial institutions in the EEA",
+      "issuerOrObligor": "Regulated financial institutions in the EEA (individual counterparties undisclosed)",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -32,22 +18,19 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC23), D01 independent arithmetic and issuer category mapping",
+    "reviewer": "Sol curation pass 2026-10-01 (CircleRecovery), D01 independently reproduced examination arithmetic",
     "confidence": "verified",
     "sources": [
       {
         "label": "Deloitte EURC examination report - August 2026",
         "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
-      },
-      {
-        "label": "Circle transparency (weekly reserve disclosure)",
-        "url": "https://www.circle.com/transparency"
       }
     ],
-    "rationale": "Circle's September 24, 2026 EURC disclosure maps EUR 4.96 million to other bank deposits and EUR 402.12 million to systemically important institution deposits. Its total-reserves script discloses the complete denominator as 402.12 + 4.96 = EUR 407.08 million. Independently dividing each amount by that denominator and rounding to five decimal places gives 1.21843% and 98.78157%. These are shares of rounded issuer balances, not independently examined category weights; the August examination covers aggregate cash and timing adjustments only. compositionAsOf remains omitted because the September 24 weekly mix does not describe the August 31 latest independent report period; no independent report date is advanced to obtain score admission.",
-    "compositionBasis": "Complete Circle weekly EURC bank-deposit disclosure as of September 24, 2026; percentages independently calculated from disclosed EUR-million balances under D01",
+    "rationale": "The complete August 31, 2026 examination reports EUR 395,424,211 of cash at regulated financial institutions less EUR 2,139,303 of net timing and settlement adjustments, totaling EUR 393,284,908 of reserve assets. Net cash divided by the examined denominator, EUR 393,284,908, times 100 is exactly 100%. This uses only examined EUR amounts, with no weekly SIFI/non-SIFI split or invented residual. The aggregate bank row carries one conservative common-mode issuer domain; the live adapter uses the same bank-deposits key and retains its weekly bank-category amounts only in contextual metadata.",
+    "compositionBasis": "Complete August 31, 2026 examined EUR bank-cash balances net of settlement adjustments; independently reproduced arithmetic under D01",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The September 24 weekly disclosure identifies the full euro bank-cash mix by SIFI and other-bank categories. Individual banks and provider concentration remain undisclosed; the August independent examination does not verify these weekly category percentages.",
+    "knownUnknownExposure": "All examined reserve assets are euro bank cash net of timing and settlement adjustments. Individual banks and their shares are not disclosed. The aggregate bank category receives no inferred diversification credit; the weekly SIFI/non-SIFI split does not describe this report period.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

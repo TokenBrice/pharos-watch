@@ -42,7 +42,7 @@ export type V9ExtensionRegistryMeta = Pick<
   | "blacklistabilityReview"
   | "contracts"
 > &
-  Partial<Pick<StablecoinMeta, "flags">>;
+  Partial<Pick<StablecoinMeta, "flags" | "custodyModel">>;
 export type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 export type ResearchEvidence = ExtensionAsset["researchEvidence"][number];
 export type ComponentEvidence = ExtensionAsset["componentEvidence"][number];

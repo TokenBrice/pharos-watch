@@ -72,6 +72,7 @@ function incidentComponentKeys(incident: V9ReviewedIncident): readonly string[] 
     ];
   }
   if (incident.domain === "operational") return ["operational-resilience:incident-review"];
+  if (incident.domain === "security-history") return ["security-history"];
   return ["peg"];
 }
 
@@ -97,7 +98,9 @@ export function addSafetyScoreV9IncidentEvidence(
         componentKeys,
         sourceId: `safety-score-v9.incident-review.${incident.incidentId}`,
         reviewedAt: incident.reviewedAt,
-        observedAt: incident.reviewedAt,
+        ...(incident.domain === "security-history"
+          ? { observedAt: source.publishedAt, publishedAt: source.publishedAt }
+          : { observedAt: incident.reviewedAt }),
         confidence: "manual-review",
         sources: [{ label: source.label, url: source.url }],
         payload: incident,

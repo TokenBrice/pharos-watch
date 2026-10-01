@@ -32,7 +32,7 @@ import {
 } from "@shared/types/exit-route";
 import { ReserveSliceSchema, ReserveIntermediarySchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
-import { WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
+import { CustodyModelSchema, WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
 import { SafetyScoreV9WrapperAllocationReviewSchema } from "./extension-wrapper-allocation";
 import { canonicalArrayBy } from "@shared/types/safety-score-v9-fact-primitives";
 import {
@@ -362,6 +362,8 @@ const MechanismExitFactOverlaySchema = z
 
 const WrapperCustodyReviewSchema = z
   .object({
+    // Authored wrapper custody model only; absence does not prove on-chain custody.
+    custodyModel: CustodyModelSchema.default("unknown"),
     providers: canonicalArrayBy(
       z
         .object({

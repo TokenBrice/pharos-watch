@@ -1058,6 +1058,9 @@ const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
     deployedExposure: erc4626DeployedExposureSchema.optional(),
+    // Whole-token pooled claim, not an allocation to its accounting asset.
+    // Underlying observations remain contextual and look-through stays unknown.
+    pooledClaim: erc4626DeployedExposureSchema.optional(),
     redemptionRoute: z.literal("async-request").optional(),
     redemptionLock: z.array(z.object({
       selector: z.union([EvmSelectorSchema, z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*\(\)$/)]),
@@ -1075,7 +1078,16 @@ const erc4626SingleAssetParamsSchema = z
       .optional(),
     ...OptionalEvmRpcFields,
   })
-  .strict();
+  .strict()
+  .superRefine((params, ctx) => {
+    if (params.pooledClaim && (params.deployedExposure || params.slice.coinId || params.slice.depType)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pooledClaim"],
+        message: "Opaque pooled claims cannot carry token dependencies or a deployed-exposure allocation",
+      });
+    }
+  });
 
 const escrowBalanceIdentityCheckSchema = z
   .object({
@@ -3191,9 +3203,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
     sourceModel: "dynamic-mix",
-    // Gross long legs of a leveraged book are not a reconciled holder-exitable
-    // allocation; issuer-attested weak probe until provenance/completeness is
-    // resolved. Debt is published as separate totals, never netted.
+    // Whole-token composition remains opaque. Gross longs, financing debts and
+    // selected source observations are contextual only, never backing weights.
     evidenceClass: "weak-live-probe",
     sourceOriginClass: "issuer-attested",
     preferredFreshnessMode: "verified",

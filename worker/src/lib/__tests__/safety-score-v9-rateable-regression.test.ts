@@ -28,7 +28,24 @@ describe("Safety Score v9 rateable regression fixture", () => {
       expect(card.score).not.toBeNull();
     }
     const usdc = cards.find((card) => card.id === "usdc-circle")!;
-    expect(usdc.pillars.backing.score).toBeCloseTo(90.018751, 6);
+    // The frozen producer still carries the obsolete unkeyed SIFI/other-bank
+    // split. Neither row may borrow the aggregate bank's reviewed identity.
+    expect(usdc.pillars.backing.score).toBeCloseTo(84.40290725, 8);
+    expect(usdc.reasonCodes).toContain("material-reserve-slice-unstructured");
+  });
+
+  it("admits the period-matched aggregate-bank fallback when Circle live reserves are absent", () => {
+    const draft = structuredClone(miniCapture.draft as unknown as ReportCardsFixedInputDraft);
+    delete draft.liveReserveMap["usdc-circle"];
+    delete draft.liveReserveProvenanceMap["usdc-circle"];
+    const artifact = buildSafetyScoreV9ReplayArtifact({
+      fixedInput: createReportCardsFixedInput(draft),
+      publishedAtSec: miniCapture.publishedAtSec,
+    });
+    const usdc = artifact.pipeline.candidate.cards.find((card) => card.id === "usdc-circle")!;
+    expect(usdc.grade).not.toBe("NR");
+    expect(usdc.nrReasons).toEqual([]);
+    expect(usdc.pillars.backing.score).toBeCloseTo(88.78773826247263, 8);
     expect(usdc.reasonCodes).not.toContain("material-reserve-slice-unstructured");
   });
 });

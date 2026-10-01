@@ -3,6 +3,7 @@
   "name": "Kinesis Gold",
   "symbol": "KAU",
   "oneLiner": "KAU (ERC-20) is KMS Labs' Ethereum gold token backed 1:1 by native Kinesis KAU; physical redemption is two-step and ERC-20 balances do not earn fee yield.",
+  "custodyModel": "unknown",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",

@@ -4,7 +4,7 @@
     {
       "sourceKey": "circle:usdc:treasuries-under-3m",
       "name": "<3-Month U.S. Treasuries",
-      "pct": 10.6788,
+      "pct": 18.0104949,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -17,26 +17,12 @@
       "maturityDaysMax": 92
     },
     {
-      "sourceKey": "circle:usdc:sifi-deposits",
-      "name": "Deposits at Systemically Important Institutions",
-      "pct": 7.5851,
+      "sourceKey": "circle:usdc:bank-deposits",
+      "name": "Cash at Regulated Financial Institutions (net settlement adjustments)",
+      "pct": 14.43502106,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Systemically important financial institutions",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "sourceKey": "circle:usdc:other-bank-deposits",
-      "name": "Other Bank Deposits",
-      "pct": 8.412,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Other regulated financial institutions",
+      "issuerOrObligor": "Regulated financial institutions (individual counterparties undisclosed)",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -47,7 +33,7 @@
     {
       "sourceKey": "circle:usdc:overnight-reverse-treasury-repo",
       "name": "Overnight Reverse Treasury Repo",
-      "pct": 73.3241,
+      "pct": 67.55448404,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Leading global banks",
@@ -62,26 +48,19 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA02USDC)",
-    "confidence": "manual-review",
+    "reviewer": "Sol curation pass 2026-10-01 (CircleRecovery), D01 independently reproduced examination arithmetic",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USDC examination report - July 2026",
-        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20July%2026%20(1).pdf"
-      },
-      {
-        "label": "Circle transparency (weekly reserve disclosure)",
-        "url": "https://www.circle.com/transparency"
-      },
-      {
-        "label": "BlackRock Circle Reserve Fund",
-        "url": "https://www.blackrock.com/cash/en-us/products/329365/circle-reserve-fund"
+        "label": "Deloitte USDC examination report - August 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
       }
     ],
-    "rationale": "The retained fallback rows were authored on September 29 from the July 31 Deloitte examination, but the two deposit percentages were extrapolated using an August 6 weekly-disclosure bank mix. The July examination reports aggregate cash and settlement adjustments, not the SIFI/non-SIFI split. The four rows therefore are not an independently examined composition at a single date; their compositionAsOf has been removed rather than renewed. Both bank slices retain their existing asset classification. The August 31 examination and September 24 itemized weekly disclosure were fetched on October 1; a replacement composition requiring percentage arithmetic is proposed for second-round validation, not applied.",
-    "compositionBasis": "Historical July 31 examined aggregate balances with an extrapolated August 6 bank-deposit split; retained pending validation of a dated replacement",
+    "rationale": "The complete August 31, 2026 examination reports USD 73,398,532,613 of reserve assets. Treasury fair values are USD 11,918,146,195 in the fund plus USD 1,301,292,779 outside it, totaling USD 13,219,438,974. Overnight Treasury repurchase agreements are USD 49,584,000,000. Net cash and settlement balances are USD 1,003,409,582 + USD 9,591,096,978 - USD 188,181,352 + USD 188,768,431 = USD 10,595,093,639. Each percentage is independently calculated as its amount divided by USD 73,398,532,613 times 100, rounded to eight decimal places; the three amounts reconcile exactly. Settlement adjustments are reported cash due to or owed by Circle, not an invented residual. The examination does not disclose a SIFI/non-SIFI split, so aggregate bank cash has one conservative common-mode issuer domain. The live adapter uses the same aggregate bank key and retains its weekly split only as contextual metadata.",
+    "compositionBasis": "Complete August 31, 2026 examined USD fair-value balances; independently reproduced arithmetic under D01",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "All examined reserve assets are classified (U.S. Treasuries, overnight Treasury repos, cash at regulated financial institutions). The SIFI vs non-SIFI split of the examined cash is not disclosed by the examination and is carried from the Aug 06, 2026 weekly-disclosure deposit mix; individual bank and repo counterparties are not named.",
+    "knownUnknownExposure": "All reported reserve assets are classified as Treasury securities, overnight Treasury repos, or net cash and settlement balances. Individual banks, bank shares, and repo counterparties are not disclosed. Aggregate bank exposure is one concentration domain, with no diversification credit inferred from institution categories.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

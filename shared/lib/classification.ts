@@ -1,4 +1,4 @@
-import type { DependencyType, GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { CustodyModel, DependencyType, GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
 import type { V9DependencyEconomicRole } from "../types/dependency-types";
 import type { V9FailureDomainRef } from "../types/safety-score-v9-fact-primitives";
 import type { ContagionShock } from "../types/contagion";
@@ -21,6 +21,17 @@ export * from "./classification/resolve-implementation-launch-date";
 export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
+
+export const CUSTODY_MODEL_LABELS: Readonly<Record<CustodyModel, string>> = {
+  onchain: "On-chain",
+  "institutional-top": "Top-tier institution",
+  "institutional-regulated": "Regulated institution",
+  "institutional-unregulated": "Unregulated institution",
+  "institutional-sanctioned": "Sanctioned institution",
+  cex: "Exchange",
+  mixed: "Mixed custody",
+  unknown: "Unknown custody",
+};
 
 export const RESEARCH_REVIEW_CONFIDENCE_LABELS: Readonly<Record<ResearchReviewConfidence, string>> = {
   verified: "Verified",

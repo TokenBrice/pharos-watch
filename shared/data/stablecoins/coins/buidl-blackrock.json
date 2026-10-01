@@ -3,6 +3,7 @@
   "name": "BlackRock USD Institutional Digital Liquidity Fund",
   "symbol": "BUIDL",
   "oneLiner": "BUIDL is BlackRock's tokenized institutional money-market fund, NAV-pegged to $1 and backed by U.S. Treasuries, repos, and cash custodied by BNY Mellon.",
+  "custodyModel": "unknown",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",

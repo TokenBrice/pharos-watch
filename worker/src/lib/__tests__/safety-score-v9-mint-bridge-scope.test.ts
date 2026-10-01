@@ -9,6 +9,8 @@ import type {
   MintAuthorityProfile,
 } from "@shared/types/core";
 import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
+import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { describe, expect, it } from "vitest";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
@@ -374,40 +376,69 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     },
   );
 
-  it("emits a deployment-bound authority with its real key, non-root reach, and reconciled share", () => {
-    const routes = [route(ARBITRUM_ROUTE), route(BASE_ROUTE)];
-    const metadata = meta("fixture-issuer-native", {
+  it("keeps durable native mint binding asset-wide despite satellite supply", () => {
+    const routes = [route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)];
+    const metadata = meta("fixture-root-mint", {
       mintAuthority: mintProfile({
         controls: [mintControl({ deploymentRefs: [ARBITRUM_ROUTE] })],
+        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
       }),
-      bridgeRouteRisk: bridgeProfile(routes, {
+      bridgeRouteRisk: bridgeProfile(routes),
+    });
+    const partition = supplyByRoute(routes);
+    partition.arbitrum!.current = 95_610_000;
+    partition.base!.current = 4_390_000;
+    const { compiled } = compileFixture(metadata, { chainSupplyByChain: partition });
+    const asset = compiled.assets[0]!;
+    const mint = asset.controls.find((control) => control.capabilities.includes("mint"))!;
+    expect(mint).toMatchObject({
+      scope: "global",
+      economicLossScope: "global-claim",
+      materialSupplyShare: null,
+    });
+    const result = evaluateV9EconomicControlAssetFacts(
+      asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      binding: true, posture: "unbounded-or-compromised", score: 25,
+    });
+    expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "centralized-mint", binding: true, materialSharePct: null,
+    }));
+  });
+
+  it("prices the worst same-address native Safe rather than its first deployment", () => {
+    const routes = [route(BASE_ROUTE), route(ETHEREUM_ROUTE), route(ARBITRUM_ROUTE)];
+    const metadata = meta("fixture-split-native-safe", {
+      mintAuthority: mintProfile({
+        reconciliation: "periodic",
+        supervision: "attestation-only",
+        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
         controls: [
-          bridgeControl({
-            id: "issuer-native-transfer-pool",
-            routeRefs: [BASE_ROUTE],
-            capabilities: ["bridge-burn", "bridge-mint", "rate-limit", "peer-config"],
-          }),
+          mintControl({ deploymentRefs: [BASE_ROUTE], authorityType: "multisig", threshold: 3, signerCount: 5 }),
+          mintControl({ deploymentRefs: [ETHEREUM_ROUTE], authorityType: "multisig", threshold: 2, signerCount: 5 }),
+          mintControl({ deploymentRefs: [ARBITRUM_ROUTE], authorityType: "multisig", threshold: 3, signerCount: 5 }),
         ],
       }),
+      bridgeRouteRisk: bridgeProfile(routes),
     });
-    const { compiled } = compileFixture(metadata);
-    const controls = controlsFor(compiled, metadata.id);
-    const mint = controls.find((control) => control.controlKey.startsWith("mint-meta:"));
-    const bridge = controls.find((control) => control.controlKey.startsWith("bridge-meta:"));
-
-    expect(mint).toMatchObject({
-      deploymentKey: ARBITRUM_ROUTE,
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: 0.5,
-      capabilities: ["mint"],
-    });
-    expect(bridge).toMatchObject({
-      deploymentKey: BASE_ROUTE,
-      capabilities: ["bridge-mint", "burn", "parameter-change"],
-    });
-    expect(controls).toHaveLength(2);
-    expect(bridge!.capabilities).not.toContain("mint");
+    const partition = supplyByRoute(routes);
+    partition.base!.current = 3_040_000;
+    partition.ethereum!.current = 81_920_000;
+    partition.arbitrum!.current = 15_040_000;
+    for (const reverse of [false, true]) {
+      const input = structuredClone(metadata);
+      if (reverse) input.mintAuthority!.controls!.reverse();
+      const asset = compileFixture(input, { chainSupplyByChain: partition }).compiled.assets[0]!;
+      const result = evaluateV9EconomicControlAssetFacts(
+        asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+      );
+      const weak = asset.controls.find((control) => control.authority?.threshold?.required === 2)!;
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        binding: true, controlKeys: [weak.controlKey],
+      });
+      expect(result.score).toBeLessThan(70);
+    }
   });
 
   it("keeps a deployment-bound authority global when the supply partition does not reconcile", () => {

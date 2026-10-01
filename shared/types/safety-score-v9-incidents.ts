@@ -15,7 +15,7 @@ import {
   StrictIsoDateSchema,
 } from "./safety-schema-primitives";
 
-// The domain vocabulary is validated by the four `z.literal("…")` discriminants
+// The domain vocabulary is validated by the `z.literal("…")` discriminants
 // on the incident union below, so a parallel enum would be a second source of
 // truth for the same list. Derive the exported type from the union instead.
 
@@ -27,6 +27,11 @@ const V9IncidentSourceSchema = z
   })
   .strict();
 
+const V9IntegrationIncidentScopeSchema = z.object({
+  kind: z.literal("integration-only"),
+  integrationKey: CanonicalKeySchema,
+}).strict();
+
 export const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("root-claim") }).strict(),
   z
@@ -36,12 +41,7 @@ export const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
       exposureShare: FractionSchema,
     })
     .strict(),
-  z
-    .object({
-      kind: z.literal("integration-only"),
-      integrationKey: CanonicalKeySchema,
-    })
-    .strict(),
+  V9IntegrationIncidentScopeSchema,
   z.object({ kind: z.literal("holder-exit") }).strict(),
 ]);
 
@@ -129,12 +129,35 @@ const V9PegIncidentSchema = z
   })
   .strict();
 
+// Historical disclosures cannot assert realized loss or active impairment.
+// occurredAt is the public disclosure date, not an inferred vulnerability onset;
+// verified remediation is a dated primary-source confirmation, not a live audit.
+const V9SecurityHistoryIncidentSchema = z.object({
+  ...CommonIncidentShape,
+  scope: z.discriminatedUnion("kind", [
+    V9IntegrationIncidentScopeSchema,
+    z.object({
+      kind: z.literal("contract-component"),
+      deploymentKey: CanonicalKeySchema,
+      componentKey: CanonicalKeySchema,
+    }).strict(),
+  ]),
+  domain: z.literal("security-history"),
+  kind: z.literal("disclosed-remediated-vulnerability"),
+  dateBasis: z.literal("public-disclosure"),
+  resolutionDateBasis: z.literal("primary-confirmation"),
+  status: z.literal("resolved"),
+  realization: z.literal("no-reported-exploit"),
+  posture: z.object({ treatment: z.literal("informational-only") }).strict(),
+}).strict();
+
 export const V9ReviewedIncidentSchema = z
   .discriminatedUnion("domain", [
     V9ControlIncidentSchema,
     V9WrapperLocalIncidentSchema,
     V9OperationalIncidentSchema,
     V9PegIncidentSchema,
+    V9SecurityHistoryIncidentSchema,
   ])
   .superRefine((incident, ctx) => {
     const resolvedAt = incident.resolvedAt ?? null;
@@ -195,6 +218,26 @@ export const V9ReviewedIncidentSchema = z
         path: ["remediation", "state"],
         message: "Resolved incidents require verified remediation evidence",
       });
+    }
+    if (incident.domain === "security-history") {
+      if (!incident.primarySources.some((source) => source.publishedAt === incident.occurredAt)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["occurredAt"],
+          message: "Public disclosure date requires a primary source published on that date",
+        });
+      }
+      if (
+        resolvedAt === null ||
+        resolvedAt > incident.remediation.lastVerifiedAt ||
+        !incident.remediation.sources.some((source) => source.publishedAt === resolvedAt)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["resolvedAt"],
+          message: "Historical resolution date requires a dated primary confirmation verified by the review",
+        });
+      }
     }
     if (incident.domain === "control") {
       const expected = incident.status === "active" ? "active" : "resolved";

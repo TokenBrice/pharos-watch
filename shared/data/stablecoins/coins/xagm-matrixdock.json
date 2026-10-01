@@ -3,6 +3,7 @@
   "name": "Matrixdock Silver",
   "symbol": "XAGm",
   "oneLiner": "XAGm is Matrixdock's silver-backed commodity token, with each token representing roughly one troy ounce of LBMA Good Delivery silver vaulted in Asia.",
+  "custodyModel": "unknown",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",

@@ -228,6 +228,8 @@ export const ReserveReviewSchema = z
     rationale: z.string().min(1),
     compositionBasis: z.string().min(1),
     compositionAsOf: StrictIsoDateSchema.optional(),
+    /** Explicit adapter ownership; omission retains the curated/report date contract. */
+    compositionSource: z.literal("live-adapter").optional(),
     scope: z.enum(RESERVE_REVIEW_SCOPE_VALUES),
     knownUnknownExposure: z.string().min(1),
     knownUnknownExposurePct: z.number().finite().min(0).max(100),

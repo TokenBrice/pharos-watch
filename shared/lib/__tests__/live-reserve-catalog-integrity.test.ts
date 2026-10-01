@@ -19,7 +19,11 @@ interface CoinSource {
     adapter: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;
     scoring?: { maxSourceAgeSec?: number };
     inputs?: { primary?: { chain?: string } };
-    params?: { slice?: { expectedAssetAddress?: string }; liabilityScope?: LiabilityScope };
+    params?: {
+      slice?: { expectedAssetAddress?: string };
+      pooledClaim?: { basis: string; reviewedAt: string; sourceUrl: string };
+      liabilityScope?: LiabilityScope;
+    };
   };
 }
 
@@ -101,12 +105,16 @@ describe("live reserve catalog integrity", () => {
       const chain = config.inputs?.primary?.chain;
       const asset = config.params?.slice?.expectedAssetAddress?.toLowerCase();
       const vault = source.contracts?.find((contract) => contract.chain === chain)?.address.toLowerCase();
-      // The adapter emits an underlying-token row for measured idle holdings
-      // and a vault-keyed :deployed row for strategy exposure. A reviewed
-      // all-deployed composition need not invent an idle-token holding.
-      const sourceKeys = chain && asset && vault
-        ? [`erc4626-single-asset:${chain}:${asset}`, `erc4626-single-asset:${chain}:${vault}:deployed`]
-        : [];
+      // Pooled claims emit only the reviewed vault claim, never an allocation
+      // to the accounting asset. Other modes retain the underlying-token idle
+      // row or vault-keyed deployed strategy row.
+      const sourceKeys = config.params?.pooledClaim
+        ? chain && vault
+          ? [`erc4626-single-asset:${chain}:${vault}:pooled-claim`]
+          : []
+        : chain && asset && vault
+          ? [`erc4626-single-asset:${chain}:${asset}`, `erc4626-single-asset:${chain}:${vault}:deployed`]
+          : [];
       const reviewedKeys = sidecarKeys.get(id);
       if (!sourceKeys.some((sourceKey) => reviewedKeys?.has(sourceKey))) {
         failures.push(`${id}: no reserve slice keyed ${sourceKeys.join(" or ") || "erc4626-single-asset:<chain>:<underlying-or-vault>"}`);

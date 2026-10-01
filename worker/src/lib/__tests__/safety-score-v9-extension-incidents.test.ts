@@ -6,8 +6,10 @@ import {
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
   routeSafetyScoreV9WrapperIncidents,
+  routeSafetyScoreV9OperationalIncidents,
 } from "../safety-score-v9/extension-incidents";
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
+import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
@@ -83,12 +85,32 @@ function wrapperFacts(): V9ApplicableWrapperLocalFacts {
 }
 
 describe("Safety Score v9 domain-routed incident adapter", () => {
-  it("curates only the three owner-approved assets", () => {
-    expect(getSafetyScoreV9ReviewedIncidents("usdp-parallel", CLOCK_SEC)).toHaveLength(1);
-    expect(getSafetyScoreV9ReviewedIncidents("zsd-zephyr-protocol", CLOCK_SEC)).toHaveLength(1);
-    expect(getSafetyScoreV9ReviewedIncidents("sdola-inverse-finance", CLOCK_SEC)).toHaveLength(1);
-    expect(getSafetyScoreV9ReviewedIncidents("usx-solstice", CLOCK_SEC)).toEqual([]);
-    expect(getSafetyScoreV9ReviewedIncidents("usdf-falcon", CLOCK_SEC)).toEqual([]);
+  it("publishes dated vulnerability history without inventing scored incident postures", () => {
+    const reviewClock = Date.parse("2026-10-01T00:00:00Z") / 1_000;
+    const productionOverlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", reviewClock);
+    if (productionOverlay === null) throw new Error("Expected operational overlay fixture");
+    for (const assetId of ["usd3-reserve-protocol", "xaut-tether", "fxusd-f-x-protocol"]) {
+      expect(getSafetyScoreV9ReviewedIncidents(assetId, reviewClock - 1)).toEqual([]);
+      const incidents = getSafetyScoreV9ReviewedIncidents(assetId, reviewClock);
+      expect(incidents).toMatchObject([{
+        domain: "security-history",
+        status: "resolved",
+        realization: "no-reported-exploit",
+        posture: { treatment: "informational-only" },
+        remediation: { state: "verified" },
+      }]);
+      const baselineControl = control(`mint:${assetId}`);
+      const baselineMint = mintReview(baselineControl.controlKey);
+      const controlRoute = routeSafetyScoreV9ControlIncidents([baselineControl], baselineMint, incidents);
+      expect(controlRoute.controls).toEqual([baselineControl]);
+      expect(controlRoute.mintReview).toEqual(baselineMint);
+      const facts = wrapperFacts();
+      expect(routeSafetyScoreV9WrapperIncidents(facts, incidents, {
+        shareAccountingNavOracle: [], measuredUnwind: [],
+      })).toEqual(facts);
+      const overlay = { ...productionOverlay, assetId };
+      expect(routeSafetyScoreV9OperationalIncidents(overlay, incidents)).toEqual(overlay);
+    }
   });
 
   it("routes USDp and ZSD into resolved control history without an active blocker", () => {

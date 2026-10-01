@@ -438,6 +438,8 @@ export const CUSTODY_MODEL_VALUES = [
   "institutional-unregulated",
   "institutional-sanctioned",
   "cex",
+  "mixed",
+  "unknown",
 ] as const;
 export type CustodyModel = (typeof CUSTODY_MODEL_VALUES)[number];
 

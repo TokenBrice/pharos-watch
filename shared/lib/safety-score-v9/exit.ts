@@ -887,6 +887,22 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
   };
 }
 
+/**
+ * A bridge-materiality-only bound leaves the current circulating USD amount
+ * established by the supply producer. Use it only to size Exit; do not promote
+ * the supply status or infer a chain/bridge partition for any other consumer.
+ */
+export function selectV9ExitCirculatingUsd(supply: V9AssetFactsBase["supply"]): number | null {
+  const { status } = supply;
+  const currentAmountWithUnknownDistribution =
+    status.observationState === "bounded-unknown" &&
+    status.applicability.state === "required" &&
+    status.applicability.policyRuleId === "v9.supply.bridge-materiality";
+  return status.observationState === "known" || currentAmountWithUnknownDistribution
+    ? supply.circulatingUsd
+    : null;
+}
+
 export function evaluateV9ExitAssetFacts(
   asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes">,
   envelope: V9ValidatedPolicyEnvelope,
@@ -894,7 +910,7 @@ export function evaluateV9ExitAssetFacts(
 ): V9ExitEvaluationResult {
   return evaluateV9Exit(
     {
-      circulatingUsd: asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null,
+      circulatingUsd: selectV9ExitCirculatingUsd(asset.supply),
       portfolioStatus:
         asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
           ? "reviewed-complete"

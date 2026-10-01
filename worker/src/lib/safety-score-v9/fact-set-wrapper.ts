@@ -1,6 +1,7 @@
 import {
   evaluateV9ExitAssetFacts,
   resolveV9ExitCapacityAtRequest,
+  selectV9ExitCirculatingUsd,
   selectV9ExitStressRequest,
 } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -354,7 +355,10 @@ function buildWrapperStructuralDimensions(
 
   let custodyEscrow: V9WrapperLocalDimensionFact;
   const custody = context.asset.wrapperCustodyReview ?? null;
-  if (custody !== null) {
+  // Only the authored on-chain model of a direct serial wrapper scopes this
+  // review to contract custody; parent legal safeguards and reuse stay upstream.
+  const directOnchainCustody = directSerialWrapper && custody?.custodyModel === "onchain";
+  if (custody !== null && !directOnchainCustody) {
     const custodyEvidence = componentResearchEvidence(context, "wrapper-local:custodyEscrow");
     const hasUnknown =
       custody.segregation === "unknown" ||
@@ -386,7 +390,11 @@ function buildWrapperStructuralDimensions(
       form === "pure"
         ? "pure-wrapper-custody-is-the-serial-parent-contract-claim"
         : "savings-passthrough-has-no-local-custody-or-escrow",
-      uniqueEvidenceRefIds([...reviewedFormEvidence, ...allocationEvidenceRefIds]),
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...allocationEvidenceRefIds,
+        ...(directOnchainCustody ? componentResearchEvidence(context, "wrapper-local:custodyEscrow") : []),
+      ]),
     );
   } else {
     custodyEscrow = unavailableWrapperFact(
@@ -495,7 +503,7 @@ function buildWrapperStructuralDimensions(
   }
 
   let rehypothecationCorrelation: V9WrapperLocalDimensionFact;
-  if (custody !== null) {
+  if (custody !== null && !directOnchainCustody) {
     const custodyEvidence = componentResearchEvidence(context, "wrapper-local:rehypothecationCorrelation");
     rehypothecationCorrelation =
       custody.rehypothecation === "unknown"
@@ -522,7 +530,13 @@ function buildWrapperStructuralDimensions(
       form === "pure"
         ? "pure-wrapper-parent-correlation-is-applied-by-serial-dependency"
         : "savings-passthrough-holds-one-parent-and-reuses-nothing",
-      uniqueEvidenceRefIds([...reviewedFormEvidence, ...allocationEvidenceRefIds]),
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...allocationEvidenceRefIds,
+        ...(directOnchainCustody
+          ? componentResearchEvidence(context, "wrapper-local:rehypothecationCorrelation")
+          : []),
+      ]),
     );
   } else {
     rehypothecationCorrelation = unavailableWrapperFact(
@@ -661,10 +675,10 @@ function buildWrapperExitDimensions(
     );
   }
 
-  const stressRequest =
-    input.supply.status.observationState === "known"
-      ? selectV9ExitStressRequest(input.supply.circulatingUsd, V9_CANDIDATE_POLICY_V1)
-      : null;
+  const stressRequest = selectV9ExitStressRequest(
+    selectV9ExitCirculatingUsd(input.supply),
+    V9_CANDIDATE_POLICY_V1,
+  );
   const admittedDocumentedUnwindRouteKeys =
     stressRequest === null
       ? new Set<string>()
@@ -884,6 +898,19 @@ export function buildWrapperLocalFacts(
         : [`wrapper-operator:${context.asset.wrapperOperator}`]),
     ],
     formEvidenceRefIds: reviewedFormEvidence,
+    // D26, reviewed 2026-10-01: Lorenzo's launch describes mixed RWA/CeFi/DeFi
+    // fund shares, and its vault accepts USD1, USDT and USDC. The USD1 brand,
+    // underlying() pointer and settlement asset do not measure a USD1 claim.
+    // https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/
+    // Preserve the serial cap and peg relationship; withhold favorable Backing
+    // inheritance until a separate review establishes the economic claim.
+    ...(context.asset.assetId === "susd1plus-lorenzo" ? {
+      parentBackingInheritance: {
+        state: "withheld" as const,
+        reason: "mixed-strategy-without-measured-parent-claim" as const,
+        evidenceRefIds: reserveEvidenceRefIds.length > 0 ? reserveEvidenceRefIds : reviewedFormEvidence,
+      },
+    } : {}),
     facts: {
       contractMutability,
       custodyEscrow,
