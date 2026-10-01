@@ -20,6 +20,27 @@ export * from "./classification/resolve-implementation-launch-date";
 export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
+/** Reserve-access diagnostics never describe local holder-transfer restrictions. */
+export const ACCESS_LOOKTHROUGH_COVERAGE_LABELS: Record<string, string> = {
+  complete: "Complete reviewed reserve-access coverage (diagnostic)",
+  incomplete: "Incomplete reserve-access coverage (diagnostic)",
+};
+export const ACCESS_LOOKTHROUGH_CAPABILITY_LABELS: Record<string, string> = {
+  freeze: "Reserve freeze", seize: "Reserve seizure", pause: "Claim pause",
+};
+export const ACCESS_LOOKTHROUGH_REASON_LABELS: Record<string, string> = {
+  "issuer-undisclosed": "Issuer has not disclosed this branch",
+  "research-incomplete": "Access research incomplete",
+  "producer-missing": "Current observation unavailable",
+  "identity-unverified": "Exact claim identity unverified",
+  "scope-unreconciled": "Reserve-access scope unreconciled",
+  stale: "Review or composition stale",
+  "future-dated": "Review later than evaluation clock",
+  cycle: "Cyclic claim path",
+  overlap: "Position overlap unproven",
+  "deployment-mismatch": "Authority acts on another deployment",
+  "claim-inapplicable": "Current claim reach not admitted",
+};
 
 const MECHANISM_ARCHETYPE_DESCRIPTORS = {
   "fiat-cash": { label: "Custodial Cash and Cash-Equivalents", shortLabel: "Custodial Cash", ctaNoun: "fiat-backed",

@@ -293,6 +293,30 @@ function evaluateV9ArchetypeBackingInternal(
             )),
       );
     }
+    if (component.fact.scopedAssessments != null) {
+      if (component.componentKey !== "assurance-and-reconciliation" ||
+        (input.archetype !== "fiat-cash" && input.archetype !== "commodity-claim")) {
+        throw new Error("Scoped financial assurance is not applicable to this component");
+      }
+      const componentWeight = applicableComponentPolicyWeight > 0
+        ? archetypePolicy.componentWeights[component.componentKey] / applicableComponentPolicyWeight : 0;
+      const fullyAssured = component.fact.scopedAssessments.every(fragment => fragment.quality !== null && fragment.status.observationState === "known");
+      for (const fragment of component.fact.scopedAssessments) {
+        const tier = fragment.quality === null ? backing.boundedUnknownQuality : backing.componentQuality[fragment.quality];
+        const fragmentScore = fullyAssured && (fragment.quality === "strong" || fragment.quality === "adequate") &&
+          input.asset.trackRecordMonths !== undefined && input.asset.trackRecordMonths >= backing.assuranceSeasonedCredit.minMonths
+          ? Math.min(tier + backing.assuranceSeasonedCredit.points, backing.componentQuality.strong) : tier;
+        const weight = componentWeight * fragment.share;
+        mechanismWeightedScore += fragmentScore * weight;
+        contributions.push({
+          componentKey: `${pathKey}:scope:${fragment.scopeId}`, source: "mechanism", score: fragmentScore,
+          normalizedWeight: weight, weightedScore: fragmentScore * weight, observationState: fragment.status.observationState,
+          provenance: null, evidenceRefIds: uniqueSorted(fragment.status.evidenceRefIds),
+          failureDomains: canonicalDomains(component.fact.failureDomains), upstreamAssetId: null,
+        });
+      }
+      continue;
+    }
     const tierScore =
       component.fact.quality === null
         ? backing.boundedUnknownQuality

@@ -27,9 +27,11 @@ import type {
 import type {
   V9CdpStressCoverageFact,
   V9MechanismRiskReview,
+  V9MechanismFactV1,
 } from "@shared/types/safety-score-v9-backing";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
+import { compileSafetyScoreV9ReserveBoundFacts } from "./extension-reserve-bounds";
 import {
   addEvidence,
   addGap,
@@ -117,7 +119,7 @@ function normalizeMechanismReview(
 
   for (const [componentKey, value] of Object.entries(normalized)) {
     if (value === null || typeof value !== "object" || !("status" in value)) continue;
-    const fact = value as { status: V9FactStatusV2 };
+    const fact = value as V9MechanismFactV1;
     const specificEvidenceKey = `mechanism-risk-review:${componentKey}`;
     const factEvidenceIds = context.asset.componentEvidence.some(
       (binding) => binding.componentKey === specificEvidenceKey,
@@ -177,6 +179,18 @@ function normalizeMechanismReview(
           : [],
       gapIds: [gapId],
     });
+    if (fact.scopedAssessments != null) {
+      for (const fragment of fact.scopedAssessments) {
+        if (fragment.quality === null) { fragment.status = fact.status; continue; }
+        const fragmentEvidence = componentResearchEvidence(context, `reserve-scope:${fragment.scopeId}`);
+        const current = fragmentEvidence.length > 0 && fragmentEvidence.every(id => context.evidence.get(id)?.freshness.state === "current");
+        fragment.status = current
+          ? createV9FactStatus({ applicability: original.applicability, observationState: "known", evidenceRefIds: fragmentEvidence })
+          : fact.status;
+        if (!current) fragment.quality = null;
+        for (const id of fragmentEvidence) componentEvidenceIds.add(id);
+      }
+    }
     if (original.observationState === "stale") {
       hasStale = true;
       if (!factEvidenceIds.some((evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale")) {
@@ -417,7 +431,7 @@ function reserveSourceEvidence(
         sourceId: provenance?.source ?? "report-cards-live-reserves",
         sourceGenerationId: source.generationId,
         disposition: "observed",
-        observedAtSec: provenance?.fetchedAt ?? source.observedAtSec,
+        observedAtSec: provenance?.reserveObservation?.observedAtSec ?? provenance?.fetchedAt ?? source.observedAtSec,
         contentSha256: domainDigest("safety-score-v9.reserve-exposure.v1", slices),
         maxAgeSec: source.maxAgeSec,
       },
@@ -447,6 +461,7 @@ function assertCompatibleReserveClassification(
 export function buildReserves(context: AssetBuildContext): {
   reserveStatus: V9FactStatusV2;
   reserveExposures: V9ReserveExposureFactV2[];
+  reserveBoundFacts?: V9AssetFactsV2["reserveBoundFacts"];
 } {
   if (context.asset.reserveApplicability.state === "not-applicable") {
     if (
@@ -467,6 +482,7 @@ export function buildReserves(context: AssetBuildContext): {
         evidenceRefIds: evidenceIds,
       }),
       reserveExposures: [],
+      reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
     };
   }
 
@@ -502,6 +518,7 @@ export function buildReserves(context: AssetBuildContext): {
           : {}),
       }).status,
       reserveExposures: [],
+      reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
     };
   }
 
@@ -635,6 +652,7 @@ export function buildReserves(context: AssetBuildContext): {
       ...(reviewedStatic
         ? {
             evidenceClass: reviewedStatic.evidenceClass,
+            ...(reviewedStatic.sourceKind == null ? {} : { sourceKind: reviewedStatic.sourceKind, scopeId: reviewedStatic.scopeId }),
           }
         : {}),
       status,
@@ -667,6 +685,7 @@ export function buildReserves(context: AssetBuildContext): {
       gapIds: envelopeGapIds,
     }),
     reserveExposures: exposures,
+    reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
   };
 }
 

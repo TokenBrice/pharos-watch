@@ -24,9 +24,26 @@ const V9MechanismFactV1Schema = z
     status: V9FactStatusV2Schema,
     quality: V9MechanismQualitySchema.nullable(),
     failureDomains: CanonicalFailureDomainsSchema,
+    scopedAssessments: z.array(z.object({
+      scopeId: z.string().min(1),
+      share: z.number().finite().positive().max(1),
+      quality: V9MechanismQualitySchema.nullable(),
+      status: V9FactStatusV2Schema,
+    }).strict()).min(1).optional(),
   })
   .strict()
   .superRefine((fact, ctx) => {
+    if (fact.scopedAssessments != null) {
+      const total = fact.scopedAssessments.reduce((sum, row) => sum + row.share, 0);
+      if (Math.abs(total - 1) > 1e-9 || new Set(fact.scopedAssessments.map(row => row.scopeId)).size !== fact.scopedAssessments.length) {
+        ctx.addIssue({ code: "custom", path: ["scopedAssessments"], message: "Scoped assurance must partition one component exactly once" });
+      }
+      for (const row of fact.scopedAssessments) {
+        if ((row.quality !== null) !== (row.status.observationState === "known") || (row.quality !== null && row.status.evidenceRefIds.length === 0)) {
+          ctx.addIssue({ code: "custom", path: ["scopedAssessments"], message: "Known assurance fragments require quality and evidence; unknown is not zero" });
+        }
+      }
+    }
     if (fact.status.applicability.state === "not-applicable" && fact.quality !== null) {
       ctx.addIssue({
         code: "custom",
@@ -534,5 +551,12 @@ export const V9MechanismRiskReviewSchema = z.discriminatedUnion("archetype", [
   V9UcitsTrsFundMechanismRiskReviewSchema,
   V9SharedReserveMechanismRiskReviewSchema,
   V9ProtocolPositionMechanismRiskReviewSchema,
-]);
+]).superRefine((review, ctx) => {
+  for (const [key, value] of Object.entries(review)) {
+    if (value != null && typeof value === "object" && "scopedAssessments" in value &&
+      (key !== "assuranceAndReconciliation" || (review.archetype !== "fiat-cash" && review.archetype !== "commodity-claim"))) {
+      ctx.addIssue({ code: "custom", path: [key, "scopedAssessments"], message: "Only eligible financial assurance components accept scoped assessments" });
+    }
+  }
+});
 export type V9MechanismRiskReview = z.infer<typeof V9MechanismRiskReviewSchema>;

@@ -47,6 +47,17 @@ for a grade is not met, claim the lower grade or leave the component uncurated (
 | `limited` | Issuer-published structured data (API, dashboard with itemized figures) corroborated by at least one verifiable external anchor: an on-chain read, a regulatory register entry, or a named third-party service agreement. |
 | `weak` / `failed` | Documented evidence of the deficiency itself (a measured shortfall, a lapsed attestation, an adverse event), pinned like any other claim. Never grade `weak` merely because evidence is missing — absence of evidence keeps the component bounded, it is not a measured weakness. |
 
+## Scoped reports and bounded observations
+
+Scoped financial engagements retain exact deployment/book/exclusion identities and a matched historical denominator. Financial-assurance fragments require an admitted current economic partition plus a complete verified current-book/exclusion join; remaining share keeps bounded-unknown quality and issuer-undisclosed responsibility. Report units never substitute for current USD liabilities, and scoped reconciliation never silently upgrades whole-token reconciliation or recovery design.
+
+Without that current partition and book join, exact coverage is diagnostic and preserves exactly the legacy report treatment, including the authored legacy reconciliation label, recovery and overlay treatment. A null current-liability share does not withdraw legacy credit. The only exception without a partition is an admitted verified current report envelope explicitly excluding nonzero or unknown-amount liabilities that are affirmatively still owed, with exclusion sources accessed no later than the scope review. Such evidence may remove overbroad legacy credit; merely omitting catalog deployment refs (including escrow-backed representations) may not.
+
+Portfolio, on-chain and standing-structure envelopes have independent clocks and never grant financial assurance, reconciliation or seasoning; a code-security audit is not a financial engagement. Standing feeder identity establishes only a conservative whole-holder instrument, not current holdings, NAV or legal priority. Bounded on-chain observations may identify exact reviewed reserve/escrow contracts and native technical subjects such as `gnosis:native:xdai`, independently of holder `contracts[]` and financial-coverage liability refs. These identities grant no financial, supply or assurance credit; reserve contracts cannot be reused as financial liabilities.
+
+Full independent and operational financial assurance require complete applicable scope; overlays cannot bypass that gate. Exact authoring and producer contracts live in [Stablecoin Data](../stablecoin-data.md#registry-editing-entry) and [Live Reserves](../live-reserves.md#snapshot-metadata-and-warning-effects).
+
+
 ## Explicitly insufficient (never admit these)
 
 Wave-6 packet research produced the canonical negative examples; they remain the test:
@@ -270,3 +281,66 @@ Burn-parent/mint-parent idle-token custody absence is a contract-only N/A, not l
 or bankruptcy protection. Parent claims must match a real dependency edge and remain adverse-only
 diagnostics: they never grant supervision, holder rights, favorable parent Backing, cap relief
 or supply changes. Per-coin facts are deferred to the later authoring wave.
+
+## Bounded reserve maturity and liquidity facts
+
+Unreleased methodology 10.0 admits B12 through `ReserveBoundedFactSchema` and the
+asset-keyed `reserve-bound-facts-v1.json` registry (initially empty), or the same
+payload on a live reserve slice's `boundedFacts`. These are independent scoped
+facts, not reserve composition, dependency weights, supply or Exit capacity.
+Keep the original category intact; use an exact source/exposure key or a named
+sub-instrument. A sub-instrument without a same-snapshot `coveredShare` is diagnostic
+only. Every fact pins its primary URLs, publisher, assertion, content digest and
+own `asOfSec`; reviewed research additionally names reviewer/date/confidence,
+while a producer names observer/source/run/timestamp/confidence without a fake review.
+
+- Contractual maturity maxima require a legally binding instrument claim covering
+  all instruments in their exact scope. Calendar months use the longest Gregorian
+  calendar duration, not a 30-day conversion. Observed maxima never become covenants,
+  WAM/WAL or fund-share expiry: reconcile a dated gross-value roster to its gross
+  denominator, use the worst residual tenor, cap informational credit at the policy
+  quality selector, and retain the uncovered factor. Already matured instruments
+  are not assumed paid. Observations contradicting a covenant withhold its positive
+  credit and retain a machine-readable rejection.
+- Exhaustive enforceable eligibility envelopes constrain a worst-feasible allocation,
+  satisfying minima before filling permitted capacity in ascending quality order.
+  Non-exhaustive marketing lists and infeasible constraints grant nothing. Eligibility
+  does not create composition: missing-composition gaps, issuer-undisclosed responsibility,
+  unknown concentration and all original ceilings remain.
+- Current availability requires a reproducible native-asset numerator and positive
+  same-snapshot denominator. Reject numerator above denominator; never clamp.
+  The evidenced fraction resolves only the unknown liquidity factor at the policy's
+  `limited` current-availability quality. It is neither stressed realization nor an
+  executable USD exit. Positive independently scoped bounds are not summed where
+  coverage could overlap; adverse information and known whole-scope classifications
+  continue to bind.
+- Structural maturity absence requires the governing instrument and complete scope;
+  an open-ended subholding cannot clear the whole-mechanism WAM signal. Stressed
+  realization facts separately identify collateral, gross coverage, stress scenario,
+  haircut budget, execution conditions, settlement asset and elapsed bound.
+  Collateral transfer, ordinary T+1 targets and gated redemptions are not stressed
+  final USD settlement. Partial stress coverage never sets the entire horizon.
+
+Admission uses the fact's own snapshot, never its fresh review to renew an old
+portfolio. Hard constraints use `reviewedReserveClassificationMaxAgeSec`; portfolio
+observations use composition maximum age plus reporting grace; current availability
+uses `currentLiquidFractionMaxAgeSec` (10,800 seconds), further restricted by the
+producer/run budgets. Date-only reviews must have fully elapsed. Live observations
+must match `boundedFactsGeneration` exactly. Compiled `reserveBoundFacts` retain
+independent status, evidence references, source generation, resolved freshness budget
+and rejection reason. Contradictory same-scope/same-generation records quarantine the
+asset; historical captures without new facts retain their original scores.
+
+Origin's producer emits same-pin idle USDC / total vault USDC on the existing keyed
+row, without increasing its idle-only redemption capacity. The separate itemized
+collateral API observer verifies cache generation around its fetch and retains a
+`diagnostic-unreconciled` observation: Ethereum/Base/Hyper strategy figures are not
+joined to the Ethereum vault denominator without explicit reconciliation.
+
+Authoring procedure: pin governing identity/scope and assertion; obtain the complete
+same-date gross coverage or leave it null; choose the factual kind (never reinterpret
+an observation as a covenant); record the true source/review clocks; compile and inspect
+the independent admission diagnostics; replay against an unchanged capture and review
+directional factor changes, unknown tails, original ceilings and public evidence references.
+Issuer non-disclosure keeps its charge. Registry entries and coin data require a separate
+reviewed authoring pass; this capability does not manufacture evidence closure.

@@ -11,7 +11,9 @@ import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullAuthoredReserveCompositionSchema } from "../../types/reserves";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
-import { hasIndependentLiveCompositionDates } from "../report-card-policy";
+import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "../report-card-policy";
+import { normalizeDeploymentId } from "../deployment-id";
+import { resolveV10ReserveObservationDeploymentRefs } from "../safety-score-v9/reserve-scope";
 import {
   CoinNoticeSchema,
   ContractDeploymentSchema,
@@ -573,11 +575,38 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = Sta
     }
     const latestReportPeriodEnd = meta.proofOfReserves?.latestReport?.periodEnd;
     const compositionAsOf = meta.reserveReview?.compositionAsOf;
+    const coverage = meta.proofOfReserves?.latestReport?.coverage;
+    const deployedRefs = (meta.contracts ?? []).map(row => normalizeDeploymentId(`${row.chain}:${row.address}`));
+    const observationRefs = meta.reserveReview?.observations?.length ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
+    for (const [field, refs, allowedRefs] of [
+      ["proofOfReserves.latestReport.coverage", coverage?.deploymentRefs ?? [], [...deployedRefs, ...(coverage?.nativeLiabilityRef ? [coverage.nativeLiabilityRef] : [])]],
+      ...((meta.reserveReview?.observations ?? []).map(row => ["reserveReview.observations", row.deploymentRefs, observationRefs] as const)),
+    ] as const) {
+      for (const ref of refs) {
+        if (!allowedRefs.includes(ref)) {
+          ctx.addIssue({ code: "custom", path: field.split("."), message: `Unresolved reserve deployment ${ref}` });
+        }
+      }
+    }
+    if (meta.reserveReview?.reportScopeId != null &&
+      (coverage?.scopeId !== meta.reserveReview.reportScopeId || coverage.denominator.periodEnd !== compositionAsOf)) {
+      ctx.addIssue({ code: "custom", path: ["reserveReview", "reportScopeId"], message: "Report-derived composition must link its exact scope and period" });
+    }
+    if (meta.reserveReview?.reportScopeId != null &&
+      meta.reserveReview.observations?.some(row => row.kind === "portfolio-observation")) {
+      ctx.addIssue({ code: "custom", path: ["reserveReview"], message: "Composition cannot be both report-derived and independently observed" });
+    }
+    // liabilityReconciliation retains the report's legacy authored conclusion.
+    // Coverage is diagnostic until joined to an admitted captured economic/book
+    // partition; catalog deployments may include escrow-backed representations,
+    // not additional root liabilities. Runtime admission, not this roster,
+    // decides whole-token scope and applies explicit still-owed exclusions.
     if (
       latestReportPeriodEnd != null &&
       compositionAsOf != null &&
       latestReportPeriodEnd !== compositionAsOf &&
-      !hasIndependentLiveCompositionDates(meta)
+      !hasIndependentLiveCompositionDates(meta) &&
+      !hasIndependentReserveObservationDates(meta)
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

@@ -32,7 +32,7 @@ import {
 
 const reviewDay = Date.parse("2026-10-01T00:00:00Z") / 1_000;
 const clockSec = reviewDay + 86_400;
-const input = (clock = clockSec) => ({ clockSec: clock, liveReserveMap: {} }) as SafetyScoreV9CompilerInput;
+const input = (clock = clockSec) => ({ clockSec: clock, liveReserveMap: {}, liveReserveProvenanceMap: {} }) as SafetyScoreV9CompilerInput;
 const identity = {
   disposition: "resolved" as const,
   reviewedAt: "2026-10-01",

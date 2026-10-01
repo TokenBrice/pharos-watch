@@ -2,7 +2,11 @@ import type { DependencyRejectionReason } from "@shared/lib/dependency-derivatio
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { hasIndependentLiveCompositionDates } from "@shared/lib/report-card-policy";
+import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "@shared/lib/report-card-policy";
+import { admitV10ReserveReportScope, admitV10ReserveObservation, shouldApplyV10ReserveReportScope, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
+import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import type { ReserveObservationEnvelope, ReserveScopedAdmission } from "@shared/types/safety-score-v9-reserve-scope";
+import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
   validateReserveCompositionTotal,
@@ -311,10 +315,27 @@ function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): Rese
   });
 }
 
-function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta): boolean {
+function reportScopeApplies(
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
+): boolean {
+  const report = meta.proofOfReserves?.latestReport;
+  if (!report?.coverage) return false;
+  const partition = fixedInput?.safetyScoreV9SupplyAttributionById[meta.id];
+  return shouldApplyV10ReserveReportScope(report, admitV10ReserveReportScope({
+    report, deploymentRefs: (meta.contracts ?? []).map(row => normalizeDeploymentId(`${row.chain}:${row.address}`)),
+    clockSec, policy: V9_CANDIDATE_POLICY_V1.policy,
+    currentPartition: partition?.model === "reviewed-economic-deployment-partition-v1" ? partition : null,
+    baseInputGenerationId: fixedInput?.baseInputGenerationId,
+  }));
+}
+
+function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta, clockSec: number, fixedInput?: Readonly<SafetyScoreV9CompilerInput>): boolean {
   const review = meta.reserveReview;
   const report = meta.proofOfReserves?.latestReport;
   if (!review || !report) return false;
+  if (reportScopeApplies(meta, clockSec, fixedInput)) return false;
   const reportSourceUrls = new Set(report.sources.map((source) => source.url));
   const transparencyIndexUrl = meta.proofOfReserves?.url;
   return (
@@ -350,11 +371,13 @@ interface IndependentlyAttestedCompositionAdmission {
 function independentlyAttestedComposition(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): IndependentlyAttestedCompositionAdmission | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const proof = meta.proofOfReserves;
   const report = proof?.latestReport;
+  if (reportScopeApplies(meta, clockSec, fixedInput)) return null;
   const attestorIndependent =
     proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
   const reviewAtSec = review ? conservativeDateEndSec(review.reviewedAt, clockSec) : null;
@@ -409,13 +432,14 @@ function independentlyAttestedComposition(
 export function buildSafetyScoreV9ReviewedStaticReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
   if (meta.mintAuthority?.supervision !== "prudential") return null;
-  const admission = independentlyAttestedComposition(meta, clockSec);
+  const admission = independentlyAttestedComposition(meta, clockSec, fixedInput);
   if (admission?.freshness !== "fresh") return null;
   return {
     rows: admission.normalizedRows,
-    evidenceClass: hasDirectIndependentReserveAssurance(meta) ? "independent" : "issuer-attested",
+    evidenceClass: hasDirectIndependentReserveAssurance(meta, clockSec, fixedInput) ? "independent" : "issuer-attested",
     provenance: "curated",
   };
 }
@@ -438,9 +462,10 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
 export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
   if (meta.mintAuthority?.supervision === "prudential") return null;
-  const admission = independentlyAttestedComposition(meta, clockSec);
+  const admission = independentlyAttestedComposition(meta, clockSec, fixedInput);
   if (admission?.freshness !== "fresh") return null;
   return { rows: admission.normalizedRows, evidenceClass: "static-validated", provenance: "audited-fallback" };
 }
@@ -454,9 +479,33 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
   provenance: "curated" | "curated-fallback",
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
+  const observationRefs = review?.observations?.length ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
+  const separate = review?.observations?.find(row =>
+    row.kind === "standing-structure" && admitV10ReserveObservation({
+      observation: row, deploymentRefs: observationRefs,
+      clockSec, policy: V9_CANDIDATE_POLICY_V1.policy,
+    }).admitted,
+  );
+  if (separate?.kind === "standing-structure" && rows.length === 1 && rows[0].pct === 100 &&
+    rows[0].assetClass === "fund-share" && rows[0].risk === "high" &&
+    rows[0].liquidityHorizon === "over-seven-days" && rows[0].coinId == null &&
+    rows[0].issuerOrObligor === separate.instrumentKey) {
+    return { rows: [...rows], evidenceClass: "static-validated", provenance, sourceKind: "standing-structure", scopeId: separate.scopeId };
+  }
+  const portfolio = review?.observations?.find(row => row.kind === "portfolio-observation" &&
+    review.reportScopeId == null && review.compositionAsOf === new Date(row.observedAtSec * 1000).toISOString().slice(0, 10) &&
+    row.wholeAssetDenominator?.sourceSha256 === row.sourceSha256 &&
+    admitV10ReserveObservation({ observation: row, deploymentRefs: observationRefs,
+      clockSec, policy: V9_CANDIDATE_POLICY_V1.policy }).wholeAssetComposition);
+  if (portfolio && review?.confidence === "verified" && review.scope === "full-composition" &&
+    review.knownUnknownExposurePct === 0 && rows.length > 0 && validateReserveCompositionTotal(rows, "full")) {
+    return { rows: [...rows], evidenceClass: "static-validated", provenance, sourceKind: "portfolio-observation", scopeId: portfolio.scopeId };
+  }
+  if (reportScopeApplies(meta, clockSec, fixedInput)) return null;
   const reviewedAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
   const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
   const reportPeriodEnd = meta.proofOfReserves?.latestReport?.periodEnd;
@@ -475,7 +524,7 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     compositionAtSec === null ||
     reviewedAtSec < compositionAtSec ||
     (hasDateMismatch && (
-      !hasIndependentLiveCompositionDates(meta) ||
+      !(hasIndependentLiveCompositionDates(meta) || hasIndependentReserveObservationDates(meta)) ||
       conservativeDateEndSec(reportPeriodEnd, clockSec) === null ||
       conservativeDateEndSec(meta.proofOfReserves?.latestReport?.publishedAt, clockSec) === null
     )) ||
@@ -494,9 +543,10 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
 export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
   if (meta.liveReservesConfig == null) return null;
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated-fallback");
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated-fallback", fixedInput);
 }
 
 /**
@@ -507,9 +557,10 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
 export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
 ): ReviewedStaticReserveRows | null {
   if (meta.liveReservesConfig != null || meta.variantOf != null) return null;
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated");
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated", fixedInput);
 }
 
 export function addReviewedStaticReserveEvidence(
@@ -521,6 +572,20 @@ export function addReviewedStaticReserveEvidence(
   const review = meta.reserveReview;
   if (!review) return;
   const report = meta.proofOfReserves?.latestReport;
+  if (admitted?.sourceKind === "standing-structure" || admitted?.sourceKind === "portfolio-observation") {
+    const structure = review.observations?.find(row => row.scopeId === admitted.scopeId && row.kind === admitted.sourceKind);
+    if (!structure) throw new Error("Independent reserve admission has no source envelope");
+    evidence.add({
+      componentKeys: ["reviewed-static-reserves", ...admitted.rows.map(row => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`)],
+      sourceId: `stablecoin-meta.reserve-${structure.kind}`, reviewedAtSec: structure.reviewedAtSec,
+      observedAtSec: structure.observedAtSec ?? structure.reviewedAtSec,
+      confidence: "verified", sources: structure.sources.map(source => ({ label: structure.kind, url: source.url })),
+      payload: { structure, rows: admitted.rows }, maxAgeSec: structure.kind === "standing-structure"
+        ? V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.standingStructureMaxAgeSec
+        : REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
+    });
+    return;
+  }
   if (!admitted) {
     const admission = independentlyAttestedComposition(meta, clockSec);
     if (admission?.freshness !== "expired") return;
@@ -655,4 +720,50 @@ export function addReserveClassificationEvidence(
     payload: { reserveReview: review, reserves: meta.reserves ?? [] },
     maxAgeSec: REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC,
   });
+}
+
+export function buildSafetyScoreV10ScopedReserveAdmissions(meta: V9ExtensionRegistryMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>): ReserveScopedAdmission[] {
+  if (fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservationFailure != null) {
+    throw new Error(`${meta.id}: malformed-reserve-observation (producer-failed)`);
+  }
+  const deploymentRefs = (meta.contracts ?? []).map(row => normalizeDeploymentId(`${row.chain}:${row.address}`));
+  const report = meta.proofOfReserves?.latestReport;
+  const partition = fixedInput.safetyScoreV9SupplyAttributionById[meta.id];
+  const admissions: ReserveScopedAdmission[] = [];
+  if (report?.coverage) {
+    const scope = admitV10ReserveReportScope({ report, deploymentRefs, clockSec: fixedInput.clockSec, policy: V9_CANDIDATE_POLICY_V1.policy,
+      currentPartition: partition?.model === "reviewed-economic-deployment-partition-v1" ? partition : null,
+      baseInputGenerationId: fixedInput.baseInputGenerationId });
+    if (scope) admissions.push(scope);
+  }
+  const live = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation;
+  const observations = [...(meta.reserveReview?.observations ?? []), ...(live ? [live] : [])];
+  const observationRefs = observations.length ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
+  for (const observation of observations) {
+    admissions.push(admitV10ReserveObservation({ observation, deploymentRefs: observationRefs,
+      clockSec: fixedInput.clockSec, policy: V9_CANDIDATE_POLICY_V1.policy }));
+  }
+  if (new Set(admissions.map(row => row.scopeId)).size !== admissions.length) {
+    throw new Error(`${meta.id}: overlapping-reserve-scope-identities`);
+  }
+  return admissions.sort((a, b) => compareText(a.scopeId, b.scopeId));
+}
+
+export function addScopedReserveEvidence(meta: V9ExtensionRegistryMeta, admissions: ReserveScopedAdmission[], live: ReserveObservationEnvelope | undefined, evidence: ReviewEvidenceBuilder): void {
+  for (const admission of admissions) {
+    if (!admission.admitted) { admission.evidenceRefIds = []; continue; }
+    const observation = [...(meta.reserveReview?.observations ?? []), ...(live ? [live] : [])].find(row => row.scopeId === admission.scopeId);
+    const report = meta.proofOfReserves?.latestReport;
+    if (observation) {
+      admission.evidenceRefIds = evidence.add({ componentKeys: [`reserve-scope:${admission.scopeId}`], sourceId: `reserve-observation:${observation.kind}`,
+        reviewedAtSec: observation.reviewedAtSec, observedAtSec: observation.observedAtSec ?? observation.reviewedAtSec,
+        sources: observation.sources.map(source => ({ label: observation.kind, url: source.url })), confidence: "verified", payload: observation,
+        maxAgeSec: observation.expiresAtSec - (observation.observedAtSec ?? observation.reviewedAtSec) });
+    } else if (report?.coverage) {
+      admission.evidenceRefIds = evidence.add({ componentKeys: [`reserve-scope:${admission.scopeId}`], sourceId: "reserve-scoped-financial-report",
+        reviewedAtSec: report.coverage.reviewedAtSec, observedAtSec: report.coverage.denominator.asOfSec, publishedAt: report.publishedAt,
+        sources: report.sources, confidence: "verified", payload: report, publishedBy: "issuer",
+        maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec });
+    }
+  }
 }

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
+import { ReserveScopedAdmissionSchema } from "@shared/types/safety-score-v9-reserve-scope";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isRecord } from "@shared/lib/type-guards";
@@ -341,6 +343,8 @@ const ReviewedStaticReserveRowsSchema = z
     ).refine((rows) => rows.length > 0, { message: "Reviewed static reserve admission requires rows" }),
     evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]),
     provenance: z.enum(["curated", "curated-fallback", "audited-fallback"]).default("curated"),
+    sourceKind: z.enum(["standing-structure", "portfolio-observation", "financial-report"]).optional(),
+    scopeId: z.string().min(1).optional(),
   })
   .strict();
 
@@ -437,7 +441,9 @@ const AssetExtensionSchema = z
     dependencies: EffectiveDependenciesOverlaySchema.nullable(),
     reserveApplicability: ReserveApplicabilitySchema,
     reserveClassifications: canonicalArrayBy(ReserveClassificationSchema, (row) => row.exposureKey),
+    reserveBoundFacts: canonicalArrayBy(ReserveBoundedFactSchema, (row) => row.factKey).optional(),
     reviewedStaticReserveRows: ReviewedStaticReserveRowsSchema.nullable().optional(),
+    reserveScopeAdmissions: z.array(ReserveScopedAdmissionSchema).optional(),
     routeReviews: canonicalArrayBy(RouteReviewSchema, (row) => `${row.lane}:${row.routeId}`),
     retainedRoutes: canonicalArrayBy(
       RetainedRouteSchema,

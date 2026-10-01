@@ -412,6 +412,7 @@ describe("VERITAS-II finding: mechanism overlays do not expire after twelve mont
     const fixedInput = {
       clockSec: Date.UTC(2027, 6, 16) / 1_000,
       liveReserveMap: { "usdc-circle": [{ pct: 100 }] },
+      liveReserveProvenanceMap: {},
     } as unknown as ReportCardsFixedInput;
     const meta = { id: "usdc-circle" } as MechanismMeta;
 

@@ -4,6 +4,10 @@
  * and operational publication code do not change score construction.
  */
 export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
+  "shared/types/safety-score-v9-reserve-scope.ts",
+  "shared/lib/safety-score-v9/reserve-scope.ts",
+  "shared/types/reserve-bounded-facts.ts",
+  "shared/lib/safety-score-v9/reserve-bound-facts.ts",
   "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
   "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
   "shared/lib/compare.ts",
@@ -13,6 +17,8 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/sha256.ts",
   "shared/lib/stable-json.ts",
   "shared/lib/safety-score-v9/access-posture.ts",
+  "shared/lib/safety-score-v9/access-lookthrough.ts",
+  "shared/types/safety-score-v9-access-lookthrough.ts",
   "shared/lib/safety-score-v9/aggregation.ts",
   "shared/lib/safety-score-v9/archetypes/algorithmic.ts",
   "shared/lib/safety-score-v9/archetypes/cdp.ts",
@@ -92,7 +98,23 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * reason: they feed version *labels* rather than scoring behaviour.
  */
 export const V9_FACT_PRODUCER_SOURCE_PATHS = [
+  "worker/src/cron/reserve-adapters/xdai-bridge.ts",
+  "shared/lib/report-card-policy.ts",
+  "shared/types/live-reserves.ts",
+  "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
+  "worker/src/lib/safety-score-v9/extension-reserve-bounds.ts",
+  "worker/src/cron/reserve-adapters/origin-vault-balances.ts",
+  "worker/src/cron/reserve-adapters/slice-math.ts",
+  "worker/src/cron/reserve-adapters/evm-observation-plan.ts",
+  "worker/src/cron/reserve-adapters/onchain.ts",
+  "worker/src/cron/reserve-adapters/request.ts",
+  "worker/src/cron/reserve-adapters/input-guards.ts",
+  "worker/src/cron/reserve-adapters/freshness.ts",
+  "worker/src/cron/reserve-adapters/redemption.ts",
+  "shared/lib/live-reserve-adapters.ts",
   "shared/data/safety-score-v9/incident-reviews-v1.json",
+  "shared/data/safety-score-v9/access-lookthrough-reviews-v1.json",
+  "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts",
   "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
   "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
   "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",

@@ -103,7 +103,7 @@ export function parseBoundedDateSec(
   label: string,
   errorKind: "review-date" | "date" = "review-date",
 ): number {
-  const timestampMs = Date.parse(`${value}T00:00:00.000Z`);
+  const timestampMs = Date.parse(value.includes("T") ? value : `${value}T00:00:00.000Z`);
   const review = errorKind === "review-date";
   if (!Number.isFinite(timestampMs)) {
     throw new Error(`Safety Score v9 ${label} has an invalid ${review ? "review date" : "date"}`);
@@ -135,7 +135,9 @@ export class ReviewEvidenceBuilder {
   add(args: {
     componentKeys: readonly string[];
     sourceId: string;
-    reviewedAt: string;
+    reviewedAt?: string;
+    reviewedAtSec?: number;
+    observedAtSec?: number;
     observedAt?: string;
     publishedAt?: string;
     publishedBy?: V9PublishedEvidenceAttribution;
@@ -144,12 +146,21 @@ export class ReviewEvidenceBuilder {
     payload: unknown;
     maxAgeSec?: number | null;
   }): string[] {
-    parseBoundedDateSec(args.reviewedAt, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
-    const observedAtSec = parseBoundedDateSec(
-      args.observedAt ?? args.reviewedAt,
-      this.clockSec,
-      `${this.assetId}:${args.sourceId}:observed`,
-    );
+    if ((args.reviewedAt == null) === (args.reviewedAtSec == null)) {
+      throw new Error("Review evidence requires exactly one reviewed date or timestamp");
+    }
+    const reviewSec = args.reviewedAtSec ?? parseBoundedDateSec(args.reviewedAt!, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
+    const observedAtSec = args.observedAtSec ?? (args.reviewedAtSec != null
+      ? args.reviewedAtSec
+      : parseBoundedDateSec(args.observedAt ?? args.reviewedAt!, this.clockSec, `${this.assetId}:${args.sourceId}:observed`));
+    if (args.reviewedAtSec != null || args.observedAtSec != null) {
+      for (const timestamp of [reviewSec, observedAtSec]) {
+        if (!Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > this.clockSec) {
+          throw new Error("Review evidence timestamp is invalid or later than the scoring clock");
+        }
+      }
+      if (observedAtSec > reviewSec) throw new Error("Evidence observation cannot postdate review");
+    }
     const publishedAtSec = args.publishedAt
       ? parseBoundedDateSec(args.publishedAt, this.clockSec, `${this.assetId}:${args.sourceId}:published`)
       : null;
@@ -162,8 +173,8 @@ export class ReviewEvidenceBuilder {
       const contentSha256 = domainDigest("safety-score-v9.reviewed-metadata-evidence.v2", {
         assetId: this.assetId,
         sourceId: args.sourceId,
-        reviewedAt: args.reviewedAt,
-        observedAt: args.observedAt ?? args.reviewedAt,
+        reviewedAt: args.reviewedAtSec ?? args.reviewedAt,
+        observedAt: args.observedAtSec ?? args.observedAt ?? args.reviewedAtSec ?? args.reviewedAt,
         publishedAt: args.publishedAt ?? null,
         publishedBy: args.publishedBy ?? "unknown",
         confidence: args.confidence ?? "manual-review",

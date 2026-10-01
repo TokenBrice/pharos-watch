@@ -4,6 +4,17 @@
   "lifecycle": "active",
   "releaseVersion": "10.0",
   "semantic": {
+    "accessLookthrough": {
+      "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
+      "coverageStates": ["complete", "incomplete"],
+      "authorityCapabilities": ["freeze", "seize", "pause"],
+      "unresolvedReasons": ["issuer-undisclosed", "research-incomplete", "producer-missing", "identity-unverified", "scope-unreconciled", "stale", "future-dated", "cycle", "overlap", "deployment-mismatch", "claim-inapplicable"],
+      "scopeBasis": "admitted-current-claim-graph",
+      "aggregation": "disjoint-position-union",
+      "transferInheritance": "never",
+      "unpricedShares": "null",
+      "cycleTreatment": "unknown-affected-component"
+    },
     "supplyAttribution": {
       "amountBases": ["circulating-usd", "fixed-token-units", "issued-currency-decimal", "native-ledger"],
       "accountingFamilies": ["independent-liability", "lock-mint", "native-wrapped"],
@@ -336,6 +347,8 @@
         "issuerAttestedReserveMaxAgeSec": 31536000,
         "reviewedReserveClassificationMaxAgeSec": 31536000,
         "reviewedReserveCompositionMaxAgeSec": 2678400,
+        "onchainObservationMaxAgeSec": 17280,
+        "standingStructureMaxAgeSec": 7776000,
         "reviewedReserveCompositionGraceSec": 604800
       }
     },
@@ -371,11 +384,31 @@
         "failed": 10
       },
       "boundedUnknownQuality": 35,
+      "reserveScope": {
+        "crossChainObservationMaxSkewSec": 120,
+        "maxFutureSkewSec": 0,
+        "financialMethodQuality": { "audit": "strong", "examination": "strong", "review": "adequate", "attestation": "adequate", "agreed-upon-procedures": "adequate" },
+        "observationKinds": ["portfolio-observation", "onchain-observation", "standing-structure"],
+        "liabilityExclusionKinds": ["frozen", "treasury", "pending-redemption", "legacy", "other"],
+        "admissionRejectionCodes": ["unverified", "future-evidence", "expired", "identity-mismatch", "denominator-incomplete", "checkpoint-mismatch", "financial-method-ineligible", "current-partition-unavailable", "exclusion-unresolved", "overlapping-scope", "block-skew", "structure-not-whole-claim"],
+        "standingEvidenceClass": "static-validated",
+        "unknownResidualTreatment": "bounded-unknown"
+      },
       "assuranceSeasonedCredit": {
         "points": 3,
         "minMonths": 60
       },
       "reserve": {
+        "boundedFacts": {
+          "factKinds": ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound"],
+          "scopeKinds": ["reserve-envelope", "exposure", "sub-instrument"],
+          "termUnits": ["days", "calendar-months"],
+          "observedMaturityQualityLevel": "limited",
+          "currentAvailabilityQualityLevel": "limited",
+          "currentLiquidFractionMaxAgeSec": 10800,
+          "requireExhaustiveEligibility": true,
+          "requireStressedFinalSettlement": true
+        },
         "assetClassQuality": {
           "cash": 98,
           "bank-deposit": 88,

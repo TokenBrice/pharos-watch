@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DependencyTypeSchema } from "./dependency-types";
+import { ReserveBoundedFactSchema } from "./reserve-bounded-facts";
 
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
 export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
@@ -80,6 +81,7 @@ export const ReserveSliceSchema = z.object({
   riskFactors: z.array(ReserveRiskFactorSchema).min(1).optional(),
   liquidityHorizon: ReserveLiquidityHorizonSchema.optional(),
   maturityDaysMax: z.number().finite().int().nonnegative().optional(),
+  boundedFacts: z.array(ReserveBoundedFactSchema).optional(),
 }).strict().superRefine((slice, ctx) => {
   if (slice.pct === 0 && !slice.sourceKey) {
     ctx.addIssue({

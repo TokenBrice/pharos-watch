@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { runAdapter, expectWarnings, installAdapterNetwork, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
+import { fetchOriginOusdCollateralLiquidityObservation } from "../origin-vault-balances";
 
 const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const OUSD = "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86";
@@ -80,16 +81,17 @@ describe("fetchOriginVaultBalancesReserves", () => {
     expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: BLOCK_NUMBER, timestamp: BLOCK_TIMESTAMP });
     expect(network.rpcCalls.every((call) => call.block === `0x${BLOCK_NUMBER.toString(16)}`)).toBe(true);
 
-    expect(result.slices).toEqual([
-      {
-        sourceKey: "origin-vault-balances:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        name: "USDC deployed through Origin OUSD strategies",
-        pct: 100,
-        risk: "medium",
-        coinId: "usdc-circle",
-        depType: "collateral",
-      },
-    ]);
+    const bound = result.slices[0]!.boundedFacts?.[0];
+    expect(bound).toMatchObject({
+      kind: "currently-liquid-fraction",
+      scope: { kind: "exposure", exposureKey: result.slices[0]!.sourceKey },
+      asOfSec: BLOCK_TIMESTAMP,
+      currentlyWithdrawable: 1_250_000,
+      totalHeld: 5_000_000,
+      snapshotAtSec: BLOCK_TIMESTAMP,
+      provenance: { kind: "producer-observation", sourceGenerationId: `ethereum:${BLOCK_NUMBER}` },
+    });
+    expect(result.slices[0]!.liquidityHorizon).toBeUndefined();
     expectWarnings(result, []);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
@@ -209,5 +211,34 @@ describe("fetchOriginVaultBalancesReserves", () => {
   it("rejects a renamed totalValue field instead of publishing a plausible snapshot", async () => {
     await expect(runOrigin(originNetwork({ failed: TOTAL_VALUE_SELECTOR }), undefined, false))
       .rejects.toThrow(/totalValue probe failed/);
+  });
+});
+
+describe("Origin collateral liquidity observer", () => {
+  const sourceUrl = "https://api.originprotocol.com/api/v2/1:OUSD/collaterals";
+  const timestampUrl = "https://api.originprotocol.com/cache/last-updated?key=collaterals-1%3AOUSD";
+  it("keeps itemized API availability diagnostic and rejects changing cache generations", async () => {
+    const stamp = { key: "collaterals-1:OUSD", lastUpdated: "2026-09-30T12:00:00Z" };
+    installAdapterNetwork({ json: {
+      [sourceUrl]: [{ id: "ethereum-vault", amount: 100, liquidAmount: 50 }, { id: "base-vault", amount: 40, liquidAmount: 20 }],
+      [timestampUrl]: stamp,
+    } });
+    const observation = await fetchOriginOusdCollateralLiquidityObservation(new AbortController().signal);
+    expect(observation.admission).toBe("diagnostic-unreconciled");
+    expect(observation.positions).toEqual([{ positionId: "ethereum-vault", totalHeld: 100, currentlyWithdrawable: 50 }, { positionId: "base-vault", totalHeld: 40, currentlyWithdrawable: 20 }]);
+    let reads = 0;
+    installAdapterNetwork({ json: { [sourceUrl]: [{ id: "vault", amount: 100, liquidAmount: 50 }], [timestampUrl]: () => ({ ...stamp, lastUpdated: ++reads === 1 ? stamp.lastUpdated : "2026-09-30T12:01:00Z" }) } });
+    await expect(fetchOriginOusdCollateralLiquidityObservation(new AbortController().signal)).rejects.toThrow(/snapshot changed/);
+  });
+  it("rejects unavailable timestamps, duplicate positions and invalid ratios", async () => {
+    for (const entries of [
+      [{ id: "vault", amount: 1, liquidAmount: 2 }],
+      [{ id: "vault", amount: 1, liquidAmount: 0 }, { id: "vault", amount: 1, liquidAmount: 0 }],
+    ]) {
+      installAdapterNetwork({ json: { [sourceUrl]: entries, [timestampUrl]: { key: "collaterals-1:OUSD", lastUpdated: "2026-09-30T12:00:00Z" } } });
+      await expect(fetchOriginOusdCollateralLiquidityObservation(new AbortController().signal)).rejects.toThrow();
+    }
+    installAdapterNetwork({ json: { [sourceUrl]: [{ id: "vault", amount: 1, liquidAmount: 0 }], [timestampUrl]: { key: "collaterals-1:OUSD", lastUpdated: null } } });
+    await expect(fetchOriginOusdCollateralLiquidityObservation(new AbortController().signal)).rejects.toThrow();
   });
 });

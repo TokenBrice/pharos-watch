@@ -30,7 +30,7 @@ function fixedInputStub(
   liveReserves: Record<string, unknown[]> = {},
   clockSec = STUB_CLOCK_SEC,
 ): ReportCardsFixedInput {
-  return { clockSec, liveReserveMap: liveReserves } as unknown as ReportCardsFixedInput;
+  return { clockSec, liveReserveMap: liveReserves, liveReserveProvenanceMap: {}, safetyScoreV9SupplyAttributionById: {} } as unknown as ReportCardsFixedInput;
 }
 
 const BARE_META: MechanismMeta = { id: "alpha" } as MechanismMeta;

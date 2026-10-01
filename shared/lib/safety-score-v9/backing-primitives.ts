@@ -1,3 +1,4 @@
+import type { V9ReserveBoundedFact } from "../../types/reserve-bounded-facts";
 import type {
   V9AssetFactsBase,
   V9EvidenceResponsibility,
@@ -79,6 +80,7 @@ export interface V9BackingAssetInput {
   readonly assetId: string;
   readonly reserveStatus: V9AssetFactsBase["reserveStatus"];
   readonly reserveExposures: readonly V9ReserveExposureFactV2[];
+  readonly reserveBoundFacts?: readonly V9ReserveBoundedFact[];
   readonly gaps: readonly (V9FactGapV2 | V9FactGapV3)[];
   readonly gapIndex?: V9GapIndex;
   readonly resolvedUpstreamExposures: readonly V9ResolvedUpstreamExposure[];

@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
+import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
+import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
 import { V9ControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
 import { ReserveIntermediarySchema } from "./reserves";
 import {
@@ -6,7 +9,7 @@ import {
   V9DependencyEconomicRoleSchema,
 } from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
-import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";
+import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema, type V9MechanismFactV1 } from "./safety-score-v9-backing";
 import { V9OperationalResilienceFactSchema } from "./safety-score-v9-operational-resilience";
 import { V9AllocationScopeFactSchema } from "./safety-score-v9-allocation";
 import {
@@ -380,6 +383,8 @@ const V9ReserveExposureFactV2Schema = z
     sourceGenerationId: CanonicalTextSchema,
     provenance: z.enum(["live", "curated", "curated-fallback", "audited-fallback"]),
     evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]).optional(),
+    sourceKind: z.enum(["standing-structure", "portfolio-observation", "financial-report", "onchain-observation"]).optional(),
+    scopeId: CanonicalTextSchema.optional(),
     status: V9FactStatusV2Schema,
     name: CanonicalTextSchema,
     weight: PositiveFractionSchema,
@@ -1099,6 +1104,7 @@ export const V9AccessReviewV2Schema = z
       .object({
         status: V9FactStatusV2Schema,
         reviews: canonicalArrayBy(V9FreezeAccessReviewV2Schema, (review) => review.reviewKey),
+        claimGraph: V9AccessClaimGraphSchema.optional(),
         /**
          * Owner ruling 2026-07-27: a current, evidenced review whose honest
          * verdict is structural rather than boolean. `inherited-upstream` =
@@ -1413,6 +1419,8 @@ const V9AssetFactsBaseFields = {
   dependencies: V9EffectiveDependenciesV2Schema,
   reserveStatus: V9FactStatusV2Schema,
   reserveExposures: canonicalArrayBy(V9ReserveExposureFactV2Schema, (exposure) => exposure.exposureKey),
+  reserveBoundFacts: canonicalArrayBy(V9ReserveBoundedFactSchema, (row) => row.fact.factKey).optional(),
+  reserveScopeAdmissions: z.array(ReserveScopedAdmissionSchema).optional(),
   exitStatus: V9FactStatusV2Schema,
   exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema, (route) => route.routeKey),
   controlStatus: V9FactStatusV2Schema,
@@ -1618,7 +1626,10 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
   const mechanismStatuses = asset.mechanismRiskReview.review
     ? Object.entries(asset.mechanismRiskReview.review).flatMap(([key, value]) =>
         value !== null && typeof value === "object" && "status" in value
-          ? [{ label: `mechanism-review:${key}`, status: value.status as V9FactStatusV2 }]
+          ? [{ label: `mechanism-review:${key}`, status: value.status as V9FactStatusV2 },
+            ...((value as V9MechanismFactV1).scopedAssessments ?? []).map(fragment => ({
+              label: `mechanism-review:${key}:scope:${fragment.scopeId}`, status: fragment.status,
+            }))]
           : [],
       )
     : [];
@@ -1629,6 +1640,7 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
     { label: "dependencies", status: asset.dependencies.status },
     { label: "reserve-envelope", status: asset.reserveStatus },
     ...asset.reserveExposures.map((fact) => ({ label: `reserve:${fact.exposureKey}`, status: fact.status })),
+    ...(asset.reserveBoundFacts ?? []).map((row) => ({ label: `reserve-bound:${row.fact.factKey}`, status: row.status })),
     { label: "exit-envelope", status: asset.exitStatus },
     ...asset.exitRoutes.flatMap((fact) => [
       { label: `route:${fact.routeKey}`, status: fact.status },
@@ -1649,6 +1661,7 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
       label: `access:freeze:${review.reviewKey}`,
       status: review.status,
     })),
+    ...v9AccessClaimGraphStatuses(asset.accessReview.freeze.claimGraph),
     { label: "peg", status: asset.peg.status },
     { label: "supply", status: asset.supply.status },
   ];
@@ -1668,6 +1681,33 @@ function validateAssetReferences(
   const gapIds = new Set(asset.gaps.map((gap) => gap.gapId));
   const referencedEvidenceIds = new Set<string>();
   const referencedGapIds = new Set<string>();
+  for (const scope of asset.reserveScopeAdmissions ?? []) {
+    if (scope.admitted && scope.evidenceRefIds.length === 0) addIssue(ctx, ["assets", assetIndex, "reserveScopeAdmissions"], "Admitted reserve scopes require evidence");
+    for (const id of scope.evidenceRefIds) {
+      if (!evidenceIds.has(id)) addIssue(ctx, ["assets", assetIndex, "reserveScopeAdmissions"], "Reserve scope references missing evidence");
+      referencedEvidenceIds.add(id);
+    }
+  }
+  const claimGraph = asset.accessReview.freeze.claimGraph;
+  if (claimGraph) {
+    if (claimGraph.assetId !== asset.assetId || claimGraph.nodes.find((node) => node.nodeKey === claimGraph.rootNodeKey)?.assetId !== asset.assetId) {
+      addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph receiving identity mismatch");
+    }
+    for (const edge of claimGraph.edges) {
+      if (edge.basis.kind === "reserve-position" && edge.weight !== null) {
+        const exposureKey = edge.basis.exposureKey;
+        if (!asset.reserveExposures.some((row) => row.exposureKey === exposureKey && row.status.observationState === "known")) {
+          addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph", "edges"], "Quantified graph edge requires an admitted reserve exposure");
+        }
+      }
+      if (edge.basis.kind === "serial-claim" && edge.basis.dependencyEdgeKey !== null && edge.weight !== null) {
+        const dependencyKey = edge.basis.dependencyEdgeKey;
+        if (!asset.dependencies.edges.some((row) => row.edgeKey === dependencyKey && row.economicRole === "serial-claim")) {
+          addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph", "edges"], "Serial graph edge requires an admitted dependency");
+        }
+      }
+    }
+  }
 
   const captureRefs = (label: string, evidenceRefIds: readonly string[], statusGapIds: readonly string[]) => {
     for (const evidenceId of evidenceRefIds) {
@@ -1939,6 +1979,10 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
     addIssue(ctx, ["sourceFingerprints", "shockCoverage"], "Stress coverage requires a source fingerprint");
   }
   for (const [assetIndex, asset] of value.assets.entries()) {
+    const claimGraph = asset.accessReview.freeze.claimGraph;
+    if (claimGraph && (claimGraph.clockSec !== value.asOfSec || claimGraph.generationId !== value.baseInputGenerationId)) {
+      addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph must match the admitted clock and input generation");
+    }
     for (const [evidenceIndex, evidence] of asset.evidence.entries()) {
       if (evidence.observedAtSec > value.asOfSec) {
         addIssue(
@@ -2027,6 +2071,18 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
           ["assets", assetIndex, "reserveExposures", exposureIndex, "sourceGenerationId"],
           "Reserve provenance generation is inconsistent",
         );
+      }
+    }
+    for (const [boundIndex, bound] of (asset.reserveBoundFacts ?? []).entries()) {
+      const generation = bound.fact.provenance.kind === "producer-observation"
+        ? value.sourceFingerprints.liveReserves.generationId
+        : value.sourceFingerprints.researchOverlays.generationId;
+      const references = asset.evidence.filter((reference) => bound.status.evidenceRefIds.includes(reference.evidenceId));
+      if (bound.sourceGenerationId !== generation || references.some((reference) => reference.sourceGenerationId !== generation || reference.freshness.maxAgeSec !== bound.freshnessMaxAgeSec)) {
+        addIssue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Bounded reserve generation or freshness budget is inconsistent");
+      }
+      if (bound.status.observationState === "known" && (bound.fact.asOfSec > value.asOfSec || value.asOfSec - bound.fact.asOfSec > bound.freshnessMaxAgeSec || references.some((reference) => reference.observedAtSec !== bound.fact.asOfSec || reference.freshness.state !== "current"))) {
+        addIssue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Known bounded reserve facts require their own current snapshot");
       }
     }
     for (const [controlIndex, control] of asset.controls.entries()) {

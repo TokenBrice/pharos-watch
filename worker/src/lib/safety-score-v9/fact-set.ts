@@ -36,6 +36,7 @@ import {
 import {
   createAssetBuildContext,
   normalizeCompiledFailureDomains,
+  componentResearchEvidence,
   projectResearchOverlayPayload,
   type AssetBuildContext,
 } from "./fact-set-context";
@@ -122,7 +123,7 @@ function buildAssetFacts(
   const routes = buildRoutes(context);
   const controls = buildControls(context);
   const economicControlReview = buildEconomicControlReview(context);
-  const accessReview = buildAccessReview(context);
+  const accessReview = buildAccessReview(context, reserves, dependencies);
   const peg = buildPeg(context);
   const supply = buildSupply(context);
   const operationalResilience = buildOperationalResilienceFact(context);
@@ -146,6 +147,9 @@ function buildAssetFacts(
       allocationScopeFacts,
     }),
   );
+  const reserveScopeAdmissions = context.asset.reserveScopeAdmissions?.map(row => ({
+    ...row, evidenceRefIds: row.admitted ? componentResearchEvidence(context, `reserve-scope:${row.scopeId}`) : [],
+  }));
   const compiledAsset: V9AssetFactsV3 = {
     assetId: context.asset.assetId,
     assetIssuerKey: context.asset.assetIssuerKey ?? null,
@@ -161,6 +165,7 @@ function buildAssetFacts(
     ...(cdpStressCoverage === undefined ? {} : { cdpStressCoverage }),
     dependencies,
     ...reserves,
+    ...(reserveScopeAdmissions === undefined ? {} : { reserveScopeAdmissions }),
     ...routes,
     ...controls,
     economicControlReview,

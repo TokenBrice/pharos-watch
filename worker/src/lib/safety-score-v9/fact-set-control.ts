@@ -10,6 +10,8 @@ import type {
   V9EconomicControlReviewV2,
   V9FactGapV3,
   V9FactStatusV2,
+  V9AssetFactsBase,
+  V9EffectiveDependenciesV3,
 } from "@shared/types/safety-score-v9-facts";
 import type { AssetExtension } from "./fact-set-schema";
 import {
@@ -23,6 +25,9 @@ import {
 import { compileReviewedControlScope, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { DEPLOYMENT_MATERIAL_SHARE_THRESHOLD } from "./extension-shared";
+import { v9AccessClaimGraphStatuses } from "@shared/types/safety-score-v9-access-lookthrough";
+import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
+import { evaluateV9AccessLookthrough } from "@shared/lib/safety-score-v9/access-lookthrough";
 
 type ExtensionControlOverlay = Extract<
   NonNullable<AssetExtension["controlReview"]>,
@@ -324,7 +329,11 @@ function normalizeAccessStatus(
   });
 }
 
-export function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 {
+export function buildAccessReview(
+  context: AssetBuildContext,
+  reserves?: Pick<V9AssetFactsBase, "reserveStatus" | "reserveExposures">,
+  dependencies?: V9EffectiveDependenciesV3,
+): V9AccessReviewV2 {
   const review = context.asset.accessReview;
   if (review === null) {
     return {
@@ -360,5 +369,73 @@ export function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 
     ...freezeReview,
     status: normalizeAccessStatus(context, freezeReview.status, `freeze:${freezeReview.reviewKey}`, freezeDisposition),
   }));
+  const graph = normalized.freeze.claimGraph;
+  if (graph) {
+    const pricedScopes = (context.asset.reserveScopeAdmissions ?? []).filter((scope) => scope.admitted && scope.wholeAssetComposition && (scope.kind === "portfolio-observation" || scope.kind === "onchain-observation"));
+    // Receiving-book fractions may cross unit claims, never a second reserve denominator.
+    const receivingBookNodes = new Set([graph.rootNodeKey]);
+    let expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (const edge of graph.edges) {
+        if (edge.basis.kind === "serial-claim" && edge.weight === 1 && edge.enabled && edge.reachesHeldClaim &&
+          edge.status.observationState === "known" && receivingBookNodes.has(edge.fromNodeKey) && !receivingBookNodes.has(edge.toNodeKey)) {
+          receivingBookNodes.add(edge.toNodeKey);
+          expanded = true;
+        }
+      }
+    }
+    for (const edge of graph.edges) {
+      if (edge.basis.kind === "reserve-position") {
+        const basis = edge.basis;
+        const target = graph.nodes.find((node) => node.nodeKey === edge.toNodeKey);
+        const exposure = reserves?.reserveExposures.find((row) => row.exposureKey === basis.exposureKey);
+        const liveObservation = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId]?.reserveObservation;
+        const staticRows = context.asset.reviewedStaticReserveRows;
+        const scopeComplete = pricedScopes.some((scope) => exposure?.provenance === "live"
+          ? liveObservation?.scopeId === scope.scopeId && liveObservation.observedAtSec === scope.observedAtSec
+          : staticRows?.sourceKind === scope.kind && staticRows.scopeId === scope.scopeId);
+        const exactKey = basis.sourceKey === null || computeSafetyScoreV9ReserveExposureKey({ name: "identity", pct: 100, risk: "low", sourceKey: basis.sourceKey }) === basis.exposureKey;
+        const matched = exactKey && exposure?.status.observationState === "known" && (exposure.trackedAssetId === null || exposure.trackedAssetId === target?.assetId);
+        edge.weight = matched && scopeComplete && receivingBookNodes.has(edge.fromNodeKey) && reserves?.reserveStatus.observationState === "known" ? exposure!.weight : null;
+        if (!matched) edge.reachesHeldClaim = false;
+      } else if (edge.basis.kind === "serial-claim" && edge.basis.dependencyEdgeKey !== null) {
+        const key = edge.basis.dependencyEdgeKey;
+        const target = graph.nodes.find((node) => node.nodeKey === edge.toNodeKey);
+        if (dependencies?.status.observationState !== "known" || !dependencies.edges.some((row) => row.edgeKey === key && row.economicRole === "serial-claim" && row.upstreamAssetId === target?.assetId)) {
+          edge.weight = null;
+          edge.reachesHeldClaim = false;
+        }
+      }
+    }
+    for (const partition of graph.partitions) {
+      const edges = graph.edges.filter((edge) => edge.partitionKey === partition.partitionKey);
+      partition.denominatorEstablished = edges.length > 0 && edges.every((edge) => edge.weight !== null);
+    }
+    for (const { label, status } of v9AccessClaimGraphStatuses(graph)) {
+      const branch = graph.unresolved.find((row) => label === `access:graph:unresolved:${row.branchKey}`);
+      const binding = label.endsWith(":admission") ? label.slice(0, -":admission".length).replace("access:graph:unresolved:", "") : label;
+      Object.assign(status, normalizeReviewedFactStatus(context, status, {
+        bindingKey: binding, staleEvidenceError: `Access graph ${label} has inconsistent stale evidence`,
+        gapId: `${context.asset.assetId}:gap:${label}`, reasonCode: "missing-access-review", ownerDomain: "control",
+        componentKey: label, message: `Diagnostic reserve-access uncertainty: ${branch?.reason ?? "review incomplete"}.`,
+        responsibility: branch?.responsibility,
+      }));
+    }
+    const summary = evaluateV9AccessLookthrough(graph);
+    if (summary.unresolvedCoverageShare === null) {
+      for (const branch of summary.unresolved) {
+        if (graph.unresolved.some((row) => row.branchKey === branch.branchKey)) continue;
+        const evidenceRefIds = graph.nodes.find((node) => node.nodeKey === branch.nodeKey)?.status.evidenceRefIds ?? [];
+        const fact = missingLocalFact(context, {
+          componentKey: `access:graph:unresolved:${branch.branchKey}`, reasonCode: "missing-access-review", ownerDomain: "control",
+          responsibility: branch.responsibility, policyRuleId: "v9.access.freeze-review",
+          message: `Diagnostic reserve-access uncertainty: ${branch.reason}.`,
+          observationState: evidenceRefIds.length > 0 ? "bounded-unknown" : "missing", evidenceRefIds,
+        });
+        graph.unresolved.push({ ...branch, status: fact.status });
+      }
+    }
+  }
   return normalized;
 }

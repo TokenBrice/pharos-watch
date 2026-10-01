@@ -118,6 +118,12 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
         ...policy.semantic.backing,
         reserve: {
           ...policy.semantic.backing.reserve,
+          boundedFacts: {
+            ...policy.semantic.backing.reserve.boundedFacts,
+            factKinds: uniqueSorted(policy.semantic.backing.reserve.boundedFacts.factKinds),
+            scopeKinds: uniqueSorted(policy.semantic.backing.reserve.boundedFacts.scopeKinds),
+            termUnits: uniqueSorted(policy.semantic.backing.reserve.boundedFacts.termUnits),
+          },
           maturityNotApplicableClasses: uniqueSorted(policy.semantic.backing.reserve.maturityNotApplicableClasses),
         },
         archetypes: Object.fromEntries(

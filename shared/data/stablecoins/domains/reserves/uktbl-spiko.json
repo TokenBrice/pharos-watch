@@ -43,13 +43,21 @@
       {
         "label": "AMF GECO: Spiko SICAV semiannual statement at June 30, 2026",
         "url": "https://geco.amf-france.org/back-office/document/download/429960"
+      },
+      {
+        "label": "Exact UKTBL GBP share-class identity, FR0014012MN7, and parent fund UUID",
+        "url": "https://public-api.spiko.io/share-classes/UKTBL"
+      },
+      {
+        "label": "UKTBL sub-fund Treasury-bill and CACEIS current-account inventory valued 1 October 2026; not GBP-class reconciliation",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=d34c5f8a-9b2e-4c1f-a5d6-78e9f0a1b2c3"
       }
     ],
     "rationale": "The producer emits one 100% 'UK Treasury Bills and cash' identity. The KID and prospectus identify the referenced regulated fund, daily dealing, an explicit 180-day maximum residual maturity for eligible instruments, and a UK-government-instrument mandate. The prior 95/5 Treasury-bill and cash split was not a reported live allocation, so this review classifies the exact aggregate producer identity at the fund-share level. The AMF-hosted June 30, 2026 semiannual statement identifies the GBP share with 15300167.12344 outstanding shares and NAV GBP 1.022602. The sub-fund reports GBP 14365078.38 in Treasury securities and GBP 1334891.77 in bank balances; these dated amounts remain inside the single fund-share identity rather than becoming invented current producer weights.",
     "compositionBasis": "100% native UKTBL GBP fund/share identity; June 30, 2026 AMF-hosted share statement and sub-fund holdings, not a current look-through allocation",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The June 30, 2026 report publishes Treasury-security and bank-balance amounts, while the current producer emits only the aggregate fund identity. Post-June portfolio weights and named bank-account allocations remain unknown; no live look-through split is authored.",
+    "knownUnknownExposure": "The June 30, 2026 report publishes Treasury-security and bank-balance amounts. The public fund-assets API also discloses seven Treasury bills and a GBP 799013.96 current account labelled CACEIS Bank for 1 October 2026. The exact GBP class FR0014012MN7 maps to that sub-fund, but the source's GBP 10354406.05 fund net-asset denominator differs from the GBP-class totals API's GBP 10361473.12 total assets. Neither supplies a complete reconciled same-checkpoint GBP-class gross asset and obligation census or per-deployment token liabilities. Named bank-account identity is now observed; whole-class allocations, fees, pending settlements and exclusions remain unresolved. No live split, denominator normalization or composition-date refresh is authored.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

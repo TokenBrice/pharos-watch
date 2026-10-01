@@ -3,6 +3,7 @@ import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { PegSummaryCoinSchema } from "@shared/types/market";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
+import { LiveReserveSnapshotProvenanceSchema } from "@shared/types/safety-score-v9-reserve-scope";
 import { sortedRecord } from "@shared/lib/compare";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -140,13 +141,7 @@ export function createFixedInputPayloadFields<
     liveReserveMap: z.record(z.string(), z.array(ReserveSliceSchema)),
     liveReserveProvenanceMap: z.record(
       z.string(),
-      z.object({
-        source: z.string().min(1),
-        fetchedAt: z.number().int().nonnegative(),
-        balanceSheetScope: z.literal("shared-sky-maker").optional(),
-        sharedBookAssetIds: z.array(z.string().min(1)).optional(),
-        sharedBookMeasuredHoldings: z.record(z.string(), z.number().finite().nonnegative()).optional(),
-      }),
+      LiveReserveSnapshotProvenanceSchema,
     ),
     chainCirculatingById: options.chainCirculatingByIdSchema,
     // DefiLlama list buckets are already USD-denominated. Consumers must use

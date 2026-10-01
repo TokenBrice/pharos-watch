@@ -8,6 +8,9 @@ import { V9SupplyAttributionPolicySchema } from "./safety-score-v9-supply-attrib
 import { ExitExecutionModelPolicySchema } from "./exit-route";
 import { V9WrapperAllocationScopePolicySchema } from "./safety-score-v9-allocation";
 import { V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
+import { V9AccessLookthroughPolicySchema } from "./safety-score-v9-access-lookthrough";
+import { ReserveScopePolicySchema } from "./safety-score-v9-reserve-scope";
+import { ReserveBoundedFactKindSchema, ReserveBoundedScopeKindSchema, ReserveBoundedTermUnitSchema } from "./reserve-bounded-facts";
 import {
   RedemptionAccessModelSchema,
   RedemptionExecutionModelSchema,
@@ -690,6 +693,8 @@ const V9EvidencePolicySchema = z
         reviewedReserveClassificationMaxAgeSec: z.number().int().positive(),
         reviewedReserveCompositionMaxAgeSec: z.number().int().positive(),
         reviewedReserveCompositionGraceSec: z.number().int().positive(),
+        onchainObservationMaxAgeSec: z.number().int().positive(),
+        standingStructureMaxAgeSec: z.number().int().positive(),
       })
       .strict(),
   })
@@ -714,6 +719,7 @@ const V9BackingArchetypePolicySchema = z
 
 const V9BackingPolicySchema = z
   .object({
+    reserveScope: ReserveScopePolicySchema,
     componentQuality: z
       .object({
         strong: ScoreSchema,
@@ -737,6 +743,22 @@ const V9BackingPolicySchema = z
       .default({ points: 0, minMonths: 60 }),
     reserve: z
       .object({
+        boundedFacts: z.object({
+          factKinds: z.array(ReserveBoundedFactKindSchema).length(ReserveBoundedFactKindSchema.options.length),
+          scopeKinds: z.array(ReserveBoundedScopeKindSchema).length(ReserveBoundedScopeKindSchema.options.length),
+          termUnits: z.array(ReserveBoundedTermUnitSchema).length(ReserveBoundedTermUnitSchema.options.length),
+          observedMaturityQualityLevel: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
+          currentAvailabilityQualityLevel: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
+          currentLiquidFractionMaxAgeSec: z.number().int().positive(),
+          requireExhaustiveEligibility: z.literal(true),
+          requireStressedFinalSettlement: z.literal(true),
+        }).strict().superRefine((value, ctx) => {
+          for (const key of ["factKinds", "scopeKinds", "termUnits"] as const) {
+            if (new Set<string>(value[key]).size !== value[key].length) {
+              ctx.addIssue({ code: "custom", path: [key], message: "Bounded fact vocabularies must be unique" });
+            }
+          }
+        }),
         assetClassQuality: z
           .object({
             cash: ScoreSchema,
@@ -886,7 +908,14 @@ const V9BackingPolicySchema = z
       })
       .strict(),
   })
-  .strict();
+  .strict().superRefine((value, ctx) => {
+    const bounded = value.reserve.boundedFacts;
+    const observed = value.componentQuality[bounded.observedMaturityQualityLevel];
+    const available = value.componentQuality[bounded.currentAvailabilityQualityLevel];
+    if (observed < value.boundedUnknownQuality || available < value.reserve.liquidityQuality.unknown || available >= value.reserve.liquidityQuality["seven-days"]) {
+      ctx.addIssue({ code: "custom", path: ["reserve", "boundedFacts"], message: "Informational bound qualities must improve unknown factors without claiming stressed liquidity" });
+    }
+  });
 
 const V9ControlPolicySchema = z
   .object({
@@ -1292,6 +1321,7 @@ const V9MethodologySemanticSchema = z
     evidence: V9EvidencePolicySchema,
     materiality: V9MaterialityPolicySchema,
     supplyAttribution: V9SupplyAttributionPolicySchema,
+    accessLookthrough: V9AccessLookthroughPolicySchema,
     backing: V9BackingPolicySchema,
     exit: V9ExitPolicySchema,
     control: V9ControlPolicySchema,

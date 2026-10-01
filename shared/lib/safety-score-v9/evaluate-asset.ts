@@ -1330,6 +1330,7 @@ export function evaluateV9Asset({
     assetId: asset.assetId,
     reserveStatus: asset.reserveStatus,
     reserveExposures: asset.reserveExposures,
+    reserveBoundFacts: asset.reserveBoundFacts,
     gaps: asset.gaps,
     gapIndex,
     resolvedUpstreamExposures: resolvedBackingExposures(
@@ -1381,6 +1382,7 @@ export function evaluateV9Asset({
     facts: asset,
     transfer: asset.accessReview.transfer,
     freezeReviews: asset.accessReview.freeze.reviews,
+    claimGraph: asset.accessReview.freeze.claimGraph,
   });
   const peg = pegInput(asset, envelope, gapIndex);
   const backingPillarEvaluation = backingPillar(backing, envelope, gapIndex);

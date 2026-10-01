@@ -1,3 +1,5 @@
+import { buildSafetyScoreV9ReserveBoundFacts, SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST } from "./extension-reserve-bounds";
+import { buildSafetyScoreV10ScopedReserveAdmissions, addScopedReserveEvidence } from "./extension-reserves";
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
 import { resolveChainId } from "@shared/lib/chains";
 import { normalizeDeploymentId } from "@shared/lib/deployment-id";
@@ -7,6 +9,8 @@ import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/d
 import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
+import type { V9AccessClaimGraph, V9AccessClaimGraphReview } from "@shared/types/safety-score-v9-access-lookthrough";
+import { buildSafetyScoreV9AccessClaimGraph, computeSafetyScoreV9AccessClaimGraphReviewsDigest } from "./extension-access-lookthrough";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compileReviewedControlScope, partialControlScopeSemantics, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
@@ -148,16 +152,17 @@ export function resolveReviewedReserveRows(input: {
   clockSec: number;
   liveReserveRows: readonly ReserveSlice[];
   liveFallbackAllowed: boolean;
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
 }): ReviewedReserveRows {
   if (input.liveReserveRows.length > 0) return null;
   return (
-    buildSafetyScoreV9ReviewedStaticReserveRows(input.meta, input.clockSec) ??
+    buildSafetyScoreV9ReviewedStaticReserveRows(input.meta, input.clockSec, input.fixedInput) ??
     (input.meta.liveReservesConfig != null
       ? input.liveFallbackAllowed
-        ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec) ??
-          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec)
+        ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput) ??
+          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput)
         : null
-      : buildSafetyScoreV9ReviewedStandaloneReserveRows(input.meta, input.clockSec))
+      : buildSafetyScoreV9ReviewedStandaloneReserveRows(input.meta, input.clockSec, input.fixedInput))
   );
 }
 
@@ -165,6 +170,7 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
   registryFingerprint?: string;
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
+  accessClaimGraphReviews?: ReadonlyMap<string, V9AccessClaimGraphReview>;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
   /**
    * Replay-only operator override. The registry fingerprint check exists so a
@@ -575,11 +581,12 @@ function dependencyFailureDomains(
 function hasAdmissibleCuratedReserveComposition(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): boolean {
-  if (buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) !== null) return true;
+  if (buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec, fixedInput) !== null) return true;
   return meta.liveReservesConfig !== undefined
-    ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec) !== null
-    : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec) !== null;
+    ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec, fixedInput) !== null
+    : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, fixedInput) !== null;
 }
 
 function prepareDependency(
@@ -587,6 +594,7 @@ function prepareDependency(
   liveReserveSlices: readonly ReserveSlice[] | undefined,
   activeIds: ReadonlySet<string>,
   clockSec: number,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): PreparedDependency {
   const liveDependencyMapping = liveReserveSlices
     ? dependencyReserveSlices(liveReserveSlices, meta, clockSec)
@@ -605,7 +613,7 @@ function prepareDependency(
     derived.dependencies.some(
       (dependency) => (dependency.type ?? "collateral") === "collateral",
     ) &&
-    !hasAdmissibleCuratedReserveComposition(meta, clockSec);
+    !hasAdmissibleCuratedReserveComposition(meta, clockSec, fixedInput);
   const issueCodes: string[] = [];
   issueCodes.push(...derived.rejectionReasons
     .filter((rejection) => rejection.reason === "coinId-without-depType" || rejection.reason === "reviewed-dependency-type-conflict" || rejection.reason === "reviewed-dependency-identity-conflict" || rejection.reason === "manual-collateral-not-in-reserves")
@@ -1001,11 +1009,9 @@ function transferMaterialScope(
   };
 }
 
-// A reviewed inherited verdict may have no parent declaration. The V9 branch
-// still needs a named upstream to attribute a failure domain, so it checks
-// explicit reserve `coinId` edges. The id must resolve to an active tracked
-// asset whose own review confirms a direct holder freeze; an upstream that is
-// itself inherited does not establish the chain this branch needs to verify.
+// Preserve the reviewed inherited disposition when no claim graph is available.
+// This names a directly freeze-capable active reserve upstream; it does not
+// establish transitive reach or price the reserve exposure.
 function resolveReserveSliceUpstreamAssetId(
   meta: V9ExtensionRegistryMeta,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
@@ -1015,21 +1021,15 @@ function resolveReserveSliceUpstreamAssetId(
   for (const slice of meta.reserves ?? []) {
     const upstreamId = slice.coinId;
     if (upstreamId === undefined || upstreamId === meta.id) continue;
-    // `upstreamAssetId` is validated against the compiled fact set's active
-    // asset set, so a tracked-but-unscored id would make the whole fact set
-    // unparseable. Registry membership alone is not enough.
+    // Fact-set references must resolve to an active scored asset.
     if (!activeAssetIds.has(upstreamId)) continue;
     const upstream = metaById.get(upstreamId);
     if (upstream === undefined) continue;
-    // Mirrors the report card's blacklistable SEED set: an explicit `true`
-    // review, or centralized governance when the asset carries no review at all.
     const directlyFreezeCapable =
       upstream.blacklistabilityReview?.reviewedStatus === true ||
       (upstream.blacklistabilityReview === undefined && upstream.flags?.governance === "centralized");
     if (!directlyFreezeCapable) continue;
-    // Deterministic pick: largest reserve share, then lexicographic id. The
-    // fact set is replayed byte-for-byte, so ties must never resolve on
-    // iteration order.
+    // Largest share, then lexicographic id: independent of registry order.
     if (best === null || slice.pct > best.pct || (slice.pct === best.pct && upstreamId < best.assetId)) {
       best = { assetId: upstreamId, pct: slice.pct };
     }
@@ -1045,9 +1045,10 @@ function adaptAccessReview(
   transferReview: SafetyScoreV9ReviewedTransferFact | undefined,
   materialScope: SafetyScoreV9TransferMaterialScope,
   clockSec: number,
+  claimGraph?: V9AccessClaimGraph,
 ): ExtensionAsset["accessReview"] {
   const review: BlacklistabilityReview | undefined = meta.blacklistabilityReview;
-  if (!review && !transferReview) return null;
+  if (!review && !transferReview && !claimGraph) return null;
 
   const transferResolution = transferReview
     ? resolveSafetyScoreV9ReviewedTransferFact(transferReview, clockSec, materialScope)
@@ -1099,12 +1100,11 @@ function adaptAccessReview(
   const status = review?.reviewedStatus;
   const declaredInheritedFrom = meta.mintAuthority?.inheritedFrom ?? meta.variantOf ?? null;
   const declaredResolvable = declaredInheritedFrom !== null && activeAssetIds.has(declaredInheritedFrom);
-  // A declared parent wins: it is the tighter claim (the whole token inherits
-  // its parent's freeze surface). The reserve-slice edge is the fallback for an
-  // honest "inherited" verdict that has no parent, which is the ordinary shape
-  // for a collateralized asset holding a freezable stablecoin in reserve.
+  // A declared active parent wins over reserve attribution. A reviewed graph
+  // owns reserve look-through when present, including its unknown branches:
+  // never fill those gaps with the legacy raw-registry reserve fallback.
   const reserveInheritedFrom =
-    declaredResolvable || status !== "inherited"
+    claimGraph || declaredResolvable || status !== "inherited"
       ? null
       : resolveReserveSliceUpstreamAssetId(meta, metaById, activeAssetIds);
   const inheritedFrom = declaredResolvable ? declaredInheritedFrom : (reserveInheritedFrom ?? declaredInheritedFrom);
@@ -1154,11 +1154,6 @@ function adaptAccessReview(
               namedUpstream && inheritedFrom
                 ? [
                     {
-                      // A declared parent transmits freeze reach through the
-                      // upstream's mint/control surface; a reserve-slice
-                      // upstream transmits it through the reserve holding it
-                      // can freeze. Different domains, so they never merge in
-                      // common-mode analysis.
                       kind: reserveInheritedFrom !== null ? ("reserve-issuer" as const) : ("mint-control" as const),
                       key: `asset:${inheritedFrom}`,
                     },
@@ -1192,13 +1187,11 @@ function adaptAccessReview(
         review ? blacklistEvidenceKeys : [],
       ),
       reviews: freezeReview,
+      ...(claimGraph ? { claimGraph } : {}),
       // Owner ruling 2026-07-27: a current review whose honest verdict is
       // "inherited from a named tracked upstream" is a measured structural
       // fact, not missing data. The freeze facts stay bounded-unknown for
       // scoring; the disposition only suppresses the missing-data gap.
-      // The upstream may be named by a declared parent OR by a curated reserve
-      // slice (see `resolveReserveSliceUpstreamAssetId`) — both are named
-      // tracked assets, which is the whole requirement.
       // Owner ruling 2026-08-10: when the same current review names no tracked
       // upstream, the honest fact is still structural — inherited exposure with
       // an untracked counterparty — so it is measured as such rather than
@@ -1326,6 +1319,8 @@ function latestResolvedMintIncidentAtSec(
 export function hasPublishedReserveReconciliationEvidence(
   proof: StablecoinMeta["proofOfReserves"] | undefined,
 ): boolean {
+  // A scoped appendix is not whole-token operational/mint reconciliation.
+  if (proof?.latestReport?.coverage != null) return false;
   if (proof?.latestReport) return true;
   const cadence = proof?.cadence;
   return cadence != null && cadence !== "none" && cadence !== "undisclosed";
@@ -1606,7 +1601,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   for (const assetId of fixedInput.activeAssetIds) {
     const meta = metaById.get(assetId);
     if (!meta) throw new Error(`Safety Score v9 baseline extension has no registry metadata for ${assetId}`);
-    preparedById.set(assetId, prepareDependency(meta, fixedInput.liveReserveMap[assetId], activeIds, clockSec));
+    preparedById.set(assetId, prepareDependency(meta, fixedInput.liveReserveMap[assetId], activeIds, clockSec, fixedInput));
   }
   const graph = diagnoseDependencyGraph(
     [...preparedById.values()]
@@ -1652,7 +1647,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
     operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
     wrapperAllocationReviewsDigest: SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST,
+    reserveBoundFactsDigest: SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST,
     reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(reviewedTransferFacts.values()),
+    accessClaimGraphReviewsDigest: computeSafetyScoreV9AccessClaimGraphReviewsDigest(options.accessClaimGraphReviews?.values()),
   });
   const sources = {
     registryObservedAtSec,
@@ -1747,11 +1744,17 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const reviewedStaticReserveRows = resolveReviewedReserveRows({
           meta,
           clockSec,
+          fixedInput,
           liveReserveRows: liveReserves,
           liveFallbackAllowed: liveToFallbackAssetIds.has(assetId),
         });
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
+        admissionPath = "reserveBoundFacts";
+        const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows);
         const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+        admissionPath = "reserveScopeAdmissions";
+        const reserveScopeAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
+        addScopedReserveEvidence(meta, reserveScopeAdmissions, fixedInput.liveReserveProvenanceMap[assetId]?.reserveObservation, reviewEvidence);
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
@@ -1904,6 +1907,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             reviewedTransferFacts.get(assetId),
           ),
           clockSec,
+          buildSafetyScoreV9AccessClaimGraph({ assetId, clockSec, generationId: fixedInput.baseInputGenerationId, evidence: reviewEvidence, review: options.accessClaimGraphReviews?.get(assetId) }),
         );
         admissionPath = "researchEvidence";
         const reviewedEvidence = reviewEvidence.finish();
@@ -1941,7 +1945,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           dependencies,
           reserveApplicability: { state: "required" },
           reserveClassifications,
+          ...(reserveBoundFacts.length > 0 ? { reserveBoundFacts } : {}),
           reviewedStaticReserveRows,
+          ...(reserveScopeAdmissions.length > 0 ? { reserveScopeAdmissions } : {}),
           routeReviews,
           retainedRoutes,
           controlReview:

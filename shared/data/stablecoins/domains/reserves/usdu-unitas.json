@@ -96,13 +96,17 @@
       {
         "label": "HT Digital collateral sighting letter, 18 September 2026 (future assurance engagement, not completed ISAE 3000 assurance)",
         "url": "https://unipayfi.github.io/POR/20260918_090007_HTD_PoR_for_Unitas.pdf"
+      },
+      {
+        "label": "HT Digital collateral sighting letter, 25 September 2026 (Solana token identity; assurance engagement remains prospective)",
+        "url": "https://raw.githubusercontent.com/UnipayFI/POR/main/docs/20260925_090008_HTD_PoR_for_Unitas.pdf"
       }
     ],
     "rationale": "Re-opened 2026-08-08: Unitas Accountable dashboard reserves_split snapshot (total reserves $55,511,787.70, supply $53,052,105.13, collateralization 104.64%) exposes four venue/instrument buckets. Curated slice names mirror the adapter reserves_split identities verbatim. Weights refreshed to the 2026-08-08 capture: Solana 47.57%, Bitcoin 35.17%, Binance 15.02%, BNB Smart Chain 2.24%. The Bitcoin bucket is new since the prior review and represents BTC/WBTC on-chain collateral per Unitas docs; the three venue buckets continue to aggregate undisclosed instrument-level composition.",
     "compositionBasis": "Accountable dashboard API reserves_split venue/instrument allocation captured 2026-08-08; per-venue instrument composition undisclosed",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The venue split identifies where reserves are attested but not what each venue holds: Binance, Solana and BNB Smart Chain aggregate collateral assets, long/short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances per venue. Bitcoin/WBTC is identified as an asset class but its custody arrangement and hedge status are not itemized. The HT Digital letter dated 18 September 2026 identifies collateral against the Solana USDu mint at 09:00:07 UTC, including a negative Other assets line; it is not a current per-venue instrument split. It reports management's segregation statement, says no procedures were performed over security placed on assets, and describes ISAE 3000 assurance as a future engagement. It does not settle the unknown legal-custody safeguards or justify re-dating the preserved August venue composition.",
+    "knownUnknownExposure": "The venue split identifies where reserves are attested but not what each venue holds: Binance, Solana and BNB Smart Chain aggregate collateral assets, long/short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances per venue. Bitcoin/WBTC is identified as an asset class but its custody arrangement and hedge status are not itemized. HT Digital's 25 September 2026 letter names the Solana USDu mint and a 09:00:08 UTC checkpoint with 43.258m circulating tokens. Its USD-million asset values are BTC 36.241, JLP 11.263, USD1 3.352, BSC-USD 1.647, U 0.435, BNB 0.388 and Other assets -0.709. The signed schedule includes unrealised CEX margin PnL; it does not map instruments to the Accountable venue buckets or establish a complete cross-deployment liability census. Segregation is reported from management, no procedures were performed over security placed on assets, and ISAE 3000 assurance remains a future engagement. Provider legal shares and safeguards therefore remain unresolved; neither this historical sighting nor the live aggregate dashboard re-dates the preserved August venue composition.",
     "knownUnknownExposurePct": 64.83,
     "nonLinkDispositions": [
       {

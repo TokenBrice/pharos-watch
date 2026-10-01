@@ -55,7 +55,7 @@ describe("Safety Score v9 methodology policy", () => {
     // Rotate only with reviewed semantic changes; release history lives in
     // shared/data/methodology-changelogs/safety-score/.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "579dc90df823d1ec4f0b8d6baa27fd1ec97621c4845dfb0620b8a8a620eb0a8e",
+      "700d2a04ccba09bbbb5844a2ffe93ede3ed55bfa14f57a0467fbb9adf51ce72e",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,
@@ -125,6 +125,8 @@ describe("Safety Score v9 methodology policy", () => {
       reviewedReserveClassificationMaxAgeSec: 365 * 86_400,
       reviewedReserveCompositionMaxAgeSec: 31 * 86_400,
       reviewedReserveCompositionGraceSec: 7 * 86_400,
+      onchainObservationMaxAgeSec: 4 * 60 * 60 * 1.2,
+      standingStructureMaxAgeSec: 90 * 86_400,
     });
   });
 
@@ -158,6 +160,9 @@ describe("Safety Score v9 methodology policy", () => {
     ["allocation required scope", (policy) => { policy.semantic.formula.wrapperAllocationScope.requiredScopes.privateCredit.leverage.push("immediate-custodian"); }],
     ["allocation leverage assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.leverageAssessments["bounded-up-to-1.5x"] = "high"; }],
     ["allocation custody assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.custodyAssessments["unsegregated"] = "critical"; }],
+    ["bounded liquid age", (policy) => { policy.semantic.backing.reserve.boundedFacts.currentLiquidFractionMaxAgeSec += 1; }],
+    ["bounded observed maturity quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.observedMaturityQualityLevel = "adequate"; }],
+    ["bounded current availability quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.currentAvailabilityQualityLevel = "adequate"; policy.semantic.backing.reserve.liquidityQuality["seven-days"] = 90; }],
   ];
   const evidenceExpiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
   for (const field of Object.keys(evidenceExpiry) as (keyof typeof evidenceExpiry)[]) {
@@ -167,6 +172,17 @@ describe("Safety Score v9 methodology policy", () => {
     const policy = candidateClone();
     change(policy);
     expect(loadV9MethodologyPolicy(policy).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+  });
+
+  it("canonicalizes bounded-fact vocabulary order but rejects informational stress protection", () => {
+    const reordered = candidateClone();
+    reordered.semantic.backing.reserve.boundedFacts.factKinds.reverse();
+    reordered.semantic.backing.reserve.boundedFacts.scopeKinds.reverse();
+    reordered.semantic.backing.reserve.boundedFacts.termUnits.reverse();
+    expect(loadV9MethodologyPolicy(reordered).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    const invalid = candidateClone();
+    invalid.semantic.backing.reserve.boundedFacts.currentAvailabilityQualityLevel = "strong";
+    expect(() => loadV9MethodologyPolicy(invalid)).toThrow();
   });
 
   it("pins the reviewed mint posture ladder keys and grading values", () => {

@@ -7,6 +7,8 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { admitV10ReserveReportScope, resolveV10ScopedAssuranceFragments, shouldApplyV10ReserveReportScope } from "@shared/lib/safety-score-v9/reserve-scope";
+import { normalizeDeploymentId } from "@shared/lib/deployment-id";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import {
   V9MechanismRiskReviewSchema,
@@ -31,6 +33,7 @@ type MechanismMeta = Pick<
   StablecoinMeta,
   "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves"
   | "mechanismArchetype" | "mechanismArchetypeReview"
+  | "contracts"
 >;
 
 const MECHANISM_POLICY_RULE_ID = "v9.backing.mechanism-review";
@@ -107,11 +110,40 @@ function assuranceQuality(report: ProofOfReservesLatestReport): V9MechanismQuali
   return "weak";
 }
 
+function scoringReportScope(fixedInput: Readonly<SafetyScoreV9CompilerInput>, meta: MechanismMeta) {
+  const report = meta.proofOfReserves?.latestReport;
+  if (!report?.coverage) return null;
+  const partition = fixedInput.safetyScoreV9SupplyAttributionById[meta.id];
+  const admission = admitV10ReserveReportScope({
+    report, deploymentRefs: (meta.contracts ?? []).map(row => normalizeDeploymentId(`${row.chain}:${row.address}`)),
+    clockSec: fixedInput.clockSec, policy: V9_CANDIDATE_POLICY_V1.policy,
+    currentPartition: partition?.model === "reviewed-economic-deployment-partition-v1" ? partition : null,
+    baseInputGenerationId: fixedInput.baseInputGenerationId,
+  });
+  return shouldApplyV10ReserveReportScope(report, admission) ? admission : null;
+}
+
 function assuranceFact(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   meta: MechanismMeta,
 ): V9MechanismFactV1 {
   const report = meta.proofOfReserves?.latestReport;
+  const admission = scoringReportScope(fixedInput, meta);
+  if (report && admission) {
+    const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserveScope.financialMethodQuality[report.assuranceMethod];
+    const fact = boundedFact("assurance-and-reconciliation", true);
+    if (!admission || quality == null) return fact;
+    const fragments = resolveV10ScopedAssuranceFragments(admission, quality);
+    if (fragments.length === 0) return fact;
+    return { ...fact, scopedAssessments: fragments.filter(row => row.share > 0).map(row => ({
+      scopeId: row.scopeId, share: row.share, quality: row.quality,
+      status: status(row.quality === null ? "bounded-unknown" : "known", "assurance-and-reconciliation"),
+    })) };
+  }
+  if (fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation != null ||
+    meta.reserveReview?.observations?.some(row => row.kind === "onchain-observation")) {
+    if (report?.assuranceMethod === "onchain-proof" || !report) return boundedFact("assurance-and-reconciliation", true);
+  }
   if (
     !report?.periodEnd ||
     !report.publishedAt ||
@@ -200,7 +232,9 @@ function buildTbillReview(
     fundClaimAndSeniority: boundedFact("fund-claim-and-seniority", reserves || meta.proofOfReserves !== undefined),
     navValuation: boundedFact("nav-valuation", reserves || meta.proofOfReserves !== undefined),
     durationAndLiquidity: boundedFact("duration-and-liquidity", maturityEvidence || reserves),
-    lossRecoveryDesign: assuranceFact(fixedInput, meta),
+    lossRecoveryDesign: scoringReportScope(fixedInput, meta) !== null
+      ? boundedFact("loss-recovery-design", true)
+      : assuranceFact(fixedInput, meta),
   };
 }
 
@@ -655,7 +689,20 @@ export function buildSafetyScoreV9MechanismReview(
           : archetype === "commodity-claim"
             ? buildCommodityClaimReview(fixedInput, meta)
             : buildBoundedFamilyReview(meta, archetype, fixedInput.clockSec);
-    return expandOverlayReview(overlay, fallbackReview);
+    const expanded = expandOverlayReview(overlay, fallbackReview);
+    const report = meta.proofOfReserves?.latestReport;
+    const technicalObservation = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation?.kind === "onchain-observation" ||
+      meta.reserveReview?.observations?.some(row => row.kind === "onchain-observation");
+    const appliesReportScope = scoringReportScope(fixedInput, meta) !== null;
+    if (appliesReportScope || (technicalObservation && report?.assuranceMethod === "onchain-proof")) {
+      if (expanded.archetype === "fiat-cash" || expanded.archetype === "commodity-claim") {
+        expanded.assuranceAndReconciliation = assuranceFact(fixedInput, meta);
+      }
+      if (expanded.archetype === "tbill" && appliesReportScope) {
+        expanded.lossRecoveryDesign = boundedFact("loss-recovery-design", true);
+      }
+    }
+    return expanded;
   }
   if (archetype === "fiat-cash") return buildFiatCashReview(fixedInput, meta);
   if (archetype === "tbill") return buildTbillReview(fixedInput, meta);

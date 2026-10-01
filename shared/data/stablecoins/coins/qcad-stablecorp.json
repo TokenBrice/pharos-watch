@@ -52,6 +52,47 @@
       "liabilityReconciliation": "full",
       "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatB; OwnerFollowups D21): retain the May 31, 2026 Davidson & Company CSAE 3000 reasonable-assurance report and existing May-dated reserve envelope in period lockstep. The archived original report prints July 15, 2026 for both practitioner and management signatures; publishedAt uses that exact signed-date stand-in under the owner ruling, not an asserted upload date. Independent-audit is the reporting family for the examination-equivalent opinion, not a financial-statement audit. Assets-and-liabilities and full reconciliation cover the report's trust-scope Ethereum liability of 651,000 QCAD only. The newer July 31 report signed September 14 remains a reference, not this composition's period authority. Stablecorp excludes pre-November 20, 2025 legacy QCAD and holds its reserves separately; neither report proves the full catalog reserve denominator or all-deployment cash split.",
       "confidence": "verified",
+      "coverage": {
+        "scopeId": "qcad-digital-trust:may-2026",
+        "liabilityBookKey": "qcad-digital-trust:prospectus-20251120",
+        "deploymentRefs": [
+          "ethereum:0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
+        ],
+        "liabilityExclusions": [],
+        "denominator": {
+          "periodEnd": "2026-05-31",
+          "asOfSec": 1780261200,
+          "currency": "CAD",
+          "unitBasis": "QCAD-token-units",
+          "decimals": 6,
+          "totalCoveredLiabilities": "651000",
+          "included": [
+            {
+              "identity": {
+                "deploymentRef": "ethereum:0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
+                "bookKey": "qcad-digital-trust:prospectus-20251120",
+                "account": null
+              },
+              "amount": "651000",
+              "evidenceRefIds": [
+                "qcad-may-2026:criteria-a",
+                "qcad-may-2026:appendix-a"
+              ]
+            }
+          ],
+          "excluded": [],
+          "completeness": "complete",
+          "evidenceRefIds": [
+            "qcad-may-2026:criteria-a",
+            "qcad-may-2026:appendix-a"
+          ],
+          "sourceSha256": "c7b0daa5c19afcca3cc2c9cb595848edce9c39a4cc9917a99956a8d90e54565b"
+        },
+        "reconciliationWithinScope": "full",
+        "assetsAsOfSec": 1780261200,
+        "reviewedAtSec": 1790897102,
+        "confidence": "verified"
+      },
       "sources": [
         {
           "label": "Davidson & Company QCAD reasonable-assurance attestation - May 2026 (retained composition-matching report)",

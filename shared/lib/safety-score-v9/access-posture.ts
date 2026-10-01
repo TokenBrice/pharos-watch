@@ -9,6 +9,8 @@ import { isV9CreditableNonAtomicRedemption, isV9ExitRouteOutputResolved } from "
 import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "./policy";
 import { compareText, uniqueSorted } from "./primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
+import { evaluateV9AccessLookthrough } from "./access-lookthrough";
+import type { V9AccessClaimGraph, V9AccessLookthroughSummary } from "../../types/safety-score-v9-access-lookthrough";
 
 export type V9TransferPosture = "permissionless" | "restrictable" | "permissioned" | "unknown";
 export type V9FreezeExposure = "none-known" | "upstream" | "direct" | "possible" | "unknown";
@@ -62,6 +64,7 @@ export interface EvaluateV9AccessPostureArgs {
   facts: V9AccessPostureAssetFacts;
   transfer: V9TransferAccessReview;
   freezeReviews: readonly V9FreezeAccessReview[];
+  claimGraph?: V9AccessClaimGraph;
 }
 
 export interface V9AccessPostureResult {
@@ -71,6 +74,7 @@ export interface V9AccessPostureResult {
   governance: V9GovernancePosture;
   unknownFields: readonly ("transfer" | "freezeExposure" | "primaryExit" | "governance")[];
   signals: readonly string[];
+  freezeLookthrough?: V9AccessLookthroughSummary | null;
 }
 
 function isKnown(status: V9FactStatusV2): boolean {
@@ -298,7 +302,14 @@ export function evaluateV9AccessPosture(args: EvaluateV9AccessPostureArgs): V9Ac
   const routes = [...args.facts.exitRoutes].sort((left, right) => compareText(left.routeKey, right.routeKey));
   const transfer: V9TransferPosture =
     isKnown(args.transfer.status) && args.transfer.posture !== null ? args.transfer.posture : "unknown";
-  const freezeExposure = deriveFreezeExposure(controls, args.freezeReviews);
+  const freezeLookthrough = args.claimGraph ? evaluateV9AccessLookthrough(args.claimGraph) : null;
+  const localExposure = deriveFreezeExposure(controls, args.freezeReviews.filter((review) => review.source !== "upstream"));
+  const legacyExposure = deriveFreezeExposure(controls, args.freezeReviews);
+  const freezeExposure: V9FreezeExposure = !freezeLookthrough ? legacyExposure
+    : localExposure === "direct" ? "direct"
+    : freezeLookthrough.authorities.some((authority) => authority.reach === "current" && authority.knownReachShare !== 0) ? "upstream"
+    : freezeLookthrough.authorities.some((authority) => authority.reach === "possible") || localExposure === "possible" ? "possible"
+    : freezeLookthrough.coverageState === "complete" && freezeLookthrough.reviewedNoCurrentReachShare === 1 ? "none-known" : "unknown";
   const primaryExit = derivePrimaryExit(routes, args.facts.exitStatus, args.policy);
   const governanceResult = deriveGovernance(args.facts.controlStatus, controls);
   const posture = {
@@ -325,5 +336,5 @@ export function evaluateV9AccessPosture(args: EvaluateV9AccessPostureArgs): V9Ac
     ...governanceResult.signals,
   ]);
 
-  return { ...posture, unknownFields, signals };
+  return { ...posture, unknownFields, signals, freezeLookthrough };
 }

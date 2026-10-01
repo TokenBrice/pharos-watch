@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DeploymentAmountEncodingSchema } from "./deployment-amounts";
+import { ReserveReportCoverageSchema, ReserveObservationEnvelopeSchema } from "./safety-score-v9-reserve-scope";
 import {
   ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
@@ -179,6 +180,7 @@ export const ProofOfReservesSchema = z
         assuranceMethod: z.enum(PROOF_ASSURANCE_METHOD_VALUES),
         scope: z.enum(PROOF_ASSURANCE_SCOPE_VALUES),
         liabilityReconciliation: z.enum(LIABILITY_RECONCILIATION_VALUES),
+        coverage: ReserveReportCoverageSchema.optional(),
         reviewer: z.string().min(1),
         confidence: z.enum(RESEARCH_REVIEW_CONFIDENCE_VALUES),
         sources: z.array(StablecoinLinkSchema).min(1),
@@ -219,6 +221,8 @@ export const ProofOfReservesSchema = z
       .optional(),
   })
   .strict();
+
+export const ProofOfReservesLatestReportSchema = ProofOfReservesSchema.shape.latestReport.unwrap();
 
 export type StablecoinFlags = z.infer<typeof StablecoinFlagsSchema>;
 export type StablecoinLink = z.infer<typeof StablecoinLinkSchema>;
@@ -263,6 +267,8 @@ export const ReserveReviewSchema = z
     /** Explicit adapter ownership; omission retains the curated/report date contract. */
     compositionSource: z.literal("live-adapter").optional(),
     scope: z.enum(RESERVE_REVIEW_SCOPE_VALUES),
+    observations: z.array(ReserveObservationEnvelopeSchema).optional(),
+    reportScopeId: z.string().min(1).optional(),
     knownUnknownExposure: z.string().min(1),
     knownUnknownExposurePct: z.number().finite().min(0).max(100),
     nonLinkDispositions: z

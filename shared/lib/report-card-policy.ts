@@ -50,3 +50,17 @@ export function hasIndependentLiveCompositionDates(
     report.confidence !== "unknown" &&
     report.sources.length > 0;
 }
+
+/** Only an explicit independently accessed observation separates report and composition clocks. */
+export function hasIndependentReserveObservationDates(
+  meta: Pick<StablecoinMeta, "reserveReview" | "proofOfReserves">,
+): boolean {
+  const review = meta.reserveReview;
+  if (!review || review.confidence !== "verified" || review.reportScopeId != null) return false;
+  return review.observations?.some(row =>
+    row.confidence === "verified" && row.sources.length > 0 &&
+    (row.kind === "standing-structure" ||
+      (review.compositionAsOf != null && row.kind === "portfolio-observation" &&
+        new Date(row.observedAtSec * 1000).toISOString().slice(0, 10) === review.compositionAsOf)),
+  ) === true;
+}

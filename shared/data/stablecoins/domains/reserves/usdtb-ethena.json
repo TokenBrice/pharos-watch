@@ -55,7 +55,8 @@
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "All examined reserve assets are classified (BUIDL fund shares at fair value; FDIC-insured bank demand deposits). Individual deposit bank names are not disclosed, and BUIDL's own underlying fund holdings are governed by BlackRock's separate fund disclosures rather than this examination.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposurePct": 0,
+    "reportScopeId": "anchorage-usdtb-2026-08-31-native-redeemable"
   },
   "custodyProfile": {
     "providers": [

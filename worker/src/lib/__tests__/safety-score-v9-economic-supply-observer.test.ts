@@ -10,12 +10,12 @@ import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attrib
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK = 1790850000;
-const HASH = `0x${"a".repeat(64)}`;
+const HASH: `0x${string}` = `0x${"a".repeat(64)}`;
 const OWNER = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const MINT = "So11111111111111111111111111111111111111112";
 const apiSource = (sourceId: string) => ({ sourceId, url: `https://issuer.example/${sourceId}`, amountPath: ["data", "amount"], observedAtPath: ["data", "observedAt"], generationPath: ["data", "generation"] });
 const apiBody = (amount: unknown = "1", observedAt: unknown = CLOCK - 60) => ({ data: { amount, observedAt, generation: "issuer-snapshot" } });
-const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
+const word = (value: bigint): `0x${string}` => `0x${value.toString(16).padStart(64, "0")}`;
 const account = (supply = "100000000") => ({ context: { slot: 100 }, value: { owner: OWNER, data: { parsed: { type: "mint", info: { supply, decimals: 6 } } } } });
 
 function fixture() {
@@ -43,7 +43,7 @@ function fixture() {
 
 beforeEach(() => {
   vi.spyOn(evmRpc, "fetchEvmBlockNumber").mockResolvedValue(102);
-  vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockImplementation(async (_chain, number) => ({ number, timestamp: CLOCK - 60, hash: HASH }));
+  vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockImplementation(async (_chain, number) => ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 60, hash: HASH }));
   vi.spyOn(evmRpc, "fetchEvmMulticall3Aggregate3AtBlock").mockImplementation(async (_chain, calls) => calls.map(call => ({ label: call.label, success: true, returnData: word(call.label.endsWith(":decimals") ? 6n : 100000000n) })));
   vi.spyOn(evmRpc, "fetchEvmRpcBatch").mockResolvedValue(["0xde0b6b3a7640000"]);
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Unexpected network request")));
@@ -77,7 +77,7 @@ describe("reviewed economic supply observation", () => {
     const f = fixture();
     vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(1);
     expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable" });
-    delete f.fixedInput.aggregateCirculatingById.alpha!.observedAtSec;
+    f.fixedInput.aggregateCirculatingById.alpha!.observedAtSec = null;
     expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: null });
     expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, assetId: "unreviewed" })).toEqual({ status: "rejected", rejectionCode: "route-inventory-unavailable", failedRouteId: null });
   });
@@ -135,7 +135,7 @@ describe("reviewed economic supply observation", () => {
   it("reconciles provider-chain observations against the admitted aggregate", async () => {
     const f = fixture(); const row = f.plan.deployments[0]!;
     row.read = { kind: "provider-chain", sourceChain: "ethereum" }; row.amountBasis = "circulating-usd"; row.decimals = null;
-    f.fixedInput.chainCirculatingById = { alpha: { ethereum: { current: 100 } } } as typeof f.fixedInput.chainCirculatingById;
+    f.fixedInput.chainCirculatingById = { alpha: { ethereum: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 } } };
     expect(await f.run()).toMatchObject({ status: "accepted", attribution: { deployments: [expect.objectContaining({ currentSupplyUsd: 100 })] } });
     f.fixedInput.chainCirculatingById.alpha!.ethereum!.current = 80;
     expect(await f.run()).toMatchObject({ status: "accepted", attribution: { unattributedSupplyUsd: 20 } });

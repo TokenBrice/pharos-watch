@@ -847,6 +847,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
       unknownFields: uniqueSorted(input.access.unknownFields),
       signals: uniqueSorted(input.access.signals),
       reasons: canonicalPublicReasons(input.access.reasons ?? []),
+      freezeLookthrough: input.access.freezeLookthrough ?? null,
     },
     dependencies: projectDependencies(input),
     scoreTrace: projectScoreTrace(input),

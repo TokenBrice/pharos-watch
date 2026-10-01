@@ -53,6 +53,43 @@
     "compositionBasis": "Retained 2026-07-31 curated feeder-interest composition; tokenized-feeder structure re-verified from Hamilton Lane issuer disclosure and Securitize primary-market page on 2026-10-01; August manager performance is a separate NAV observation, not a composition refresh",
     "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
+    "observations": [
+      {
+        "kind": "standing-structure",
+        "scopeId": "hlscope:whole-feeder-lp-standing-identity:1790896833",
+        "liabilityBookKey": "hlscope:tokenized-feeder-lp-interests",
+        "deploymentRefs": [],
+        "reviewer": "DataBBMisc04",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+            "accessedAtSec": 1790896833,
+            "sha256": "18b789471b114c886e834eefcb8d7ae0ee5ac8f59ce2a3598a09d687f8a62b36"
+          }
+        ],
+        "reviewedAtSec": 1790896833,
+        "expiresAtSec": 1798672833,
+        "sourceGeneration": "datab:hlscope:standing-identity:1790896833",
+        "sourceSha256": "18b789471b114c886e834eefcb8d7ae0ee5ac8f59ce2a3598a09d687f8a62b36",
+        "completeness": "complete",
+        "obligations": [
+          {
+            "key": "feeder-current-holdings-nav-and-liabilities",
+            "disposition": "unresolved",
+            "reason": "Complete standing instrument identity only; no current feeder NAV, holdings or liability denominator was obtained."
+          },
+          {
+            "key": "executed-feeder-lp-agreement-and-holder-priority",
+            "disposition": "unresolved",
+            "reason": "The issuer distinguishes the feeder offering from SCOPE; Main Fund rights do not establish token-holder pass-through or recovery priority."
+          }
+        ],
+        "observedAtSec": null,
+        "wholeHolderClaim": true,
+        "instrumentKey": "Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (Delaware) investing into Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg); underlying private-credit borrowers"
+      }
+    ],
     "knownUnknownExposure": "No residual unknown exposure within the reserve composition: the entire reserve is the tokenized feeder LP interest. The underlying Main Fund loan-level weights and cash sleeve are look-through risk details, not reserve slices.",
     "knownUnknownExposurePct": 0
   },

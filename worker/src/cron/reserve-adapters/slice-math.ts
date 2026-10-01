@@ -174,6 +174,7 @@ export function normalizeSlices(slices: ReserveSlice[], decimals: number | null 
       slice.riskFactors ? [...slice.riskFactors].sort() : undefined,
       slice.liquidityHorizon,
       slice.maturityDaysMax,
+      slice.boundedFacts,
     ]);
     const existing = grouped.get(key);
     if (existing) {

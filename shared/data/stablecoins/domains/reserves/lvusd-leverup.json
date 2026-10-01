@@ -49,6 +49,73 @@
     "compositionBasis": "LeverUp documentation and a fixed-block read of the complete LVUSD issuer transparency vault list, reserve token, USDC balance, and LVUSD supply",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
+    "observations": [
+      {
+        "kind": "onchain-observation",
+        "scopeId": "lvusd:designated-usdc-vault:monad:109737920",
+        "liabilityBookKey": "lvusd:monad-native-token-supply",
+        "deploymentRefs": [
+          "monad:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1"
+        ],
+        "reviewer": "DataBBMisc04",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://rpc.monad.xyz",
+            "accessedAtSec": 1790896949,
+            "sha256": "6d1eebeb471315e0e5fb7c5a911cf95e5d650cd50dc4d280021cf198a85258ae"
+          }
+        ],
+        "reviewedAtSec": 1790896949,
+        "expiresAtSec": 1790914214,
+        "sourceGeneration": "datab:lvusd:monad-finalized:109737920",
+        "sourceSha256": "6d1eebeb471315e0e5fb7c5a911cf95e5d650cd50dc4d280021cf198a85258ae",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "native-lvusd-total-supply",
+            "disposition": "included",
+            "reason": "Exact totalSupply() of the tracked LVUSD contract at the same finalized block; no supply override or current USD partition is asserted."
+          },
+          {
+            "key": "complete-economic-obligations",
+            "disposition": "unresolved",
+            "reason": "Token supply and designated-vault assets do not establish complete pending redemptions, trader profit/loss, fees, interest or other protocol obligations."
+          }
+        ],
+        "observedAtSec": 1790896934,
+        "blocks": [
+          {
+            "chain": "monad",
+            "number": 109737920,
+            "hash": "0xa1ad38080616f63198f49f71241f213d27d857029a18e6c91803be954f51d1b5",
+            "timestamp": 1790896934,
+            "finality": "finalized"
+          }
+        ],
+        "quantities": [
+          {
+            "key": "lvusd:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1:totalSupply",
+            "deploymentRef": "monad:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+            "selector": "0x18160ddd",
+            "rawAmount": "1406832469062000000000000",
+            "decimals": 18
+          },
+          {
+            "key": "usdc:0x754704bc059f8c67012fed69bc8a327a5aafb603:balanceOf:0xc69d584b3118e94b3443cc6c67076281242fa704",
+            "deploymentRef": "monad:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+            "selector": "0x70a08231000000000000000000000000c69d584b3118e94b3443cc6c67076281242fa704",
+            "rawAmount": "906831469062",
+            "decimals": 6
+          }
+        ],
+        "ratio": {
+          "numerator": "906831.469062",
+          "denominator": "1406832.469062",
+          "unitBasis": "USDC units per LVUSD token; designated-vault-only diagnostic, not full economic-liability coverage"
+        }
+      }
+    ],
     "knownUnknownExposure": "The complete issuer-designated LVUSD vault list contained one vault whose reserveToken() was USDC. No additional designated LVUSD reserve asset was identified. Its USDC balance was 500,001 below LVUSD supply, so the designated reserve composition is complete while reserve coverage is below 100%.",
     "knownUnknownExposurePct": 0
   },
