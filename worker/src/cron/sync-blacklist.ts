@@ -5,6 +5,7 @@ import { type RateLimitedFetch, createRateLimiter } from "../lib/evm-logs";
 import { type ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { backfillAmounts, type BlacklistAmountBackfillResult } from "../lib/blacklist/amount-recovery";
 import {
   backfillTronBlacklistAmounts,
@@ -235,12 +236,16 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
   }
 
-  const decodeRetryRows = await db.prepare(`
-    SELECT substr(remainder, 1, instr(remainder, ':') - 1) AS configKey, COUNT(*) AS count
-    FROM (SELECT substr(key, length('blacklist:decode-retry:') + 1) AS remainder
-      FROM cache WHERE key GLOB 'blacklist:decode-retry:*')
-    GROUP BY configKey
-  `).all<{ configKey: string; count: number }>();
+  const decodeRetryRows = await runWithOverloadRetry(
+    () => db.prepare(`
+      SELECT substr(remainder, 1, instr(remainder, ':') - 1) AS configKey, COUNT(*) AS count
+      FROM (SELECT substr(key, length('blacklist:decode-retry:') + 1) AS remainder
+        FROM cache WHERE key GLOB 'blacklist:decode-retry:*')
+      GROUP BY configKey
+    `).all<{ configKey: string; count: number }>(),
+    3,
+    signal,
+  );
   const decodeRetryCounts = Object.fromEntries(
     (decodeRetryRows.results ?? []).map((row) => [row.configKey, row.count]),
   );
