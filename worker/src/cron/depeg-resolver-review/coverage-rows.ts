@@ -6,7 +6,7 @@ import {
   type DdrrV2CoverageInput,
 } from "@shared/lib/depeg-resolver-review";
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { numberValue, stringValue } from "@shared/lib/type-guards";
 import type { DdrrLineage } from "@shared/types/depeg-resolver-review";
 import type {

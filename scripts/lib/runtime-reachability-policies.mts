@@ -75,6 +75,7 @@ export const RUNTIME_REACHABILITY_POLICIES = [
         "worker/src/handlers/scheduled/hourly-blacklist.ts",
         "worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts",
         "worker/src/handlers/scheduled/daily-0300.ts",
+        "worker/src/handlers/scheduled/depeg-resolver.ts",
       ],
     },
     forbidden: {
