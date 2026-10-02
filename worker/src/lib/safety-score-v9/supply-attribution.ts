@@ -230,7 +230,7 @@ function supplyAttributionAssetDescriptors():
       assetId, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
-      observe: ({ fixedInput, chainRpcs, signal }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, chainRpcs, signal }),
+      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal }),
     })),
   ];
 }

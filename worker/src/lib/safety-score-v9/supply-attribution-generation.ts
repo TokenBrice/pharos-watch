@@ -19,7 +19,7 @@ import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   deriveReviewedDeploymentUnitPartition,
 } from "./supply-attribution-contract";
-import { REVIEWED_ECONOMIC_SUPPLY_PLANS, deriveReviewedEconomicDeploymentPartition, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, reviewedEconomicDeploymentAttributionValidationError } from "./supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_ASSET_ID,
@@ -351,7 +351,7 @@ function assertCaptureBindings(input: {
     if (attribution.model === "reviewed-economic-deployment-partition-v1") {
       const error = reviewedEconomicDeploymentAttributionValidationError({
         assetId, attribution, aggregateSupplyUsd: aggregateSupplyUsd(input.fixedInput, assetId),
-        registryFingerprint: input.fixedInput.registryFingerprint, clockSec: input.fixedInput.clockSec,
+        registryFingerprint: input.fixedInput.registryFingerprint, clockSec: record.scoringClockSec,
         baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration,
         aggregateObservedAtSec: input.fixedInput.aggregateCirculatingById[assetId]?.observedAtSec ?? null,
         referencePrice: input.fixedInput.navPriceById?.[assetId] ?? null,
@@ -563,6 +563,50 @@ export function isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
   );
 }
 
+function rederiveEconomicSupplyAttribution(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  generation: SafetyScoreV9SupplyAttributionGeneration,
+  assetId: string,
+  stored: Extract<SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"][string], { model: "reviewed-economic-deployment-partition-v1" }>,
+) {
+  const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId);
+  // Validate the original packet against its capture, never the new publication
+  // identity. Only raw external observations survive the consumer re-derivation.
+  if (!plan || stored.scoringClockSec < generation.sourceClockSec ||
+    stored.scoringClockSec > generation.captureClockSec ||
+    reviewedEconomicDeploymentAttributionValidationError({
+      assetId, attribution: stored, aggregateSupplyUsd: stored.aggregate.supplyUsd,
+      registryFingerprint: generation.registryFingerprint, clockSec: stored.scoringClockSec,
+      baseInputGenerationId: generation.sourceBaseInputGenerationId, sourceGeneration: generation.sourceGeneration,
+    }) !== null) return null;
+  const aggregate = fixedInput.aggregateCirculatingById[assetId];
+  if (aggregate?.observedAtSec == null) return null;
+  const referencePrice = plan.referencePriceSource === null
+    ? economicSupplyInputReferencePrice(fixedInput, assetId) : stored.referencePrice;
+  if (!referencePrice) return null;
+  const observations = [];
+  for (const observation of stored.observations) {
+    const row = plan.deployments.find(row => row.deploymentKey === observation.id);
+    if (row && (row.read.kind === "provider-chain" || row.read.kind === "native-from-aggregate")) {
+      const current = economicSupplyInputDeploymentObservation({ fixedInput, plan, row, referencePrice });
+      if (!current) return null;
+      observations.push(current);
+    } else {
+      observations.push(observation);
+    }
+  }
+  const attribution = deriveReviewedEconomicDeploymentPartition({
+    plan, baseInputGenerationId: fixedInput.baseInputGenerationId, sourceGeneration: fixedInput.sourceGeneration,
+    registryFingerprint: fixedInput.registryFingerprint, clockSec: fixedInput.clockSec,
+    aggregate: { supplyUsd: aggregateSupplyUsd(fixedInput, assetId), observedAtSec: aggregate.observedAtSec,
+      sourceGeneration: fixedInput.sourceGeneration },
+    referencePrice, conversions: stored.conversions, observations, inFlight: stored.inFlight,
+  });
+  return attribution && economicProviderSupplyContradictionChain(
+    attribution, fixedInput.chainCirculatingById[assetId] ?? {},
+  ) === null ? attribution : null;
+}
+
 export function applySafetyScoreV9SupplyAttributionGeneration(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   generation:
@@ -622,19 +666,8 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
               scoringClockSec: fixedInput.clockSec,
               observation: stored.observation,
             })
-          : stored.model === "reviewed-economic-deployment-partition-v1" &&
-            REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) &&
-            stored.baseInputGenerationId === fixedInput.baseInputGenerationId &&
-            stored.sourceGeneration === fixedInput.sourceGeneration &&
-            stored.aggregate.supplyUsd === aggregate &&
-            stored.aggregate.observedAtSec === fixedInput.aggregateCirculatingById[assetId]?.observedAtSec
-            ? deriveReviewedEconomicDeploymentPartition({
-                plan: REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId)!,
-                baseInputGenerationId: fixedInput.baseInputGenerationId, sourceGeneration: fixedInput.sourceGeneration,
-                registryFingerprint: fixedInput.registryFingerprint, clockSec: fixedInput.clockSec,
-                aggregate: stored.aggregate, referencePrice: stored.referencePrice, conversions: stored.conversions,
-                observations: stored.observations, inFlight: stored.inFlight,
-              })
+          : stored.model === "reviewed-economic-deployment-partition-v1"
+            ? rederiveEconomicSupplyAttribution(fixedInput, generation, assetId, stored)
             : null;
     // Each accepted asset carries its own observation contract, so a re-derivation
     // failure (typically an observation that aged past that asset's own window

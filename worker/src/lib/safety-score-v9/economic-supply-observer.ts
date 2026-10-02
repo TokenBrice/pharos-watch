@@ -12,7 +12,7 @@ import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3A
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
-import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
+import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 
 /** Finalized mint snapshot, case-preserved identity, pinned chronology and response hash. */
@@ -66,21 +66,23 @@ export type ReviewedEconomicSupplyObservationAttempt =
 
 /** Reads only the reviewed census. The aggregate is always copied from admitted source input. */
 export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
-  assetId: string; fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>; chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal;
+  assetId: string; fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>; scoringClockSec: number; chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal;
 }): Promise<ReviewedEconomicSupplyObservationAttempt> {
   let failedRouteId: string | null = null;
   try {
+    if (!Number.isSafeInteger(input.scoringClockSec) || input.scoringClockSec < input.fixedInput.clockSec) {
+      return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: null };
+    }
     const inventory = buildReviewedEconomicDeploymentInventory(input.assetId);
     const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(input.assetId);
     if (!inventory || !plan) return { status: "rejected", rejectionCode: "route-inventory-unavailable", failedRouteId: null };
     const aggregate = input.fixedInput.aggregateCirculatingById[input.assetId];
     const aggregateUsd = getCirculatingRawOrNull(aggregate ?? {});
-    const price = input.fixedInput.navPriceById?.[input.assetId];
     if (aggregateUsd === null || aggregate?.observedAtSec == null) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: null };
     const observations: EconomicSupplyObservation[] = [], inFlight: EconomicSupplyObservation[] = [], conversions: EconomicSupplyReference[] = [];
     const referencePrice: EconomicSupplyReference | null = plan.referencePriceSource
       ? await readReviewedApiAmount(plan.referencePriceSource, input.signal)
-      : price ? { sourceId: price.sourceId, value: String(price.priceUsd), sourceGeneration: input.fixedInput.sourceGeneration, observedAtSec: price.observedAtSec, responseSha256: sha256Hex(stableJsonStringifyV1(price)) } : null;
+      : economicSupplyInputReferencePrice(input.fixedInput, input.assetId);
     if (!referencePrice || Number(referencePrice.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: plan.sourceId };
     const headers = new Map<string, EvmBlockHeader>();
     const readEvm = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
@@ -93,7 +95,7 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
           "safeBlockLag" in other.read ? other.read.safeBlockLag : 0));
         if (head === null || lag <= 0 || head < lag) return null;
         const block = await rewindEvmBlockHeaderToScoringClock({
-          initialBlockNumber: head - lag, scoringClockSec: input.fixedInput.clockSec, signal: input.signal,
+          initialBlockNumber: head - lag, scoringClockSec: input.scoringClockSec, signal: input.signal,
           fetchHeader: number => fetchEvmBlockHeader(row.chainId, number, options),
         });
         if (!block) return null;
@@ -160,18 +162,13 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
     for (const row of plan.deployments) {
       throwIfAborted(input.signal); failedRouteId = row.routeId ?? row.deploymentKey;
       let observation: EconomicSupplyObservation | null = null;
-      if (row.read.kind === "provider-chain") {
-        const sameChain = plan.deployments.filter(other => other.chainId === row.chainId);
-        const amount = input.fixedInput.chainCirculatingById[input.assetId]?.[row.read.sourceChain]?.current;
-        if (sameChain.length === 1 && row.amountBasis === "circulating-usd" && amount !== undefined) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: String(amount), observedAtSec: aggregate.observedAtSec, anchor: input.fixedInput.sourceGeneration, anchorHash: sha256Hex(stableJsonStringifyV1(input.fixedInput.chainCirculatingById[input.assetId])), responseSha256: sha256Hex(stableJsonStringifyV1({ sourceChain: row.read.sourceChain, amount })) };
+      if (row.read.kind === "provider-chain" || row.read.kind === "native-from-aggregate") {
+        observation = economicSupplyInputDeploymentObservation({ fixedInput: input.fixedInput, plan, row, referencePrice });
       } else if (row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance") {
         observation = await readEvm(row, row.deploymentKey, row.read.kind === "evm-balance" ? row.read.account : undefined);
       } else if (row.read.kind === "solana-mint" && row.chainId === "solana" && row.address !== null && row.decimals !== null) {
-        const result = await observeEconomicSolanaMint({ address: row.address, decimals: row.decimals, programOwner: row.read.programOwner, clockSec: input.fixedInput.clockSec, chainRpcs: input.chainRpcs, signal: input.signal, requireExactContextSlot: true });
+        const result = await observeEconomicSolanaMint({ address: row.address, decimals: row.decimals, programOwner: row.read.programOwner, clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, requireExactContextSlot: true });
         if (result) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: result.amount, observedAtSec: result.observedAtSec, anchor: result.slot, anchorHash: result.blockHash, responseSha256: result.responseSha256 };
-      } else if (row.read.kind === "native-from-aggregate" && row.holdingKind === "native-gas" && row.amountBasis === "native-ledger") {
-        const amount = aggregateUsd / Number(referencePrice.value);
-        if (Number.isFinite(amount) && amount >= 0) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: amount.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 }), observedAtSec: Math.min(aggregate.observedAtSec, referencePrice.observedAtSec), anchor: `attributed:${input.fixedInput.sourceGeneration}`, anchorHash: sha256Hex(stableJsonStringifyV1({ aggregate, referencePrice })), responseSha256: sha256Hex(stableJsonStringifyV1({ aggregate, referencePrice })) };
       } else if (row.read.kind === "xrpl-issued-currency" && row.chainId === "xrpl") {
         const url = input.chainRpcs.get("xrpl")?.endpoints[0]?.url ?? getPublicRpcUrl("xrpl");
         if (url) {
@@ -240,7 +237,7 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
         return { status: "rejected", rejectionCode: "deployment-state-invalid", failedRouteId: `anchor:${chainId}` };
       }
     }
-    const attribution = deriveReviewedEconomicDeploymentPartition({ plan, baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration, registryFingerprint: input.fixedInput.registryFingerprint, clockSec: input.fixedInput.clockSec, aggregate: { supplyUsd: aggregateUsd, observedAtSec: aggregate.observedAtSec, sourceGeneration: input.fixedInput.sourceGeneration }, referencePrice, conversions, observations, inFlight });
+    const attribution = deriveReviewedEconomicDeploymentPartition({ plan, baseInputGenerationId: input.fixedInput.baseInputGenerationId, sourceGeneration: input.fixedInput.sourceGeneration, registryFingerprint: input.fixedInput.registryFingerprint, clockSec: input.scoringClockSec, aggregate: { supplyUsd: aggregateUsd, observedAtSec: aggregate.observedAtSec, sourceGeneration: input.fixedInput.sourceGeneration }, referencePrice, conversions, observations, inFlight });
     if (attribution) {
       const contradiction = economicProviderSupplyContradictionChain(attribution, input.fixedInput.chainCirculatingById[input.assetId] ?? {});
       if (contradiction !== null) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: `provider:${contradiction}` };

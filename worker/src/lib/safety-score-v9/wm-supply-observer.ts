@@ -1,4 +1,6 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { sleepWithSignal } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
 import {
   fetchEvmBlockHeader,
@@ -10,6 +12,7 @@ import {
 import {
   expectedWmDeploymentIdentity,
   reviewedDeploymentIdentityValidationError,
+  reviewedDeploymentObservationTimingIssue,
   type ReviewedDeploymentSupplyObservation,
   type ReviewedDeploymentUnitPartitionV1,
 } from "./supply-attribution-contract";
@@ -51,6 +54,11 @@ export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = 
   citrea: 12,
   monad: 10,
 };
+
+// Reserve sixty seconds of the isolated three-minute slot for admission, RPC
+// and publication. The outer signal enforces its absolute deadline; this idle
+// wait adds no fanout and never changes the capture clock.
+const WM_SKEW_REPAIR_MAX_WAIT_MS = 120_000;
 
 export type WmReviewedDeploymentRejectionCode = ReviewedDeploymentObservationRejectionCode;
 export type WmReviewedDeploymentObservationAttempt = ReviewedDeploymentObservationAttempt;
@@ -168,31 +176,62 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
   dependencyOverrides: Partial<WmObserverDependencies> = {},
 ): Promise<WmReviewedDeploymentObservationAttempt> {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...dependencyOverrides };
-  return observeReviewedDeploymentUnitPartitionAttempt({
+  const evmObservations = new Map<string, ReviewedDeploymentObservationResult>();
+  const solanaObservations = new Map<string, ReviewedDeploymentSupplyObservation | null>();
+  const observationInput = {
     assetId: "wm-m0",
     aggregateSupplyUsd: input.aggregateSupplyUsd,
     registryFingerprint: input.registryFingerprint,
     scoringClockSec: input.scoringClockSec,
     signal: input.signal,
     identityRuntime: (routeId) => expectedWmDeploymentIdentity(routeId)?.runtime ?? null,
-    observeEvm: (route) => observeWmEvmDeployment(
-      route.routeId,
-      route.chainId,
-      route.contractAddress,
-      input.scoringClockSec,
-      input.chainRpcs,
-      dependencies,
-      input.signal,
-    ),
-    observeSolana: (route) => dependencies.fetchSolanaObservation(
-      route.routeId,
-      route.contractAddress,
-      input.signal,
-      undefined,
-      input.chainRpcs,
-    ),
+    observeEvm: async (route) => {
+      const cached = evmObservations.get(route.routeId);
+      if (cached) return cached;
+      const result = await observeWmEvmDeployment(
+        route.routeId, route.chainId, route.contractAddress, input.scoringClockSec,
+        input.chainRpcs, dependencies, input.signal,
+      );
+      evmObservations.set(route.routeId, result);
+      return result;
+    },
+    observeSolana: async (route) => {
+      if (solanaObservations.has(route.routeId)) return solanaObservations.get(route.routeId)!;
+      const observation = await dependencies.fetchSolanaObservation(
+        route.routeId, route.contractAddress, input.signal, undefined, input.chainRpcs,
+      );
+      solanaObservations.set(route.routeId, observation);
+      return observation;
+    },
     identityValidationError: reviewedDeploymentIdentityValidationError,
+  } satisfies Parameters<typeof observeReviewedDeploymentUnitPartitionAttempt>[0];
+  const attempt = await observeReviewedDeploymentUnitPartitionAttempt(observationInput);
+  if (attempt.status !== "rejected" || attempt.rejectionCode !== "deployment-observation-skew") return attempt;
+  const observations = [...evmObservations.values()].flatMap(result => result.status === "accepted" ? [result.observation] : []);
+  for (const observation of solanaObservations.values()) if (observation) observations.push(observation);
+  const earliest = Math.min(...observations.map(row => row.blockTimeSec));
+  const latest = Math.max(...observations.map(row => row.blockTimeSec));
+  const issue = reviewedDeploymentObservationTimingIssue({
+    assetId: "wm-m0", clockSec: input.scoringClockSec, captureStartedAtSec: earliest,
+    captureEndedAtSec: latest, observedAtSec: latest, deployments: observations,
   });
+  if (issue?.code !== "cross-chain-skew") return attempt;
+  const minimumTime = latest - V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
+  // Finalized account state cannot be fetched historically. Only a lagging EVM
+  // safe head can mature into this already-captured cross-chain envelope.
+  if ([...solanaObservations.values()].some(row => row && row.blockTimeSec < minimumTime)) return attempt;
+  const laggingRouteIds = [...evmObservations].filter(([, result]) =>
+    result.status === "accepted" && result.observation.blockTimeSec < minimumTime,
+  ).map(([routeId]) => routeId);
+  const requiredWaitMs = (minimumTime - earliest) * 1_000;
+  if (laggingRouteIds.length === 0 || requiredWaitMs > WM_SKEW_REPAIR_MAX_WAIT_MS) return attempt;
+  // Coarse/variable block production makes a guessed per-block margin unsafe;
+  // spend the bounded maturity allowance once, rather than adding retry fanout.
+  await sleepWithSignal(WM_SKEW_REPAIR_MAX_WAIT_MS, input.signal);
+  for (const routeId of laggingRouteIds) evmObservations.delete(routeId);
+  // Exactly one repair pass. Every reread revalidates the original inventory,
+  // hash-pinned state and identity; unchanged siblings keep their true clocks.
+  return observeReviewedDeploymentUnitPartitionAttempt(observationInput);
 }
 
 export async function observeWmReviewedDeploymentUnitPartition(
