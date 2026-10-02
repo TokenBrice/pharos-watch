@@ -33,6 +33,9 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     description:
       "V10 keeps Backing, Control and Exit and sharpens what feeds them: the weakest mint route, issuer-set prices, shared reserves, and gold redeemed into dollars.",
     datePublished: "2026-10-02",
+    coverImage: "/blog/safety-score-v10-cover.png",
+    coverAlt:
+      "The Pharos lighthouse beam passing through a lens onto a small gold bar, then splitting into three sharp beams toward the words “Backing. Control. Exit.” beneath the label “Safety Score V10”.",
   },
   {
     slug: "api-access-free-grades-supporter-keys",

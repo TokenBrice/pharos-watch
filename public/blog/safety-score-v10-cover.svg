@@ -1,0 +1,203 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Inter:wght@400;500;600&amp;display=swap');
+    </style>
+    <radialGradient id="bgGradient" cx="26%" cy="46%" r="72%">
+      <stop offset="0%" stop-color="#0d1f3c"/>
+      <stop offset="100%" stop-color="#050a14"/>
+    </radialGradient>
+    <radialGradient id="lanternAmbient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.22"/>
+      <stop offset="40%" stop-color="#E8DCC4" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="iconGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="goldGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F3D27A" stop-opacity="0.5"/>
+      <stop offset="45%" stop-color="#E2B656" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#E2B656" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D4C8B0"/>
+      <stop offset="40%" stop-color="#E8DCC4"/>
+      <stop offset="100%" stop-color="#C8BBAA"/>
+    </linearGradient>
+    <!-- Lantern light gathered by the lens -->
+    <linearGradient id="intake" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#F5EFDD" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0.26"/>
+    </linearGradient>
+    <linearGradient id="focus" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#F5EFDD" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#FFF8E8" stop-opacity="0.7"/>
+    </linearGradient>
+    <!-- Three sharper beams out of the focal point: the same three pillars -->
+    <linearGradient id="sharp" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#FFF8E8" stop-opacity="0.5"/>
+      <stop offset="40%" stop-color="#E8DCC4" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="lensFill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.08"/>
+      <stop offset="50%" stop-color="#F5EFDD" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="goldFace" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8DD8C"/>
+      <stop offset="100%" stop-color="#C9962F"/>
+    </linearGradient>
+    <linearGradient id="goldTop" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FBE7A6"/>
+      <stop offset="100%" stop-color="#E8C266"/>
+    </linearGradient>
+    <filter id="sg" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="beamBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="9"/>
+    </filter>
+    <filter id="crispBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5"/>
+    </filter>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <!-- Ambient glow behind lighthouse -->
+  <circle cx="315" cy="240" r="270" fill="url(#lanternAmbient)"/>
+
+  <!-- Lantern light gathered into the lens -->
+  <g filter="url(#beamBlur)">
+    <polygon points="315,209 466,146 466,272" fill="url(#intake)"/>
+  </g>
+  <!-- Converging from the lens to the focal point -->
+  <g filter="url(#crispBlur)">
+    <polygon points="478,150 522,205 522,213 478,268" fill="url(#focus)"/>
+  </g>
+
+  <!-- Three sharper beams from the focal point, one toward each pillar word -->
+  <g filter="url(#crispBlur)">
+    <polygon points="522,209 1240,176 1240,226" fill="url(#sharp)"/>
+    <polygon points="522,209 1240,318 1240,368" fill="url(#sharp)" opacity="0.8"/>
+    <polygon points="522,209 1240,460 1240,510" fill="url(#sharp)" opacity="0.6"/>
+  </g>
+
+  <!-- Radial beams from lantern (~315, 209) -->
+  <g filter="url(#beamBlur)">
+    <line x1="315" y1="209" x2="315" y2="0" stroke="#E8DCC4" stroke-width="3.5" opacity="0.16"/>
+    <line x1="315" y1="209" x2="110" y2="0" stroke="#E8DCC4" stroke-width="3" opacity="0.11"/>
+    <line x1="315" y1="209" x2="520" y2="0" stroke="#E8DCC4" stroke-width="3" opacity="0.11"/>
+    <line x1="315" y1="209" x2="0" y2="80" stroke="#E8DCC4" stroke-width="2.5" opacity="0.06"/>
+    <line x1="315" y1="209" x2="0" y2="170" stroke="#E8DCC4" stroke-width="2" opacity="0.04"/>
+  </g>
+
+  <!-- Background stars -->
+  <circle cx="75" cy="60" r="1.2" fill="#E8DCC4" opacity="0.25"/>
+  <circle cx="190" cy="145" r="0.8" fill="#E8DCC4" opacity="0.15"/>
+  <circle cx="460" cy="48" r="1" fill="#E8DCC4" opacity="0.2"/>
+  <circle cx="680" cy="72" r="1.2" fill="#E8DCC4" opacity="0.18"/>
+  <circle cx="870" cy="118" r="0.9" fill="#E8DCC4" opacity="0.22"/>
+  <circle cx="1020" cy="58" r="1.1" fill="#E8DCC4" opacity="0.15"/>
+  <circle cx="1130" cy="105" r="0.8" fill="#E8DCC4" opacity="0.2"/>
+  <circle cx="130" cy="495" r="0.9" fill="#E8DCC4" opacity="0.12"/>
+  <circle cx="890" cy="540" r="1" fill="#E8DCC4" opacity="0.14"/>
+  <circle cx="1090" cy="465" r="0.8" fill="#E8DCC4" opacity="0.1"/>
+  <circle cx="1155" cy="300" r="0.9" fill="#E8DCC4" opacity="0.16"/>
+  <circle cx="52" cy="335" r="1" fill="#E8DCC4" opacity="0.12"/>
+  <circle cx="1040" cy="385" r="0.7" fill="#E8DCC4" opacity="0.13"/>
+  <circle cx="620" cy="110" r="0.8" fill="#E8DCC4" opacity="0.14"/>
+  <circle cx="960" cy="250" r="0.7" fill="#E8DCC4" opacity="0.12"/>
+
+  <!-- Lighthouse icon: identical to the V9 cover, scaled 3.8x, centered at (315, 315) -->
+  <g transform="translate(315, 315) scale(3.8) translate(-44, -44)">
+    <circle cx="44" cy="16" r="16" fill="url(#iconGlow)"/>
+
+    <line x1="44" y1="16" x2="44" y2="-4" stroke="#E8DCC4" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="22" y2="-2" stroke="#E8DCC4" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="66" y2="-2" stroke="#E8DCC4" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="4" y2="4" stroke="#E8DCC4" stroke-width="2" opacity="0.25" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="84" y2="4" stroke="#E8DCC4" stroke-width="2" opacity="0.25" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="-4" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.15" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="92" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.15" stroke-linecap="round"/>
+
+    <path d="M14,8 L74,8 L74,36 Q74,74 44,84 Q14,74 14,36 Z" fill="none" stroke="#E8DCC4" stroke-width="2.5" opacity="0.45" stroke-linejoin="round"/>
+
+    <circle cx="44" cy="16" r="5" fill="white" opacity="0.9" filter="url(#sg)"/>
+
+    <path d="M39,22 C39,14 49,14 49,22 Z" fill="#E8DCC4" opacity="0.9"/>
+
+    <rect x="38.5" y="22" width="11" height="7" rx="1" fill="#F5F0E6" opacity="0.85"/>
+    <line x1="42" y1="22" x2="42" y2="29" stroke="#0a1628" stroke-width="0.8" opacity="0.3"/>
+    <line x1="46" y1="22" x2="46" y2="29" stroke="#0a1628" stroke-width="0.8" opacity="0.3"/>
+
+    <rect x="34" y="29" width="20" height="4" rx="1.5" fill="#E8DCC4" opacity="0.85"/>
+
+    <path d="M37,33 L51,33 L54,66 L34,66 Z" fill="url(#tBody)" opacity="0.8"/>
+    <line x1="36.2" y1="44" x2="52.2" y2="44" stroke="#0d1f3c" stroke-width="2" opacity="0.35"/>
+    <line x1="35.3" y1="55" x2="53.1" y2="55" stroke="#0d1f3c" stroke-width="2" opacity="0.35"/>
+
+    <rect x="30" y="66" width="28" height="5" rx="2.5" fill="#E8DCC4" opacity="0.7"/>
+    <rect x="26" y="71" width="36" height="5" rx="2.5" fill="#E8DCC4" opacity="0.45"/>
+  </g>
+
+  <!-- Lens: a biconvex glass that focuses the lantern light -->
+  <path d="M468,137 Q494,209 468,281 Q442,209 468,137 Z" fill="url(#lensFill)" stroke="#E8DCC4" stroke-width="2.4" opacity="0.88" stroke-linejoin="round"/>
+  <path d="M461,160 Q452,190 455,214" stroke="#FFF8E8" stroke-width="2" opacity="0.35" stroke-linecap="round"/>
+
+  <!-- Gold bar at the focal point -->
+  <circle cx="524" cy="209" r="44" fill="url(#goldGlow)"/>
+  <g transform="translate(524, 210) scale(1.15)">
+    <path d="M-15,-8 L15,-8 L20,8 L-20,8 Z" fill="url(#goldFace)"/>
+    <path d="M-15,-8 L15,-8 L12,-12 L-12,-12 Z" fill="url(#goldTop)"/>
+    <line x1="-12" y1="-4.5" x2="12" y2="-4.5" stroke="#FFF3C8" stroke-width="1.2" opacity="0.55"/>
+  </g>
+
+  <!-- Eyebrow -->
+  <text x="572" y="180"
+        font-family="'Inter', Arial, sans-serif"
+        font-size="24" font-weight="600"
+        fill="#4bc4de"
+        letter-spacing="0.26em">SAFETY SCORE V10</text>
+
+  <!-- Headline: the same three pillars -->
+  <text x="569" y="272"
+        font-family="'Cormorant Garamond', Georgia, serif"
+        font-size="86" font-weight="600"
+        fill="#F5F0E6"
+        letter-spacing="0.01em"
+        filter="url(#softGlow)" opacity="0.55">Backing.</text>
+  <text x="572" y="272"
+        font-family="'Cormorant Garamond', Georgia, serif"
+        font-size="86" font-weight="600"
+        fill="#F5F0E6"
+        letter-spacing="0.01em">Backing.</text>
+  <text x="572" y="358"
+        font-family="'Cormorant Garamond', Georgia, serif"
+        font-size="86" font-weight="600"
+        fill="#EFE7D6"
+        letter-spacing="0.01em">Control.</text>
+  <text x="572" y="444"
+        font-family="'Cormorant Garamond', Georgia, serif"
+        font-size="86" font-weight="600"
+        fill="#E8DCC4"
+        letter-spacing="0.01em">Exit.</text>
+
+  <!-- Separator -->
+  <line x1="575" y1="492" x2="1120" y2="492" stroke="#E8DCC4" stroke-width="1.2" opacity="0.16"/>
+
+  <!-- Footer -->
+  <text x="575" y="530"
+        font-family="'Inter', Arial, sans-serif"
+        font-size="19" font-weight="400"
+        fill="#E8DCC4" opacity="0.55"
+        letter-spacing="0.03em">Same Pillars · Sharper Measurements</text>
+</svg>
